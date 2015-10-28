@@ -15,6 +15,7 @@ import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.preprocess import score
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.sql import check_sql_input
 
 
 def table(shape, fill=None):
@@ -211,13 +212,14 @@ class OWRank(widget.OWWidget):
 
         self.updateVisibleScoreColumns()
 
+    @check_sql_input
     def setData(self, data):
-        self.error()
+        self.error([0, 100])
         self.resetInternals()
 
         if data is not None and not data.domain.class_var:
             data = None
-            self.error(100, "")
+            self.error(100, "Data does not have a target variable")
 
         self.data = data
         if self.data is not None:

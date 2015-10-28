@@ -1,12 +1,9 @@
 import sys
 import bisect
-import copy
 import contextlib
-
 import pkg_resources
 
 import numpy
-
 from PyQt4.QtGui import (
     QWidget, QButtonGroup, QGroupBox, QRadioButton, QSlider,
     QDoubleSpinBox, QComboBox, QSpinBox, QListView,
@@ -15,7 +12,6 @@ from PyQt4.QtGui import (
     QStylePainter, QStyleOptionFrame, QPixmap,
     QApplication, QDrag
 )
-
 from PyQt4 import QtGui
 from PyQt4.QtCore import (
     Qt, QObject, QEvent, QSize, QModelIndex, QMimeData, QTimer
@@ -24,13 +20,12 @@ from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 import Orange.data
-
 from Orange import preprocess
 from Orange.statistics import distribution
 from Orange.preprocess import Continuize, Randomize as Random
-
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
+from Orange.widgets.utils.sql import check_sql_input
 from .owimpute import RandomTransform
 
 
@@ -1593,6 +1588,7 @@ class OWPreprocess(widget.OWWidget):
 
         self.commit()
 
+    @check_sql_input
     def set_data(self, data=None):
         """Set the input data set."""
         self.data = data

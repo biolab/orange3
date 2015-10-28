@@ -13,15 +13,14 @@ from PyQt4.QtGui import (
     QVBoxLayout, QHBoxLayout, QFormLayout, QToolButton, QLineEdit,
     QAction, QKeySequence
 )
-
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
 import Orange.preprocess.transformation
-
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.sql import check_sql_input
 
 
 def get_qualified(module, name):
@@ -397,6 +396,7 @@ class OWEditDomain(widget.OWWidget):
 
         box.layout().addWidget(self.editor_stack)
 
+    @check_sql_input
     def set_data(self, data):
         """Set input data set."""
         self.closeContext()
@@ -534,7 +534,7 @@ class OWEditDomain(widget.OWWidget):
             class_vars = all_new_vars[n_attrs: n_attrs + n_class_vars]
             new_metas = all_new_vars[n_attrs + n_class_vars:]
             new_domain = Orange.data.Domain(attrs, class_vars, new_metas)
-            new_data = Orange.data.Table.from_table(new_domain, self.data)
+            new_data = self.data.from_table(new_domain, self.data)
 
         self.send("Data", new_data)
 
