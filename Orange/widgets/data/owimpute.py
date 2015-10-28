@@ -1,7 +1,5 @@
-
 import collections
 from collections import namedtuple
-import copy
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
@@ -9,16 +7,15 @@ from PyQt4.QtGui import (
     QVBoxLayout, QStackedLayout, QComboBox, QLineEdit,
     QDoubleValidator, QButtonGroup
 )
-
 from PyQt4.QtCore import Qt, QMargins
 
 import Orange.data
 from Orange.base import Model, Learner
 from Orange.data import filter as data_filter
-
 from Orange.widgets import gui, settings
-from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import OWWidget
 
 
 def _margins(margins, container):
@@ -271,6 +268,7 @@ class OWImpute(OWWidget):
             self.defbggroup.button(index).setChecked(True)
             self._invalidate()
 
+    @check_sql_input
     def set_data(self, data):
         self.closeContext()
         self.clear()

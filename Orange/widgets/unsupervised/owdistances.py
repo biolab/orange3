@@ -2,8 +2,9 @@ import numpy
 
 import Orange.data
 import Orange.misc
-from Orange.widgets import widget, gui, settings
 from Orange import distance
+from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.sql import check_sql_input
 
 
 _METRICS = [
@@ -54,6 +55,7 @@ class OWDistances(widget.OWWidget):
 
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
+    @check_sql_input
     def set_data(self, data):
         self.data = data
         self.unconditional_commit()

@@ -1,9 +1,10 @@
 from PyQt4 import QtGui
 
 from Orange.data import Table
+from Orange.preprocess.remove import Remove
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
-from Orange.preprocess.remove import Remove
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWPurgeDomain(widget.OWWidget):
@@ -78,6 +79,7 @@ class OWPurgeDomain(widget.OWWidget):
                         orientation="horizontal")
         gui.rubber(self.controlArea)
 
+    @check_sql_input
     def setData(self, dataset):
         if dataset is not None:
             self.data = dataset

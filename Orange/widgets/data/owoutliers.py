@@ -1,14 +1,14 @@
 import sys
 
+import numpy as np
 from PyQt4 import QtGui
 
-import numpy as np
-
+from Orange.base import SklLearner
+from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.data import Table, Domain, ContinuousVariable
-from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
-from Orange.base import SklLearner
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWOutliers(widget.OWWidget):
@@ -115,6 +115,7 @@ class OWOutliers(widget.OWWidget):
         self.support_fraction_spin.setDisabled(False)
         self.warning(0)
 
+    @check_sql_input
     def set_data(self, dataset):
         self.data = dataset
         if self.data is None:

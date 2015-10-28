@@ -11,13 +11,13 @@ from functools import reduce
 from itertools import chain, repeat
 from operator import itemgetter
 
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
-
 import numpy
+from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWConcatenate(widget.OWWidget):
@@ -122,14 +122,16 @@ class OWConcatenate(widget.OWWidget):
             callback=self.apply, default=True
         )
 
+    @check_sql_input
     def set_primary_data(self, data):
         self.primary_data = data
 
+    @check_sql_input
     def set_more_data(self, data=None, id=None):
-        if data is None:
-            del self.more_data[id]
-        else:
+        if data is not None:
             self.more_data[id] = data
+        elif id in self.more_data:
+            del self.more_data[id]
 
     def handleNewSignals(self):
         self.apply()

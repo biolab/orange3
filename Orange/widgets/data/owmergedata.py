@@ -2,14 +2,14 @@ import math
 import itertools
 from collections import defaultdict
 
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui
 import numpy
 
 import Orange
-
 from Orange.widgets import widget
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWMergeData(widget.OWWidget):
@@ -84,6 +84,7 @@ class OWMergeData(widget.OWWidget):
         # resize
         self.resize(400, 500)
 
+    @check_sql_input
     def setDataA(self, data):
         #self.closeContext()
         self.dataA = data
@@ -94,6 +95,7 @@ class OWMergeData(widget.OWWidget):
 
         self.infoBoxDataA.setText(self.dataInfoText(data))
 
+    @check_sql_input
     def setDataB(self, data):
         #self.closeContext()
         self.dataB = data

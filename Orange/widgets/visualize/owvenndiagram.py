@@ -6,29 +6,26 @@ Venn Diagram Widget
 
 import math
 import unicodedata
-
 from collections import namedtuple, defaultdict, OrderedDict, Counter
 from itertools import count
 from functools import reduce
 from xml.sax.saxutils import escape
 
 import numpy
-
 from PyQt4.QtGui import (
     QComboBox, QGraphicsScene, QGraphicsView, QGraphicsWidget,
     QGraphicsPathItem, QGraphicsTextItem, QPainterPath, QPainter,
     QTransform, QColor, QBrush, QPen, QStyle, QPalette,
     QApplication
 )
-
 from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF
 from PyQt4.QtCore import pyqtSignal as Signal
 
 import Orange.data
-
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.io import FileFormat
+from Orange.widgets.utils.sql import check_sql_input
 
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
@@ -131,6 +128,7 @@ class OWVennDiagram(widget.OWWidget):
         self._queue = []
         self.graphButton.clicked.connect(self.save_graph)
 
+    @check_sql_input
     def setData(self, data, key=None):
         self.error(0)
         if not self._inputUpdate:

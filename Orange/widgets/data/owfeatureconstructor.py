@@ -13,19 +13,19 @@ import functools
 import builtins
 import math
 import random
-from collections import namedtuple, Counter
+from collections import namedtuple
 from itertools import chain
+
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy
 from PyQt4.QtCore import Qt, QEvent, pyqtSignal as Signal, pyqtProperty as Property
 
 import Orange
-
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import DomainContextHandler, Setting, ContextSetting
 from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils.sql import check_sql_input
 
-from .owpythonscript import PythonSyntaxHighlighter
 
 FeatureDescriptor = \
     namedtuple("FeatureDescriptor", ["name", "expression"])
@@ -612,6 +612,7 @@ class OWFeatureConstructor(widget.OWWidget):
         self.descriptors = descriptors
         self.featuremodel[:] = list(self.descriptors)
 
+    @check_sql_input
     def setData(self, data=None):
         self.closeContext()
 

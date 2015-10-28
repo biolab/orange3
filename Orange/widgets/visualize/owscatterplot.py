@@ -9,9 +9,8 @@ from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
 from sklearn.neighbors import NearestNeighbors
 
 import Orange
-from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
-                        DiscreteVariable
-from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
+from Orange.data import Table, Domain, StringVariable, ContinuousVariable
+from Orange.data.sql.table import SqlTable
 from Orange.preprocess.score import ReliefF
 from Orange.widgets import gui
 from Orange.widgets.io import FileFormat
@@ -216,8 +215,15 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
 
     def set_data(self, data):
-        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
-            data = data.sample_time(DEFAULT_SAMPLE_TIME)
+        self.information(1)
+        if isinstance(data, SqlTable):
+            if data.approx_len() < 4000:
+                data = Table(data)
+            else:
+                self.information(1, "Data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(2000, partial=True)
+                data = Table(data_sample)
 
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None

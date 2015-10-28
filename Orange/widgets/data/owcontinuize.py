@@ -6,6 +6,7 @@ from Orange.preprocess import Continuize, Normalize
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWContinuize(widget.OWWidget):
@@ -90,6 +91,7 @@ class OWContinuize(widget.OWWidget):
     def settings_changed(self):
         self.commit()
 
+    @check_sql_input
     def setData(self, data):
         self.data = data
         if data is None:
