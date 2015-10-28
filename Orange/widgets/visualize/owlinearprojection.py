@@ -8,24 +8,21 @@ from functools import reduce
 from operator import itemgetter
 from types import SimpleNamespace as namespace
 from xml.sax.saxutils import escape
-
 import pkg_resources
 
+import numpy
 from PyQt4 import QtGui, QtCore
-
 from PyQt4.QtGui import (
     QListView, QSizePolicy, QApplication, QAction, QKeySequence,
     QGraphicsLineItem, QSlider, QPainterPath
 )
 from PyQt4.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF, QPointF
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-
-import numpy
-
 import pyqtgraph.graphicsItems.ScatterPlotItem
 import pyqtgraph as pg
-import Orange
 
+from Orange.data import Table, Variable
+from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
@@ -220,11 +217,11 @@ class OWLinearProjection(widget.OWWidget):
     icon = "icons/LinearProjection.svg"
     priority = 2000
 
-    inputs = [("Data", Orange.data.Table, "set_data", widget.Default),
-              ("Data Subset", Orange.data.Table, "set_subset_data")]
+    inputs = [("Data", Table, "set_data", widget.Default),
+              ("Data Subset", Table, "set_subset_data")]
 #              #TODO: Allow for axes to be supplied from an external source.
 #               ("Projection", numpy.ndarray, "set_axes"),]
-    outputs = [("Selected Data", Orange.data.Table)]
+    outputs = [("Selected Data", Table)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -543,6 +540,15 @@ class OWLinearProjection(widget.OWWidget):
         """
         self.closeContext()
         self.clear()
+        self.information(0)
+        if isinstance(data, SqlTable):
+            if data.approx_len() < 4000:
+                data = Table(data)
+            else:
+                self.information(0, "Data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(2000, partial=True)
+                data = Table(data_sample)
         self.data = data
         if data is not None:
             self._initialize(data)
@@ -620,7 +626,7 @@ class OWLinearProjection(widget.OWWidget):
         return {(type(var), var.name): (source_ind, pos)
                 for source_ind, var_list in enumerate(lists)
                 for pos, var in enumerate(var_list)
-                if isinstance(var, Orange.data.Variable)}
+                if isinstance(var, Variable)}
 
     def _decode_var_state(self, state, lists):
         all_vars = reduce(list.__iadd__, lists, [])
@@ -1617,7 +1623,7 @@ def test_main(argv=None):
     else:
         filename = "iris"
 
-    data = Orange.data.Table(filename)
+    data = Table(filename)
 
     app = QApplication([])
     w = OWLinearProjection()
