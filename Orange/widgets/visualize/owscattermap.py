@@ -470,8 +470,8 @@ class OWScatterMap(widget.OWWidget):
 
     sample_percentages = []
     sample_percentages_captions = []
-    sample_times = [0.1, 0.5, 3, 5, 20, 40, 80]
-    sample_times_captions = ['0.1s', '1s', '5s', '10s', '30s', '1min', '2min']
+    sample_times = [0.5, 3, 5, 20, 40, 80]
+    sample_times_captions = ['1s', '5s', '10s', '30s', '1min', '2min']
 
     use_cache = settings.Setting(True)
 
