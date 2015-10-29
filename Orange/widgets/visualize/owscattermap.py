@@ -470,8 +470,8 @@ class OWScatterMap(widget.OWWidget):
 
     sample_percentages = []
     sample_percentages_captions = []
-    sample_times = [0.1, 0.5, 3, 5, 20, 40, 80]
-    sample_times_captions = ['0.1s', '1s', '5s', '10s', '30s', '1min', '2min']
+    sample_times = [0.5, 3, 5, 20, 40, 80]
+    sample_times_captions = ['1s', '5s', '10s', '30s', '1min', '2min']
 
     use_cache = settings.Setting(True)
 
@@ -596,12 +596,11 @@ class OWScatterMap(widget.OWWidget):
             level = self.sample_percentages[level]
 
         if sample_type == 'time':
-            self.dataset = \
-                self.original_data.sample_time(level, no_cache=True)
+            self.dataset = self.original_data.sample_time(level, no_cache=True)
         else:
             if 0 < level < 100:
-                self.dataset = \
-                    self.original_data.sample_percentage(level, no_cache=True)
+                self.dataset = self.original_data.sample_percentage(
+                    level, no_cache=True)
             if level >= 100:
                 self.dataset = self.original_data
         self.set_sampled_data(self.dataset)
@@ -684,8 +683,7 @@ class OWScatterMap(widget.OWWidget):
         self.plot.clear()
         self.x_var_index = min(self.x_var_index, len(self.x_var_model) - 1)
         self.y_var_index = min(self.y_var_index, len(self.y_var_model) - 1)
-        if self.dataset is None or self.x_var_index == -1 or \
-                self.y_var_index == -1:
+        if not self.dataset or self.x_var_index == -1 or self.y_var_index == -1:
             return
 
         data = self.dataset
