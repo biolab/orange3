@@ -596,12 +596,11 @@ class OWScatterMap(widget.OWWidget):
             level = self.sample_percentages[level]
 
         if sample_type == 'time':
-            self.dataset = \
-                self.original_data.sample_time(level, no_cache=True)
+            self.dataset = self.original_data.sample_time(level, no_cache=True)
         else:
             if 0 < level < 100:
-                self.dataset = \
-                    self.original_data.sample_percentage(level, no_cache=True)
+                self.dataset = self.original_data.sample_percentage(
+                    level, no_cache=True)
             if level >= 100:
                 self.dataset = self.original_data
         self.set_sampled_data(self.dataset)
