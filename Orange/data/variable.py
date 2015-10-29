@@ -13,7 +13,7 @@ from Orange.util import Registry
 # For storing unknowns
 Unknown = ValueUnknown = float("nan")
 # For checking for unknowns
-MISSING_VALUES = {"?", ".", "", "NA", "~", None}
+MISSING_VALUES = {"?", "nan", ".", "", "NA", "~", None}
 
 DISCRETE_MAX_VALUES = 3  # == 2 + nan
 
@@ -54,7 +54,9 @@ def is_discrete_values(values):
             return False
 
     # Strip NaN from unique
-    unique = {i for i in unique if not (isinstance(i, Number) and np.isnan(i))}
+    unique = {i for i in unique
+              if (not i in MISSING_VALUES and
+                  not (isinstance(i, Number) and np.isnan(i)))}
 
     # All NaNs => indeterminate
     if not unique: return None
