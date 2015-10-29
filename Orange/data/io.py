@@ -65,11 +65,11 @@ def detect_encoding(filename):
 
     # file not available or unable to guess the encoding, have chardet do it
     detector = UniversalDetector()
+    # We examine only first N 4kB blocks of file because chardet is really slow
+    MAX_BYTES = 4*1024*12
 
     def _from_file(f):
-        for line in f:
-            detector.feed(line)
-            if detector.done: break
+        detector.feed(f.read(MAX_BYTES))
         detector.close()
         return detector.result.get('encoding')
 
@@ -77,7 +77,7 @@ def detect_encoding(filename):
         with open_compressed(filename, 'rb') as f:
             return _from_file(f)
     elif isinstance(filename, bytes):
-        detector.feed(filename)
+        detector.feed(filename[:MAX_BYTES])
         detector.close()
         return detector.result.get('encoding')
     elif hasattr(filename, 'encoding'):
@@ -512,15 +512,19 @@ class CSVFormat(FileFormat):
     @classmethod
     def read_file(cls, filename, wrapper=None):
         wrapper = wrapper or _IDENTITY
-        import csv
-        for encoding in (lambda: 'us-ascii',                 # fast
-                         lambda: detect_encoding(filename),  # precise
-                         lambda: 'utf-8'):                   # fallback
-            with cls.open(filename, mode='rt', newline='', encoding=encoding()) as file:
+        import csv, sys, locale
+        for encoding in (lambda: ('us-ascii', None),                 # fast
+                         lambda: (detect_encoding(filename), None),  # precise
+                         lambda: (locale.getpreferredencoding(False), None),
+                         lambda: (sys.getdefaultencoding(), None),   # desperate
+                         lambda: ('utf-8', 'ignore')):               # fallback
+            encoding, errors = encoding()
+            with cls.open(filename, mode='rt', newline='', encoding=encoding, errors=errors) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
                     dialect = csv.Sniffer().sniff(file.read(1024), cls.DELIMITERS)
-                except UnicodeDecodeError:
+                except UnicodeDecodeError as e:
+                    error = e
                     continue
                 except csv.Error:
                     dialect = csv.excel()
