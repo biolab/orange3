@@ -3,6 +3,8 @@ import logging
 import subprocess
 from os import path
 from ast import literal_eval
+from math import isnan
+from numbers import Number
 from itertools import chain, repeat
 from functools import lru_cache
 from collections import OrderedDict
@@ -498,6 +500,22 @@ class FileFormat(metaclass=FileFormatMeta):
         write(cls.header_flags(data))
 
     @classmethod
+    def write_data(cls, write, data):
+        """`write` is a callback that accepts an iterable"""
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                       data.X,
+                       data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                       data.metas):
+            write(['' if isinstance(val, Number) and isnan(val) else
+                   var.values[int(val)] if var.is_discrete else
+                   val
+                   for var, val in zip(vars, flatten(row))])
+
+    @classmethod
     def write(cls, filename, data):
         return cls.write_file(filename, data)
 
@@ -547,8 +565,7 @@ class CSVFormat(FileFormat):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data)
-            writer.writerows([[inst.weight] * data.has_weights() +
-                              inst.list for inst in data])
+            cls.write_data(writer.writerow, data)
 
 
 class TabFormat(CSVFormat):
