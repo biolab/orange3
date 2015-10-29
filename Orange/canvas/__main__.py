@@ -16,7 +16,7 @@ import signal
 
 import pkg_resources
 
-from PyQt4.QtGui import QFont, QColor, QDesktopServices
+from PyQt4.QtGui import QFont, QColor, QDesktopServices, QMessageBox
 from PyQt4.QtCore import Qt, QDir, QUrl
 
 from Orange import canvas
@@ -357,11 +357,28 @@ def main(argv=None):
         sys.excepthook.handledException.connect(output_view.parent().show)
 
     # If run for the first time, open a browser tab with a survey
-    first_run = settings.value("startup/first-run", True, type=bool)
-    if first_run:
-        success = QDesktopServices.openUrl(
-            QUrl("http://orange.biolab.si/survey/short.html"));
-        settings.setValue("startup/first-run", not success)
+    show_survey = settings.value("startup/show-survey", True, type=bool)
+    if show_survey:
+        question = QMessageBox(
+            QMessageBox.Question,
+            'Orange Survey',
+            'We would like to know more about how our software is used.\n\n'
+            'Would you care to fill our short 1-minute survey?',
+            QMessageBox.Yes | QMessageBox.No)
+        question.setDefaultButton(QMessageBox.Yes)
+        later = question.addButton('Ask again later', QMessageBox.NoRole)
+        question.setEscapeButton(later)
+
+        def handle_response(result):
+            if result == QMessageBox.Yes:
+                success = QDesktopServices.openUrl(
+                    QUrl("http://orange.biolab.si/survey/short.html"));
+                settings.setValue("startup/show-survey", not success)
+            else:
+                settings.setValue("startup/show-survey", result != QMessageBox.No)
+
+        question.finished.connect(handle_response)
+        question.show()
 
     with redirect_stdout(stdout), redirect_stderr(stderr):
         log.info("Entering main event loop.")
