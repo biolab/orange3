@@ -266,7 +266,8 @@ class Variable(metaclass=VariableMeta):
         :return: copy of self
         :rtype: Variable
         """
-        var = copy.copy(self)
+        var = self.__class__()
+        var.__dict__.update(self.__dict__)
         var.master = self.master
         return var
 

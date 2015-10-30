@@ -85,7 +85,10 @@ class DiscColorTableModel(ColorTableModel):
             return
         if role == Qt.DisplayRole or role == Qt.EditRole:
             return var.values[col - 1]
-        color = var.colors[col - 1]
+        try:
+            color = var.colors[col - 1]
+        except:
+            return
         if role == Qt.DecorationRole:
             return QColor(*color)
         if role == Qt.ToolTipRole:
@@ -169,6 +172,8 @@ class ColorTable(QTableView):
 
 class DiscreteTable(ColorTable):
     def handle_click(self, index, x_offset):
+        if self.model().data(index, Qt.EditRole) is None:
+            return
         if index.column() == 0 or x_offset > 24:
             self.edit(index)
         else:
@@ -221,8 +226,8 @@ class OWColor(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     settingsHandler = settings.PerfectDomainContextHandler()
-    disc_colors = settings.ContextSetting([])
-    cont_colors = settings.ContextSetting([])
+    disc_data = settings.ContextSetting([])
+    cont_data = settings.ContextSetting([])
     color_settings = settings.Setting(None)
     selected_schema_index = settings.Setting(0)
 
@@ -247,6 +252,7 @@ class OWColor(widget.OWWidget):
         box.layout().addWidget(self.cont_view)
 
     def set_data(self, data):
+        self.closeContext()
         self.disc_colors = []
         self.cont_colors = []
         if data is None:
@@ -267,12 +273,10 @@ class OWColor(widget.OWWidget):
                             n_values = len(var.values)
                             palette = ColorPaletteGenerator(n_values)
                             var.colors = palette.getRGB(range(n_values))
-                        # TODO: This is OK for model, but not for settings
                         self.disc_colors.append(var)
                     else:
                         if not hasattr(var, "colors"):
                             var.colors = ((0, 0, 255), (255, 255, 0), False)
-                        # TODO: This is OK for model, but not for settings
                         self.cont_colors.append(var)
                     vars.append(var)
                 return vars
@@ -281,12 +285,32 @@ class OWColor(widget.OWWidget):
             domain = Orange.data.Domain(create_part(domain.attributes),
                                         create_part(domain.class_vars),
                                         create_part(domain.metas))
+            self.openContext(data)
             self.data = Orange.data.Table(domain, data)
+            self.data.domain = domain
+
             self.disc_model.set_data(self.disc_colors)
             self.cont_model.set_data(self.cont_colors)
             self.disc_view.resizeColumnsToContents()
             self.cont_view.resizeColumnsToContents()
         self.commit()
+
+    def storeSpecificSettings(self):
+        self.current_context.disc_data = \
+            [(var.name, var.values, var.colors) for var in self.disc_colors]
+        self.current_context.cont_data = \
+            [(var.name, var.colors) for var in self.cont_colors]
+
+    def retrieveSpecificSettings(self):
+        disc_data = getattr(self.current_context, "disc_data", ())
+        for var, (name, values, colors) in zip(self.disc_colors, disc_data):
+            var.name = name
+            var.values = values[:]
+            var.colors = colors[:]
+        cont_data = getattr(self.current_context, "cont_data", ())
+        for var, (name, colors) in zip(self.cont_colors, cont_data):
+            var.name = name
+            var.colors = colors[:]
 
     def commit(self):
         self.send("Data", self.data)
