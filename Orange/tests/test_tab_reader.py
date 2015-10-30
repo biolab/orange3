@@ -52,12 +52,11 @@ class TestTabReader(unittest.TestCase):
         f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
         self.assertEqual(f2.name, "Feature 2")
-        self.assertEqual(f2.attributes, {'a': '1', 'b': '2'})
+        self.assertEqual(f2.attributes, {'a': 1, 'b': 2})
         self.assertIn(c1, table.domain.class_vars)
         self.assertIsInstance(c1, DiscreteVariable)
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
-
         outf = io.StringIO()
         outf.close = lambda: None
         TabFormat.write_file(outf, table)
@@ -69,7 +68,7 @@ class TestTabReader(unittest.TestCase):
         f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
         self.assertEqual(f2.name, "Feature 2")
-        self.assertEqual(f2.attributes, {'a': '1', 'b': '2'})
+        self.assertEqual(f2.attributes, {'a': 1, 'b': 2})
         self.assertIn(c1, table.domain.class_vars)
         self.assertIsInstance(c1, DiscreteVariable)
         self.assertEqual(c1.name, "Class 1")
@@ -119,12 +118,13 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(len(data), 6)
         self.assertEqual(len(data.domain), 1)
         self.assertEqual(len(data.domain.metas), 1)
-        NAME = "['5534fab7fad58d5df50061f1', '5534fab8fad58d5de20061f8']"
-        self.assertEqual(data.domain[0].name, NAME)
+        NAME = ['5534fab7fad58d5df50061f1', '5534fab8fad58d5de20061f8']
+        self.assertEqual(data.domain[0].name, str(NAME))
         ATTRIBUTES = dict(
-            Timepoint='20',
+            Timepoint=20,
             id=NAME,
-            Name="['Gene expressions (dd_AX4_on_Ka_20Hr_bio1_mapped.bam)', 'Gene expressions (dd_AX4_on_Ka_20Hr_bio2_mapped.bam)']",
-            Replicate="['1', '2']",
+            Name=['Gene expressions (dd_AX4_on_Ka_20Hr_bio1_mapped.bam)',
+                  'Gene expressions (dd_AX4_on_Ka_20Hr_bio2_mapped.bam)'],
+            Replicate=['1', '2'],
         )
         self.assertEqual(data.domain[0].attributes, ATTRIBUTES)
