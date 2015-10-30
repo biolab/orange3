@@ -607,6 +607,13 @@ class ColorPaletteGenerator:
             number_of_colors = max(rgb_colors.keys())
         self.set_number_of_colors(number_of_colors)
 
+    @classmethod
+    def palette(cls, n):
+        from Orange.data import DiscreteVariable
+        if isinstance(n, DiscreteVariable):
+            n = len(n.values)
+        return cls(n).getRGB(np.arange(n))
+
     def set_number_of_colors(self, number_of_colors=0):
         """Change the palette if there are palettes for different number of
            colors. Else, just copy colors as numpy array"""
