@@ -425,12 +425,6 @@ class OWFile(widget.OWWidget):
             self.warnings.setText("")
 
             add_origin(data, fn)
-            # make new data and send it
-            file_name = os.path.split(fn)[1]
-            if "." in file_name:
-                data.name = file_name[:file_name.rfind('.')]
-            else:
-                data.name = file_name
 
             self.dataReport = self.prepareDataReport(data)
         self.send("Data", data)
