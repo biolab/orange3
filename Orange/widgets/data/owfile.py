@@ -206,9 +206,9 @@ class OWFile(widget.OWWidget):
                      "represent different variables")
 
         box = gui.widgetBox(self.controlArea, "Info", addSpace=True)
-        self.infoa = gui.widgetLabel(box, 'No data loaded.')
-        self.infob = gui.widgetLabel(box, ' ')
+        self.info = gui.widgetLabel(box, 'No data loaded.')
         self.warnings = gui.widgetLabel(box, ' ')
+        gui.rubber(box)
         #Set word wrap, so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
         self.warnings.setSizePolicy(
@@ -372,8 +372,7 @@ class OWFile(widget.OWWidget):
                                  .format(basename))
         if fn == "(none)":
             self.send("Data", None)
-            self.infoa.setText("No data loaded")
-            self.infob.setText("")
+            self.info.setText("No data loaded")
             self.warnings.setText("")
             return
 
@@ -399,28 +398,26 @@ class OWFile(widget.OWWidget):
                             self.recent_paths[ind].abspath == fn_original:
                 del self.recent_paths[ind]
             self.error(err_value)
-            self.infoa.setText('Data was not loaded due to an error.')
-            self.infob.setText('Error:')
+            self.info.setText('Data was not loaded due to an error.\nError:')
             self.warnings.setText(err_value)
 
         if data is None:
             self.dataReport = None
         else:
             domain = data.domain
-            self.infoa.setText(
-                "{} instance(s), {} feature(s), {} meta attribute(s)"
-                .format(len(data), len(domain.attributes), len(domain.metas)))
+            text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
+                len(data), len(domain.attributes), len(domain.metas))
             if domain.has_continuous_class:
-                self.infob.setText("Regression; numerical class.")
+                text += "\nRegression; numerical class."
             elif domain.has_discrete_class:
-                self.infob.setText("Classification; " +
-                                   "discrete class with {} values."
-                                   .format(len(domain.class_var.values)))
+                text += "\nClassification; discrete class with {} values.".format(
+                    len(domain.class_var.values))
             elif data.domain.class_vars:
-                self.infob.setText("Multi-target; {} target variables."
-                                   .format(len(data.domain.class_vars)))
+                text += "\nMulti-target; {} target variables.".format(
+                    len(data.domain.class_vars))
             else:
-                self.infob.setText("Data has no target variable.")
+                text += "\nData has no target variable."
+            self.info.setText(text)
             self.warnings.setText("")
 
             add_origin(data, fn)
