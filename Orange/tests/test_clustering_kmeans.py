@@ -17,7 +17,7 @@ class KMeansTest(unittest.TestCase):
 
     def test_kmeans_parameters(self):
         table = Orange.data.Table('iris')
-        kmeans = KMeans(n_clusters=20,
+        kmeans = KMeans(n_clusters=10,
                         max_iter=10,
                         random_state=42,
                         tol=0.001,

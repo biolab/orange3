@@ -17,9 +17,13 @@ class Discretizer(Transformation):
         super().__init__(variable)
         self.points = points
 
+    @staticmethod
+    def digitize(x, bins):
+        return np.digitize(x, bins) if bins else [0]*len(x)
+
     def transform(self, c):
         if c.size:
-            return np.where(np.isnan(c), np.NaN, np.digitize(c, self.points))
+            return np.where(np.isnan(c), np.NaN, self.digitize(c, self.points))
         else:
             return np.array([], dtype=int)
 

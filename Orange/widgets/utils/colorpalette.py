@@ -548,7 +548,7 @@ class GradientPaletteGenerator:
         values = np.clip(values, 0, 1 - EPS)
         bin = np.digitize(values, self.bins)
         nans = bin >= len(self.bins)
-        bin[nans] = 0  # just so that the next two lines pass
+        values[nans] = bin[nans] = 0  # just so that the next two lines pass
         p = (values - self.bins[bin - 1]) / self.deriv
         results = np.round((1 - p) * self.colors[bin - 1].T + p * self.colors[bin].T).T.astype(int)
         results[nans] = NAN_GREY
