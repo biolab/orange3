@@ -1,7 +1,6 @@
 import os
 import sys
 import urllib
-from collections import namedtuple
 
 from PyQt4 import QtGui
 from Orange.widgets import widget, gui
@@ -21,22 +20,27 @@ def add_origin(examples, filename):
             var.attributes["origin"] = dir_name
 
 
-RecentPath = namedtuple(
-    "RecentPath",
-    ["abspath",   #: str # absolute path
-     "prefix",    #: Option[str]  # BASEDIR | SAMPLE-DATASETS | ...
-     "relpath"]   #: Option[str]  # path relative to `prefix`
-)
+class RecentPath:
+    abspath = ''
+    prefix = None   #: Option[str]  # BASEDIR | SAMPLE-DATASETS | ...
+    relpath = ''  #: Option[str]  # path relative to `prefix`
+    title = ''    #: Option[str]  # title of filename (e.g. from URL)
 
-
-class RecentPath(RecentPath):
-    def __new__(cls, abspath, prefix, relpath):
+    def __init__(self, abspath, prefix, relpath, title=''):
         if os.name == "nt":
             # always use a cross-platform pathname component separator
             abspath = abspath.replace(os.path.sep, "/")
             if relpath is not None:
                 relpath = relpath.replace(os.path.sep, "/")
-        return super(RecentPath, cls).__new__(cls, abspath, prefix, relpath)
+        self.abspath = abspath
+        self.prefix = prefix
+        self.relpath = relpath
+        self.title = title
+
+    def __eq__(self, other):
+        return (self.abspath == other.abspath or
+                self.prefix == other.prefix and
+                self.relpath == other.relpath)
 
     @staticmethod
     def create(path, searchpaths):
@@ -118,7 +122,7 @@ class RecentPath(RecentPath):
     @property
     def value(self):
         if self.prefix == "url-datasets":
-            return self.abspath
+            return '{} ({})'.format(self.title, self.abspath)
         return os.path.basename(self.abspath)
 
     @property
@@ -131,11 +135,6 @@ class RecentPath(RecentPath):
     @property
     def dirname(self):
         return os.path.dirname(self.abspath)
-
-
-class RecentPathDelegate(QtGui.QStyledItemDelegate):
-    def displayText(self, value, locale):
-        return os.path.basename(value)
 
 
 class OWFile(widget.OWWidget):
@@ -183,7 +182,6 @@ class OWFile(widget.OWWidget):
         self.file_combo = QtGui.QComboBox(box)
         self.file_combo.setMinimumWidth(300)
         self.file_combo.setEditable(True)
-        self.file_combo.setItemDelegate(RecentPathDelegate())
         self.file_combo.lineEdit().setStyleSheet("padding-left: 1px;")
         box.layout().addWidget(self.file_combo)
         self.file_combo.activated[int].connect(self.select_file)
@@ -262,7 +260,7 @@ class OWFile(widget.OWWidget):
         if self.recent_paths:
             basename = self.file_combo.currentText()
             if (basename == self.recent_paths[0].relpath or
-                basename == os.path.basename(self.recent_paths[0].abspath)):
+                basename == self.recent_paths[0].value):
                 return self.open_file(self.recent_paths[0].abspath)
         self.select_file(len(self.recent_paths) + 1)
 
@@ -292,8 +290,8 @@ class OWFile(widget.OWWidget):
                     return
 
         if len(self.recent_paths) > 0:
-            self.set_file_list()
             self.open_file(self.recent_paths[0].abspath)
+            self.set_file_list()
 
     def browse_file(self, in_demos=0):
         if in_demos:
@@ -425,6 +423,14 @@ class OWFile(widget.OWWidget):
             self.warnings.setText("")
 
             add_origin(data, fn)
+
+            # Set title for URL paths
+            rp = self.recent_paths[0]
+            rp = self.recent_paths[0] = RecentPath(getattr(data, 'origin', rp.abspath),
+                                                   rp.prefix, rp.relpath, data.name)
+            # Ensure the same URL isn't in recent_paths twice
+            try: del self.recent_paths[self.recent_paths.index(rp, 1)]
+            except ValueError: pass
 
             self.dataReport = self.prepareDataReport(data)
         self.send("Data", data)
