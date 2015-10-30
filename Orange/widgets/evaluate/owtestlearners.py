@@ -134,7 +134,8 @@ class OWTestLearners(widget.OWWidget):
               ("Test Data", Table, "set_test_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
-    outputs = [("Evaluation Results", Orange.evaluation.Results)]
+    outputs = [("Predictions", Orange.data.Table),
+               ("Evaluation Results", Orange.evaluation.Results)]
 
     settingsHandler = settings.ClassValuesContextHandler()
 
@@ -535,13 +536,18 @@ class OWTestLearners(widget.OWWidget):
         valid = [slot for slot in self.learners.values()
                  if slot.results is not None and slot.results.success]
         if valid:
+            # Evaluation results
             combined = results_merge([slot.results.value for slot in valid])
             combined.learner_names = [learner_name(slot.learner)
                                       for slot in valid]
+
+            # Predictions & Probabilities
+            predictions = combined.get_augmented_data(combined.learner_names)
         else:
             combined = None
+            predictions = None
         self.send("Evaluation Results", combined)
-
+        self.send("Predictions", predictions)
 
 
 def learner_name(learner):

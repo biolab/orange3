@@ -5,6 +5,7 @@ import numpy as np
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.classification.majority import ConstantModel
 from Orange.classification.naive_bayes import NaiveBayesModel
+from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table
 from Orange.evaluation import *
 from Orange.preprocess import discretize, preprocess
@@ -561,3 +562,48 @@ class TestShuffleSplit(unittest.TestCase):
                            test_size=1 - train_size, n_resamples=n_resamples)
         self.assertEqual(len(res.predicted[0]),
                          n_resamples * nrows * (1 - train_size))
+
+
+class TestAugmentedData(unittest.TestCase):
+    def test_augmented_data_classification(self):
+        data = Table("iris")
+        n_classes = len(data.domain.class_var.values)
+        res = CrossValidation(data, [NaiveBayesLearner()], store_data=True)
+        table = res.get_augmented_data(['Naive Bayes'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        # +1 for class, +n_classes for probabilities, +1 for fold
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + n_classes + 1)
+        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
+
+        res = CrossValidation(data, [NaiveBayesLearner(), MajorityLearner()], store_data=True)
+        table = res.get_augmented_data(['Naive Bayes', 'Majority'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2*(n_classes+1) + 1)
+        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
+        self.assertEqual(table.domain.metas[len(data.domain.metas)+1].values, data.domain.class_var.values)
+
+    def test_augmented_data_regression(self):
+        data = Table("housing")
+        res = CrossValidation(data, [LinearRegressionLearner(), ], store_data=True)
+        table = res.get_augmented_data(['Linear Regression'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        # +1 for class, +1 for fold
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + 1)
+
+        res = CrossValidation(data, [LinearRegressionLearner(), MeanLearner()], store_data=True)
+        table = res.get_augmented_data(['Linear Regression', 'Mean Learner'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        # +2 for class, +1 for fold
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)

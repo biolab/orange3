@@ -2,7 +2,7 @@ import numpy as np
 
 import sklearn.cross_validation as skl_cross_validation
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "ShuffleSplit", "TestOnTestData", "sample"]
@@ -201,6 +201,72 @@ class Results:
             results.probabilities = self.probabilities[:, self.folds[fold]]
 
         return results
+
+    def get_augmented_data(self, model_names, include_attrs=True, include_predictions=True, include_probabilities=True):
+        """
+        Return the data, augmented with predictions, probabilities (if the task is classification) and folds info.
+        Predictions, probabilities and folds are inserted as meta attributes.
+
+        Args:
+            model_names (list): A list of strings containing learners' names.
+            include_attrs (bool): Flag that tells whether to include original attributes.
+            include_predictions (bool): Flag that tells whether to include predictions.
+            include_probabilities (bool): Flag that tells whether to include probabilities.
+
+        Returns:
+            Orange.data.Table: Data augmented with predictions, (probabilities) and (fold).
+
+        """
+        assert self.predicted.shape[0] == len(model_names)
+
+        data = self.data[self.row_indices]
+        class_var = data.domain.class_var
+        classification = class_var and class_var.is_discrete
+
+        new_meta_attr = []
+        new_meta_vals = np.empty((len(data), 0))
+
+        if classification:
+            # predictions
+            if include_predictions:
+                new_meta_attr.extend(DiscreteVariable(name=name, values=class_var.values)
+                                     for name in model_names)
+                new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
+
+            # probabilities
+            if include_probabilities:
+                for name in model_names:
+                    new_meta_attr.extend(ContinuousVariable(name="%s (%s)" % (name, value))
+                                         for value in class_var.values)
+
+                for i in self.probabilities:
+                    new_meta_vals = np.hstack((new_meta_vals, i))
+
+        elif include_predictions:
+            # regression
+            new_meta_attr.extend(ContinuousVariable(name=name)
+                                 for name in model_names)
+            new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
+
+        # add fold info
+        if self.folds is not None:
+            new_meta_attr.append(DiscreteVariable(name="Fold", values=[i+1 for i, s in enumerate(self.folds)]))
+            fold = np.empty((len(data), 1))
+            for i, s in enumerate(self.folds):
+                fold[s, 0] = i
+            new_meta_vals = np.hstack((new_meta_vals, fold))
+
+        # append new columns to meta attributes
+        new_meta_attr = list(data.domain.metas) + new_meta_attr
+        new_meta_vals = np.hstack((data.metas, new_meta_vals))
+
+        X = data.X if include_attrs else np.empty((len(data), 0))
+        attrs = data.domain.attributes if include_attrs else []
+
+        domain = Domain(attrs, data.domain.class_vars, metas=new_meta_attr)
+        predictions = Table.from_numpy(domain, X, data.Y, metas=new_meta_vals)
+        predictions.name = data.name
+        return predictions
 
 
 class CrossValidation(Results):
