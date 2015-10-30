@@ -85,8 +85,7 @@ class DiscDelegate(QStyledItemDelegate):
             extra = self.cutsText(state)
             option.text = option.text + ": " + extra
 
-    @staticmethod
-    def cutsText(state):
+    def cutsText(self, state):
         method = state.method
         name = None
         # Need a better way to distinguish discretization states
@@ -125,7 +124,7 @@ class DiscDelegate(QStyledItemDelegate):
 
 class OWDiscretize(widget.OWWidget):
     name = "Discretize"
-    description = "Discretize the numeric data features."
+    description = "Discretize the continuous data features."
     icon = "icons/Discretize.svg"
     inputs = [InputSignal("Data", Orange.data.Table, "set_data",
                           doc="Input data table")]
@@ -162,13 +161,13 @@ class OWDiscretize(widget.OWWidget):
         self.default_bbox = rbox = gui.radioButtons(
             box, self, "default_method", callback=self._default_disc_changed)
 
-        options = self.options = [
+        options = [
             self.tr("Default"),
-            self.tr("Leave numeric"),
+            self.tr("Leave continuous"),
             self.tr("Entropy-MDL discretization"),
             self.tr("Equal-frequency discretization"),
             self.tr("Equal-width discretization"),
-            self.tr("Remove numeric variables")
+            self.tr("Remove continuous attributes")
         ]
 
         for opt in options[1:5]:
@@ -220,13 +219,9 @@ class OWDiscretize(widget.OWWidget):
 
         self.controlbox = controlbox
 
-        box = gui.auto_commit(
-            self.controlArea, self, "autosend", "Apply",
-            orientation="horizontal",
-            checkbox_label="Send data after every change")
-        box.layout().insertSpacing(0, 20)
-        box.layout().insertWidget(0, self.report_button)
-
+        gui.auto_commit(self.controlArea, self, "autosend", "Apply",
+                        orientation="horizontal",
+                        checkbox_label="Send data after every change")
 
     def set_data(self, data):
         self.closeContext()
@@ -447,15 +442,6 @@ class OWDiscretize(widget.OWWidget):
                 self.var_state[i]._replace(points=None, disc_var=None)
             for i, var in enumerate(self.varmodel)
         }
-
-    def send_report(self):
-        self.report_items((
-            ("Default method", self.options[self.default_method + 1]),))
-        if self.varmodel:
-            self.report_items("Thresholds", [
-                (var.name,
-                 DiscDelegate.cutsText(self.var_state[i]) or "leave numeric")
-                for i, var in enumerate(self.varmodel)])
 
 
 def main():

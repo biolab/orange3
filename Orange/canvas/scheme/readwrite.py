@@ -6,8 +6,7 @@ import base64
 import sys
 import warnings
 
-from xml.etree.ElementTree import (TreeBuilder, Element, ElementTree, parse,
-                                   fromstring)
+from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
 
 from collections import defaultdict, namedtuple
 from itertools import chain, count
@@ -566,10 +565,7 @@ def parse_ows_etree_v_1_0(tree):
 
 
 def parse_ows_stream(stream):
-    if isinstance(stream, str):
-        doc = ElementTree(fromstring(stream))
-    else:
-        doc = parse(stream)
+    doc = parse(stream)
     scheme_el = doc.getroot()
     version = scheme_el.get("version", None)
     if version is None:

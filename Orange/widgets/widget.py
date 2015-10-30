@@ -1,3 +1,4 @@
+
 import sys
 import time
 import os
@@ -13,7 +14,7 @@ from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
 
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
-from Orange.canvas.report import Report
+
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import vartype
@@ -62,7 +63,7 @@ class WidgetMetaClass(type(QDialog)):
         return cls
 
 
-class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
+class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # Global widget count
     widget_id = 0
 
@@ -95,6 +96,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     want_graph = False
     show_save_graph = True
     want_status_bar = False
+    no_report = False
 
     save_position = True
     resizing_enabled = True
@@ -168,13 +170,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         """QDialog __init__ was already called in __new__,
         please do not call it here."""
 
-    def inline_graph_report(self):
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        box.layout().addWidget(self.graphButton)
-        box.layout().addWidget(self.report_button)
-        self.report_button_background.hide()
-        self.graphButtonBackground.hide()
-
     @classmethod
     def get_flags(cls):
         return (Qt.Window if cls.resizing_enabled
@@ -224,9 +219,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                                              orientation="vertical", margin=4)
 
         if self.want_graph and self.show_save_graph:
-            self.graphButtonBackground = gui.widgetBox(
-                self.leftWidgetPart, orientation="horizontal", margin=4)
-            self.graphButton = gui.button(self.graphButtonBackground,
+            graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
+                                                  orientation="horizontal", margin=4)
+            self.graphButton = gui.button(graphButtonBackground,
                                           self, "&Save Graph")
             self.graphButton.setAutoDefault(0)
 
@@ -258,16 +253,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
 
-        if hasattr(self, "send_report"):
-            self.report_button_background = gui.widgetBox(
-                self.leftWidgetPart,
-                orientation="horizontal", margin=4
-            )
-            self.report_button = gui.button(
-                self.report_button_background,
-                self, "&Report", callback=self.show_report)
-            self.report_button.setAutoDefault(0)
-
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
             return
@@ -279,6 +264,10 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     def setStatusBarText(self, text, timeout=5000):
         if hasattr(self, "widgetStatusBar"):
             self.widgetStatusBar.showMessage(" " + text, timeout)
+
+    # TODO add!
+    def prepareDataReport(self, data):
+        pass
 
     def __restoreWidgetGeometry(self):
         restored = False
