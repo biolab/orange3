@@ -417,6 +417,10 @@ class OWFile(widget.OWWidget):
                     len(data.domain.class_vars))
             else:
                 text += "\nData has no target variable."
+            if 'Timestamp' in data.domain:
+                # Google Forms uses this header to timestamp responses
+                text += '\n\nFirst entry: {}\nLast entry: {}'.format(
+                    data[0, 'Timestamp'], data[-1, 'Timestamp'])
             self.info.setText(text)
             self.warnings.setText("")
 
