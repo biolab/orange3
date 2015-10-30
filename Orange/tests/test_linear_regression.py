@@ -83,3 +83,10 @@ class LinearRegressionTest(unittest.TestCase):
         for i, attr in enumerate(data.domain.attributes):
             score = learner.score_data(data, attr)
             self.assertEqual(score, scores[i])
+
+    def test_coefficients(self):
+        data = Table([[11], [12], [13]], [0, 1, 2])
+        model = LinearRegressionLearner()(data)
+        self.assertAlmostEqual(float(model.intercept), -11)
+        self.assertEqual(len(model.coefficients), 1)
+        self.assertAlmostEqual(float(model.coefficients[0]), 1)

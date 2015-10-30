@@ -19,7 +19,7 @@ class _FeatureScorerMixin(LearnerScorer):
     class_type = ContinuousVariable
 
     def score(self, model):
-        return np.abs(model.skl_model.coef_)
+        return np.abs(model.coefficients)
 
 
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
@@ -121,16 +121,13 @@ class PolynomialLearner(Learner):
 
 
 class LinearModel(SklModel):
-    def __init__(self, model):
-        self.model = model
-
     @property
     def intercept(self):
-        return self.model.intercept_
+        return self.skl_model.intercept_
 
     @property
     def coefficients(self):
-        return self.model.coef_
+        return self.skl_model.coef_
 
     def predict(self, X):
         vals = self.skl_model.predict(X)
