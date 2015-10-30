@@ -2,7 +2,7 @@ from bisect import bisect_left
 import sys
 
 import numpy as np
-from PyQt4.QtCore import QSize, Qt
+from PyQt4.QtCore import QSize, Qt, QTimer
 from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
     QStandardItem
@@ -10,7 +10,7 @@ from sklearn.neighbors import NearestNeighbors
 
 import Orange
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF
 from Orange.widgets import gui
 from Orange.widgets.io import FileFormat
@@ -52,6 +52,7 @@ class OWScatterPlot(OWWidget):
     settingsHandler = DomainContextHandler()
 
     auto_send_selection = Setting(True)
+    auto_sample = Setting(True)
     toolbar_selection = Setting(0)
     color_settings = Setting(None)
     selected_schema_index = Setting(0)
@@ -84,7 +85,10 @@ class OWScatterPlot(OWWidget):
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
         self.data_metas_X = None  # self.data, where primitive metas are moved to X
+        self.sql_data = None  # Orange.data.sql.table.SqlTable
         self.attribute_selection_list = None  # list of Orange.data.Variable
+        self.__timer = QTimer(self, interval=1200)
+        self.__timer.timeout.connect(self.add_data)
 
         common_options = {"labelWidth": 50, "orientation": "horizontal",
                           "sendSelectedValue": True, "valueType": str}
@@ -113,6 +117,11 @@ class OWScatterPlot(OWWidget):
         gui.checkBox(
             gui.indentedBox(box), self, 'graph.jitter_continuous',
             'Jitter continuous values', callback=self.reset_graph_data)
+
+        self.sampling = gui.auto_commit(
+            self.controlArea, self, "auto_sample", "Sample", box="Sampling",
+            callback=self.switch_sampling, commit=lambda: self.add_data(1))
+        self.sampling.setVisible(False)
 
         box = gui.widgetBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
@@ -216,14 +225,21 @@ class OWScatterPlot(OWWidget):
 
     def set_data(self, data):
         self.information(1)
+        self.__timer.stop()
+        self.sampling.setVisible(False)
+        self.sql_data = None
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
                 data = Table(data)
             else:
-                self.information(1, "Data has been sampled")
-                data_sample = data.sample_time(1, no_cache=True)
+                self.information(1, "Large SQL table (showing a sample)")
+                self.sql_data = data
+                data_sample = data.sample_time(0.8, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
+                self.sampling.setVisible(True)
+                if self.auto_sample:
+                    self.__timer.start()
 
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
@@ -244,6 +260,23 @@ class OWScatterPlot(OWWidget):
             and len(self.data.domain.attributes) > 1)
         self.openContext(self.data)
 
+    def add_data(self, time=0.4):
+        if self.data and len(self.data) > 2000:
+            return self.__timer.stop()
+        data_sample = self.sql_data.sample_time(time, no_cache=True)
+        if data_sample:
+            data_sample.download_data(2000, partial=True)
+            data = Table(data_sample)
+            self.data = Table.concatenate((self.data, data), axis=0)
+            self.data_metas_X = self.move_primitive_metas_to_X(self.data)
+            self.handleNewSignals()
+
+    def switch_sampling(self):
+        self.__timer.stop()
+        if self.auto_sample and self.sql_data:
+            self.add_data()
+            self.__timer.start()
+
     def move_primitive_metas_to_X(self, data):
         if data is not None:
             new_attrs = [a for a in data.domain.attributes + data.domain.metas
@@ -254,6 +287,13 @@ class OWScatterPlot(OWWidget):
         return data
 
     def set_subset_data(self, subset_data):
+        self.warning(0)
+        if isinstance(subset_data, SqlTable):
+            if subset_data.approx_len() < AUTO_DL_LIMIT:
+                subset_data = Table(subset_data)
+            else:
+                self.warning(0, "Data subset does not support large Sql tables")
+                subset_data = None
         self.subset_data = self.move_primitive_metas_to_X(subset_data)
 
     # called when all signals are received, so the graph is updated only once
