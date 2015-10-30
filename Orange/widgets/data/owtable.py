@@ -27,7 +27,7 @@ from Orange.statistics import basic_stats
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
-from Orange.widgets.utils import colorpalette, datacaching
+from Orange.widgets.utils import datacaching
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.itemmodels import TableModel
 
@@ -368,8 +368,6 @@ class OWDataTable(widget.OWWidget):
     select_rows = Setting(True)
     auto_commit = Setting(True)
 
-    color_settings = Setting(None)
-    selected_schema_index = Setting(0)
     color_by_class = Setting(True)
     settingsHandler = DomainContextHandler(
         match_values=DomainContextHandler.MATCH_VALUES_ALL)
@@ -412,8 +410,6 @@ class OWDataTable(widget.OWWidget):
                      callback=self._on_distribution_color_changed)
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self._on_distribution_color_changed)
-        gui.button(box, self, "Set colors", self.set_colors, autoDefault=False,
-                   tooltip="Set the background color and color palette")
 
         box = gui.widgetBox(self.controlArea, "Selection")
 
@@ -425,9 +421,6 @@ class OWDataTable(widget.OWWidget):
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selected Rows", "Auto send is on")
 
-        dlg = self.create_color_dialog()
-        self.discPalette = dlg.getDiscretePalette("discPalette")
-
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
@@ -438,29 +431,6 @@ class OWDataTable(widget.OWWidget):
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)
-
-    def create_color_dialog(self):
-        c = colorpalette.ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        box = c.createBox("otherColors", "Other Colors")
-        c.createColorButton(box, "Default", "Default color",
-                            QtGui.QColor(self.dist_color))
-        c.setColorSchemas(self.color_settings, self.selected_schema_index)
-        return c
-
-    def set_colors(self):
-        dlg = self.create_color_dialog()
-        if dlg.exec():
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selectedSchemaIndex
-            self.discPalette = dlg.getDiscretePalette("discPalette")
-            self.dist_color = QtGui.QColor(dlg.getColor("Default"))
-            self.dist_color_RGB = (
-                self.dist_color.red(), self.dist_color.green(),
-                self.dist_color.blue(), self.dist_color.alpha()
-            )
-            if self.show_distributions:
-                self._on_distribution_color_changed()
 
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
@@ -544,7 +514,11 @@ class OWDataTable(widget.OWWidget):
 
         rowcount = data.approx_len()
 
-        color_schema = self.discPalette if self.color_by_class else None
+        if self.color_by_class and data.domain.class_var:
+            color_schema = [
+                QtGui.QColor(*c) for c in data.domain.class_var.colors]
+        else:
+            color_schema = None
         if self.show_distributions:
             view.setItemDelegate(
                 gui.TableBarItem(
@@ -688,13 +662,22 @@ class OWDataTable(widget.OWWidget):
 
     def _on_distribution_color_changed(self):
         for ti in range(self.tabs.count()):
-            color_schema = self.discPalette if self.color_by_class else None
+            widget = self.tabs.widget(ti)
+            model = widget.model()
+            while isinstance(model, QtGui.QAbstractProxyModel):
+                model = model.sourceModel()
+            data = model.source
+            if self.color_by_class and data.domain.class_var:
+                color_schema = [
+                    QtGui.QColor(*c) for c in data.domain.class_var.colors]
+            else:
+                color_schema = None
             if self.show_distributions:
                 delegate = gui.TableBarItem(self, color=self.dist_color,
                                             color_schema=color_schema)
             else:
                 delegate = QtGui.QStyledItemDelegate(self)
-            self.tabs.widget(ti).setItemDelegate(delegate)
+            widget.setItemDelegate(delegate)
         tab = self.tabs.currentWidget()
         if tab:
             tab.reset()
