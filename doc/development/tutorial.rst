@@ -29,18 +29,16 @@ a toolbox on the left:
 Each widget has a name description and a set of input/outputs
 (referred to as widget's meta description).
 
-.. 
-   This meta data is discovered at Orange Canvas application startup
-   leveraging setuptools/distribute and it's `entry points`_ protocol.
-   Orange Canvas looks for widgets using a `orange.widgets` entry point.
 
-   .. _`entry points`: http://pythonhosted.org/distribute/setuptools.html#dynamic-discovery-of-services-and-plugins
+This meta data is discovered at Orange Canvas application startup
+leveraging setuptools/distribute and it's `entry points`_ protocol.
+Orange Canvas looks for widgets using a ``orange.widgets`` entry point.
+
+.. _`entry points`: http://pythonhosted.org/distribute/setuptools.html#dynamic-discovery-of-services-and-plugins
 
 
 Defining a widget
 *****************
-
-.. Here we shall explore true facts about the OWWidget.
 
 :class:`~Orange.widgets.widget.OWWidget` is the base class of a widget
 in the Orange Canvas workflow.
@@ -123,14 +121,16 @@ widget functionality
            # Send the entered number on "Number" output
            self.send("Number", self.number)
 
-.. seealso:: :func:`Orange.widgets.gui.lineEdit`, :func:`Orange.widgets.widget.OWWidget.send`
+.. seealso::
+   :func:`Orange.widgets.gui.lineEdit`,
+   :func:`Orange.widgets.widget.OWWidget.send`
 
 By itself this widget seems uninteresting. We need some thing more.
 How about displaying a number.
 
 .. code-block:: python
 
-   from Orange.widgets widget, gui
+   from Orange.widgets import widget, gui
 
    class Print(widget.OWWidget):
        name = "Print"
@@ -163,7 +163,7 @@ the channel.
 
 Now we can use one widget to input a number and another to display it.
 
-One more 
+One more
 
 .. code-block:: python
 
