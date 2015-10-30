@@ -69,7 +69,8 @@ class RichTableDecorator(QIdentityProxyModel):
             for var in source.vars:
                 if isinstance(var, Orange.data.Variable):
                     labels.extend(var.attributes.keys())
-            self._labels = list(sorted(set(labels)))
+            self._labels = list(sorted(
+                {label for label in labels if not label.startswith("_")}))
         else:
             self._continuous = []
             self._labels = []
@@ -673,7 +674,8 @@ class OWDataTable(widget.OWWidget):
             labelnames = set()
             for a in model.source.domain:
                 labelnames.update(a.attributes.keys())
-            labelnames = sorted(list(labelnames))
+            labelnames = sorted(
+                [label for label in labelnames if not label.startswith("_")])
             self.set_corner_text(view, "\n".join([""] + labelnames))
         else:
             model.setRichHeaderFlags(RichTableDecorator.Name)
