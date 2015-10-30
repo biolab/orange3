@@ -18,13 +18,15 @@ Orange Documentation
    modules/evaluation
    modules/misc
 
-Development
-===========
+Widget Development
+==================
 
 .. toctree::
     :maxdepth: 2
 
+    development/tutorial
     development/widget
+    development/gui
 
 Widgets
 =======
