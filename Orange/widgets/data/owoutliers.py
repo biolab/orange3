@@ -39,6 +39,7 @@ class OWOutliers(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.data = None
+        self.n_inliers = self.n_outliers = None
 
         box = gui.widgetBox(self.controlArea, "Information")
         self.data_info_label = gui.widgetLabel(box, self.data_info_default)
@@ -134,6 +135,7 @@ class OWOutliers(widget.OWWidget):
     def commit(self):
         self.error()
         inliers = outliers = None
+        self.n_inliers = self.n_outliers = None
         if self.data is not None and len(self.data) > 0:
             try:
                 y_pred = self.detect_outliers()
@@ -148,6 +150,8 @@ class OWOutliers(widget.OWWidget):
                                  self.new_data, outliers_ind)
                 self.in_out_info_label.setText('%d inliers, %d outliers' %
                                                (len(inliers), len(outliers)))
+                self.n_inliers = len(inliers)
+                self.n_outliers = len(outliers)
 
         self.send("Inliers", inliers)
         self.send("Outliers", outliers)
@@ -182,6 +186,26 @@ class OWOutliers(widget.OWWidget):
             self.new_domain = self.data.domain
             self.new_data = self.data
 
+    def send_report(self):
+        if self.n_outliers is None or self.n_inliers is None:
+            return
+        self.report_items("Data",
+                          (("Input instances", len(self.data)),
+                           ("Inliers", self.n_inliers),
+                           ("Outliers", self.n_outliers)))
+        if self.outlier_method == 0:
+            self.report_items(
+                "Detection",
+                (("Detection method",
+                  "One class SVM with non-linear kernel (RBF)"),
+                 ("Regularization (nu)", self.nu),
+                 ("Kernel coefficient", self.gamma)))
+        else:
+            self.report_items(
+                "Detection",
+                (("Detection method", "Covariance estimator"),
+                 ("Contamination", self.cont),
+                 ("Support fraction", self.support_fraction)))
 
 def test_main():
     app = QtGui.QApplication([])

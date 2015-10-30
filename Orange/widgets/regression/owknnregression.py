@@ -93,6 +93,14 @@ class OWKNNRegression(widget.OWWidget):
         self.send("Learner", learner)
         self.send("Predictor", model)
 
+    def send_report(self):
+        self.report_items((("Name", self.learner_name),))
+        self.report_items("Model parameters", (
+            ("Number of neighbours", self.n_neighbors),
+            ("Metric", self.metrics[self.metric_index].capitalize())))
+        if self.data:
+            self.report_data("Data", self.data)
+
 
 if __name__ == "__main__":
     import sys

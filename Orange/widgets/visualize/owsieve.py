@@ -104,6 +104,7 @@ class OWSieveDiagram(OWWidget):
         # gui.button(optimizationButtons, self, "VizRank", callback = self.optimizationDlg.reshow, debuggingEnabled = 0, tooltip = "Find attribute groups with highest value dependency")
 
         gui.rubber(self.controlArea)
+        self.inline_graph_report()
 
         # self.wdChildDialogs = [self.optimizationDlg]        # used when running widget debugging
         # self.graphButton.clicked.connect(self.saveToFileCanvas)
@@ -111,13 +112,6 @@ class OWSieveDiagram(OWWidget):
         self.resize(800, 550)
         random.seed()
         self.graphButton.clicked.connect(self.save_graph)
-
-    def sendReport(self):
-        self.startReport("%s [%s, %s]" % (self.windowTitle(), self.attrX, self.attrY))
-        self.reportSettings("",
-                            [("X-Attribute", self.attrX), ("Y-Attribute", self.attrY),
-                             self.attrCondition != "(None)" and ("Condition", "%s = '%s'" % (self.attrCondition, self.attrConditionValue))])
-        # self.reportImage(lambda *x: OWChooseImageSizeDlg(self.canvas).saveImage(*x))
 
 
     # receive new data and update all fields
@@ -462,7 +456,15 @@ class OWSieveDiagram(OWWidget):
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
-# class OWSieveOptimization(OWMosaicOptimization, orngMosaic):
+    def get_widget_name_extension(self):
+        if self.data is not None:
+            return "{} vs {}".format(self.attrX, self.attrY)
+
+    def send_report(self):
+        self.report_plot(self.canvas)
+
+
+            # class OWSieveOptimization(OWMosaicOptimization, orngMosaic):
 #     settingsList = ["percentDataUsed", "ignoreTooSmallCells",
 #                     "timeLimit", "useTimeLimit", "lastSaveDirName", "projectionLimit", "useProjectionLimit"]
 #

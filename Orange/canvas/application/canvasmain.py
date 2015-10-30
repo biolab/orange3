@@ -400,6 +400,12 @@ class CanvasMainWindow(QMainWindow):
                     triggered=self.open_and_freeze_scheme
                     )
 
+        self.open_report_action = \
+            QAction(self.tr("Open Report"), self,
+                    objectName="action-open-report",
+                    triggered=self.open_report,
+                    )
+
         self.save_action = \
             QAction(self.tr("Save"), self,
                     objectName="action-save",
@@ -528,7 +534,8 @@ class CanvasMainWindow(QMainWindow):
 
         self.show_report_action = \
             QAction(self.tr("Show Report View"), self,
-                    triggered=self.show_report_view
+                    triggered=self.show_report_view,
+                    shortcut=QKeySequence(Qt.ShiftModifier | Qt.Key_R)
                     )
 
         if sys.platform == "darwin":
@@ -593,6 +600,7 @@ class CanvasMainWindow(QMainWindow):
         # File -> Open Recent submenu
         self.recent_menu = QMenu(self.tr("Open Recent"), file_menu)
         file_menu.addMenu(self.recent_menu)
+        file_menu.addAction(self.open_report_action)
         file_menu.addSeparator()
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
@@ -896,6 +904,11 @@ class CanvasMainWindow(QMainWindow):
         else:
             return QDialog.Rejected
 
+    def open_report(self):
+        from Orange.canvas.report.owreport import OWReport
+        rep = OWReport()
+        rep.open_report()
+
     def open_and_freeze_scheme(self):
         """
         Open a new scheme and freeze signal propagation. Return
@@ -947,6 +960,18 @@ class CanvasMainWindow(QMainWindow):
             scheme_doc_widget.setPath(filename)
 
             self.add_recent_scheme(new_scheme.title, filename)
+
+    def load_scheme_xml(self, xml):
+        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
+        scheme_load(new_scheme, xml)
+        self.set_new_scheme(new_scheme)
+        return QDialog.Accepted
+
+    def get_scheme_xml(self):
+        buffer = BytesIO()
+        curr_scheme = self.current_document().scheme()
+        curr_scheme.save_to(buffer, pretty=True, pickle_fallback=True)
+        return buffer.getvalue().decode("utf-8")
 
     def new_scheme_from(self, filename):
         """Create and return a new :class:`widgetsscheme.WidgetsScheme`

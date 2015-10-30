@@ -3,10 +3,6 @@ from PyQt4 import QtGui, QtCore, QtSvg
 from Orange.util import abstract
 from Orange.data.io import FileFormat
 
-from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
-from pyqtgraph.exporters.SVGExporter import SVGExporter
-from pyqtgraph.exporters.ImageExporter import ImageExporter
-
 
 @abstract
 class ImgFormat(FileFormat):
@@ -30,13 +26,19 @@ class ImgFormat(FileFormat):
     def _get_exporter():
         pass
 
+    @staticmethod
+    def _export(self, exporter, filename):
+        raise NotImplementedError(
+            "Descendants of ImgFormat must override method _export")
+
     @classmethod
     def write_image(cls, filename, scene):
-        if isinstance(scene, GraphicsWidget):
+        from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
+
+        try:
             exporter = cls._get_exporter()
-            exp = exporter(scene)
-            exp.export(filename)
-        else:
+            cls._export(exporter(scene), filename)
+        except:
             source = scene.itemsBoundingRect().adjusted(-15, -15, 15, 15)
             buffer = cls._get_buffer(source.size(), filename)
 
@@ -74,11 +76,17 @@ class PngFormat(ImgFormat):
 
     @staticmethod
     def _save_buffer(buffer, filename):
-        buffer.save(filename)
+        buffer.save(filename, "png")
 
     @staticmethod
     def _get_exporter():
+        from pyqtgraph.exporters.ImageExporter import ImageExporter
         return ImageExporter
+
+    @staticmethod
+    def _export(exporter, filename):
+        buffer = exporter.export(toBytes=True)
+        buffer.save(filename, "png")
 
 
 class SvgFormat(ImgFormat):
@@ -102,4 +110,9 @@ class SvgFormat(ImgFormat):
 
     @staticmethod
     def _get_exporter():
+        from pyqtgraph.exporters.SVGExporter import SVGExporter
         return SVGExporter
+
+    @staticmethod
+    def _export(exporter, filename):
+        exporter.export(filename)
