@@ -1872,7 +1872,6 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
                 master, value, callback, combo.activated[int],
                 CallFrontComboBox(combo, None, control2attributeDict))
     miscellanea(combo, hb, widget, **misc)
-    combo.emptyString = emptyString
     return combo
 
 

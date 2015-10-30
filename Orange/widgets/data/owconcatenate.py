@@ -50,11 +50,6 @@ class OWConcatenate(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    domain_opts = ("Union of attributes appearing in all tables",
-                   "Intersection of attributes in all tables")
-
-    id_roles = ("Class attribute", "Attribute", "Meta attribute")
-
     def __init__(self):
         super().__init__()
 
@@ -70,8 +65,11 @@ class OWConcatenate(widget.OWWidget):
             box, self.tr("When there is no primary table, " +
                          "the domain should be:"))
 
-        for opts in self.domain_opts:
-            gui.appendRadioButton(box, self.tr(opts))
+        gui.appendRadioButton(
+            box, self.tr("Union of attributes appearing in all tables"))
+
+        gui.appendRadioButton(
+            box, self.tr("Intersection of attributes in all tables"))
 
         gui.separator(box)
 
@@ -105,7 +103,11 @@ class OWConcatenate(widget.OWWidget):
 
         form.addRow(
             self.tr("Place"),
-            gui.comboBox(ibox, self, "source_column_role", items=self.id_roles)
+            gui.comboBox(
+                ibox, self, "source_column_role",
+                items=[self.tr("Class attribute"),
+                       self.tr("Attribute"),
+                       self.tr("Meta attribute")])
         )
 
         ibox.layout().addLayout(form)
@@ -115,13 +117,8 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        gui.separator(self.controlArea, 8)
-
-        box = gui.widgetBox(self.controlArea, True, orientation="horizontal",)
-        box.layout().addWidget(self.report_button)
-        gui.separator(box, 20)
         gui.button(
-            box, self, self.tr("Apply Changes"),
+            self.controlArea, self, self.tr("Apply Changes"),
             callback=self.apply, default=True
         )
 
@@ -181,18 +178,6 @@ class OWConcatenate(widget.OWWidget):
     def _merge_type_changed(self, ):
         if self.primary_data is None and self.more_data:
             self.apply()
-
-    def send_report(self):
-        items = OrderedDict()
-        if self.primary_data is not None:
-            items["Domain"] = "from primary data"
-        else:
-            items["Domain"] = self.tr(self.domain_opts[self.merge_type]).lower()
-        if self.append_source_column:
-            items["Source data ID"] = "{} (as {})".format(
-                self.source_attr_name,
-                self.id_roles[self.source_column_role].lower())
-        self.report_items(items)
 
 
 def concat(tables):
