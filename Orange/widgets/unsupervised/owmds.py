@@ -93,8 +93,8 @@ class OWMDS(widget.OWWidget):
     icon = "icons/MDS.svg"
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]
-    outputs = [("Data", Orange.data.Table, widget.Default),
-               ("Selected Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.Table, widget.Default),
+               ("Data", Orange.data.Table)]
 
     #: Initialization type
     PCA, Random = 0, 1
