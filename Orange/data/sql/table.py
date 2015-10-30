@@ -323,7 +323,9 @@ class SqlTable(table.Table):
         """Download SQL data and store it in memory as numpy matrices."""
         if limit and not partial and self.approx_len() > limit:
             raise ValueError("Too many rows to download the data into memory.")
-        X, Y, metas = [], [], []
+        X = [np.empty((0, len(self.domain.attributes)))]
+        Y = [np.empty((0, len(self.domain.class_vars)))]
+        metas = [np.empty((0, len(self.domain.metas)))]
         for row in islice(self, limit):
             X.append(row._x)
             Y.append(row._y)
