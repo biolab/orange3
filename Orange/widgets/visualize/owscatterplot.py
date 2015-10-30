@@ -231,15 +231,10 @@ class OWScatterPlot(OWWidget):
             return
 
         self.closeContext()
-        same_domain = \
-            self.data and data and \
-            data.domain.checksum() == self.data.domain.checksum()
+        same_domain = (self.data and data and
+                       data.domain.checksum() == self.data.domain.checksum())
         self.data = data
         self.data_metas_X = self.move_primitive_metas_to_X(data)
-
-        # TODO: adapt scatter plot to work on SqlTables (avoid use of X and Y)
-        if isinstance(self.data, SqlTable):
-            self.data.download_data()
 
         if not same_domain:
             self.init_attr_values()
