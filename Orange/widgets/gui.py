@@ -2273,9 +2273,9 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     :type master: OWWidget or OWComponent
     :param label: The button label
     :type label: str
-    :param label: The label used when auto-commit is on; default is
+    :param auto_label: The label used when auto-commit is on; default is
         `"Auto " + label`
-    :type label: str
+    :type auto_label: str
     :param commit: master's method to override ('commit' by default)
     :type commit: function
     :param callback: function to call whenever the checkbox's statechanged

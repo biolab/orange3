@@ -1,5 +1,3 @@
-import copy
-
 from PyQt4.QtCore import Qt, QAbstractTableModel, SIGNAL
 from PyQt4.QtGui import QStyledItemDelegate, QColor, QHeaderView, QFont, \
     QColorDialog, QTableView, qRgb, QImage
@@ -7,7 +5,7 @@ import numpy as np
 
 import Orange
 from Orange.widgets import widget, settings, gui
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, \
+from Orange.widgets.utils.colorpalette import \
     ContinuousPaletteGenerator, ColorPaletteDlg
 
 ColorRole = next(gui.OrangeUserRole)
@@ -230,6 +228,7 @@ class OWColor(widget.OWWidget):
     cont_data = settings.ContextSetting([])
     color_settings = settings.Setting(None)
     selected_schema_index = settings.Setting(0)
+    auto_apply = settings.Setting(True)
 
     want_main_area = False
 
@@ -243,13 +242,20 @@ class OWColor(widget.OWWidget):
                             orientation="horizontal")
         self.disc_model = DiscColorTableModel()
         self.disc_view = DiscreteTable(self.disc_model)
+        self.disc_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(self.disc_view)
 
         box = gui.widgetBox(self.controlArea, "Numeric variables",
                             orientation="horizontal")
         self.cont_model = ContColorTableModel()
         self.cont_view = ContinuousTable(self, self.cont_model)
+        self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(self.cont_view)
+
+        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        gui.auto_commit(box, self, "auto_apply", "Send data", box=box,
+                        checkbox_label="Resend data on every change  ")
+        gui.rubber(box)
 
     def set_data(self, data):
         self.closeContext()
@@ -306,6 +312,9 @@ class OWColor(widget.OWWidget):
             var.name = name
             if colors is not False:
                 var.colors = colors
+
+    def _on_data_changed(self, *args):
+        self.commit()
 
     def commit(self):
         self.send("Data", self.data)
