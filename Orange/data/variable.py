@@ -8,7 +8,7 @@ import collections
 
 from . import _variable
 
-from Orange.util import Registry
+from Orange.util import Registry, color_to_hex, hex_to_color
 
 
 # For storing unknowns
@@ -258,6 +258,7 @@ class Variable(metaclass=VariableMeta):
                 self._all_vars[name].append(self)
             else:
                 self._all_vars[name] = self
+        self._colors = None
 
     def make_proxy(self):
         """
@@ -438,6 +439,22 @@ class ContinuousVariable(Variable):
     def number_of_decimals(self):
         return self._number_of_decimals
 
+    @property
+    def colors(self):
+        if self._colors is None:
+            if "_colors" in self.attributes:
+                col1, col2, black = self.attributes["_colors"]
+                self._colors = (hex_to_color(col1), hex_to_color(col2), black)
+            else:
+                self._colors = ((0, 0, 255), (255, 255, 0), False)
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        col1, col2, black = self._colors = value
+        self.attributes["_colors"] = \
+            [color_to_hex(col1), color_to_hex(col2), black]
+
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
     def number_of_decimals(self, x):
@@ -509,6 +526,32 @@ class DiscreteVariable(Variable):
         self.ordered = ordered
         self.values = list(values)
         self.base_value = base_value
+
+    @property
+    def colors(self):
+        if self._colors is None:
+            if "_colors" in self.attributes:
+                self._colors = np.array(
+                    [hex_to_color(col) for col in self.attributes["_colors"]],
+                    dtype=np.int8)
+            else:
+                from Orange.widgets.utils.colorpalette import \
+                    ColorPaletteGenerator
+                self._colors = ColorPaletteGenerator.palette(self)
+            self._colors.flags.writeable = False
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        self._colors = value
+        self.attributes["_colors"] = [color_to_hex(col) for col in value]
+
+    def set_color(self, i, color):
+        self.colors = self.colors
+        self._colors.flags.writeable = True
+        self._colors[i, :] = color
+        self._colors.flags.writeable = False
+        self.attributes["_colors"][i] = color_to_hex(color)
 
     def __repr__(self):
         """

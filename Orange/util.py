@@ -102,6 +102,13 @@ def export_globals(globals, module_name):
                 not getattr(v, '__name__', k).startswith('_'))]  # neither marked internal
 
 
+def color_to_hex(color):
+    return "#{:02X}{:02X}{:02X}".format(*color)
+
+
+def hex_to_color(s):
+    return int(s[1:3], 16), int(s[3:5], 16), int(s[5:7], 16)
+
 # For best result, keep this at the bottom
 __all__ = export_globals(globals(), __name__)
 

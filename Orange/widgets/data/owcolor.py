@@ -102,7 +102,7 @@ class DiscColorTableModel(ColorTableModel):
         if col == 0:
             return ColorTableModel.setData(self, index, value, role)
         if role == ColorRole:
-            self.variables[row].colors[col - 1][:] = value[:3]
+            self.variables[row].set_color(col - 1, value[:3])
         elif role == Qt.EditRole:
             self.variables[row].values[col - 1] = value
         else:
@@ -261,23 +261,13 @@ class OWColor(widget.OWWidget):
             def create_part(variables):
                 vars = []
                 for i, var in enumerate(variables):
-                    if not (var.is_discrete or var.is_continuous):
-                        vars.append(var)
-                        continue
-                    var = var.make_proxy()
-                    if hasattr(var, "colors"):
-                        var.colors = copy.copy(var.colors)
-                    if var.is_discrete:
-                        var.values = var.values[:]
-                        if not hasattr(var, "colors"):
-                            n_values = len(var.values)
-                            palette = ColorPaletteGenerator(n_values)
-                            var.colors = palette.getRGB(range(n_values))
-                        self.disc_colors.append(var)
-                    else:
-                        if not hasattr(var, "colors"):
-                            var.colors = ((0, 0, 255), (255, 255, 0), False)
-                        self.cont_colors.append(var)
+                    if var.is_discrete or var.is_continuous:
+                        var = var.make_proxy()
+                        if var.is_discrete:
+                            var.values = var.values[:]
+                            self.disc_colors.append(var)
+                        else:
+                            self.cont_colors.append(var)
                     vars.append(var)
                 return vars
 
@@ -296,21 +286,26 @@ class OWColor(widget.OWWidget):
         self.commit()
 
     def storeSpecificSettings(self):
+        # Store the colors that were changed -- but not others
         self.current_context.disc_data = \
-            [(var.name, var.values, var.colors) for var in self.disc_colors]
+            [(var.name, var.values, "_colors" in var.attributes and var.colors)
+             for var in self.disc_colors]
         self.current_context.cont_data = \
-            [(var.name, var.colors) for var in self.cont_colors]
+            [(var.name, "_colors" in var.attributes and var.colors)
+             for var in self.cont_colors]
 
     def retrieveSpecificSettings(self):
         disc_data = getattr(self.current_context, "disc_data", ())
         for var, (name, values, colors) in zip(self.disc_colors, disc_data):
             var.name = name
             var.values = values[:]
-            var.colors = colors[:]
+            if colors is not False:
+                var.colors = colors
         cont_data = getattr(self.current_context, "cont_data", ())
         for var, (name, colors) in zip(self.cont_colors, cont_data):
             var.name = name
-            var.colors = colors[:]
+            if colors is not False:
+                var.colors = colors
 
     def commit(self):
         self.send("Data", self.data)
