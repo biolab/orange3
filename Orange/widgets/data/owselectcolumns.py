@@ -300,14 +300,14 @@ class OWSelectAttributes(widget.OWWidget):
     outputs = [("Data", Table), ("Features", widget.AttributeList)]
 
     want_main_area = False
-    want_control_area = False
+    want_control_area = True
 
     settingsHandler = SelectAttributesDomainContextHandler()
     domain_role_hints = ContextSetting({})
 
     def __init__(self):
         super().__init__()
-        self.controlArea = QtGui.QWidget(self.leftWidgetPart)
+        self.controlArea = QtGui.QWidget(self.controlArea)
         self.layout().addWidget(self.controlArea)
         layout = QtGui.QGridLayout()
         self.controlArea.setLayout(layout)

@@ -197,33 +197,29 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         gui.rubber(self.warning_bar)
         self.warning_bar.setVisible(False)
 
-        self.topWidgetPart = gui.widgetBox(self,
-                                           orientation="horizontal", margin=0)
-        self.leftWidgetPart = gui.widgetBox(self.topWidgetPart,
-                                            orientation="vertical", margin=0)
-        if self.want_main_area:
-            self.leftWidgetPart.setSizePolicy(
-                QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
-            self.leftWidgetPart.updateGeometry()
-            self.mainArea = gui.widgetBox(self.topWidgetPart,
-                                          orientation="vertical",
-                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-                                                                 QSizePolicy.Expanding),
-                                          margin=0)
-            self.mainArea.layout().setMargin(4)
-            self.mainArea.updateGeometry()
+        hbox = gui.widgetBox(self, orientation="horizontal", margin=0)
+        self.want_main_area = self.want_graph or self.want_main_area
 
         if self.want_control_area:
-            self.controlArea = gui.widgetBox(self.leftWidgetPart,
-                                             orientation="vertical", margin=4)
-
-        if self.want_graph:
-            graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
-                                                  orientation="horizontal", margin=4)
-            self.graphButton = gui.button(graphButtonBackground,
-                                          self, "&Save Graph")
-            self.graphButton.setAutoDefault(0)
-
+            self.controlArea = gui.widgetBox(hbox,
+                                             orientation="vertical",
+                                             margin=4)
+            if self.want_graph:
+                leftSide = self.controlArea
+                self.controlArea = gui.widgetBox(leftSide,
+                                                 orientation="vertical",
+                                                 margin=4)
+                self.graphButton = gui.button(leftSide, None,"$Save Graph")
+                self.graphButton.setAutoDefault(0)
+            if self.want_main_area:
+                self.controlArea.setSizePolicy(QSizePolicy.Fixed,
+                                               QSizePolicy.MinimumExpanding)
+        if self.want_main_area:
+            self.mainArea = gui.widgetBox(hbox,
+                                          orientation="vertical",
+                                          margin=4,
+                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
+                                                                 QSizePolicy.Expanding))
         if self.want_status_bar:
             self.widgetStatusArea = QFrame(self)
             self.statusBarIconArea = QFrame(self)
