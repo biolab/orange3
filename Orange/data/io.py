@@ -2,6 +2,7 @@ import re
 import logging
 import subprocess
 from os import path
+from ast import literal_eval
 from itertools import chain, repeat
 from functools import lru_cache
 from collections import OrderedDict
@@ -88,7 +89,8 @@ def detect_encoding(filename):
 class Flags:
     """Parser for column flags (i.e. third header row)"""
     DELIMITER = ' '
-    _RE_SPLIT = re.compile(r'(?<!\\)' + DELIMITER)
+    _RE_SPLIT = re.compile(r'(?<!\\)' + DELIMITER).split
+    _RE_ATTR_UNQUOTED_STR = re.compile(r'^[a-zA-Z_]').match
     ALL = OrderedDict((
         ('class',     'c'),
         ('ignore',    'i'),
@@ -107,7 +109,9 @@ class Flags:
             if self._RE_ALL.match(flag):
                 if '=' in flag:
                     k, v = flag.split('=', 1)
-                    self.attributes[k] = v
+                    self.attributes[k] = (v if Flags._RE_ATTR_UNQUOTED_STR(v) else
+                                          literal_eval(v) if v else
+                                          '')
                 else:
                     setattr(self, flag, True)
                     setattr(self, self.ALL.get(flag, ''), True)
@@ -122,7 +126,7 @@ class Flags:
     @staticmethod
     def split(s):
         return [i.replace('\\' + Flags.DELIMITER, Flags.DELIMITER)
-                for i in Flags._RE_SPLIT.split(s)]
+                for i in Flags._RE_SPLIT(s)]
 
 
 # Matches discrete specification where all the values are listed, space-separated
