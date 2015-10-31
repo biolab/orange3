@@ -179,7 +179,7 @@ class OWFile(widget.OWWidget):
         vbox = gui.widgetBox(self.controlArea, "Data File / URL",
                              addSpace=True)
         box = gui.widgetBox(vbox, orientation=0)
-        self.file_combo = QtGui.QComboBox(box)
+        self.file_combo = QtGui.QComboBox(box, sizeAdjustPolicy=QtGui.QComboBox.AdjustToContents)
         self.file_combo.setMinimumWidth(300)
         self.file_combo.setEditable(True)
         self.file_combo.lineEdit().setStyleSheet("padding-left: 1px;")
