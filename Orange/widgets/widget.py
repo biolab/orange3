@@ -94,7 +94,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     want_main_area = True
     want_control_area = True
     want_graph = False
-    show_save_graph = True
     want_status_bar = False
     no_report = False
 
@@ -218,7 +217,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             self.controlArea = gui.widgetBox(self.leftWidgetPart,
                                              orientation="vertical", margin=4)
 
-        if self.want_graph and self.show_save_graph:
+        if self.want_graph:
             graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
                                                   orientation="horizontal", margin=4)
             self.graphButton = gui.button(graphButtonBackground,
