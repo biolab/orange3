@@ -533,7 +533,7 @@ class DiscreteVariable(Variable):
             if "_colors" in self.attributes:
                 self._colors = np.array(
                     [hex_to_color(col) for col in self.attributes["_colors"]],
-                    dtype=np.int8)
+                    dtype=np.uint8)
             else:
                 from Orange.widgets.utils.colorpalette import \
                     ColorPaletteGenerator
