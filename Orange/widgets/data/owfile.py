@@ -377,6 +377,8 @@ class OWFile(widget.OWWidget):
         self.loaded_file = ""
 
         data = None
+        progress = gui.ProgressBar(self, 3)
+        progress.advance()
         try:
             # TODO handle self.new_variables
             data = Table(fn)
@@ -398,6 +400,8 @@ class OWFile(widget.OWWidget):
             self.error(err_value)
             self.info.setText('Data was not loaded due to an error.\nError:')
             self.warnings.setText(err_value)
+        finally:
+            progress.finish()
 
         if data is None:
             self.dataReport = None
