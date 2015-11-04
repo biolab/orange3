@@ -70,14 +70,15 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # Widget Meta Description
     # -----------------------
 
-    #: Widget name (:class:`str`)
+    #: Widget name (:class:`str`) as presented in the Canvas
     name = None
     id = None
     category = None
     version = None
-    #: Short widget description (optional, displayed in canvas online help).
+    #: Short widget description (:class:`str` optional), displayed in
+    #: canvas help tooltips.
     description = None
-    #: A longer widget description (optional)
+    #: A longer widget description (:class:`str` optional)
     long_description = None
     #: Widget icon path relative to the defining module
     icon = "icons/Unknown.png"
@@ -105,10 +106,11 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # ----------------------------------
 
     #: Should the widget have basic layout
-    #: (If this flag is false then all the following flags are also ignored).
+    #: (If this flag is false then the `want_main_area` and
+    #: `want_control_area` are ignored).
     want_basic_layout = True
     #: Should the widget construct a `mainArea` (this is a resizable
-    #: area left of the controlArea).
+    #: area to the right of the `controlArea`).
     want_main_area = True
     #: Should the widget construct a `controlArea`.
     want_control_area = True
@@ -134,13 +136,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     savedWidgetGeometry = settings.Setting(None)
 
-    #: A list of user advice messages to display to the user.
-    #: When a widget is first shown a message tom this list is selected
+    #: A list of advice messages (:class:`Message`) to display to the user.
+    #: When a widget is first shown a message from this list is selected
     #: for display. If a user accepts (clicks 'Ok. Got it') the choice is
     #: recorded and the message is never shown again (closing the message
     #: will not mark it as seen). Messages can be displayed again by pressing
     #: Shift + F1
-    #: :type: List[Message]
+    #:
+    #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
     def __new__(cls, *args, **kwargs):
@@ -379,6 +382,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.activateWindow()
 
     def send(self, signalName, value, id=None):
+        """
+        Send a `value` on the `signalName` widget output.
+
+        An output with `signalName` must be defined in the class ``outputs``
+        list.
+        """
         if not any(s.name == signalName for s in self.outputs):
             raise ValueError('{} is not a valid output signal for widget {}'.format(
                 signalName, self.name))
@@ -857,7 +866,7 @@ class Message(object):
     :param str moreurl:
         An url to open when a user clicks a 'Learn more' button.
 
-    .. seealso:: OWWidget.UserAdviceMessages
+    .. seealso:: :const:`OWWidget.UserAdviceMessages`
 
     """
     #: QStyle.SP_MessageBox* pixmap enums repeated for easier access
