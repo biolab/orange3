@@ -292,6 +292,7 @@ class OWDistributions(widget.OWWidget):
 
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
+        bottomaxis.resizeEvent()
 
         self.set_left_axis_name()
         if var and var.is_continuous:
@@ -334,6 +335,7 @@ class OWDistributions(widget.OWWidget):
         self.plot_prob.clear()
         self._legend.clear()
 
+
         if self.show_prob:
             self.plot.showAxis('right')
         else:
@@ -341,6 +343,7 @@ class OWDistributions(widget.OWWidget):
 
         bottomaxis = self.plot.getAxis("bottom")
         bottomaxis.setLabel(var.name)
+        bottomaxis.resizeEvent()
 
         cvar_values = cvar.values
         palette = colorpalette.ColorPaletteGenerator(len(cvar_values))
@@ -473,13 +476,15 @@ class OWDistributions(widget.OWWidget):
         self._legend.show()
 
     def set_left_axis_name(self):
-        set_label = self.plot.getAxis("left").setLabel
+        leftaxis = self.plot.getAxis("left")
+        set_label = leftaxis.setLabel
         if self.var and self.var.is_continuous:
             set_label(["Density", "Relative density"]
                       [self.cvar is not None and self.relative_freq])
         else:
             set_label(["Frequency", "Relative frequency"]
                       [self.cvar is not None and self.relative_freq])
+        leftaxis.resizeEvent()
 
     def enable_disable_rel_freq(self):
         self.cb_prob.setDisabled(self.var is None or self.cvar is None)
