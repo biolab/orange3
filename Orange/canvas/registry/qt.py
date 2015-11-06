@@ -303,25 +303,17 @@ def tooltip_helper(desc):
         tooltip.append("{0}".format(
                             escape(desc.description)))
 
-    inputs_fmt = "<li>{name} ({class_name})</li>"
-
-    def type_str(type_name):
-        if type_name.startswith("__builtin__."):
-            return type_name[len("__builtin__."):]
-        else:
-            return type_name
+    inputs_fmt = "<li>{name}</li>"
 
     if desc.inputs:
-        inputs = "".join(inputs_fmt.format(name=inp.name,
-                                           class_name=type_str(inp.type))
+        inputs = "".join(inputs_fmt.format(name=inp.name)
                          for inp in desc.inputs)
         tooltip.append("Inputs:<ul>{0}</ul>".format(inputs))
     else:
         tooltip.append("No inputs")
 
     if desc.outputs:
-        outputs = "".join(inputs_fmt.format(name=out.name,
-                                            class_name=type_str(out.type))
+        outputs = "".join(inputs_fmt.format(name=out.name)
                           for out in desc.outputs)
         tooltip.append("Outputs:<ul>{0}</ul>".format(outputs))
     else:
