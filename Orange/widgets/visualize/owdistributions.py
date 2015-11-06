@@ -335,7 +335,6 @@ class OWDistributions(widget.OWWidget):
         self.plot_prob.clear()
         self._legend.clear()
 
-
         if self.show_prob:
             self.plot.showAxis('right')
         else:
