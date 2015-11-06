@@ -791,8 +791,8 @@ PREPROCESSORS = [
     ),
     PreprocessAction(
         "Normalize", "orange.preprocess.scale", "Scaling",
-        Description("Center and Scale Features",
-                    icon_path("Continuize.svg")),
+        Description("Normalize Features",
+                    icon_path("Normalize.svg")),
         Scale
     ),
     PreprocessAction(
