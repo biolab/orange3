@@ -1,5 +1,5 @@
-Save
-====
+Save Data
+=========
 
 ![Save widget icon](icons/save.png)
 
@@ -21,7 +21,7 @@ Signals
 Description
 -----------
 
-**Save** widget considers a data set provided in the input channel and saves
+**Save Data** widget considers a data set provided in the input channel and saves
 it to a data file with the specified name. It can save the data as both tab-delimited
 and comma-separated files.
 
@@ -40,7 +40,7 @@ Example
 -------
 
 In the workflow below we load the data into a **Scatter Plot** widget, where
-we select a subset of the data instances and push them to the **Save** widget to
+we select a subset of the data instances and push them to the **Save Data** widget to
 store them in a file.
 
 <img src="images/Save-Workflow.png" alt="image" width="600">
