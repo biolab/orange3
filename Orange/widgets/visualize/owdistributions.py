@@ -155,48 +155,48 @@ class OWDistributions(widget.OWWidget):
             orientation="horizontal",
             callback=self._on_relative_freq_changed)
 
-        plotview = pg.PlotWidget(background=None)
-        plotview.setRenderHint(QtGui.QPainter.Antialiasing)
-        self.mainArea.layout().addWidget(plotview)
+        self.plotview = pg.PlotWidget(background=None)
+        self.plotview.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.mainArea.layout().addWidget(self.plotview)
         w = QtGui.QLabel()
         w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
-
-        self.plot = pg.PlotItem()
-        self.plot.hideButtons()
-        plotview.setCentralItem(self.plot)
+        self.ploti = pg.PlotItem()
+        self.plot = self.ploti.vb
+        self.ploti.hideButtons()
+        self.plotview.setCentralItem(self.ploti)
 
         self.plot_prob = pg.ViewBox()
-        self.plot.hideAxis('right')
-        self.plot.scene().addItem(self.plot_prob)
-        self.plot.getAxis("right").linkToView(self.plot_prob)
-        self.plot.getAxis("right").setLabel("Probability")
+        self.ploti.hideAxis('right')
+        self.ploti.scene().addItem(self.plot_prob)
+        self.ploti.getAxis("right").linkToView(self.plot_prob)
+        self.ploti.getAxis("right").setLabel("Probability")
         self.plot_prob.setZValue(10)
-        self.plot_prob.setXLink(self.plot)
+        self.plot_prob.setXLink(self.ploti)
         self.update_views()
-        self.plot.vb.sigResized.connect(self.update_views)
+        self.ploti.vb.sigResized.connect(self.update_views)
         self.plot_prob.setRange(yRange=[0,1])
 
         def disable_mouse(plot):
             plot.setMouseEnabled(False, False)
             plot.setMenuEnabled(False)
 
-        disable_mouse(self.plot.getViewBox())
+        disable_mouse(self.plot)
         disable_mouse(self.plot_prob)
 
         pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
         for axis in ("left", "bottom"):
-            self.plot.getAxis(axis).setPen(pen)
+            self.ploti.getAxis(axis).setPen(pen)
 
         self._legend = LegendItem()
-        self._legend.setParentItem(self.plot.getViewBox())
+        self._legend.setParentItem(self.plot)
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
         self.graphButton.clicked.connect(self.save_graph)
 
     def update_views(self):
-        self.plot_prob.setGeometry(self.plot.vb.sceneBoundingRect())
-        self.plot_prob.linkedViewChanged(self.plot.vb, self.plot_prob.XAxis)
+        self.plot_prob.setGeometry(self.plot.sceneBoundingRect())
+        self.plot_prob.linkedViewChanged(self.plot, self.plot_prob.XAxis)
 
     def set_data(self, data):
         self.closeContext()
@@ -289,9 +289,9 @@ class OWDistributions(widget.OWWidget):
         assert len(dist) > 0
         self.plot.clear()
         self.plot_prob.clear()
-        self.plot.hideAxis('right')
+        self.ploti.hideAxis('right')
 
-        bottomaxis = self.plot.getAxis("bottom")
+        bottomaxis = self.ploti.getAxis("bottom")
         bottomaxis.setLabel(var.name)
         bottomaxis.resizeEvent()
 
@@ -335,13 +335,14 @@ class OWDistributions(widget.OWWidget):
         self.plot.clear()
         self.plot_prob.clear()
         self._legend.clear()
+        self.tooltip_items = []
 
         if self.show_prob:
-            self.plot.showAxis('right')
+            self.ploti.showAxis('right')
         else:
-            self.plot.hideAxis('right')
+            self.ploti.hideAxis('right')
 
-        bottomaxis = self.plot.getAxis("bottom")
+        bottomaxis = self.ploti.getAxis("bottom")
         bottomaxis.setLabel(var.name)
         bottomaxis.resizeEvent()
 
@@ -476,7 +477,7 @@ class OWDistributions(widget.OWWidget):
         self._legend.show()
 
     def set_left_axis_name(self):
-        leftaxis = self.plot.getAxis("left")
+        leftaxis = self.ploti.getAxis("left")
         set_label = leftaxis.setLabel
         if self.var and self.var.is_continuous:
             set_label(["Density", "Relative density"]
