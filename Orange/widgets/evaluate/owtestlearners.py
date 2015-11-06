@@ -22,6 +22,7 @@ import Orange.regression
 from Orange.base import Learner
 from Orange.evaluation import scoring
 from Orange.preprocess.preprocess import Preprocess
+from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
 
 
@@ -160,6 +161,8 @@ class OWTestLearners(widget.OWWidget):
         self.data = None
         self.test_data = None
         self.preprocessor = None
+        self.train_data_missing_vals = False
+        self.test_data_missing_vals = False
 
         #: An Ordered dictionary with current inputs and their testing
         #: results.
@@ -251,6 +254,16 @@ class OWTestLearners(widget.OWWidget):
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
+        self.warning(4)
+        self.train_data_missing_vals = data is not None and \
+                                       np.isnan(data.Y).any()
+        if self.train_data_missing_vals or self.test_data_missing_vals:
+            self.warning(4, self._get_missing_data_warning(
+                self.train_data_missing_vals, self.test_data_missing_vals
+            ))
+            if data:
+                data = RemoveNaNClasses(data)
+
         self.data = data
         self.closeContext()
         if data is not None:
@@ -276,9 +289,24 @@ class OWTestLearners(widget.OWWidget):
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
+        self.warning(4)
+        self.test_data_missing_vals = data is not None and \
+                                      np.isnan(data.Y).any()
+        if self.train_data_missing_vals or self.test_data_missing_vals:
+            self.warning(4, self._get_missing_data_warning(
+                self.train_data_missing_vals, self.test_data_missing_vals
+            ))
+            if data:
+                data = RemoveNaNClasses(data)
+
         self.test_data = data
         if self.resampling == OWTestLearners.TestOnTest:
             self._invalidate()
+
+    def _get_missing_data_warning(self, train_missing, test_missing):
+        return "Instances with unknown target values were removed from{}data"\
+            .format(train_missing * test_missing * " "
+                    or train_missing * " train " or test_missing * " test ")
 
     def set_preprocessor(self, preproc):
         """

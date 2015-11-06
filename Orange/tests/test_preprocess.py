@@ -3,6 +3,8 @@ from unittest.mock import Mock, MagicMock, patch
 import numpy as np
 
 import Orange
+from Orange.data import Domain, Table, DiscreteVariable
+from Orange.preprocess import RemoveNaNClasses
 
 
 class TestPreprocess(unittest.TestCase):
@@ -52,3 +54,24 @@ class RemoveConstant(unittest.TestCase):
         data = Orange.data.Table("iris")
         d = Orange.preprocess.preprocess.RemoveConstant(data)
         self.assertEqual(len(d.domain.attributes), 4)
+
+
+class TestRemoveNanClass(unittest.TestCase):
+    def test_remove_nan_classes(self):
+        table = Table("imports-85")
+        self.assertTrue(np.isnan(table.Y).any())
+        table = RemoveNaNClasses(table)
+        self.assertTrue(not np.isnan(table.Y).any())
+
+    def test_remove_nan_classes_multiclass(self):
+        domain = Domain([DiscreteVariable("a", values="01")],
+                        [DiscreteVariable("b", values="01"),
+                        DiscreteVariable("c", values="01")])
+        table = Table(domain, [[0, 1, np.nan],
+                               [1, np.nan, 0],
+                               [1, 0, 1],
+                               [1, np.nan, np.nan]])
+        table = RemoveNaNClasses(table)
+        self.assertTrue(not np.isnan(table).any())
+        self.assertEqual(table.domain, domain)
+        self.assertEqual(len(table), 1)

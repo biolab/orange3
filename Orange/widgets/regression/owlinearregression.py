@@ -1,4 +1,5 @@
 from itertools import chain
+import numpy as np
 from PyQt4.QtGui import QLayout
 from PyQt4.QtCore import Qt
 
@@ -7,6 +8,7 @@ from Orange.regression.linear import (
     LassoRegressionLearner, LinearModel, LinearRegressionLearner,
     RidgeRegressionLearner)
 from Orange.preprocess.preprocess import Preprocess
+from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.sql import check_sql_input
 
@@ -103,7 +105,20 @@ class OWLinearRegression(widget.OWWidget):
 
     def commit(self):
         alpha = self.alphas[self.alpha_index]
-        args = {"preprocessors": self.preprocessors}
+        preprocessors = self.preprocessors
+        if self.data is not None and np.isnan(self.data.Y).any():
+            self.warning(0, "Missing values of target variable(s)")
+            if not self.preprocessors:
+                if self.reg_type == OWLinearRegression.OLS:
+                    preprocessors = LinearRegressionLearner.preprocessors
+                elif self.reg_type == OWLinearRegression.Ridge:
+                    preprocessors = RidgeRegressionLearner.preprocessors
+                else:
+                    preprocessors = LassoRegressionLearner.preprocessors
+            else:
+                preprocessors = list(self.preprocessors)
+            preprocessors.append(RemoveNaNClasses())
+        args = {"preprocessors": preprocessors}
         if self.reg_type == OWLinearRegression.OLS:
             learner = LinearRegressionLearner(**args)
         elif self.reg_type == OWLinearRegression.Ridge:

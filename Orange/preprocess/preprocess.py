@@ -13,7 +13,8 @@ from . import impute, discretize
 from Orange.statistics import distribution
 from ..misc.enum import Enum
 
-__all__ = ["Continuize", "Discretize", "Impute", "SklImpute", "Normalize", "Randomize"]
+__all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
+           "Normalize", "Randomize", "RemoveNaNClasses"]
 
 
 class Preprocess:
@@ -185,6 +186,32 @@ class RemoveConstant(Preprocess):
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
+
+
+class RemoveNaNClasses(Preprocess):
+    """
+    Construct preprocessor that removes examples with missing class
+    from the data set.
+    """
+
+    def __call__(self, data):
+        """
+        Remove rows that contain NaN in any class variable from the data set
+        and return the resulting data table.
+
+        Parameters
+        ----------
+        data : an input data set
+
+        Returns
+        -------
+        data : data set without rows with missing classes
+        """
+        if len(data.Y.shape) > 1:
+            nan_cls = np.any(np.isnan(data.Y), axis=1)
+        else:
+            nan_cls = np.isnan(data.Y)
+        return Table(data.domain, data, np.where(nan_cls == False))
 
 
 class Normalize(Preprocess):
