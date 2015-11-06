@@ -5,7 +5,7 @@ import numpy
 import pyqtgraph as pg
 
 from Orange.data import Table, Domain, StringVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
 import Orange.projection
 from Orange.widgets import widget, gui, settings
@@ -144,6 +144,15 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
+        self.information(0)
+        if isinstance(data, SqlTable):
+            if data.approx_len() < AUTO_DL_LIMIT:
+                data = Table(data)
+            elif not remotely:
+                self.information(0, "Data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(2000, partial=True)
+                data = Table(data_sample)
         self.data = data
         self.fit()
 
@@ -156,7 +165,7 @@ class OWPCA(widget.OWWidget):
         if self.normalize:
             data = Normalize(data)
         self._transformed = None
-        if remotely and isinstance(data, SqlTable):
+        if isinstance(data, SqlTable): # data was big and remote available
             self.sampling_box.setVisible(True)
             self.start_button.setText("Start remote computation")
             self.start_button.setEnabled(True)
