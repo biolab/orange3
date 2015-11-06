@@ -9,7 +9,7 @@ from Orange.data.io import FileFormat
 
 
 class OWSave(widget.OWWidget):
-    name = "Save"
+    name = "Save Data"
     description = "Save data to an output file."
     icon = "icons/Save.svg"
     author = "Martin Frlin"
