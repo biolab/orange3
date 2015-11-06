@@ -1,8 +1,8 @@
 import copy
 
-from PyQt4.QtCore import Qt, QAbstractTableModel, SIGNAL, QModelIndex
+from PyQt4.QtCore import Qt, QAbstractTableModel, SIGNAL
 from PyQt4.QtGui import QStyledItemDelegate, QColor, QHeaderView, QFont, \
-    QColorDialog, QTableView, QPixmap, qRgb, QImage
+    QColorDialog, QTableView, qRgb, QImage
 import numpy as np
 
 import Orange
@@ -11,9 +11,6 @@ from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, \
     ContinuousPaletteGenerator, ColorPaletteDlg
 
 ColorRole = next(gui.OrangeUserRole)
-
-def _encode_color(color):
-    return "#{}{}{}".format(*[("0" + hex(x)[2:])[-2:] for x in color])
 
 
 class HorizontalGridDelegate(QStyledItemDelegate):
@@ -29,10 +26,17 @@ class HorizontalGridDelegate(QStyledItemDelegate):
 class ColorTableModel(QAbstractTableModel):
     def __init__(self):
         QAbstractTableModel.__init__(self)
-        self.colors = []
+        self.variables = []
 
-    def set_data(self, colors):
-        self.colors = colors
+    @staticmethod
+    def _encode_color(color):
+        return "#{}{}{}".format(*[("0" + hex(x)[2:])[-2:] for x in color])
+
+    def flags(self, _):
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def set_data(self, variables):
+        self.variables = variables
         self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
                   self.index(0, 0), self.index(self.n_columns(), self.n_rows()))
 
@@ -43,13 +47,13 @@ class ColorTableModel(QAbstractTableModel):
         return 0 if parent.isValid() else self.n_columns()
 
     def n_rows(self):
-        return len(self.colors)
+        return len(self.variables)
 
     def data(self, index, role=Qt.DisplayRole):
         # Only valid for the first column
-        row, col = index.row(), index.column()
-        if role == Qt.DisplayRole:
-            return self.colors[row][0]
+        row = index.row()
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            return self.variables[row].name
         if role == Qt.FontRole:
             font = QFont()
             font.setBold(True)
@@ -57,40 +61,56 @@ class ColorTableModel(QAbstractTableModel):
         if role == Qt.TextAlignmentRole:
             return Qt.AlignRight | Qt.AlignVCenter
 
+    def setData(self, index, value, role):
+        # Only valid for the first column
+        if role == Qt.EditRole:
+            self.variables[index.row()].name = value
+        else:
+            return False
+        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        return True
+
 
 class DiscColorTableModel(ColorTableModel):
     def n_columns(self):
-        return bool(self.colors) and \
-               1 + max(len(labels) for _, labels, __ in self.colors)
+        return bool(self.variables) and \
+               1 + max(len(var.values) for var in self.variables)
 
     def data(self, index, role=Qt.DisplayRole):
         row, col = index.row(), index.column()
         if col == 0:
             return ColorTableModel.data(self, index, role)
-        name, labels, colors = self.colors[row]
-        if col > len(labels):
+        var = self.variables[row]
+        if col > len(var.values):
             return
-        if role == Qt.DisplayRole:
-            return labels[col - 1]
-        color = colors[col - 1]
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            return var.values[col - 1]
+        color = var.colors[col - 1]
         if role == Qt.DecorationRole:
             return QColor(*color)
         if role == Qt.ToolTipRole:
-            return _encode_color(color)
+            return self._encode_color(color)
         if role == ColorRole:
-            return color
+            return var.colors[col - 1]
 
     # noinspection PyMethodOverriding
     def setData(self, index, value, role):
         row, col = index.row(), index.column()
+        if col == 0:
+            return ColorTableModel.setData(self, index, value, role)
         if role == ColorRole:
-            self.colors[row][2][col - 1][:] = value[:3]
-            self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                      index, index)
+            self.variables[row].colors[col - 1][:] = value[:3]
+        elif role == Qt.EditRole:
+            self.variables[row].values[col - 1] = value
+        else:
+            return False
+        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        return True
 
 
 class ContColorTableModel(ColorTableModel):
-    def n_columns(self):
+    @staticmethod
+    def n_columns():
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
@@ -99,29 +119,97 @@ class ContColorTableModel(ColorTableModel):
             return ColorTableModel.data(self, index, role)
         if col > 1:
             return
-        colors = self.colors[row][1]
+        var = self.variables[row]
         if role == Qt.DecorationRole:
-            continuous_palette = ContinuousPaletteGenerator(*colors)
+            continuous_palette = ContinuousPaletteGenerator(*var.colors)
             line = continuous_palette.getRGB(np.arange(0, 1, 1 / 256))
-            data = np.arange(0, 256, dtype=np.int8).reshape(1, 256).repeat(16, 0)
+            data = np.arange(0, 256, dtype=np.int8).\
+                reshape((1, 256)).\
+                repeat(16, 0)
             img = QImage(data, 256, 16, QImage.Format_Indexed8)
             img.setColorCount(256)
             img.setColorTable([qRgb(*x) for x in line])
             img.data = data
             return img
         if role == Qt.ToolTipRole:
-            return "{} - {}".format(_encode_color(colors[0]),
-                                    _encode_color(colors[1]))
+            return "{} - {}".format(self._encode_color(var.colors[0]),
+                                    self._encode_color(var.colors[1]))
         if role == ColorRole:
-            return colors
+            return var.colors
 
     # noinspection PyMethodOverriding
     def setData(self, index, value, role):
         row, col = index.row(), index.column()
+        if col == 0:
+            return ColorTableModel.setData(self, index, value, role)
         if role == ColorRole:
-            self.colors[row][1] = value
-            self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                      index, index)
+            self.variables[row].colors = value
+        else:
+            return False
+        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        return True
+
+
+class TableWithMouse(QTableView):
+    def __init__(self, model):
+        QTableView.__init__(self)
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+        self.setShowGrid(False)
+        self.setSelectionMode(QTableView.NoSelection)
+        self.setItemDelegate(HorizontalGridDelegate())
+        self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
+        self.setModel(model)
+
+    def mouseReleaseEvent(self, ev):
+        index = self.indexAt(ev.pos())
+        rect = self.visualRect(index)
+        self.handle_click(index, ev.pos().x() - rect.x())
+
+
+class DiscreteTable(TableWithMouse):
+    def handle_click(self, index, x_offset):
+        if index.column() == 0 or x_offset > 24:
+            self.edit(index)
+        else:
+            self.change_color(index)
+
+    def change_color(self, index):
+        color = self.model().data(index, ColorRole)
+        if color is None:
+            return
+        dlg = QColorDialog(QColor(*color))
+        if dlg.exec():
+            color = dlg.selectedColor()
+            self.model().setData(index, color.getRgb(), ColorRole)
+
+
+class ContinuousTable(TableWithMouse):
+    def __init__(self, master, model):
+        TableWithMouse.__init__(self, model)
+        self.master = master
+
+    def handle_click(self, index, _):
+        if index.column() == 0:
+            self.edit(index)
+        else:
+            self.change_color(index)
+
+    def change_color(self, index):
+        from_c, to_c, black = self.model().data(index, ColorRole)
+        master = self.master
+        dlg = ColorPaletteDlg(master)
+        dlg.createContinuousPalette("", "Gradient palette", black,
+                                    QColor(*from_c), QColor(*to_c))
+        dlg.setColorSchemas(master.color_settings, master.selected_schema_index)
+        if dlg.exec():
+            self.model().setData(index,
+                                 (dlg.contLeft.getColor().getRgb(),
+                                  dlg.contRight.getColor().getRgb(),
+                                  dlg.contpassThroughBlack),
+                                 ColorRole)
+            master.color_settings = dlg.getColorSchemas()
+            master.selected_schema_index = dlg.selectedSchemaIndex
 
 
 class OWColor(widget.OWWidget):
@@ -146,28 +234,17 @@ class OWColor(widget.OWWidget):
         self.disc_colors = []
         self.cont_colors = []
 
-        def prepare_table(box, model, on_click):
-            view = QTableView()
-            view.horizontalHeader().hide()
-            view.verticalHeader().hide()
-            view.setShowGrid(False)
-            view.setSelectionMode(QTableView.NoSelection)
-            view.setItemDelegate(HorizontalGridDelegate())
-            view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
-            box.layout().addWidget(view)
-            view.clicked.connect(on_click)
-            view.setModel(model)
-            return view
-
         box = gui.widgetBox(self.controlArea, "Discrete variables",
                             orientation="horizontal")
         self.disc_model = DiscColorTableModel()
-        self.disc_view = prepare_table(box, self.disc_model, self.disc_clicked)
+        self.disc_view = DiscreteTable(self.disc_model)
+        box.layout().addWidget(self.disc_view)
 
         box = gui.widgetBox(self.controlArea, "Numeric variables",
                             orientation="horizontal")
         self.cont_model = ContColorTableModel()
-        self.cont_view = prepare_table(box, self.cont_model, self.cont_clicked)
+        self.cont_view = ContinuousTable(self, self.cont_model)
+        box.layout().addWidget(self.cont_view)
 
     def set_data(self, data):
         self.disc_colors = []
@@ -175,9 +252,9 @@ class OWColor(widget.OWWidget):
         if data is None:
             self.data = None
         else:
-            def create_part(part):
+            def create_part(variables):
                 vars = []
-                for var in part:
+                for i, var in enumerate(variables):
                     if not (var.is_discrete or var.is_continuous):
                         vars.append(var)
                         continue
@@ -189,12 +266,11 @@ class OWColor(widget.OWWidget):
                             n_values = len(var.values)
                             palette = ColorPaletteGenerator(n_values)
                             var.colors = palette.getRGB(range(n_values))
-                        self.disc_colors.append(
-                            (var.name, var.values, var.colors))
+                        self.disc_colors.append(var)
                     else:
                         if not hasattr(var, "colors"):
                             var.colors = ((0, 0, 255), (255, 255, 0), False)
-                        self.cont_colors.append([var.name, var.colors])
+                        self.cont_colors.append(var)
                     vars.append(var)
                 return vars
 
@@ -205,38 +281,12 @@ class OWColor(widget.OWWidget):
             self.data = Orange.data.Table(domain, data)
             self.disc_model.set_data(self.disc_colors)
             self.cont_model.set_data(self.cont_colors)
-            print(self.disc_colors)
-            print(self.cont_colors)
             self.disc_view.resizeColumnsToContents()
             self.cont_view.resizeColumnsToContents()
         self.commit()
 
     def commit(self):
         self.send("Data", self.data)
-
-    def disc_clicked(self, index):
-        color = self.disc_model.data(index, ColorRole)
-        if color is None:
-            return
-        dlg = QColorDialog(QColor(*color))
-        if dlg.exec():
-            color = dlg.selectedColor()
-            self.disc_model.setData(index, color.getRgb(), ColorRole)
-
-    def cont_clicked(self, index):
-        from_c, to_c, black = self.cont_model.data(index, ColorRole)
-        dlg = ColorPaletteDlg(self)
-        dlg.createContinuousPalette("", "Gradient palette", black,
-                                    QColor(*from_c), QColor(*to_c))
-        dlg.setColorSchemas(self.color_settings, self.selected_schema_index)
-        if dlg.exec():
-            self.cont_model.setData(index,
-                                    (dlg.contLeft.getColor().getRgb(),
-                                     dlg.contRight.getColor().getRgb(),
-                                     dlg.contpassThroughBlack), \
-                                    ColorRole)
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selectedSchemaIndex
 
 
 if __name__ == "__main__":
