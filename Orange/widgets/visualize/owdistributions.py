@@ -138,7 +138,8 @@ class OWDistributions(widget.OWWidget):
         self.cb_disc_cont = gui.checkBox(
             gui.indentedBox(box, sep=4),
             self, "disc_cont", "Bin continuous variables",
-            callback=self._on_groupvar_idx_changed)
+            callback=self._on_groupvar_idx_changed,
+            tooltip="Show continuous variables as discrete.")
 
         box = gui.widgetBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
@@ -148,12 +149,14 @@ class OWDistributions(widget.OWWidget):
         box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
-            callback=self._on_relative_freq_changed)
+            callback=self._on_relative_freq_changed,
+            tooltip="Normalize probabilities so that probabilities for each group-by value sum to 1.")
         gui.separator(box2)
         self.cb_prob = gui.comboBox(
             box2, self, "show_prob", label="Show probabilities",
             orientation="horizontal",
-            callback=self._on_relative_freq_changed)
+            callback=self._on_relative_freq_changed,
+            tooltip="Show probabilities for a chosen group-by value (at each point probabilities for all group-by values sum to 1).")
 
         self.plotview = pg.PlotWidget(background=None)
         self.plotview.setRenderHint(QtGui.QPainter.Antialiasing)
