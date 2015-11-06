@@ -162,14 +162,16 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         data = self.data
-        if self.normalize:
-            data = Normalize(data)
         self._transformed = None
         if isinstance(data, SqlTable): # data was big and remote available
             self.sampling_box.setVisible(True)
             self.start_button.setText("Start remote computation")
             self.start_button.setEnabled(True)
         else:
+            # TODO move the following normalization outside
+            # so it is applied for SqlTables as well (when it works on them)
+            if self.normalize:
+                data = Normalize(data)
             self.sampling_box.setVisible(False)
             pca = Orange.projection.PCA()
             pca = pca(data)
