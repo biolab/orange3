@@ -154,6 +154,7 @@ class OWFile(widget.OWWidget):
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
+    resizing_enabled = False
 
     #: back-compatibility: List[str] saved files list
     recent_files = Setting([])

@@ -37,6 +37,8 @@ class OWKMeans(widget.OWWidget):
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
     OUTPUT_METHODS = ("Class", "Feature", "Meta")
 
+    resizing_enabled = False
+
     k = Setting(8)
     k_from = Setting(2)
     k_to = Setting(8)
