@@ -1405,13 +1405,15 @@ class SequenceFlow(QWidget):
             # Remove the drop indicator spacer item before re-inserting
             # the frame
             self.__setDropIndicatorAt(None)
-            if oldindex != index:
-                layout.insertWidget(index, frame)
-                if index > oldindex:
-                    self.widgetMoved.emit(oldindex, index - 1)
-                else:
-                    self.widgetMoved.emit(oldindex, index)
 
+            if index > oldindex:
+                index = index - 1
+
+            if index != oldindex:
+                item = layout.takeAt(oldindex)
+                assert item.widget() is frame
+                layout.insertWidget(index, frame)
+                self.widgetMoved.emit(oldindex, index)
                 event.accept()
 
             self.__dragstart = None, None, None
