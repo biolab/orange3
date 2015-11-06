@@ -1785,6 +1785,7 @@ class HeatmapScene(QGraphicsScene):
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
         self.selection_manager = HeatmapSelectionManager()
+        self.__selecting = False
 
     def set_selection_manager(self, manager):
         self.selection_manager = manager
@@ -1844,23 +1845,30 @@ class HeatmapScene(QGraphicsScene):
         heatmap = self.heatmap_at_pos(pos)
         if heatmap and event.button() & Qt.LeftButton:
             row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
-            self.selection_manager.selection_start(heatmap, event)
+            if row != -1:
+                self.selection_manager.selection_start(heatmap, event)
+                self.__selecting = True
         return QGraphicsScene.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
         pos = event.scenePos()
         heatmap = self.heatmap_at_pos(pos)
-        if heatmap and event.buttons() & Qt.LeftButton:
+        if heatmap and event.buttons() & Qt.LeftButton and self.__selecting:
             row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
-            self.selection_manager.selection_update(heatmap, event)
+            if row != -1:
+                self.selection_manager.selection_update(heatmap, event)
         return QGraphicsScene.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         pos = event.scenePos()
         heatmap = self.heatmap_at_pos(pos)
-        if heatmap:
+        if heatmap and event.button() == Qt.LeftButton and self.__selecting:
             row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
             self.selection_manager.selection_finish(heatmap, event)
+
+        if event.button() == Qt.LeftButton and self.__selecting:
+            self.__selecting = False
+
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
@@ -2122,7 +2130,7 @@ class HeatmapSelectionManager(QObject):
 
     def select_rows(self, rows, heatmap=None, clear=True):
         """Add `rows` to selection. If `heatmap` is provided the rows
-        are mapped from the local indices to global heatmap indics. If `clear`
+        are mapped from the local indices to global heatmap indices. If `clear`
         then remove previous rows.
         """
         if heatmap is not None:
