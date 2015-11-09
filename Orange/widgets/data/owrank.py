@@ -5,11 +5,11 @@ Rank
 Rank (score) features for prediction.
 
 """
-
+import sys
 from collections import namedtuple
 
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, pyqtSlot as Slot
 
 import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable
@@ -141,7 +141,7 @@ class OWRank(widget.OWWidget):
         self.discRanksView.setColumnWidth(0, 20)
         self.discRanksView.sortByColumn(1, Qt.DescendingOrder)
         self.discRanksView.selectionModel().selectionChanged.connect(
-            self.commit
+            self._selectionChanged
         )
         self.discRanksView.pressed.connect(self.onSelectItem)
         self.discRanksView.horizontalHeader().sectionClicked.connect(
@@ -171,7 +171,7 @@ class OWRank(widget.OWWidget):
         self.discRanksView.setColumnWidth(0, 20)
         self.contRanksView.sortByColumn(1, Qt.DescendingOrder)
         self.contRanksView.selectionModel().selectionChanged.connect(
-            self.commit
+            self._selectionChanged
         )
         self.contRanksView.pressed.connect(self.onSelectItem)
         self.contRanksView.horizontalHeader().sectionClicked.connect(
@@ -334,6 +334,10 @@ class OWRank(widget.OWWidget):
         self.selectButtons.button(self.selectMethod).setChecked(True)
         self.commit()
 
+    @Slot()
+    def _selectionChanged(self):
+        self.commit()
+
     def setSelectMethod(self, method):
         if self.selectMethod != method:
             self.selectMethod = method
@@ -477,14 +481,26 @@ class MySortProxyModel(QtGui.QSortFilterProxyModel):
             return left < right
 
 
-if __name__ == "__main__":
-    a = QtGui.QApplication([])
+def main(argv=sys.argv):
+    a = QtGui.QApplication(list(argv))
+    argv = a.argv()
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "wine.tab"
+
     ow = OWRank()
-    ow.setData(Orange.data.Table("wine.tab"))
-    ow.setData(Orange.data.Table("zoo.tab"))
-#     ow.setData(Orange.data.Table("servo.tab"))
-#     ow.setData(Orange.data.Table("iris.tab"))
-#     ow.setData(orange.ExampleTable("auto-mpg.tab"))
     ow.show()
+    ow.raise_()
+
+    ow.setData(Orange.data.Table(filename))
+    ow.handleNewSignals()
+
     a.exec_()
+    ow.setData(None)
+    ow.handleNewSignals()
     ow.saveSettings()
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
