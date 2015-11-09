@@ -1,20 +1,22 @@
 import unittest
 
-import Orange
+from Orange.data import Table
+from Orange.evaluation import CrossValidation, CA, RMSE
 from Orange.classification import RandomForestLearner
+from Orange.regression import RandomForestRegressionLearner
 
 
 class RandomForestTest(unittest.TestCase):
     def test_RandomForest(self):
-        table = Orange.data.Table('iris')
+        table = Table('iris')
         forest = RandomForestLearner()
-        results = Orange.evaluation.CrossValidation(table, [forest], k=10)
-        ca = Orange.evaluation.CA(results)
+        results = CrossValidation(table, [forest], k=10)
+        ca = CA(results)
         self.assertGreater(ca, 0.9)
         self.assertLess(ca, 0.99)
 
     def test_predict_single_instance(self):
-        table = Orange.data.Table('iris')
+        table = Table('iris')
         forest = RandomForestLearner()
         c = forest(table)
         for ins in table:
@@ -22,15 +24,45 @@ class RandomForestTest(unittest.TestCase):
             val, prob = c(ins, c.ValueProbs)
 
     def test_predict_table(self):
-        table = Orange.data.Table('iris')
+        table = Table('iris')
         forest = RandomForestLearner()
         c = forest(table)
         c(table)
         vals, probs = c(table, c.ValueProbs)
 
     def test_predict_numpy(self):
-        table = Orange.data.Table('iris')
+        table = Table('iris')
         forest = RandomForestLearner()
         c = forest(table)
         c(table.X)
         vals, probs = c(table.X, c.ValueProbs)
+
+    def test_RandomForestRegression(self):
+        table = Table('housing')
+        forest = RandomForestRegressionLearner()
+        results = CrossValidation(table, [forest], k=10)
+        _ = RMSE(results)
+
+    def test_predict_single_instance_reg(self):
+        table = Table('housing')
+        forest = RandomForestRegressionLearner()
+        model = forest(table)
+        for ins in table:
+            pred = model(ins)
+            self.assertTrue(pred > 0)
+
+    def test_predict_table_reg(self):
+        table = Table('housing')
+        forest = RandomForestRegressionLearner()
+        model = forest(table)
+        pred = model(table)
+        self.assertEqual(len(table), len(pred))
+        self.assertTrue(all(pred) > 0)
+
+    def test_predict_numpy_reg(self):
+        table = Table('housing')
+        forest = RandomForestRegressionLearner()
+        model = forest(table)
+        pred = model(table.X)
+        self.assertEqual(len(table), len(pred))
+        self.assertTrue(all(pred) > 0)
