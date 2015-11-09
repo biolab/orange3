@@ -439,7 +439,9 @@ def _enterButton(parent, control, placeholder=True):
     if not _enter_icon:
         _enter_icon = QtGui.QIcon(
             os.path.dirname(__file__) + "/icons/Dlg_enter.png")
-    button = QtGui.QToolButton(parent)
+    button = QtGui.QPushButton(parent)
+    button.setAutoDefault(True)
+    button.setDefault(True)
     height = control.sizeHint().height()
     button.setFixedSize(height, height)
     button.setIcon(_enter_icon)
