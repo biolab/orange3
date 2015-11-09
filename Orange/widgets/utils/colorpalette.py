@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 import math
 from numbers import Number
 from collections import Iterable
@@ -653,6 +654,24 @@ class ColorPaletteGenerator:
             return self.rgb_array[-1 if np.isnan(value) else int(value)]
 
     getColor = getRGB
+
+    def resolve(self, number_of_colors):
+        """
+        Return a palette with `number_of_colors`.
+
+        If possible try to preserve the same 'color scheme' (`rgb_colors`
+        dictionary constructor parameter), falling back to the
+        `DefaultRGBColors` if `number_of_colors < 18` or a rainbow palette
+        otherwise.
+
+        """
+        palette = copy.copy(self)
+        try:
+            palette.set_number_of_colors(number_of_colors)
+        except ValueError:
+            # Fall back to the default palette
+            palette = ColorPaletteGenerator(number_of_colors)
+        return palette
 
 
 # only for backward compatibility
