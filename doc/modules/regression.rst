@@ -89,3 +89,13 @@ Simple Random Forest
 
 .. autoclass:: SimpleRandomForestLearner
    :members:
+
+
+
+.. index:: regression tree
+   pair: regression; tree
+
+Regression Tree
+-------------------
+.. autoclass:: TreeRegressionLearner
+   :members:
