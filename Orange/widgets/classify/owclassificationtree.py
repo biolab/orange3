@@ -80,9 +80,10 @@ class OWClassificationTree(widget.OWWidget):
     def set_learner(self):
         self.learner = TreeLearner(
             criterion=self.scores[self.attribute_score][1],
-            max_depth=self.max_depth,
-            min_samples_split=self.min_internal,
-            min_samples_leaf=self.min_leaf,
+            max_depth=self.max_depth if self.limit_depth else None,
+            min_samples_split=(self.min_internal if self.limit_min_internal
+                               else 2),
+            min_samples_leaf=(self.min_leaf if self.limit_min_leaf else 1),
             preprocessors=self.preprocessors
         )
         self.learner.name = self.model_name
