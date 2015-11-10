@@ -90,6 +90,24 @@ class LegendItem(LegendItem):
             brush = QBrush(QColor(232, 232, 232, 100))
         self.__brush = brush
 
+    def storeAnchor(self):
+        """
+        Return the current relative anchor position (relative to the parent)
+        """
+        anchor = legend_anchor_pos(self)
+        if anchor is None:
+            anchor = ((1, 0), (1, 0))
+        return anchor
+
+    def restoreAnchor(self, anchors):
+        """
+        Restore (parent) relative position from stored anchors.
+
+        The restored position is within the parent bounds.
+        """
+        anchor, parentanchor = anchors
+        self.anchor(*bound_anchor_pos(anchor, parentanchor))
+
     def setPen(self, pen):
         """Set the legend frame pen."""
         pen = QPen(pen)
@@ -125,6 +143,20 @@ class LegendItem(LegendItem):
         _, label = self.items[-1]
         label.setText(name, justify="left")
 
+    def clear(self):
+        """
+        Clear all legend items.
+        """
+        items = list(self.items)
+        self.items = []
+        for sample, label in items:
+            self.layout.removeItem(sample)
+            self.layout.removeItem(label)
+            sample.hide()
+            label.hide()
+
+        self.updateSize()
+
 
 ANCHORS = {
     Qt.TopLeftCorner: (0, 0),
@@ -158,8 +190,26 @@ def legend_anchor_pos(legend):
     parent_rect = QRectF(QPointF(0, 0), parent.size())
 
     # Find the closest corner of rect to parent rect
-    c1, c2, *parentPos = rect_anchor_pos(rect, parent_rect)
-    return corner_anchor(c1), parentPos
+    c1, _, *parentPos = rect_anchor_pos(rect, parent_rect)
+    return corner_anchor(c1), tuple(parentPos)
+
+
+def bound_anchor_pos(corner, parentpos):
+    corner = np.clip(corner, 0, 1)
+    parentpos = np.clip(parentpos, 0, 1)
+
+    irx, iry = corner
+    prx, pry = parentpos
+
+    if irx > 0.9 and prx < 0.1:
+        irx = prx = 0.0
+    if iry > 0.9 and pry < 0.1:
+        iry = pry = 0.0
+    if irx < 0.1 and prx > 0.9:
+        irx = prx = 1.0
+    if iry < 0.1 and pry > 0.9:
+        iry = pry = 1.0
+    return (irx, iry), (prx, pry)
 
 
 def rect_anchor_pos(rect, parent_rect):
@@ -693,7 +743,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.brush_colors = np.hstack(
                     [self.pen_colors,
                      np.full((self.n_points, 1), self.alpha_value)])
-                self.pen_colors *= 100 / self.DarkerValue
+                self.pen_colors *= 100 // self.DarkerValue
                 self.pen_colors = [make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
             if subset is not None:
@@ -805,7 +855,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def create_legend(self):
         self.legend = LegendItem()
         self.legend.setParentItem(self.plot_widget.getViewBox())
-        self.legend.anchor(*self.__legend_anchor)
+        self.legend.restoreAnchor(self.__legend_anchor)
 
     def remove_legend(self):
         if self.legend:
@@ -848,7 +898,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:
             legend = self.color_legend = LegendItem()
             legend.setParentItem(self.plot_widget.getViewBox())
-            legend.anchor(*self.__color_legend_anchor)
+            legend.restoreAnchor(self.__color_legend_anchor)
 
             label = PaletteItemSample(self.continuous_palette, self.scale)
             legend.addItem(label, "")

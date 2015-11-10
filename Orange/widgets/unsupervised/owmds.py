@@ -867,8 +867,10 @@ class OWMDS(widget.OWWidget):
                 text_item.setPos(x, y)
 
         self._legend_item = LegendItem()
+        viewbox = self.plot.getViewBox()
         self._legend_item.setParentItem(self.plot.getViewBox())
-        self._legend_item.anchor(*self.legend_anchor)
+        self._legend_item.setZValue(viewbox.zValue() + 10)
+        self._legend_item.restoreAnchor(self.legend_anchor)
 
         color_var = shape_var = None
         color_index = self.cb_color_value.currentIndex()
