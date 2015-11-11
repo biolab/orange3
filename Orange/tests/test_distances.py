@@ -9,6 +9,7 @@ from Orange.data import (Table, Domain, ContinuousVariable,
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
                              Jaccard, _preprocess)
+from Orange.misc.distmatrix import DistMatrix
 
 
 def tables_equal(tab1, tab2):
@@ -33,6 +34,19 @@ class TestDistMatrix(TestCase):
         self.assertTrue(tables_equal(unpickled_dist.row_items, self.dist.row_items))
         self.assertTrue(tables_equal(unpickled_dist.col_items, self.dist.col_items))
         self.assertEqual(unpickled_dist.axis, self.dist.axis)
+
+    def test_invert(self):
+        x = np.array([[-1, 1, 2],
+                      [3, 4, 5]])
+        dm = DistMatrix(x)
+        np.testing.assert_equal(dm.invert(0), np.array([[1, -1, -2],
+                                                        [-3, -4, -5]]))
+        np.testing.assert_equal(dm.invert(1), np.array([[2, 0, -1],
+                                                        [-2, -3, -4]]))
+        np.testing.assert_equal(dm.invert(2), np.array([[6, 4, 3],
+                                                        [2, 1, 0]]))
+        np.testing.assert_equal(dm.invert(3), np.array([[-1, 1, 1/2],
+                                                        [1/3, 1/4, 1/5]]))
 
 
 class TestEuclidean(TestCase):

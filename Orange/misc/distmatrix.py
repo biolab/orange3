@@ -101,6 +101,8 @@ class DistMatrix(np.ndarray):
         elif typ == 1:
             return 1.-self
         elif typ == 2:
+            return np.max(self) - self
+        elif typ == 3:
             return 1./self
         else:
             raise ValueError('Unknown option for typ of matrix inversion.')
