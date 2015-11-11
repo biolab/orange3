@@ -380,25 +380,17 @@ class OWFile(widget.OWWidget):
         self.loaded_file = ""
 
         data = None
-        err_value = None
         try:
             # TODO handle self.new_variables
             data = Table(fn)
             self.loaded_file = fn
         except Exception as exc:
-            err_value = str(exc)
-            if "is being loaded as" in str(err_value):
-                try:
-                    data = Table(fn)
-                    self.loaded_file = fn
-                    self.warning(0, err_value)
-                except:
-                    data = None
-        if err_value is not None:
             if fn.startswith("http"):
                 err_value = "File '{}' does not contain valid data".format(
                     os.path.basename(fn)
                 )
+            else:
+                err_value = str(exc)
             ind = self.file_combo.currentIndex()
             text = self.file_combo.currentText()
             self.file_combo.removeItem(ind)
