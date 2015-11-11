@@ -354,7 +354,7 @@ class ClassificationTreeNode(GraphicsNode):
         counts = counts[0]
         counts_sum = numpy.sum(counts)
         if counts_sum > 0:
-            counts /= counts_sum
+            counts = counts / counts_sum
         return counts
 
     def num_instances(self):
