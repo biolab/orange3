@@ -245,7 +245,10 @@ class OWDistanceMap(widget.OWWidget):
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
     outputs = [("Data", Orange.data.Table), ("Features", widget.AttributeList)]
 
-    sorting = settings.Setting(0)
+    #: type of ordering to apply to matrix rows/columns
+    NoOrdering, Clustering, OrderedClustering = 0, 1, 2
+
+    sorting = settings.Setting(NoOrdering)
 
     colormap = settings.Setting(_default_colormap_index)
     color_gamma = settings.Setting(0.0)
@@ -258,6 +261,12 @@ class OWDistanceMap(widget.OWWidget):
 
     want_graph = True
 
+    # Disable clustering for inputs bigger than this
+    _MaxClustering = 3000
+
+    # Disable cluster leaf ordering for inputs bigger than this
+    _MaxOrderedClustering = 1000
+
     def __init__(self):
         super().__init__()
 
@@ -269,11 +278,10 @@ class OWDistanceMap(widget.OWWidget):
         self._selection = None
 
         box = gui.widgetBox(self.controlArea, "Element sorting", margin=0)
-        gui.comboBox(box, self, "sorting",
-                     items=["None", "Clustering",
-                            "Clustering with ordered leaves"
-                            ],
-                     callback=self._invalidate_ordering)
+        self.sorting_cb = gui.comboBox(
+            box, self, "sorting",
+            items=["None", "Clustering", "Clustering with ordered leaves"],
+            callback=self._invalidate_ordering)
 
         box = gui.widgetBox(self.controlArea, "Colors")
 
@@ -390,6 +398,36 @@ class OWDistanceMap(widget.OWWidget):
         else:
             self.set_items(None)
 
+        if matrix is not None:
+            N, _ = matrix.shape
+        else:
+            N = 0
+
+        model = self.sorting_cb.model()
+        item = model.item(2)
+
+        msg = None
+        if N > OWDistanceMap._MaxOrderedClustering:
+            item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+            if self.sorting == OWDistanceMap.OrderedClustering:
+                self.sorting = OWDistanceMap.Clustering
+                msg = "Cluster ordering was disabled due to the input " \
+                      "matrix being to big"
+        else:
+            item.setFlags(item.flags() | Qt.ItemIsEnabled)
+
+        item = model.item(1)
+        if N > OWDistanceMap._MaxClustering:
+            item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+            if self.sorting == OWDistanceMap.Clustering:
+                self.sorting = OWDistanceMap.NoOrdering
+            msg = "Clustering was disabled due to the input " \
+                  "matrix being to big"
+        else:
+            item.setFlags(item.flags() | Qt.ItemIsEnabled)
+
+        self.information(1, msg)
+
     def set_items(self, items, axis=1):
         self.items = items
         model = self.annot_combo.model()
@@ -461,11 +499,11 @@ class OWDistanceMap(widget.OWWidget):
 
         self.matrix_item.selectionChanged.connect(self._invalidate_selection)
 
-        if self.sorting == 0:
+        if self.sorting == OWDistanceMap.NoOrdering:
             tree = None
-        elif self.sorting == 1:
+        elif self.sorting == OWDistanceMap.Clustering:
             tree = self._cluster_tree()
-        else:
+        elif self.sorting == OWDistanceMap.OrderedClustering:
             tree = self._ordered_cluster_tree()
 
         self._set_displayed_dendrogram(tree)
@@ -489,13 +527,13 @@ class OWDistanceMap(widget.OWWidget):
             self._setup_scene()
 
     def _update_ordering(self):
-        if self.sorting == 0:
+        if self.sorting == OWDistanceMap.NoOrdering:
             self._sorted_matrix = self.matrix
             self._sort_indices = None
         else:
-            if self.sorting == 1:
+            if self.sorting == OWDistanceMap.Clustering:
                 tree = self._cluster_tree()
-            elif self.sorting == 2:
+            elif self.sorting == OWDistanceMap.OrderedClustering:
                 tree = self._ordered_cluster_tree()
 
             leaves = hierarchical.leaves(tree)
@@ -530,7 +568,7 @@ class OWDistanceMap(widget.OWWidget):
     def _set_labels(self, labels):
         self._labels = labels
 
-        if labels and self.sorting:
+        if labels and self.sorting != OWDistanceMap.NoOrdering:
             sortind = self._sort_indices
             labels = [labels[i] for i in sortind]
 
@@ -561,7 +599,7 @@ class OWDistanceMap(widget.OWWidget):
         ranges = self.matrix_item.selections()
         ranges = reduce(iadd, ranges, [])
         indices = reduce(iadd, ranges, [])
-        if self.sorting:
+        if self.sorting != OWDistanceMap.NoOrdering:
             sortind = self._sort_indices
             indices = [sortind[i] for i in indices]
         self._selection = list(sorted(set(indices)))
@@ -694,6 +732,7 @@ def test(argv=sys.argv):
     w.set_distances(dist)
     w.handleNewSignals()
     rval = app.exec_()
+    w.set_distances(None)
     w.saveSettings()
     w.onDeleteWidget()
     sip.delete(w)
