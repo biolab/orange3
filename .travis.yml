@@ -25,6 +25,7 @@ addons:
             - libqt4-dev
 
 before_install:
+    - pip install codecov
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ]; then
         source $TRAVIS_BUILD_DIR/travis/decrypt_upload_doc_id.sh;
       fi
@@ -45,7 +46,7 @@ script:
 
 after_success:
     - cd $TRAVIS_BUILD_DIR
-    - coveralls
+    - codecov
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
         source $TRAVIS_BUILD_DIR/travis/upload_doc.sh;
       fi
