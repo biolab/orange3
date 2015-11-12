@@ -467,13 +467,13 @@ class OWDistanceMap(widget.OWWidget):
             item.setParentItem(None)
             item.scene().removeItem(item)
 
-        if self.matrix_item:
+        if self.matrix_item is not None:
+            self.matrix_item.selectionChanged.disconnect(
+                self._invalidate_selection)
             remove(self.matrix_item)
             self.matrix_item = None
 
-        self.top_dendrogram.hide()
-        self.left_dendrogram.hide()
-
+        self._set_displayed_dendrogram(None)
         self._set_labels(None)
 
     def _cluster_tree(self):
@@ -489,6 +489,7 @@ class OWDistanceMap(widget.OWWidget):
         return self._ordered_tree
 
     def _setup_scene(self):
+        self._clear_plot()
         self.matrix_item = DistanceMapItem(self._sorted_matrix)
         # Scale the y axis to compensate for pg.ViewBox's y axis invert
         self.matrix_item.scale(1, -1)
@@ -634,6 +635,10 @@ class OWDistanceMap(widget.OWWidget):
         save_img = OWSave(data=self.grid_widget,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self.clear()
 
 
 class TextList(GraphicsSimpleTextList):
