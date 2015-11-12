@@ -213,13 +213,19 @@ class OWSql(widget.OWWidget):
 
         self.error(0)
 
-        table = SqlTable(dict(host=self.host,
-                              port=self.port,
-                              database=self.database,
-                              user=self.username,
-                              password=self.password),
-                         self.table,
-                         inspect_values=False)
+        try:
+            table = SqlTable(dict(host=self.host,
+                                  port=self.port,
+                                  database=self.database,
+                                  user=self.username,
+                                  password=self.password),
+                             self.table,
+                             inspect_values=False)
+        except psycopg2.ProgrammingError as ex:
+            self.error(0, str(ex))
+            return
+
+
         sample = False
         if table.approx_len() > LARGE_TABLE and self.guess_values:
             confirm = QMessageBox(self)
