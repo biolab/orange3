@@ -397,7 +397,8 @@ class OWDistanceMap(widget.OWWidget):
             model[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            model[:] = ["None", "Enumeration"] + list(items.domain)
+            model[:] = (["None", "Enumeration"] +
+                        list(items.domain) + list(items.domain.metas))
         elif isinstance(items, list) and \
                 all(isinstance(item, Orange.data.Variable) for item in items):
             model[:] = ["None", "Enumeration", "Name"]
