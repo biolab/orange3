@@ -231,6 +231,11 @@ class DistanceMapItem(pg.ImageItem):
             self.setToolTip("")
 
 
+_color_palettes = sorted(colorbrewer.colorSchemes["sequential"].items()) + \
+                  [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]})]
+_default_colormap_index = len(_color_palettes) - 1
+
+
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
     description = "Visualize a distance matrix."
@@ -242,7 +247,7 @@ class OWDistanceMap(widget.OWWidget):
 
     sorting = settings.Setting(0)
 
-    colormap = settings.Setting(0)
+    colormap = settings.Setting(_default_colormap_index)
     color_gamma = settings.Setting(0.0)
     color_low = settings.Setting(0.0)
     color_high = settings.Setting(1.0)
@@ -276,11 +281,8 @@ class OWDistanceMap(widget.OWWidget):
             box, self, "colormap", callback=self._update_color
         )
         self.colormap_cb.setIconSize(QSize(64, 16))
-        self.palettes = list(sorted(load_default_palettes()))
-        self.palettes += [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]})]
-        for i, pcolor in enumerate(self.palettes):
-            if pcolor[0] == 'Blue-Yellow':
-                self.colormap = i
+        self.palettes = list(_color_palettes)
+
         init_color_combo(self.colormap_cb, self.palettes, QSize(64, 16))
         self.colormap_cb.setCurrentIndex(self.colormap)
 
@@ -673,11 +675,6 @@ def init_color_combo(cb, palettes, iconsize):
         colors = [QColor(*c) for c in colors]
         cb.addItem(QIcon(palette_pixmap(colors, iconsize)), name,
                    palette)
-
-
-def load_default_palettes():
-    palettes = colorbrewer.colorSchemes["sequential"]
-    return list(palettes.items())
 
 
 def test(argv=sys.argv):
