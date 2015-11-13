@@ -44,6 +44,8 @@ class LinearRegressionTest(unittest.TestCase):
         data = Table('housing')
         learner = LinearRegressionLearner()
         scores = learner.score_data(data)
+        self.assertEqual('NOX',
+                         data.domain.attributes[np.argmax(scores)].name)
         self.assertEqual(len(scores), len(data.domain.attributes))
 
     def test_ridge_scorer(self):
