@@ -112,7 +112,8 @@ class EqualFreq(Discretization):
             att = attribute.to_sql()
             quantiles = [(i + 1) / self.n for i in range(self.n - 1)]
             query = data._sql_query(
-                ['quantile(%s, ARRAY%s)' % (att, str(quantiles))])
+                ['quantile(%s, ARRAY%s)' % (att, str(quantiles))],
+                use_time_sample=1000)
             with data._execute_sql_query(query) as cur:
                 points = sorted(set(cur.fetchone()[0]))
         else:
