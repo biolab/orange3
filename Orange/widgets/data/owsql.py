@@ -2,7 +2,7 @@ import sys
 
 import psycopg2
 from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QTimer
 from PyQt4.QtGui import QApplication, QCursor, QMessageBox
 
 from Orange.data import Table
@@ -117,7 +117,7 @@ class OWSql(widget.OWWidget):
 
         self.connect()
         if self.table:
-            self.open_table()
+            QTimer.singleShot(0, self.open_table)
 
     def error(self, id=0, text=""):
         super().error(id, text)
