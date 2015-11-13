@@ -3,6 +3,7 @@ import numpy as np
 from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
+from Orange.statistics.basic_stats import BasicStats
 from .transformation import Transformation
 from . import _discretize
 
@@ -140,12 +141,8 @@ class EqualWidth(Discretization):
             points = self._split_eq_width(min, max)
         else:
             if type(data) == SqlTable:
-                att = attribute.to_sql()
-                query = data._sql_query(['min(%s)::double precision' % att,
-                                         'max(%s)::double precision' % att])
-                with data._execute_sql_query(query) as cur:
-                    min, max = cur.fetchone()
-                points = self._split_eq_width(min, max)
+                stats = BasicStats(data, attribute)
+                points = self._split_eq_width(stats.min, stats.max)
             else:
                 values = data[:, attribute]
                 values = values.X if values.X.size else values.Y
