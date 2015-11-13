@@ -1021,7 +1021,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             return False
 
 
-class HelpEventDelegate(QObject):
+class HelpEventDelegate(QObject): #also used by owdistributions
     def __init__(self, delegate, parent=None):
         super().__init__(parent)
         self.delegate = delegate
