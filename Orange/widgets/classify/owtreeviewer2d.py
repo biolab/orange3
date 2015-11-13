@@ -70,7 +70,7 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
             color = brush.color()
             r, g, b, _ = color.getRgb()
             lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            if lum > 30:
+            if lum > 100:
                 self.setDefaultTextColor(Qt.black)
             else:
                 self.setDefaultTextColor(Qt.white)
