@@ -538,11 +538,13 @@ class Table(MutableSequence, Storage):
                              url, re.IGNORECASE)
             try:
                 workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
-                if not workbook: raise ValueError
+                if not workbook:
+                    raise ValueError
             except (AttributeError, ValueError):
                 raise ValueError
             url = 'https://docs.google.com/spreadsheets/d/{}/export?format=tsv'.format(workbook)
-            if sheet: url += '&gid=' + sheet
+            if sheet:
+                url += '&gid=' + sheet
             return url
 
         URL_TRIMMERS = (
