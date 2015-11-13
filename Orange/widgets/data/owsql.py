@@ -45,6 +45,9 @@ class OWSql(widget.OWWidget):
     guess_values = Setting(True)
     download = Setting(False)
 
+    materialize = Setting(False)
+    materialize_table_name = Setting("")
+
     def __init__(self):
         super().__init__()
 
@@ -94,6 +97,10 @@ class OWSql(widget.OWWidget):
         self.sqltext = QtGui.QTextEdit(self.custom_sql)
         self.sqltext.setPlainText(self.sql)
         self.custom_sql.layout().addWidget(self.sqltext)
+
+        mt = gui.widgetBox(self.custom_sql, orientation='horizontal')
+        gui.checkBox(mt, self, 'materialize', 'materialize to table ')
+        gui.lineEdit(mt, self, 'materialize_table_name')
 
         self.executebtn = gui.button(
             self.custom_sql, self, 'Execute', callback=self.open_table)
@@ -191,15 +198,34 @@ class OWSql(widget.OWWidget):
         if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
             self.table = self.tablecombo.currentText()
         else:
-            self.table = self.sqltext.toPlainText()
+            self.sql = self.table = self.sqltext.toPlainText()
+            if self.materialize:
+                try:
+                    cur = self._connection.cursor()
+                    cur.execute("DROP TABLE IF EXISTS " + self.materialize_table_name)
+                    cur.execute("CREATE TABLE " + self.materialize_table_name + " AS " + self.table)
+                    self.table = self.materialize_table_name
+                except psycopg2.ProgrammingError as ex:
+                    self.error(0, str(ex))
+                    return
+                finally:
+                    self._connection.commit()
 
-        table = SqlTable(dict(host=self.host,
-                              port=self.port,
-                              database=self.database,
-                              user=self.username,
-                              password=self.password),
-                         self.table,
-                         inspect_values=False)
+        self.error(0)
+
+        try:
+            table = SqlTable(dict(host=self.host,
+                                  port=self.port,
+                                  database=self.database,
+                                  user=self.username,
+                                  password=self.password),
+                             self.table,
+                             inspect_values=False)
+        except psycopg2.ProgrammingError as ex:
+            self.error(0, str(ex))
+            return
+
+
         sample = False
         if table.approx_len() > LARGE_TABLE and self.guess_values:
             confirm = QMessageBox(self)
