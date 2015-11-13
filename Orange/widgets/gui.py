@@ -2294,17 +2294,17 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
         if callback:
             callback()
 
-    def unconditional_commit(*args, **kwargs):
+    def unconditional_commit():
         nonlocal dirty
         if getattr(master, value):
-            do_commit(*args, **kwargs)
+            do_commit()
         else:
             dirty = True
 
-    def do_commit(*args, **kwargs):
+    def do_commit():
         nonlocal dirty
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        commit(*args, **kwargs)
+        commit()
         QApplication.restoreOverrideCursor()
         dirty = False
 
