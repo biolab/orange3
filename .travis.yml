@@ -41,7 +41,7 @@ script:
     - cd $TRAVIS_BUILD_DIR
     - python -c "from Orange.tests import *"
     - coverage run --source=Orange setup.py test
-    - (cd $TRAVIS_BUILD_DIR/doc && make html)
+    - (cd $TRAVIS_BUILD_DIR/doc && make html && python widget_index.py "http://docs.orange.biolab.si/3/")
 
 after_success:
     - cd $TRAVIS_BUILD_DIR
