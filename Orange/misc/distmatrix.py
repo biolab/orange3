@@ -90,21 +90,6 @@ class DistMatrix(np.ndarray):
         idxs = np.argsort(self[i, :])[:]
         return self[:, idxs]
 
-    def invert(self, typ):
-        """Invert values in the distance matrix.
-
-        :param type: 0 (-X), 1 (1 - X), 2 (max - X), 3 (1 / X)
-        :type type: int
-        """
-        if typ == 0:
-            return -self
-        elif typ == 1:
-            return 1.-self
-        elif typ == 2:
-            return 1./self
-        else:
-            raise ValueError('Unknown option for typ of matrix inversion.')
-
     def submatrix(self, row_items, col_items=None):
         """Return a submatrix of self, describing only distances between items"""
         if not col_items:
