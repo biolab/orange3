@@ -363,6 +363,14 @@ Parts = namedtuple(
 Parts.levels = property(lambda self: self.span)
 
 
+_color_palettes = (sorted(colorbrewer.colorSchemes["sequential"].items()) +
+                   [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]}),
+                    ("Green-Black-Red", {3: [(0, 255, 0), (0, 0, 0),
+                                             (255, 0, 0)]})])
+_default_palette_index = \
+    [name for name, _, in _color_palettes].index("Blue-Yellow")
+
+
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Heatmap visualization."
@@ -420,7 +428,8 @@ class OWHeatMap(widget.OWWidget):
     # Stored color palette settings
     color_settings = settings.Setting(None)
     user_palettes = settings.Setting([])
-    palette_index = settings.Setting(0)
+
+    palette_index = settings.Setting(_default_palette_index)
     column_label_pos = settings.Setting(PositionTop)
 
     auto_commit = settings.Setting(True)
@@ -461,13 +470,9 @@ class OWHeatMap(widget.OWWidget):
         colorbox = gui.widgetBox(self.controlArea, "Color")
         self.color_cb = gui.comboBox(colorbox, self, "palette_index")
         self.color_cb.setIconSize(QSize(64, 16))
-        palettes = sorted(colorbrewer.colorSchemes["sequential"].items())
-        palettes += [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]}),
-            ("Green-Black-Red", {3: [(0, 255, 0), (0, 0, 0), (255, 0, 0)]})]
-        palettes += self.user_palettes
-        for i, pcolor in enumerate(palettes):
-            if pcolor[0] == 'Blue-Yellow':
-                self.palette_index = i
+        palettes = _color_palettes + self.user_palettes
+
+        self.palette_index = min(self.palette_index, len(palettes) - 1)
 
         model = color_palette_model(palettes, self.color_cb.iconSize())
         model.setParent(self)
