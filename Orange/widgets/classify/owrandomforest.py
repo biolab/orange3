@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import QLabel, QGridLayout, QLayout
+from PyQt4.QtGui import QLabel, QGridLayout
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
@@ -13,19 +13,20 @@ from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWRandomForest(widget.OWWidget):
-    name = "Random Forest"
-    description = "Random forest classication algorithm."
+    name = "Random Forest Classification"
+    description = "Random forest classification algorithm."
     icon = "icons/RandomForest.svg"
 
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Learner", RandomForestLearner),
-               ("Classifier", RandomForestClassifier)]
+               ("Model", RandomForestClassifier)]
 
     want_main_area = False
     resizing_enabled = False
 
-    learner_name = settings.Setting("Random Forest Learner")
+    LEARNER = RandomForestLearner
+    learner_name = settings.Setting("RF Classification Learner")
     n_estimators = settings.Setting(10)
     max_features = settings.Setting(5)
     use_max_features = settings.Setting(False)
@@ -151,22 +152,20 @@ class OWRandomForest(widget.OWWidget):
         if self.use_max_leaf_nodes:
             common_args["max_leaf_nodes"] = self.max_leaf_nodes
 
-        learner = RandomForestLearner(
-            preprocessors=self.preprocessors,**common_args
-        )
+        learner = self.LEARNER(preprocessors=self.preprocessors, **common_args)
         learner.name = self.learner_name
-        classifier = None
+        model = None
 
         if self.data is not None:
             self.error(0)
             if not learner.check_learner_adequacy(self.data.domain):
                 self.error(0, learner.learner_adequacy_err_msg)
             else:
-                classifier = learner(self.data)
-                classifier.name = self.learner_name
+                model = learner(self.data)
+                model.name = self.learner_name
 
         self.send("Learner", learner)
-        self.send("Classifier", classifier)
+        self.send("Model", model)
 
     def settingsChanged(self):
         self._max_features_spin.setEnabled(self.use_max_features)

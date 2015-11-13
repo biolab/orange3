@@ -7,3 +7,4 @@ from .mean import *
 from .knn import *
 from .simple_random_forest import *
 from .svm import *
+from .random_forest import *
