@@ -37,3 +37,11 @@ class LogisticRegressionTest(unittest.TestCase):
         clf = learn(table[:100])
         p = clf(table[100:], ret=Model.Probs)
         self.assertTrue(all(abs(p.sum(axis=1) - 1) < 1e-6))
+
+    def test_learner_scorer(self):
+        data = Table('voting')
+        learner = LogisticRegressionLearner()
+        scores = learner.score_data(data)
+        self.assertEqual('physician-fee-freeze',
+                         data.domain.attributes[np.argmax(scores)].name)
+        self.assertEqual(len(scores), len(data.domain.attributes))

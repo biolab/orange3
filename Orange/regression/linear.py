@@ -1,3 +1,5 @@
+import numpy as np
+
 import sklearn.linear_model as skl_linear_model
 import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
@@ -17,7 +19,7 @@ class _FeatureScorerMixin(LearnerScorer):
     class_type = ContinuousVariable
 
     def score(self, model):
-        return model.skl_model.coef_
+        return np.abs(model.skl_model.coef_)
 
 
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
