@@ -396,7 +396,11 @@ class OWHeatMap(widget.OWWidget):
         (Clustering, "Clustering"),
         (OrderedClustering, "Clustering with leaf ordering")
     ]
-    MaxClusteringInputSize = 1000
+    # Disable clustering for inputs bigger than this
+    _MaxClustering = 3000
+
+    # Disable cluster leaf ordering for inputs bigger than this
+    _MaxOrderedClustering = 1000
 
     gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
@@ -411,10 +415,22 @@ class OWHeatMap(widget.OWWidget):
         """The current selected row ordering method."""
         return self.RowOrdering[self.sort_rows_idx][0]
 
+    @sort_rows.setter
+    def sort_rows(self, value):
+        i = [i for i, (s, _) in enumerate(self.RowOrdering)
+             if s == value]
+        self.sort_rows_idx = i.pop() if i else 0
+
     @property
     def sort_columns(self):
         """The current selected column ordering method."""
         return self.ColumnOrdering[self.sort_columns_idx][0]
+
+    @sort_columns.setter
+    def sort_columns(self, value):
+        i = [i for i, (s, _) in enumerate(self.ColumnOrdering)
+             if s == value]
+        self.sort_columns_idx = i.pop() if i else 0
 
     merge_kmeans = settings.Setting(False)
     merge_kmeans_k = settings.Setting(50)
@@ -861,13 +877,13 @@ class OWHeatMap(widget.OWWidget):
                     for row in parts.rows]
             parts = parts._replace(rows=rows)
         elif self.sort_rows != OWHeatMap.NoSorting:
-            assert len(effective_data) < OWHeatMap.MaxClusteringInputSize
+            assert len(effective_data) <= OWHeatMap._MaxClustering
             parts = self.cluster_rows(
                 effective_data, parts,
                 ordered=self.sort_rows == OWHeatMap.OrderedClustering)
 
         if self.sort_columns != OWHeatMap.NoSorting:
-            assert len(effective_data.domain.attributes) < OWHeatMap.MaxClusteringInputSize
+            assert len(effective_data.domain.attributes) <= OWHeatMap._MaxClustering
             parts = self.cluster_columns(
                 effective_data, parts,
                 ordered=self.sort_columns == OWHeatMap.OrderedClustering)
@@ -1246,37 +1262,64 @@ class OWHeatMap(widget.OWWidget):
             else:
                 item.setFlags(flags & ~Qt.ItemIsEnabled)
 
-        rowclust_enabled = (len(data) < OWHeatMap.MaxClusteringInputSize
-                            if data is not None else True)
-        colclust_enabled = (len(data.domain.attributes) < OWHeatMap.MaxClusteringInputSize
-                            if data is not None else True)
+        if data is not None:
+            N = len(data)
+            M = len(data.domain.attributes)
+        else:
+            N = M = 0
+
+        rc_enabled = N <= OWHeatMap._MaxClustering
+        rco_enabled = N <= OWHeatMap._MaxOrderedClustering
+
+        cc_enabled = M <= OWHeatMap._MaxClustering
+        cco_enabled = M <= OWHeatMap._MaxOrderedClustering
+        sort_rows, sort_cols = self.sort_rows, self.sort_columns
+
+        row_clust_msg = None
+        col_clust_msg = None
+
+        if not rco_enabled and sort_rows == OWHeatMap.OrderedClustering:
+            sort_rows = OWHeatMap.Clustering
+            row_clust_msg = "Row cluster ordering was disabled due to the " \
+                            "input matrix being to big"
+
+        if not rc_enabled and sort_rows == OWHeatMap.Clustering:
+            sort_rows = OWHeatMap.SortBarycenter
+            row_clust_msg = "Row clustering was was disabled due to the " \
+                            "input matrix being to big"
+
+        if not cco_enabled and sort_cols == OWHeatMap.OrderedClustering:
+            sort_cols = OWHeatMap.Clustering
+            col_clust_msg = "Column cluster ordering was disabled due to " \
+                            "the input matrix being to big"
+
+        if not cc_enabled and sort_cols == OWHeatMap.Clustering:
+            sort_cols = OWHeatMap.NoSorting
+            col_clust_msg = "Column clustering was disabled due to the " \
+                            "input matrix being to big"
+
+        self.information(3, row_clust_msg)
+        self.information(4, col_clust_msg)
+
+        self.sort_rows = sort_rows
+        self.sort_columns = sort_cols
 
         # Disable/enable the combobox items for the clustering methods
         for i in range(self.rowsortcb.count()):
             item = self.rowsortcb.model().item(i)
             sorting = self.RowOrdering[i][0]
-            if sorting == OWHeatMap.Clustering or \
-                    sorting == OWHeatMap.OrderedClustering:
-                enable(item, rowclust_enabled)
+            if sorting == OWHeatMap.Clustering:
+                enable(item, rc_enabled)
+            if sorting == OWHeatMap.OrderedClustering:
+                enable(item, rco_enabled)
 
         for i in range(self.colsortcb.count()):
             item = self.colsortcb.model().item(i)
             sorting = self.ColumnOrdering[i][0]
-            if sorting == OWHeatMap.Clustering or \
-                sorting == OWHeatMap.OrderedClustering:
-                enable(item, colclust_enabled)
-
-        # Ensure the current selected method is not a clustring method
-        # if it is disabled
-        if not rowclust_enabled and \
-                (self.sort_rows == OWHeatMap.Clustering or
-                 self.sort_rows == OWHeatMap.OrderedClustering):
-            self.sort_rows_idx = 0
-
-        if not colclust_enabled and \
-                (self.sort_columns == OWHeatMap.Clustering or
-                 self.sort_columns == OWHeatMap.OrderedClustering):
-            self.sort_columns_idx = 0
+            if sorting == OWHeatMap.Clustering:
+                enable(item, cc_enabled)
+            if sorting == OWHeatMap.OrderedClustering:
+                enable(item, cco_enabled)
 
     def heatmap_widgets(self):
         """Iterate over heatmap widgets.
