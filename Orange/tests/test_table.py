@@ -1261,6 +1261,27 @@ class CreateTableWithUrl(TableTests):
         np.testing.assert_array_equal(d1.X, d2.X)
         np.testing.assert_array_equal(d1.Y, d2.Y)
 
+    class _MockUrlOpen(MagicMock):
+        headers = {'content-disposition':
+            'attachment; filename="Something-FormResponses.tsv"; '
+            'filename*=UTF-8''Something%20%28Responses%29.tsv'}
+        url = 'https://docs.google.com/spreadsheets/d/ABCD/edit'
+        def __enter__(self): return self
+        def __exit__(self, *args, **kwargs): pass
+        def read(self): return b'''\
+a\tb\tc
+1\t2\t3
+2\t3\t4'''
+
+    urlopen = _MockUrlOpen()
+
+    @patch('Orange.data.table.urlopen', urlopen)
+    def test_google_sheets(self):
+        d = data.Table(self.urlopen.url)
+        self.urlopen.assert_called_with('https://docs.google.com/spreadsheets/d/ABCD/export?format=tsv', timeout=10)
+        self.assertEqual(len(d), 2)
+        self.assertEqual(d.name, 'Something-FormResponses')
+
 
 class CreateTableWithDomain(TableTests):
     def test_creates_an_empty_table_with_given_domain(self):

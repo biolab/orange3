@@ -1,4 +1,5 @@
 import os
+import re
 import zlib
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
@@ -7,9 +8,10 @@ import operator
 from functools import reduce
 from warnings import warn
 from threading import Lock
-import tempfile
-import urllib.parse
-import urllib.request
+from tempfile import NamedTemporaryFile
+from urllib.parse import urlparse, unquote as urlunquote
+from urllib.request import urlopen
+from urllib.error import URLError
 
 import bottlechest as bn
 from scipy import sparse as sp
@@ -523,13 +525,53 @@ class Table(MutableSequence, Storage):
 
     @classmethod
     def from_url(cls, url):
-        name = os.path.basename(urllib.parse.urlparse(url)[2])
-        f = tempfile.NamedTemporaryFile(suffix=name, delete=False)
-        fname = f.name
-        f.close()
-        urllib.request.urlretrieve(url, fname)
-        data = cls.from_file(f.name)
-        os.remove(fname)
+        # Resolve (potential) redirects to a final URL
+        response = urlopen(url, timeout=10)
+        url = response.url
+        response.close()
+
+        def url_googlesheets(url):
+            match = re.match(r'(?:https?://)?(?:www\.)?'
+                             'docs\.google\.com/spreadsheets/d/'
+                             '(?P<workbook_id>[-\w_]+)'
+                             '(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
+                             url, re.IGNORECASE)
+            try:
+                workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
+                if not workbook:
+                    raise ValueError
+            except (AttributeError, ValueError):
+                raise ValueError
+            url = 'https://docs.google.com/spreadsheets/d/{}/export?format=tsv'.format(workbook)
+            if sheet:
+                url += '&gid=' + sheet
+            return url
+
+        URL_TRIMMERS = (
+            url_googlesheets,
+        )
+        for trim in URL_TRIMMERS:
+            try: url = trim(url)
+            except ValueError: continue
+            else: break
+
+        name = urlparse(url)[2].replace('/', '_')
+
+        def suggested_filename(content_disposition):
+            # See https://tools.ietf.org/html/rfc6266#section-4.1
+            matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
+                                 content_disposition or '')
+            return urlunquote(matches[-1]) if matches else ''
+
+        with urlopen(url, timeout=10) as response:
+            name = suggested_filename(response.headers['content-disposition']) or name
+            with NamedTemporaryFile(suffix=name) as f:
+                f.write(response.read())
+                f.flush()
+                data = cls.from_file(f.name)
+        # Override name set in from_file() to avoid holding the temp prefix
+        data.name = os.path.splitext(name)[0]
+        data.origin = url
         return data
 
     # Helper function for __setitem__ and insert:
