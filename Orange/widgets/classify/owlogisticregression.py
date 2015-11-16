@@ -1,3 +1,4 @@
+import numpy as np
 from itertools import chain
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
@@ -104,9 +105,11 @@ class OWLogisticRegression(widget.OWWidget):
         classifier = None
 
         if self.data is not None:
-            self.error(0)
+            self.error([0, 1])
             if not learner.check_learner_adequacy(self.data.domain):
                 self.error(0, learner.learner_adequacy_err_msg)
+            elif len(np.unique(self.data.Y)) < 2:
+                self.error(1, "Data contains only one target value.")
             else:
                 classifier = learner(self.data)
                 classifier.name = self.learner_name
