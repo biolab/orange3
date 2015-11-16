@@ -128,42 +128,6 @@ class WidgetDiscovery(object):
                 log.error("An exception occurred while processing %r.",
                           entry_point, exc_info=True)
 
-    def process_directory(self, directory):
-        """
-        Process and locate any widgets in directory on a file system,
-        i.e. examines all .py files in the directory, delegating the
-        to `process_file` (deprecated)
-
-        """
-        for filename in glob.glob(os.path.join(directory, "*.py")):
-            self.process_file(filename)
-
-    def process_file(self, filename):
-        """
-        Process .py file containing the widget code (deprecated).
-        """
-        filename = fix_pyext(filename)
-        # TODO: zipped modules
-        if self.cache_has_valid_entry(filename):
-            desc = self.cache_get(filename).description
-            return
-
-        if self.cache_can_ignore(filename):
-            log.info("Ignoring %r.", filename)
-            return
-
-        try:
-            desc = WidgetDescription.from_file(filename)
-        except WidgetSpecificationError:
-            self.cache_insert(filename, 0, None, None,
-                              WidgetSpecificationError)
-            return
-        except Exception:
-            log.info("Error processing a file.", exc_info=True)
-            return
-
-        self.handle_widget(desc)
-
     def process_widget_module(self, module, name=None, category_name=None,
                               distribution=None):
         """
@@ -331,19 +295,7 @@ class WidgetDiscovery(object):
         if isinstance(module, str):
             module = __import__(module, fromlist=[""])
 
-        desc = None
-        try:
-            desc = WidgetDescription.from_module(module)
-        except WidgetSpecificationError:
-            try:
-                desc = WidgetDescription.from_file(
-                    module.__file__, import_name=module.__name__
-                )
-            except Exception:
-                pass
-
-            if desc is None:
-                raise
+        desc = WidgetDescription.from_module(module)
 
         if widget_name is not None:
             desc.name = widget_name
@@ -491,16 +443,6 @@ def widget_descriptions_from_package(package):
         try:
             desc = WidgetDescription.from_module(module)
         except Exception:
-            pass
-        if not desc:
-            try:
-                desc = WidgetDescription.from_file(
-                    module.__file__, import_name=name
-                    )
-            except Exception:
-                pass
-
-        if not desc:
             log.info("Error in %r", name, exc_info=True)
         else:
             desciptions.append(desc)
