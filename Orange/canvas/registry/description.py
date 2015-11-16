@@ -4,8 +4,8 @@ Widget meta description classes
 
 """
 
-import os
 import sys
+import copy
 import warnings
 
 # Exceptions
@@ -102,12 +102,14 @@ class InputSignal(object):
                "handler={handler}, ...)")
         return fmt.format(type(self), **self.__dict__)
 
+    __repr__ = __str__
+
 
 def input_channel_from_args(args):
     if isinstance(args, tuple):
         return InputSignal(*args)
     elif isinstance(args, InputSignal):
-        return args
+        return copy.copy(args)
     else:
         raise TypeError("invalid declaration of widget input signal")
 
@@ -166,14 +168,17 @@ class OutputSignal(object):
                "...)")
         return fmt.format(type(self), **self.__dict__)
 
+    __repr__ = __str__
+
 
 def output_channel_from_args(args):
     if isinstance(args, tuple):
         return OutputSignal(*args)
     elif isinstance(args, OutputSignal):
-        return args
+        return copy.copy(args)
     else:
         raise TypeError("invalid declaration of widget output signal")
+
 
 class WidgetDescription(object):
     """
@@ -385,11 +390,16 @@ class WidgetDescription(object):
 
         qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
 
+        inputs = [input_channel_from_args(input_) for input_ in
+                  widget_class.inputs]
+        outputs = [output_channel_from_args(output) for output in
+                   widget_class.outputs]
+
         # Convert all signal types into qualified names.
         # This is to prevent any possible import problems when cached
         # descriptions are unpickled (the relevant code using this lists
         # should be able to handle missing types better).
-        for s in widget_class.inputs + widget_class.outputs:
+        for s in inputs + outputs:
             s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
 
         return cls(
@@ -401,8 +411,8 @@ class WidgetDescription(object):
             long_description=widget_class.long_description,
             qualified_name=qualified_name,
             package=module.__package__,
-            inputs=widget_class.inputs,
-            outputs=widget_class.outputs,
+            inputs=inputs,
+            outputs=outputs,
             author=widget_class.author,
             author_email=widget_class.author_email,
             maintainer=widget_class.maintainer,
