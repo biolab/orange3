@@ -13,7 +13,7 @@ import builtins
 import math
 import random
 from collections import namedtuple
-from itertools import chain
+from itertools import chain, count
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import QSizePolicy
@@ -345,19 +345,38 @@ class OWFeatureConstructor(widget.OWWidget):
             "Add", toolTip="Create a new feature",
             shortcut=QtGui.QKeySequence.New
         )
+
+        def unique_name(fmt, reserved):
+            candidates = (fmt.format(i) for i in count(1))
+            return next(c for c in candidates if c not in reserved)
+
+        def reserved_names():
+            varnames = []
+            if self.data is not None:
+                varnames = [var.name for var in
+                            self.data.domain.variables + self.data.domain.metas]
+            varnames += [desc.name for desc in self.featuremodel]
+            return set(varnames)
+
+        def generate_newname(fmt):
+            return unique_name(fmt, reserved_names())
+
         menu = QtGui.QMenu(self.addbutton)
         cont = menu.addAction("Continuous")
         cont.triggered.connect(
-            lambda: self.addFeature(ContinuousDescriptor("Name", "", 3))
+            lambda: self.addFeature(
+                ContinuousDescriptor(generate_newname("X{}"), "", 3))
         )
         disc = menu.addAction("Discrete")
         disc.triggered.connect(
             lambda: self.addFeature(
-                DiscreteDescriptor("Name", "", ("A", "B"), -1, False))
+                DiscreteDescriptor(generate_newname("D{}"), "",
+                                   ("A", "B"), -1, False))
         )
         string = menu.addAction("String")
         string.triggered.connect(
-            lambda: self.addFeature(StringDescriptor("Name", ""))
+            lambda: self.addFeature(
+                StringDescriptor(generate_newname("S{}"), ""))
         )
         menu.addSeparator()
         self.duplicateaction = menu.addAction("Duplicate selected variable")
