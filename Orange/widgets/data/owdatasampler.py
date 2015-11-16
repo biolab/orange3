@@ -180,6 +180,7 @@ class OWDataSampler(widget.OWWidget):
                 sample = self.data.sample_time(
                     self.sampleSizeSqlTime, no_cache=True)
             if self.sql_dl:
+                sample.download_data()
                 sample = Table(sample)
         else:
             if self.indices is None or not self.use_seed:
