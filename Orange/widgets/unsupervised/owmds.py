@@ -109,6 +109,13 @@ class OWMDS(widget.OWWidget):
         ("None", -1)
     ]
 
+    JitterAmount = [
+        ("None", 0),
+        ("0.1%", 0.1),
+        ("0.5%", 0.5),
+        ("1%", 1.0),
+        ("2%", 2.0)
+    ]
     #: Runtime state
     Running, Finished, Waiting = 1, 2, 3
 
@@ -132,7 +139,7 @@ class OWMDS(widget.OWWidget):
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
     connected_pairs = settings.Setting(5)
-    spread_equal_points = settings.Setting(False)
+    jitter = settings.Setting(0)
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
 
@@ -183,10 +190,6 @@ class OWMDS(widget.OWWidget):
                         box, self, "refresh_rate",
                         items=[t for t, _ in OWMDS.RefreshRate],
                         callback=self.__invalidate_refresh))
-        gui.separator(box, 10)
-        gui.checkBox(box, self, "spread_equal_points",
-                     "Spread points at zero-distances",
-                     callback=self.__invalidate_embedding)
         gui.separator(box, 10)
         self.runbutton = gui.button(
             box, self, "Run", callback=self._toggle_run)
@@ -244,6 +247,12 @@ class OWMDS(widget.OWWidget):
                         self, "connected_pairs", minValue=0, maxValue=20,
                         createLabel=False,
                         callback=self._on_connected_changed))
+        form.addRow("Jitter",
+                    gui.comboBox(
+                        box, self, "jitter",
+                        items=[text for text, _ in self.JitterAmount],
+                        callback=self._update_plot))
+
         box.layout().addLayout(form)
 
         gui.rubber(self.controlArea)
@@ -488,9 +497,6 @@ class OWMDS(widget.OWWidget):
     def __start(self):
         self.__draw_similar_pairs = False
         X = self._effective_matrix
-        if self.spread_equal_points:
-            maxval = numpy.max(X)
-            X = numpy.clip(X, maxval / 10, maxval)
 
         if self.embedding is not None:
             init = self.embedding
@@ -705,6 +711,17 @@ class OWMDS(widget.OWWidget):
             else:
                 return numpy.zeros_like(a)
 
+        def jitter(x, factor=1, rstate=None):
+            if rstate is None:
+                rstate = numpy.random.RandomState()
+            elif not isinstance(rstate, numpy.random.RandomState):
+                rstate = numpy.random.RandomState(rstate)
+            span = numpy.nanmax(x) - numpy.nanmin(x)
+            if span < numpy.finfo(x.dtype).eps * 100:
+                span = 1
+            a = factor * span / 100.
+            return x + (rstate.random_sample(x.shape) - 0.5) * a
+
         if self._pen_data is None:
             if self._selection_mask is not None:
                 pointflags = numpy.where(
@@ -818,6 +835,10 @@ class OWMDS(widget.OWWidget):
             self._label_data = label_items
 
         emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
+        if self.jitter > 0:
+            _, jitter_factor = self.JitterAmount[self.jitter]
+            emb_x = jitter(emb_x, jitter_factor, amount=0, rstate=42)
+            emb_y = jitter(emb_y, jitter_factor, amount=0, rstate=667)
 
         if self.connected_pairs and self.__draw_similar_pairs:
             if self._similar_pairs is None:
