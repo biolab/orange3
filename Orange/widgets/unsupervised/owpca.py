@@ -5,7 +5,8 @@ import numpy
 import pyqtgraph as pg
 
 from Orange.data import Table, Domain, StringVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
+from Orange.preprocess import Normalize
 import Orange.projection
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.io import FileFormat
@@ -26,12 +27,14 @@ class OWPCA(widget.OWWidget):
     inputs = [("Data", Table, "set_data")]
     outputs = [("Transformed data", Table),
                ("Components", Table)]
+
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
     address = settings.Setting('')
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
+    normalize = settings.Setting(True)
 
     want_graph = True
 
@@ -94,6 +97,11 @@ class OWPCA(widget.OWWidget):
         self.__timer.timeout.connect(self.get_model)
 
         self.sampling_box.setVisible(remotely)
+
+        self.options_box = gui.widgetBox(self.controlArea, "Options")
+        gui.checkBox(self.options_box, self, "normalize", "Normalize data",
+                     callback=self.fit)
+
         self.controlArea.layout().addStretch()
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Send data",
@@ -136,33 +144,49 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
-        self.clear()
+        self.information(0)
+        if isinstance(data, SqlTable):
+            if data.approx_len() < AUTO_DL_LIMIT:
+                data = Table(data)
+            elif not remotely:
+                self.information(0, "Data has been sampled")
+                data_sample = data.sample_time(1, no_cache=True)
+                data_sample.download_data(2000, partial=True)
+                data = Table(data_sample)
         self.data = data
+        self.fit()
 
+    def fit(self):
+        self.clear()
         self.start_button.setEnabled(False)
-        if data is not None:
-            self._transformed = None
-            if remotely and isinstance(data, SqlTable):
-                self.sampling_box.setVisible(True)
-                self.start_button.setText("Start remote computation")
-                self.start_button.setEnabled(True)
-            else:
-                self.sampling_box.setVisible(False)
-                pca = Orange.projection.PCA()
-                pca = pca(self.data)
-                variance_ratio = pca.explained_variance_ratio_
-                cumulative = numpy.cumsum(variance_ratio)
-                self.components_spin.setRange(0, len(cumulative))
+        if self.data is None:
+            return
+        data = self.data
+        self._transformed = None
+        if isinstance(data, SqlTable): # data was big and remote available
+            self.sampling_box.setVisible(True)
+            self.start_button.setText("Start remote computation")
+            self.start_button.setEnabled(True)
+        else:
+            # TODO move the following normalization outside
+            # so it is applied for SqlTables as well (when it works on them)
+            if self.normalize:
+                data = Normalize(data)
+            self.sampling_box.setVisible(False)
+            pca = Orange.projection.PCA()
+            pca = pca(data)
+            variance_ratio = pca.explained_variance_ratio_
+            cumulative = numpy.cumsum(variance_ratio)
+            self.components_spin.setRange(0, len(cumulative))
 
-                self._pca = pca
-                self._variance_ratio = variance_ratio
-                self._cumulative = cumulative
-                self._setup_plot()
+            self._pca = pca
+            self._variance_ratio = variance_ratio
+            self._cumulative = cumulative
+            self._setup_plot()
 
-                self.unconditional_commit()
+            self.unconditional_commit()
 
     def clear(self):
-        self.data = None
         self._pca = None
         self._transformed = None
         self._variance_ratio = None
