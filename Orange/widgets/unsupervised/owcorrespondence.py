@@ -93,6 +93,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         gui.rubber(self.controlArea)
 
         self.plot = pg.PlotWidget(background="w")
+        self.plot.setMenuEnabled(False)
         self.mainArea.layout().addWidget(self.plot)
         self.graphButton.clicked.connect(self.save_graph)
 
