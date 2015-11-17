@@ -1708,14 +1708,19 @@ class OWPreprocess(widget.OWWidget):
             self.preprocessormodel.rowsRemoved.connect(self.__on_modelchanged)
             self.preprocessormodel.rowsMoved.connect(self.__on_modelchanged)
 
-    def __on_modelchanged(self):
-        if self.preprocessormodel is None or self.preprocessormodel.rowCount() == 0:
+        self.__update_overlay()
+
+    def __update_overlay(self):
+        if self.preprocessormodel is None or \
+                self.preprocessormodel.rowCount() == 0:
             self.overlay.setWidget(self.flow_view)
             self.overlay.show()
         else:
             self.overlay.setWidget(None)
             self.overlay.hide()
 
+    def __on_modelchanged(self):
+        self.__update_overlay()
         self.commit()
 
     @check_sql_input
