@@ -1,3 +1,4 @@
+from collections import defaultdict
 import numpy as np
 from sklearn import feature_selection as skl_fss
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -5,6 +6,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize
+from Orange.util import abstract
 
 
 __all__ = ["Chi2",
@@ -112,6 +114,31 @@ class UnivariateLinearRegression(SklScorer):
     def score(self, X, y):
         f, p = skl_fss.f_regression(X, y)
         return f
+
+
+class LearnerScorer(Scorer):
+
+    @abstract
+    def score(self, model):
+        pass
+
+    def score_data(self, data, feature=None):
+        model = self(data)
+        scores = self.score(model)
+
+        if data.domain != self.domain:
+            scores_grouped = defaultdict(list)
+            for attr, score in zip(self.domain.attributes, scores):
+                # Go up the chain of preprocessors to obtain the original variable
+                while getattr(attr, 'compute_value', False):
+                    attr = getattr(attr.compute_value, 'variable', attr)
+                scores_grouped[attr].append(score)
+            scores = [sum(scores_grouped[attr]) / len(scores_grouped[attr])
+                      if attr in scores_grouped else 0
+                      for attr in data.domain.attributes]
+
+        return scores[data.domain.attributes.index(feature)] if feature \
+            else scores
 
 
 class ClassificationScorer(Scorer):

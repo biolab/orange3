@@ -49,7 +49,8 @@ class OWRank(widget.OWWidget):
     icon = "icons/Rank.svg"
     priority = 1102
 
-    inputs = [("Data", Orange.data.Table, "setData")]
+    inputs = [("Data", Orange.data.Table, "setData"),
+              ("Scorer", score.Scorer, "set_learner", widget.Multiple)]
     outputs = [("Reduced Data", Orange.data.Table)]
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
@@ -129,10 +130,9 @@ class OWRank(widget.OWWidget):
         self.discRanksView.setSelectionMode(QtGui.QTableView.MultiSelection)
         self.discRanksView.setSortingEnabled(True)
 
+        self.discRanksLabels = ["#"] + [m.shortname for m in self.discMeasures]
         self.discRanksModel = QtGui.QStandardItemModel(self)
-        self.discRanksModel.setHorizontalHeaderLabels(
-            ["#"] + [m.shortname for m in self.discMeasures]
-        )
+        self.discRanksModel.setHorizontalHeaderLabels(self.discRanksLabels)
 
         self.discRanksProxyModel = MySortProxyModel(self)
         self.discRanksProxyModel.setSourceModel(self.discRanksModel)
@@ -159,10 +159,9 @@ class OWRank(widget.OWWidget):
         self.contRanksView.setSelectionMode(QtGui.QTableView.MultiSelection)
         self.contRanksView.setSortingEnabled(True)
 
+        self.contRanksLabels = ["#"] + [m.shortname for m in self.contMeasures]
         self.contRanksModel = QtGui.QStandardItemModel(self)
-        self.contRanksModel.setHorizontalHeaderLabels(
-            ["#"] + [m.shortname for m in self.contMeasures]
-        )
+        self.contRanksModel.setHorizontalHeaderLabels(self.contRanksLabels)
 
         self.contRanksProxyModel = MySortProxyModel(self)
         self.contRanksProxyModel.setSourceModel(self.contRanksModel)
@@ -191,6 +190,7 @@ class OWRank(widget.OWWidget):
         self.resize(690, 500)
 
         self.measure_scores = table((len(self.measures), 0), None)
+        self.learners = {}
 
     def switchRanksMode(self, index):
         """
@@ -249,11 +249,33 @@ class OWRank(widget.OWWidget):
                 item.setData(gui.attributeIconDict[a], Qt.DecorationRole)
                 self.ranksModel.setVerticalHeaderItem(i, item)
 
-            self.measure_scores = table((len(self.measures),
-                                         len(attrs)), None)
+            shape = (len(self.measures) + len(self.learners), len(attrs))
+            self.measure_scores = table(shape, None)
             self.updateScores()
 
         self.selectMethodChanged()
+        self.commit()
+
+    def set_learner(self, learner, lid=None):
+        if learner is None and lid is not None:
+            del self.learners[lid]
+        elif learner is not None:
+            self.learners[lid] = score_meta(
+                learner.name,
+                learner.name,
+                learner
+            )
+        attrs_len = 0 if not self.data else len(self.data.domain.attributes)
+        shape = (len(self.measures) + len(self.learners), attrs_len)
+        self.measure_scores = table(shape, None)
+        labels = [v.shortname for k, v in self.learners.items()]
+        self.contRanksModel.setHorizontalHeaderLabels(
+            self.contRanksLabels + labels
+        )
+        self.discRanksModel.setHorizontalHeaderLabels(
+            self.discRanksLabels + labels
+        )
+        self.updateScores()
         self.commit()
 
     def updateScores(self, measuresMask=None):
@@ -267,7 +289,7 @@ class OWRank(widget.OWWidget):
         if not self.data:
             return
 
-        measures = self.measures
+        measures = self.measures + [v for k, v in self.learners.items()]
         # Invalidate all warnings
         self.warning(range(max(len(self.discMeasures),
                                len(self.contMeasures))))
@@ -275,15 +297,24 @@ class OWRank(widget.OWWidget):
         if measuresMask is None:
             # Update all selected measures
             measuresMask = [self.selectedMeasures.get(m.name)
-                            for m in measures]
+                            for m in self.measures]
+            measuresMask = measuresMask + [v.name for k, v in
+                                           self.learners.items()]
 
         data = self.data
-
+        self.error(1)
         for index, (meas, mask) in enumerate(zip(measures, measuresMask)):
             if not mask:
                 continue
-            estimator = meas.score()
-            self.measure_scores[index] = estimator(data)
+            if index < len(self.measures):
+                estimator = meas.score()
+                self.measure_scores[index] = estimator(data)
+            else:
+                learner = meas.score
+                if not learner.check_learner_adequacy(self.data.domain):
+                    self.error(1, learner.learner_adequacy_err_msg)
+                else:
+                    self.measure_scores[index] = meas.score.score_data(data)
 
         self.updateRankModel(measuresMask)
         self.ranksProxyModel.invalidate()
@@ -296,6 +327,10 @@ class OWRank(widget.OWWidget):
         Update the rankModel.
         """
         values = []
+        for i in range(len(self.measure_scores) + 1,
+                       self.ranksModel.columnCount()):
+            self.ranksModel.removeColumn(i)
+
         for i, scores in enumerate(self.measure_scores):
             values_one = []
             for j, score in enumerate(scores):
@@ -485,6 +520,12 @@ if __name__ == "__main__":
 #     ow.setData(Orange.data.Table("servo.tab"))
 #     ow.setData(Orange.data.Table("iris.tab"))
 #     ow.setData(orange.ExampleTable("auto-mpg.tab"))
+#    ow.setData(Orange.data.Table("housing"))
+#    ow.set_learner(Orange.regression.LinearRegressionLearner(), (1, 'Linear Regression', None))
+#    ow.set_learner(Orange.regression.RidgeRegressionLearner(), (2, 'Linear Regression', None))
+#    ow.set_learner(None, (1, 'Linear Regression', None))
+    ow.set_learner(Orange.classification.RandomForestLearner(), (3, 'Learner', None))
+    ow.commit()
     ow.show()
     a.exec_()
     ow.saveSettings()

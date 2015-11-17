@@ -1,8 +1,12 @@
+import numpy as np
+
 import sklearn.linear_model as skl_linear_model
 import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
 
-from Orange.regression import Learner, Model, SklLearner
+from Orange.regression import Learner, Model, SklLearner, SklModel
+from Orange.data import Variable, ContinuousVariable
+from Orange.preprocess.score import LearnerScorer
 
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "LassoRegressionLearner", "SGDRegressionLearner",
@@ -10,7 +14,15 @@ __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "PolynomialLearner"]
 
 
-class LinearRegressionLearner(SklLearner):
+class _FeatureScorerMixin(LearnerScorer):
+    feature_type = Variable
+    class_type = ContinuousVariable
+
+    def score(self, model):
+        return np.abs(model.skl_model.coef_)
+
+
+class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
     name = 'linreg'
 
@@ -23,7 +35,7 @@ class LinearRegressionLearner(SklLearner):
         return LinearModel(sk)
 
 
-class RidgeRegressionLearner(SklLearner):
+class RidgeRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.Ridge
     name = 'ridge'
 
@@ -34,7 +46,7 @@ class RidgeRegressionLearner(SklLearner):
         self.params = vars()
 
 
-class LassoRegressionLearner(SklLearner):
+class LassoRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.Lasso
     name = 'lasso'
 
@@ -108,12 +120,9 @@ class PolynomialLearner(Learner):
         return PolynomialModel(model, polyfeatures)
 
 
-class LinearModel(Model):
-    def __init__(self, model):
-        self.model = model
-
+class LinearModel(SklModel):
     def predict(self, X):
-        vals = self.model.predict(X)
+        vals = self.skl_model.predict(X)
         if len(vals.shape) == 1:
             # Prevent IndexError for 1D array
             return vals
@@ -123,7 +132,7 @@ class LinearModel(Model):
             return vals
 
     def __str__(self):
-        return 'LinearModel {}'.format(self.model)
+        return 'LinearModel {}'.format(self.skl_model)
 
 
 class PolynomialModel(Model):
