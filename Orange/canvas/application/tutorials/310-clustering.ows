@@ -1,82 +1,44 @@
 <?xml version='1.0' encoding='utf-8'?>
 <scheme description="The workflow clusters the data items in Iris data set by first estimating the distances between data instances. Distance matrix is passed to hierarchical clustering, which renders the dendrogram. Select different parts of the dendrogram to further analyze the corresponding data.&#10;&#10;Notice that hierarchical clustering can only handle small data sets, that is, those that contain only a small number of data instances. For larger data sets the distance matrix may get too big and may not fit in the memory. An alternative method that can consider such data sets is k-means clustering." title="Hierarchical Clustering" version="2.0">
 	<nodes>
-		<node id="0" name="File" position="(164.0, 145.0)" project_name="Orange" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
-		<node id="1" name="Data Table" position="(335.0, 64.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
-		<node id="2" name="Distances" position="(283.0, 248.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owdistances.OWDistances" title="Distances" version="" />
-		<node id="3" name="Distance Map" position="(406.0, 196.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owdistancemap.OWDistanceMap" title="Distance Map" version="" />
-		<node id="4" name="Hierarchical Clustering" position="(410.0, 317.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owhierarchicalclustering.OWHierarchicalClustering" title="Hierarchical Clustering" version="" />
-		<node id="5" name="Data Table" position="(521.0, 317.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table (1)" version="" />
+		<node id="0" name="File" position="(135.0, 135.0)" project_name="Orange" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Distances" position="(242.0, 203.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owdistances.OWDistances" title="Distances" version="" />
+		<node id="2" name="Data Table" position="(268.0, 90.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="3" name="Distance Map" position="(412.0, 184.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owdistancemap.OWDistanceMap" title="Distance Map" version="" />
+		<node id="4" name="Hierarchical Clustering" position="(418.0, 307.0)" project_name="Orange" qualified_name="Orange.widgets.unsupervised.owhierarchicalclustering.OWHierarchicalClustering" title="Hierarchical Clustering" version="" />
+		<node id="5" name="Data Table" position="(583.0, 262.0)" project_name="Orange" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table (1)" version="" />
+		<node id="6" name="Box Plot" position="(526.0, 390.0)" project_name="Orange" qualified_name="Orange.widgets.visualize.owboxplot.OWBoxPlot" title="Box Plot" version="" />
 	</nodes>
 	<links>
 		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
 		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="0" />
-		<link enabled="true" id="2" sink_channel="Distances" sink_node_id="3" source_channel="Distances" source_node_id="2" />
-		<link enabled="true" id="3" sink_channel="Distances" sink_node_id="4" source_channel="Distances" source_node_id="2" />
+		<link enabled="true" id="2" sink_channel="Distances" sink_node_id="3" source_channel="Distances" source_node_id="1" />
+		<link enabled="true" id="3" sink_channel="Distances" sink_node_id="4" source_channel="Distances" source_node_id="1" />
 		<link enabled="true" id="4" sink_channel="Data" sink_node_id="5" source_channel="Selected Data" source_node_id="4" />
+		<link enabled="true" id="5" sink_channel="Data" sink_node_id="6" source_channel="Selected Data" source_node_id="4" />
 	</links>
 	<annotations>
-		<text font-family="Helvetica" font-size="14" id="0" rect="(35.0, 22.0, 150.0, 96.0)">Read the data. Try this schema with the brown-selected set (from data sets that come with Orange).</text>
-		<text font-family="Helvetica" font-size="14" id="1" rect="(447.0, 79.0, 170.0, 54.0)">Visualize the data distances in a heat map.</text>
-		<text font-family="Helvetica" font-size="14" id="2" rect="(129.0, 329.0, 150.0, 54.0)">Compute the distances between the data samples.</text>
-		<text font-family="Helvetica" font-size="14" id="3" rect="(287.0, 424.0, 150.0, 40.0)">Hierarchically cluster the data.</text>
-		<arrow end="(133.0, 142.0)" fill="#C1272D" id="4" start="(92.0, 107.0)" />
-		<arrow end="(262.0, 305.0)" fill="#C1272D" id="5" start="(229.0, 341.0)" />
-		<arrow end="(408.0, 162.0)" fill="#C1272D" id="6" start="(443.0, 101.0)" />
-		<arrow end="(373.0, 379.0)" fill="#C1272D" id="7" start="(348.0, 422.0)" />
-		<text font-family="Helvetica" font-size="14" id="8" rect="(594.0, 146.0, 239.0, 128.0)">Choose any part of the clustering dendrogram. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this schema into interactive data analysis.</text>
+		<text font-family="Helvetica" font-size="14" id="0" rect="(18.0, 15.0, 150.0, 82.0)">Read the data. Try this schema with the "brown-selected" data (from data sets that come with Orange).</text>
+		<text font-family="Helvetica" font-size="14" id="1" rect="(402.0, 63.0, 150.0, 54.0)">Visualize the data distances in a heat map.</text>
+		<text font-family="Helvetica" font-size="14" id="2" rect="(597.0, 56.0, 214.0, 153.0)">Choose any part of the clustering dendrogram in Hierarchical Clustering. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this schema into interactive data analysis.
+</text>
+		<text font-family="Helvetica" font-size="14" id="3" rect="(601.0, 330.0, 150.0, 96.0)">Any change in selection in hierarchical clustering will propagate to the Data Table and Box Plot widgets.</text>
+		<text font-family="Helvetica" font-size="14" id="4" rect="(253.0, 384.0, 150.0, 40.0)">Hierarchically cluster the data.</text>
+		<text font-family="Helvetica" font-size="14" id="5" rect="(81.0, 263.0, 150.0, 54.0)">Compute the distances between the data samples.</text>
+		<arrow end="(104.00000000000003, 133.0)" fill="#C1272D" id="6" start="(52.00000000000002, 100.0)" />
+		<arrow end="(421.0, 154.00000000000003)" fill="#C1272D" id="7" start="(454.0, 102.00000000000003)" />
+		<arrow end="(206.00000000000003, 226.0)" fill="#C1272D" id="8" start="(176.00000000000003, 274.0)" />
+		<arrow end="(379.0000000000001, 328.0)" fill="#C1272D" id="9" start="(335.0000000000001, 381.0)" />
+		<arrow end="(501.0, 325.99999999999994)" fill="#39B54A" id="10" start="(593.0, 363.99999999999994)" />
 	</annotations>
 	<thumbnail />
 	<node_properties>
-		<properties format="pickle" node_id="0">gAN9cQAoWA0AAABuZXdfdmFyaWFibGVzcQGJWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQJjc2lw
-Cl91bnBpY2tsZV90eXBlCnEDWAwAAABQeVF0NC5RdENvcmVxBFgKAAAAUUJ5dGVBcnJheXEFQy4B
-2dDLAAEAAAAAA5QAAAHFAAAFhAAAAqcAAAOUAAAB2wAABYQAAAKnAAAAAAAAcQaFcQeHcQhScQlY
-DAAAAHJlY2VudF9maWxlc3EKXXELKFgwAAAAL1VzZXJzL2JsYXovZGV2L29yYW5nZTMvT3Jhbmdl
-L2RhdGFzZXRzL2lyaXMudGFicQxYOgAAAC9Vc2Vycy9ibGF6L2Rldi9vcmFuZ2UzL09yYW5nZS9k
-YXRhc2V0cy9icm93bi1zZWxlY3RlZC50YWJxDVg0AAAAL1VzZXJzL2JsYXovRGVza3RvcC9kYXRh
-LW1vdmllbGVucy9tb3ZpZXMtZ2VucmVzLnRhYnEOWDMAAAAvVXNlcnMvYmxhei9kZXYvb3Jhbmdl
-My9PcmFuZ2UvZGF0YXNldHMvdGl0YW5pYy50YWJxD1gyAAAAL1VzZXJzL2JsYXovZGV2L29yYW5n
-ZTMvT3JhbmdlL2RhdGFzZXRzL2xlbnNlcy50YWJxEFgxAAAAL1VzZXJzL2JsYXovZGV2L29yYW5n
-ZTMvT3JhbmdlL2RhdGFzZXRzL2dsYXNzLnRhYnERWFgAAAAvVXNlcnMvYmxhei9Eb2N1bWVudHMv
-YWN0LzE1LWJheWxvci1kYXRhIG1pbmluZyBjb3Vyc2UvbWF0ZXJpYWwvZ3JhZGVzLXNtYWxsLWhl
-YWRlci54bHN4cRJYUQAAAC9Vc2Vycy9ibGF6L0RvY3VtZW50cy9hY3QvMTUtYmF5bG9yLWRhdGEg
-bWluaW5nIGNvdXJzZS9tYXRlcmlhbC9ncmFkZXMtc21hbGwueGxzeHETZXUu
-</properties>
-		<properties format="pickle" node_id="1">gAN9cQAoWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxAYhYCwAAAGF1dG9fY29tbWl0cQKIWBIA
-AABzaG93X2Rpc3RyaWJ1dGlvbnNxA4lYCwAAAHNlbGVjdF9yb3dzcQSIWA4AAABkaXN0X2NvbG9y
-X1JHQnEFKEvcS9xL3Ev/dHEGWA4AAABjb2xvcl9zZXR0aW5nc3EHTlgTAAAAc2F2ZWRXaWRnZXRH
-ZW9tZXRyeXEIY3NpcApfdW5waWNrbGVfdHlwZQpxCVgMAAAAUHlRdDQuUXRDb3JlcQpYCgAAAFFC
-eXRlQXJyYXlxC0MuAdnQywABAAAAAAGYAAABlAAABYIAAANwAAABmAAAAaoAAAWCAAADcAAAAAAA
-AHEMhXENh3EOUnEPWBUAAABzZWxlY3RlZF9zY2hlbWFfaW5kZXhxEEsAWA4AAABjb2xvcl9ieV9j
-bGFzc3ERiHUu
-</properties>
-		<properties format="pickle" node_id="2">gAN9cQAoWAoAAABhdXRvY29tbWl0cQGJWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQJjc2lwCl91
-bnBpY2tsZV90eXBlCnEDWAwAAABQeVF0NC5RdENvcmVxBFgKAAAAUUJ5dGVBcnJheXEFQy4B2dDL
-AAEAAAAAA6MAAAEyAAAEZAAAAiMAAAOjAAABSAAABGQAAAIjAAAAAAAAcQaFcQeHcQhScQlYCgAA
-AG1ldHJpY19pZHhxCksEWAQAAABheGlzcQtLAHUu
-</properties>
-		<properties format="pickle" node_id="3">gAN9cQAoWAoAAABhdXRvY29tbWl0cQGIWAkAAABjb2xvcl9sb3dxAkcAAAAAAAAAAFgHAAAAc29y
-dGluZ3EDSwJYCgAAAGNvbG9yX2hpZ2hxBEc/8AAAAAAAAFgIAAAAY29sb3JtYXBxBUsMWAsAAABj
-b2xvcl9nYW1tYXEGRwAAAAAAAAAAWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQdjc2lwCl91bnBp
-Y2tsZV90eXBlCnEIWAwAAABQeVF0NC5RdENvcmVxCVgKAAAAUUJ5dGVBcnJheXEKQy4B2dDLAAEA
-AAAAABgAAAA6AAAFZQAAA2wAAAAYAAAAUAAABWUAAANsAAAAAAAAcQuFcQyHcQ1ScQ5YDgAAAGFu
-bm90YXRpb25faWR4cQ9LAHUu
-</properties>
-		<properties format="pickle" node_id="4">gAN9cQAoWAcAAABwcnVuaW5ncQFLAFgMAAAAY2x1c3Rlcl9uYW1lcQJYBwAAAENsdXN0ZXJxA1gJ
-AAAAY3V0X3JhdGlvcQRHQFLAAAAAAABYCQAAAG1heF9kZXB0aHEFSwpYEwAAAHNhdmVkV2lkZ2V0
-R2VvbWV0cnlxBmNzaXAKX3VucGlja2xlX3R5cGUKcQdYDAAAAFB5UXQ0LlF0Q29yZXEIWAoAAABR
-Qnl0ZUFycmF5cQlDLgHZ0MsAAQAAAAACKAAAADkAAAVHAAACdAAAAigAAABPAAAFRwAAAnQAAAAA
-AABxCoVxC4dxDFJxDVgMAAAAY2x1c3Rlcl9yb2xlcQ5LAlgQAAAAc2VsZWN0aW9uX21ldGhvZHEP
-SwBYBwAAAGxpbmthZ2VxEEsDWA4AAABhbm5vdGF0aW9uX2lkeHERSwFYCgAAAGF1dG9jb21taXRx
-EohYDwAAAGFwcGVuZF9jbHVzdGVyc3ETiFgFAAAAdG9wX25xFEsDdS4=
-</properties>
-		<properties format="pickle" node_id="5">gAN9cQAoWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxAYhYCwAAAGF1dG9fY29tbWl0cQKIWBIA
-AABzaG93X2Rpc3RyaWJ1dGlvbnNxA4lYCwAAAHNlbGVjdF9yb3dzcQSIWA4AAABkaXN0X2NvbG9y
-X1JHQnEFKEvcS9xL3Ev/dHEGWA4AAABjb2xvcl9zZXR0aW5nc3EHTlgTAAAAc2F2ZWRXaWRnZXRH
-ZW9tZXRyeXEIY3NpcApfdW5waWNrbGVfdHlwZQpxCVgMAAAAUHlRdDQuUXRDb3JlcQpYCgAAAFFC
-eXRlQXJyYXlxC0MuAdnQywABAAAAAAGYAAABlAAABYIAAANwAAABmAAAAaoAAAWCAAADcAAAAAAA
-AHEMhXENh3EOUnEPWBUAAABzZWxlY3RlZF9zY2hlbWFfaW5kZXhxEEsAWA4AAABjb2xvcl9ieV9j
-bGFzc3ERiHUu
-</properties>
+		<properties format="literal" node_id="0">{'savedWidgetGeometry': None, 'new_variables': False, 'recent_files': [], 'recent_paths': []}</properties>
+		<properties format="literal" node_id="1">{'axis': 0, 'metric_idx': 0, 'savedWidgetGeometry': None, 'autocommit': False}</properties>
+		<properties format="literal" node_id="2">{'dist_color_RGB': (220, 220, 220, 255), 'select_rows': True, 'show_distributions': False, 'color_by_class': True, 'color_settings': None, 'savedWidgetGeometry': None, 'auto_commit': True, 'selected_schema_index': 0, 'context_settings': [], 'show_attribute_labels': True}</properties>
+		<properties format="literal" node_id="3">{'color_high': 1.0, 'color_low': 0.0, 'autocommit': True, 'savedWidgetGeometry': None, 'sorting': 0, 'annotation_idx': 0, 'colormap': 18, 'color_gamma': 0.0}</properties>
+		<properties format="literal" node_id="4">{'annotation_idx': 0, 'pruning': 0, 'savedWidgetGeometry': None, 'autocommit': True, 'cluster_role': 2, 'max_depth': 10, 'cut_ratio': 75.0, 'cluster_name': 'Cluster', 'append_clusters': True, 'selection_method': 0, 'top_n': 3, 'linkage': 1}</properties>
+		<properties format="literal" node_id="5">{'dist_color_RGB': (220, 220, 220, 255), 'select_rows': True, 'show_distributions': False, 'color_by_class': True, 'color_settings': None, 'savedWidgetGeometry': None, 'auto_commit': True, 'selected_schema_index': 0, 'context_settings': [], 'show_attribute_labels': True}</properties>
+		<properties format="literal" node_id="6">{'stattest': 0, 'sig_threshold': 0.05, 'stretched': True, 'compare': 1, 'savedWidgetGeometry': None, 'context_settings': [], 'show_annotations': True}</properties>
 	</node_properties>
 </scheme>
