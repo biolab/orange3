@@ -31,4 +31,15 @@ class Average:
             else:
                 raise TypeError("Variable must be continuous or discrete")
 
-        return variable.copy(compute_value=ReplaceUnknowns(variable, value))
+        a = variable.copy(compute_value=ReplaceUnknowns(variable, value))
+        a.to_sql = ImputeSql(variable, value)
+        return a
+
+
+class ImputeSql:
+    def __init__(self, var, default):
+        self.var = var
+        self.default = default
+
+    def __call__(self):
+        return 'coalesce(%s, %s)' % (self.var.to_sql(), str(self.default))

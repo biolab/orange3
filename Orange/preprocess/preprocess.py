@@ -153,6 +153,10 @@ class SklImpute(Preprocess):
         self.force = force
 
     def __call__(self, data):
+        from Orange.data.sql.table import SqlTable
+        if isinstance(data, SqlTable):
+            return Impute()(data)
+
         if not self.force and not np.isnan(data.X).any():
             return data
         self.imputer = skl_preprocessing.Imputer(strategy=self.strategy)

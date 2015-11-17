@@ -602,9 +602,12 @@ class SqlTable(table.Table):
 
     # sql queries
     def _sql_query(self, fields, filters=(),
-                   group_by=None, order_by=None, offset=None, limit=None):
+                   group_by=None, order_by=None, offset=None, limit=None,
+                   use_time_sample=None):
         sql = ["SELECT", ', '.join(fields),
                "FROM", self.table_name]
+        if use_time_sample is not None:
+            sql.append("TABLESAMPLE system_time(%i)" % use_time_sample)
         row_filters = [f.to_sql() for f in self.row_filters]
         row_filters.extend(filters)
         if row_filters:

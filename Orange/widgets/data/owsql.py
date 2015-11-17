@@ -204,14 +204,13 @@ class OWSql(widget.OWWidget):
                     cur = self._connection.cursor()
                     cur.execute("DROP TABLE IF EXISTS " + self.materialize_table_name)
                     cur.execute("CREATE TABLE " + self.materialize_table_name + " AS " + self.table)
+                    cur.execute("ANALYZE " + self.materialize_table_name)
                     self.table = self.materialize_table_name
                 except psycopg2.ProgrammingError as ex:
                     self.error(0, str(ex))
                     return
                 finally:
                     self._connection.commit()
-
-        self.error(0)
 
         try:
             table = SqlTable(dict(host=self.host,
@@ -224,6 +223,8 @@ class OWSql(widget.OWWidget):
         except psycopg2.ProgrammingError as ex:
             self.error(0, str(ex))
             return
+
+        self.error(0)
 
 
         sample = False
