@@ -33,7 +33,6 @@ class SVMLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_multiclass = True
         self.supports_weights = True
 
 
@@ -48,7 +47,6 @@ class LinearSVMLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_multiclass = True
 
 
 class NuSVMClassifier(SklModel):
@@ -72,7 +70,6 @@ class NuSVMLearner(SklLearner):
                  max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_multiclass = True
         self.supports_weights = True
 
 

@@ -4,7 +4,6 @@ import sklearn.preprocessing as skl_preprocessing
 
 from Orange.regression import Learner, Model, SklLearner
 
-
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "LassoRegressionLearner", "SGDRegressionLearner",
            "ElasticNetLearner", "ElasticNetCVLearner",
@@ -17,7 +16,7 @@ class LinearRegressionLearner(SklLearner):
 
     def __init__(self, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
-    
+
     def fit(self, X, Y, W):
         sk = skl_linear_model.LinearRegression()
         sk.fit(X, Y)
@@ -97,7 +96,7 @@ class PolynomialLearner(Learner):
         super().__init__(preprocessors=preprocessors)
         self.degree = degree
         self.learner = learner
-    
+
     def fit(self, X, Y, W):
         polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
         X = polyfeatures.fit_transform(X)
@@ -110,8 +109,6 @@ class PolynomialLearner(Learner):
 
 
 class LinearModel(Model):
-    supports_multiclass = True
-
     def __init__(self, model):
         self.model = model
 
@@ -128,9 +125,8 @@ class LinearModel(Model):
     def __str__(self):
         return 'LinearModel {}'.format(self.model)
 
-class PolynomialModel(Model):
-    supports_multiclass = True
 
+class PolynomialModel(Model):
     def __init__(self, model, polyfeatures):
         self.model = model
         self.polyfeatures = polyfeatures
