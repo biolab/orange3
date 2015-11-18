@@ -2,7 +2,7 @@ import os
 import sys
 import urllib
 
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data.table import Table, get_sample_datasets_dir
@@ -214,7 +214,10 @@ class OWFile(widget.OWWidget):
 
         self.set_file_list()
         if len(self.recent_paths) > 0:
-            self.open_file(self.recent_paths[0].abspath)
+            path = self.recent_paths[0].abspath
+            # Must not call open_file from within __init__. open_file
+            # explicitly re-enters the event loop (by a progress bar)
+            QtCore.QTimer.singleShot(0, lambda: self.open_file(path))
 
     def _relocate_recent_files(self):
         if self.recent_files and not self.recent_paths:
