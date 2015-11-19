@@ -9,9 +9,10 @@ from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
 from sklearn.neighbors import NearestNeighbors
 
 import Orange
-from Orange.data import Table, Domain, StringVariable, ContinuousVariable
+from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
+    DiscreteVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
-from Orange.preprocess.score import ReliefF
+from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
 from Orange.widgets.io import FileFormat
 from Orange.widgets.settings import \
@@ -599,7 +600,9 @@ class OWScatterPlot(OWWidget):
                                       for i in range(X.shape[1])],
                                      self.parent_widget.data.domain.class_vars)
             data = Orange.data.Table(dom, X, Y)
-            weights = ReliefF(n_iterations=100, k_nearest=self.k)(data)
+            relief = ReliefF if isinstance(dom.class_var,
+                                           DiscreteVariable) else RReliefF
+            weights = relief(n_iterations=100, k_nearest=self.k)(data)
             attrs = sorted(
                 zip(weights,
                     (x.name for x in self.parent_widget.data.domain.attributes)
