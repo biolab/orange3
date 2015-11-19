@@ -596,18 +596,17 @@ class OWScatterPlot(OWWidget):
         def score_heuristic(self):
             X = self.parent_widget.graph.scaled_data.T
             Y = self.parent_widget.data.Y
-            dom = Orange.data.Domain([ContinuousVariable(str(i))
-                                      for i in range(X.shape[1])],
-                                     self.parent_widget.data.domain.class_vars)
-            data = Orange.data.Table(dom, X, Y)
+            dom = Domain([ContinuousVariable(str(i))
+                          for i in range(X.shape[1])],
+                         self.parent_widget.data.domain.class_vars)
+            data = Table(dom, X, Y)
             relief = ReliefF if isinstance(dom.class_var,
                                            DiscreteVariable) else RReliefF
             weights = relief(n_iterations=100, k_nearest=self.k)(data)
-            attrs = sorted(
-                zip(weights,
-                    (x.name for x in self.parent_widget.data.domain.attributes)
-                    ),
-                reverse=True)
+            attrs = sorted(zip(weights,
+                               (x.name for x in
+                                self.parent_widget.data.domain.attributes)),
+                           reverse=True)
             return [a for _, a in attrs]
 
 
