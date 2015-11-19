@@ -25,13 +25,13 @@ class ControlPoint(GraphicsPathObject):
 
     def __init__(self, parent=None, anchor=0, **kwargs):
         GraphicsPathObject.__init__(self, parent, **kwargs)
-        self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
         self.setAcceptedMouseButtons(Qt.LeftButton)
 
         self.__constraint = 0
         self.__constraintFunc = None
         self.__anchor = 0
+        self.__initialPosition = None
         self.setAnchor(anchor)
 
         path = QPainterPath()
@@ -53,15 +53,33 @@ class ControlPoint(GraphicsPathObject):
             # Enable ItemPositionChange (and pos constraint) only when
             # this is the mouse grabber item
             self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
-        return GraphicsPathObject.mousePressEvent(self, event)
+            event.accept()
+        else:
+            GraphicsPathObject.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
+            self.__initialPosition = None
             self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, False)
-        return GraphicsPathObject.mouseReleaseEvent(self, event)
+            event.accept()
+        else:
+            GraphicsPathObject.mouseReleaseEvent(self, event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            if self.__initialPosition is None:
+                self.__initialPosition = self.pos()
+
+            current = self.mapToParent(self.mapFromScene(event.scenePos()))
+            down = self.mapToParent(
+                self.mapFromScene(event.buttonDownScenePos(Qt.LeftButton)))
+
+            self.setPos(self.__initialPosition + current - down)
+            event.accept()
+        else:
+            GraphicsPathObject.mouseMoveEvent(self, event)
 
     def itemChange(self, change, value):
-
         if change == QGraphicsItem.ItemPositionChange:
             newpos = self.constrain(value)
             return newpos
