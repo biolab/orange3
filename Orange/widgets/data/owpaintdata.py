@@ -820,7 +820,7 @@ class OWPaintData(widget.OWWidget):
         self._selected_indices = None
         self._scatter_item = None
 
-        self.labels = ["Class-1", "Class-2"]
+        self.labels = ["C1", "C2"]
 
         self.undo_stack = QtGui.QUndoStack(self)
 
@@ -978,7 +978,7 @@ class OWPaintData(widget.OWWidget):
 
     def add_new_class_label(self):
 
-        labels = ("Class-%i" % i for i in count(1))
+        labels = ("C%i" % i for i in count(1))
         labels = filter(lambda label: label not in self.class_model,
                         labels)
         newlabel = next(labels)
