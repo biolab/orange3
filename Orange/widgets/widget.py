@@ -225,7 +225,7 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
                 self.controlArea = gui.widgetBox(leftSide,
                                                  orientation="vertical",
                                                  margin=0)
-                self.graphButton = gui.button(leftSide, None,"$Save Graph")
+                self.graphButton = gui.button(leftSide, None, "&Save Graph")
                 self.graphButton.setAutoDefault(0)
             if self.want_main_area:
                 self.controlArea.setSizePolicy(QSizePolicy.Fixed,
