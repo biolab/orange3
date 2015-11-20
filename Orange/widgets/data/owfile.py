@@ -317,7 +317,7 @@ class OWFile(widget.OWWidget):
                     "Cannot find the directory with example data sets")
                 return
         else:
-            if self.recent_paths:
+            if self.recent_paths and self.recent_paths[0].prefix != 'url-datasets':
                 start_file = self.recent_paths[0].abspath
             else:
                 start_file = os.path.expanduser("~/")
@@ -386,6 +386,7 @@ class OWFile(widget.OWWidget):
             # TODO handle self.new_variables
             data = Table(fn)
             self.loaded_file = fn
+            QtCore.QTimer.singleShot(100, lambda: self.file_combo.lineEdit().setCursorPosition(0))
         except Exception as exc:
             if fn.startswith("http"):
                 err_value = "File '{}' does not contain valid data".format(
