@@ -26,7 +26,6 @@ from Orange.preprocess import Continuize, Randomize as Random
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
-from .owimpute import RandomTransform
 
 
 @contextlib.contextmanager
@@ -275,25 +274,6 @@ class ContinuizeEditor(BaseEditor):
         return Continuize(multinomial_treatment=treatment)
 
 
-class _ImputeRandom:
-
-    class ReplaceUnknownsSampleRandom(RandomTransform):
-        def transform(self, column):
-            mask = numpy.isnan(column)
-            c = column[mask]
-            if not c.size:
-                return column
-            else:
-                c = super().transform(c)
-                column = numpy.array(column)
-                column[mask] = c
-                return column
-
-    def __call__(self, data, variable):
-        dist = distribution.get_distribution(data, variable)
-        return variable.copy(compute_value=self.ReplaceUnknownsSampleRandom(variable, dist))
-
-
 class _RemoveNaNRows(preprocess.preprocess.Preprocess):
     def __call__(self, data):
         mask = numpy.isnan(data.X)
@@ -310,7 +290,7 @@ class ImputeEditor(BaseEditor):
 #         Constant: (None, {"value": 0})
         Average: (preprocess.impute.Average(), {}),
 #         Model: (preprocess.impute.Model, {}),
-        Random: (_ImputeRandom(), {}),
+        Random: (preprocess.impute.Random(), {}),
         DropRows: (None, {})
     }
     Names = {
