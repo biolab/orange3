@@ -175,6 +175,12 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         res = CrossValidation(data, [MajorityLearner()], k=3)
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
+    def test_too_many_folds(self):
+        data = Table('iris')
+        w = []
+        res = CrossValidation(data, [MajorityLearner()], k=len(data)/2, warnings=w)
+        self.assertTrue(len(w) > 0)
+
     def test_failed(self):
         self.run_test_failed(CrossValidation, 20)
 
