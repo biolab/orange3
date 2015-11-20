@@ -871,7 +871,6 @@ class OWLinearProjection(widget.OWWidget):
             self.clear_density_img()
             self.cb_class_density.setEnabled(False)
 
-
         self._update_legend()
 
     def _shape_data(self, mask):
@@ -929,7 +928,7 @@ class OWLinearProjection(widget.OWWidget):
             self.__legend = legend = LegendItem()
             legend.setParentItem(self.viewbox)
             legend.setZValue(self.viewbox.zValue() + 10)
-            legend.anchor(*self.legend_anchor)
+            legend.restoreAnchor(self.legend_anchor)
         else:
             legend = self.__legend
 

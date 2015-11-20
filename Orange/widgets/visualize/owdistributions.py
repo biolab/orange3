@@ -156,6 +156,7 @@ class OWDistributions(widget.OWWidget):
             callback=self._on_relative_freq_changed)
 
         plotview = pg.PlotWidget(background=None)
+        plotview.setRenderHint(QtGui.QPainter.Antialiasing)
         self.mainArea.layout().addWidget(plotview)
         w = QtGui.QLabel()
         w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
