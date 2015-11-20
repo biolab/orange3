@@ -372,7 +372,15 @@ class FileFormat(metaclass=FileFormatMeta):
 
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
-                values = [float(i) for i in orig_values]
+                try:
+                    values = [float(i) for i in orig_values]
+                except ValueError:
+                    for row, num in enumerate(orig_values):
+                        try: float(num)
+                        except ValueError: break
+                    raise ValueError('Non-continuous value in (1-based) '
+                                     'line {}, column {}'.format(row + len(headers) + 1,
+                                                                 col + 1))
 
             elif (type_flag in DiscreteVariable.TYPE_HEADERS or
                   _RE_DISCRETE_LIST.match(type_flag)):
