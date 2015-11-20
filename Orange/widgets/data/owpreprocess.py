@@ -1,6 +1,8 @@
 import sys
 import bisect
 import contextlib
+import warnings
+
 import pkg_resources
 
 import numpy
@@ -899,6 +901,7 @@ PREPROCESSORS = [
     )
 ]
 
+
 # TODO: Extend with entry points here
 # PREPROCESSORS += iter_entry_points("Orange.widgets.data.owpreprocess")
 
@@ -916,6 +919,126 @@ PREPROCESSORS = [
 # * the source (of drag/drop) is an item model displayed in a list
 #   view (source list).
 # * the drag/drop is controlled by the controller/adapter,
+
+
+def list_model_move_row_helper(model, parent, src, dst):
+    assert src != dst and src != dst - 1
+    data = model.itemData(model.index(src, 0, parent))
+    removed = model.removeRow(src, parent)
+    if not removed:
+        return False
+
+    realdst = dst - 1 if dst > src else dst
+    inserted = model.insertRow(realdst, parent)
+    if not inserted:
+        return False
+
+    dataset = model.setItemData(model.index(realdst, 0, parent), data)
+
+    return removed and inserted and dataset
+
+
+def list_model_move_rows_helper(model, parent, src, count, dst):
+    assert not (src <= dst < src + count + 1)
+    rowdata = [model.itemData(model.index(src + i, 0, parent))
+               for i in range(count)]
+    removed = model.removeRows(src, count, parent)
+    if not removed:
+        return False
+
+    realdst = dst - count if dst > src else dst
+    inserted = model.insertRows(realdst, count, parent)
+    if not inserted:
+        return False
+
+    setdata = True
+    for i, data in enumerate(rowdata):
+        didset = model.setItemData(model.index(realdst + i, 0, parent), data)
+        setdata = setdata and didset
+    return setdata
+
+
+class StandardItemModel(QtGui.QStandardItemModel):
+    """
+    A QStandardItemModel improving support for internal row moves.
+
+    The QStandardItemModel is missing support for explicitly moving
+    rows internally. Therefore to move a row it is first removed
+    reinserted as an empty row and it's data repopulated.
+    This triggers rowsRemoved/rowsInserted and dataChanged signals.
+    If an observer is monitoring the model state it would see all the model
+    changes. By using moveRow[s] only one `rowsMoved` signal is emitted
+    coalescing all the updates.
+
+    .. note:: The semantics follow Qt5's QAbstractItemModel.moveRow[s]
+
+    """
+
+    def moveRow(self, sourceParent, sourceRow, destParent, destRow):
+        """
+        Move sourceRow from sourceParent to destinationRow under destParent.
+
+        Returns True if the row was successfully moved; otherwise
+        returns false.
+
+        .. note:: Only moves within the same parent are currently supported
+
+        """
+        if not sourceParent == destParent:
+            return False
+
+        if not self.beginMoveRows(sourceParent, sourceRow, sourceRow,
+                                  destParent, destRow):
+            return False
+
+        # block so rowsRemoved/Inserted and dataChanged signals
+        # are not emitted during the move. Instead the rowsMoved
+        # signal will be emitted from self.endMoveRows().
+        # I am mostly sure this is safe (a possible problem would be if the
+        # base class itself would connect to the rowsInserted, ... to monitor
+        # ensure internal invariants)
+        with blocked(self):
+            didmove = list_model_move_row_helper(
+                self, sourceParent, sourceRow, destRow)
+        self.endMoveRows()
+
+        if not didmove:
+            warnings.warn(
+                "`moveRow` did not succeed! Data model might be "
+                "in an inconsistent state.",
+                RuntimeWarning)
+        return didmove
+
+    def moveRows(self, sourceParent, sourceRow, count,
+                 destParent, destRow):
+        """
+        Move count rows starting with the given sourceRow under parent
+        sourceParent to row destRow under parent destParent.
+
+        Return true if the rows were successfully moved; otherwise
+        returns false.
+
+        .. note:: Only moves within the same parent are currently supported
+
+        """
+        if not self.beginMoveRows(sourceParent, sourceRow, sourceRow + count,
+                                  destParent, destRow):
+            return False
+
+        # block so rowsRemoved/Inserted and dataChanged signals
+        # are not emitted during the move. Instead the rowsMoved
+        # signal will be emitted from self.endMoveRows().
+        with blocked(self):
+            didmove = list_model_move_rows_helper(
+                self, sourceParent, sourceRow, count, destRow)
+        self.endMoveRows()
+
+        if not didmove:
+            warnings.warn(
+                "`moveRows` did not succeed! Data model might be "
+                "in an inconsistent state.",
+                RuntimeWarning)
+        return didmove
 
 #: Qt.ItemRole holding the PreprocessAction instance
 DescriptionRole = Qt.UserRole
@@ -1094,7 +1217,7 @@ class Controller(QObject):
         model.removeRows(row, 1, QModelIndex())
 
     def _widgetMoved(self, from_, to):
-        # The widget in the view were already swaped, so
+        # The widget in the view were already swapped, so
         # we must disconnect from the model when moving the rows.
         # It would be better if this class would also filter and
         # handle internal widget moves.
@@ -1104,13 +1227,16 @@ class Controller(QObject):
             model.moveRow
         except AttributeError:
             data = model.itemData(model.index(from_, 0))
-            model.removeRow(from_, QModelIndex())
-            model.insertRow(to, QModelIndex())
-
+            removed = model.removeRow(from_, QModelIndex())
+            inserted = model.insertRow(to, QModelIndex())
             model.setItemData(model.index(to, 0), data)
+            assert removed and inserted
             assert model.rowCount() == len(self.view.widgets())
         else:
-            model.moveRow(QModelIndex(), from_, QModelIndex(), to)
+            if to > from_:
+                to = to + 1
+            didmove = model.moveRow(QModelIndex(), from_, QModelIndex(), to)
+            assert didmove
         finally:
             self.__connect(model)
 
@@ -1375,13 +1501,15 @@ class SequenceFlow(QWidget):
             # Remove the drop indicator spacer item before re-inserting
             # the frame
             self.__setDropIndicatorAt(None)
-            if oldindex != index:
-                layout.insertWidget(index, frame)
-                if index > oldindex:
-                    self.widgetMoved.emit(oldindex, index - 1)
-                else:
-                    self.widgetMoved.emit(oldindex, index)
 
+            if index > oldindex:
+                index = index - 1
+
+            if index != oldindex:
+                item = layout.takeAt(oldindex)
+                assert item.widget() is frame
+                layout.insertWidget(index, frame)
+                self.widgetMoved.emit(oldindex, index)
                 event.accept()
 
             self.__dragstart = None, None, None
@@ -1612,7 +1740,7 @@ class OWPreprocess(widget.OWWidget):
         """Load a preprocessor list from a dict."""
         name = saved.get("name", "")
         preprocessors = saved.get("preprocessors", [])
-        model = QStandardItemModel()
+        model = StandardItemModel()
 
         def dropMimeData(data, action, row, column, parent):
             if data.hasFormat("application/x-qwidget-ref") and \
@@ -1665,6 +1793,7 @@ class OWPreprocess(widget.OWWidget):
             self.preprocessormodel.dataChanged.disconnect(self.__on_modelchanged)
             self.preprocessormodel.rowsInserted.disconnect(self.__on_modelchanged)
             self.preprocessormodel.rowsRemoved.disconnect(self.__on_modelchanged)
+            self.preprocessormodel.rowsMoved.disconnect(self.__on_modelchanged)
             self.preprocessormodel.deleteLater()
 
         self.preprocessormodel = ppmodel
@@ -1673,15 +1802,21 @@ class OWPreprocess(widget.OWWidget):
             self.preprocessormodel.dataChanged.connect(self.__on_modelchanged)
             self.preprocessormodel.rowsInserted.connect(self.__on_modelchanged)
             self.preprocessormodel.rowsRemoved.connect(self.__on_modelchanged)
+            self.preprocessormodel.rowsMoved.connect(self.__on_modelchanged)
 
-    def __on_modelchanged(self):
-        if self.preprocessormodel is None or self.preprocessormodel.rowCount() == 0:
+        self.__update_overlay()
+
+    def __update_overlay(self):
+        if self.preprocessormodel is None or \
+                self.preprocessormodel.rowCount() == 0:
             self.overlay.setWidget(self.flow_view)
             self.overlay.show()
         else:
             self.overlay.setWidget(None)
             self.overlay.hide()
 
+    def __on_modelchanged(self):
+        self.__update_overlay()
         self.commit()
 
     @check_sql_input
@@ -1720,7 +1855,10 @@ class OWPreprocess(widget.OWWidget):
             return preprocess.preprocess.PreprocessorList(plist)
 
     def apply(self):
+        # Sync the model into storedsettings on every apply.
+        self.storeSpecificSettings()
         preprocessor = self.buildpreproc()
+
         if self.data is not None:
             self.error(0)
             try:
@@ -1735,8 +1873,6 @@ class OWPreprocess(widget.OWWidget):
         self.send("Preprocessed Data", data)
 
     def commit(self):
-        # Sync the model into storedsettings on every change commit.
-        self.storeSpecificSettings()
         if not self._invalidated:
             self._invalidated = True
             QApplication.postEvent(self, QEvent(QEvent.User))
@@ -1797,6 +1933,7 @@ def test_main(argv=sys.argv):
     w.show()
     w.raise_()
     r = app.exec_()
+    w.set_data(None)
     w.saveSettings()
     w.onDeleteWidget()
     return r
