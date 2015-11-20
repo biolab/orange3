@@ -286,7 +286,7 @@ class Domain:
 
     @property
     def has_continuous_class(self):
-        return self.class_var and self.class_var.is_continuous
+        return bool(self.class_var and self.class_var.is_continuous)
 
     @property
     def has_discrete_class(self):
