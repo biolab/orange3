@@ -317,7 +317,7 @@ class OWFile(widget.OWWidget):
                     "Cannot find the directory with example data sets")
                 return
         else:
-            if self.recent_paths:
+            if self.recent_paths and self.recent_paths[0].prefix != 'url-datasets':
                 start_file = self.recent_paths[0].abspath
             else:
                 start_file = os.path.expanduser("~/")
