@@ -10,7 +10,6 @@ import bottlechest
 import Orange.data
 from Orange.data import Table
 from . import impute, discretize
-from Orange.statistics import distribution
 from ..misc.enum import Enum
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
