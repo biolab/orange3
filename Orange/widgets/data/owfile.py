@@ -386,6 +386,7 @@ class OWFile(widget.OWWidget):
             # TODO handle self.new_variables
             data = Table(fn)
             self.loaded_file = fn
+            QtCore.QTimer.singleShot(100, lambda: self.file_combo.lineEdit().setCursorPosition(0))
         except Exception as exc:
             if fn.startswith("http"):
                 err_value = "File '{}' does not contain valid data".format(
