@@ -164,6 +164,8 @@ class ColorTable(QTableView):
 
     def mouseReleaseEvent(self, ev):
         index = self.indexAt(ev.pos())
+        if not index.isValid():
+            return
         rect = self.visualRect(index)
         self.handle_click(index, ev.pos().x() - rect.x())
 
