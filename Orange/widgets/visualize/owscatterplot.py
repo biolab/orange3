@@ -7,6 +7,7 @@ from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
     QStandardItem
 from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics import r2_score
 
 import Orange
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
@@ -578,7 +579,11 @@ class OWScatterPlot(OWWidget):
                     y = y_full[valid]
                     knn = NearestNeighbors(n_neighbors=self.k).fit(X)
                     ind = knn.kneighbors(return_distance=False)
-                    score = norm * np.sum(y[ind] == y.reshape(-1, 1))
+                    if isinstance(self.parent_widget.data.domain.class_var,
+                            DiscreteVariable):
+                        score = norm * np.sum(y[ind] == y.reshape(-1, 1))
+                    else:
+                        score = r2_score(y, np.mean(y[ind], axis=1))
                     pos = bisect_left(self.scores, score)
                     self.projectionTableModel.insertRow(
                         len(self.scores) - pos,
