@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from Orange.data import ContinuousVariable, DiscreteVariable
+from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.data.io import CSVFormat
 
 tab_file = """\
@@ -59,3 +59,7 @@ class TestTabReader(unittest.TestCase):
         self.read_easy(csv_file, "Feature ")
         self.read_easy(csv_file_nh, "Feature ")
 
+    def test_read_nonutf8_encoding(self):
+        with self.assertRaises(ValueError) as cm:
+            data = Table('binary-blob.tab')
+        self.assertIn('NULL byte', cm.exception.args[0])
