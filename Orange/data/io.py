@@ -1,5 +1,5 @@
 import re
-import logging
+import warnings
 import subprocess
 from os import path
 from ast import literal_eval
@@ -17,8 +17,6 @@ from chardet.universaldetector import UniversalDetector
 from Orange.data.variable import *
 from Orange.util import abstract, Registry, flatten, namegen
 
-
-log = logging.getLogger()
 
 _IDENTITY = lambda i: i
 
@@ -118,7 +116,7 @@ class Flags:
                     setattr(self, flag, True)
                     setattr(self, self.ALL.get(flag, ''), True)
             elif flag:
-                log.warning('Invalid attribute flag \'{}\''.format(flag))
+                warnings.warn('Invalid attribute flag \'{}\''.format(flag))
 
     @staticmethod
     def join(iterable, *args):
@@ -535,8 +533,13 @@ class CSVFormat(FileFormat):
                          lambda: (detect_encoding(filename), None),  # precise
                          lambda: (locale.getpreferredencoding(False), None),
                          lambda: (sys.getdefaultencoding(), None),   # desperate
+                         lambda: ('utf-8', None),                    # ...
                          lambda: ('utf-8', 'ignore')):               # fallback
             encoding, errors = encoding()
+            # Clear the error flag for all except the last check, because
+            # the error of second-to-last check is stored and shown as warning in owfile
+            if errors != 'ignore':
+                error = ''
             with cls.open(filename, mode='rt', newline='', encoding=encoding, errors=errors) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
@@ -553,7 +556,14 @@ class CSVFormat(FileFormat):
 
                 try:
                     reader = csv.reader(file, dialect=dialect)
-                    return wrapper(cls.data_table(reader))
+                    data = cls.data_table(reader)
+                    if error and isinstance(error, UnicodeDecodeError):
+                        pos, endpos = error.args[2], error.args[3]
+                        warning = ('Skipped invalid byte(s) in position '
+                                   '{}{}').format(pos,
+                                                  ('-' + str(endpos)) if (endpos - pos) > 1 else '')
+                        warnings.warn(warning)
+                    return wrapper(data)
                 except Exception as e:
                     error = e
                     continue

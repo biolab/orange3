@@ -1,6 +1,7 @@
 import unittest
 from tempfile import NamedTemporaryFile
 import os
+import warnings
 
 import numpy as np
 
@@ -63,3 +64,8 @@ class TestTabReader(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             data = Table('binary-blob.tab')
         self.assertIn('NULL byte', cm.exception.args[0])
+
+        with self.assertRaises(ValueError):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                data = Table('invalid_characters.tab')

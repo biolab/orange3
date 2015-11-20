@@ -1,6 +1,7 @@
 import os
 import sys
 import urllib
+from warnings import catch_warnings
 
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
@@ -384,7 +385,9 @@ class OWFile(widget.OWWidget):
         progress.advance()
         try:
             # TODO handle self.new_variables
-            data = Table(fn)
+            with catch_warnings(record=True) as warnings:
+                data = Table(fn)
+            self.warning(33, warnings[-1].message.args[0] if warnings else '')
             self.loaded_file = fn
             QtCore.QTimer.singleShot(100, lambda: self.file_combo.lineEdit().setCursorPosition(0))
         except Exception as exc:
@@ -402,7 +405,7 @@ class OWFile(widget.OWWidget):
                             self.recent_paths[ind].abspath == fn_original:
                 del self.recent_paths[ind]
             self.error(err_value)
-            self.info.setText('Data was not loaded due to an error.\nError:')
+            self.info.setText('Data was not loaded due to an error:')
             self.warnings.setText(err_value)
         finally:
             progress.finish()
