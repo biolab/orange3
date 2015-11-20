@@ -3068,7 +3068,11 @@ class LinkStyledItemDelegate(QtGui.QStyledItemDelegate):
             if not isinstance(font, QtGui.QFont):
                 font = option.font
             painter.setFont(font)
-            painter.setPen(QtGui.QPen(Qt.blue))
+            if option.state & QtGui.QStyle.State_Selected:
+                color = option.palette.highlightedText().color()
+            else:
+                color = option.palette.link().color()
+            painter.setPen(QtGui.QPen(color))
             painter.drawText(textRect, option.displayAlignment, elideText)
             painter.restore()
         else:
