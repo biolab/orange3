@@ -3,7 +3,7 @@ import numpy as np
 from PyQt4.QtGui import QLayout
 from PyQt4.QtCore import Qt
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearModel, LinearRegressionLearner,
     RidgeRegressionLearner)
@@ -22,7 +22,8 @@ class OWLinearRegression(widget.OWWidget):
     inputs = [("Data", Table, "set_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
     outputs = [("Linear Regression", LinearRegressionLearner),
-               ("Model", LinearModel)]
+               ("Model", LinearModel),
+               ("Coefficients", Table)]
 
     #: Types
     OLS, Ridge, Lasso = 0, 1, 2
@@ -128,6 +129,7 @@ class OWLinearRegression(widget.OWWidget):
 
         learner.name = self.learner_name
         predictor = None
+        coef_table = None
 
         self.error(0)
         if self.data is not None:
@@ -136,10 +138,17 @@ class OWLinearRegression(widget.OWWidget):
             else:
                 predictor = learner(self.data)
                 predictor.name = self.learner_name
+                domain = Domain(
+                    [ContinuousVariable("coef", number_of_decimals=7)],
+                    metas=[StringVariable("name")])
+                coefs = [predictor.intercept] + list(predictor.coefficients)
+                names = ["intercept"] + \
+                    [attr.name for attr in predictor.domain.attributes]
+                coef_table = Table(domain, list(zip(coefs, names)))
 
         self.send("Linear Regression", learner)
         self.send("Model", predictor)
-
+        self.send("Coefficients", coef_table)
 
 
 if __name__ == "__main__":
