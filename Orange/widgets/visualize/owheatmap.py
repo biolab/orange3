@@ -778,7 +778,10 @@ class OWHeatMap(widget.OWWidget):
                     cluster = hierarchical.dist_matrix_clustering(matrix)
 
                 if ordered and cluster_ord is None:
-                    cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
+                    self.progressBarInit()
+                    cluster_ord = hierarchical.optimal_leaf_ordering(
+                        cluster, matrix, progress_callback=self.progressBarSet)
+                    self.progressBarFinished()
 
             row_groups.append(row._replace(cluster=cluster, cluster_ordered=cluster_ord))
 
@@ -807,7 +810,10 @@ class OWHeatMap(widget.OWWidget):
         if cluster is None:
             cluster = hierarchical.dist_matrix_clustering(matrix)
         if ordered and cluster_ord is None:
-            cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
+            self.progressBarInit()
+            cluster_ord = hierarchical.optimal_leaf_ordering(
+                cluster, matrix, progress_callback=self.progressBarSet)
+            self.progressBarFinished()
 
         col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
                       for col in parts.columns]

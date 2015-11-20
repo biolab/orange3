@@ -77,7 +77,6 @@ def feature_clustering(data, distance=PearsonR,
     return dist_matrix_clustering(matrix, linkage=linkage)
 
 
-
 def dist_matrix_linkage(matrix, linkage=AVERAGE):
     """
     Return linkage using a precomputed distance matrix.
@@ -109,7 +108,58 @@ def sample_clustering(X, linkage=AVERAGE, metric="euclidean"):
     return tree_from_linkage(Z)
 
 
-Tree = namedtuple("Tree", ["value", "branches"])
+class Tree(object):
+    __slots__ = ("__value", "__branches", "__hash")
+
+    def __init__(self, value, branches=()):
+        if not isinstance(branches, tuple):
+            raise TypeError()
+        self.__value = value
+        self.__branches = branches
+        # preemptively cache the hash value
+        self.__hash = hash((value, branches))
+
+    def __hash__(self):
+        return self.__hash
+
+    def __eq__(self, other):
+        return isinstance(other, Tree) and tuple(self) == tuple(other)
+
+    def __lt__(self, other):
+        if not isinstance(other, Tree):
+            return NotImplemented
+        return tuple(self) < tuple(other)
+
+    def __le__(self, other):
+        if not isinstance(other, Tree):
+            return NotImplemented
+        return tuple(self) <= tuple(other)
+
+    def __getnewargs__(self):
+        return tuple(self)
+
+    def __iter__(self):
+        return iter((self.__value, self.__branches))
+
+    def __repr__(self):
+        return ("{0.__name__}(value={1!r}, branches={2!r})"
+                .format(type(self), self.value, self.branches))
+
+    @property
+    def is_leaf(self):
+        return not bool(self.branches)
+
+    @property
+    def left(self):
+        return self.branches[0]
+
+    @property
+    def right(self):
+        return self.branches[-1]
+
+    value = property(attrgetter("_Tree__value"))
+    branches = property(attrgetter("_Tree__branches"))
+
 
 ClusterData = namedtuple("Cluster", ["range", "height"])
 SingletonData = namedtuple("Singleton", ["range", "height", "index"])
@@ -132,26 +182,6 @@ class ClusterData(ClusterData, _Ranged):
 
 class SingletonData(SingletonData, _Ranged):
     __slots__ = ()
-
-
-class Tree(Tree):
-    def __new__(cls, value, branches=()):
-        if not isinstance(branches, tuple):
-            raise TypeError()
-
-        return super().__new__(cls, value, branches)
-
-    @property
-    def is_leaf(self):
-        return not bool(self.branches)
-
-    @property
-    def left(self):
-        return self.branches[0]
-
-    @property
-    def right(self):
-        return self.branches[-1]
 
 
 def tree_from_linkage(linkage):
@@ -461,12 +491,16 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
                     m, k = left_inner.start + i, right_inner.start + j
                     score = M[u, m] + M[k, w] + distances[m, k]
                     M[u, w] = M[w, u] = score
-                    ordering[u, w] = (u, m, k, w)
+                    ordering[u, w] = (m, k)
 
         return M, ordering
 
     subtrees = list(postorder(tree))
-    ordering = {}
+    ordering_dtype = numpy.dtype(
+        [("m", numpy.uint32),
+         ("k", numpy.uint32)])
+
+    ordering = numpy.empty(distances.shape, dtype=ordering_dtype)
 
     for i, subtree in enumerate(subtrees):
         M, ordering = optimal_ordering(subtree, M, ordering)
@@ -504,12 +538,12 @@ def optimal_leaf_ordering(tree, distances, progress_callback=None):
                 assert u in range(*tree.value.range)
                 assert w in range(*tree.value.range)
                 if u < w:
-                    u, m, k, w = ordering[u, w]
+                    m, k = ordering[u, w]
 
                     opt_uw[tree.left] = (u, m)
                     opt_uw[tree.right] = (k, w)
                 else:
-                    w, k, m, u = ordering[w, u]
+                    k, m = ordering[w, u]
                     opt_uw[tree.right] = (u, m)
 
                     opt_uw[tree.left] = (k, w)
