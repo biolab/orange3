@@ -33,6 +33,7 @@ install:
     - source $TRAVIS_BUILD_DIR/travis/install.sh
     - source $TRAVIS_BUILD_DIR/travis/install_postgres.sh
     - source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh
+    - source $TRAVIS_BUILD_DIR/travis/build_doc.sh
 
 before_script:
     - pip install coveralls
@@ -41,7 +42,6 @@ script:
     - cd $TRAVIS_BUILD_DIR
     - python -c "from Orange.tests import *"
     - coverage run --source=Orange setup.py test
-    - (cd $TRAVIS_BUILD_DIR/doc && make html && python widget_index.py "http://docs.orange.biolab.si/3/")
 
 after_success:
     - cd $TRAVIS_BUILD_DIR

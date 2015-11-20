@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Generete widget index for the webpage.
 """
@@ -40,7 +41,7 @@ for li in div.find_all():
         doclink = webdocprefix + a.get('href')
         text = a.string
         ret[-1][1].append({"img": imglink, "doc": doclink, "text": text })
-    
+
 with open(outfile, 'wt') as f:
     json.dump(ret, f, indent=1)
 
