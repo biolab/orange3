@@ -514,7 +514,7 @@ class OWDataTable(widget.OWWidget):
 
         rowcount = data.approx_len()
 
-        if self.color_by_class and data.domain.class_var:
+        if self.color_by_class and data.domain.has_discrete_class:
             color_schema = [
                 QtGui.QColor(*c) for c in data.domain.class_var.colors]
         else:
