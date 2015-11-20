@@ -481,10 +481,11 @@ class OWScatterPlot(OWWidget):
     class VizRank(OWWidget):
         name = "Rank projections (Scatter Plot)"
 
+        want_control_area = False
+
         def __init__(self, parent_widget):
             super().__init__()
             self.parent_widget = parent_widget
-            self.want_control_area = False
             self.running = False
             self.progress = None
             self.k = 10

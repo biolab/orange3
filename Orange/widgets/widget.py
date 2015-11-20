@@ -10,7 +10,7 @@ from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
     QEventLoop, QSettings, QUrl
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
-    QShortcut, QKeySequence, QDesktopServices
+    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle
 
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
@@ -94,7 +94,6 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     want_main_area = True
     want_control_area = True
     want_graph = False
-    show_save_graph = True
     want_status_bar = False
     no_report = False
 
@@ -175,6 +174,19 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         return (Qt.Window if cls.resizing_enabled
                 else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
+    class Splitter(QSplitter):
+        def createHandle(self):
+            return self.Handle(self.orientation(), self,
+                                   cursor=Qt.PointingHandCursor)
+        class Handle(QSplitterHandle):
+            def mouseReleaseEvent(self, event):
+                if event.button() == Qt.LeftButton:
+                    splitter = self.splitter()
+                    splitter.setSizes([int(splitter.sizes()[0] == 0), 1000])
+                super().mouseReleaseEvent(event)
+            def mouseMoveEvent(self, event):
+                return  # Prevent moving; just show/hide
+
     # noinspection PyAttributeOutsideInit
     def insertLayout(self):
         def createPixmapWidget(self, parent, iconName):
@@ -198,32 +210,35 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         gui.rubber(self.warning_bar)
         self.warning_bar.setVisible(False)
 
-        self.topWidgetPart = gui.widgetBox(self,
-                                           orientation="horizontal", margin=0)
-        self.leftWidgetPart = gui.widgetBox(self.topWidgetPart,
-                                            orientation="vertical", margin=0)
-        if self.want_main_area:
-            self.leftWidgetPart.setSizePolicy(
-                QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
-            self.leftWidgetPart.updateGeometry()
-            self.mainArea = gui.widgetBox(self.topWidgetPart,
-                                          orientation="vertical",
-                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-                                                                 QSizePolicy.Expanding),
-                                          margin=0)
-            self.mainArea.layout().setMargin(4)
-            self.mainArea.updateGeometry()
+        self.want_main_area = self.want_graph or self.want_main_area
+
+        splitter = self.Splitter(Qt.Horizontal, self)
+        self.layout().addWidget(splitter)
 
         if self.want_control_area:
-            self.controlArea = gui.widgetBox(self.leftWidgetPart,
-                                             orientation="vertical", margin=4)
-
-        if self.want_graph and self.show_save_graph:
-            graphButtonBackground = gui.widgetBox(self.leftWidgetPart,
-                                                  orientation="horizontal", margin=4)
-            self.graphButton = gui.button(graphButtonBackground,
-                                          self, "&Save Graph")
-            self.graphButton.setAutoDefault(0)
+            self.controlArea = gui.widgetBox(splitter,
+                                             orientation="vertical",
+                                             margin=0)
+            splitter.setSizes([1])  # Results in smallest size allowed by policy
+            if self.want_graph:
+                leftSide = self.controlArea
+                self.controlArea = gui.widgetBox(leftSide,
+                                                 orientation="vertical",
+                                                 margin=0)
+                self.graphButton = gui.button(leftSide, None,"$Save Graph")
+                self.graphButton.setAutoDefault(0)
+            if self.want_main_area:
+                self.controlArea.setSizePolicy(QSizePolicy.Fixed,
+                                               QSizePolicy.MinimumExpanding)
+            self.controlArea.layout().setContentsMargins(4, 4, 0 if self.want_main_area else 4, 4)
+        if self.want_main_area:
+            self.mainArea = gui.widgetBox(splitter,
+                                          orientation="vertical",
+                                          margin=4,
+                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
+                                                                 QSizePolicy.Expanding))
+            splitter.setCollapsible(1, False)
+            self.mainArea.layout().setContentsMargins(0 if self.want_control_area else 4, 4, 4, 4)
 
         if self.want_status_bar:
             self.widgetStatusArea = QFrame(self)

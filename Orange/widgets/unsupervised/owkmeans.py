@@ -176,7 +176,7 @@ class OWKMeans(widget.OWWidget):
         QTimer.singleShot(100, self.adjustSize)
 
     def sizeHint(self):
-        s = self.leftWidgetPart.sizeHint()
+        s = self.controlArea.sizeHint()
         if self.optimize_k and not self.mainArea.isHidden():
             s.setWidth(s.width() + self.mainArea.sizeHint().width() +
                        4 * self.childrenRect().x())

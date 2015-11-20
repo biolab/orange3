@@ -335,7 +335,6 @@ class OWImageViewer(widget.OWWidget):
     zoom = settings.Setting(25)
     autoCommit = settings.Setting(False)
 
-    show_save_graph = True
     want_graph = True
 
     def __init__(self):
