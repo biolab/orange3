@@ -809,26 +809,25 @@ class OWScatterMap(widget.OWWidget):
         def bin_func(xbins, ybins):
             return grid_bin(data, xvar, yvar, xbins, ybins, zvar)
 
-        self.progressBarInit()
         last_node = root
         update_time = time.time()
         changed = False
 
-        for i, node in enumerate(
-                sharpen_region(self._root, region, nbins, bin_func)):
-            tick = time.time() - update_time
-            changed = changed or node is not last_node
-            if changed and ((i % nbins == 0) or tick > 2.0):
-                self.update_map(node)
-                last_node = node
-                changed = False
-                update_time = time.time()
-                self.progressBarSet(100 * i / (nbins ** 2))
+        with self.progressBar(nbins ** 2) as progress_bar:
+            for i, node in enumerate(
+                    sharpen_region(self._root, region, nbins, bin_func)):
+                tick = time.time() - update_time
+                changed = changed or node is not last_node
+                if changed and ((i % nbins == 0) or tick > 2.0):
+                    self.update_map(node)
+                    last_node = node
+                    changed = False
+                    update_time = time.time()
+                    progress_bar.advance()
 
         self._root = last_node
         self._cache[xvar, yvar, zvar] = self._root
         self.update_map(self._root)
-        self.progressBarFinished()
 
     def _sampling_width(self):
         if self._item is None:
@@ -910,26 +909,23 @@ class OWScatterMap(widget.OWWidget):
         scored_rects = sorted(scored_rects, reverse=True,
                               key=operator.itemgetter(0))
         root = self._root
-        self.progressBarInit()
         update_time = time.time()
 
-        for i, (_, rect) in enumerate(scored_rects):
-            root = sharpen_region_recur(
-                root, rect.intersect(region),
-                nbins, depth + 1, bin_func
-            )
-            tick = time.time() - update_time
-            if tick > 2.0:
-                self.update_map(root)
-                update_time = time.time()
-
-            self.progressBarSet(100 * i / len(scored_rects))
+        with self.progressBar(len(scored_rects)) as progress_bar:
+            for i, (_, rect) in enumerate(scored_rects):
+                root = sharpen_region_recur(
+                    root, rect.intersect(region),
+                    nbins, depth + 1, bin_func)
+                tick = time.time() - update_time
+                if tick > 2.0:
+                    self.update_map(root)
+                    update_time = time.time()
+                progress_bar.advance()
 
         self._root = root
 
         self._cache[xvar, yvar, zvar] = self._root
         self.update_map(self._root)
-        self.progressBarFinished()
 
     def select_nodes_to_sharpen(self, node, region, bw, depth):
         """

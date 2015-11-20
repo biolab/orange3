@@ -1,3 +1,4 @@
+import contextlib
 import sys
 import time
 import os
@@ -580,6 +581,39 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         if processEvents is not None and processEvents is not False:
             qApp.processEvents(processEvents)
+
+    @contextlib.contextmanager
+    def progressBar(self, iterations=0):
+        """
+        Context manager for progress bar.
+
+        Using it ensures that the progress bar is removed at the end without
+        needing the `finally` blocks.
+
+        Usage:
+
+            with self.progressBar(20) as progress:
+                ...
+                progress.advance()
+
+        or
+
+            with self.progressBar() as progress:
+                ...
+                progress.advance(0.15)
+
+        or
+
+            with self.progressBar():
+                ...
+                self.progressBarSet(50)
+
+        :param iterations: the number of iterations (optional)
+        :type iterations: int
+        """
+        progress_bar = gui.ProgressBar(self, iterations)
+        yield progress_bar
+        progress_bar.finish()  # Let us not rely on garbage collector
 
     #: Widget's status message has changed.
     statusMessageChanged = Signal(str)

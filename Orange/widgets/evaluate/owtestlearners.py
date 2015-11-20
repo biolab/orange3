@@ -372,42 +372,41 @@ class OWTestLearners(widget.OWWidget):
             preprocessor=self.preprocessor,
             callback=update_progress)
         self.setStatusMessage("Running")
-        self.progressBarInit()
 
-        try:
-            if self.resampling == OWTestLearners.KFold:
-                if len(self.data) < self.k_folds:
-                    self.error(4, "Number of folds exceeds the data size")
-                    return
+        with self.progressBar():
+            try:
+                if self.resampling == OWTestLearners.KFold:
+                    if len(self.data) < self.k_folds:
+                        self.error(4, "Number of folds exceeds the data size")
+                        return
 
-                warnings = []
-                results = Orange.evaluation.CrossValidation(
-                    self.data, learners, k=self.k_folds, random_state=rstate,
-                    warnings=warnings, **common_args)
-                if warnings:
-                    self.warning(2, warnings[0])
-            elif self.resampling == OWTestLearners.LeaveOneOut:
-                results = Orange.evaluation.LeaveOneOut(
-                    self.data, learners, **common_args)
-            elif self.resampling == OWTestLearners.ShuffleSplit:
-                train_size = self.sample_p / 100
-                results = Orange.evaluation.ShuffleSplit(
-                    self.data, learners, n_resamples=self.n_repeat,
-                    train_size=train_size, test_size=None,
-                    random_state=rstate, **common_args)
-            elif self.resampling == OWTestLearners.TestOnTrain:
-                results = Orange.evaluation.TestOnTrainingData(
-                    self.data, learners, **common_args)
-            elif self.resampling == OWTestLearners.TestOnTest:
-                results = Orange.evaluation.TestOnTestData(
-                    self.data, self.test_data, learners, **common_args)
-            else:
-                assert False
-        except RuntimeError as e:
-            self.error(2, str(e))
-            self.setStatusMessage("")
-            self.progressBarFinished()
-            return
+                    warnings = []
+                    results = Orange.evaluation.CrossValidation(
+                        self.data, learners, k=self.k_folds,
+                        random_state=rstate, warnings=warnings, **common_args)
+                    if warnings:
+                        self.warning(2, warnings[0])
+                elif self.resampling == OWTestLearners.LeaveOneOut:
+                    results = Orange.evaluation.LeaveOneOut(
+                        self.data, learners, **common_args)
+                elif self.resampling == OWTestLearners.ShuffleSplit:
+                    train_size = self.sample_p / 100
+                    results = Orange.evaluation.ShuffleSplit(
+                        self.data, learners, n_resamples=self.n_repeat,
+                        train_size=train_size, test_size=None,
+                        random_state=rstate, **common_args)
+                elif self.resampling == OWTestLearners.TestOnTrain:
+                    results = Orange.evaluation.TestOnTrainingData(
+                        self.data, learners, **common_args)
+                elif self.resampling == OWTestLearners.TestOnTest:
+                    results = Orange.evaluation.TestOnTestData(
+                        self.data, self.test_data, learners, **common_args)
+                else:
+                    assert False
+            except RuntimeError as e:
+                self.error(2, str(e))
+                self.setStatusMessage("")
+                return
 
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
         for learner, result in zip(learners, split_by_model(results)):
@@ -431,7 +430,6 @@ class OWTestLearners(widget.OWWidget):
                 self.learners[key]._replace(results=result, stats=stats)
 
         self.setStatusMessage("")
-        self.progressBarFinished()
 
     def _update_header(self):
         # Set the correct horizontal header labels on the results_model.

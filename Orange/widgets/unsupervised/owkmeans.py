@@ -214,19 +214,16 @@ class OWKMeans(widget.OWWidget):
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
             if self.check_data_size(self.k_to):
-                self.progressBarInit()
-                progress_steps = self.k_to - self.k_from + 1
                 self.optimization_runs = []
                 kmeans = KMeans(
                     init=['random', 'k-means++'][self.smart_init],
                     n_init=self.n_init,
                     max_iter=self.max_iterations)
-                for k in range(self.k_from, self.k_to + 1):
-                    self.progressBarSet(100.0 * (k - self.k_from) /
-                                        progress_steps)
-                    kmeans.params["n_clusters"] = k
-                    self.optimization_runs.append((k, kmeans(self.data)))
-                self.progressBarFinished()
+                with self.progressBar(self.k_to - self.k_from + 1) as progress:
+                    for k in range(self.k_from, self.k_to + 1):
+                        progress.advance()
+                        kmeans.params["n_clusters"] = k
+                        self.optimization_runs.append((k, kmeans(self.data)))
         finally:
             self.controlArea.setDisabled(False)
         self.show_results()
