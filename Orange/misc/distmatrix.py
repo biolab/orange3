@@ -16,10 +16,10 @@ class DistMatrix(np.ndarray):
 
     .. attribute:: axis
 
-        If axis=1 we calculate distances between rows,
-        if axis=0 we calculate distances between columns.
+        If axis=0 we calculate distances between rows,
+        if axis=1 we calculate distances between columns.
     """
-    def __new__(cls, data, row_items=None, col_items=None, axis=1):
+    def __new__(cls, data, row_items=None, col_items=None, axis=0):
         """Construct a new distance matrix containing the given data.
 
         :param data: Distance matrix
@@ -43,7 +43,7 @@ class DistMatrix(np.ndarray):
         if obj is None: return
         self.row_items = getattr(obj, 'row_items', None)
         self.col_items = getattr(obj, 'col_items', None)
-        self.axis = getattr(obj, 'axis', 1)
+        self.axis = getattr(obj, 'axis', 0)
 
     def __array_wrap__(self, out_arr, context=None):
         if out_arr.ndim == 0:  # a single scalar

@@ -20,25 +20,30 @@ def _preprocess(table):
 
 
 def _orange_to_numpy(x):
-    """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance` to :class:`numpy.ndarray`."""
+    """
+    Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance` to :class:`numpy.ndarray`.
+    Always return a 2D array.
+    """
     if isinstance(x, data.Table):
         return x.X
     elif isinstance(x, data.RowInstance):
-        return x.x
+        return np.atleast_2d(x.x)
+    elif isinstance(x, np.ndarray):
+        return np.atleast_2d(x)
     else:
-        return x
+        return x    # e.g. None
 
 
-class Distance():
-    def __call__(self, e1, e2=None, axis=1, impute=False):
+class Distance:
+    def __call__(self, e1, e2=None, axis=0, impute=False):
         """
         :param e1: input data instances, we calculate distances between all pairs
         :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
         :param e2: optional second argument for data instances
            if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
         :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows,
-           if axis=0 we calculate distances between columns
+        :param axis: if axis=0 we calculate distances between rows,
+           if axis=1 we calculate distances between columns
         :type axis: int
         :param impute: if impute=True all NaN values in matrix are replaced with 0
         :type impute: bool
@@ -57,22 +62,15 @@ class SklDistance(Distance):
         """
         self.metric = metric
 
-    def __call__(self, e1, e2=None, axis=1, impute=False):
+    def __call__(self, e1, e2=None, axis=0, impute=False):
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
-        if axis == 0:
+        if axis == 1:
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        if not sparse.issparse(x1):
-            x1 = np.atleast_2d(x1)
-        if e2 is not None and not sparse.issparse(x2):
-            x2 = np.atleast_2d(x2)
         dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist = DistMatrix(dist)
+        dist = DistMatrix(dist, e1, e2, axis)
         return dist
 
 Euclidean = SklDistance('euclidean')
@@ -92,24 +90,14 @@ class SpearmanDistance(Distance):
         """
         self.absolute = absolute
 
-    def __call__(self, e1, e2=None, axis=1, impute=False):
+    def __call__(self, e1, e2=None, axis=0, impute=False):
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
+        # set also x2 to always get the matrix out of scipy.
+        # if only two examples are given, scipy returns the float, not a matrix
         if x2 is None:
             x2 = x1
-        if x1.ndim == 1 or x2.ndim == 1:
-            axis = 0
-            slc = len(x1) if x1.ndim > 1 else 1
-        else:
-            slc = len(x1) if axis == 1 else x1.shape[1]
-        # stats.spearmanr does not work when e1=Table and e2=RowInstance
-        # so we replace e1 and e2 and then transpose the result
-        transpose = False
-        if x1.ndim == 2 and x2.ndim == 1:
-            x1, x2 = x2, x1
-            slc = len(e1) if x1.ndim > 1 else 1
-            transpose = True
-        rho, _ = stats.spearmanr(x1, x2, axis=axis)
+        rho, _ = stats.spearmanr(x1, x2, axis=1-axis)
         if np.isnan(rho).any() and impute:
             rho = np.nan_to_num(rho)
         if self.absolute:
@@ -119,13 +107,11 @@ class SpearmanDistance(Distance):
         if isinstance(dist, np.float):
             dist = np.array([[dist]])
         elif isinstance(dist, np.ndarray):
+            # e.g. stats.spearmanr(x[:2], x[:3]) returns 5x5 matrix, with ALL five examples in
+            # rows and columns. We only need the pper right corner of the matrix - that is [:2, 2:]
+            slc = len(x1) if axis == 0 else x1.shape[1]
             dist = dist[:slc, slc:]
-        if transpose:
-           dist = dist.T
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist = DistMatrix(dist)
+        dist = DistMatrix(dist, e1, e2, axis)
         return dist
 
 SpearmanR = SpearmanDistance(absolute=False)
@@ -143,18 +129,14 @@ class PearsonDistance(Distance):
         """
         self.absolute = absolute
 
-    def __call__(self, e1, e2=None, axis=1, impute=False):
+    def __call__(self, e1, e2=None, axis=0, impute=False):
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if x2 is None:
             x2 = x1
-        if axis == 0:
+        if axis == 1:
             x1 = x1.T
             x2 = x2.T
-        if x1.ndim == 1:
-            x1 = list([x1])
-        if x2.ndim == 1:
-            x2 = list([x2])
         rho = np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
         if np.isnan(rho).any() and impute:
             rho = np.nan_to_num(rho)
@@ -162,10 +144,7 @@ class PearsonDistance(Distance):
             dist = (1. - np.abs(rho)) / 2.
         else:
             dist = (1. - rho) / 2.
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist = DistMatrix(dist)
+        dist = DistMatrix(dist, e1, e2, axis)
         return dist
 
 
