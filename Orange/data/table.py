@@ -565,10 +565,11 @@ class Table(MutableSequence, Storage):
 
         with urlopen(url, timeout=10) as response:
             name = suggested_filename(response.headers['content-disposition']) or name
-            with NamedTemporaryFile(suffix=name) as f:
+            with NamedTemporaryFile(suffix=name, delete=False) as f:
                 f.write(response.read())
-                f.flush()
-                data = cls.from_file(f.name)
+                # delete=False is a workaround for https://bugs.python.org/issue14243
+            data = cls.from_file(f.name)
+            os.unlink(f.name)
         # Override name set in from_file() to avoid holding the temp prefix
         data.name = os.path.splitext(name)[0]
         data.origin = url
