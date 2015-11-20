@@ -15,6 +15,7 @@ from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table, Var
 from Orange.data.io import BasketFormat
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
+from Orange.data.table import dataset_dirs
 
 
 class MultiClassTest(unittest.TestCase):
@@ -219,6 +220,13 @@ class ClassfierListInputTest(unittest.TestCase):
 
 
 class LearnerAccessibility(unittest.TestCase):
+    def setUp(self):
+        Variable._clear_all_caches()
+        dataset_dirs.append("Orange/tests")
+
+    def tearDown(self):
+        dataset_dirs.pop()
+
     def all_learners(self):
         classification_modules = pkgutil.walk_packages(
             path=Orange.classification.__path__,
@@ -266,6 +274,16 @@ class LearnerAccessibility(unittest.TestCase):
             try:
                 learner = learner()
                 table = Table("housing")
+                self.assertRaises(ValueError, learner, table)
+            except TypeError as err:
+                traceback.print_exc()
+                continue
+
+    def test_adequacy_all_learners_multiclass(self):
+        for learner in self.all_learners():
+            try:
+                learner = learner()
+                table = Table("test8.tab")
                 self.assertRaises(ValueError, learner, table)
             except TypeError as err:
                 traceback.print_exc()
