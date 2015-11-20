@@ -285,18 +285,23 @@ class CrossValidation(Results):
 
     """
     def __init__(self, data, learners, k=10, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None):
+                 store_models=False, preprocessor=None, callback=None, warnings=None):
         super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback)
         self.k = k
         self.random_state = random_state
         Y = data.Y.copy().flatten()
+        indices = None
         if data.domain.has_discrete_class:
             indices = skl_cross_validation.StratifiedKFold(
                 Y, self.k, shuffle=True, random_state=self.random_state
             )
-        else:
+            if any(len(train) == 0 or len(test) == 0 for train, test in indices):
+                if warnings is not None:
+                    warnings.append("Using non-stratified sampling.")
+                indices = None
+        if indices is None:
             indices = skl_cross_validation.KFold(
                 len(Y), self.k, shuffle=True, random_state=self.random_state
             )

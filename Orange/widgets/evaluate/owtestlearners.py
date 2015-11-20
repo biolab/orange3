@@ -377,9 +377,12 @@ class OWTestLearners(widget.OWWidget):
 
         try:
             if self.resampling == OWTestLearners.KFold:
+                warnings = []
                 results = Orange.evaluation.CrossValidation(
                     self.data, learners, k=self.k_folds, random_state=rstate,
-                    **common_args)
+                    warnings=warnings, **common_args)
+                if warnings:
+                    self.warning(2, warnings[0])
             elif self.resampling == OWTestLearners.LeaveOneOut:
                 results = Orange.evaluation.LeaveOneOut(
                     self.data, learners, **common_args)
