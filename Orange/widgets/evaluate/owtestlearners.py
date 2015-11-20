@@ -267,6 +267,7 @@ class OWTestLearners(widget.OWWidget):
         self.data = data
         self.closeContext()
         if data is not None:
+            self._update_class_selection()
             self.openContext(data.domain.class_var)
         self._invalidate()
 
@@ -356,6 +357,8 @@ class OWTestLearners(widget.OWWidget):
         items = [(key, slot) for key, slot in self.learners.items()
                  if slot.results is None]
         learners = [slot.learner for _, slot in items]
+        if len(items) == 0:
+            return
 
         if self.test_data is not None and \
                 self.resampling != OWTestLearners.TestOnTest:
@@ -371,27 +374,37 @@ class OWTestLearners(widget.OWWidget):
             callback=update_progress)
         self.setStatusMessage("Running")
         self.progressBarInit()
-        if self.resampling == OWTestLearners.KFold:
-            results = Orange.evaluation.CrossValidation(
-                self.data, learners, k=self.k_folds, random_state=rstate,
-                **common_args)
-        elif self.resampling == OWTestLearners.LeaveOneOut:
-            results = Orange.evaluation.LeaveOneOut(
-                self.data, learners, **common_args)
-        elif self.resampling == OWTestLearners.ShuffleSplit:
-            train_size = self.sample_p / 100
-            results = Orange.evaluation.ShuffleSplit(
-                self.data, learners, n_resamples=self.n_repeat,
-                train_size=train_size, test_size=None,
-                random_state=rstate, **common_args)
-        elif self.resampling == OWTestLearners.TestOnTrain:
-            results = Orange.evaluation.TestOnTrainingData(
-                self.data, learners, **common_args)
-        elif self.resampling == OWTestLearners.TestOnTest:
-            results = Orange.evaluation.TestOnTestData(
-                self.data, self.test_data, learners, **common_args)
-        else:
-            assert False
+
+        try:
+            if self.resampling == OWTestLearners.KFold:
+                warnings = []
+                results = Orange.evaluation.CrossValidation(
+                    self.data, learners, k=self.k_folds, random_state=rstate,
+                    warnings=warnings, **common_args)
+                if warnings:
+                    self.warning(2, warnings[0])
+            elif self.resampling == OWTestLearners.LeaveOneOut:
+                results = Orange.evaluation.LeaveOneOut(
+                    self.data, learners, **common_args)
+            elif self.resampling == OWTestLearners.ShuffleSplit:
+                train_size = self.sample_p / 100
+                results = Orange.evaluation.ShuffleSplit(
+                    self.data, learners, n_resamples=self.n_repeat,
+                    train_size=train_size, test_size=None,
+                    random_state=rstate, **common_args)
+            elif self.resampling == OWTestLearners.TestOnTrain:
+                results = Orange.evaluation.TestOnTrainingData(
+                    self.data, learners, **common_args)
+            elif self.resampling == OWTestLearners.TestOnTest:
+                results = Orange.evaluation.TestOnTestData(
+                    self.data, self.test_data, learners, **common_args)
+            else:
+                assert False
+        except RuntimeError as e:
+            self.error(2, str(e))
+            self.setStatusMessage("")
+            self.progressBarFinished()
+            return
 
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
         for learner, result in zip(learners, split_by_model(results)):
