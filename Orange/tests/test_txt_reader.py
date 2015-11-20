@@ -1,10 +1,12 @@
 import unittest
 from tempfile import NamedTemporaryFile
 import os
+import warnings
+from io import StringIO
 
 import numpy as np
 
-from Orange.data import ContinuousVariable, DiscreteVariable
+from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.data.io import CSVFormat
 
 tab_file = """\
@@ -28,6 +30,14 @@ csv_file_nh = """\
 1.0,      1.3,       5
 2.0,      42,        7
 """
+
+noncont_marked_cont = '''\
+a,b
+d,c
+,
+e,1
+f,g
+'''
 
 
 class TestTabReader(unittest.TestCase):
@@ -59,3 +69,20 @@ class TestTabReader(unittest.TestCase):
         self.read_easy(csv_file, "Feature ")
         self.read_easy(csv_file_nh, "Feature ")
 
+    def test_read_nonutf8_encoding(self):
+        with self.assertRaises(ValueError) as cm:
+            data = Table('binary-blob.tab')
+        self.assertIn('NULL byte', cm.exception.args[0])
+
+        with self.assertRaises(ValueError):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                data = Table('invalid_characters.tab')
+
+    def test_noncontinous_marked_continuous(self):
+        file = NamedTemporaryFile("wt", delete=False)
+        file.write(noncont_marked_cont)
+        file.close()
+        with self.assertRaises(ValueError) as cm:
+            table = CSVFormat().read_file(file.name)
+        self.assertIn('line 5, column 2', cm.exception.args[0])

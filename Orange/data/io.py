@@ -1,8 +1,10 @@
 import re
-import logging
+import warnings
 import subprocess
 from os import path
 from ast import literal_eval
+from math import isnan
+from numbers import Number
 from itertools import chain, repeat
 from functools import lru_cache
 from collections import OrderedDict
@@ -15,8 +17,6 @@ from chardet.universaldetector import UniversalDetector
 from Orange.data.variable import *
 from Orange.util import abstract, Registry, flatten, namegen
 
-
-log = logging.getLogger()
 
 _IDENTITY = lambda i: i
 
@@ -65,11 +65,11 @@ def detect_encoding(filename):
 
     # file not available or unable to guess the encoding, have chardet do it
     detector = UniversalDetector()
+    # We examine only first N 4kB blocks of file because chardet is really slow
+    MAX_BYTES = 4*1024*12
 
     def _from_file(f):
-        for line in f:
-            detector.feed(line)
-            if detector.done: break
+        detector.feed(f.read(MAX_BYTES))
         detector.close()
         return detector.result.get('encoding')
 
@@ -77,7 +77,7 @@ def detect_encoding(filename):
         with open_compressed(filename, 'rb') as f:
             return _from_file(f)
     elif isinstance(filename, bytes):
-        detector.feed(filename)
+        detector.feed(filename[:MAX_BYTES])
         detector.close()
         return detector.result.get('encoding')
     elif hasattr(filename, 'encoding'):
@@ -116,7 +116,7 @@ class Flags:
                     setattr(self, flag, True)
                     setattr(self, self.ALL.get(flag, ''), True)
             elif flag:
-                log.warning('Invalid attribute flag \'{}\''.format(flag))
+                warnings.warn('Invalid attribute flag \'{}\''.format(flag))
 
     @staticmethod
     def join(iterable, *args):
@@ -372,7 +372,15 @@ class FileFormat(metaclass=FileFormatMeta):
 
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
-                values = [float(i) for i in orig_values]
+                try:
+                    values = [float(i) for i in orig_values]
+                except ValueError:
+                    for row, num in enumerate(orig_values):
+                        try: float(num)
+                        except ValueError: break
+                    raise ValueError('Non-continuous value in (1-based) '
+                                     'line {}, column {}'.format(row + len(headers) + 1,
+                                                                 col + 1))
 
             elif (type_flag in DiscreteVariable.TYPE_HEADERS or
                   _RE_DISCRETE_LIST.match(type_flag)):
@@ -498,6 +506,22 @@ class FileFormat(metaclass=FileFormatMeta):
         write(cls.header_flags(data))
 
     @classmethod
+    def write_data(cls, write, data):
+        """`write` is a callback that accepts an iterable"""
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                       data.X,
+                       data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                       data.metas):
+            write(['' if isinstance(val, Number) and isnan(val) else
+                   var.values[int(val)] if var.is_discrete else
+                   val
+                   for var, val in zip(vars, flatten(row))])
+
+    @classmethod
     def write(cls, filename, data):
         return cls.write_file(filename, data)
 
@@ -512,15 +536,24 @@ class CSVFormat(FileFormat):
     @classmethod
     def read_file(cls, filename, wrapper=None):
         wrapper = wrapper or _IDENTITY
-        import csv
-        for encoding in (lambda: 'us-ascii',                 # fast
-                         lambda: detect_encoding(filename),  # precise
-                         lambda: 'utf-8'):                   # fallback
-            with cls.open(filename, mode='rt', newline='', encoding=encoding()) as file:
+        import csv, sys, locale
+        for encoding in (lambda: ('us-ascii', None),                 # fast
+                         lambda: (detect_encoding(filename), None),  # precise
+                         lambda: (locale.getpreferredencoding(False), None),
+                         lambda: (sys.getdefaultencoding(), None),   # desperate
+                         lambda: ('utf-8', None),                    # ...
+                         lambda: ('utf-8', 'ignore')):               # fallback
+            encoding, errors = encoding()
+            # Clear the error flag for all except the last check, because
+            # the error of second-to-last check is stored and shown as warning in owfile
+            if errors != 'ignore':
+                error = ''
+            with cls.open(filename, mode='rt', newline='', encoding=encoding, errors=errors) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
                     dialect = csv.Sniffer().sniff(file.read(1024), cls.DELIMITERS)
-                except UnicodeDecodeError:
+                except UnicodeDecodeError as e:
+                    error = e
                     continue
                 except csv.Error:
                     dialect = csv.excel()
@@ -531,7 +564,14 @@ class CSVFormat(FileFormat):
 
                 try:
                     reader = csv.reader(file, dialect=dialect)
-                    return wrapper(cls.data_table(reader))
+                    data = cls.data_table(reader)
+                    if error and isinstance(error, UnicodeDecodeError):
+                        pos, endpos = error.args[2], error.args[3]
+                        warning = ('Skipped invalid byte(s) in position '
+                                   '{}{}').format(pos,
+                                                  ('-' + str(endpos)) if (endpos - pos) > 1 else '')
+                        warnings.warn(warning)
+                    return wrapper(data)
                 except Exception as e:
                     error = e
                     continue
@@ -543,8 +583,7 @@ class CSVFormat(FileFormat):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data)
-            writer.writerows([[inst.weight] * data.has_weights() +
-                              inst.list for inst in data])
+            cls.write_data(writer.writerow, data)
 
 
 class TabFormat(CSVFormat):
