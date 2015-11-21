@@ -8,6 +8,7 @@ from Orange.regression import (LinearRegressionLearner,
                                ElasticNetCVLearner,
                                MeanLearner)
 from Orange.evaluation import CrossValidation, RMSE
+from sklearn import linear_model
 
 
 class LinearRegressionTest(unittest.TestCase):
@@ -90,3 +91,17 @@ class LinearRegressionTest(unittest.TestCase):
         self.assertAlmostEqual(float(model.intercept), -11)
         self.assertEqual(len(model.coefficients), 1)
         self.assertAlmostEqual(float(model.coefficients[0]), 1)
+
+    def test_comparison_with_sklearn(self):
+        alphas = [0.001, 0.1, 1, 10, 100]
+        data = Table("housing")
+        learners = [(LassoRegressionLearner, linear_model.Lasso),
+                    (RidgeRegressionLearner, linear_model.Ridge)]
+        for o_learner, s_learner in learners:
+            for a in alphas:
+                lr = o_learner(alpha=a)
+                o_model = lr(data)
+                s_model = s_learner(alpha=a, fit_intercept=True)
+                s_model.fit(data.X, data.Y)
+                delta = np.sum(s_model.coef_ - o_model.coefficients)
+                self.assertAlmostEqual(delta, 0.0)

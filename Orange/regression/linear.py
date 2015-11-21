@@ -30,9 +30,8 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
 
     def fit(self, X, Y, W):
-        sk = self.__wraps__()
-        sk.fit(X, Y)
-        return LinearModel(sk)
+        model = super().fit(X, Y, W)
+        return LinearModel(model.skl_model)
 
 
 class RidgeRegressionLearner(LinearRegressionLearner):
