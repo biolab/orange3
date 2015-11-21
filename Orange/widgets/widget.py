@@ -67,15 +67,25 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     # Global widget count
     widget_id = 0
 
-    # Widget description
+    # Widget Meta Description
+    # -----------------------
+
+    #: Widget name (:class:`str`) as presented in the Canvas
     name = None
     id = None
     category = None
     version = None
+    #: Short widget description (:class:`str` optional), displayed in
+    #: canvas help tooltips.
     description = None
+    #: A longer widget description (:class:`str` optional)
     long_description = None
+    #: Widget icon path relative to the defining module
     icon = "icons/Unknown.png"
+    #: Widget priority used for sorting within a category
+    #: (default ``sys.maxsize``).
     priority = sys.maxsize
+
     author = None
     author_email = None
     maintainer = None
@@ -86,18 +96,33 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     keywords = []
     background = None
     replaces = None
+
+    #: A list of published input definitions
     inputs = []
+    #: A list of published output definitions
     outputs = []
 
-    # Default widget layout settings
+    # Default widget GUI layout settings
+    # ----------------------------------
+
+    #: Should the widget have basic layout
+    #: (If this flag is false then the `want_main_area` and
+    #: `want_control_area` are ignored).
     want_basic_layout = True
+    #: Should the widget construct a `mainArea` (this is a resizable
+    #: area to the right of the `controlArea`).
     want_main_area = True
+    #: Should the widget construct a `controlArea`.
     want_control_area = True
     want_graph = False
     want_status_bar = False
     no_report = False
 
     save_position = True
+
+    #: If false the widget will receive fixed size constraint
+    #: (derived from it's layout). Use for widgets which have simple
+    #: static size contents.
     resizing_enabled = True
 
     widgetStateChanged = Signal(str, int, str)
@@ -110,13 +135,14 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
 
     savedWidgetGeometry = settings.Setting(None)
 
-    #: A list of user advice messages to display to the user.
-    #: When a widget is first shown a message tom this list is selected
+    #: A list of advice messages (:class:`Message`) to display to the user.
+    #: When a widget is first shown a message from this list is selected
     #: for display. If a user accepts (clicks 'Ok. Got it') the choice is
     #: recorded and the message is never shown again (closing the message
     #: will not mark it as seen). Messages can be displayed again by pressing
     #: Shift + F1
-    #: :type: List[Message]
+    #:
+    #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
     def __new__(cls, *args, **kwargs):
@@ -354,10 +380,9 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.__quicktipOnce()
 
     def wheelEvent(self, event):
-        """ Silently accept the wheel event. This is to ensure combo boxes
-        and other controls that have focus don't receive this event unless
-        the cursor is over them.
-        """
+        # Silently accept the wheel event. This is to ensure combo boxes
+        # and other controls that have focus don't receive this event unless
+        # the cursor is over them.
         event.accept()
 
     def setCaption(self, caption):
@@ -372,6 +397,12 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
         self.activateWindow()
 
     def send(self, signalName, value, id=None):
+        """
+        Send a `value` on the `signalName` widget output.
+
+        An output with `signalName` must be defined in the class ``outputs``
+        list.
+        """
         if not any(s.name == signalName for s in self.outputs):
             raise ValueError('{} is not a valid output signal for widget {}'.format(
                 signalName, self.name))
@@ -543,11 +574,20 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
     statusMessageChanged = Signal(str)
 
     def setStatusMessage(self, text):
+        """
+        Set widget's status message.
+
+        This is a short status string to be displayed inline next to
+        the instantiated widget icon in the canvas.
+        """
         if self.__statusMessage != text:
             self.__statusMessage = text
             self.statusMessageChanged.emit(text)
 
     def statusMessage(self):
+        """
+        Return the widget's status message.
+        """
         return self.__statusMessage
 
     def keyPressEvent(self, e):
@@ -557,12 +597,21 @@ class OWWidget(QDialog, metaclass=WidgetMetaClass):
             QDialog.keyPressEvent(self, e)
 
     def information(self, id=0, text=None):
+        """
+        Set/clear a widget information message (for `id`).
+        """
         self.setState("Info", id, text)
 
     def warning(self, id=0, text=""):
+        """
+        Set/clear a widget warning message (for `id`).
+        """
         self.setState("Warning", id, text)
 
     def error(self, id=0, text=""):
+        """
+        Set/clear a widget error message (for `id`).
+        """
         self.setState("Error", id, text)
 
     def setState(self, state_type, id, text):
@@ -832,7 +881,7 @@ class Message(object):
     :param str moreurl:
         An url to open when a user clicks a 'Learn more' button.
 
-    .. seealso:: OWWidget.UserAdviceMessages
+    .. seealso:: :const:`OWWidget.UserAdviceMessages`
 
     """
     #: QStyle.SP_MessageBox* pixmap enums repeated for easier access
@@ -851,12 +900,27 @@ class Message(object):
         self.persistent_id = persistent_id
 
 
-# Pull signal constants from canvas to widget namespace
+#: Input/Output flags.
+#: -------------------
+#:
+#: The input/output is the default for its type.
+#: When there are multiple IO signals with the same type the
+#: one with the default flag takes precedence when adding a new
+#: link in the canvas.
 Default = widget_description.Default
 NonDefault = widget_description.NonDefault
+#: Single input signal (default)
 Single = widget_description.Single
+#: Multiple outputs can be linked to this signal.
+#: Signal handlers with this flag have (object, id: object) -> None signature.
 Multiple = widget_description.Multiple
+#: Applies to user interaction only.
 Explicit = widget_description.Explicit
+#: Dynamic output type.
+#: Specifies that the instances on the output will in general be
+#: subtypes of the declared type and that the output can be connected
+#: to any input signal which can accept a subtype of the declared output
+#: type.
 Dynamic = widget_description.Dynamic
 
 InputSignal = widget_description.InputSignal
