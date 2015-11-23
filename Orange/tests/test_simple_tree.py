@@ -4,11 +4,12 @@ import pickle
 import numpy as np
 
 import Orange
-from Orange.classification.simple_tree import SimpleTreeLearner
+from Orange.classification import SimpleTreeLearner as SimpleTreeCls
+from Orange.regression import SimpleTreeLearner as SimpleTreeReg
 from Orange.data import ContinuousVariable, Domain, DiscreteVariable, Table
 
-class SimpleTreeTest(unittest.TestCase):
 
+class SimpleTreeTest(unittest.TestCase):
     def setUp(self):
         self.N = 50
         self.Mi = 3
@@ -39,7 +40,7 @@ class SimpleTreeTest(unittest.TestCase):
 
     def test_SimpleTree_classification(self):
         Orange.data.Variable._clear_all_caches()
-        lrn = SimpleTreeLearner()
+        lrn = SimpleTreeCls()
         clf = lrn(self.data_cls)
         p = clf(self.data_cls, clf.Probs)
         self.assertEqual(p.shape, (self.N, self.cls_vals))
@@ -48,7 +49,7 @@ class SimpleTreeTest(unittest.TestCase):
         np.testing.assert_almost_equal(p.sum(axis=1), np.ones(self.N))
 
     def test_SimpleTree_classification_pickle(self):
-        lrn = SimpleTreeLearner()
+        lrn = SimpleTreeCls()
         clf = lrn(self.data_cls)
         p = clf(self.data_cls, clf.Probs)
         clf_ = pickle.loads(pickle.dumps(clf))
@@ -56,13 +57,14 @@ class SimpleTreeTest(unittest.TestCase):
         np.testing.assert_almost_equal(p, p_)
 
     def test_SimpleTree_classification_tree(self):
-        lrn = SimpleTreeLearner(min_instances=6, max_majority=0.7)
+        lrn = SimpleTreeCls(min_instances=6, max_majority=0.7)
         clf = lrn(self.data_cls)
         self.assertEqual(clf.dumps_tree(
-            clf.node), '{ 1 4 -1.17364 { 1 5 0.37564 { 2 0.00 0.00 0.56 } { 2 0.00 3.00 1.14 } } { 1 4 -0.41863 { 1 5 0.14592 { 2 3.54 0.54 0.70 } { 2 2.46 0.46 2.47 } } { 1 4 0.24404 { 1 4 0.00654 { 1 3 -0.15750 { 2 1.00 0.00 0.45 } { 2 1.00 3.00 0.48 } } { 2 1.00 5.00 0.70 } } { 1 5 0.32635 { 2 0.52 2.52 4.21 } { 2 2.48 3.48 1.30 } } } } }')
+            clf.node),
+            '{ 1 4 -1.17364 { 1 5 0.37564 { 2 0.00 0.00 0.56 } { 2 0.00 3.00 1.14 } } { 1 4 -0.41863 { 1 5 0.14592 { 2 3.54 0.54 0.70 } { 2 2.46 0.46 2.47 } } { 1 4 0.24404 { 1 4 0.00654 { 1 3 -0.15750 { 2 1.00 0.00 0.45 } { 2 1.00 3.00 0.48 } } { 2 1.00 5.00 0.70 } } { 1 5 0.32635 { 2 0.52 2.52 4.21 } { 2 2.48 3.48 1.30 } } } } }')
 
     def test_SimpleTree_regression(self):
-        lrn = SimpleTreeLearner()
+        lrn = SimpleTreeReg()
         clf = lrn(self.data_reg)
         p = clf(self.data_reg)
         self.assertEqual(p.shape, (self.N,))
@@ -71,14 +73,15 @@ class SimpleTreeTest(unittest.TestCase):
         pass
 
     def test_SimpleTree_regression_tree(self):
-        lrn = SimpleTreeLearner(min_instances=5)
+        lrn = SimpleTreeReg(min_instances=5)
         clf = lrn(self.data_reg)
         self.assertEqual(clf.dumps_tree(
-            clf.node), '{ 0 2 { 1 4 0.13895 { 1 4 -0.32607 { 2 4.60993 1.71141 } { 2 4.96454 3.56122 } } { 2 7.09220 -4.32343 } } { 1 4 -0.35941 { 0 0 { 1 5 -0.20027 { 2 3.54255 0.95095 } { 2 5.50000 -5.56049 } } { 2 7.62411 2.03615 } } { 1 5 0.40797 { 1 3 0.83459 { 2 3.71094 0.27028 } { 2 5.18490 3.70920 } } { 2 5.77083 5.93398 } } } }')
+            clf.node),
+            '{ 0 2 { 1 4 0.13895 { 1 4 -0.32607 { 2 4.60993 1.71141 } { 2 4.96454 3.56122 } } { 2 7.09220 -4.32343 } } { 1 4 -0.35941 { 0 0 { 1 5 -0.20027 { 2 3.54255 0.95095 } { 2 5.50000 -5.56049 } } { 2 7.62411 2.03615 } } { 1 5 0.40797 { 1 3 0.83459 { 2 3.71094 0.27028 } { 2 5.18490 3.70920 } } { 2 5.77083 5.93398 } } } }')
 
     def test_SimpleTree_single_instance(self):
         data = Orange.data.Table('iris')
-        lrn = SimpleTreeLearner()
+        lrn = SimpleTreeCls()
         clf = lrn(data)
         for ins in data[::20]:
             clf(ins)
@@ -95,11 +98,11 @@ class SimpleTreeTest(unittest.TestCase):
                               ['f', 2, "c"],
                               ["e", 3, "a"],
                               ['f', 3, "c"]])
-        lrn = SimpleTreeLearner(min_instances=1)
+        lrn = SimpleTreeCls(min_instances=1)
         clf = lrn(data)
-        str = clf.to_string()
+        clf_str = clf.to_string()
         res = '\nd1 ([2.0, 2.0, 2.0])\n: e\n   c1 ([2.0, 2.0, 0.0])\n   : <=2.5\n      c1 ([1.0, 2.0, 0.0])\n      : <=1.5 --> a ([1.0, 1.0, 0.0])\n      : >1.5 --> b ([0.0, 1.0, 0.0])\n   : >2.5 --> a ([1.0, 0.0, 0.0])\n: f --> c ([0.0, 0.0, 2.0])'
-        self.assertEqual(str, res)
+        self.assertEqual(clf_str, res)
 
     def test_SimpleTree_to_string_regression(self):
         domain = Domain([DiscreteVariable(name='d1', values='ef'),
@@ -111,11 +114,12 @@ class SimpleTreeTest(unittest.TestCase):
                               ['f', 2, 30],
                               ["e", 3, 10],
                               ['f', 3, 30]])
-        lrn = SimpleTreeLearner(min_instances=1)
-        clf = lrn(data)
-        str = clf.to_string()
-        res = '\nd1 (120.0: 6.0)\n: e\n   c1 (60.0: 4.0)\n   : <=2.5\n      c1 (50.0: 3.0)\n      : <=1.5 --> 15.0 (30.0: 2.0)\n      : >1.5 --> 20.0 (20.0: 1.0)\n   : >2.5 --> 10.0 (10.0: 1.0)\n: f --> 30.0 (60.0: 2.0)'
-        self.assertEqual(str, res)
+        lrn = SimpleTreeReg(min_instances=1)
+        reg = lrn(data)
+        reg_str = reg.to_string()
+        res = '\nd1 (20.0: 6.0)\n: e\n   c1 (15.0: 4.0)\n   : <=2.5\n      c1 (16.667: 3.0)\n      : <=1.5 --> (15.0: 2.0)\n      : >1.5 --> (20.0: 1.0)\n   : >2.5 --> (10.0: 1.0)\n: f --> (30.0: 2.0)'
+        self.assertEqual(reg_str, res)
+
 
 if __name__ == '__main__':
     unittest.main()
