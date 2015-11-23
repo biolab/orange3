@@ -323,6 +323,10 @@ class OWFeatureConstructor(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Variable Definitions")
 
+        toplayout = QtGui.QHBoxLayout()
+        toplayout.setContentsMargins(0, 0, 0, 0)
+        box.layout().addLayout(toplayout)
+
         self.editorstack = QtGui.QStackedWidget(
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
                                    QSizePolicy.MinimumExpanding)
@@ -336,13 +340,11 @@ class OWFeatureConstructor(widget.OWWidget):
 
         self.editorstack.setEnabled(False)
 
-        box.layout().addWidget(self.editorstack)
-
-        buttonlayout = QtGui.QHBoxLayout()
-        buttonlayout.setContentsMargins(4, 4, 4, 4)
+        buttonlayout = QtGui.QVBoxLayout()
+        buttonlayout.setContentsMargins(0, 0, 0, 0)
 
         self.addbutton = QtGui.QPushButton(
-            "Add", toolTip="Create a new feature",
+            "New", toolTip="Create a new variable",
             shortcut=QtGui.QKeySequence.New
         )
 
@@ -393,7 +395,9 @@ class OWFeatureConstructor(widget.OWWidget):
         buttonlayout.addWidget(self.addbutton)
         buttonlayout.addWidget(self.removebutton)
         buttonlayout.addStretch(10)
-        box.layout().addLayout(buttonlayout)
+
+        toplayout.addLayout(buttonlayout, 0)
+        toplayout.addWidget(self.editorstack, 10)
 
         # Layout for the list view
         layout = QtGui.QVBoxLayout(spacing=1, margin=0)
