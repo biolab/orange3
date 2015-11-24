@@ -104,13 +104,13 @@ class OWDataSampler(widget.OWWidget):
         gui.appendRadioButton(sampling, "Time:")
         ibox = gui.indentedBox(sampling)
         spin = gui.spin(ibox, self, "sampleSizeSqlTime", minv=1, maxv=3600,
-                        callback=set_sampling_type(self.FixedSize))
+                        callback=set_sampling_type(self.SqlTime))
         spin.setSuffix(" sec")
         gui.appendRadioButton(sampling, "Percentage")
         ibox = gui.indentedBox(sampling)
         spin = gui.spin(ibox, self, "sampleSizeSqlPercentage", spinType=float,
                         minv=0.0001, maxv=100, step=0.1, decimals=4,
-                        callback=set_sampling_type(self.FixedProportion))
+                        callback=set_sampling_type(self.SqlProportion))
         spin.setSuffix(" %")
         self.sql_box.setVisible(False)
 
