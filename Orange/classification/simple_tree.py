@@ -276,11 +276,14 @@ class SimpleTreeModel(Model):
             else:
                 node = self.node
         n = node.contents
-        if self.type == Regression:
+        if self.type == Classification:
+            decimals = 1
+        else:
             decimals = self.domain.class_var.number_of_decimals
         if n.children_size == 0:
             if self.type == Classification:
-                node_cont = [n.dist[i] for i in range(self.cls_vals)]
+                node_cont = [round(n.dist[i], decimals)
+                             for i in range(self.cls_vals)]
                 index = node_cont.index(max(node_cont))
                 major_class = self.cls_vars[0].values[index]
                 return ' --> %s (%s)' % (major_class, node_cont)
@@ -290,7 +293,8 @@ class SimpleTreeModel(Model):
         else:
             node_desc = self.dom_attr[n.split_attr].name
             if self.type == Classification:
-                node_cont = [n.dist[i] for i in range(self.cls_vals)]
+                node_cont = [round(n.dist[i], decimals)
+                             for i in range(self.cls_vals)]
             else:
                 node_cont = str(round(n.sum / n.n, decimals)) + ': ' + str(n.n)
             ret_str = '\n' + '   ' * level + '%s (%s)' % (node_desc,
