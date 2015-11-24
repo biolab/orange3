@@ -987,6 +987,8 @@ class OWScatterMap(widget.OWWidget):
     def get_widget_name_extension(self):
         if self.dataset is None:
             return
+        if self.x_var_index < 0 or self.y_var_index < 0:
+            return
         return "{} vs {}".format(
             self.x_var_model[self.x_var_index],
             self.y_var_model[self.y_var_index])
@@ -1407,7 +1409,7 @@ def main(argv=None):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "adult"
+        filename = "zoo"
 
     data = Orange.data.Table(filename)
 
