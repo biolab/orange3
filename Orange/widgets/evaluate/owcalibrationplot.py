@@ -86,6 +86,14 @@ class OWCalibrationPlot(widget.OWWidget):
         self.results = results
 
         if results is not None:
+            if results.data is None:
+                self.error(0, "Give me data!!")
+                results = None
+            elif not results.data.domain.has_discrete_class:
+                self.error(0, "Need discrete class variable")
+                results = None
+
+        if results is not None:
             self._initialize(results)
             self._replot()
 
