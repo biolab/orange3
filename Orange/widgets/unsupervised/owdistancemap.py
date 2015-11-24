@@ -646,7 +646,7 @@ class OWDistanceMap(widget.OWWidget):
         if self.annotation_idx <= 1:
             annot = annot.lower()
         self.report_items((
-            ("Sorting", self.sorting_combo.currentText().lower()),
+            ("Sorting", self.sorting_cb.currentText().lower()),
             ("Annotations", annot)
         ))
         if self.matrix is not None:

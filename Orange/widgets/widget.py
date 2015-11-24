@@ -197,8 +197,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
         box.layout().addWidget(self.graphButton)
         box.layout().addWidget(self.report_button)
-        self.report_button_background.hide()
-        self.graphButtonBackground.hide()
+#        self.report_button_background.hide()
+#        self.graphButtonBackground.hide()
 
     @classmethod
     def get_flags(cls):
@@ -258,6 +258,16 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                                                  margin=0)
                 self.graphButton = gui.button(leftSide, None, "&Save Graph")
                 self.graphButton.setAutoDefault(0)
+
+            if hasattr(self, "send_report"):
+                leftSide = self.controlArea
+                self.controlArea = gui.widgetBox(leftSide,
+                                                 orientation="vertical",
+                                                 margin=0)
+                self.report_button = gui.button(leftSide, None, "&Report",
+                                                callback=self.show_report)
+                self.report_button.setAutoDefault(0)
+
             if self.want_main_area:
                 self.controlArea.setSizePolicy(QSizePolicy.Fixed,
                                                QSizePolicy.MinimumExpanding)
@@ -298,16 +308,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
-
-        if hasattr(self, "send_report"):
-            self.report_button_background = gui.widgetBox(
-                self.leftWidgetPart,
-                orientation="horizontal", margin=4
-            )
-            self.report_button = gui.button(
-                self.report_button_background,
-                self, "&Report", callback=self.show_report)
-            self.report_button.setAutoDefault(0)
 
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):
