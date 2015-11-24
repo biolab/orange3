@@ -31,7 +31,7 @@ class OWKNNRegression(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.preprocessors = ()
+        self.preprocessors = None
         self.data = None
 
         box = gui.widgetBox(self.controlArea, "Learner/Model Name")
