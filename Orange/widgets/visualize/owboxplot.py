@@ -792,16 +792,16 @@ class OWBoxPlot(widget.OWWidget):
         save_img.exec_()
 
     def get_widget_name_extension(self):
-        if self.attributes_select:
+        if self.attributes_select and len(self.attributes):
             return self.attributes[self.attributes_select[0]][0]
 
     def send_report(self):
         self.report_plot(self.box_scene)
         text = ""
-        if self.attributes_select:
+        if self.attributes_select and len(self.attributes):
             text += "Box plot for attribute '{}' ".format(
                 self.attributes[self.attributes_select[0]][0])
-        if self.grouping_select:
+        if self.grouping_select  and len(self.grouping):
             text += "grouped by '{}'".format(
                 self.grouping[self.grouping_select[0]][0])
         if text:
