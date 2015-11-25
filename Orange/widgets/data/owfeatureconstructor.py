@@ -403,7 +403,6 @@ class OWFeatureConstructor(widget.OWWidget):
         layout = QtGui.QVBoxLayout(spacing=1, margin=0)
         self.featuremodel = DescriptorModel(parent=self)
 
-        self.featuremodel.wrap(self.descriptors)
         self.featureview = QtGui.QListView(
             minimumWidth=200,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
@@ -447,6 +446,7 @@ class OWFeatureConstructor(widget.OWWidget):
         if self.currentIndex >= 0:
             editor = self.editorstack.currentWidget()
             self.featuremodel[self.currentIndex] = editor.editorData()
+            self.descriptors = list(self.featuremodel)
 
     def setDescriptors(self, descriptors):
         """
@@ -457,18 +457,30 @@ class OWFeatureConstructor(widget.OWWidget):
 
     @check_sql_input
     def setData(self, data=None):
+        """Set the input dataset."""
         self.closeContext()
 
-        self.featuremodel.wrap([])
-        self.currentIndex = -1
         self.data = data
 
         if self.data is not None:
+            descriptors = list(self.descriptors)
+            currindex = self.currentIndex
             self.openContext(data)
-            self.featuremodel.wrap(self.descriptors)
-            self.setCurrentIndex(self.currentIndex)
 
-        self.editorstack.setEnabled(len(self.featuremodel) > 0)
+            if descriptors != self.descriptors or \
+                    self.currentIndex != currindex:
+                # disconnect from the selection model while reseting the model
+                selmodel = self.featureview.selectionModel()
+                selmodel.selectionChanged.disconnect(
+                    self._on_selectedVariableChanged)
+
+                self.featuremodel[:] = list(self.descriptors)
+                self.setCurrentIndex(self.currentIndex)
+
+                selmodel.selectionChanged.connect(
+                    self._on_selectedVariableChanged)
+
+        self.editorstack.setEnabled(self.currentIndex >= 0)
 
     def handleNewSignals(self):
         if self.data is not None:
