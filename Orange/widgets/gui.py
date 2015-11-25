@@ -2306,9 +2306,11 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     def do_commit():
         nonlocal dirty
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        commit()
-        QApplication.restoreOverrideCursor()
-        dirty = False
+        try:
+            commit()
+            dirty = False
+        finally:
+            QApplication.restoreOverrideCursor()
 
     dirty = False
     commit = commit or getattr(master, 'commit')
