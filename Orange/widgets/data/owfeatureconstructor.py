@@ -563,30 +563,6 @@ class OWFeatureConstructor(widget.OWWidget):
 import ast
 
 
-class RewriteNames(ast.NodeTransformer):
-    def __init__(self, names):
-        self.names = names
-        self.rewrites = []
-
-    def visit_Str(self, node):
-        if node.s in self.names:
-            new = ast.Subscript(
-                value=ast.Name(id="value", ctx=ast.Load()),
-                slice=ast.Index(value=ast.Str(s=node.s)),
-                ctx=ast.Load()
-            )
-            self.rewrites.append((node.s))
-            return ast.copy_location(new)
-        else:
-            return node
-
-
-def bind_names(exp, domain):
-    names = [f.name for f in domain.features]
-    transf = RewriteNames(names)
-    return transf.visit(exp)
-
-
 def freevars(exp, env):
     etype = type(exp)
     if etype in [ast.Expr, ast.Expression]:
