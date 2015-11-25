@@ -837,8 +837,8 @@ class OWMDS(widget.OWWidget):
         emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
         if self.jitter > 0:
             _, jitter_factor = self.JitterAmount[self.jitter]
-            emb_x = jitter(emb_x, jitter_factor, amount=0, rstate=42)
-            emb_y = jitter(emb_y, jitter_factor, amount=0, rstate=667)
+            emb_x = jitter(emb_x, jitter_factor, rstate=42)
+            emb_y = jitter(emb_y, jitter_factor, rstate=667)
 
         if self.connected_pairs and self.__draw_similar_pairs:
             if self._similar_pairs is None:
