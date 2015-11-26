@@ -274,7 +274,7 @@ class Variable(metaclass=VariableMeta):
 
     def __eq__(self, other):
         """Two variables are equivalent if the originate from the same master"""
-        return self.master is other.master
+        return hasattr(other, "master") and self.master is other.master
 
     def __hash__(self):
         return super().__hash__()
