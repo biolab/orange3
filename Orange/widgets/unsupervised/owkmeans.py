@@ -328,22 +328,18 @@ class OWKMeans(widget.OWWidget):
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
         meta_attrs = domain.metas
-        X, Y, metas = self.data.X, self.data.Y, self.data.metas
         if self.place_cluster_ids == self.OUTPUT_CLASS:
             if classes:
                 meta_attrs += classes
-                metas = np.hstack((metas, Y.reshape(len(self.data), 1)))
             classes = [clust_var]
-            Y = clust_ids
         elif self.place_cluster_ids == self.OUTPUT_ATTRIBUTE:
             attributes += (clust_var, )
-            X = np.hstack((X, clust_ids))
         else:
             meta_attrs += (clust_var, )
-            metas = np.hstack((metas, clust_ids))
 
         domain = Domain(attributes, classes, meta_attrs)
-        new_table = Table(domain, X, Y, metas, self.data.W)
+        new_table = Table.from_table(domain, self.data)
+        new_table.get_column_view(clust_var)[0][:] = clust_ids.X.ravel()
 
         centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
 
