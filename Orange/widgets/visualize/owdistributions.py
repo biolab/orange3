@@ -224,7 +224,7 @@ class OWDistributions(widget.OWWidget):
                 self.groupvarview.addItem(self.icons[var], var.name)
             if domain.has_discrete_class:
                 self.groupvar_idx = \
-                    self.groupvarmodel.index(domain.class_var)
+                    self.groupvarmodel[1:].index(domain.class_var) + 1
             self.openContext(domain)
             self.variable_idx = min(max(self.variable_idx, 0),
                                     len(self.varmodel) - 1)
