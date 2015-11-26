@@ -185,6 +185,8 @@ class OWDataSampler(widget.OWWidget):
         else:
             if self.indices is None or not self.use_seed:
                 self.updateindices()
+                if self.indices is None:
+                    return
             if self.sampling_type in [self.FixedProportion, self.FixedSize]:
                 remaining, sample = self.indices
                 self.outputInfoLabel.setText(
@@ -202,6 +204,32 @@ class OWDataSampler(widget.OWWidget):
         self.send("Remaining Data", other)
 
     def updateindices(self):
+        err_msg = ""
+        repl = True
+        data_length = len(self.data)
+        num_classes = len(self.data.domain.class_var.values) \
+            if self.data.domain.has_discrete_class else 0
+
+        if self.sampling_type == self.FixedSize:
+            size = self.sampleSizeNumber
+            repl = self.replacement
+        elif self.sampling_type == self.FixedProportion:
+            size = np.ceil(self.sampleSizePercentage / 100 * data_length)
+            repl = False
+        elif data_length < self.number_of_folds:
+            err_msg = "Number of folds exceeds the data size"
+
+        if not repl and (data_length <= size):
+            err_msg = "Sample must be smaller than data"
+        if not repl and data_length <= num_classes and self.stratify:
+            err_msg = "Not enough data for stratified sampling"
+
+        self.error(0)
+        if err_msg:
+            self.error(err_msg)
+            self.indices = None
+            return
+
         rnd = self.RandomSeed if self.use_seed else None
         stratified = (self.stratify and
                       type(self.data) == Table and
@@ -276,6 +304,7 @@ def test_main():
     w.set_data(data)
     w.show()
     return app.exec_()
+
 
 if __name__ == "__main__":
     sys.exit(test_main())
