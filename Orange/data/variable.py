@@ -2,12 +2,13 @@ from numbers import Number, Real, Integral
 from math import isnan, floor, sqrt
 import numpy as np
 from pickle import PickleError
+import copy
 
 import collections
 
 from . import _variable
 
-from Orange.util import Registry
+from Orange.util import Registry, color_to_hex, hex_to_color
 
 
 # For storing unknowns
@@ -233,6 +234,12 @@ class Variable(metaclass=VariableMeta):
     .. attribute:: attributes
 
         A dictionary with user-defined attributes of the variable
+
+    .. attribute:: master
+
+        The variable that this variable is a copy of. If a copy is made from a
+        copy, the copy has a reference to the original master. If the variable
+        is not a copy, it is its own master.
     """
     Unknown = ValueUnknown
 
@@ -245,11 +252,32 @@ class Variable(metaclass=VariableMeta):
         self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.attributes = {}
+        self.master = self
         if name and compute_value is None:
             if isinstance(self._all_vars, collections.defaultdict):
                 self._all_vars[name].append(self)
             else:
                 self._all_vars[name] = self
+        self._colors = None
+
+    def make_proxy(self):
+        """
+        Copy the variable and set the master to `self.master` or to `self`.
+
+        :return: copy of self
+        :rtype: Variable
+        """
+        var = self.__class__()
+        var.__dict__.update(self.__dict__)
+        var.master = self.master
+        return var
+
+    def __eq__(self, other):
+        """Two variables are equivalent if the originate from the same master"""
+        return self.master is other.master
+
+    def __hash__(self):
+        return super().__hash__()
 
     @classmethod
     def make(cls, name):
@@ -411,6 +439,22 @@ class ContinuousVariable(Variable):
     def number_of_decimals(self):
         return self._number_of_decimals
 
+    @property
+    def colors(self):
+        if self._colors is None:
+            if "colors" in self.attributes:
+                col1, col2, black = self.attributes["colors"]
+                self._colors = (hex_to_color(col1), hex_to_color(col2), black)
+            else:
+                self._colors = ((0, 0, 255), (255, 255, 0), False)
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        col1, col2, black = self._colors = value
+        self.attributes["colors"] = \
+            [color_to_hex(col1), color_to_hex(col2), black]
+
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
     def number_of_decimals(self, x):
@@ -482,6 +526,33 @@ class DiscreteVariable(Variable):
         self.ordered = ordered
         self.values = list(values)
         self.base_value = base_value
+
+    @property
+    def colors(self):
+        if self._colors is None:
+            if "colors" in self.attributes:
+                self._colors = np.array(
+                    [hex_to_color(col) for col in self.attributes["colors"]],
+                    dtype=np.uint8)
+            else:
+                from Orange.widgets.utils.colorpalette import \
+                    ColorPaletteGenerator
+                self._colors = ColorPaletteGenerator.palette(self)
+            self._colors.flags.writeable = False
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        self._colors = value
+        self._colors.flags.writeable = False
+        self.attributes["colors"] = [color_to_hex(col) for col in value]
+
+    def set_color(self, i, color):
+        self.colors = self.colors
+        self._colors.flags.writeable = True
+        self._colors[i, :] = color
+        self._colors.flags.writeable = False
+        self.attributes["colors"][i] = color_to_hex(color)
 
     def __repr__(self):
         """
