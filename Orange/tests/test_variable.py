@@ -67,6 +67,13 @@ class BaseVariableTest(unittest.TestCase):
         self.assertFalse(a.is_primitive())
 
 
+    def test_strange_eq(self):
+        a = ContinuousVariable()
+        b = ContinuousVariable()
+        self.assertTrue(a == a)
+        self.assertFalse(a == b)
+        self.assertFalse(a == "somestring")
+
 def variabletest(varcls):
     def decorate(cls):
         return type(cls.__name__, (cls, unittest.TestCase), {'varcls': varcls})
