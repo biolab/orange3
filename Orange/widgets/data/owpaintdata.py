@@ -957,6 +957,7 @@ class OWPaintData(widget.OWWidget):
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)
         self.plotview = pg.PlotWidget(background="w", viewBox=viewbox)
+        self.plotview.sizeHint = lambda: QSize(200, 100)  # Minimum size for 1-d painting
         self.plot = self.plotview.getPlotItem()
 
         axis_color = self.palette().color(QtGui.QPalette.Text)
@@ -992,9 +993,11 @@ class OWPaintData(widget.OWWidget):
         if self.hasAttr2:
             self.plot.setYRange(0, 1, padding=0)
             self.plot.showAxis('left')
+            self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Minimum)
         else:
             self.plot.setYRange(-.5, .5, padding=0)
             self.plot.hideAxis('left')
+            self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
         for button, tool in self.toolButtons:
             if tool.only2d:
                 button.setDisabled(not self.hasAttr2)
