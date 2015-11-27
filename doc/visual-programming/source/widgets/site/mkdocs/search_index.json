@@ -1,0 +1,609 @@
+{
+    "docs": [
+        {
+            "location": "/data/concatenate/",
+            "text": "Concatenate\n\n\n\n\nConcatenates data from multiple sources.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nPrimary Data\n\n\n\n\nData set that defines the attribute set.\n\n\n\n\nAdditional Data\n\n\n\n\nAdditional data set.\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nDescription\n\n\nThe widget concatenates multiple sets of instances (data sets). The merge is\n\u201cvertical\u201d, in a sense that two sets of 10 and 5 instances yield a new\nset of 15 instances.\n\n\n\n\n\n\nSet the attribute merging method.\n\n\nAdd identification od source data sets to the output data set..\n\n\n\n\nIf one of the tables is connected to the widget as the primary\ntable, the resulting table will contain its own attributes. If there\nis no primary table, the attributes can be either a union of all\nattributes that appear in the tables specified as \u201cAdditional Tables\u201d,\nor their intersection, that is, a list of attributes common to all\nthe connected tables.\n\n\nExample\n\n\nThe widget can be used, for instance, for merging the data from\nthree separate files, as shown below.",
+            "title": "Concatenate"
+        },
+        {
+            "location": "/data/concatenate/#concatenate",
+            "text": "Concatenates data from multiple sources.",
+            "title": "Concatenate"
+        },
+        {
+            "location": "/data/concatenate/#signals",
+            "text": "Inputs :   Primary Data   Data set that defines the attribute set.   Additional Data   Additional data set.  Outputs :   Data",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/concatenate/#description",
+            "text": "The widget concatenates multiple sets of instances (data sets). The merge is\n\u201cvertical\u201d, in a sense that two sets of 10 and 5 instances yield a new\nset of 15 instances.    Set the attribute merging method.  Add identification od source data sets to the output data set..   If one of the tables is connected to the widget as the primary\ntable, the resulting table will contain its own attributes. If there\nis no primary table, the attributes can be either a union of all\nattributes that appear in the tables specified as \u201cAdditional Tables\u201d,\nor their intersection, that is, a list of attributes common to all\nthe connected tables.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/concatenate/#example",
+            "text": "The widget can be used, for instance, for merging the data from\nthree separate files, as shown below.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/continuize/",
+            "text": "Continuize\n\n\n\n\nTurns discrete attributes into continuous dummy variables.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nOutput data set.\n\n\nDescription\n\n\nContinuize\n widget receives a data set in the input and outputs the same\ndata in which the discrete attributes (including binary attributes) are\nreplaced with continuous.\n\n\n\n\n\n\n\n\nContinuization methods, which define the treatment of\nmultivalued discrete attributes. Say that we have a discrete attribute\nstatus with values low, middle and high, listed in that order. Options\nfor their transformation are:\n\n\n\n\n\n\nTarget or First value as base\n: the attribute will be transformed\n  into two continuous attributes, status=middle with values 0 or 1\n  signifying whether the original attribute had value middle on a\n  particular example, and similarly, status=high. Hence, a\n  three-valued attribute is transformed into two continuous\n  attributes, corresponding to all except the first value of\n  the attribute.\n\n\n\n\nMost frequent value as base\n: similar to the above, except that the\n  data is analyzed and the most frequent value is used as a base.\n  So, if most examples have the value middle, the two newly\n  constructed continuous attributes will be status=low\n  and status=high.\n\n\nOne attribute per value\n: this would construct three continuous\n  attributes out of a three-valued discrete one.\n\n\nIgnore multinominal attributes\n: removes the multinominal\n  attributes from the data.\n\n\nTreat as ordinal\n: converts the attribute into a continuous\n  attribute with values 0, 1, and 2.\n\n\n\n\nDivide by number of values\n: same as above, except that the values\n  are normalized into range 0-1. So, our case would give values 0, 0.5 and 1.\n\n\n\n\n\n\nDefine the treatment of continuous attributes. You will usually prefer \nLeave as it is\n option. The alternative is \n  \nNormalize by span\n which will subtract the lowest value found in the data and divide by the\n  span, so all values will fit into [0, 1]. Finally, \nNormalize by variance\n subtracts the average and divides by the \n  variance.\n\n\n\n\n\n\nDefine the treatment of class attributes. Besides leaving it as it is, \n  there are also a couple of options which are\n  available for multinominal attributes, except for those options which\n  split the attribute into more than one attribute - this obviously cannot\n  be supported since you cannot have more than one class attribute.\n\n\n\n\n\n\nWith \nvalue range\n, you can define the values of the new attributes. In\n  the above text we supposed the range \nfrom 0 to 1\n. You can change it to\n  \nfrom -1 to 1\n.\n\n\n\n\n\n\nIf \nAuto apply is on\n, the data set is committed on any change.\n  Otherwise, you have to press \nApply\n after each change.\n\n\n\n\n\n\nExample\n\n\nThe schema below shows a typical use of this widget: in order to\nproperly plot linear projection of the data, discrete attributes need to\nbe converted to continuous, therefore we put the data through Continuize\nwidget before drawing it. Attribute \u201cchest pain\u201d originally had four\nvalues and was transformed into three continuous attributes; similar\nhappened to gender, which was transformed into a single attribute\ngender=female.",
+            "title": "Continuize"
+        },
+        {
+            "location": "/data/continuize/#continuize",
+            "text": "Turns discrete attributes into continuous dummy variables.",
+            "title": "Continuize"
+        },
+        {
+            "location": "/data/continuize/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   Data   Output data set.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/continuize/#description",
+            "text": "Continuize  widget receives a data set in the input and outputs the same\ndata in which the discrete attributes (including binary attributes) are\nreplaced with continuous.     Continuization methods, which define the treatment of\nmultivalued discrete attributes. Say that we have a discrete attribute\nstatus with values low, middle and high, listed in that order. Options\nfor their transformation are:    Target or First value as base : the attribute will be transformed\n  into two continuous attributes, status=middle with values 0 or 1\n  signifying whether the original attribute had value middle on a\n  particular example, and similarly, status=high. Hence, a\n  three-valued attribute is transformed into two continuous\n  attributes, corresponding to all except the first value of\n  the attribute.   Most frequent value as base : similar to the above, except that the\n  data is analyzed and the most frequent value is used as a base.\n  So, if most examples have the value middle, the two newly\n  constructed continuous attributes will be status=low\n  and status=high.  One attribute per value : this would construct three continuous\n  attributes out of a three-valued discrete one.  Ignore multinominal attributes : removes the multinominal\n  attributes from the data.  Treat as ordinal : converts the attribute into a continuous\n  attribute with values 0, 1, and 2.   Divide by number of values : same as above, except that the values\n  are normalized into range 0-1. So, our case would give values 0, 0.5 and 1.    Define the treatment of continuous attributes. You will usually prefer  Leave as it is  option. The alternative is \n   Normalize by span  which will subtract the lowest value found in the data and divide by the\n  span, so all values will fit into [0, 1]. Finally,  Normalize by variance  subtracts the average and divides by the \n  variance.    Define the treatment of class attributes. Besides leaving it as it is, \n  there are also a couple of options which are\n  available for multinominal attributes, except for those options which\n  split the attribute into more than one attribute - this obviously cannot\n  be supported since you cannot have more than one class attribute.    With  value range , you can define the values of the new attributes. In\n  the above text we supposed the range  from 0 to 1 . You can change it to\n   from -1 to 1 .    If  Auto apply is on , the data set is committed on any change.\n  Otherwise, you have to press  Apply  after each change.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/continuize/#example",
+            "text": "The schema below shows a typical use of this widget: in order to\nproperly plot linear projection of the data, discrete attributes need to\nbe converted to continuous, therefore we put the data through Continuize\nwidget before drawing it. Attribute \u201cchest pain\u201d originally had four\nvalues and was transformed into three continuous attributes; similar\nhappened to gender, which was transformed into a single attribute\ngender=female.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/datainfo/",
+            "text": "Data Info\n\n\n\n\nDisplays information on the selected data set.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nA data set.\n\n\n\n\nSelected Data\n\n\n\n\nA data subset.\n\n\nOutputs\n:\n\n\n\n\n(None)\n\n\n\n\nDescription\n\n\nA simple widget that presents information on data set size, features, targets, meta attributes, and location. It is useful when you manually select a subset and you want to see information on the selected subset.\n\n\n\n\n\n\nInformation on data set size\n\n\nInformation on discrete and continuous features\n\n\nInformation on targets\n\n\nInformation on meta attributes\n\n\nInformation on where the data is stored\n\n\n\n\nExamples\n\n\nBelow we compare two \nData Info\n widgets - one with the information on the entire data set and the other with the information on the (manually) selected subset from the \nScatterplot\n widget.",
+            "title": "Datainfo"
+        },
+        {
+            "location": "/data/datainfo/#data-info",
+            "text": "Displays information on the selected data set.",
+            "title": "Data Info"
+        },
+        {
+            "location": "/data/datainfo/#signals",
+            "text": "Inputs :   Data   A data set.   Selected Data   A data subset.  Outputs :   (None)",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/datainfo/#description",
+            "text": "A simple widget that presents information on data set size, features, targets, meta attributes, and location. It is useful when you manually select a subset and you want to see information on the selected subset.    Information on data set size  Information on discrete and continuous features  Information on targets  Information on meta attributes  Information on where the data is stored",
+            "title": "Description"
+        },
+        {
+            "location": "/data/datainfo/#examples",
+            "text": "Below we compare two  Data Info  widgets - one with the information on the entire data set and the other with the information on the (manually) selected subset from the  Scatterplot  widget.",
+            "title": "Examples"
+        },
+        {
+            "location": "/data/datasampler/",
+            "text": "Data Sampler\n\n\n\n\nSelects a subset of data instances from the input data set.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set to be sampled.\n\n\nOutputs\n:\n\n\n\n\nData Sample\n\n\n\n\nA set of sampled data instances.\n\n\n\n\nRemaining Data\n\n\n\n\nAll other data instances from input data set that are not included in the sample.\n\n\nDescription\n\n\nData Sampler\n implements several means of sampling of the data from the\ninput channel. It outputs the sampled data set and complementary data\nset (with instances from the input set that are not included in the\nsampled data set). Output is processed after the input data set is provided and \nSample Data\n is pressed.\n\n\n\n\n\n\nInformation on the input and output data set.\n\n\nThe desired sampling method.\n\n\nReplicable sampling maintains sampling patterns that can be carried across users, while stratification mimics the composition of the input data set.\n\n\nPress '\nSample data\n' to output the data sample.\n\n\n\n\nExample\n\n\nIn the following workflow schema we have sampled 10 data instances\nfrom the \nIris\n data set and sent the original data and the sample to \nScatterplot\n\nwidget. Sampled data instances are plotted with filled circles.",
+            "title": "Datasampler"
+        },
+        {
+            "location": "/data/datasampler/#data-sampler",
+            "text": "Selects a subset of data instances from the input data set.",
+            "title": "Data Sampler"
+        },
+        {
+            "location": "/data/datasampler/#signals",
+            "text": "Inputs :   Data   Input data set to be sampled.  Outputs :   Data Sample   A set of sampled data instances.   Remaining Data   All other data instances from input data set that are not included in the sample.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/datasampler/#description",
+            "text": "Data Sampler  implements several means of sampling of the data from the\ninput channel. It outputs the sampled data set and complementary data\nset (with instances from the input set that are not included in the\nsampled data set). Output is processed after the input data set is provided and  Sample Data  is pressed.    Information on the input and output data set.  The desired sampling method.  Replicable sampling maintains sampling patterns that can be carried across users, while stratification mimics the composition of the input data set.  Press ' Sample data ' to output the data sample.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/datasampler/#example",
+            "text": "In the following workflow schema we have sampled 10 data instances\nfrom the  Iris  data set and sent the original data and the sample to  Scatterplot \nwidget. Sampled data instances are plotted with filled circles.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/datatable/",
+            "text": "Data Table\n\n\n\n\nDisplays attribute-value data in a spreadsheet.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nAttribute-valued data set.\n\n\nOutputs\n:\n\n\n\n\nSelected Data\n\n\n\n\nSelected data instances.\n\n\nDescription\n\n\nData Table\n widget receives one or more data sets in its input and\npresents them as a spreadsheet. Data instances may be sorted by\nattribute values. Widget also supports manual selection of data\ninstances.\n\n\n\n\n\n\nThe name of the data set (usually the input\n    data file). Data instances are in rows and their\n    attribute values in columns. In this example the data set is\n    sorted by the attribute \"sepal length\".\n\n\nUse '\nRestore Order\n' button to\n    reorder data instance after attribute-based sorting.\n\n\nInfo on current data set size and the number and types of\n    attributes.\n\n\nValues of continuous attributes can be visualized with bars; colors can be attributed to different classes.\n\n\nData instances (rows) can be selected and sent to the widget's\n    output channel.\n\n\nWhile auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press '\nSend Selected      Rows\n'.\n\n\n\n\nExample\n\n\nWe used two \nFile\n widgets to read the \niris\n and \nglass\n data set (provided in\nOrange distribution), and send them to the \nData Table\n widget.\n\n\n\n\nSelected data instances in the first \nData Table\n are passed to the second\n\nData Table\n. Notice that we can select which data set to view (iris or\nglass). Changing from one data set to another alters the communicated\nselection of the data instances if \"\nCommit on any change\n\" is selected.",
+            "title": "Datatable"
+        },
+        {
+            "location": "/data/datatable/#data-table",
+            "text": "Displays attribute-value data in a spreadsheet.",
+            "title": "Data Table"
+        },
+        {
+            "location": "/data/datatable/#signals",
+            "text": "Inputs :   Data   Attribute-valued data set.  Outputs :   Selected Data   Selected data instances.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/datatable/#description",
+            "text": "Data Table  widget receives one or more data sets in its input and\npresents them as a spreadsheet. Data instances may be sorted by\nattribute values. Widget also supports manual selection of data\ninstances.    The name of the data set (usually the input\n    data file). Data instances are in rows and their\n    attribute values in columns. In this example the data set is\n    sorted by the attribute \"sepal length\".  Use ' Restore Order ' button to\n    reorder data instance after attribute-based sorting.  Info on current data set size and the number and types of\n    attributes.  Values of continuous attributes can be visualized with bars; colors can be attributed to different classes.  Data instances (rows) can be selected and sent to the widget's\n    output channel.  While auto-send is on, all changed will be automatically communicated to other widgets. Otherwise press ' Send Selected      Rows '.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/datatable/#example",
+            "text": "We used two  File  widgets to read the  iris  and  glass  data set (provided in\nOrange distribution), and send them to the  Data Table  widget.   Selected data instances in the first  Data Table  are passed to the second Data Table . Notice that we can select which data set to view (iris or\nglass). Changing from one data set to another alters the communicated\nselection of the data instances if \" Commit on any change \" is selected.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/discretize/",
+            "text": "Discretize\n\n\n\n\nDiscretizes continuous attributes from input data set.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nAttribute-valued data set.\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nData set with discretized values.\n\n\nDescription\n\n\nDiscretize\n widget discretizes continuous attributes with a selected method.\n\n\n\n\n\n\nThe basic version of the widget is rather simple. It allows choosing\n  between three different discretizations. \n\n\nEntropy-MDL\n, invented by Fayyad\n  and Irani is a top-down discretization which recursively splits the\n  attribute at a cut maximizing information gain, until the gain\n  is lower than the minimal description length of the cut. This discretization\n  can result in an arbitrary number of intervals, including a single\n  interval in which case the attribute is discarded as useless (removed).\n\n\nEqual-frequency\n splits the attribute into the a given number of intervals,\n  so that they each contain approximately the same number of instances.\n\n\nEqual-width\n evenly splits the range between the smallest and the largest\n  observed value. \nNumber of intervals\n can be set manually.\n\n\n\n\nThe widget can also be set to leave the attributes continuous or to\n  remove them.\n\n\n\n\n\n\nTo treat attributes individually, go to \nIndividual Attribute Settings\n. They show a specific \n  discretization of each attribute and allows to change it. First, the top left list shows the\n  cut-off points for each attribute. In the snapshot we used the\n  entropy-MDL discretization which determines the optimal number of\n  intervals automatically: we can see it discretized the age into\n  seven intervals with cut-offs at 21.50, 23.50, 27.50, 35.50, 43.50, 54.50 and 61.50, respectively, while the\n  capital-gain got split into many intervals with several cut-offs. \n  The final weight (fnlwgt), for instance, was left with a single interval and thus removed.\n\n\n\n\n\n\nOn the right we can select a specific discretization method for\n  each attribute. Attribute \n\u201cfnlwgt\u201d\n would be removed by the MDL-based\n  discretization, so to prevent its removal, we select the attribute and choose, for\n  instance, \nEqual-frequency discretization\n. We could also choose to leave the attribute continuous.\n\n\n\n\nTick '\nSend data after every change\n' for the widget to automatically commit changes. Alternatively press \nApply\n.\n\n\n\n\nExample\n\n\nIn the schema below we show \nIris\n data set with continuous attributes (as\nin original data file) and with discretized attributes.",
+            "title": "Discretize"
+        },
+        {
+            "location": "/data/discretize/#discretize",
+            "text": "Discretizes continuous attributes from input data set.",
+            "title": "Discretize"
+        },
+        {
+            "location": "/data/discretize/#signals",
+            "text": "Inputs :   Data   Attribute-valued data set.  Outputs :   Data   Data set with discretized values.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/discretize/#description",
+            "text": "Discretize  widget discretizes continuous attributes with a selected method.    The basic version of the widget is rather simple. It allows choosing\n  between three different discretizations.   Entropy-MDL , invented by Fayyad\n  and Irani is a top-down discretization which recursively splits the\n  attribute at a cut maximizing information gain, until the gain\n  is lower than the minimal description length of the cut. This discretization\n  can result in an arbitrary number of intervals, including a single\n  interval in which case the attribute is discarded as useless (removed).  Equal-frequency  splits the attribute into the a given number of intervals,\n  so that they each contain approximately the same number of instances.  Equal-width  evenly splits the range between the smallest and the largest\n  observed value.  Number of intervals  can be set manually.   The widget can also be set to leave the attributes continuous or to\n  remove them.    To treat attributes individually, go to  Individual Attribute Settings . They show a specific \n  discretization of each attribute and allows to change it. First, the top left list shows the\n  cut-off points for each attribute. In the snapshot we used the\n  entropy-MDL discretization which determines the optimal number of\n  intervals automatically: we can see it discretized the age into\n  seven intervals with cut-offs at 21.50, 23.50, 27.50, 35.50, 43.50, 54.50 and 61.50, respectively, while the\n  capital-gain got split into many intervals with several cut-offs. \n  The final weight (fnlwgt), for instance, was left with a single interval and thus removed.    On the right we can select a specific discretization method for\n  each attribute. Attribute  \u201cfnlwgt\u201d  would be removed by the MDL-based\n  discretization, so to prevent its removal, we select the attribute and choose, for\n  instance,  Equal-frequency discretization . We could also choose to leave the attribute continuous.   Tick ' Send data after every change ' for the widget to automatically commit changes. Alternatively press  Apply .",
+            "title": "Description"
+        },
+        {
+            "location": "/data/discretize/#example",
+            "text": "In the schema below we show  Iris  data set with continuous attributes (as\nin original data file) and with discretized attributes.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/editdomain/",
+            "text": "Edit Domain\n\n\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData (Orange.data.Table)\n\n\n\n\nInput data set\n\n\nOutputs\n:\n\n\n\n\nData (Orange.data.Table)\n\n\n\n\nEdited output data set\n\n\nDescription\n\n\nThis widget can be used to edit/change the domain of the data set.\n\n\n\n\n\n\n\n\nAll features (including meta attributes) from the input data set\nare listed in the \nDomain Features\n list in the box on the left. Selecting one\nfeature displays an editor on the right.\n\n\n\n\n\n\nThe name of the feature can be changed in the \nName\n line edit.\n\n\n\n\n\n\nFor \nDiscrete\n features value names can also be changed in the\n\nValues\n list box.\n\n\nAdditonal feature annotations can be added/removed/edited in the \nLabels\n\nbox. To add a new label click the \"+\" button and add the \nKey\n and \nValue\n\ncolumns for the new entry. Selecting an existing label and pressing \"-\"\nwill remove the annotation.\n\n\n\n\n\n\nTo revert the changes made to the feature press \nReset Selected\n button in\nthe \nReset\n box while the feature is selected in the \nDomain Features\n list.\nPressing \nReset All\n will reset all features in the domain at the same\ntime.\n\n\n\n\n\n\nPressing \nCommit\n button will send the changed domain data set to the\noutput channel.",
+            "title": "Editdomain"
+        },
+        {
+            "location": "/data/editdomain/#edit-domain",
+            "text": "",
+            "title": "Edit Domain"
+        },
+        {
+            "location": "/data/editdomain/#signals",
+            "text": "Inputs :   Data (Orange.data.Table)   Input data set  Outputs :   Data (Orange.data.Table)   Edited output data set",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/editdomain/#description",
+            "text": "This widget can be used to edit/change the domain of the data set.     All features (including meta attributes) from the input data set\nare listed in the  Domain Features  list in the box on the left. Selecting one\nfeature displays an editor on the right.    The name of the feature can be changed in the  Name  line edit.    For  Discrete  features value names can also be changed in the Values  list box.  Additonal feature annotations can be added/removed/edited in the  Labels \nbox. To add a new label click the \"+\" button and add the  Key  and  Value \ncolumns for the new entry. Selecting an existing label and pressing \"-\"\nwill remove the annotation.    To revert the changes made to the feature press  Reset Selected  button in\nthe  Reset  box while the feature is selected in the  Domain Features  list.\nPressing  Reset All  will reset all features in the domain at the same\ntime.    Pressing  Commit  button will send the changed domain data set to the\noutput channel.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/featureconstructor/",
+            "text": "Feature Constructor\n\n\n\n\nAdd new features to your data set.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nA data set.\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nModified data set.\n\n\nDescription\n\n\nFeature Constructor\n allows you to manually add features (columns) into your data set. The new feature can be a computation of the existing one or a combination of several (addition, subtraction, etc.). You can choose what type of feature it will be (discrete, continuous or string) and what its parameters are (name, value, expression). For continuous variables you must define decimal precision and construct an expression in a Python mode. \n\n\n\n\n\n\nList of constructed attributes\n\n\nAdd or remove features\n\n\nNew feature name\n\n\nDecimal precision\n\n\nExpression in Python\n\n\nPress commit to communicate changes\n\n\n\n\nFor discrete variables, however, there's a bit more work. First add or remove the values you want to for the new feature. Then select the base value and the expression. In the example below, we have constructed an expression with 'if lower than' and defined three conditions; the program ascribes 0 (which we renamed to lower) if the original value is lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the other values. \n\n\n\n\n\n\nNew feature name\n\n\nList of discrete values (click on the value to rename it)\n\n\nAdd or remove discrete values\n\n\nSelect base value\n\n\nOrder the values\n\n\nExpression in Python\n\n\n\n\nExamples\n\n\nWith \nFeature Constructor\n you can easily adjust or combine existing features into new ones. Below we have added one new continuous and one new discrete feature. Notice that we use an underscore for the feature name (e.g. petal_length). For the continuous feature we squared the existing \npetal length\n value, while we used \nlower than\n for the discrete one.\n\n\n\n\nHints\n\n\nIf you are unfamiliar with Python math language, here's a quick introduction.\n- +, - to add, subtract\n- * to multiply, / to divide\n- % to divide and return the remainder\n- ** exponent (for square root square by 0.5)\n- // for floor division\n- \n, \n, \n=, \n= less than, greater than, less or equal, greater or equal\n- == for equal\n- != for not equal\n\n\nAs in example:\n(\nvalue\n) if (\nfeature name\n) \n (\nvalue\n), else (\nvalue\n) if (\nfeature name\n) \n (\nvalue\n), else (\nvalue\n)\n\n\n[Use value 1 if feature is less than specified value, else use value 2 if feature is less than specified value 2, else use value 3.]\n\n\nSee more \nhere\n.",
+            "title": "Featureconstructor"
+        },
+        {
+            "location": "/data/featureconstructor/#feature-constructor",
+            "text": "Add new features to your data set.",
+            "title": "Feature Constructor"
+        },
+        {
+            "location": "/data/featureconstructor/#signals",
+            "text": "Inputs :   Data   A data set.  Outputs :   Data   Modified data set.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/featureconstructor/#description",
+            "text": "Feature Constructor  allows you to manually add features (columns) into your data set. The new feature can be a computation of the existing one or a combination of several (addition, subtraction, etc.). You can choose what type of feature it will be (discrete, continuous or string) and what its parameters are (name, value, expression). For continuous variables you must define decimal precision and construct an expression in a Python mode.     List of constructed attributes  Add or remove features  New feature name  Decimal precision  Expression in Python  Press commit to communicate changes   For discrete variables, however, there's a bit more work. First add or remove the values you want to for the new feature. Then select the base value and the expression. In the example below, we have constructed an expression with 'if lower than' and defined three conditions; the program ascribes 0 (which we renamed to lower) if the original value is lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the other values.     New feature name  List of discrete values (click on the value to rename it)  Add or remove discrete values  Select base value  Order the values  Expression in Python",
+            "title": "Description"
+        },
+        {
+            "location": "/data/featureconstructor/#examples",
+            "text": "With  Feature Constructor  you can easily adjust or combine existing features into new ones. Below we have added one new continuous and one new discrete feature. Notice that we use an underscore for the feature name (e.g. petal_length). For the continuous feature we squared the existing  petal length  value, while we used  lower than  for the discrete one.",
+            "title": "Examples"
+        },
+        {
+            "location": "/data/featureconstructor/#hints",
+            "text": "If you are unfamiliar with Python math language, here's a quick introduction.\n- +, - to add, subtract\n- * to multiply, / to divide\n- % to divide and return the remainder\n- ** exponent (for square root square by 0.5)\n- // for floor division\n-  ,  ,  =,  = less than, greater than, less or equal, greater or equal\n- == for equal\n- != for not equal  As in example:\n( value ) if ( feature name )   ( value ), else ( value ) if ( feature name )   ( value ), else ( value )  [Use value 1 if feature is less than specified value, else use value 2 if feature is less than specified value 2, else use value 3.]  See more  here .",
+            "title": "Hints"
+        },
+        {
+            "location": "/data/file/",
+            "text": "File\n\n\n\n\nReads attribute-value data from an input file.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\n(None)\n\n\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nAttribute-valued data from the input file.\n\n\nDescription\n\n\nFile\n widget reads the input data file (data table with data instances)\nand sends the data set to its output channel. History of the most recently opened files is maintained in the widget. The widget also includes a directory with sample data sets that come pre-installed with Orange.\n\n\nThe widget reads data from Excel (\n.xlsx\n), simple tab-delimited (\n.txt\n) or comma-separated\nfiles (\n.csv\n).\n\n\n\n\n\n\nBrowse for a data file.\n\n\nBrowse through previously opened data files, or load any of the sample ones.\n\n\nReloads currently selected data file.\n\n\nInformation on the loaded data set: data set size, number and types of data features.\n\n\nAllows you to distinguish between columns with the same name across files (otherwise columns with the same name will be considered as the same attribute).\n\n\n\n\nExample\n\n\nMost Orange workflows would probably start with the \nFile\n widget. In the\nschema below, the widget is used to read the data that is sent to both the\n\nData Table\n and the \nBox Plot\n widget.",
+            "title": "File"
+        },
+        {
+            "location": "/data/file/#file",
+            "text": "Reads attribute-value data from an input file.",
+            "title": "File"
+        },
+        {
+            "location": "/data/file/#signals",
+            "text": "Inputs :   (None)   Outputs :   Data   Attribute-valued data from the input file.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/file/#description",
+            "text": "File  widget reads the input data file (data table with data instances)\nand sends the data set to its output channel. History of the most recently opened files is maintained in the widget. The widget also includes a directory with sample data sets that come pre-installed with Orange.  The widget reads data from Excel ( .xlsx ), simple tab-delimited ( .txt ) or comma-separated\nfiles ( .csv ).    Browse for a data file.  Browse through previously opened data files, or load any of the sample ones.  Reloads currently selected data file.  Information on the loaded data set: data set size, number and types of data features.  Allows you to distinguish between columns with the same name across files (otherwise columns with the same name will be considered as the same attribute).",
+            "title": "Description"
+        },
+        {
+            "location": "/data/file/#example",
+            "text": "Most Orange workflows would probably start with the  File  widget. In the\nschema below, the widget is used to read the data that is sent to both the Data Table  and the  Box Plot  widget.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/paintdata/",
+            "text": "Paint Data\n\n\n\n\nPaints the data on a 2D plane. You can place individual data points or use a brush\nto paint larger data sets.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\n(None)\n\n\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nAttribute-valued data set created in the widget.\n\n\nDescription\n\n\nThe widget supports the creation of the new data set by visually placing\ndata points on a two-dimension plane. Data points can be placed on\nthe plane individually (Put) or in a larger number by brushing (Brush).\nData points can belong to classes if the data is intended to be used in\nsupervised learning.\n\n\n\n\n\n\nA 2D drawing canvas with fixed coordinate system.\n\n\nName the axes and selet the class to paint data instances. You can add or remove classes. Use one class only to create classless, unsupervised data sets.\n\n\nDrawing tools. Paint data points with \nBrush\n (multiple data instances) or \nPut\n (individual data instance). Select data points with \nSelect\n and remove them with Delete key. Reposition data points with \nJitter\n (spread) and \nMagnet\n (focus). Use \nZoom\n and scroll to zoom in or out. Below, set radius and intensity for Brush, Put, Jitter and Magnet tools.\n\n\nTick the box on the left to automacitally commit changes to other widgets. Alternatively, press '\nSend\n' \n  to apply them.\n\n\n\n\nExample\n\n\nIn the workflow below we have painted an unsupervised (class-less) data\nset and sent it to \nData Table\n and \nK-Means Clustering\n widget.\nWe have painted three clusters, which were, at least in a number of\nclusters, correctly identified by the k-means clustering.",
+            "title": "Paintdata"
+        },
+        {
+            "location": "/data/paintdata/#paint-data",
+            "text": "Paints the data on a 2D plane. You can place individual data points or use a brush\nto paint larger data sets.",
+            "title": "Paint Data"
+        },
+        {
+            "location": "/data/paintdata/#signals",
+            "text": "Inputs :   (None)   Outputs :   Data   Attribute-valued data set created in the widget.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/paintdata/#description",
+            "text": "The widget supports the creation of the new data set by visually placing\ndata points on a two-dimension plane. Data points can be placed on\nthe plane individually (Put) or in a larger number by brushing (Brush).\nData points can belong to classes if the data is intended to be used in\nsupervised learning.    A 2D drawing canvas with fixed coordinate system.  Name the axes and selet the class to paint data instances. You can add or remove classes. Use one class only to create classless, unsupervised data sets.  Drawing tools. Paint data points with  Brush  (multiple data instances) or  Put  (individual data instance). Select data points with  Select  and remove them with Delete key. Reposition data points with  Jitter  (spread) and  Magnet  (focus). Use  Zoom  and scroll to zoom in or out. Below, set radius and intensity for Brush, Put, Jitter and Magnet tools.  Tick the box on the left to automacitally commit changes to other widgets. Alternatively, press ' Send ' \n  to apply them.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/paintdata/#example",
+            "text": "In the workflow below we have painted an unsupervised (class-less) data\nset and sent it to  Data Table  and  K-Means Clustering  widget.\nWe have painted three clusters, which were, at least in a number of\nclusters, correctly identified by the k-means clustering.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/pythonscript/",
+            "text": "Python Script\n\n\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nin_data (Orange.data.Table)\n\n\n\n\nInput data set bound to \nin_data\n variable in the script\u2019s local namespace.\n\n\n\n\nin_distance (Orange.core.SymMatrix)\n\n\n\n\nInput symmetric matrix bound to \nin_distance\n variable in the script\u2019s local namespace.\n\n\n\n\nin_learner (Orange.classification.Learner)\n\n\n\n\nInput learner bound to \nin_learner\n variable in the script\u2019s local namespace.\n\n\n\n\nin_classifier (Orange.classification.Learner)\n\n\n\n\nInput classifier bound to \nin_classifier\n variable in the script\u2019s local namespace.\n\n\n\n\nin_object (object)\n\n\n\n\nInput python object bound to \nin_object\n variable in the script\u2019s local namespace.\n\n\nOutputs\n:\n\n\n\n\nout_data (Orange.data.Table)\n\n\n\n\nData set retrieved from \nout_data\n variable in the script\u2019s local namespace after execution.\n\n\n\n\nout_distance (Orange.core.SymMatrix)\n\n\n\n\nSymmetric matrix retrieved from \nout_distance\n variable in the script\u2019s local namespace after execution.\n\n\n\n\nout_learner (Orange.classification.Learner)\n\n\n\n\nLearner retrieved from \nout_learner\n variable in the script\u2019s local namespace.\n\n\n\n\nout_classifier (Orange.classification.Learner)\n\n\n\n\nClassifier retrieved from \nout_classifier\n variable in the script\u2019s local namespace after execution.\n\n\n\n\nout_object (object)\n\n\n\n\nPython object retrieved from \nout_object\n variable in the script\u2019s local namespace after execution.\n\n\nDescription\n\n\n\n\nPython Script\n widget can be used to run a python script in the inputs,\nwhen a suitable functionality is not implemented in an existing widgets.\nThe scripts have \nin_data\n, \nin_distance\n, \nin_learner\n, \nin_classifier\n\nand \nin_object\n variables (from input signals) in their local namespace.\nIf a signal is not connected or it did not yet receive any data, those\nvariables contain \nNone\n.\n\n\nAfter the script is executed \nout_data\n, \nout_distance\n, \u2026 variables\nfrom the script\u2019s local namespace are extracted and used as outputs of\nthe widget. The widget can be further connected to other widgets for visualizing the output.\n\n\nFor instance the following script would simply pass on all signals it\nreceives:\n\n\nout_data = in_data\nout_distance = in_distance\nout_learner = in_learner\nout_classifier = in_classifier\nout_object = in_object\n\n\n\n\n\nNote\n\n\nYou should not modify the input objects in place.\n\n\n\n\nThe \nPython script\n editor on the left can be used to edit a script (it\nsupports some rudimentary syntax highlighting).\n\n\nPressing the \nExecute\n in the \nRun\n box executes the script (using \nexec\n).\nAny script output (from \nprint\n) is captured and displayed in the\n\nConsole\n below the script.\n\n\nIf \nAuto execute\n is checked, the script is run any time inputs to\nthe widget change.\n\n\nLibrary\n\n\nThe \nLibrary\n control can be used to manage multiple scripts.\n\n\nPressing \"+\" will add a new entry and open it in the \nPython script\n\neditor. When the script is modified its entry in the \nLibrary\n will\nchange to indicate it has unsaved changes. Pressing \nUpdate\n will save the\nscript (keyboard shortcut ctrl + s). A script can be removed by\nselecting it and pressing the \"-\" button.",
+            "title": "Pythonscript"
+        },
+        {
+            "location": "/data/pythonscript/#python-script",
+            "text": "",
+            "title": "Python Script"
+        },
+        {
+            "location": "/data/pythonscript/#signals",
+            "text": "Inputs :   in_data (Orange.data.Table)   Input data set bound to  in_data  variable in the script\u2019s local namespace.   in_distance (Orange.core.SymMatrix)   Input symmetric matrix bound to  in_distance  variable in the script\u2019s local namespace.   in_learner (Orange.classification.Learner)   Input learner bound to  in_learner  variable in the script\u2019s local namespace.   in_classifier (Orange.classification.Learner)   Input classifier bound to  in_classifier  variable in the script\u2019s local namespace.   in_object (object)   Input python object bound to  in_object  variable in the script\u2019s local namespace.  Outputs :   out_data (Orange.data.Table)   Data set retrieved from  out_data  variable in the script\u2019s local namespace after execution.   out_distance (Orange.core.SymMatrix)   Symmetric matrix retrieved from  out_distance  variable in the script\u2019s local namespace after execution.   out_learner (Orange.classification.Learner)   Learner retrieved from  out_learner  variable in the script\u2019s local namespace.   out_classifier (Orange.classification.Learner)   Classifier retrieved from  out_classifier  variable in the script\u2019s local namespace after execution.   out_object (object)   Python object retrieved from  out_object  variable in the script\u2019s local namespace after execution.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/pythonscript/#description",
+            "text": "Python Script  widget can be used to run a python script in the inputs,\nwhen a suitable functionality is not implemented in an existing widgets.\nThe scripts have  in_data ,  in_distance ,  in_learner ,  in_classifier \nand  in_object  variables (from input signals) in their local namespace.\nIf a signal is not connected or it did not yet receive any data, those\nvariables contain  None .  After the script is executed  out_data ,  out_distance , \u2026 variables\nfrom the script\u2019s local namespace are extracted and used as outputs of\nthe widget. The widget can be further connected to other widgets for visualizing the output.  For instance the following script would simply pass on all signals it\nreceives:  out_data = in_data\nout_distance = in_distance\nout_learner = in_learner\nout_classifier = in_classifier\nout_object = in_object   Note  You should not modify the input objects in place.   The  Python script  editor on the left can be used to edit a script (it\nsupports some rudimentary syntax highlighting).  Pressing the  Execute  in the  Run  box executes the script (using  exec ).\nAny script output (from  print ) is captured and displayed in the Console  below the script.  If  Auto execute  is checked, the script is run any time inputs to\nthe widget change.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/pythonscript/#library",
+            "text": "The  Library  control can be used to manage multiple scripts.  Pressing \"+\" will add a new entry and open it in the  Python script \neditor. When the script is modified its entry in the  Library  will\nchange to indicate it has unsaved changes. Pressing  Update  will save the\nscript (keyboard shortcut ctrl + s). A script can be removed by\nselecting it and pressing the \"-\" button.",
+            "title": "Library"
+        },
+        {
+            "location": "/data/save/",
+            "text": "Save\n\n\n\n\nSaves data to a file.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nA data set.\n\n\nOutputs\n:\n\n\n\n\n(None)\n\n\n\n\nDescription\n\n\nSave\n widget considers a data set provided in the input channel and saves\nit to a data file with the specified name. It can save the data as both tab-delimited\nand comma-separated files.\n\n\nThe widget does not save the data every time it receives a\nnew signal in the input as this would constantly (and, mostly,\ninadvertently) overwrite the file. Instead, the data is saved only after\na new file name is set or the user pushes \nSave\n button.\n\n\n\n\n\n\nChoose file format\n\n\nSave by overwriting the existing file\n\n\nSave as\n to create a new file\n\n\n\n\nExample\n\n\nIn the workflow below we load the data into a \nScatter Plot\n widget, where\nwe select a subset of the data instances and push them to the \nSave\n widget to\nstore them in a file.",
+            "title": "Save"
+        },
+        {
+            "location": "/data/save/#save",
+            "text": "Saves data to a file.",
+            "title": "Save"
+        },
+        {
+            "location": "/data/save/#signals",
+            "text": "Inputs :   Data   A data set.  Outputs :   (None)",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/save/#description",
+            "text": "Save  widget considers a data set provided in the input channel and saves\nit to a data file with the specified name. It can save the data as both tab-delimited\nand comma-separated files.  The widget does not save the data every time it receives a\nnew signal in the input as this would constantly (and, mostly,\ninadvertently) overwrite the file. Instead, the data is saved only after\na new file name is set or the user pushes  Save  button.    Choose file format  Save by overwriting the existing file  Save as  to create a new file",
+            "title": "Description"
+        },
+        {
+            "location": "/data/save/#example",
+            "text": "In the workflow below we load the data into a  Scatter Plot  widget, where\nwe select a subset of the data instances and push them to the  Save  widget to\nstore them in a file.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/selectcolumns/",
+            "text": "Select Columns\n\n\n\n\nManual selection of data attributes and composition of data domain.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nAttribute-valued data set.\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nAttribute-valued data set composed using the domain specification from the widget.\n\n\nDescription\n\n\nSelect Columns\n widget is used to manually compose your data domain.\nUser can decide which attributes will be used and how. Orange\ndistinguishes between ordinary attributes, an (optional) class\nattributes and meta attributes. For instance, for building a\nclassification model, the domain would be composed of a set of\nattributes and a discrete class attribute. Meta attributes are not used\nin modelling, but several widgets can use them for instance labels.\n\n\nOrange attributes are typed and are either discrete, continuous or a\ncharacter string. The attribute type is marked with a symbol appearing\nbefore the name of the attribute (D, C, S, respectively).\n\n\n\n\n\n\nLeft-out data attributes that will not be in the output data file.\n\n\nData attributes in the new data file.\n\n\nA class attribute. If none, the new data set will be classless.\n\n\nMeta attributes of the new data file. These attributes are included in the data set but are, for most of the methods, not considered in analysis.\n\n\nApply change of the data domain and send the new data file to the output channel of the widget.\n\n\nReset the domain composition to that of the input data file.\n\n\n\n\nExample\n\n\nIn a workflow below an input data from the \nFile\n widget is fed to\n\nSelect Columns\n widget, which outputs the data to the \nData Table\n.\n\n\n\n\nWe used the schema to redefine the classification problem in \nheart\ndisease\n data set. Originally, the task was to predict if the patient has\na coronary artery diameter narrowing. We changed the problem to that of\ngender classification based on age, chest pain and cholesterol level,\nand informatively kept the diameter narrowing as a meta\nattribute.",
+            "title": "Selectcolumns"
+        },
+        {
+            "location": "/data/selectcolumns/#select-columns",
+            "text": "Manual selection of data attributes and composition of data domain.",
+            "title": "Select Columns"
+        },
+        {
+            "location": "/data/selectcolumns/#signals",
+            "text": "Inputs :   Data   Attribute-valued data set.  Outputs :   Data   Attribute-valued data set composed using the domain specification from the widget.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/selectcolumns/#description",
+            "text": "Select Columns  widget is used to manually compose your data domain.\nUser can decide which attributes will be used and how. Orange\ndistinguishes between ordinary attributes, an (optional) class\nattributes and meta attributes. For instance, for building a\nclassification model, the domain would be composed of a set of\nattributes and a discrete class attribute. Meta attributes are not used\nin modelling, but several widgets can use them for instance labels.  Orange attributes are typed and are either discrete, continuous or a\ncharacter string. The attribute type is marked with a symbol appearing\nbefore the name of the attribute (D, C, S, respectively).    Left-out data attributes that will not be in the output data file.  Data attributes in the new data file.  A class attribute. If none, the new data set will be classless.  Meta attributes of the new data file. These attributes are included in the data set but are, for most of the methods, not considered in analysis.  Apply change of the data domain and send the new data file to the output channel of the widget.  Reset the domain composition to that of the input data file.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/selectcolumns/#example",
+            "text": "In a workflow below an input data from the  File  widget is fed to Select Columns  widget, which outputs the data to the  Data Table .   We used the schema to redefine the classification problem in  heart\ndisease  data set. Originally, the task was to predict if the patient has\na coronary artery diameter narrowing. We changed the problem to that of\ngender classification based on age, chest pain and cholesterol level,\nand informatively kept the diameter narrowing as a meta\nattribute.",
+            "title": "Example"
+        },
+        {
+            "location": "/data/selectrows/",
+            "text": "Select Rows\n\n\n\n\nSelects data instances based on conditions over data features.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nData set.\n\n\nOutputs\n:\n\n\n\n\nMatching Data\n\n\n\n\nInstances that match the conditions.\n\n\n\n\nNon-Matching Data\n\n\n\n\nInstances that do not match the conditions.\n\n\nDescription\n\n\nThis widget selects a subset from the input data based on user-defined conditions. \nInstances that match the selection rule are placed in the output \nMatching Data\n channel.\n\n\nCriteria for data selection are presented as a collection of conjuncted terms (i.e. selected items are those\nmatching all the terms in '\nConditions\n').\n\n\nCondition terms are defined through selecting of an attribute, selecting\nan operator from the list of operators,\nand, if needed, defining the value to be used in the condition term.\nOperators are different for discrete, continuous and string attributes.\n\n\n\n\n\n\nConditions you want to apply, their operators and related values.\n\n\nAdd a new condition to the list of conditions.\n\n\nAdd all the possible variables at once.\n\n\nRemove all the listed variables at once.\n\n\nInformation on the input data set.\n\n\nInformation on instances that match the condition(s).\n\n\nPurge the output data.\n\n\nWhen the 'Commit all change' box is ticked, all changes will be automatically communicated to other widgets.\n\n\n\n\nAny change in composition of the condition will update the information pane (\nData Out\n).\n\n\nIf \nCommit on change\n is selected, then the output is updated on any change \nin the composition of the condition or any of its terms.\n\n\nExample\n\n\n\n\nIn this example we used the car data from \nimports-85\n data set and\nlisted all the imported diesel cars by brand.",
+            "title": "Selectrows"
+        },
+        {
+            "location": "/data/selectrows/#select-rows",
+            "text": "Selects data instances based on conditions over data features.",
+            "title": "Select Rows"
+        },
+        {
+            "location": "/data/selectrows/#signals",
+            "text": "Inputs :   Data   Data set.  Outputs :   Matching Data   Instances that match the conditions.   Non-Matching Data   Instances that do not match the conditions.",
+            "title": "Signals"
+        },
+        {
+            "location": "/data/selectrows/#description",
+            "text": "This widget selects a subset from the input data based on user-defined conditions. \nInstances that match the selection rule are placed in the output  Matching Data  channel.  Criteria for data selection are presented as a collection of conjuncted terms (i.e. selected items are those\nmatching all the terms in ' Conditions ').  Condition terms are defined through selecting of an attribute, selecting\nan operator from the list of operators,\nand, if needed, defining the value to be used in the condition term.\nOperators are different for discrete, continuous and string attributes.    Conditions you want to apply, their operators and related values.  Add a new condition to the list of conditions.  Add all the possible variables at once.  Remove all the listed variables at once.  Information on the input data set.  Information on instances that match the condition(s).  Purge the output data.  When the 'Commit all change' box is ticked, all changes will be automatically communicated to other widgets.   Any change in composition of the condition will update the information pane ( Data Out ).  If  Commit on change  is selected, then the output is updated on any change \nin the composition of the condition or any of its terms.",
+            "title": "Description"
+        },
+        {
+            "location": "/data/selectrows/#example",
+            "text": "In this example we used the car data from  imports-85  data set and\nlisted all the imported diesel cars by brand.",
+            "title": "Example"
+        },
+        {
+            "location": "/visualize/boxplot/",
+            "text": "Box Plot\n\n\n\n\nShows basic distribution of attribute values.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\n(None)\n\n\n\n\nDescription\n\n\nBox Plot\n shows distributions of attribute values. It is a\ngood practice to check any new data with this widget to quickly\ndiscover any anomalies, such as duplicated values (e.g. gray and grey),\noutliers, and alike.\n\n\nFor continuous attributes, the widget shows the minimal and maximal\nvalue. In case of Iris\u2019s attribute '\npetal length\n' (figure on the left),\nthese are 1.6 and 5.1 (approximately). The mean (dark blue)\nand the median (yellow) are represented by the vertical line.\n\n\nChoose \nGrouping\n to see box plots displayed by class. When instances are grouped by class\nyou can change the display mode. Annotated boxes will display the end values, the mean and the median,\nwhile compare medians and compare means will, naturally, compare the selected value between class groups.\n\n\n\n\n\n\nVisual representation of the data file\n\n\nVariable presented\n\n\nChoose grouping by class\n\n\nChoose display mode\n\n\n\n\nFor discrete attributes, the bars represent the number of examples with\neach particular attribute value. The picture shows the number of\ndifferent animal types in the \nZoo\n data set: there are 41 mammals, 13\nfish, 20 birds and so on.\n\n\n\n\nExample\n\n\nBox Plot\n is most commonly used immediately after the \nFile\n\nwidget to observe statistical properties of the data set. It is also\nuseful for finding properties of a specific data set, for instance a\ngroup of examples manually defined in another widget (e.g. \nScatterplot\n) \nor examples belonging to some cluster or a classification tree\nnode, as shown in the schema below.",
+            "title": "Boxplot"
+        },
+        {
+            "location": "/visualize/boxplot/#box-plot",
+            "text": "Shows basic distribution of attribute values.",
+            "title": "Box Plot"
+        },
+        {
+            "location": "/visualize/boxplot/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   (None)",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/boxplot/#description",
+            "text": "Box Plot  shows distributions of attribute values. It is a\ngood practice to check any new data with this widget to quickly\ndiscover any anomalies, such as duplicated values (e.g. gray and grey),\noutliers, and alike.  For continuous attributes, the widget shows the minimal and maximal\nvalue. In case of Iris\u2019s attribute ' petal length ' (figure on the left),\nthese are 1.6 and 5.1 (approximately). The mean (dark blue)\nand the median (yellow) are represented by the vertical line.  Choose  Grouping  to see box plots displayed by class. When instances are grouped by class\nyou can change the display mode. Annotated boxes will display the end values, the mean and the median,\nwhile compare medians and compare means will, naturally, compare the selected value between class groups.    Visual representation of the data file  Variable presented  Choose grouping by class  Choose display mode   For discrete attributes, the bars represent the number of examples with\neach particular attribute value. The picture shows the number of\ndifferent animal types in the  Zoo  data set: there are 41 mammals, 13\nfish, 20 birds and so on.",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/boxplot/#example",
+            "text": "Box Plot  is most commonly used immediately after the  File \nwidget to observe statistical properties of the data set. It is also\nuseful for finding properties of a specific data set, for instance a\ngroup of examples manually defined in another widget (e.g.  Scatterplot ) \nor examples belonging to some cluster or a classification tree\nnode, as shown in the schema below.",
+            "title": "Example"
+        },
+        {
+            "location": "/visualize/distributions/",
+            "text": "Distributions\n\n\n\n\nDisplays value distributions for a single attribute.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\n(None)\n\n\n\n\nDescription\n\n\nDistributions\n displays value distribution of discrete or\ncontinuous attributes. If the data contains class variable, distributions are\nconditioned on the class.\n\n\n\n\nFor discrete attributes, the graph displayed by the widget shows how\nmany times (e.g., in how many instances) each attribute\nvalue appears in the data. If the data contains a class variable, class\ndistributions for each of the attribute values will be displayed as well\n(like in the snapshot above). The widget may be requested to display\nonly value distributions for instances of certain class (\nGroup by\n).\n\n\n\n\nFor continuous attributes, the attribute values are discretized and\nvalue distribution is displayed as a histogram. Class\nprobabilities for the continuous attributes are obtained through loess\nsmoothing, while the appearance of the curve is set in \nShow continuous variables by\n.\n\n\nIn class-less domains, the bars are displayed in gray.",
+            "title": "Distributions"
+        },
+        {
+            "location": "/visualize/distributions/#distributions",
+            "text": "Displays value distributions for a single attribute.",
+            "title": "Distributions"
+        },
+        {
+            "location": "/visualize/distributions/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   (None)",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/distributions/#description",
+            "text": "Distributions  displays value distribution of discrete or\ncontinuous attributes. If the data contains class variable, distributions are\nconditioned on the class.   For discrete attributes, the graph displayed by the widget shows how\nmany times (e.g., in how many instances) each attribute\nvalue appears in the data. If the data contains a class variable, class\ndistributions for each of the attribute values will be displayed as well\n(like in the snapshot above). The widget may be requested to display\nonly value distributions for instances of certain class ( Group by ).   For continuous attributes, the attribute values are discretized and\nvalue distribution is displayed as a histogram. Class\nprobabilities for the continuous attributes are obtained through loess\nsmoothing, while the appearance of the curve is set in  Show continuous variables by .  In class-less domains, the bars are displayed in gray.",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/heat-map/",
+            "text": "Heat Map\n\n\n\n\nPlots a heat map for a pair of attributes.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\nNone\n\n\n\n\nDescription\n\n\nHeat map\n is a graphical method for visualizing frequencies in\na two-way matrix by color. The higher the occurrence of a certain value,\nthe darker the represented color. By combining two values on x and y axes we see where the attribute\ncombination is the strongest and where the weakest, thus enabling us to find strong corelations\nor representative instances.\n\n\n\n\n\n\nInformation on the input data\n\n\nChoose x attribute\n\n\nChoose y attribute\n\n\nDiscrete attribute for color scheme\n\n\nColor scheme legend. You can select which attribute instances you wish to see in the visualization.\n\n\nSelect the color scale strength (linear, square root or logarithmic)\n\n\nTo move the map use \nDrag\n and to select data subset use \nSelect\n\n\nVisualization\n\n\n\n\nExample\n\n\nBelow you can see an example workflow for Heat Map widget. Notice that the widget only works with continuous\ndata, so you need to first continuize data attributes that you want to visualize. Heat map below displays two\nattributes from \nIris\n data set, namely the petal width and petal length. Here we can see the distribution of width and \nlength values per Iris type. You can see that the variety \nIris setosa\n is distinctly separated from the other two varieties \nby petal width and length and that the most typical values for these attributes is 0.2 for petal width and 1.5 for petal \nlength. \nIris virginica\n and \nIris versicolor\n on the other hand have a greater variance of petal width and length values.",
+            "title": "Heat map"
+        },
+        {
+            "location": "/visualize/heat-map/#heat-map",
+            "text": "Plots a heat map for a pair of attributes.",
+            "title": "Heat Map"
+        },
+        {
+            "location": "/visualize/heat-map/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   None",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/heat-map/#description",
+            "text": "Heat map  is a graphical method for visualizing frequencies in\na two-way matrix by color. The higher the occurrence of a certain value,\nthe darker the represented color. By combining two values on x and y axes we see where the attribute\ncombination is the strongest and where the weakest, thus enabling us to find strong corelations\nor representative instances.    Information on the input data  Choose x attribute  Choose y attribute  Discrete attribute for color scheme  Color scheme legend. You can select which attribute instances you wish to see in the visualization.  Select the color scale strength (linear, square root or logarithmic)  To move the map use  Drag  and to select data subset use  Select  Visualization",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/heat-map/#example",
+            "text": "Below you can see an example workflow for Heat Map widget. Notice that the widget only works with continuous\ndata, so you need to first continuize data attributes that you want to visualize. Heat map below displays two\nattributes from  Iris  data set, namely the petal width and petal length. Here we can see the distribution of width and \nlength values per Iris type. You can see that the variety  Iris setosa  is distinctly separated from the other two varieties \nby petal width and length and that the most typical values for these attributes is 0.2 for petal width and 1.5 for petal \nlength.  Iris virginica  and  Iris versicolor  on the other hand have a greater variance of petal width and length values.",
+            "title": "Example"
+        },
+        {
+            "location": "/visualize/modelmapprojectionrank/",
+            "text": "ModelMap Projection Rank\n\n\n\n\nRanks projection quality for the data set.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\nFeatures\n\n\n\n\nFeature combination of the chosen projection.\n\n\nDescription\n\n\nModelMap Projection Rank\n is an approach, which can automatically find the \nmost useful data projections (projections where clusters with different class values are well separated and non\n-overlapping). It can be used with visualization methods that map attribute values to points in a two-\ndimensional space, namely Sieve Diagram and Scatterplot. \n\n\nInterestingness of a projection is estimated as classification accuracy of k-nearest neighbor classifier \non a data set that consists of positions of the projected points and their class information. Therefore, projections with \nwell separated classes will be associated with high classification accuracy while projections with overlapping classes will \nscore lower. \nModelMap Projection Rank\n can assess all possible projections and presents a short \nlist of best scored projections, that will hopefully reveal relevant patterns.\n\n\n\n\n\n\nInput data information\n\n\nP-index is the value of projection quality. Rank by P-index to see the highest projection quality pairs.\n\n\nAttribute combination with the highest projection quality.\n\n\nPress \"\nRank Projections\n\" to begin the ranking process.\n\n\n\n\nExample\n\n\nModelMap Projection Rank\n helps us find the most useful attribute pairs and sends them to visualization widgets. In the \nexample below we used \nIris\n data set to rank attribute pairs. Click on \nP-Index\n to sort the data by projection quality. If \nwe select the lowest-scoring pair (sepal width and sepal length, see widgets on the left), the scatterplot visualization is \nhighly dispersed, thus making it difficult to analyze the data. However, if we select the highest-scoring pair (petal width \nand petal length, see widgets on the right), we can already recognize patterns from the scatterplot visualization (Iris' \nsubvarieties are in separate clusters).\n\n\n\n\nReferences\n\n\nLeban, G., Zupan, B., Vidmar, G., Bratko, I. (2006). VizRank: Data Visualization Guided by Machine Learning. In Data Mining\nand Knowledge Discovery, 13, 119\u2013136. (Available \nhere\n.)",
+            "title": "Modelmapprojectionrank"
+        },
+        {
+            "location": "/visualize/modelmapprojectionrank/#modelmap-projection-rank",
+            "text": "Ranks projection quality for the data set.",
+            "title": "ModelMap Projection Rank"
+        },
+        {
+            "location": "/visualize/modelmapprojectionrank/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   Features   Feature combination of the chosen projection.",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/modelmapprojectionrank/#description",
+            "text": "ModelMap Projection Rank  is an approach, which can automatically find the \nmost useful data projections (projections where clusters with different class values are well separated and non\n-overlapping). It can be used with visualization methods that map attribute values to points in a two-\ndimensional space, namely Sieve Diagram and Scatterplot.   Interestingness of a projection is estimated as classification accuracy of k-nearest neighbor classifier \non a data set that consists of positions of the projected points and their class information. Therefore, projections with \nwell separated classes will be associated with high classification accuracy while projections with overlapping classes will \nscore lower.  ModelMap Projection Rank  can assess all possible projections and presents a short \nlist of best scored projections, that will hopefully reveal relevant patterns.    Input data information  P-index is the value of projection quality. Rank by P-index to see the highest projection quality pairs.  Attribute combination with the highest projection quality.  Press \" Rank Projections \" to begin the ranking process.",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/modelmapprojectionrank/#example",
+            "text": "ModelMap Projection Rank  helps us find the most useful attribute pairs and sends them to visualization widgets. In the \nexample below we used  Iris  data set to rank attribute pairs. Click on  P-Index  to sort the data by projection quality. If \nwe select the lowest-scoring pair (sepal width and sepal length, see widgets on the left), the scatterplot visualization is \nhighly dispersed, thus making it difficult to analyze the data. However, if we select the highest-scoring pair (petal width \nand petal length, see widgets on the right), we can already recognize patterns from the scatterplot visualization (Iris' \nsubvarieties are in separate clusters).",
+            "title": "Example"
+        },
+        {
+            "location": "/visualize/modelmapprojectionrank/#references",
+            "text": "Leban, G., Zupan, B., Vidmar, G., Bratko, I. (2006). VizRank: Data Visualization Guided by Machine Learning. In Data Mining\nand Knowledge Discovery, 13, 119\u2013136. (Available  here .)",
+            "title": "References"
+        },
+        {
+            "location": "/visualize/scatterplot/",
+            "text": "Scatter Plot\n\n\n\n\nScatterplot visualization with explorative analysis and\nintelligent data visualization enhancements.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\n\n\nData Subset\n\n\n\n\nA subset of instances from the input data set.\n\n\nOutputs\n:\n\n\n\n\nSelected Data\n\n\n\n\nA subset of instances that user has manually selected from the scatterplot.\n\n\n\n\nUnselected Data\n\n\n\n\nAll other data (examples not included in the user\u2019s selection).\n\n\nDescription\n\n\nScatterplot\n widget provides a 2-dimensional scatterplot\nvisualization for both continuous and discrete-valued attributes. The\ndata is displayed as a collection of points, each having a value of\nX-axis attribute determining the position on the horizontal axis and a\nvalue of Y-axis attribute determining the position on the vertical axis.\nVarious properties of the graph, like color, size and shape of the\npoints, axis titles, maximum point size and jittering can be adjusted on the left side of the widget. \nA snapshot below shows a scatterplot of an \nIris\n data set, with the size of the points\nproportional to the value of sepal width attribute, and coloring matching that of the class attribute.\n\n\n\n\nFor discrete attributes, \njittering\n circumvents the overlap of the points with the same\nvalue for both axes, and therefore the density of the points in\nthe region corresponds better to the data. As an example, a\nscatterplot for the \nTitanic\n data set reporting on the gender of the\npassengers and the traveling class is shown below; without jittering,\nscatterplot would display only eight distinct points.\n\n\n\n\nIntelligent Data Visualization\n\n\nScatterplot\n widget works well with other widgets for visualizing data subsets. To find the best projection rank sift the\ndata through the \nModelMap Projection Rank\n widget and select attribute pair with the highest P-value. To see the desired \ndata subset in the scatterplot use \nData Table\n widget and select a subset manually. \nScatterplot\n widget will hollow out\nthe unselected data and bold the selected data. In \nSelect Rows\n widget you can set the criteria for your subset, which \nfilters the input data and makes the scatterplot portray only instances that fit those criteria. You can also use \n\nClassification Tree Viewer\n widget for selecting the data within a certain tree node.\n\n\n\n\nExplorative Data Analysis\n\n\n\n\nScatterplot\n, as the rest of Orange widgets, supports zooming-in and out\nof the part of the plot and a manual selection of data instances. These functions\nare available in the lower left corner of the widget. The default tool is select, which\nselects data instances within the chosen rectangular area. Pan enables you to\nmove the scatterplot around the pane. With 'Zoom' you can zoom in and out of the pane with a\nmouse scroll, while 'Reset zoom' resets the visualization to its optimal size. An example of a simple \nschema where we selected data instances from a rectangular region and sent them to the \nData Table\n\nwidget is shown below. Notice that the scatterplot doesn't show all 49 data instances, \nbecause some data instances overlap (they have the same values for both attributes used).\n\n\n\n\nExample\n\n\nScatterplot can be combined with any widget that outputs a list\nof selected data instances. In the example below we combine \nClassification Tree\n \nand \nScatterplot\n to display instances taken from a chosen classification tree node\n(clicking on any node of classification tree would send a set of\nselected data instances to the scatterplot and mark selected instances with filled symbols).",
+            "title": "Scatterplot"
+        },
+        {
+            "location": "/visualize/scatterplot/#scatter-plot",
+            "text": "Scatterplot visualization with explorative analysis and\nintelligent data visualization enhancements.",
+            "title": "Scatter Plot"
+        },
+        {
+            "location": "/visualize/scatterplot/#signals",
+            "text": "Inputs :   Data   Input data set.   Data Subset   A subset of instances from the input data set.  Outputs :   Selected Data   A subset of instances that user has manually selected from the scatterplot.   Unselected Data   All other data (examples not included in the user\u2019s selection).",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/scatterplot/#description",
+            "text": "Scatterplot  widget provides a 2-dimensional scatterplot\nvisualization for both continuous and discrete-valued attributes. The\ndata is displayed as a collection of points, each having a value of\nX-axis attribute determining the position on the horizontal axis and a\nvalue of Y-axis attribute determining the position on the vertical axis.\nVarious properties of the graph, like color, size and shape of the\npoints, axis titles, maximum point size and jittering can be adjusted on the left side of the widget. \nA snapshot below shows a scatterplot of an  Iris  data set, with the size of the points\nproportional to the value of sepal width attribute, and coloring matching that of the class attribute.   For discrete attributes,  jittering  circumvents the overlap of the points with the same\nvalue for both axes, and therefore the density of the points in\nthe region corresponds better to the data. As an example, a\nscatterplot for the  Titanic  data set reporting on the gender of the\npassengers and the traveling class is shown below; without jittering,\nscatterplot would display only eight distinct points.",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/scatterplot/#intelligent-data-visualization",
+            "text": "Scatterplot  widget works well with other widgets for visualizing data subsets. To find the best projection rank sift the\ndata through the  ModelMap Projection Rank  widget and select attribute pair with the highest P-value. To see the desired \ndata subset in the scatterplot use  Data Table  widget and select a subset manually.  Scatterplot  widget will hollow out\nthe unselected data and bold the selected data. In  Select Rows  widget you can set the criteria for your subset, which \nfilters the input data and makes the scatterplot portray only instances that fit those criteria. You can also use  Classification Tree Viewer  widget for selecting the data within a certain tree node.",
+            "title": "Intelligent Data Visualization"
+        },
+        {
+            "location": "/visualize/scatterplot/#explorative-data-analysis",
+            "text": "Scatterplot , as the rest of Orange widgets, supports zooming-in and out\nof the part of the plot and a manual selection of data instances. These functions\nare available in the lower left corner of the widget. The default tool is select, which\nselects data instances within the chosen rectangular area. Pan enables you to\nmove the scatterplot around the pane. With 'Zoom' you can zoom in and out of the pane with a\nmouse scroll, while 'Reset zoom' resets the visualization to its optimal size. An example of a simple \nschema where we selected data instances from a rectangular region and sent them to the  Data Table \nwidget is shown below. Notice that the scatterplot doesn't show all 49 data instances, \nbecause some data instances overlap (they have the same values for both attributes used).",
+            "title": "Explorative Data Analysis"
+        },
+        {
+            "location": "/visualize/scatterplot/#example",
+            "text": "Scatterplot can be combined with any widget that outputs a list\nof selected data instances. In the example below we combine  Classification Tree  \nand  Scatterplot  to display instances taken from a chosen classification tree node\n(clicking on any node of classification tree would send a set of\nselected data instances to the scatterplot and mark selected instances with filled symbols).",
+            "title": "Example"
+        },
+        {
+            "location": "/visualize/sievediagram/",
+            "text": "Sieve Diagram\n\n\n\n\nPlots a sieve diagram for a pair of attributes.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\nNone\n\n\n\n\nDescription\n\n\nSieve diagram\n is a graphical method for visualizing frequencies in\na two-way contingency table and comparing them to the expected\nfrequencies under assumption of independence. The sieve diagram was\nproposed by Riedwyl and Sch\u00fcpbach in a technical report in 1983 and\nlater called a parquet diagram (Riedwyl and Sch\u00fcpbach, 1994). In this display the\narea of each rectangle is proportional to the expected frequency, while the\nobserved frequency is shown by the number of squares in each rectangle.\nThe difference between observed and expected frequency (proportional to\nthe standard Pearson residual) appears as the density of shading, using\ncolor to indicate whether the deviation from independence is positive\n(blue) or negative (red).\n\n\nThe snapshot below shows a sieve diagram for \nTitanic\n data set and has\nattributes \nsex\n and \nsurvived\n (the latter is a class attribute in\nthis data set). The plot shows that the two variables are highly\nassociated, as there are substantial differences between observed and\nexpected frequencies in all of the four quadrants. For example and as\nhighlighted in a balloon, the chance for surviving the accident was much higher\nfor female passengers than expected (0.06 vs. 0.15).\n\n\n\n\nPairs of attributes with interesting associations are shown with shading \nthe most interesting attribute pair in the \nTitanic\n data set, which is\nindeed the one we show in the above snapshot. For contrast, a sieve\ndiagram of the least interesting pair (age vs. survival) is shown below.\n\n\n\n\nReferences\n\n\nRiedwyl, H., and Sch\u00fcpbach, M. (1994). Parquet diagram to plot contingency tables. In Softstat '93: Advances in Statistical Software, F. Faulbaum (Ed.). New York: Gustav Fischer, 293-299.",
+            "title": "Sievediagram"
+        },
+        {
+            "location": "/visualize/sievediagram/#sieve-diagram",
+            "text": "Plots a sieve diagram for a pair of attributes.",
+            "title": "Sieve Diagram"
+        },
+        {
+            "location": "/visualize/sievediagram/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   None",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/sievediagram/#description",
+            "text": "Sieve diagram  is a graphical method for visualizing frequencies in\na two-way contingency table and comparing them to the expected\nfrequencies under assumption of independence. The sieve diagram was\nproposed by Riedwyl and Sch\u00fcpbach in a technical report in 1983 and\nlater called a parquet diagram (Riedwyl and Sch\u00fcpbach, 1994). In this display the\narea of each rectangle is proportional to the expected frequency, while the\nobserved frequency is shown by the number of squares in each rectangle.\nThe difference between observed and expected frequency (proportional to\nthe standard Pearson residual) appears as the density of shading, using\ncolor to indicate whether the deviation from independence is positive\n(blue) or negative (red).  The snapshot below shows a sieve diagram for  Titanic  data set and has\nattributes  sex  and  survived  (the latter is a class attribute in\nthis data set). The plot shows that the two variables are highly\nassociated, as there are substantial differences between observed and\nexpected frequencies in all of the four quadrants. For example and as\nhighlighted in a balloon, the chance for surviving the accident was much higher\nfor female passengers than expected (0.06 vs. 0.15).   Pairs of attributes with interesting associations are shown with shading \nthe most interesting attribute pair in the  Titanic  data set, which is\nindeed the one we show in the above snapshot. For contrast, a sieve\ndiagram of the least interesting pair (age vs. survival) is shown below.",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/sievediagram/#references",
+            "text": "Riedwyl, H., and Sch\u00fcpbach, M. (1994). Parquet diagram to plot contingency tables. In Softstat '93: Advances in Statistical Software, F. Faulbaum (Ed.). New York: Gustav Fischer, 293-299.",
+            "title": "References"
+        },
+        {
+            "location": "/visualize/venn-diagram/",
+            "text": "Venn Diagram\n\n\n\n\nPlots \nVenn diagram\n for two or more data subsets.\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nInput data set.\n\n\nOutputs\n:\n\n\n\n\nData\n\n\n\n\nOutput data set.\n\n\nDescription\n\n\n\n\nVenn Diagram\n displays logical relations between data sets. This projection shows two or more data sets represented by \ncircles of different colors. Intersections are subsets that belong to more than one data set. To further analyse or visualize\nthe subset click on an intersection.\n\n\n\n\n\n\nVenn diagram with input data and number of instances for each data set.\n\n\nInformation on input data.\n\n\nSelect identifiers by which to compare the subsets.\n\n\nIf \nAuto commit\n is on, changes are automatically communicated to other widgets.\n\n\n\n\nExamples\n\n\nThe easiest way to use \nVenn Diagram\n is to select data subsets and find matching instances in the visualization. We use \nthe \nbreast-cancer\n data set to select two subsets with \nSelect Rows\n widget - the first subset is that of breast cancer \npatients aged between 40 and 49 and the second is that of patients with tumor size between 25 and 29. \nVenn Diagram\n helps us \nfind instances that correspond to both criteria, which can be found in the intersection of the two circles.\n\n\n\n\nVenn Diagram\n widget can be also used for exploring different prediction models. In the following example we analysed 3 \nprediction methods, namely \nNaive Bayes\n, \nSVN Learner\n and \nRandom Forest Learner\n, according to their misclassified \ninstances. By selecting misclassifications in the three \nConfusion Matrix\n widgets and sending them to Venn diagram, we can\nsee all the misclassification instances visualized per method used. Then we open \nVenn Diagram\n and select, for \nexample, the misclassified instances that were identified by all three methods (in our case 1). This is represented as an \nintersection of all three circles. Click on the intersection to see this instance marked in the \nScatterplot\n widget. Try \nselecting different diagram sections to see how the scatterplot visualization changes.",
+            "title": "Venn diagram"
+        },
+        {
+            "location": "/visualize/venn-diagram/#venn-diagram",
+            "text": "Plots  Venn diagram  for two or more data subsets.",
+            "title": "Venn Diagram"
+        },
+        {
+            "location": "/visualize/venn-diagram/#signals",
+            "text": "Inputs :   Data   Input data set.  Outputs :   Data   Output data set.",
+            "title": "Signals"
+        },
+        {
+            "location": "/visualize/venn-diagram/#description",
+            "text": "Venn Diagram  displays logical relations between data sets. This projection shows two or more data sets represented by \ncircles of different colors. Intersections are subsets that belong to more than one data set. To further analyse or visualize\nthe subset click on an intersection.    Venn diagram with input data and number of instances for each data set.  Information on input data.  Select identifiers by which to compare the subsets.  If  Auto commit  is on, changes are automatically communicated to other widgets.",
+            "title": "Description"
+        },
+        {
+            "location": "/visualize/venn-diagram/#examples",
+            "text": "The easiest way to use  Venn Diagram  is to select data subsets and find matching instances in the visualization. We use \nthe  breast-cancer  data set to select two subsets with  Select Rows  widget - the first subset is that of breast cancer \npatients aged between 40 and 49 and the second is that of patients with tumor size between 25 and 29.  Venn Diagram  helps us \nfind instances that correspond to both criteria, which can be found in the intersection of the two circles.   Venn Diagram  widget can be also used for exploring different prediction models. In the following example we analysed 3 \nprediction methods, namely  Naive Bayes ,  SVN Learner  and  Random Forest Learner , according to their misclassified \ninstances. By selecting misclassifications in the three  Confusion Matrix  widgets and sending them to Venn diagram, we can\nsee all the misclassification instances visualized per method used. Then we open  Venn Diagram  and select, for \nexample, the misclassified instances that were identified by all three methods (in our case 1). This is represented as an \nintersection of all three circles. Click on the intersection to see this instance marked in the  Scatterplot  widget. Try \nselecting different diagram sections to see how the scatterplot visualization changes.",
+            "title": "Examples"
+        },
+        {
+            "location": "/docs/",
+            "text": "Welcome to MkDocs\n\n\nFor full documentation visit \nmkdocs.org\n.\n\n\nCommands\n\n\n\n\nmkdocs new [dir-name]\n - Create a new project.\n\n\nmkdocs serve\n - Start the live-reloading docs server.\n\n\nmkdocs build\n - Build the documentation site.\n\n\nmkdocs help\n - Print this help message.\n\n\n\n\nProject layout\n\n\nmkdocs.yml    # The configuration file.\ndocs/\n    index.md  # The documentation homepage.\n    ...       # Other markdown pages, images and other files.",
+            "title": "Home"
+        },
+        {
+            "location": "/docs/#welcome-to-mkdocs",
+            "text": "For full documentation visit  mkdocs.org .",
+            "title": "Welcome to MkDocs"
+        },
+        {
+            "location": "/docs/#commands",
+            "text": "mkdocs new [dir-name]  - Create a new project.  mkdocs serve  - Start the live-reloading docs server.  mkdocs build  - Build the documentation site.  mkdocs help  - Print this help message.",
+            "title": "Commands"
+        },
+        {
+            "location": "/docs/#project-layout",
+            "text": "mkdocs.yml    # The configuration file.\ndocs/\n    index.md  # The documentation homepage.\n    ...       # Other markdown pages, images and other files.",
+            "title": "Project layout"
+        },
+        {
+            "location": "/classify/logisticregression/",
+            "text": "Logistic Regression\n\n\n\n\nLogistic Regression Learner\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nData set\n- \nPreprocessor\n\n\nPreprocessed data\n\n\nOutputs\n:\n\n\n\n\nLearner\n\n\n\n\nThe logistic regression learning algorithm with settings as specified in the dialog.\n\n\n\n\nLogistic Regression Classifier\n\n\n\n\nTrained classifier (a subtype of Classifier). \nLogistic Regression Classifier\n sends data only if the data input is present.\n\n\nDescription\n\n\n\n\n\n\nA name under which the learner appears in other widgets. The default name is 'Logistic regression'.\n\n\nThe penalty type (either L1 or L2).\n\n\nRegularization value (higher value means less regularization).\n\n\nSet numerical tolerance (permitted deviation from expected value).\n\n\n\n\nExample\n\n\nThe widget is used just as any other widget for inducing a classifier. This is an example demonstrating the prediction value of logistic regress used on \nvoting.tab\n data set. We first use a \nLogistic Regression\n learner to provide a LR classifier for \nPredictions\n widget. We want to see the quality of LR prediction model a person being a republic or a democrat based on their voting patterns. In \nSelect Attributes\n we choose logistic regression as a feature and party as a class. Then we use \nScatterplot\n to see which instances were correctly predicted and which were false.",
+            "title": "Logisticregression"
+        },
+        {
+            "location": "/classify/logisticregression/#logistic-regression",
+            "text": "Logistic Regression Learner",
+            "title": "Logistic Regression"
+        },
+        {
+            "location": "/classify/logisticregression/#signals",
+            "text": "Inputs :   Data   Data set\n-  Preprocessor  Preprocessed data  Outputs :   Learner   The logistic regression learning algorithm with settings as specified in the dialog.   Logistic Regression Classifier   Trained classifier (a subtype of Classifier).  Logistic Regression Classifier  sends data only if the data input is present.",
+            "title": "Signals"
+        },
+        {
+            "location": "/classify/logisticregression/#description",
+            "text": "A name under which the learner appears in other widgets. The default name is 'Logistic regression'.  The penalty type (either L1 or L2).  Regularization value (higher value means less regularization).  Set numerical tolerance (permitted deviation from expected value).",
+            "title": "Description"
+        },
+        {
+            "location": "/classify/logisticregression/#example",
+            "text": "The widget is used just as any other widget for inducing a classifier. This is an example demonstrating the prediction value of logistic regress used on  voting.tab  data set. We first use a  Logistic Regression  learner to provide a LR classifier for  Predictions  widget. We want to see the quality of LR prediction model a person being a republic or a democrat based on their voting patterns. In  Select Attributes  we choose logistic regression as a feature and party as a class. Then we use  Scatterplot  to see which instances were correctly predicted and which were false.",
+            "title": "Example"
+        },
+        {
+            "location": "/classify/naivebayes/",
+            "text": "Naive Bayes\n\n\n\n\nNaive Bayesian Learner\n\n\nSignals\n\n\nInputs\n:\n\n\n\n\nData\n\n\n\n\nData set\n\n\n\n\nPreprocessor\n\n\n\n\nPreprocessed data\n\n\nOutputs\n:\n\n\n\n\nLearner\n\n\n\n\nNaive Bayesian learning algorithm with settings as specified in the dialog. It can be fed into widgets for testing learners.\n\n\n\n\nNaive Bayesian Classifier\n\n\n\n\nTrained classifier (a subtype of Classifier). The \nNaive Bayesian Classifier\n signal sends data only if the learning data\n(signal \nData\n) is present.\n\n\nDescription\n\n\n\n\nThe only option in this widget is the name under which it will appear in other widgets. The default name is '\nNaive Bayes\n'.\nWhen you change it, you need to press '\nApply\n'.\n\n\nExamples\n\n\nHere we present two uses of this widget. First we compare the results of \nNaive Bayesian learner\n with another\nlearner, a \nRandom Forest\n.\n\n\n\n\nThe second schema show the quality of predictions made with \nNaive Bayes\n. We feed the \nTest Learners\n widget\na Naive Bayes learner and then send the data to the \nConfusion Matrix\n. In this widget we select misclassified\ninstances and show them in \nScatterplot\n. The bold dots in the scatterplot are the misclassified instances\nfrom \nNaive Bayes\n.",
+            "title": "Naivebayes"
+        },
+        {
+            "location": "/classify/naivebayes/#naive-bayes",
+            "text": "Naive Bayesian Learner",
+            "title": "Naive Bayes"
+        },
+        {
+            "location": "/classify/naivebayes/#signals",
+            "text": "Inputs :   Data   Data set   Preprocessor   Preprocessed data  Outputs :   Learner   Naive Bayesian learning algorithm with settings as specified in the dialog. It can be fed into widgets for testing learners.   Naive Bayesian Classifier   Trained classifier (a subtype of Classifier). The  Naive Bayesian Classifier  signal sends data only if the learning data\n(signal  Data ) is present.",
+            "title": "Signals"
+        },
+        {
+            "location": "/classify/naivebayes/#description",
+            "text": "The only option in this widget is the name under which it will appear in other widgets. The default name is ' Naive Bayes '.\nWhen you change it, you need to press ' Apply '.",
+            "title": "Description"
+        },
+        {
+            "location": "/classify/naivebayes/#examples",
+            "text": "Here we present two uses of this widget. First we compare the results of  Naive Bayesian learner  with another\nlearner, a  Random Forest .   The second schema show the quality of predictions made with  Naive Bayes . We feed the  Test Learners  widget\na Naive Bayes learner and then send the data to the  Confusion Matrix . In this widget we select misclassified\ninstances and show them in  Scatterplot . The bold dots in the scatterplot are the misclassified instances\nfrom  Naive Bayes .",
+            "title": "Examples"
+        }
+    ]
+}
