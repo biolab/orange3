@@ -95,4 +95,4 @@ Example
 
 The code produces the following graph:
 
-.. image:: /images/statExamples-graph_ranks1.png
+.. image:: images/statExamples-graph_ranks1.png
