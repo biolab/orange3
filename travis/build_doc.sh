@@ -1,3 +1,7 @@
-cd $TRAVIS_BUILD_DIR/doc
+cd $TRAVIS_BUILD_DIR/doc/development
 make html
-./build_widget_catalog.py --input build/html/index.html --output build/html/widgets.json --url-prefix "http://docs.orange.biolab.si/3/"
+cd $TRAVIS_BUILD_DIR/doc/data-mining-library
+make html
+cd $TRAVIS_BUILD_DIR/doc/visual-programming
+make html
+./build_widget_catalog.py --input build/html/index.html --output build/html/widgets.json --url-prefix "http://docs.orange.biolab.si/3/visual-programming/"
