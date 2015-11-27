@@ -7,6 +7,12 @@ Getting Started
 
 Here we need to copy the getting started guide.
 
+.. toctree::
+   :maxdepth: 1
+
+   loading-your-data/index
+
+
 Widgets
 =======
 
