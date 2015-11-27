@@ -284,6 +284,15 @@ class Gini(ClassificationScorer):
 
 
 class ReliefF(Scorer):
+    """
+    ReliefF algorithm. Contrary to most other scorers, Relief family of
+    algorithms is not as myoptic but tends to give unreliable results with
+    datasets with lots (hundreds) of features.
+
+    Robnik-Šikonja, M., Kononenko, I.
+    Theoretical and empirical analysis of ReliefF and RReliefF.
+    2003. http://lkm.fri.uni-lj.si/rmarko/papers/robnik03-mlj.pdf
+    """
     feature_type = Variable
     class_type = DiscreteVariable
 
