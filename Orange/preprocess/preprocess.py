@@ -11,6 +11,7 @@ import Orange.data
 from Orange.data import Table
 from . import impute, discretize
 from ..misc.enum import Enum
+from collections.abc import Iterable
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
            "Normalize", "Randomize", "RemoveNaNClasses",
@@ -415,3 +416,74 @@ class PreprocessorList:
             data = pp(data)
         return data
 
+
+def is_same_type(a, b):
+    """
+    Return True if input preprocessors a and b are of the same kind.
+    """
+    return type(a) == type(b) or \
+        (isinstance(a, (SklImpute, Impute)) and isinstance(b, (SklImpute, Impute)))
+
+
+def add_preprocessors(preprocessors, old=None):
+    """ Add preprocessors to a list of preprocessors.
+    
+    If new preprocessors are in the same order than the old, 
+    just replace old preprocessors with a matching new one.
+    
+    If the order is different remove matching old preprocessors
+    and append new ones in the given order.
+    """
+
+    def to_list(preproc):
+        if isinstance(preproc, PreprocessorList):
+            preproc = preproc.preprocessors
+        if not preproc:
+            preproc = []
+        if not isinstance(preproc, Iterable):
+            preproc = [ preproc]
+        return preproc
+
+    old = to_list(old)
+    preprocessors = to_list(preprocessors)
+
+    add_preprocessors = []
+
+    #check the order of new preprocessors
+    same_type_ind = []
+    for a in preprocessors:
+        for i,b in enumerate(old):
+            if is_same_type(a,b):
+                same_type_ind.append(i)
+
+    #is order the same?
+    replace = same_type_ind == sorted(same_type_ind)
+
+    current = [ [] for a in old ] #allow multiple of the same type
+
+    for a in preprocessors:
+        same_type_ind = []
+        for i,b in enumerate(old):
+            if is_same_type(a,b):
+                same_type_ind.append(i)
+        if same_type_ind:
+            if replace:
+                current[same_type_ind[0]].append(a)
+            else:
+                for s in same_type_ind:
+                    current[s] = None #mark a preprocessor for removal
+                add_preprocessors.append(a)
+        else:
+            add_preprocessors.append(a)
+    
+    #keep those that were not changed
+    for i,(a,o) in enumerate(zip(current, old)):
+        if a == []:
+            current[i] = [o]
+
+    currentl = []
+    for c in current:
+        if c: #skip preprocesors marked for removal
+            currentl += c
+
+    return currentl + add_preprocessors
