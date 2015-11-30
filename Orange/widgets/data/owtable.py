@@ -729,15 +729,25 @@ class OWDataTable(widget.OWWidget):
     def set_selection(self):
         if len(self.selected_rows) and len(self.selected_cols):
             view = self.tabs.currentWidget()
+            model = view.model()
+            if model.rowCount() <= self.selected_rows[-1] or \
+                    model.columnCount() <= self.selected_cols[-1]:
+                return
+
             selection = QItemSelection()
-            temp_selection = QItemSelection()
-            for row in self.selected_rows:
-                for col in self.selected_cols:
-                    index = view.model().index(row, col)
-                    temp_selection.select(index, index)
-                    selection.merge(temp_selection, QItemSelectionModel.Select)
-            view.selectionModel().select(selection,
-                                         QItemSelectionModel.ClearAndSelect)
+            rowranges = list(ranges(self.selected_rows))
+            colranges = list(ranges(self.selected_cols))
+
+            for rowstart, rowend in rowranges:
+                for colstart, colend in colranges:
+                    selection.append(
+                        QtGui.QItemSelectionRange(
+                            view.model().index(rowstart, colstart),
+                            view.model().index(rowend - 1, colend - 1)
+                        )
+                    )
+            view.selectionModel().select(
+                selection, QItemSelectionModel.ClearAndSelect)
 
     def get_selection(self, view):
         """
