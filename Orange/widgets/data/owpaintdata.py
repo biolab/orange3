@@ -834,13 +834,12 @@ class OWPaintData(widget.OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        self.tools_cache = {}
-
-        self._init_ui()
-
         self.data = numpy.zeros((0, 3))
         self.colors = colorpalette.ColorPaletteGenerator(
             len(colorpalette.DefaultRGBColors))
+        self.tools_cache = {}
+
+        self._init_ui()
 
     def _init_ui(self):
         namesBox = gui.widgetBox(self.controlArea, "Names")
@@ -980,7 +979,6 @@ class OWPaintData(widget.OWWidget):
 
         self.plot.hideButtons()
         self.plot.setXRange(0, 1, padding=0)
-        self._reset_dimensions()
 
         self.mainArea.layout().addWidget(self.plotview)
 
@@ -989,7 +987,9 @@ class OWPaintData(widget.OWWidget):
         self.set_current_tool(self.TOOLS[0][2])
         self.graphButton.clicked.connect(self.save_graph)
 
-    def _reset_dimensions(self):
+        self.set_dimensions()
+
+    def set_dimensions(self):
         if self.hasAttr2:
             self.plot.setYRange(0, 1, padding=0)
             self.plot.showAxis('left')
@@ -998,23 +998,10 @@ class OWPaintData(widget.OWWidget):
             self.plot.setYRange(-.5, .5, padding=0)
             self.plot.hideAxis('left')
             self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
+        self._replot()
         for button, tool in self.toolButtons:
             if tool.only2d:
                 button.setDisabled(not self.hasAttr2)
-
-    def set_dimensions(self):
-        if self.hasAttr2:
-            undo, redo = self._reset_dimensions, self._reset_dimensions
-        else:
-            def redo():
-                self.data[:, 1] = 0
-                self._reset_dimensions()
-                self._replot()
-            def undo(prev_values=self.data[:, 1].copy() if self.data[:, 1].any() else 0):
-                self.data[:, 1] = prev_values
-                self._reset_dimensions()
-                self._replot()
-        self.undo_stack.push(SimpleUndoCommand(redo, undo))
 
     def set_data(self, data):
         if data:
@@ -1212,7 +1199,8 @@ class OWPaintData(widget.OWWidget):
         pens = [pen(self.colors[i]) for i in range(nclasses)]
 
         self._scatter_item = pg.ScatterPlotItem(
-            self.data[:, 0], self.data[:, 1],
+            self.data[:, 0],
+            self.data[:, 1] if self.hasAttr2 else numpy.zeros(self.data.shape[0]),
             symbol="+",
             pen=[pens[int(ci)] for ci in self.data[:, 2]]
         )
