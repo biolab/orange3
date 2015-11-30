@@ -446,7 +446,7 @@ class ClassificationTreeNode(TreeNode):
 class OWClassificationTreeGraph(OWTreeGraph):
     name = "Classification Tree Viewer"
     description = "Graphical visualization of a classification tree."
-    icon = "icons/ClassificationTree.svg"
+    icon = "icons/ClassificationTreeGraph.svg"
 
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
