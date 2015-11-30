@@ -184,6 +184,7 @@ class OWDataSampler(widget.OWWidget):
             if self.sql_dl:
                 sample.download_data()
                 sample = Table(sample)
+
         else:
             if self.indices is None or not self.use_seed:
                 self.updateindices()

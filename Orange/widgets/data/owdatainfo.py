@@ -136,6 +136,8 @@ class OWDataInfo(widget.OWWidget):
                 self.targets = "<p>Multi target data</p>\n" + pack_table(
                     (("Discrete", disc_class), ("Numeric", cont_class)))
 
+        self.data_desc = dd = OrderedDict()
+
         if SqlTable is not None and isinstance(data, SqlTable):
             connection_string = ' '.join(
                 '%s=%s' % (key, value)
@@ -143,15 +145,14 @@ class OWDataInfo(widget.OWWidget):
                 if value is not None)
             self.location = "Table '%s', using connection:\n%s" % (
                 data.table_name, connection_string)
+            dd["Rows"] = data.approx_len()
         else:
             self.location = "Data is stored in memory"
+            dd["Rows"] = len(data)
 
         def join_if(items):
             return ", ".join(s.format(n) for s, n in items if n)
 
-        self.data_desc = dd = OrderedDict()
-
-        dd["Rows"] = len(data)
         dd["Features"] = len(domain.attributes) and join_if((
             ("{} discrete", disc_features),
             ("{} numeric", cont_features)

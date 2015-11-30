@@ -54,7 +54,7 @@ class OWSql(widget.OWWidget):
         super().__init__()
 
         self._connection = None
-        self.data_desc = None
+        self.data_desc_table = None
         self.database_desc = None
 
         vbox = gui.widgetBox(self.controlArea, "Server", addSpace=True)
@@ -162,14 +162,14 @@ class OWSql(widget.OWWidget):
             ))
         except psycopg2.Error as err:
             self.error(0, str(err).split('\n')[0])
-            self.database_desc = self.data_desc = None
+            self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 
 
     def refresh_tables(self):
         self.tablecombo.clear()
         if self._connection is None:
-            self.data_desc = None
+            self.data_desc_table = None
             return
 
         cur = self._connection.cursor()
@@ -199,7 +199,7 @@ class OWSql(widget.OWWidget):
             return self.open_table()
         else:
             self.custom_sql.setVisible(True)
-            self.data_desc = None
+            self.data_desc_table = None
             self.database_desc["Table"] = "(None)"
             self.table = None
 
@@ -207,7 +207,7 @@ class OWSql(widget.OWWidget):
         if self.tablecombo.currentIndex() <= 0:
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
-            self.data_desc = None
+            self.data_desc_table = None
             return
 
         if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
@@ -294,15 +294,16 @@ class OWSql(widget.OWWidget):
             table = Table(table)
 
         self.send("Data", table)
-        self.data_desc = report.describe_data(table)
+        self.data_desc_table = table
 
     def send_report(self):
         if not self.database_desc:
             self.report_paragraph("No database connection.")
             return
         self.report_items("Database", self.database_desc)
-        if self.data_desc:
-            self.report_items("Data", self.data_desc)
+        if self.data_desc_table:
+            self.report_items("Data",
+                              report.describe_data(self.data_desc_table))
 
 if __name__ == "__main__":
     import os

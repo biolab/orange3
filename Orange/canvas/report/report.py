@@ -5,6 +5,7 @@ from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
 from PyQt4.QtGui import QGraphicsScene, QStandardItemModel, QColor
 from Orange.widgets.io import PngFormat
+from Orange.data.sql.table import SqlTable
 
 
 class Report:
@@ -553,7 +554,10 @@ def describe_data(data):
     items = OrderedDict()
     if data is None:
         return items
-    items["Data instances"] = len(data)
+    if isinstance(data, SqlTable):
+        items["Data instances"] = data.approx_len()
+    else:
+        items["Data instances"] = len(data)
     items.update(describe_domain(data.domain))
     return items
 
@@ -603,7 +607,10 @@ def describe_data_brief(data):
     items = OrderedDict()
     if data is None:
         return items
-    items["Data instances"] = len(data)
+    if isinstance(data, SqlTable):
+        items["Data instances"] = data.approx_len()
+    else:
+        items["Data instances"] = len(data)
     items.update(describe_domain_brief(data.domain))
     return items
 
