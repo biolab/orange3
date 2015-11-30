@@ -131,7 +131,8 @@ class OWLiftCurve(widget.OWWidget):
 
         if results is not None:
             if results.data is None:
-                self.error(0, "Give me data!!")
+                self.error(0, "Evaluation results require"
+                              " information on test data")
                 results = None
             elif not results.data.domain.has_discrete_class:
                 self.error(0, "Need discrete class variable")
