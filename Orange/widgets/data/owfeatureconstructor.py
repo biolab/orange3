@@ -124,8 +124,11 @@ class FeatureEditor(QtGui.QFrame):
         self.attrs_model = itemmodels.VariableListModel(
             ["Select feature"], parent=self)
         self.attributescb = QtGui.QComboBox(
-            minimumContentsLength=12,
-            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            minimumContentsLength=16,
+            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon,
+            sizePolicy=QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum,
+                                         QtGui.QSizePolicy.Minimum)
+        )
         self.attributescb.setModel(self.attrs_model)
 
         sorted_funcs = sorted(self.FUNCTIONS)
@@ -137,7 +140,11 @@ class FeatureEditor(QtGui.QFrame):
             [''],
             [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
 
-        self.functionscb = QtGui.QComboBox()
+        self.functionscb = QtGui.QComboBox(
+            minimumContentsLength=16,
+            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon,
+            sizePolicy=QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum,
+                                         QtGui.QSizePolicy.Minimum))
         self.functionscb.setModel(self.funcs_model)
 
         hbox = QtGui.QHBoxLayout()
@@ -340,11 +347,12 @@ class OWFeatureConstructor(widget.OWWidget):
 
         self.editorstack.setEnabled(False)
 
-        buttonlayout = QtGui.QVBoxLayout()
+        buttonlayout = QtGui.QVBoxLayout(spacing=10)
         buttonlayout.setContentsMargins(0, 0, 0, 0)
 
         self.addbutton = QtGui.QPushButton(
             "New", toolTip="Create a new variable",
+            minimumWidth=120,
             shortcut=QtGui.QKeySequence.New
         )
 
@@ -388,6 +396,7 @@ class OWFeatureConstructor(widget.OWWidget):
 
         self.removebutton = QtGui.QPushButton(
             "Remove", toolTip="Remove selected variable",
+            minimumWidth=120,
             shortcut=QtGui.QKeySequence.Delete
         )
         self.removebutton.clicked.connect(self.removeSelectedFeature)
