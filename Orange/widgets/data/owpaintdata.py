@@ -113,6 +113,7 @@ def transform(command, data):
 
 @transform.register(Append)
 def append(command, data):
+    numpy.clip(command.points[:, :2], 0, 1, out=command.points[:, :2])
     return (numpy.vstack([data, command.points]),
             DeleteIndices(slice(len(data),
                                 len(data) + len(command.points))))
@@ -978,7 +979,7 @@ class OWPaintData(widget.OWWidget):
             self.plot.hideAxis('left')
 
         self.plot.hideButtons()
-        self.plot.setXRange(0, 1, padding=0)
+        self.plot.setXRange(0, 1, padding=0.01)
 
         self.mainArea.layout().addWidget(self.plotview)
 
@@ -991,11 +992,11 @@ class OWPaintData(widget.OWWidget):
 
     def set_dimensions(self):
         if self.hasAttr2:
-            self.plot.setYRange(0, 1, padding=0)
+            self.plot.setYRange(0, 1, padding=0.01)
             self.plot.showAxis('left')
             self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Minimum)
         else:
-            self.plot.setYRange(-.5, .5, padding=0)
+            self.plot.setYRange(-.5, .5, padding=0.01)
             self.plot.hideAxis('left')
             self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
         self._replot()
