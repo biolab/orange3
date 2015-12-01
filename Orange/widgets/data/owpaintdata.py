@@ -159,47 +159,16 @@ class PaintViewBox(pg.ViewBox):
         self.setAcceptHoverEvents(True)
         self.tool = None
 
-    def mousePressEvent(self, event):
-        if self.tool is not None and self.tool.mousePressEvent(event):
-            event.accept()
-        else:
-            super().mousePressEvent(event)
+        def handle(event, eventType):
+            if self.tool is not None and getattr(self.tool, eventType)(event):
+                event.accept()
+            else:
+                getattr(super(self.__class__, self), eventType)(event)
 
-    def mouseMoveEvent(self, event):
-        if self.tool is not None and self.tool.mouseMoveEvent(event):
-            event.accept()
-        else:
-            super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if self.tool is not None and self.tool.mouseReleaseEvent(event):
-            event.accept()
-        else:
-            super().mouseReleaseEvent(event)
-
-    def mouseClickEvent(self, event):
-        if self.tool is not None and self.tool.mouseClickEvent(event):
-            event.accept()
-        else:
-            super().mouseClickEvent(event)
-
-    def mouseDragEvent(self, event, axis=None):
-        if self.tool is not None and self.tool.mouseDragEvent(event):
-            event.accept()
-        else:
-            super().mouseDragEvent(event)
-
-    def hoverEnterEvent(self, event):
-        if self.tool is not None and self.tool.hoverEnterEvent(event):
-            event.accept()
-        else:
-            super().hoverEnterEvent(event)
-
-    def hoverLeaveEvent(self, event):
-        if self.tool is not None and self.tool.hoverLeaveEvent(event):
-            event.accept()
-        else:
-            super().hoverLeaveEvent(event)
+        for eventType in ('mousePressEvent', 'mouseMoveEvent', 'mouseReleaseEvent',
+                          'mouseClickEvent', 'mouseDragEvent',
+                          'mouseEnterEvent', 'mouseLeaveEvent'):
+            setattr(self, eventType, partial(handle, eventType=eventType))
 
 
 def crosshairs(color, radius=24, circle=False):
@@ -624,14 +593,8 @@ class SimpleUndoCommand(QtGui.QUndoCommand):
     """
     def __init__(self, redo, undo, parent=None):
         super().__init__(parent)
-        self._redo = redo
-        self._undo = undo
-
-    def redo(self):
-        self._redo()
-
-    def undo(self):
-        self._undo()
+        self.redo = redo
+        self.undo = undo
 
 
 class UndoCommand(QtGui.QUndoCommand):
