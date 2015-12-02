@@ -587,19 +587,23 @@ def domain_eq(d1, d2):
 
 # Comparing/hashing Orange.data.Instance across domains ignoring metas.
 class ComparableInstance:
-    __slots__ = ["inst", "domain"]
+    __slots__ = ["inst", "domain", "__hash"]
 
     def __init__(self, inst):
         self.inst = inst
         self.domain = inst.domain
+        self.__hash = hash((self.inst.x.data.tobytes(),
+                            self.inst.y.data.tobytes()))
 
     def __hash__(self):
-        return hash(self.inst.x.data.tobytes())
+        return self.__hash
 
     def __eq__(self, other):
         # XXX: comparing NaN with different payload
-        return (domain_eq(self.domain, other.domain)
-                and self.inst.x.data.tobytes() == other.inst.x.data.tobytes())
+        return (isinstance(other, ComparableInstance)
+                and domain_eq(self.domain, other.domain)
+                and self.inst.x.data.tobytes() == other.inst.x.data.tobytes()
+                and self.inst.y.data.tobytes() == other.inst.y.data.tobytes())
 
     def __iter__(self):
         return iter(self.inst)
