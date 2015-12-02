@@ -20,7 +20,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
 from Orange.widgets.utils import getHtmlCompatibleString
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg, DefaultRGBColors
+from Orange.widgets.utils.colorpalette import DefaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
 from Orange.widgets.io import FileFormat
@@ -107,8 +107,6 @@ class OWMosaicDisplay(OWWidget):
     show_apriori_distribution_boxes = Setting(True)
     use_boxes = Setting(True)
     interior_coloring = Setting(0)
-    color_settings = Setting(None)
-    selected_schema_index = Setting(0)
     show_subset_data_boxes = Setting(True)
     remove_unused_labels = Setting(True)
     variable1 = ContextSetting("")
@@ -142,7 +140,6 @@ class OWMosaicDisplay(OWWidget):
         self.attributeValueOffset = 3
         self.residuals = []  # residual values if the residuals are visualized
         self.aprioriDistributions = []
-        self.colorPalette = None
         self.permutationDict = {}
         self.manualAttributeValuesDict = {}
         self.conditionalDict = None
@@ -229,10 +226,6 @@ class OWMosaicDisplay(OWWidget):
         gui.comboBox(ind_box, self, 'show_apriori_distribution_boxes',
                      items=self.subboxesOpts, callback=self.updateGraph)
 
-        hbox = gui.widgetBox(self.controlArea, "Colors", addSpace=1)
-        gui.button(hbox, self, "Set Colors", self.setColors,
-                   tooltip="Set the color palette for class values")
-
         # self.box6.setSizePolicy(QSizePolicy(QSizePolicy.Minimum , QSizePolicy.Fixed ))
         self.controlArea.layout().addStretch(1)
 
@@ -246,8 +239,6 @@ class OWMosaicDisplay(OWWidget):
         # self.wdChildDialogs = [self.optimizationDlg]  # used when running widget debugging
 
         # self.collapsableWBox.updateControls()
-        dlg = self.createColorDialog()
-        self.colorPalette = dlg.getDiscretePalette("discPalette")
         self.selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
 
         gui.rubber(self.controlArea)
@@ -771,6 +762,10 @@ class OWMosaicDisplay(OWWidget):
                               penColor=args["selectionDict"][tuple(used_vals)], penWidth=2, z=-100)
 
         # if we have selected a rule that contains this combination of attr values then show a kind of selection of this rectangle
+        if self.data.domain.has_discrete_class:
+            colors = [QColor(*col) for col in self.data.domain.class_var.colors]
+        else:
+            colors = None
         if self.activeRule and len(used_attrs) == len(self.activeRule[0]) and sum(
                 [v in used_attrs for v in self.activeRule[0]]) == len(self.activeRule[0]):
             for vals in self.activeRule[1]:
@@ -781,7 +776,8 @@ class OWMosaicDisplay(OWWidget):
                     counts = [self.conditionalDict[attrVals + "-" + val] for val in values]
                     d = 2
                     r = OWCanvasRectangle(self.canvas, x0 - d, y0 - d, x1 - x0 + 2 * d + 1, y1 - y0 + 2 * d + 1, z=50)
-                    r.setPen(QPen(self.colorPalette[counts.index(max(counts))], 2, Qt.DashLine))
+                    r.setPen(QPen(colors[counts.index(max(counts))] if colors
+                                  else Qt.black, 2, Qt.DashLine))
 
         aprioriDist = ()
         pearson = None
@@ -855,8 +851,8 @@ class OWMosaicDisplay(OWWidget):
                     v = y1 - y0 - total
                 else:
                     v = ((y1 - y0) * val) / self.conditionalDict[attrVals]
-                OWCanvasRectangle(self.canvas, x0, y0 + total, x1 - x0, v, self.colorPalette[i],
-                                  self.colorPalette[i], z=-20)
+                OWCanvasRectangle(self.canvas, x0, y0 + total, x1 - x0, v,
+                                  colors[i], colors[i], z=-20)
                 total += v
 
             # show apriori boxes and lines
@@ -904,7 +900,8 @@ class OWMosaicDisplay(OWWidget):
                     x, y, w, h, xL1, yL1, xL2, yL2 = x0, y0 + total2, self._box_size, v2, x0, y0 + total1 + v1, x1, y0 + total1 + v1
 
                     if self.use_boxes:
-                        OWCanvasRectangle(self.canvas, x, y, w, h, self.colorPalette[i], self.colorPalette[i], z=20)
+                        OWCanvasRectangle(self.canvas, x, y, w, h,
+                                          colors[i], colors[i], z=20)
                     if i < len(clsValues) - 1 and self.show_apriori_distribution_lines:
                         OWCanvasLine(self.canvas, xL1, yL1, xL2, yL2, z=10, penColor=self._apriori_pen_color)
 
@@ -922,7 +919,8 @@ class OWMosaicDisplay(OWWidget):
                     counts = [self.conditionalSubsetDict[attrVals + "-" + val] for val in clsValues]
                     if sum(counts) == 1:
                         OWCanvasRectangle(self.canvas, x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5,
-                                          self.colorPalette[counts.index(1)], QColor(Qt.white), penWidth=2, z=-50,
+                                          colors[counts.index(1)],
+                                          QColor(Qt.white), penWidth=2, z=-50,
                                           penStyle=Qt.DashLine)
 
                     if self.show_subset_data_boxes:  # do we want to show exact distribution in the right edge of each cell
@@ -936,7 +934,7 @@ class OWMosaicDisplay(OWWidget):
                             else:
                                 v = ((y1 - y0) * val) / float(self.conditionalSubsetDict[attrVals])
                             OWCanvasRectangle(self.canvas, x1 - self._box_size, y0 + total, self._box_size, v,
-                                              self.colorPalette[i], self.colorPalette[i], z=15)
+                                              colors[i], colors[i], z=15)
                             total += v
 
         tooltipText = "Examples in this area have:<br>" + condition
@@ -976,7 +974,7 @@ class OWMosaicDisplay(OWWidget):
         else:
             names = (list(self.attributeValuesDict.get(data.domain.class_var.name, [])) or get_variable_values_sorted(
                 data.domain.class_var)) + [data.domain.class_var.name + ":"]
-            colors = [self.colorPalette[i] for i in range(len(data.domain.class_var.values))]
+            colors = [QColor(*col) for col in data.domain.class_var.colors]
 
         self.names = [OWCanvasText(self.canvas, name, alignment=Qt.AlignVCenter) for name in names]
         totalWidth = sum([text.boundingRect().width() for text in self.names])
@@ -1006,22 +1004,6 @@ class OWMosaicDisplay(OWWidget):
     #     sizeDlg = OWDlgs.OWChooseImageSizeDlg(self.canvas, parent=self)
     #     sizeDlg.exec_()
 
-    def setColors(self):
-        dlg = self.createColorDialog()
-        if dlg.exec_():
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selectedSchemaIndex
-            self.colorPalette = dlg.getDiscretePalette("discPalette")
-            if self.data and self.data.domain.has_discrete_class:
-                self.colorPalette.set_number_of_colors(len(self.data.domain.class_var.values))
-            self.updateGraph()
-
-    def createColorDialog(self):
-        c = ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette",
-                                DefaultRGBColors)  # defaultColorBrewerPalette)
-        c.setColorSchemas(self.color_settings, self.selected_schema_index)
-        return c
 
     # ########################################
     # cell/example selection

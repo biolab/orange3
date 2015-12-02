@@ -680,9 +680,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if attr_color != "" and attr_color != "(Same color)":
             color_index = self.attribute_name_index[attr_color]
             color_var = self.data_domain[attr_color]
+            colors = color_var.colors
             if color_var.is_discrete:
-                self.discrete_palette.set_number_of_colors(
-                    len(color_var.values))
+                self.discrete_palette = ColorPaletteGenerator(
+                    number_of_colors=len(colors), rgb_colors=colors)
+            else:
+                self.continuous_palette = ContinuousPaletteGenerator(*colors)
         return color_index
 
     def compute_colors_sel(self, keep_colors=False):
