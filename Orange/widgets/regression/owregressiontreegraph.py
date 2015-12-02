@@ -4,6 +4,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ClassValuesContextHandler
 from Orange.widgets.classify.owclassificationtreegraph import (OWTreeGraph,
                                                                TreeNode)
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 
 
 class RegressionTreeNode(TreeNode):
@@ -38,20 +39,22 @@ class OWRegressionTreeGraph(OWTreeGraph):
         box = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
         self.color_combo = gui.comboBox(
             box, self, "color_index", orientation=0, items=[],
-            label="Target class", callback=self.toggle_color,
+            label="Colors", callback=self.toggle_color,
             contentsLength=8)
         gui.separator(box)
-        gui.button(box, self, "Set Colors", callback=self.set_colors)
         gui.rubber(self.controlArea)
 
     def ctree(self, model=None):
-        super().ctree(model)
         if model is not None:
             self.color_combo.clear()
             self.color_combo.addItem("Default")
             self.color_combo.addItem("Instances in node")
             self.color_combo.addItem("Impurity")
             self.color_combo.setCurrentIndex(self.color_index)
+            self.scene.colorPalette = \
+                ContinuousPaletteGenerator(*model.domain.class_var.colors)
+        super().ctree(model)
+
 
     def update_node_info(self, node):
         distr = node.get_distribution()
