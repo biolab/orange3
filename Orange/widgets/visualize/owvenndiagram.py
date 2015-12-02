@@ -49,6 +49,9 @@ class OWVennDiagram(widget.OWWidget):
     inputhints = settings.Setting({})
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
+    #: Output 'unique' items only (one output row for every unique
+    #: instance `key`)
+    output_uniqueonly = settings.Setting(True)
     autocommit = settings.Setting(True)
 
     graph_name = "scene"
@@ -104,8 +107,10 @@ class OWVennDiagram(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Commit", "Auto commit")
+        box = gui.widgetBox(self.controlArea, "Output")
+        gui.checkBox(box, self, "output_uniqueonly", "Unique items only",
+                     callback=lambda: self.commit())
+        gui.auto_commit(box, self, "autocommit", "Commit", box=False)
 
         # Main area view
         self.scene = QGraphicsScene()
@@ -520,25 +525,25 @@ class OWVennDiagram(widget.OWWidget):
                     return _map[ComparableInstance(inst)]
 
             mask = numpy.array(mask, dtype=bool)
-            subset = Orange.data.Table(input.table.domain,
-                                       input.table[mask])
-            subset.ids = input.table.ids[mask]
+            subset = input.table[mask]
+
             if len(subset) == 0:
                 continue
 
             # add columns with source table id and set id
 
-            id_column = numpy.array([[instance_key(inst)] for inst in subset],
-                                    dtype=object)
-            source_names = numpy.array([[names[i]]] * len(subset),
-                                       dtype=object)
+            if self.output_uniqueonly:
+                id_column = numpy.array([[instance_key(inst)] for inst in subset],
+                                        dtype=object)
+                source_names = numpy.array([[names[i]]] * len(subset),
+                                           dtype=object)
 
-            subset = append_column(subset, "M", source_var, source_names)
-            subset = append_column(subset, "M", item_id_var, id_column)
+                subset = append_column(subset, "M", source_var, source_names)
+                subset = append_column(subset, "M", item_id_var, id_column)
 
             selected_subsets.append(subset)
 
-        if selected_subsets:
+        if selected_subsets and self.output_uniqueonly:
             data = table_concat(selected_subsets)
             # Get all variables which are not constant between the same
             # item set
@@ -550,6 +555,8 @@ class OWVennDiagram(widget.OWWidget):
             data = reshape_wide(data, varying, [item_id_var], [source_var])
             # remove the temporary item set id column
             data = drop_columns(data, [item_id_var])
+        elif selected_subsets:
+            data = table_concat(selected_subsets)
         else:
             data = None
 
