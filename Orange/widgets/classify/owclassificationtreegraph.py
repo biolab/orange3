@@ -9,10 +9,8 @@ from Orange.widgets.classify.owtreeviewer2d import *
 from Orange.data import Table
 from Orange.classification.tree import TreeClassifier
 from Orange.preprocess.transformation import Indicator
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 
-from Orange.widgets.settings import \
-    Setting, ContextSetting, ClassValuesContextHandler
+from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler
 from Orange.widgets import gui
 
 
@@ -32,26 +30,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.mainArea.layout().addWidget(self.scene_view)
         self.toggle_zoom_slider()
         self.scene.selectionChanged.connect(self.update_selection)
-
-        dlg = self.create_color_dialog()
-        self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
         self.inline_graph_report()
-
-    def set_colors(self):
-        dlg = self.create_color_dialog()
-        if dlg.exec_():
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_color_settings_index = dlg.selectedSchemaIndex
-            self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
-            self.scene.update()
-            self.toggle_node_color()
-
-    def create_color_dialog(self):
-        c = ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("colorPalette", "Discrete Palette")
-        c.setColorSchemas(self.color_settings,
-                          self.selected_color_settings_index)
-        return c
 
     def set_node_info(self):
         for node in self.scene.nodes():
@@ -108,6 +87,9 @@ class OWTreeGraph(OWTreeViewer2D):
                     Table.from_table(self.model.domain, self.dataset)
             else:
                 self.clf_dataset = self.dataset
+            class_var = self.domain.class_var
+            if class_var.is_discrete:
+                self.scene.colors = [QColor(*col) for col in class_var.colors]
             self.openContext(self.domain.class_var)
             self.root_node = self.walkcreate(self.tree, 0, None)
             self.info.setText(
@@ -203,7 +185,7 @@ class PieChart(QGraphicsRectItem):
     def paint(self, painter, option, widget=None):
         dist_sum = sum(self.dist)
         start_angle = 0
-        colors = self.scene().colorPalette
+        colors = self.scene().colors
         for i in range(len(self.dist)):
             angle = self.dist[i] * 16 * 360. / dist_sum
             if angle == 0:
@@ -462,21 +444,18 @@ class OWClassificationTreeGraph(OWTreeGraph):
 
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
-    color_settings = Setting(None)
-    selected_color_settings_index = Setting(0)
 
     inputs = [("Classification Tree", TreeClassifier, "ctree")]
     NODE = ClassificationTreeNode
 
     def __init__(self):
         super().__init__()
-        box = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
         self.target_combo = gui.comboBox(
-            box, self, "target_class_index", orientation=0, items=[],
-            label="Target class", callback=self.toggle_color,
-            contentsLength=8)
-        gui.separator(box)
-        gui.button(box, self, "Set Colors", callback=self.set_colors)
+            None, self, "target_class_index", orientation=0, items=[],
+            callback=self.toggle_color, contentsLength=8, addToLayout=False,
+            sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                   QSizePolicy.Fixed))
+        self.display_box.layout().addRow("Target class ", self.target_combo)
         gui.rubber(self.controlArea)
 
     def ctree(self, model=None):
@@ -509,17 +488,17 @@ class OWClassificationTreeGraph(OWTreeGraph):
                      format(text))
 
     def toggle_node_color(self):
-        palette = self.scene.colorPalette
+        colors = self.scene.colors
         for node in self.scene.nodes():
             distr = node.get_distribution()
             total = numpy.sum(distr)
             if self.target_class_index:
                 p = distr[self.target_class_index - 1] / total
-                color = palette[self.target_class_index].light(200 - 100 * p)
+                color = colors[self.target_class_index].light(200 - 100 * p)
             else:
                 modus = node.majority()
                 p = distr[modus] / (total or 1)
-                color = palette[int(modus)].light(400 - 300 * p)
+                color = colors[int(modus)].light(400 - 300 * p)
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 
