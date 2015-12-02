@@ -791,12 +791,12 @@ class OWLinearProjection(widget.OWWidget):
         if color_var is not None:
             color_data = self._get_data(color_var)
             if color_var.is_continuous:
-                color_data = plotutils.continuous_colors(color_data)
+                color_data = plotutils.continuous_colors(
+                    color_data, None, *color_var.colors)
             else:
-                palette = colorpalette.ColorPaletteGenerator(
-                    len(color_var.values))
                 color_data = plotutils.discrete_colors(
-                    color_data, len(color_var.values), palette=palette
+                    color_data, len(color_var.values),
+                    color_index=color_var.colors
                 )
             if mask is not None:
                 color_data = color_data[mask]
@@ -950,17 +950,15 @@ class OWLinearProjection(widget.OWWidget):
                 legend.setParentItem(self.viewbox)
             legend.setVisible(True)
 
-        palette = colorpalette.ColorPaletteGenerator(
-            len(color_var.values) if color_var is not None else 0)
         symbols = list(ScatterPlotItem.Symbols)
 
         if shape_var is color_var:
-            items = [(palette[i], symbols[i], name)
+            items = [(QtGui.QColor(color_var.colors[i]), symbols[i], name)
                      for i, name in enumerate(color_var.values)]
         else:
             colors = shapes = []
             if color_var is not None:
-                colors = [(palette[i], "o", name)
+                colors = [(QtGui.QColor(*color_var.colors[i]), "o", name)
                           for i, name in enumerate(color_var.values)]
             if shape_var is not None:
                 shapes = [(QtGui.QColor(Qt.gray),
@@ -1564,13 +1562,11 @@ class PlotPinchZoomTool(PlotTool):
 
 class plotutils:
     @ staticmethod
-    def continuous_colors(data, palette=None):
+    def continuous_colors(data, palette=None,
+                          low=(220, 220, 220), high=(0,0,0), through_black=False):
         if palette is None:
             palette = colorpalette.ContinuousPaletteGenerator(
-                QtGui.QColor(220, 220, 220),
-                QtGui.QColor(0, 0, 0),
-                False
-            )
+                QtGui.QColor(*low), QtGui.QColor(*high), through_black)
         amin, amax = numpy.nanmin(data), numpy.nanmax(data)
         span = amax - amin
         data = (data - amin) / (span or 1)
@@ -1584,11 +1580,11 @@ class plotutils:
         return colors
 
     @staticmethod
-    def discrete_colors(data, nvalues, palette=None):
-        if palette is None or nvalues >= palette.number_of_colors:
-            palette = colorpalette.ColorPaletteGenerator(nvalues)
-
-        color_index = palette.getRGB(numpy.arange(nvalues))
+    def discrete_colors(data, nvalues, palette=None, color_index=None):
+        if color_index is None:
+            if palette is None or nvalues >= palette.number_of_colors:
+                palette = colorpalette.ColorPaletteGenerator(nvalues)
+            color_index = palette.getRGB(numpy.arange(nvalues))
         # Unknown values as gray
         # TODO: This should already be a part of palette
         color_index = numpy.vstack((color_index, [[128, 128, 128]]))
