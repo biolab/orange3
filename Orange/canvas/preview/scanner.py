@@ -81,6 +81,7 @@ def scheme_svg_thumbnail(scheme_file):
     scheme_load(scheme, scheme_file, error_handler=errors.append)
 
     tmp_scene = scene.CanvasScene()
+    tmp_scene.set_channel_names_visible(False)
     tmp_scene.set_registry(global_registry())
     tmp_scene.set_scheme(scheme)
 
