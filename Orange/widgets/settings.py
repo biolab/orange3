@@ -505,12 +505,11 @@ class ContextHandler(SettingsHandler):
         setting.time = time.time()
         widget.context_settings.insert(0, setting)
 
-    @staticmethod
-    def add_context(widget, setting):
+    def add_context(self, widget, setting):
         """Add the context to the top of the list."""
         s = widget.context_settings
         s.insert(0, setting)
-        del s[len(s):]
+        del s[self.MAX_SAVED_CONTEXTS:]
 
     def clone_context(self, old_context, *args):
         """Construct a copy of the context settings suitable for the context
