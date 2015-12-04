@@ -304,6 +304,7 @@ class OWSelectAttributes(widget.OWWidget):
 
     settingsHandler = SelectAttributesDomainContextHandler()
     domain_role_hints = ContextSetting({})
+    auto_commit = Setting(False)
 
     def __init__(self):
         super().__init__()
@@ -414,13 +415,14 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_meta_button = gui.button(bbox, self, "Down",
             callback=partial(self.move_down, self.meta_attrs_view))
 
-        bbox = gui.widgetBox(self.controlArea, orientation="horizontal",
-                             addToLayout=False, margin=0)
-        gui.button(bbox, self, "Apply", callback=self.commit)
-        gui.button(bbox, self, "Reset", callback=self.reset)
+        autobox = gui.auto_commit(None, self, "auto_commit", "Apply", "Auto apply")
+        layout.addWidget(autobox, 3, 0, 1, 3)
+        gui.separator(autobox, 40)
+        reset = gui.button(autobox, self, "Reset", callback=self.reset)
+        autobox.layout().addWidget(self.report_button)
+        reset.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        self.report_button.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
 
-        layout.addWidget(bbox, 3, 0, 1, 3)
-        bbox.layout().addWidget(self.report_button)
         layout.setRowStretch(0, 4)
         layout.setRowStretch(1, 0)
         layout.setRowStretch(2, 2)
@@ -605,6 +607,7 @@ class OWSelectAttributes(widget.OWWidget):
                         [list(v.attributes.items()) for v in vars], [])
         items.extend(["%s=%s" % item for item in labels])
         items.extend(reduce(list.__add__, list(map(list, labels)), []))
+        self.commit()
 
         new = sorted(set(items))
         if new != self.original_completer_items:
