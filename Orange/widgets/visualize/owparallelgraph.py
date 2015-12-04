@@ -17,6 +17,7 @@ from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft, OWPlotItem
 from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleData
@@ -62,6 +63,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.attribute_indices = []
         self.valid_data = []
         self.groups = {}
+        self.colors = None
 
         self.selected_examples = []
         self.unselected_examples = []
@@ -104,8 +106,13 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.visualized_mid_labels = mid_labels
         self.add_relevant_selections(old_selection_conditions)
 
-        if self.data_has_discrete_class:
-            self.discrete_palette.set_number_of_colors(len(self.data_domain.class_var.values))
+        class_var = self.data_domain.class_var
+        if not class_var:
+            self.colors = None
+        elif class_var.is_discrete:
+            self.colors = class_var.colors
+        elif class_var.is_continuous:
+            self.colors = ContinuousPaletteGenerator(*class_var.colors)
 
         if self.group_lines:
             self.show_statistics = False
@@ -195,9 +202,11 @@ class OWParallelGraph(OWPlot, ScaleData):
     def select_color(self, row_index):
         if self.data_has_class:
             if self.data_has_continuous_class:
-                return self.continuous_palette.getRGB(self.data[row_index, self.data_class_index])
+                return self.continuous_palette.getRGB(
+                    self.data[row_index, self.data_class_index])
             else:
-                return self.discrete_palette.getRGB(self.data[row_index, self.data_class_index])
+                return self.colors[
+                    int(self.data[row_index, self.data_class_index])]
         else:
             return 0, 0, 0
 
@@ -235,7 +244,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                 nsigma2 = math.sqrt(sigma2) / diff[i + 1]
 
                 polygon = ParallelCoordinatePolygon(i, nmu1, nmu2, nsigma1, nsigma2, phi,
-                                                    tuple(self.discrete_palette.getRGB(j)))
+                                                    tuple(self.colors[j]))
                 polygon.attach(self)
 
         self.replot()
@@ -259,8 +268,9 @@ class OWParallelGraph(OWPlot, ScaleData):
                 self.legend().clear()
                 values = get_variable_values_sorted(self.data_domain.class_var)
                 for i, value in enumerate(values):
-                    self.legend().add_item(self.data_domain.class_var.name, value,
-                                           OWPoint(OWPoint.Rect, self.discrete_palette[i], self.point_width))
+                    self.legend().add_item(
+                        self.data_domain.class_var.name, value,
+                        OWPoint(OWPoint.Rect, QColor(*self.colors[i]), 10))
             else:
                 values = self.attr_values[self.data_domain.class_var.name]
                 decimals = self.data_domain.class_var.number_of_decimals
@@ -401,7 +411,7 @@ class OWParallelGraph(OWPlot, ScaleData):
                 for i in range(class_count):
                     class_value = sorted_class_values[i]
 
-                    color = QColor(self.discrete_palette[i])
+                    color = QColor(*self.colors[i])
                     color.setAlpha(self.alpha_value)
 
                     width = float(value_count[class_value] * 0.5) / float(max_count)

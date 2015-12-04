@@ -354,8 +354,6 @@ class OWMosaicDisplay(OWWidget):
                 self.interior_coloring_opts[CLASS_DISTRIBUTION])
         if self.data.domain.has_discrete_class:
             self.interior_coloring = CLASS_DISTRIBUTION
-            self.colorPalette.set_number_of_colors(
-                len(self.data.domain.class_var.values))
         else:
             self.interior_coloring = PEARSON
 
