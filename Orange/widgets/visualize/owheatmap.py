@@ -574,6 +574,7 @@ class OWHeatMap(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
+        self.inline_graph_report()
 
         # Scene with heatmap
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)
@@ -1524,6 +1525,16 @@ class OWHeatMap(widget.OWWidget):
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
+
+    def send_report(self):
+        self.report_items((
+            ("Columns", self.ColumnOrdering[self.sort_columns_idx][1].lower()),
+            ("Rows", self.RowOrdering[self.sort_rows_idx][1].lower()),
+            ("Row annotation",
+             self.annotation_index > 0 and
+             self.annotation_vars[self.annotation_index])
+        ))
+        self.report_plot(self.heatmap_scene)
 
 
 class GraphicsWidget(QtGui.QGraphicsWidget):

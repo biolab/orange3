@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from collections import OrderedDict
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import QGridLayout, QLabel
@@ -199,6 +200,31 @@ class OWSVMRegression(widget.OWWidget):
         mask = enabled[self.kernel_type]
         for spin, enabled in zip(self._kernel_params, mask):
             spin.setEnabled(enabled)
+
+    def send_report(self):
+        self.report_items((("Name", self.learner_name),))
+
+        items = OrderedDict()
+        if self.svrtype == 0:
+            items["SVM type"] = \
+                "ε-SVR, C={}, ε={}".format(self.epsilon_C, self.epsilon)
+        else:
+            items["SVM type"] = "ν-SVR, C={}, ν={}".format(self.nu_C, self.nu)
+        if self.kernel_type == 0:
+            items["Kernel"] = "Linear"
+        elif self.kernel_type == 1:
+            items["Kernel"] = "Polynomial, ({g:.4} x∙y + {c:.4})^{d}".format(
+                g=self.gamma, c=self.coef0, d=self.degree)
+        elif self.kernel_type == 2:
+            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(self.gamma)
+        else:
+            items["Kernel"] = "Sigmoid, tanh({g:.4} x∙y + {c:.4})".format(
+                g=self.gamma, c=self.coef0)
+        items["Numerical tolerance"] = "{:.6}".format(self.tol)
+        self.report_items("Model parameters", items)
+
+        if self.data:
+            self.report_data("Data", self.data)
 
 
 if __name__ == "__main__":

@@ -59,24 +59,31 @@ class OWClassificationTree(widget.OWWidget):
         gui.spin(box, self, "max_depth", 1, 1000,
                  label="Limit the depth to ", checked="limit_depth")
 
-        self.btn_apply = gui.button(self.controlArea, self, "&Apply",
+        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
+        box.layout().addWidget(self.report_button)
+        gui.separator(box, 20)
+        self.btn_apply = gui.button(box, self, "&Apply",
                                     callback=self.set_learner, disabled=0,
                                     default=True)
 
         self.set_learner()
 
-    def sendReport(self):
-        self.reportSettings(
+    def send_report(self):
+        from Orange.canvas.report import plural_w
+        self.report_items((("Name", self.model_name),))
+        self.report_items(
             "Model parameters",
-            [("Attribute selection", self.scores[self.attribute_score][0]),
+            [("Split selection", self.scores[self.attribute_score][0]),
              ("Pruning", ", ".join(s for s, c in (
-                 ("%i instances in leaves" % self.min_leaf,
-                  self.limit_min_leaf),
-                 ("%i instance in internal node" % self.min_internal,
-                  self.limit_min_internal),
-                 ("maximum depth %i" % self.max_depth, self.limit_depth)) if c)
-              or ": None")])
-        self.reportData(self.data)
+                 (plural_w("at least {number} instance{s} in leaves",
+                           self.min_leaf), self.limit_min_leaf),
+                 (plural_w("at least {number} instance{s} in internal nodes",
+                           self.min_internal), self.limit_min_internal),
+                 ("maximum depth {}".format(self.max_depth),
+                  self.limit_depth))
+              if c) or "None")])
+        if self.data:
+            self.report_data("Data", self.data)
 
     def set_learner(self):
         self.learner = self.LEARNER(

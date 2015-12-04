@@ -150,6 +150,14 @@ class OWMergeData(widget.OWWidget):
     def _invalidate(self):
         self.commit()
 
+    def send_report(self):
+        attr_a = self.selectedIndexA()
+        attr_b = self.selectedIndexB()
+        self.report_items((
+            ("Attribute A", attr_a and self.attrModelA[attr_a]),
+            ("Attribute B", attr_b and self.attrModelB[attr_b])
+        ))
+
 
 def selected_row(view):
     rows = view.selectionModel().selectedRows()

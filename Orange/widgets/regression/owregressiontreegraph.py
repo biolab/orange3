@@ -78,6 +78,16 @@ class OWRegressionTreeGraph(OWTreeGraph):
                 180 - li * 150))
         self.scene.update()
 
+    def send_report(self):
+        if not self.tree:
+            return
+        self.report_items((
+            ("Tree size", self.info.text()),
+            ("Edge widths",
+             ("Fixed", "Relative to root", "Relative to parent")[
+                 self.line_width_method])))
+        self.report_plot(self.scene)
+
 
 if __name__ == "__main__":
     import sys

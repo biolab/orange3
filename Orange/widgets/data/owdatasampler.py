@@ -48,6 +48,7 @@ class OWDataSampler(widget.OWWidget):
         super().__init__()
         self.data = None
         self.indices = None
+        self.sampled_instances = self.remaining_instances = None
 
         box = gui.widgetBox(self.controlArea, "Information")
         self.dataInfoLabel = gui.widgetLabel(box, 'No data on input.')
@@ -170,6 +171,7 @@ class OWDataSampler(widget.OWWidget):
     def commit(self):
         if self.data is None:
             sample = other = None
+            self.sampled_instances = self.remaining_instances = None
             self.outputInfoLabel.setText("")
         elif isinstance(self.data, SqlTable):
             other = None
@@ -182,6 +184,7 @@ class OWDataSampler(widget.OWWidget):
             if self.sql_dl:
                 sample.download_data()
                 sample = Table(sample)
+
         else:
             if self.indices is None or not self.use_seed:
                 self.updateindices()
@@ -200,6 +203,8 @@ class OWDataSampler(widget.OWWidget):
                 )
             sample = self.data[sample]
             other = self.data[remaining]
+            self.sampled_instances = len(sample)
+            self.remaining_instances = len(other)
         self.send("Data Sample", sample)
         self.send("Remaining Data", other)
 
@@ -247,6 +252,36 @@ class OWDataSampler(widget.OWWidget):
             self.indices = sample_fold_indices(
                 self.data, self.number_of_folds, stratified=stratified,
                 random_state=rnd)
+
+    def send_report(self):
+        if self.sampling_type == self.FixedProportion:
+            tpe = "Random sample with {} % of data".format(
+                self.sampleSizePercentage)
+        elif self.sampling_type == self.FixedSize:
+            if self.sampleSizeNumber == 1:
+                tpe = "Random data instance"
+            else:
+                tpe = "Random sample with {} data instances".format(
+                    self.sampleSizeNumber)
+                if self.replacement:
+                    tpe += ", with replacement"
+        elif self.sampling_type == self.CrossValidation:
+            tpe = "Fold {} of {}-fold cross-validation".format(
+                self.selectedFold, self.number_of_folds)
+        else:
+            tpe = "Undefined"  # should not come here at all
+        if self.stratify:
+            tpe += ", stratified (if possible)"
+        if self.use_seed:
+            tpe += ", deterministic"
+        items = [("Sampling type", tpe)]
+        if self.sampled_instances is not None:
+            items += [
+                ("Input", "{} instances".format(len(self.data))),
+                ("Sample", "{} instances".format(self.sampled_instances)),
+                ("Remaining", "{} instances".format(self.remaining_instances)),
+            ]
+        self.report_items(items)
 
 
 def sample_fold_indices(table, folds=10, stratified=False, random_state=None):

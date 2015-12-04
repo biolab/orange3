@@ -177,6 +177,8 @@ class OWDistributions(widget.OWWidget):
         self.plot.vb.sigResized.connect(self.update_views)
         self.plot_prob.setRange(yRange=[0,1])
 
+        self.inline_graph_report()
+
         def disable_mouse(plot):
             plot.setMouseEnabled(False, False)
             plot.setMenuEnabled(False)
@@ -511,6 +513,29 @@ class OWDistributions(widget.OWWidget):
         save_img = OWSave(data=self.plot,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def get_widget_name_extension(self):
+        if self.variable_idx >= 0:
+            return self.varmodel[self.variable_idx]
+
+    def send_report(self):
+        if self.variable_idx < 0:
+            return
+        self.report_plot(self.plot_prob)
+        text = "Distribution of '{}'".format(
+            self.varmodel[self.variable_idx])
+        if self.groupvar_idx:
+            group_var = self.groupvarmodel[self.groupvar_idx]
+            prob = self.cb_prob
+            indiv_probs = 0 < prob.currentIndex() < prob.count() - 1
+            if not indiv_probs or self.relative_freq:
+                text += " grouped by '{}'".format(group_var)
+                if self.relative_freq:
+                    text += " (relative frequencies)"
+            if indiv_probs:
+                text += "; probabilites for '{}={}'".format(
+                    group_var, prob.currentText())
+        self.report_caption(text)
 
 
 def dist_sum(D1, D2):

@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.evaluate.owrocanalysis import convex_hull
 from Orange.widgets.io import FileFormat
+from Orange.canvas import report
 
 
 CurvePoints = namedtuple(
@@ -228,6 +229,15 @@ class OWLiftCurve(widget.OWWidget):
         save_img = OWSave(data=self.plot,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def send_report(self):
+        if self.results is None:
+            return
+        caption = report.list_legend(self.classifiers_list_box,
+                                     self.selected_classifiers)
+        self.report_items((("Target class", self.target_cb.currentText()),))
+        self.report_plot(self.plot)
+        self.report_caption(caption)
 
 
 def lift_curve_from_results(results, target, clf_idx, subset=slice(0, -1)):

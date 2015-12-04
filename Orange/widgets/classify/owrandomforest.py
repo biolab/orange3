@@ -120,8 +120,10 @@ class OWRandomForest(widget.OWWidget):
 #         gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1,
 #                        label="Index of tree on the output")
 
-        gui.button(self.controlArea, self, "&Apply",
-                   callback=self.apply, default=True)
+        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
+        box.layout().addWidget(self.report_button)
+        gui.separator(box, 20)
+        gui.button(box, self, "&Apply", callback=self.apply, default=True)
 
         self.settingsChanged()
         self.apply()
@@ -172,6 +174,21 @@ class OWRandomForest(widget.OWWidget):
         self._random_state_spin.setEnabled(self.use_random_state)
         self._max_depth_spin.setEnabled(self.use_max_depth)
         self._max_leaf_nodes_spin.setEnabled(self.use_max_leaf_nodes)
+
+    def send_report(self):
+        self.report_items((("Name", self.learner_name),))
+        self.report_items(
+            "Model parameters",
+            (("Number of trees", self.n_estimators),
+             ("Maximal number of considered features",
+              self.max_features if self.use_max_features else "unlimited"),
+             ("Fixed random seed", self.use_random_state and self.random_state),
+             ("Maximal tree depth",
+              self.max_depth if self.use_max_depth else "unlimited"),
+             ("Stop splitting nodes with maximum instances",
+              self.max_leaf_nodes if self.use_max_leaf_nodes else "unlimited")))
+        if self.data:
+            self.report_data("Data", self.data)
 
 
 if __name__ == "__main__":

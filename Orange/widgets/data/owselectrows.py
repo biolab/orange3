@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from itertools import chain
 
 from PyQt4 import QtGui, Qt, QtCore
@@ -11,6 +12,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import \
     PerfectDomainContextHandler, Setting, ContextSetting
 from Orange.widgets.utils import vartype
+from Orange.canvas import report
 
 
 class OWSelectRows(widget.OWWidget):
@@ -40,7 +42,7 @@ class OWSelectRows(widget.OWWidget):
                              "is greater than", "is at least",
                              "is between", "is outside",
                              "is defined"],
-        DiscreteVariable: ["is", "is not", "in", "is defined"],
+        DiscreteVariable: ["is", "is not", "is one of", "is defined"],
         StringVariable: ["equals", "is not",
                          "is before", "is equal or before",
                          "is after", "is equal or after",
@@ -56,6 +58,7 @@ class OWSelectRows(widget.OWWidget):
         self.conditions = []
         self.last_output_conditions = None
         self.data = None
+        self.data_desc = self.match_desc = self.nonmatch_desc = None
 
         box = gui.widgetBox(self.controlArea, 'Conditions', stretch=100)
         self.cond_list = QtGui.QTableWidget(box)
@@ -232,7 +235,7 @@ class OWSelectRows(widget.OWWidget):
         if oper == oper_combo.count() - 1:
             self.cond_list.removeCellWidget(oper_combo.row, 2)
         elif var.is_discrete:
-            if oper_combo.currentText() == 'in':
+            if oper_combo.currentText() == "is one of":
                 if selected_values:
                     lc = [x for x in list(selected_values)]
                 button = DropDownToolButton(self, var, lc)
@@ -280,8 +283,10 @@ class OWSelectRows(widget.OWWidget):
             data is None or
             len(data.domain.variables) + len(data.domain.metas) > 100)
         if not data:
+            self.data_desc = None
             self.commit()
             return
+        self.data_desc = report.describe_data_brief(data)
         self.conditions = []
         try:
             self.openContext(data)
@@ -378,6 +383,9 @@ class OWSelectRows(widget.OWWidget):
         self.send("Matching Data", matching_output)
         self.send("Unmatched Data", non_matching_output)
 
+        self.match_desc = report.describe_data_brief(matching_output)
+        self.nonmatch_desc = report.describe_data_brief(non_matching_output)
+
         self.update_info(matching_output, self.data_out_rows)
 
     def update_info(self, data, lab1):
@@ -390,24 +398,77 @@ class OWSelectRows(widget.OWWidget):
             lab1.setText("~%s row%s, %s variable%s" % (sp(data.approx_len()) +
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
-    def sendReport(self):
-        self.reportSettings("Output", [("Remove unused values/attributes",
-                                        self.purge_attributes),
-                                       ("Remove unused classes",
-                                        self.purge_classes)])
-        text = "<table>\n<th>Attribute</th><th>Condition</th><th>Value</th>/n"
-        for i, cond in enumerate(self.conditions):
-            if cond.type == "OR":
-                text += "<tr><td span=3>\"OR\"</td></tr>\n"
-            else:
-                text += "<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n" % \
-                        (cond.varName, repr(cond.operator), cond.val1)
+    def send_report(self):
+        if not self.data:
+            self.report_paragraph("No data.")
+            return
 
-        text += "</table>"
-        import OWReport
-        self.reportSection("Conditions")
-        self.reportRaw(OWReport.reportTable(self.cond_list))
-#        self.reportTable("Conditions", self.criteriaTable)
+        pdesc = None
+        describe_domain = False
+        for d in (self.data_desc, self.match_desc, self.nonmatch_desc):
+            if not d or not d["Data instances"]:
+                continue
+            ndesc = d.copy()
+            del ndesc["Data instances"]
+            if pdesc is not None and pdesc != ndesc:
+                describe_domain = True
+            pdesc = ndesc
+
+        conditions = []
+        domain = self.data.domain
+        for attr_name, oper, values in self.conditions:
+            attr_index = domain.index(attr_name)
+            attr = domain[attr_index]
+            names = self.operator_names[type(attr)]
+            name = names[oper]
+            if oper == len(names) - 1:
+                conditions.append("{} {}".format(attr, name))
+            elif attr.is_discrete:
+                if name == "is one of":
+                    if len(values) == 1:
+                        conditions.append("{} is {}".format(
+                            attr, attr.values[values[0] - 1]))
+                    elif len(values) > 1:
+                        conditions.append("{} is {} or {}".format(
+                            attr,
+                            ", ".join(attr.values[v - 1] for v in values[:-1]),
+                            attr.values[values[-1] - 1]))
+                else:
+                    if not (values and values[0]):
+                        continue
+                    value = values[0] - 1
+                    conditions.append("{} {} {}".
+                                      format(attr, name, attr.values[value]))
+            else:
+                if len(values) == 1:
+                    conditions.append("{} {} {}".
+                                      format(attr, name, *values))
+                else:
+                    conditions.append("{} {} {} and {}".
+                                      format(attr, name, *values))
+        items = OrderedDict()
+        if describe_domain:
+            items.update(self.data_desc)
+        else:
+            items["Instances"] = self.data_desc["Data instances"]
+        items["Condition"] = " AND ".join(conditions) or "no conditions"
+        self.report_items("Data", items)
+        if describe_domain:
+            self.report_items("Matching data", self.match_desc)
+            self.report_items("Non-matching data", self.nonmatch_desc)
+        else:
+            match_inst = \
+                bool(self.match_desc) and \
+                self.match_desc["Data instances"]
+            nonmatch_inst = \
+                bool(self.nonmatch_desc) and \
+                self.nonmatch_desc["Data instances"]
+            self.report_items(
+                "Output",
+                (("Matching data",
+                  "{} instances".format(match_inst) if match_inst else "None"),
+                 ("Non-matching data",
+                  nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
 
 
 class CheckBoxPopup(QtGui.QWidget):

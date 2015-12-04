@@ -329,6 +329,7 @@ class OWDistanceMap(widget.OWWidget):
 
         gui.auto_commit(self.controlArea, self, "autocommit",
                         "Send data", "Auto send is on")
+        self.inline_graph_report()
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)
@@ -639,6 +640,17 @@ class OWDistanceMap(widget.OWWidget):
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.clear()
+
+    def send_report(self):
+        annot = self.annot_combo.currentText()
+        if self.annotation_idx <= 1:
+            annot = annot.lower()
+        self.report_items((
+            ("Sorting", self.sorting_cb.currentText().lower()),
+            ("Annotations", annot)
+        ))
+        if self.matrix is not None:
+            self.report_plot(self.grid_widget)
 
 
 class TextList(GraphicsSimpleTextList):

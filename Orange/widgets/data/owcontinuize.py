@@ -34,7 +34,7 @@ class OWContinuize(widget.OWWidget):
     autosend = Setting(True)
 
     multinomial_treats = (
-        ("Target or First value as base", Continuize.FirstAsBase),
+        ("Target or first value as base", Continuize.FirstAsBase),
         ("Most frequent value as base", Continuize.FrequentAsBase),
         ("One attribute per value", Continuize.Indicators),
         ("Ignore multinomial attributes", Continuize.RemoveMultinomial),
@@ -125,15 +125,14 @@ class OWContinuize(widget.OWWidget):
         else:
             self.send("Data", None)
 
-    def sendReport(self):
-        self.reportData(self.data, "Input data")
-        self.reportSettings(
+    def send_report(self):
+        self.report_items(
             "Settings",
             [("Multinominal attributes",
               self.multinomial_treats[self.multinomial_treatment][0]),
              ("Continuous attributes",
               self.continuous_treats[self.continuous_treatment][0]),
-             ("Class", self.class_treats[self.class_tereatment][0]),
+             ("Class", self.class_treats[self.class_treatment][0]),
              ("Value range", self.value_ranges[self.zero_based])])
 
 

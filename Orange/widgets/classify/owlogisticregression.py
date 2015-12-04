@@ -41,6 +41,8 @@ class OWLogisticRegression(widget.OWWidget):
     fit_intercept = True
     intercept_scaling = 1.0
 
+    penalty_types = ("Lasso (L1)", "Ridge (L2)")
+
     def __init__(self):
         super().__init__()
 
@@ -52,7 +54,7 @@ class OWLogisticRegression(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, box=True)
         gui.comboBox(box, self, "penalty_type", label="Regularization type: ",
-                     items=("Lasso (L1)", "Ridge (L2)"),
+                     items=self.penalty_types,
                      orientation="horizontal", addSpace=4)
         gui.widgetLabel(box, "Strength:")
         box2 = gui.widgetBox(gui.indentedBox(box), orientation="horizontal")
@@ -117,6 +119,14 @@ class OWLogisticRegression(widget.OWWidget):
         self.send("Learner", learner)
         self.send("Classifier", classifier)
 
+    def send_report(self):
+        self.report_items((("Name", self.learner_name),))
+        self.report_items("Model parameters", (
+            ("Regularization", "{}, C={}".format(
+                self.penalty_types[self.penalty_type], self.C_s[self.C_index])),
+        ))
+        if self.data:
+            self.report_data("Data", self.data)
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])

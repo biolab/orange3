@@ -173,7 +173,9 @@ class OWFile(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.domain = None
-
+        self.data = None
+        self.recent_files = [fn for fn in self.recent_files
+                             if os.path.exists(fn)]
         self.loaded_file = ""
         self._relocate_recent_files()
 
@@ -411,7 +413,7 @@ class OWFile(widget.OWWidget):
             progress.finish()
 
         if data is None:
-            self.dataReport = None
+            self.data = None
         else:
             domain = data.domain
             text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
@@ -443,18 +445,34 @@ class OWFile(widget.OWWidget):
             try: del self.recent_paths[self.recent_paths.index(rp, 1)]
             except ValueError: pass
 
-            self.dataReport = self.prepareDataReport(data)
+            self.data = data
         self.send("Data", data)
 
-    def sendReport(self):
-        dataReport = getattr(self, "dataReport", None)
-        if dataReport:
-            self.reportSettings(
-                "File",
-                [("File name", self.loaded_file),
-                 ("Format", self.formats.get(os.path.splitext(
-                     self.loaded_file)[1], "unknown format"))])
-            self.reportData(self.dataReport)
+    def get_widget_name_extension(self):
+        _, name = os.path.split(self.loaded_file)
+        return os.path.splitext(name)[0]
+
+    def send_report(self):
+        if self.data is None:
+            self.report_paragraph("File", "No file.")
+            return
+
+        home = os.path.expanduser("~")
+        if self.loaded_file.startswith(home):
+            # os.path.join does not like ~
+            name = "~/" + self.loaded_file[len(home):].lstrip("/").lstrip("\\")
+        else:
+            name = self.loaded_file
+        self.report_items("File", [("File name", name),
+                                   ("Format", self._get_ext_name(name))])
+        self.report_data("Data", self.data)
+
+    @staticmethod
+    def _get_ext_name(filename):
+        try:
+            return FileFormat.names[os.path.splitext(filename)[1]]
+        except KeyError:
+            return "unknown format"
 
     def workflowEnvChanged(self, key, value, oldvalue):
         if key == "basedir":

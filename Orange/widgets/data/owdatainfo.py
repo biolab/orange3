@@ -1,9 +1,11 @@
+from collections import OrderedDict
 import threading
 
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
+from Orange.canvas import report
 try:
     from Orange.data.sql.table import SqlTable
 except ImportError:
@@ -39,7 +41,7 @@ class OWDataInfo(widget.OWWidget):
             gui.label(bo, self, "%%(%s)s" % name)
 
         # ensure the widget has some decent minimum width.
-        self.targets = "Discrete class with 123 values"
+        self.targets = "Discrete outcome with 123 values"
         self.layout().activate()
         # NOTE: The minimum width is set on the 'contained' widget and
         # not `self`. The layout will set a fixed size to `self` taking
@@ -49,6 +51,7 @@ class OWDataInfo(widget.OWWidget):
         self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 
         self.targets = ""
+        self.data_desc = None
 
     def data(self, data):
         def n_or_none(i):
@@ -70,6 +73,7 @@ class OWDataInfo(widget.OWWidget):
             self.data_set_size = "No data"
             self.features = self.targets = self.meta_attributes = "None"
             self.location = ""
+            self.data_desc = None
             return
 
         sparses = [s for s, m in (("features", data.X_density),
@@ -94,36 +98,45 @@ class OWDataInfo(widget.OWWidget):
         if not domain.attributes:
             self.features = "None"
         else:
+            disc_features = count(domain.attributes, DiscreteVariable)
+            cont_features = count(domain.attributes, ContinuousVariable)
             self.features = pack_table((
-                ("Discrete", count_n(domain.attributes, DiscreteVariable)),
-                ("Continuous", count_n(domain.attributes, ContinuousVariable)))
-            )
+                ("Discrete", n_or_none(disc_features)),
+                ("Numeric", n_or_none(cont_features))
+            ))
 
         if not domain.metas:
             self.meta_attributes = "None"
         else:
+            disc_metas = count(domain.metas, DiscreteVariable)
+            cont_metas = count(domain.metas, ContinuousVariable)
+            str_metas = count(domain.metas, StringVariable)
             self.meta_attributes = pack_table((
-                ("Discrete", count_n(domain.metas, DiscreteVariable)),
-                ("Continuous", count_n(domain.metas, ContinuousVariable)),
-                ("String", count_n(domain.metas, StringVariable))))
+                ("Discrete", n_or_none(disc_metas)),
+                ("Numeric", n_or_none(cont_metas)),
+                ("Textual", n_or_none(str_metas))))
 
         class_var = domain.class_var
         if class_var:
             if class_var.is_continuous:
-                self.targets = "Continuous target variable"
+                self.targets = "Numeric target variable"
             else:
-                self.targets = "Discrete class with %i values" % \
+                self.targets = "Discrete outcome with %i values" % \
                                len(class_var.values)
         elif domain.class_vars:
-            dis = count_n(domain.class_vars, DiscreteVariable)
-            con = count_n(domain.class_vars, ContinuousVariable)
-            if not con:
-                self.targets = "Multitarget data,\n%i discrete targets" % dis
-            elif not dis:
-                self.targets = "Multitarget data,\n%i continuous targets" % con
+            disc_class = count(domain.class_vars, DiscreteVariable)
+            cont_class = count(domain.class_vars, ContinuousVariable)
+            if not cont_class:
+                self.targets = "Multitarget data,\n%i discrete targets" % \
+                               n_or_none(disc_class)
+            elif not disc_class:
+                self.targets = "Multitarget data,\n%i numeric targets" % \
+                               n_or_none(cont_class)
             else:
                 self.targets = "<p>Multi target data</p>\n" + pack_table(
-                    (("Discrete", dis), ("Continuous", con)))
+                    (("Discrete", disc_class), ("Numeric", cont_class)))
+
+        self.data_desc = dd = OrderedDict()
 
         if SqlTable is not None and isinstance(data, SqlTable):
             connection_string = ' '.join(
@@ -132,9 +145,39 @@ class OWDataInfo(widget.OWWidget):
                 if value is not None)
             self.location = "Table '%s', using connection:\n%s" % (
                 data.table_name, connection_string)
+            dd["Rows"] = data.approx_len()
         else:
             self.location = "Data is stored in memory"
+            dd["Rows"] = len(data)
 
+        def join_if(items):
+            return ", ".join(s.format(n) for s, n in items if n)
+
+        dd["Features"] = len(domain.attributes) and join_if((
+            ("{} discrete", disc_features),
+            ("{} numeric", cont_features)
+        ))
+        if domain.class_var:
+            name = domain.class_var.name
+            if domain.class_var.is_discrete:
+                dd["Target"] = "discrete outcome '{}'".format(name)
+            else:
+                dd["Target"] = "numeric target '{}'".format(name)
+        elif domain.class_vars:
+            tt = ""
+            if disc_class:
+                tt += report.plural("{number} discrete outcome{s}", disc_class)
+            if cont_class:
+                tt += report.plural("{number} numeric target{s}", cont_class)
+        dd["Meta attributes"] = len(domain.metas) > 0 and join_if((
+            ("{} discrete", disc_metas),
+            ("{} numeric", cont_metas),
+            ("{} textual", str_metas)
+        ))
+
+    def send_report(self):
+        if self.data_desc:
+            self.report_items(self.data_desc)
 
 if __name__ == "__main__":
     a = QtGui.QApplication([])

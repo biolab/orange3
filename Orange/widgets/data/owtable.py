@@ -770,6 +770,13 @@ class OWDataTable(widget.OWWidget):
         cols = sorted(set(ind.column() for ind in indexes))
         return rows, cols
 
+    @staticmethod
+    def _get_model(view):
+        model = view.model()
+        while isinstance(model, QtGui.QAbstractProxyModel):
+            model = model.sourceModel()
+        return model
+
     def commit(self):
         """
         Commit/send the current selected row/column selection.
@@ -777,10 +784,7 @@ class OWDataTable(widget.OWWidget):
         selected_data = other_data = None
         view = self.tabs.currentWidget()
         if view and view.model() is not None:
-            model = view.model()
-            while isinstance(model, QtGui.QAbstractProxyModel):
-                model = model.sourceModel()
-
+            model = self._get_model(view)
             table = model.source  # The input data table
 
             # Selections of individual instances are not implemented
@@ -854,6 +858,14 @@ class OWDataTable(widget.OWWidget):
             QtGui.QApplication.clipboard().setMimeData(
                 mime, QtGui.QClipboard.Clipboard
             )
+
+    def send_report(self):
+        view = self.tabs.currentWidget()
+        if not view or not view.model():
+            return
+        model = self._get_model(view)
+        self.report_data_brief(model.source)
+        self.report_table(view)
 
 # Table Summary
 

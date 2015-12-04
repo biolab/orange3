@@ -35,6 +35,7 @@ class OWTreeGraph(OWTreeViewer2D):
 
         dlg = self.create_color_dialog()
         self.scene.colorPalette = dlg.getDiscretePalette("colorPalette")
+        self.inline_graph_report()
 
     def set_colors(self):
         dlg = self.create_color_dialog()
@@ -172,6 +173,17 @@ class OWTreeGraph(OWTreeViewer2D):
         else:
             data = None
         self.send("Data", data)
+
+    def send_report(self):
+        if not self.tree:
+            return
+        self.report_items((
+            ("Tree size", self.info.text()),
+            ("Edge widths",
+             ("Fixed", "Relative to root", "Relative to parent")[
+                 self.line_width_method]),
+            ("Target class", self.target_combo.currentText())))
+        self.report_plot(self.scene)
 
 
 class PieChart(QGraphicsRectItem):

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+from collections import OrderedDict
+
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 
@@ -114,8 +116,10 @@ class OWSVMClassification(widget.OWWidget):
         gui.spin(box, self, "max_iter", 0, 1e6, 100,
         label="Iteration Limit", checked="limit_iter")
 
-        gui.button(self.controlArea, self, "&Apply",
-                   callback=self.apply, default=True)
+        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
+        box.layout().addWidget(self.report_button)
+        gui.separator(box, 20)
+        gui.button(box, self, "&Apply", callback=self.apply, default=True)
 
         self._on_kernel_changed()
 
@@ -179,6 +183,31 @@ class OWSVMClassification(widget.OWWidget):
         for spin, enabled in zip(self._kernel_params, mask):
             spin.setEnabled(enabled)
 
+    def send_report(self):
+        self.report_items((("Name", self.learner_name),))
+
+        items = OrderedDict()
+        if self.svmtype == 0:
+            items["SVM type"] = "C-SVM, C={}".format(self.C)
+        else:
+            items["SVM type"] = "ν-SVM, ν={}".format(self.nu)
+        if self.kernel_type == 0:
+            items["Kernel"] = "Linear"
+        elif self.kernel_type == 1:
+            items["Kernel"] = "Polynomial, ({g:.4} x∙y + {c:.4})^{d}".format(
+                g=self.gamma, c=self.coef0, d=self.degree)
+        elif self.kernel_type == 2:
+            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(self.gamma)
+        else:
+            items["Kernel"] = "Sigmoid, tanh({g:.4} x∙y + {c:.4})".format(
+                g=self.gamma, c=self.coef0)
+        items["Numerical tolerance"] = "{:.6}".format(self.tol)
+        items["Iteration limt"] = \
+            self.max_iter if self.limit_iter else "unlimited"
+        self.report_items("Model parameters", items)
+
+        if self.data:
+            self.report_data("Data", self.data)
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])

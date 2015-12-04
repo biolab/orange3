@@ -11,6 +11,7 @@ from sklearn.neighbors import NearestNeighbors
 import Orange
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable
+from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
@@ -177,6 +178,7 @@ class OWScatterPlot(OWWidget):
 
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
                         "Send Selection")
+        self.inline_graph_report()
 
         def zoom(s):
             """Zoom in/out by factor `s`."""
@@ -445,33 +447,34 @@ class OWScatterPlot(OWWidget):
         self.vizrank.hide()
         super().hideEvent(he)
 
-    def sendReport(self):
-        self.startReport(
-            "%s [%s - %s]" % (self.windowTitle(), self.attr_x, self.attr_y))
-        self.reportSettings(
-            "Visualized attributes",
-            [("X", self.attr_x),
-             ("Y", self.attr_y),
-             self.graph.attr_color and ("Color", self.graph.attr_color),
-             self.graph.attr_label and ("Label", self.graph.attr_label),
-             self.graph.attr_shape and ("Shape", self.graph.attr_shape),
-             self.graph.attr_size and ("Size", self.graph.attr_size)])
-        self.reportSettings(
-            "Settings",
-            [("Symbol size", self.graph.point_width),
-             ("Opacity", self.graph.alpha_value),
-             ("Jittering", self.graph.jitter_size),
-             ("Jitter continuous attributes",
-              gui.YesNo[self.graph.jitter_continuous])])
-        self.reportSection("Graph")
-        self.reportImage(self.graph.save_to_file, QSize(400, 400))
-
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
         save_img = OWSave(data=self.graph.plot_widget.plotItem,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
+
+    def get_widget_name_extension(self):
+        if self.data is not None:
+            return "{} vs {}".format(self.combo_value(self.cb_attr_x),
+                                     self.combo_value(self.cb_attr_y))
+
+    def send_report(self):
+        disc_attr = False
+        if self.data:
+            domain = self.data.domain
+            disc_attr = domain[self.attr_x].is_discrete or \
+                        domain[self.attr_y].is_discrete
+        caption = report.render_items_vert((
+             ("Color", self.combo_value(self.cb_attr_color)),
+             ("Label", self.combo_value(self.cb_attr_label)),
+             ("Shape", self.combo_value(self.cb_attr_shape)),
+             ("Size", self.combo_value(self.cb_attr_size)),
+             ("Jittering", (self.graph.jitter_continuous or disc_attr) and
+              self.graph.jitter_size)))
+        self.report_plot(self.graph.plot_widget)
+        if caption:
+            self.report_caption(caption)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
