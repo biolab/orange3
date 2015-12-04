@@ -5,16 +5,15 @@ Naive Bayes Learner
 
 from  Orange.data import Table
 from Orange.classification.naive_bayes import NaiveBayesLearner, NaiveBayesModel
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 
 
-class OWNaiveBayes(widget.OWWidget):
+class OWNaiveBayes(OWProvidesLearner, widget.OWWidget):
     name = "Naive Bayes"
     description = "Naive Bayesian classifier."
     icon = "icons/NaiveBayes.svg"
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", NaiveBayesLearner),
                ("Classifier", NaiveBayesModel)]
 
@@ -56,15 +55,10 @@ class OWNaiveBayes(widget.OWWidget):
         else:
             self.send("Classifier", None)
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = NaiveBayesLearner
 
     def apply(self):
-        learner = NaiveBayesLearner(
+        learner = self.LEARNER(
             preprocessors=self.preprocessors
         )
         learner.name = self.learner_name

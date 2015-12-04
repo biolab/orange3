@@ -5,19 +5,18 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification import logistic_regression as lr
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWLogisticRegression(widget.OWWidget):
+class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
     name = "Logistic Regression"
     description = "Logistic regression classification algorithm with " \
                   "LASSO (L1) or ridge (L2) regularization."
     icon = "icons/LogisticRegression.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", lr.LogisticRegressionLearner),
                ("Classifier", lr.LogisticRegressionClassifier)]
 
@@ -85,16 +84,11 @@ class OWLogisticRegression(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = lr.LogisticRegressionLearner
 
     def apply(self):
         penalty = ["l1", "l2"][self.penalty_type]
-        learner = lr.LogisticRegressionLearner(
+        learner = self.LEARNER(
             penalty=penalty,
             dual=self.dual,
             tol=self.tol,

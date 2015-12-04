@@ -11,20 +11,19 @@ from Orange.data import Table, Domain
 from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
                                       LinearRegressionLearner, PolynomialLearner)
 from Orange.regression import Learner
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWUnivariateRegression(widget.OWWidget):
+class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
     name = "Univariate Regression"
     description = "Univariate regression with polynomial expansion."
     icon = "icons/UnivariateRegression.svg"
 
     inputs = [("Data", Table, "set_data", widget.Default),
-              ("Preprocessor", Preprocess, "set_preprocessor"),
-              ("Learner", Learner, "set_learner")]
+              ("Learner", Learner, "set_learner")] + OWProvidesLearner.inputs
     outputs = [("Learner", Learner),
                ("Predictor", LinearModel)]
 
@@ -144,12 +143,6 @@ class OWUnivariateRegression(widget.OWWidget):
             else:
                 self.y_var_index = min(max(0, nvars-1), nvars - 1)
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-
     def set_learner(self, learner):
         self.learner = learner
 
@@ -187,13 +180,15 @@ class OWUnivariateRegression(widget.OWWidget):
         self.plotview.addItem(self.plot_item)
         self.plotview.replot()
 
+    LEARNER = LinearRegressionLearner
+
     def apply(self):
         learner = self.learner
         predictor = None
 
         if self.data is not None:
             if self.learner is None:
-                learner = LinearRegressionLearner(preprocessors=self.preprocessors)
+                learner = self.LEARNER(preprocessors=self.preprocessors)
 
             attributes = self.x_var_model[self.x_var_index]
             class_var = self.y_var_model[self.y_var_index]

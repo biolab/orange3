@@ -6,18 +6,17 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.regression.linear import SGDRegressionLearner, LinearModel
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWSGDRegression(widget.OWWidget):
+class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
     name = "Stochastic Gradient Descent"
     description = "Stochastic gradient descent algorithm for regression."
     icon = "icons/SGDRegression.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", SGDRegressionLearner),
                ("Predictor", LinearModel)]
 
@@ -137,12 +136,7 @@ class OWSGDRegression(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = SGDRegressionLearner
 
     def apply(self):
         loss = ["squared_loss", "huber", "epsilon_insensitive", "squared_epsilon_insensitive"][self.loss_function]
@@ -160,7 +154,7 @@ class OWSGDRegression(widget.OWWidget):
             n_iter=self.n_iter,
         )
 
-        learner = SGDRegressionLearner(
+        learner = self.LEARNER(
             preprocessors=self.preprocessors, **common_args)
         learner.name = self.learner_name
 

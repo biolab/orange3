@@ -7,17 +7,16 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.regression import SVRLearner, NuSVRLearner, SklModel
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWSVMRegression(widget.OWWidget):
+class OWSVMRegression(OWProvidesLearner, widget.OWWidget):
     name = "SVM Regression"
     description = "Support vector machine regression algorithm."
     icon = "icons/SVMRegression.svg"
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", SVRLearner, widget.Default),
                ("Predictor", SklModel),
                ("Support vectors", Table)]
@@ -151,12 +150,7 @@ class OWSVMRegression(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = SVRLearner  # OWProvidesLearner uses this
 
     def apply(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]

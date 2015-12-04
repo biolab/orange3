@@ -4,21 +4,20 @@
 from Orange.data import Table
 from  Orange.regression.knn import KNNRegressionLearner
 from Orange.regression import SklModel
-from Orange.preprocess.preprocess import Preprocess
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWKNNRegression(widget.OWWidget):
+class OWKNNRegression(OWProvidesLearner, widget.OWWidget):
     name = "Nearest Neighbors"
     description = "k-nearest neighbours regression algorithm."
     icon = "icons/kNearestNeighbours.svg"
     priority = 20
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", KNNRegressionLearner),
                ("Predictor", SklModel)]
 
@@ -63,19 +62,13 @@ class OWKNNRegression(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        """Set preprocessor to apply on training data."""
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = KNNRegressionLearner
 
     def apply(self):
         """
         Construct the learner and apply it on the training data if available.
         """
-        learner = KNNRegressionLearner(
+        learner = self.LEARNER(
             n_neighbors=self.n_neighbors,
             metric=self.metrics[self.metric_index],
             preprocessors=self.preprocessors

@@ -1,19 +1,18 @@
 from Orange.data import Table
 from Orange.classification.majority import MajorityLearner, ConstantModel
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 
 
-class OWMajority(widget.OWWidget):
+class OWMajority(OWProvidesLearner, widget.OWWidget):
     name = "Majority"
     description = "Classification to the most frequent class " \
                   "from the training set."
     priority = 20
     icon = "icons/Majority.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", MajorityLearner),
                ("Classifier", ConstantModel)]
 
@@ -44,15 +43,10 @@ class OWMajority(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = MajorityLearner
 
     def apply(self):
-        learner = MajorityLearner(
+        learner = self.LEARNER(
             preprocessors=self.preprocessors
         )
         learner.name = self.learner_name
