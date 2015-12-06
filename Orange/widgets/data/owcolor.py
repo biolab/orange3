@@ -296,10 +296,10 @@ class OWColor(widget.OWWidget):
     def storeSpecificSettings(self):
         # Store the colors that were changed -- but not others
         self.current_context.disc_data = \
-            [(var.name, var.values, "_colors" in var.attributes and var.colors)
+            [(var.name, var.values, "colors" in var.attributes and var.colors)
              for var in self.disc_colors]
         self.current_context.cont_data = \
-            [(var.name, "_colors" in var.attributes and var.colors)
+            [(var.name, "colors" in var.attributes and var.colors)
              for var in self.cont_colors]
 
     def retrieveSpecificSettings(self):

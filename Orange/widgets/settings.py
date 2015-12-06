@@ -444,6 +444,8 @@ class ContextHandler(SettingsHandler):
         global context (i.e. `widget.context_settings is not
         self.global_contexts`); this happens when the widget was initialized by
         an instance-specific data that was passed to :obj:`initialize`."""
+        self.settings_from_widget(widget)
+
         super().update_defaults(widget)
         globs = self.global_contexts
         if widget.context_settings is not globs:
