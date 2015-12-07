@@ -337,8 +337,7 @@ class OWTestLearners(widget.OWWidget):
         Run/evaluate the learners.
         """
         self.warning([1, 2])
-        self.error(2)
-
+        self.error([2, 4])
         if self.data is None:
             return
 
@@ -377,6 +376,10 @@ class OWTestLearners(widget.OWWidget):
 
         try:
             if self.resampling == OWTestLearners.KFold:
+                if len(self.data) < self.k_folds:
+                    self.error(4, "Number of folds exceeds the data size")
+                    return
+
                 warnings = []
                 results = Orange.evaluation.CrossValidation(
                     self.data, learners, k=self.k_folds, random_state=rstate,
@@ -458,8 +461,8 @@ class OWTestLearners(widget.OWWidget):
         target_index = None
         if self.data is not None:
             class_var = self.data.domain.class_var
-            if class_var.is_discrete and \
-                    self.class_selection != self.TARGET_AVERAGE:
+            if self.data.domain.has_discrete_class and \
+                            self.class_selection != self.TARGET_AVERAGE:
                 target_index = class_var.values.index(self.class_selection)
         else:
             class_var = None
