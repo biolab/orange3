@@ -1220,8 +1220,8 @@ class OWHeatMap(widget.OWWidget):
 
     def __update_margins(self):
         """
-        Update dendrogram and text list widgets margins to include the
-        space for average stripe.
+        Update horizontal dendrogram and text list widgets margins to
+        include the space for average stripe.
         """
         def offset(hm):
             if hm.show_averages:
@@ -1230,36 +1230,22 @@ class OWHeatMap(widget.OWWidget):
                 return 0
 
         hm_row = self.heatmap_widget_grid[0]
-        hm_col = next(zip(*self.heatmap_widget_grid))
         dendrogram_col = self.col_dendrograms
-        dendrogram_row = self.row_dendrograms
 
         col_annot = zip(self.col_annotation_widgets_top,
                         self.col_annotation_widgets_bottom)
-        row_annot = self.row_annotation_widgets
 
         for hm, annot, dendrogram in zip(hm_row, col_annot, dendrogram_col):
             left_offset = offset(hm)
             if dendrogram is not None:
-                width = hm.size().width()
-                col_count = hm.heatmap_data().shape[1]
-                half_col = (width - left_offset) / col_count / 2
-                _, top, _, bottom = dendrogram.getContentsMargins()
+                _, top, right, bottom = dendrogram.getContentsMargins()
                 dendrogram.setContentsMargins(
-                    left_offset + half_col, top, half_col, bottom)
+                    left_offset, top, right, bottom)
 
             _, top, right, bottom = annot[0].getContentsMargins()
             annot[0].setContentsMargins(left_offset, top, right, bottom)
             _, top, right, bottom = annot[1].getContentsMargins()
             annot[1].setContentsMargins(left_offset, top, right, bottom)
-
-        for hm, annot, dendrogram in zip(hm_col, row_annot, dendrogram_row):
-            if dendrogram is not None:
-                height = hm.size().height()
-                row_count = hm.heatmap_data().shape[0]
-                half_row = height / row_count / 2
-                left, _, right, _ = dendrogram.getContentsMargins()
-                dendrogram.setContentsMargins(left, half_row, right, half_row)
 
     def __update_clustering_enable_state(self, data):
         def enable(item, state):
