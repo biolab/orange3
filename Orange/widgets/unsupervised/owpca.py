@@ -35,6 +35,8 @@ class OWPCA(widget.OWWidget):
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
     normalize = settings.Setting(True)
+    maxp = settings.Setting(20)
+    axis_labels = settings.Setting(10)
 
     want_graph = True
 
@@ -48,6 +50,7 @@ class OWPCA(widget.OWWidget):
         self._cumulative = None
         self._line = False
 
+        # Components Selection
         box = gui.widgetBox(self.controlArea, "Components Selection")
         form = QFormLayout()
         box.layout().addLayout(form)
@@ -69,6 +72,7 @@ class OWPCA(widget.OWWidget):
         form.addRow("Components", self.components_spin)
         form.addRow("Variance covered", self.variance_spin)
 
+        # Incremental learning
         self.sampling_box = gui.widgetBox(self.controlArea,
                                           "Incremental learning")
 
@@ -98,9 +102,15 @@ class OWPCA(widget.OWWidget):
 
         self.sampling_box.setVisible(remotely)
 
+        # Options
         self.options_box = gui.widgetBox(self.controlArea, "Options")
         gui.checkBox(self.options_box, self, "normalize", "Normalize data",
                      callback=self.fit)
+        self.maxp_spin = gui.spin(
+            self.options_box, self, "maxp", 1, 100,
+            label="Show only first", callback=self._setup_plot,
+            keyboardTracking=False
+        )
 
         self.controlArea.layout().addStretch()
 
@@ -205,21 +215,21 @@ class OWPCA(widget.OWWidget):
             return
         self._variance_ratio = self._pca.explained_variance_ratio_
         self._cumulative = numpy.cumsum(self._variance_ratio)
-        self.plot.clear()
         self._setup_plot()
         self._transformed = None
         self.commit()
 
     def _setup_plot(self):
+        self.plot.clear()
         explained_ratio = self._variance_ratio
         explained = self._cumulative
-        (p, ) = explained.shape
+        p = min(len(self._variance_ratio), self.maxp)
 
-        self.plot.plot(numpy.arange(p), explained_ratio,
+        self.plot.plot(numpy.arange(p), explained_ratio[:p],
                        pen=pg.mkPen(QColor(Qt.red), width=2),
                        antialias=True,
                        name="Variance")
-        self.plot.plot(numpy.arange(p), explained,
+        self.plot.plot(numpy.arange(p), explained[:p],
                        pen=pg.mkPen(QColor(Qt.darkYellow), width=2),
                        antialias=True,
                        name="Cumulative Variance")
@@ -234,8 +244,7 @@ class OWPCA(widget.OWWidget):
 
         self.plot.addItem(self._line)
         self.plot.setRange(xRange=(0.0, p - 1), yRange=(0.0, 1.0))
-        axis = self.plot.getAxis("bottom")
-        axis.setTicks([[(i, "PC{}".format(i + 1)) for i in range(p)]])
+        self._update_axis()
 
     def _on_cut_changed(self, line):
         # cut changed by means of a cut line over the scree plot.
@@ -304,6 +313,12 @@ class OWPCA(widget.OWWidget):
 
     def _invalidate_selection(self):
         self.commit()
+
+    def _update_axis(self):
+        p = min(len(self._variance_ratio), self.maxp)
+        axis = self.plot.getAxis("bottom")
+        d = max((p-1)//(self.axis_labels-1), 1)
+        axis.setTicks([[(i, str(i+1)) for i in range(0, p, d)]])
 
     def commit(self):
         transformed = components = None
