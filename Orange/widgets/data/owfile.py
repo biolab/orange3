@@ -40,8 +40,9 @@ class RecentPath:
 
     def __eq__(self, other):
         return (self.abspath == other.abspath or
-                self.prefix == other.prefix and
-                self.relpath == other.relpath)
+                (self.prefix is not None and self.relpath is not None and
+                 self.prefix == other.prefix and
+                 self.relpath == other.relpath))
 
     @staticmethod
     def create(path, searchpaths):
@@ -136,6 +137,13 @@ class RecentPath:
     @property
     def dirname(self):
         return os.path.dirname(self.abspath)
+
+    def __repr__(self):
+        return ("{0.__class__.__name__}(abspath={0.abspath!r}, "
+                "prefix={0.prefix!r}, relpath={0.relpath!r}, "
+                "title={0.title!r})").format(self)
+
+    __str__ = __repr__
 
 
 class OWFile(widget.OWWidget):
