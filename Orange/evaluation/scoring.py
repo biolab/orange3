@@ -76,14 +76,16 @@ class Precision(Score):
     __wraps__ = skl_metrics.precision_score
 
     def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.precision_score)
+        return self.from_predicted(results, skl_metrics.precision_score,
+                                   average="weighted")
 
 
 class Recall(Score):
     __wraps__ = skl_metrics.recall_score
 
     def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.recall_score)
+        return self.from_predicted(results, skl_metrics.recall_score,
+                                   average="weighted")
 
 
 class F1(Score):
