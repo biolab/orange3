@@ -145,6 +145,7 @@ class OWLinearRegression(widget.OWWidget):
                 names = ["intercept"] + \
                     [attr.name for attr in predictor.domain.attributes]
                 coef_table = Table(domain, list(zip(coefs, names)))
+                coef_table.name = "coefficients"
 
         self.send("Linear Regression", learner)
         self.send("Model", predictor)
