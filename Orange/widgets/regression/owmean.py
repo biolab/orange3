@@ -2,16 +2,15 @@ from Orange.widgets import widget, settings, gui
 
 from Orange.data import Table
 from Orange.regression.mean import MeanLearner, MeanModel
-from Orange.preprocess.preprocess import Preprocess
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 
 
-class OWMean(widget.OWWidget):
+class OWMean(OWProvidesLearner, widget.OWWidget):
     name = "Mean Learner"
     description = "Regression to the average class value from the training set."
     icon = "icons/Mean.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", MeanLearner), ("Predictor", MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")
@@ -36,15 +35,10 @@ class OWMean(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = MeanLearner
 
     def apply(self):
-        learner = MeanLearner(preprocessors=self.preprocessors)
+        learner = self.LEARNER(preprocessors=self.preprocessors)
         learner.name = self.learner_name
         predictor = None
         if self.data is not None:

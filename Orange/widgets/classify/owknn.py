@@ -1,17 +1,16 @@
 from Orange.data import Table
 from Orange.classification import KNNLearner, SklModel
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWKNNLearner(widget.OWWidget):
+class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
     name = "Nearest Neighbors"
     description = "k-nearest neighbors classification algorithm."
     icon = "icons/KNN.svg"
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", KNNLearner), ("Classifier", SklModel)]
 
     want_main_area = False
@@ -50,15 +49,10 @@ class OWKNNLearner(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = KNNLearner
 
     def apply(self):
-        learner = KNNLearner(
+        learner = self.LEARNER(
             n_neighbors=self.n_neighbors,
             metric=self.metrics[self.metric_index],
             preprocessors=self.preprocessors

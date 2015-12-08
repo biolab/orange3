@@ -7,19 +7,18 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification.svm import SVMLearner, SVMClassifier, NuSVMLearner
-from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWSVMClassification(widget.OWWidget):
+class OWSVMClassification(OWProvidesLearner, widget.OWWidget):
     name = "SVM"
     description = "Support vector machines classifier with standard " \
                   "selection of kernels."
     icon = "icons/SVM.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", SVMLearner, widget.Default),
                ("Classifier", SVMClassifier),
                ("Support vectors", Table)]
@@ -132,12 +131,7 @@ class OWSVMClassification(widget.OWWidget):
         if data is not None:
             self.apply()
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
+    LEARNER = SVMLearner  # OWProvidesLearner uses this
 
     def apply(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]

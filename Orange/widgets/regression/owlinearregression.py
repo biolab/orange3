@@ -7,20 +7,19 @@ from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearModel, LinearRegressionLearner,
     RidgeRegressionLearner)
-from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWLinearRegression(widget.OWWidget):
+class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
     name = "Linear Regression"
     description = "A linear regression algorithm with optional L1 and L2 " \
                   "regularization."
     icon = "icons/LinearRegression.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Linear Regression", LinearRegressionLearner),
                ("Model", LinearModel),
                ("Coefficients", Table)]
@@ -83,12 +82,6 @@ class OWLinearRegression(widget.OWWidget):
     def set_data(self, data):
         self.data = data
 
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-
     def handleNewSignals(self):
         self.commit()
 
@@ -103,6 +96,11 @@ class OWLinearRegression(widget.OWWidget):
     def _alpha_changed(self):
         self._set_alpha_label()
         self.commit()
+
+    LEARNER = LinearRegressionLearner  # OWProvidesLearner uses this
+
+    def apply(self):
+        return self.commit()
 
     def commit(self):
         alpha = self.alphas[self.alpha_index]

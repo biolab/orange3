@@ -1,19 +1,18 @@
 from Orange.data import Table
-from Orange.preprocess.preprocess import Preprocess
 from Orange.classification.tree import TreeLearner, TreeClassifier
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWClassificationTree(widget.OWWidget):
+class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
     name = "Classification Tree"
     icon = "icons/ClassificationTree.svg"
     description = "Classification tree algorithm with forward pruning."
     priority = 30
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
 
     outputs = [
         ("Learner", TreeLearner),
@@ -23,6 +22,7 @@ class OWClassificationTree(widget.OWWidget):
     resizing_enabled = False
 
     LEARNER = TreeLearner
+
     model_name = Setting("Classification Tree")
     attribute_score = Setting(0)
     limit_min_leaf = Setting(True)
@@ -63,10 +63,10 @@ class OWClassificationTree(widget.OWWidget):
         box.layout().addWidget(self.report_button)
         gui.separator(box, 20)
         self.btn_apply = gui.button(box, self, "&Apply",
-                                    callback=self.set_learner, disabled=0,
+                                    callback=self.apply, disabled=0,
                                     default=True)
 
-        self.set_learner()
+        self.apply()
 
     def send_report(self):
         from Orange.canvas.report import plural_w
@@ -85,7 +85,7 @@ class OWClassificationTree(widget.OWWidget):
         if self.data:
             self.report_data("Data", self.data)
 
-    def set_learner(self):
+    def apply(self):
         self.learner = self.LEARNER(
             criterion=self.scores[self.attribute_score][1],
             max_depth=self.max_depth if self.limit_depth else None,
@@ -116,14 +116,7 @@ class OWClassificationTree(widget.OWWidget):
         if data is not None and data.domain.class_var is None:
             self.error(0, "Data has no target variable")
             self.data = None
-        self.set_learner()
-
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.set_learner()
+        self.apply()
 
 
 if __name__ == "__main__":

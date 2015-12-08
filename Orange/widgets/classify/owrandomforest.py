@@ -5,20 +5,19 @@ from PyQt4.QtGui import QLabel, QGridLayout
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.preprocess.preprocess import Preprocess
 from Orange.classification.random_forest import (RandomForestLearner,
                                                  RandomForestClassifier)
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
 
 
-class OWRandomForest(widget.OWWidget):
+class OWRandomForest(OWProvidesLearner, widget.OWWidget):
     name = "Random Forest Classification"
     description = "Random forest classification algorithm."
     icon = "icons/RandomForest.svg"
 
-    inputs = [("Data", Table, "set_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", RandomForestLearner),
                ("Model", RandomForestClassifier)]
 
@@ -26,6 +25,7 @@ class OWRandomForest(widget.OWWidget):
     resizing_enabled = False
 
     LEARNER = RandomForestLearner
+
     learner_name = settings.Setting("RF Classification Learner")
     n_estimators = settings.Setting(10)
     max_features = settings.Setting(5)
@@ -134,13 +134,6 @@ class OWRandomForest(widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
-        self.apply()
 
     def apply(self):
         common_args = dict()
