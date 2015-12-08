@@ -239,6 +239,9 @@ class TextAnnotation(Annotation):
         self.__textItem.document().contentsChanged.disconnect(
             self.textEdited
         )
+        cursor = self.__textItem.textCursor()
+        cursor.clearSelection()
+        self.__textItem.setTextCursor(cursor)
         self.editingFinished.emit()
 
     def __onDocumentSizeChanged(self, size):
