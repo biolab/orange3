@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 
 import Orange
-from Orange.preprocess import Continuize
+from Orange.preprocess import Continuize, Normalize
 from Orange.projection import PCA, SparsePCA, RandomizedPCA, IncrementalPCA
 
 
@@ -75,7 +75,6 @@ class TestPCA(unittest.TestCase):
         pc1_ipca = pca_model.partial_fit(data[1::2]).components_[0]
         self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 4)
 
-
     def test_compute_value(self):
         iris = Orange.data.Table('iris')
         pca = PCA(n_components=2)(iris)
@@ -106,3 +105,13 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_almost_equal(pca.X, pca2.X)
         np.testing.assert_almost_equal(pca.X, pca3.X)
 
+    def test_PCA_scorer(self):
+        data = Orange.data.Table('iris')
+        pca = PCA(preprocessors=[Normalize()])
+        scores = pca.score_data(data)
+        self.assertEqual(len(scores), len(data.domain.attributes))
+        self.assertEqual(['petal length', 'petal width'],
+                         sorted([data.domain.attributes[i].name
+                                 for i in np.argsort(scores)[-2:]]))
+        self.assertEqual([round(s, 4) for s in scores],
+                         [0.5224, 0.2634, 0.5813, 0.5656])

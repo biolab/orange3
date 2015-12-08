@@ -1,3 +1,4 @@
+import numpy as np
 import sklearn.decomposition as skl_decomposition
 
 try:
@@ -10,14 +11,24 @@ except ImportError:
         pass
 
 import Orange.data
+from Orange.data import Variable
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
 from Orange.projection import SklProjector, Projection
+from Orange.preprocess.score import LearnerScorer
 
 __all__ = ["PCA", "SparsePCA", "RandomizedPCA", "IncrementalPCA"]
 
 
-class PCA(SklProjector):
+class _FeatureScorerMixin(LearnerScorer):
+    feature_type = Variable
+    component = 0
+
+    def score(self, model):
+        return np.abs(model.components_[self.component])
+
+
+class PCA(SklProjector, _FeatureScorerMixin):
     __wraps__ = skl_decomposition.PCA
     name = 'pca'
 

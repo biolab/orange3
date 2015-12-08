@@ -7,7 +7,7 @@ import pyqtgraph as pg
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
-import Orange.projection
+from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.io import FileFormat
 
@@ -26,7 +26,8 @@ class OWPCA(widget.OWWidget):
 
     inputs = [("Data", Table, "set_data")]
     outputs = [("Transformed data", Table),
-               ("Components", Table)]
+               ("Components", Table),
+               ("PCA", PCA)]
 
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
@@ -49,6 +50,9 @@ class OWPCA(widget.OWWidget):
         self._variance_ratio = None
         self._cumulative = None
         self._line = False
+        self._pca_projector = PCA()
+        self._pca_projector.component = 0
+        self._pca_preprocessors = PCA.preprocessors
 
         # Components Selection
         box = gui.widgetBox(self.controlArea, "Components Selection")
@@ -130,6 +134,7 @@ class OWPCA(widget.OWWidget):
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
 
         self.mainArea.layout().addWidget(self.plot)
+        self._update_normalize()
 
     def update_model(self):
         self.get_model()
@@ -182,8 +187,7 @@ class OWPCA(widget.OWWidget):
             if self.normalize:
                 data = Normalize(data)
             self.sampling_box.setVisible(False)
-            pca = Orange.projection.PCA()
-            pca = pca(data)
+            pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
             cumulative = numpy.cumsum(variance_ratio)
             self.components_spin.setRange(0, len(cumulative))
@@ -344,6 +348,7 @@ class OWPCA(widget.OWWidget):
 
         self.send("Transformed data", transformed)
         self.send("Components", components)
+        self.send("PCA", self._pca_projector)
 
     def send_report(self):
         if self.data is None:
