@@ -146,6 +146,7 @@ class Columns:
 # noinspection PyPep8Naming
 class Table(MutableSequence, Storage):
     __file__ = None
+    name = "untitled"
 
     @property
     def columns(self):
