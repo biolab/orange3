@@ -48,9 +48,10 @@ def dendrogram_layout(tree, expand_leaves=False):
         cluster = node.value
         if node.is_leaf:
             if expand_leaves:
-                start, end = float(cluster.first), float(cluster.last - 1)
+                start = float(cluster.first) + 0.5
+                end = float(cluster.last - 1) + 0.5
             else:
-                start = end = leaf_idx
+                start = end = leaf_idx + 0.5
                 leaf_idx += 1
             center = (start + end) / 2.0
             cluster_geometry[node] = (start, center, end)
@@ -235,7 +236,7 @@ class DendrogramWidget(QGraphicsWidget):
         self._cluster_parent = {}
         self.__hoverHighlightEnabled = hoverHighlightEnabled
         self.__selectionMode = selectionMode
-        self.setContentsMargins(5, 5, 5, 5)
+        self.setContentsMargins(0, 0, 0, 0)
         self.set_root(root)
 
     def clear(self):
@@ -599,9 +600,9 @@ class DendrogramWidget(QGraphicsWidget):
         crect = self.contentsRect()
         leaf_count = len(list(leaves(self._root)))
         if self.orientation in [Left, Right]:
-            drect = QSizeF(self._root.value.height, leaf_count - 1)
+            drect = QSizeF(self._root.value.height, leaf_count)
         else:
-            drect = QSizeF(self._root.value.last - 1, self._root.value.height)
+            drect = QSizeF(leaf_count, self._root.value.height)
 
         transform = QTransform().scale(
             crect.width() / drect.width(),
@@ -911,11 +912,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
         self.dendrogram.selectionEdited.connect(self._selection_edited)
 
-        fm = self.fontMetrics()
-        self.dendrogram.setContentsMargins(
-            5, fm.lineSpacing() / 2,
-            5, fm.lineSpacing() / 2
-        )
         self.labels = GraphicsSimpleTextList()
         self.labels.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self.labels.setAlignment(Qt.AlignLeft)
