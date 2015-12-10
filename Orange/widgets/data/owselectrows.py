@@ -32,7 +32,8 @@ class OWSelectRows(widget.OWWidget):
     settingsHandler = PerfectDomainContextHandler()
     conditions = ContextSetting([])
     update_on_change = Setting(True)
-    purge_attributes = Setting(True)
+    purge_attributes_unused = Setting(True)
+    purge_attributes_const = Setting(True)
     purge_classes = Setting(True)
     auto_commit = Setting(True)
 
@@ -96,9 +97,13 @@ class OWSelectRows(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
         box_setting = gui.widgetBox(box, 'Purging')
-        self.cb_pa = gui.checkBox(
-            box_setting, self, "purge_attributes", "Remove unused features",
-            callback=self.conditions_changed)
+        self.cb_pa_u = gui.checkBox(
+            box_setting, self, "purge_attributes_unused",
+            "Remove unused features", callback=self.conditions_changed)
+        gui.separator(box_setting, height=1)
+        self.cb_pa_c = gui.checkBox(
+            box_setting, self, "purge_attributes_const",
+            "Remove constant features", callback=self.conditions_changed)
         gui.separator(box_setting, height=1)
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
@@ -275,7 +280,8 @@ class OWSelectRows(widget.OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.data = data
-        self.cb_pa.setEnabled(not isinstance(data, SqlTable))
+        self.cb_pa_u.setEnabled(not isinstance(data, SqlTable))
+        self.cb_pa_c.setEnabled(not isinstance(data, SqlTable))
         self.cb_pc.setEnabled(not isinstance(data, SqlTable))
         self.remove_all_rows()
         self.add_button.setDisabled(data is None)
@@ -366,12 +372,13 @@ class OWSelectRows(widget.OWWidget):
             #     matching_output.name = self.data.name
             #     non_matching_output.name = self.data.name
 
-            purge_attrs = self.purge_attributes
+            purge_attrs_u = self.purge_attributes_unused
+            purge_attrs_c = self.purge_attributes_const
             purge_classes = self.purge_classes
-            if (purge_attrs or purge_classes) and \
+            if (purge_attrs_u or purge_attrs_c or purge_classes) and \
                     not isinstance(self.data, SqlTable):
-                attr_flags = sum([Remove.RemoveConstant * purge_attrs,
-                                  Remove.RemoveUnusedValues * purge_attrs])
+                attr_flags = sum([Remove.RemoveConstant * purge_attrs_c,
+                                  Remove.RemoveUnusedValues * purge_attrs_u])
                 class_flags = sum([Remove.RemoveConstant * purge_classes,
                                   Remove.RemoveUnusedValues * purge_classes])
                 # same settings used for attributes and meta features
