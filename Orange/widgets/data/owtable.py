@@ -667,9 +667,9 @@ class OWDataTable(widget.OWWidget):
             while isinstance(model, QtGui.QAbstractProxyModel):
                 model = model.sourceModel()
             data = model.source
-            if self.color_by_class and data.domain.class_var:
-                color_schema = [
-                    QtGui.QColor(*c) for c in data.domain.class_var.colors]
+            class_var = data.domain.class_var
+            if self.color_by_class and class_var and class_var.is_discrete:
+                color_schema = [QtGui.QColor(*c) for c in class_var.colors]
             else:
                 color_schema = None
             if self.show_distributions:
