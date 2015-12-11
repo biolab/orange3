@@ -51,11 +51,11 @@ INSTALL_REQUIRES = (
     'setuptools',
     'numpy>=1.9.0',
     'scipy',
-    'scikit-learn>=0.16',
-    'chardet>=2.3.0',
     'bottlechest',
-    'xlrd>=0.9.2',
-    'docutils',
+    'scikit-learn>=0.16',
+    'chardet>=2.3.0',   # encoding detection
+    'xlrd>=0.9.2',      # reading Excel files
+    'docutils',         # parsing docs for addon installation
 )
 
 if sys.version_info < (3, 4):
