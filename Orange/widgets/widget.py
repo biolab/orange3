@@ -644,18 +644,30 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     def information(self, id=0, text=None):
         """
         Set/clear a widget information message (for `id`).
+
+        Args:
+            id (int or list): The id of the message
+            text (str): Text of the message.
         """
         self.setState("Info", id, text)
 
     def warning(self, id=0, text=""):
         """
         Set/clear a widget warning message (for `id`).
+
+        Args:
+            id (int or list): The id of the message
+            text (str): Text of the message.
         """
         self.setState("Warning", id, text)
 
     def error(self, id=0, text=""):
         """
         Set/clear a widget error message (for `id`).
+
+        Args:
+            id (int or list): The id of the message
+            text (str): Text of the message.
         """
         self.setState("Error", id, text)
 
@@ -927,7 +939,6 @@ class Message(object):
         An url to open when a user clicks a 'Learn more' button.
 
     .. seealso:: :const:`OWWidget.UserAdviceMessages`
-
     """
     #: QStyle.SP_MessageBox* pixmap enums repeated for easier access
     Question = QStyle.SP_MessageBoxQuestion
