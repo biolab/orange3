@@ -1,11 +1,13 @@
 """
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
+from contextlib import contextmanager
 import functools
+from itertools import islice
+import logging
 import re
 import threading
-from contextlib import contextmanager
-from itertools import islice
+from time import time
 
 import numpy as np
 
@@ -17,9 +19,11 @@ from .. import domain, variable, table, instance, filter,\
     DiscreteVariable, ContinuousVariable, StringVariable
 from Orange.data.sql import filter as sql_filter
 
+
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
 DEFAULT_SAMPLE_TIME = 1
+sql_log = logging.getLogger('sql_log')
 
 
 class SqlTable(table.Table):
@@ -694,8 +698,10 @@ class SqlTable(table.Table):
         connection = self.connection_pool.getconn()
         cur = connection.cursor()
         try:
+            t = time()
             cur.execute(query, param)
             yield cur
+            sql_log.info("{:.2f} ms: {}".format(1000 * (time() - t), query))
         finally:
             connection.commit()
             self.connection_pool.putconn(connection)

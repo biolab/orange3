@@ -8,11 +8,11 @@ import sys
 import gc
 import re
 import logging
+from logging.handlers import RotatingFileHandler
 import optparse
 import pickle
 import shlex
 import shutil
-import signal
 
 import pkg_resources
 
@@ -79,6 +79,13 @@ def fix_win_pythonw_std_stream():
         if sys.stdout is not None and sys.stderr.fileno() < 0:
             sys.stderr = open(os.devnull, "wb")
 
+def make_sql_logger():
+    sql_log = logging.getLogger('sql_log')
+    sql_log.setLevel(logging.DEBUG)
+    handler = RotatingFileHandler(os.path.join(config.log_dir(), 'sql.log'),
+                                  maxBytes=1e7, backupCount=2)
+    sql_log.addHandler(handler)
+
 
 def main(argv=None):
     if argv is None:
@@ -140,6 +147,9 @@ def main(argv=None):
     root_level = min(levels[options.log_level], logging.INFO)
     rootlogger = logging.getLogger(canvas.__name__)
     rootlogger.setLevel(root_level)
+
+    # Initialize SQL query and execution time logger (in SqlTable)
+    make_sql_logger()
 
     # Standard output stream handler at the requested level
     stream_hander = logging.StreamHandler()
