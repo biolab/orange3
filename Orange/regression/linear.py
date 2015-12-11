@@ -4,9 +4,11 @@ import sklearn.linear_model as skl_linear_model
 import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
 
-from Orange.regression import Learner, Model, SklLearner, SklModel
 from Orange.data import Variable, ContinuousVariable
+from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 from Orange.preprocess.score import LearnerScorer
+from Orange.regression import Learner, Model, SklLearner, SklModel
+
 
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "LassoRegressionLearner", "SGDRegressionLearner",
@@ -102,6 +104,9 @@ class SGDRegressionLearner(LinearRegressionLearner):
 
 class PolynomialLearner(Learner):
     name = 'poly learner'
+    preprocessors = [Continuize(),
+                     RemoveNaNColumns(),
+                     SklImpute(force=False)]
 
     def __init__(self, learner, degree=1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
