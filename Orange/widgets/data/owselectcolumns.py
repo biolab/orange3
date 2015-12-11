@@ -486,7 +486,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.meta_attrs[:] = []
             self.available_attrs[:] = []
 
-        self.commit()
+        self.unconditional_commit()
 
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.
