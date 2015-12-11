@@ -603,10 +603,7 @@ class OWSelectAttributes(widget.OWWidget):
         """
         vars = list(self.available_attrs)
         items = [var.name for var in vars]
-        labels = reduce(list.__add__,
-                        [list(v.attributes.items()) for v in vars], [])
-        items.extend(["%s=%s" % item for item in labels])
-        items.extend(reduce(list.__add__, list(map(list, labels)), []))
+        items += ["%s=%s" % item for v in vars for item in v.attributes.items()]
         self.commit()
 
         new = sorted(set(items))
