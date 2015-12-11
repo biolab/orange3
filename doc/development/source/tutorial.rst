@@ -5,34 +5,34 @@ Getting Started
 ###############
 
 
-Orange Widgets are components in and Orange Canvas visual programming
-environment. They represent some self contained functionality and
-provide graphical user interface (GUI). Widgets communicate, and
+Orange Widgets are components in Orange Canvas, a visual programming
+environment of Orange. They represent some self contained functionalities and
+provide a graphical user interface (GUI). Widgets communicate with each other and
 pass objects through communication channels to interact with other
 widgets.
 
 On this page, we will start with some simple essentials, and then
-show how to build a simple widget that will be ready to run within
+show you how to build a simple widget that will be ready to run within
 Orange Canvas.
 
 
 Prerequisites
 *************
 
-Each Orange widget belongs to a category and within a
-category has an associated priority. Opening Orange Canvas, a visual
+Each Orange widget belongs to a category and has an associated priority
+within that category. When opening Orange Canvas, a visual
 programming environment that comes with Orange, widgets are listed in
 a toolbox on the left:
 
 .. image:: images/widgettoolbox.png
 
 Each widget has a name description and a set of input/outputs
-(referred to as widget's meta description).
+(referred to as the widget's meta description).
 
 
 This meta data is discovered at Orange Canvas application startup
-leveraging setuptools/distribute and it's `entry points`_ protocol.
-Orange Canvas looks for widgets using a ``orange.widgets`` entry point.
+leveraging setuptools/distribute and its `entry points`_ protocol.
+Orange Canvas looks for widgets using an ``orange.widgets`` entry point.
 
 .. _`entry points`: http://pythonhosted.org/distribute/setuptools.html#dynamic-discovery-of-services-and-plugins
 
@@ -43,7 +43,7 @@ Defining a widget
 :class:`~Orange.widgets.widget.OWWidget` is the base class of a widget
 in the Orange Canvas workflow.
 
-Every widget in the canvas framework needs to define it's meta data.
+Every widget in the canvas framework needs to define its meta data.
 This includes the widget's name and text descriptions and more
 importantly its input/output specification. This is done by
 defining constants in the widget's class namespace.
@@ -70,16 +70,16 @@ a single integer specified by the user.
         outputs = [("Number", int)]
 
 
-By design principle, in an interface Orange widgets are most
+By design principle, Orange widgets in an interface are most
 often split to control and main area. Control area appears on the left
 and should include any controls for settings or options that your widget
 will use. Main area would most often include a graph, table or some
 drawing that will be based on the inputs to the widget and current
 options/setting in the control area.
-:class:`~Orange.widgets.widget.OWWidget` make these two areas available
+:class:`~Orange.widgets.widget.OWWidget` makes these two areas available
 through its attributes :obj:`self.controlArea` and :obj:`self.mainArea`.
 Notice that while it would be nice for all widgets to have this common
-visual look, you can use these areas in any way you want to, even
+visual look, you can use these areas in any way you want, even
 disregarding one and composing your widget completely unlike the
 others in Orange.
 
@@ -104,7 +104,7 @@ special property/member in the widget's class definition like so:
 
 
 And finally the actual code to define the GUI and the associated
-widget functionality
+widget functionality:
 
 .. code-block:: python
 
@@ -125,8 +125,8 @@ widget functionality
    :func:`Orange.widgets.gui.lineEdit`,
    :func:`Orange.widgets.widget.OWWidget.send`
 
-By itself this widget seems uninteresting. We need some thing more.
-How about displaying a number.
+By itself this widget seems uninteresting. We need something more.
+How about displaying a number?
 
 .. code-block:: python
 
@@ -156,14 +156,14 @@ How about displaying a number.
            else:
                self.label.setText("The number is {}".format(self.number))
 
-Notice how in the `set_number` method we check if number is `None`.
+Notice how in the `set_number` method we check whether the number is `None`.
 `None` is sent to the widget when a connection between the widgets is removed
 or if the sending widget to which we are connected intentionally emptied
 the channel.
 
 Now we can use one widget to input a number and another to display it.
 
-One more
+One more:
 
 .. code-block:: python
 
