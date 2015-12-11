@@ -34,9 +34,9 @@ class ColorTableModel(QAbstractTableModel):
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def set_data(self, variables):
+        self.emit(SIGNAL("modelAboutToBeReset()"))
         self.variables = variables
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"),
-                  self.index(0, 0), self.index(self.n_columns(), self.n_rows()))
+        self.emit(SIGNAL("modelReset()"))
 
     def rowCount(self, parent):
         return 0 if parent.isValid() else self.n_rows()
@@ -264,7 +264,7 @@ class OWColor(widget.OWWidget):
         self.disc_colors = []
         self.cont_colors = []
         if data is None:
-            self.data = None
+            self.data = self.domain = None
         else:
             def create_part(variables):
                 vars = []
