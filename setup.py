@@ -55,6 +55,7 @@ INSTALL_REQUIRES = (
     'chardet>=2.3.0',
     'bottlechest',
     'xlrd>=0.9.2',
+    'docutils',
 )
 
 if sys.version_info < (3, 4):
