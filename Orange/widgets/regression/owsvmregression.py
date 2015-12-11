@@ -16,8 +16,11 @@ class OWSVMRegression(OWProvidesLearner, widget.OWWidget):
     name = "SVM Regression"
     description = "Support vector machine regression algorithm."
     icon = "icons/SVMRegression.svg"
+
+    LEARNER = SVRLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", SVRLearner, widget.Default),
+    outputs = [("Learner", LEARNER, widget.Default),
                ("Predictor", SklModel),
                ("Support vectors", Table)]
 
@@ -149,8 +152,6 @@ class OWSVMRegression(OWProvidesLearner, widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    LEARNER = SVRLearner  # OWProvidesLearner uses this
 
     def apply(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]

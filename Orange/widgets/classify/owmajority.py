@@ -12,8 +12,10 @@ class OWMajority(OWProvidesLearner, widget.OWWidget):
     priority = 20
     icon = "icons/Majority.svg"
 
+    LEARNER = MajorityLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", MajorityLearner),
+    outputs = [("Learner", LEARNER),
                ("Classifier", ConstantModel)]
 
     learner_name = Setting("Majority")
@@ -42,8 +44,6 @@ class OWMajority(OWProvidesLearner, widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    LEARNER = MajorityLearner
 
     def apply(self):
         learner = self.LEARNER(

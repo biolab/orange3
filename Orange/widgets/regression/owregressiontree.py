@@ -8,9 +8,11 @@ class OWRegressionTree(OWClassificationTree):
     icon = "icons/RegressionTree.svg"
     description = "Regression tree algorithm with forward pruning."
 
-    outputs = [("Learner", TreeRegressionLearner), ("Tree", TreeRegressor)]
-
     LEARNER = TreeRegressionLearner
+
+    outputs = [("Learner", LEARNER),
+               ("Tree", TreeRegressor)]
+
     model_name = Setting("Regression Tree")
     attribute_score = Setting(0)
     limit_min_leaf = Setting(True)

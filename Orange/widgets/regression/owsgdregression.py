@@ -16,8 +16,10 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
     description = "Stochastic gradient descent algorithm for regression."
     icon = "icons/SGDRegression.svg"
 
+    LEARNER = SGDRegressionLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", SGDRegressionLearner),
+    outputs = [("Learner", LEARNER),
                ("Predictor", LinearModel)]
 
     learner_name = settings.Setting("SGD Regression")
@@ -135,8 +137,6 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    LEARNER = SGDRegressionLearner
 
     def apply(self):
         loss = ["squared_loss", "huber", "epsilon_insensitive", "squared_epsilon_insensitive"][self.loss_function]
