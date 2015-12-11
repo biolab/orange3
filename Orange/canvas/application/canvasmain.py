@@ -66,7 +66,7 @@ BASE_LINK = "http://orange.biolab.si/"
 LINKS = \
     {"start-using": BASE_LINK + "start-using/",
      "tutorial": BASE_LINK + "tutorial/",
-     "reference": BASE_LINK + "doc/"
+     "reference": BASE_LINK + "docs/"
      }
 
 
