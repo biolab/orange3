@@ -7,7 +7,7 @@ import sys
 import logging
 import operator
 from functools import partial
-from io import BytesIO
+from io import BytesIO, StringIO
 
 import pkg_resources
 
@@ -963,7 +963,7 @@ class CanvasMainWindow(QMainWindow):
 
     def load_scheme_xml(self, xml):
         new_scheme = widgetsscheme.WidgetsScheme(parent=self)
-        scheme_load(new_scheme, xml)
+        scheme_load(new_scheme, StringIO(xml))
         self.set_new_scheme(new_scheme)
         return QDialog.Accepted
 
