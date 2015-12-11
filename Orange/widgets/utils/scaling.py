@@ -539,9 +539,9 @@ class ScaleScatterPlotData(ScaleData):
                         del data, graph, valuedict, closuredict, \
                             polygon_vertices_dict, enlarged_closure_dict, \
                             other_dict, classes_dict
-                except:
-                    type, val, traceback = sys.exc_info()
-                    sys.excepthook(type, val, traceback)  # print the exception
+                    except:
+                        type, val, traceback = sys.exc_info()
+                        sys.excepthook(type, val, traceback)  # print the exception
 
         secs = time.time() - start_time
         self.clusterOptimization.setStatusBarText(
