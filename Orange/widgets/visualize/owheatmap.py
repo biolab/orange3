@@ -779,10 +779,10 @@ class OWHeatMap(widget.OWWidget):
                     cluster = hierarchical.dist_matrix_clustering(matrix)
 
                 if ordered and cluster_ord is None:
-                    self.progressBarInit()
-                    cluster_ord = hierarchical.optimal_leaf_ordering(
-                        cluster, matrix, progress_callback=self.progressBarSet)
-                    self.progressBarFinished()
+                    with self.progressBar():
+                        cluster_ord = hierarchical.optimal_leaf_ordering(
+                            cluster, matrix,
+                            progress_callback=self.progressBarSet)
 
             row_groups.append(row._replace(cluster=cluster, cluster_ordered=cluster_ord))
 
@@ -811,10 +811,9 @@ class OWHeatMap(widget.OWWidget):
         if cluster is None:
             cluster = hierarchical.dist_matrix_clustering(matrix)
         if ordered and cluster_ord is None:
-            self.progressBarInit()
-            cluster_ord = hierarchical.optimal_leaf_ordering(
-                cluster, matrix, progress_callback=self.progressBarSet)
-            self.progressBarFinished()
+            with self.progressBar():
+                cluster_ord = hierarchical.optimal_leaf_ordering(
+                    cluster, matrix, progress_callback=self.progressBarSet)
 
         col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
                       for col in parts.columns]
@@ -831,8 +830,6 @@ class OWHeatMap(widget.OWWidget):
             group_var = data.domain.class_var
         else:
             group_var = None
-
-        self.progressBarInit()
 
         group_label = split_label
         if self.merge_kmeans:
@@ -901,7 +898,6 @@ class OWHeatMap(widget.OWWidget):
         self.__columns_cache[group_label] = parts
 
         self.heatmapparts = parts
-        self.progressBarFinished()
 
     def construct_heatmaps_scene(self, parts, data):
         def select_row(item):
