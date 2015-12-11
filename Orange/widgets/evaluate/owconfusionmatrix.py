@@ -38,6 +38,12 @@ class OWConfusionMatrix(widget.OWWidget):
     append_probabilities = settings.Setting(False)
     autocommit = settings.Setting(True)
 
+    UserAdviceMessages = [
+        widget.Message(
+                "Clicking on cells or in headers outputs the corresponding "
+                "data instances",
+                "click_cell")]
+
     def __init__(self):
         super().__init__()
 
