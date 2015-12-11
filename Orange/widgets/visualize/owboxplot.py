@@ -16,7 +16,7 @@ from Orange.statistics import contingency, distribution
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils import datacaching, colorpalette, vartype
+from Orange.widgets.utils import datacaching, vartype
 from Orange.widgets.io import FileFormat
 
 
@@ -201,7 +201,6 @@ class OWBoxPlot(widget.OWWidget):
 
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
-        self.disc_palette = colorpalette.ColorPaletteGenerator()
 
         self.update_display_box()
         self.graphButton.clicked.connect(self.save_graph)
@@ -393,10 +392,8 @@ class OWBoxPlot(widget.OWWidget):
 
         self.draw_axis_disc()
         if self.grouping_select[0]:
-            self.disc_palette.set_number_of_colors(len(self.conts[0]))
             self.boxes = [self.strudel(cont) for cont in self.conts]
         else:
-            self.disc_palette.set_number_of_colors(len(self.dist))
             self.boxes = [self.strudel(self.dist)]
 
         selected_grouping = self.grouping[self.grouping_select[0]][0]
@@ -711,7 +708,6 @@ class OWBoxPlot(widget.OWWidget):
         if ss < 1e-6:
             QtGui.QGraphicsRectItem(0, -10, 1, 10, box)
         cum = 0
-        get_color = self.disc_palette.getRGB
         for i, v in enumerate(dist):
             if v < 1e-6:
                 continue
@@ -719,7 +715,8 @@ class OWBoxPlot(widget.OWWidget):
                 v /= ss
             v *= self.scale_x
             rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
-            rect.setBrush(QtGui.QBrush(QtGui.QColor(*get_color(i))))
+            print(attr.colors[i])
+            rect.setBrush(QtGui.QBrush(QtGui.QColor(*attr.colors[i])))
             rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             if self.stretched:
                 tooltip = "{}: {:.2f}%".format(attr.values[i],

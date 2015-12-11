@@ -18,7 +18,6 @@ from Orange.widgets import gui
 from Orange.widgets.io import FileFormat
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
@@ -56,8 +55,6 @@ class OWScatterPlot(OWWidget):
     auto_send_selection = Setting(True)
     auto_sample = Setting(True)
     toolbar_selection = Setting(0)
-    color_settings = Setting(None)
-    selected_schema_index = Setting(0)
 
     attr_x = ContextSetting("")
     attr_y = ContextSetting("")
@@ -145,7 +142,6 @@ class OWScatterPlot(OWWidget):
 
         g = self.graph.gui
         box2 = g.point_properties_box(self.controlArea, box)
-        gui.button(box2, self, "Set Colors", self.set_colors)
 
         box = gui.widgetBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
@@ -167,11 +163,6 @@ class OWScatterPlot(OWWidget):
         buttons[g.ZoomReset].clicked.connect(self.graph.reset_button_clicked)
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
-
-        dlg = self.create_color_dialog()
-        self.graph.continuous_palette = dlg.getContinuousPalette("contPalette")
-        self.graph.discrete_palette = dlg.getDiscretePalette("discPalette")
-        dlg.deleteLater()
 
         p = self.graph.plot_widget.palette()
         self.graph.set_palette(p)
@@ -422,22 +413,6 @@ class OWScatterPlot(OWWidget):
     def commit(self):
         self.send_data()
         self.send_features()
-
-    def set_colors(self):
-        dlg = self.create_color_dialog()
-        if dlg.exec_():
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selectedSchemaIndex
-            self.graph.continuous_palette = dlg.getContinuousPalette("contPalette")
-            self.graph.discrete_palette = dlg.getDiscretePalette("discPalette")
-            self.update_graph()
-
-    def create_color_dialog(self):
-        c = ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette("discPalette", "Discrete Palette")
-        c.createContinuousPalette("contPalette", "Continuous Palette")
-        c.setColorSchemas(self.color_settings, self.selected_schema_index)
-        return c
 
     def closeEvent(self, ce):
         self.vizrank.close()

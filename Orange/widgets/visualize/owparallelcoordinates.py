@@ -8,19 +8,13 @@ from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets.gui import attributeIconDict
 from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
-from Orange.widgets.utils.colorpalette import ColorPaletteDlg, ColorPaletteGenerator
-from Orange.widgets.utils.plot import xBottom, OWPalette
+from Orange.widgets.utils.plot import xBottom
 from Orange.widgets.utils.scaling import checksum
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
 from Orange.widgets.widget import AttributeList
 from Orange.widgets import gui, widget
-
-
-CONTINUOUS_PALETTE = "contPalette"
-DISCRETE_PALETTE = "discPalette"
-CANVAS_COLOR = "Canvas"
 
 
 class OWParallelCoordinates(OWVisWidget):
@@ -40,9 +34,6 @@ class OWParallelCoordinates(OWVisWidget):
 
     show_all_attributes = Setting(default=False)
     auto_send_selection = Setting(default=True)
-
-    color_settings = Setting(default=None)
-    selected_schema_index = Setting(default=0)
 
     jitterSizeNums = [0, 2, 5, 10, 15, 20, 30]
 
@@ -64,10 +55,6 @@ class OWParallelCoordinates(OWVisWidget):
         self.middle_labels = "Correlations"
 
         self.create_control_panel()
-        self.color_picker = self.create_color_picker_dialog()
-        self.graph.continuous_palette = self.color_picker.getContinuousPalette(CONTINUOUS_PALETTE)
-        self.graph.discrete_palette = self.color_picker.getDiscretePalette(DISCRETE_PALETTE)
-        self.graph.setCanvasBackground(self.color_picker.getColor(CANVAS_COLOR))
 
         self.resize(900, 700)
 
@@ -75,19 +62,11 @@ class OWParallelCoordinates(OWVisWidget):
 
     #noinspection PyAttributeOutsideInit
     def create_control_panel(self):
-        self.control_tabs = gui.tabWidget(self.controlArea)
-        self.general_tab = gui.createTabPage(self.control_tabs, "Main")
-        self.settings_tab = gui.createTabPage(self.control_tabs, "Settings")
-
-        self.add_attribute_selection_area(self.general_tab)
-        self.add_zoom_select_toolbar(self.general_tab)
-
-        self.add_visual_settings(self.settings_tab)
-        #self.add_annotation_settings(self.settings_tab)
-        self.add_color_settings(self.settings_tab)
-        self.add_group_settings(self.settings_tab)
-
-        self.settings_tab.layout().addStretch(100)
+        self.add_attribute_selection_area(self.controlArea)
+        self.add_visual_settings(self.controlArea)
+        #self.add_annotation_settings(self.        controlArea)
+        self.add_group_settings(self.controlArea)
+        self.add_zoom_select_toolbar(self.controlArea)
         self.icons = attributeIconDict
 
     def add_attribute_selection_area(self, parent):
@@ -115,11 +94,6 @@ class OWParallelCoordinates(OWVisWidget):
                      sendSelectedValue=False, valueType=int)
         gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.update_graph,
                      tooltip="Show bars with distribution of class values (only for discrete attributes)")
-
-    def add_color_settings(self, parent):
-        box = gui.widgetBox(parent, "Colors", orientation="horizontal")
-        gui.button(box, self, "Set colors", self.select_colors,
-                   tooltip="Set the canvas background color and color palette for coloring continuous variables")
 
     def add_group_settings(self, parent):
         box = gui.widgetBox(parent, "Groups", orientation="vertical")
@@ -223,25 +197,6 @@ class OWParallelCoordinates(OWVisWidget):
         self.graph.rescale_data()
         self.update_graph()
 
-    def select_colors(self):
-        dlg = self.color_picker
-        if dlg.exec_():
-            self.color_settings = dlg.getColorSchemas()
-            self.selected_schema_index = dlg.selectedSchemaIndex
-            self.graph.continuous_palette = dlg.getContinuousPalette(CONTINUOUS_PALETTE)
-            self.graph.discrete_palette = dlg.getDiscretePalette(DISCRETE_PALETTE)
-            self.graph.setCanvasBackground(dlg.getColor(CANVAS_COLOR))
-            self.update_graph()
-
-    def create_color_picker_dialog(self):
-        c = ColorPaletteDlg(self, "Color Palette")
-        c.createDiscretePalette(DISCRETE_PALETTE, "Discrete Palette")
-        c.createContinuousPalette(CONTINUOUS_PALETTE, "Continuous Palette")
-        box = c.createBox("otherColors", "Other Colors")
-        c.createColorButton(box, CANVAS_COLOR, "Canvas color", self.graph.color(OWPalette.Canvas))
-        c.setColorSchemas(self.color_settings, self.selected_schema_index)
-        return c
-
     def attributes_changed(self):
         if not self.__ignore_updates:
             self.graph.removeAllSelections()
@@ -258,7 +213,6 @@ if __name__ == "__main__":
     a = QApplication(sys.argv)
     ow = OWParallelCoordinates()
     ow.show()
-    ow.graph.discrete_palette = ColorPaletteGenerator(rgb_colors=[(127, 201, 127), (190, 174, 212), (253, 192, 134)])
     ow.graph.group_lines = True
     ow.graph.number_of_groups = 10
     ow.graph.number_of_steps = 30

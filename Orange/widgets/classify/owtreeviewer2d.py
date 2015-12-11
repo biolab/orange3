@@ -366,37 +366,43 @@ class OWTreeViewer2D(OWWidget):
         self.tree = None
 
         box = gui.widgetBox(
-            self.controlArea, 'Tree size', addSpace=20,
+            self.controlArea, 'Tree', addSpace=20,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
         self.info = gui.widgetLabel(box, 'No tree.')
 
-        layout = QGridLayout()
+        layout = QFormLayout()
         layout.setVerticalSpacing(20)
-        box = gui.widgetBox(self.controlArea, "Size", addSpace=True,
-                            orientation=layout)
-        layout.addWidget(QLabel("Zoom: "), 0, 0, Qt.AlignRight)
-        layout.addWidget(gui.hSlider(
-            box, self, 'zoom', minValue=1, maxValue=10, step=1,
-            createLabel=False, ticks=False, addToLayout=False, addSpace=False,
-            callback=self.toggle_zoom_slider), 0, 1)
-        layout.addWidget(QLabel("Width: "), 1, 0, Qt.AlignRight)
-        layout.addWidget(gui.hSlider(
-            box, self, 'max_node_width', minValue=50, maxValue=200, step=1,
-            createLabel=False, ticks=False, addToLayout=False, addSpace=False,
-            callback=self.toggle_node_size), 1, 1)
-        layout.addWidget(QLabel("Depth: "), 2, 0, Qt.AlignRight)
-        layout.addWidget(gui.comboBox(
-            box, self, 'max_tree_depth',
-            items=["Unlimited"] + ["{} levels".format(x) for x in range(2, 10)],
-            addToLayout=False,
-            sendSelectedValue=False, callback=self.toggle_tree_depth,
-            sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
-                                   QSizePolicy.Fixed)), 2, 1)
-        layout.addWidget(QLabel("Edge width: "), 3, 0, Qt.AlignRight)
-        layout.addWidget(gui.comboBox(
-            box, self, 'line_width_method', addToLayout=False,
-            items=['Fixed', 'Relative to root', 'Relative to parent'],
-            callback=self.toggle_line_width), 3, 1)
+        layout.setFieldGrowthPolicy(layout.ExpandingFieldsGrow)
+        box = self.display_box = \
+            gui.widgetBox(self.controlArea, "Display", addSpace=True,
+                          orientation=layout)
+        layout.addRow(
+            "Zoom ",
+            gui.hSlider(box, self, 'zoom',
+                        minValue=1, maxValue=10, step=1, ticks=False,
+                        callback=self.toggle_zoom_slider,
+                        createLabel=False, addToLayout=False, addSpace=False))
+        layout.addRow(
+            "Width ",
+            gui.hSlider(box, self, 'max_node_width',
+                        minValue=50, maxValue=200, step=1, ticks=False,
+                        callback=self.toggle_node_size,
+                        createLabel=False, addToLayout=False, addSpace=False))
+        policy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        layout.addRow(
+            "Depth ",
+            gui.comboBox(box, self, 'max_tree_depth',
+                         items=["Unlimited"] + [
+                             "{} levels".format(x) for x in range(2, 10)],
+                         addToLayout=False, sendSelectedValue=False,
+                         callback=self.toggle_tree_depth, sizePolicy=policy))
+        layout.addRow(
+            "Edge width ",
+            gui.comboBox(box, self, 'line_width_method',
+                         items=['Fixed', 'Relative to root',
+                                'Relative to parent'],
+                         addToLayout=False,
+                         callback=self.toggle_line_width, sizePolicy=policy))
         self.resize(800, 500)
         self.graphButton.clicked.connect(self.save_graph)
 

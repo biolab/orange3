@@ -19,7 +19,7 @@ import pyqtgraph as pg
 import Orange.data
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import itemmodels
 from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 from Orange.widgets.io import FileFormat
@@ -377,8 +377,7 @@ class OWDistributions(widget.OWWidget):
         bottomaxis.resizeEvent()
 
         cvar_values = cvar.values
-        palette = colorpalette.ColorPaletteGenerator(len(cvar_values))
-        colors = [palette[i].lighter() for i in range(len(cvar_values))]
+        colors = [QtGui.QColor(*col).lighter() for col in cvar.colors]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
