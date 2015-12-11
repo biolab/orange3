@@ -66,7 +66,7 @@ BASE_LINK = "http://orange.biolab.si/"
 LINKS = \
     {"start-using": BASE_LINK + "start-using/",
      "tutorial": BASE_LINK + "tutorial/",
-     "reference": BASE_LINK + "doc/"
+     "reference": BASE_LINK + "docs/"
      }
 
 
@@ -1260,7 +1260,7 @@ class CanvasMainWindow(QMainWindow):
     def documentation(self, *args):
         """Show reference documentation.
         """
-        url = QUrl(LINKS["tutorial"])
+        url = QUrl(LINKS["reference"])
         QDesktopServices.openUrl(url)
 
     def recent_scheme(self, *args):
