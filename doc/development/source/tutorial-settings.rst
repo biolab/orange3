@@ -27,7 +27,7 @@ button) to be saved. That is, any change we made, we want to save it so
 that the next time we open the widget the settings is there as we have left
 it
 
-.. 
+..
    There is some complication to it, as widget can be part of an
    application, or part of some schema in the Canvas, and we would like
    to have the settings application- or schema-specific.
@@ -40,10 +40,10 @@ Luckily, since we use the base class :class:`~Orange.widgets.widget.OWWidget`,
 the settings will be handled just fine. We only need to tell which variables
 we want to use for persistent settings.
 
-.. 
+..
    For Python inspired readers: these
    variables can store any complex object, as long as it is
-   picklable. 
+   picklable.
 
 In our widget, we will use two settings variables, and we declare this
 in the widget class definition (after the `inputs`, `outputs` definitions).
@@ -62,8 +62,8 @@ In our widget, we won't be setting these variables directly,
 but will instead use them in conjunction with GUI controls.
 
 
-Controls and OWGUI
-******************
+Controls and module `gui`
+*************************
 
 We will use the :mod:`Orange.widgets.gui` to create/define the gui.
 With this library, the GUI definition part of the options box is a bit
