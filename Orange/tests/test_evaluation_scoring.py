@@ -87,7 +87,8 @@ class Scoring_AUC_Test(unittest.TestCase):
 
     def test_multiclass_auc_multi_learners(self):
         data = Orange.data.Table('iris')
-        learners = [Orange.classification.LogisticRegressionLearner(), Orange.classification.MajorityLearner()]
+        learners = [Orange.classification.LogisticRegressionLearner(),
+                    Orange.classification.MajorityLearner()]
         res = Orange.evaluation.testing.CrossValidation(data, learners, k=10)
         self.assertTrue(AUC(res)[0] > 0.6 > AUC(res)[1] > 0.4)
 
@@ -141,7 +142,8 @@ class Scoring_CD_Test(unittest.TestCase):
         cd = Orange.evaluation.scoring.compute_CD(avranks, 30)
         np.testing.assert_almost_equal(cd, 0.856344)
 
-        cd = Orange.evaluation.scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
+        cd = Orange.evaluation.scoring.compute_CD(avranks, 30,
+                                                  test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
 
 
@@ -152,6 +154,25 @@ class Scoring_LogLoss_Test(unittest.TestCase):
         results = Orange.evaluation.TestOnTrainingData(data, [majority])
         ll = Orange.evaluation.LogLoss(results)
         self.assertAlmostEqual(ll[0], - np.log(1 / 3))
+
+    def _log_loss(self, act, prob):
+        ll = np.dot(np.log(prob[:, 0]), act[:, 0]) + \
+             np.dot(np.log(prob[:, 1]), act[:, 1])
+        return - ll / len(act)
+
+    def test_log_loss_calc(self):
+        data = Orange.data.Table('titanic')
+        learner = Orange.classification.LogisticRegressionLearner()
+        results = Orange.evaluation.TestOnTrainingData(data, [learner])
+
+        actual = np.copy(results.actual)
+        actual = actual.reshape(actual.shape[0], 1)
+        actual = np.hstack((1 - actual, actual))
+        probab = results.probabilities[0]
+
+        ll_calc = self._log_loss(actual, probab)
+        ll_orange = Orange.evaluation.LogLoss(results)
+        self.assertEqual(ll_calc, ll_orange[0])
 
 
 class Scoring_F1_Test(unittest.TestCase):
