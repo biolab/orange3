@@ -188,7 +188,7 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         self.run_test_callback(CrossValidation, np.arange(0, 1.05, 0.05))
 
     def test_preprocessor(self):
-        self.run_test_preprocessor(CrossValidation, [135] * 10)
+        self.run_test_preprocessor(CrossValidation, [135, 15] * 10*2)
 
 
 class LeaveOneOutTestCase(unittest.TestCase, CommonSamplingTests):
@@ -295,7 +295,7 @@ class LeaveOneOutTestCase(unittest.TestCase, CommonSamplingTests):
         self.run_test_callback(LeaveOneOut, np.arange(0, 1.005, 0.01))
 
     def test_preprocessor(self):
-        self.run_test_preprocessor(LeaveOneOut, [149] * 150)
+        self.run_test_preprocessor(LeaveOneOut, [149, 1] * 150*2)
 
 
 class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
@@ -390,7 +390,7 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         self.run_test_callback(TestOnTrainingData, np.array([0, 0.5, 1]))
 
     def test_preprocessor(self):
-        self.run_test_preprocessor(TestOnTrainingData, [150])
+        self.run_test_preprocessor(TestOnTrainingData, [150] * 1*2)
 
 
 class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
@@ -533,7 +533,7 @@ class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
         TestOnTestData(data[:30], data[-20:],
                        [MajorityLearner(), MajorityLearner()],
                        preprocessor=preprocessor)
-        self.assertEqual(data_sizes, [30])
+        self.assertEqual(data_sizes, [30, 20] * 1*2)
 
 
 class TestTrainTestSplit(unittest.TestCase):

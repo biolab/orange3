@@ -169,6 +169,28 @@ class Results:
             self.probabilities = \
                 np.empty((nmethods, nrows, nclasses), dtype=np.float32)
 
+    def preprocess(self, learner, train_data, test_data=None):
+        # First, apply the user-supplied preprocessor, if any
+        if self.preprocessor is not None:
+            train_data = self.preprocessor(train_data)
+            if test_data is not None:
+                test_data = Table.from_table(train_data.domain, test_data)
+        # Second, apply any preprocessors required by learner
+        if callable(getattr(learner, 'preprocess', None)):
+            train_data = learner.preprocess(train_data)
+            if test_data is not None:
+                test_data = Table.from_table(train_data.domain, test_data)
+            # Finally, force-apply preprocessors on test data as well
+            # (e.g. test data may have NaNs whereas train data didn't have any)
+            if test_data is not None:
+                if self.preprocessor is not None:
+                    test_data = self.preprocessor(test_data)
+                test_data = learner.preprocess(test_data)
+                # Inherit the domain in the other direction. It needs to be
+                # the exact same domain.
+                train_data = Table.from_table(test_data.domain, train_data)
+        return train_data, test_data
+
     def train_if_succ(self, learner_index, learner, data):
         if self.failed[learner_index]:
             return False
@@ -313,19 +335,20 @@ class CrossValidation(Results):
         nmethods = len(learners)
         n_callbacks = nmethods * self.k
         for fold_idx, (train, test) in enumerate(indices):
-            train_data, test_data = data[train], data[test]
-            if len(train_data) == 0 or len(test_data) == 0:
+            train_data_orig, test_data_orig = data[train], data[test]
+            if len(train_data_orig) == 0 or len(test_data_orig) == 0:
                 raise RuntimeError("One of the train or test folds is empty.")
-            if self.preprocessor is not None:
-                train_data = self.preprocessor(train_data)
             fold_slice = slice(ptr, ptr + len(test))
             self.folds.append(fold_slice)
             self.row_indices[fold_slice] = test
-            self.actual[fold_slice] = test_data.Y.flatten()
+            self.actual[fold_slice] = test_data_orig.Y.flatten()
             if self.store_models:
                 fold_models = [None] * nmethods
                 self.models.append(fold_models)
             for i, learner in enumerate(learners):
+                train_data, test_data = self.preprocess(learner,
+                                                        train_data_orig,
+                                                        test_data_orig)
                 model = self.train_if_succ(i, learner, train_data)
                 self.call_callback((fold_idx * nmethods + i) / n_callbacks)
                 if not model:
@@ -377,14 +400,15 @@ class LeaveOneOut(Results):
             metas[[0, test_idx]] = metas[[test_idx, 0]]
             if W:
                 W[[0, test_idx]] = W[[test_idx, 0]]
-            test_data = Table.from_numpy(domain, teX, teY, te_metas, teW)
-            train_data = Table.from_numpy(domain, trX, trY, tr_metas, trW)
-            if self.preprocessor is not None:
-                train_data = self.preprocessor(train_data)
+            test_data_orig = Table.from_numpy(domain, teX, teY, te_metas, teW)
+            train_data_orig = Table.from_numpy(domain, trX, trY, tr_metas, trW)
             if self.store_models:
                 fold_models = [None] * nmethods
                 self.models.append(fold_models)
             for i, learner in enumerate(learners):
+                train_data, test_data = self.preprocess(learner,
+                                                        train_data_orig,
+                                                        test_data_orig)
                 model = self.train_if_succ(i, learner, train_data)
                 self.call_callback((test_idx * nmethods + i) / n_callbacks)
                 if not model:
@@ -415,11 +439,9 @@ class TestOnTrainingData(Results):
             models = [None] * nmethods
             self.models = [models]
         self.actual = data.Y.flatten()
-        if self.preprocessor is not None:
-            train_data = self.preprocessor(data)
-        else:
-            train_data = data
+        train_data_orig = data
         for i, learner in enumerate(learners):
+            train_data, _ = self.preprocess(learner, train_data_orig, None)
             model = self.train_if_succ(i, learner, train_data)
             self.call_callback(i / nmethods)
             if not model:
@@ -466,17 +488,18 @@ class ShuffleSplit(Results):
         nmethods = len(learners)
         n_callbacks = self.n_resamples * nmethods
         for samp_idx, (train, test) in enumerate(indices):
-            train_data, test_data = data[train], data[test]
-            if preprocessor is not None:
-                train_data = self.preprocessor(train_data)
+            train_data_orig, test_data_orig = data[train], data[test]
             self.folds.append(slice(fold_start, fold_start + len(test)))
             row_indices.append(test)
-            actual.append(test_data.Y.flatten())
+            actual.append(test_data_orig.Y.flatten())
             if self.store_models:
                 fold_models = [None] * nmethods
                 self.models.append(fold_models)
 
             for i, learner in enumerate(learners):
+                train_data, test_data = self.preprocess(learner,
+                                                        train_data_orig,
+                                                        test_data_orig)
                 model = self.train_if_succ(i, learner, train_data)
                 self.call_callback((samp_idx * nmethods + i ) / n_callbacks)
                 if model:
@@ -519,9 +542,9 @@ class TestOnTestData(Results):
     """
     Test on a separate test data set.
     """
-    def __init__(self, train_data, test_data, learners, store_data=False,
+    def __init__(self, train_data_orig, test_data_orig, learners, store_data=False,
                  store_models=False, preprocessor=None, callback=None):
-        super().__init__(test_data, len(learners), store_data=store_data,
+        super().__init__(test_data_orig, len(learners), store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback)
         nmethods = len(learners)
@@ -529,12 +552,13 @@ class TestOnTestData(Results):
             models = [None] * nmethods
             self.models = [models]
 
-        self.row_indices = np.arange(len(test_data))
-        self.actual = test_data.Y.flatten()
+        self.row_indices = np.arange(len(test_data_orig))
+        self.actual = test_data_orig.Y.flatten()
 
-        if self.preprocessor is not None:
-            train_data = self.preprocessor(train_data)
         for i, learner in enumerate(learners):
+            train_data, test_data = self.preprocess(learner,
+                                                    train_data_orig,
+                                                    test_data_orig)
             model = self.train_if_succ(i, learner, train_data)
             self.call_callback(i / nmethods)
             if not model:
