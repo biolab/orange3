@@ -165,7 +165,7 @@ class OWPredictions(widget.OWWidget):
         class_var = predictor.domain.class_var
         classification = class_var and class_var.is_discrete
 
-        newattrs = []
+        newmetas = []
         newcolumns = []
         slots = list(self.predictors.values())
 
@@ -173,7 +173,7 @@ class OWPredictions(widget.OWWidget):
             if self.show_predictions:
                 mc = [DiscreteVariable(name=p.name, values=class_var.values)
                       for p in slots]
-                newattrs.extend(mc)
+                newmetas.extend(mc)
                 newcolumns.extend(p.results[0].reshape((-1, 1))
                                   for p in slots)
 
@@ -181,36 +181,32 @@ class OWPredictions(widget.OWWidget):
                 for p in slots:
                     m = [ContinuousVariable(name="%s(%s)" % (p.name, value))
                          for value in class_var.values]
-                    newattrs.extend(m)
+                    newmetas.extend(m)
                 newcolumns.extend(p.results[1] for p in slots)
 
         else:
             # regression
             mc = [ContinuousVariable(name=p.name)
                   for p in self.predictors.values()]
-            newattrs.extend(mc)
+            newmetas.extend(mc)
             newcolumns.extend(p.results[0].reshape((-1, 1))
                               for p in slots)
 
         if self.show_attrs:
-            X = [self.data.X]
-            attrs = list(self.data.domain.attributes) + newattrs
+            attrs = list(self.data.domain.attributes)
         else:
-            X = []
-            attrs = newattrs
+            attrs = []
+        metas = list(self.data.domain.metas) + newmetas
+
         domain = Orange.data.Domain(attrs, self.data.domain.class_var,
-                                    metas=self.data.domain.metas)
+                                    metas=metas)
+        predictions = self.data.from_table(domain, self.data)
 
         if newcolumns:
-            X.extend(numpy.atleast_2d(cols) for cols in newcolumns)
-        if X:
-            X = numpy.hstack(tuple(X))
-        else:
-            X = numpy.zeros((len(self.data), 0))
-
-        predictions = Orange.data.Table.from_numpy(
-            domain, X, self.data.Y, metas=self.data.metas)
-        predictions.name = self.data.name
+            newcolumns = numpy.hstack(
+                [numpy.atleast_2d(cols) for cols in newcolumns]
+            )
+            predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
         results = None
         if self.data.domain.class_var == class_var:
