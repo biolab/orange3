@@ -1,0 +1,9 @@
+name	hair	feathers	eggs	milk	airborne	aquatic	predator	toothed	backbone	breathes	venomous	fins	legs	tail	domestic	catsize	type
+string	d	d	d	d	d	d	d	d	d	d	d	d	d	d	d	d	d
+																	class
+aardvark	1	0	0	1	0	0	1	1	1	1	0	0	4	0	0	1	mammal
+antelope	1	0	0	1	0	0	0	1	1	1	0	0	4	1	0	1	mammal
+bass	0	0	1	0	0	1	1	1	1	0	0	1	0	1	0	0	fish
+bear	1	0	0	1	0	0	1	1	1	1	0	0	4	0	0	1	mammal
+boar	1	0	0	1	0	0	1	1	1	1	0	0	4	1	0	1	mammal
+buffalo	1	0	0	1	0	0	0	1	1	1	0	0	4	1	0	1	mammal
