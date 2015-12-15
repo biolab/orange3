@@ -148,17 +148,13 @@ class Impute(Preprocess):
 class SklImpute(Preprocess):
     __wraps__ = skl_preprocessing.Imputer
 
-    def __init__(self, strategy='mean', force=True):
+    def __init__(self, strategy='mean'):
         self.strategy = strategy
-        self.force = force
 
     def __call__(self, data):
         from Orange.data.sql.table import SqlTable
         if isinstance(data, SqlTable):
             return Impute()(data)
-
-        if not self.force and not np.isnan(data.X).any():
-            return data
         self.imputer = skl_preprocessing.Imputer(strategy=self.strategy)
         X = self.imputer.fit_transform(data.X)
         # Create new variables with appropriate `compute_value`, but

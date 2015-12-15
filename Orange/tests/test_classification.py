@@ -141,7 +141,8 @@ class ExpandProbabilitiesTest(unittest.TestCase):
     def prepareTable(self, rows, attr, vars, class_var_domain):
         attributes = ["Feature %i" % i for i in range(attr)]
         classes = ["Class %i" % i for i in range(vars)]
-        attr_vars = [DiscreteVariable(name=a) for a in attributes]
+        attr_vars = [DiscreteVariable(name=a, values=range(2))
+                     for a in attributes]
         class_vars = [DiscreteVariable(name=c,
                                             values=range(class_var_domain))
                       for c in classes]
@@ -217,6 +218,13 @@ class ClassfierListInputTest(unittest.TestCase):
         for se in strlist: #individual examples
             assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+
+
+class UnknownValuesInPrediction(unittest.TestCase):
+    def test_unknown(self):
+        table = Table("iris")
+        tree = LogisticRegressionLearner()(table)
+        tree([1, 2, None])
 
 
 class LearnerAccessibility(unittest.TestCase):
