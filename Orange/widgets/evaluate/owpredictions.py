@@ -164,10 +164,55 @@ class OWPredictions(widget.OWWidget):
         predictor = next(iter(self.predictors.values())).predictor
         class_var = predictor.domain.class_var
         classification = class_var and class_var.is_discrete
+
+        newattrs = []
+        newcolumns = []
         slots = list(self.predictors.values())
 
+        if classification:
+            if self.show_predictions:
+                mc = [DiscreteVariable(name=p.name, values=class_var.values)
+                      for p in slots]
+                newattrs.extend(mc)
+                newcolumns.extend(p.results[0].reshape((-1, 1))
+                                  for p in slots)
+
+            if self.show_probabilities:
+                for p in slots:
+                    m = [ContinuousVariable(name="%s(%s)" % (p.name, value))
+                         for value in class_var.values]
+                    newattrs.extend(m)
+                newcolumns.extend(p.results[1] for p in slots)
+
+        else:
+            # regression
+            mc = [ContinuousVariable(name=p.name)
+                  for p in self.predictors.values()]
+            newattrs.extend(mc)
+            newcolumns.extend(p.results[0].reshape((-1, 1))
+                              for p in slots)
+
+        if self.show_attrs:
+            X = [self.data.X]
+            attrs = list(self.data.domain.attributes) + newattrs
+        else:
+            X = []
+            attrs = newattrs
+        domain = Orange.data.Domain(attrs, self.data.domain.class_var,
+                                    metas=self.data.domain.metas)
+
+        if newcolumns:
+            X.extend(numpy.atleast_2d(cols) for cols in newcolumns)
+        if X:
+            X = numpy.hstack(tuple(X))
+        else:
+            X = numpy.zeros((len(self.data), 0))
+
+        predictions = Orange.data.Table.from_numpy(
+            domain, X, self.data.Y, metas=self.data.metas)
+        predictions.name = self.data.name
+
         results = None
-        predictions = None
         if self.data.domain.class_var == class_var:
             N = len(self.data)
             results = Orange.evaluation.Results(self.data, store_data=True)
@@ -180,11 +225,6 @@ class OWPredictions(widget.OWWidget):
                 results.probabilities = numpy.array(
                     [p.results[1] for p in slots])
             results.learner_names = [pname(p.predictor) for p in slots]
-
-            predictions = results.get_augmented_data(results.learner_names,
-                                                     include_attrs=self.show_attrs,
-                                                     include_predictions=self.show_predictions,
-                                                     include_probabilities=self.show_probabilities)
 
         self.send("Predictions", predictions)
         self.send("Evaluation Results", results)
