@@ -164,10 +164,51 @@ class OWPredictions(widget.OWWidget):
         predictor = next(iter(self.predictors.values())).predictor
         class_var = predictor.domain.class_var
         classification = class_var and class_var.is_discrete
+
+        newmetas = []
+        newcolumns = []
         slots = list(self.predictors.values())
 
+        if classification:
+            if self.show_predictions:
+                mc = [DiscreteVariable(name=p.name, values=class_var.values)
+                      for p in slots]
+                newmetas.extend(mc)
+                newcolumns.extend(p.results[0].reshape((-1, 1))
+                                  for p in slots)
+
+            if self.show_probabilities:
+                for p in slots:
+                    m = [ContinuousVariable(name="%s(%s)" % (p.name, value))
+                         for value in class_var.values]
+                    newmetas.extend(m)
+                newcolumns.extend(p.results[1] for p in slots)
+
+        else:
+            # regression
+            mc = [ContinuousVariable(name=p.name)
+                  for p in self.predictors.values()]
+            newmetas.extend(mc)
+            newcolumns.extend(p.results[0].reshape((-1, 1))
+                              for p in slots)
+
+        if self.show_attrs:
+            attrs = list(self.data.domain.attributes)
+        else:
+            attrs = []
+        metas = list(self.data.domain.metas) + newmetas
+
+        domain = Orange.data.Domain(attrs, self.data.domain.class_var,
+                                    metas=metas)
+        predictions = self.data.from_table(domain, self.data)
+
+        if newcolumns:
+            newcolumns = numpy.hstack(
+                [numpy.atleast_2d(cols) for cols in newcolumns]
+            )
+            predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
+
         results = None
-        predictions = None
         if self.data.domain.class_var == class_var:
             N = len(self.data)
             results = Orange.evaluation.Results(self.data, store_data=True)
@@ -180,11 +221,6 @@ class OWPredictions(widget.OWWidget):
                 results.probabilities = numpy.array(
                     [p.results[1] for p in slots])
             results.learner_names = [pname(p.predictor) for p in slots]
-
-            predictions = results.get_augmented_data(results.learner_names,
-                                                     include_attrs=self.show_attrs,
-                                                     include_predictions=self.show_predictions,
-                                                     include_probabilities=self.show_probabilities)
 
         self.send("Predictions", predictions)
         self.send("Evaluation Results", results)
