@@ -111,8 +111,10 @@ class OWSql(widget.OWWidget):
         self.custom_sql.layout().addWidget(self.sqltext)
 
         mt = gui.widgetBox(self.custom_sql, orientation='horizontal')
-        gui.checkBox(mt, self, 'materialize', 'materialize to table ')
-        gui.lineEdit(mt, self, 'materialize_table_name')
+        cb = gui.checkBox(mt, self, 'materialize', 'Materialize to table ')
+        cb.setToolTip('Save results of the query in a table')
+        le = gui.lineEdit(mt, self, 'materialize_table_name')
+        le.setToolTip('Save results of the query in a table')
 
         self.executebtn = gui.button(
             self.custom_sql, self, 'Execute', callback=self.open_table)
@@ -203,6 +205,7 @@ class OWSql(widget.OWWidget):
             if table_name == self.table:
                 self.tablecombo.setCurrentIndex(i + 1)
         self.tablecombo.addItem("Custom SQL")
+        self.select_table()
 
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
@@ -216,6 +219,11 @@ class OWSql(widget.OWWidget):
             self.table = None
 
     def open_table(self):
+        table = self.get_table()
+        self.data_desc_table = table
+        self.send("Data", table)
+
+    def get_table(self):
         if self.tablecombo.currentIndex() <= 0:
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
@@ -230,6 +238,10 @@ class OWSql(widget.OWWidget):
         else:
             self.sql = self.table = self.sqltext.toPlainText()
             if self.materialize:
+                if not self.materialize_table_name:
+                    self.error(
+                        0, "Specify a table name to materialize the query")
+                    return
                 try:
                     cur = self._connection.cursor()
                     cur.execute("DROP TABLE IF EXISTS " + self.materialize_table_name)
@@ -305,8 +317,7 @@ class OWSql(widget.OWWidget):
             table.download_data(MAX_DL_LIMIT)
             table = Table(table)
 
-        self.send("Data", table)
-        self.data_desc_table = table
+        return table
 
     def send_report(self):
         if not self.database_desc:
