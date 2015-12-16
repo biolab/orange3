@@ -142,7 +142,7 @@ class OWDataInfo(widget.OWWidget):
             connection_string = ' '.join(
                 '%s=%s' % (key, value)
                 for key, value in data.connection_params.items()
-                if value is not None)
+                if value is not None and key != 'password')
             self.location = "Table '%s', using connection:\n%s" % (
                 data.table_name, connection_string)
             dd["Rows"] = data.approx_len()
