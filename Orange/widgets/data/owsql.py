@@ -193,6 +193,7 @@ class OWSql(widget.OWWidget):
             if table_name == self.table:
                 self.tablecombo.setCurrentIndex(i + 1)
         self.tablecombo.addItem("Custom SQL")
+        self.select_table()
 
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
@@ -206,6 +207,11 @@ class OWSql(widget.OWWidget):
             self.table = None
 
     def open_table(self):
+        table = self.get_table()
+        self.data_desc_table = table
+        self.send("Data", table)
+
+    def get_table(self):
         if self.tablecombo.currentIndex() <= 0:
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
@@ -299,8 +305,7 @@ class OWSql(widget.OWWidget):
             table.download_data(MAX_DL_LIMIT)
             table = Table(table)
 
-        self.send("Data", table)
-        self.data_desc_table = table
+        return table
 
     def send_report(self):
         if not self.database_desc:
