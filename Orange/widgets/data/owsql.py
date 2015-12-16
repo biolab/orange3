@@ -40,6 +40,7 @@ class OWSql(widget.OWWidget):
     host = Setting(None)
     port = Setting(None)
     database = Setting(None)
+    schema = Setting(None)
     username = Setting(None)
     password = Setting(None)
     table = Setting(None)
@@ -61,22 +62,28 @@ class OWSql(widget.OWWidget):
         box = gui.widgetBox(vbox)
         self.servertext = QtGui.QLineEdit(box)
         self.servertext.setPlaceholderText('Server')
+        self.servertext.setToolTip('Server')
         if self.host:
             self.servertext.setText(self.host if not self.port else
                                     '{}:{}'.format(self.host, self.port))
         box.layout().addWidget(self.servertext)
         self.databasetext = QtGui.QLineEdit(box)
-        self.databasetext.setPlaceholderText('Database')
+        self.databasetext.setPlaceholderText('Database[/Schema]')
+        self.databasetext.setToolTip('Database or optionally Database/Schema')
         if self.database:
-            self.databasetext.setText(self.database)
+            self.databasetext.setText(
+                self.database if not self.schema else
+                '{}/{}'.format(self.database, self.schema))
         box.layout().addWidget(self.databasetext)
         self.usernametext = QtGui.QLineEdit(box)
         self.usernametext.setPlaceholderText('Username')
+        self.usernametext.setToolTip('Username')
         if self.username:
             self.usernametext.setText(self.username)
         box.layout().addWidget(self.usernametext)
         self.passwordtext = QtGui.QLineEdit(box)
         self.passwordtext.setPlaceholderText('Password')
+        self.passwordtext.setToolTip('Password')
         self.passwordtext.setEchoMode(QtGui.QLineEdit.Password)
         if self.password:
             self.passwordtext.setText(self.password)
@@ -88,6 +95,7 @@ class OWSql(widget.OWWidget):
             minimumContentsLength=35,
             sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLength
         )
+        self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
         self.tablecombo.activated[int].connect(self.select_table)
         self.connectbutton = gui.button(
@@ -143,7 +151,7 @@ class OWSql(widget.OWWidget):
         hostport = self.servertext.text().split(':')
         self.host = hostport[0]
         self.port = hostport[1] if len(hostport) == 2 else None
-        self.database = self.databasetext.text()
+        self.database, _, self.schema = self.databasetext.text().partition('/')
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
         try:
@@ -173,6 +181,10 @@ class OWSql(widget.OWWidget):
             return
 
         cur = self._connection.cursor()
+        if self.schema:
+            schema_clause = "AND n.nspname = '{}'".format(self.schema)
+        else:
+            schema_clause = "AND pg_catalog.pg_table_is_visible(c.oid)"
         cur.execute("""SELECT --n.nspname as "Schema",
                               c.relname AS "Name"
                        FROM pg_catalog.pg_class c
@@ -181,9 +193,9 @@ class OWSql(widget.OWWidget):
                         AND n.nspname <> 'pg_catalog'
                         AND n.nspname <> 'information_schema'
                         AND n.nspname !~ '^pg_toast'
-                        AND pg_catalog.pg_table_is_visible(c.oid)
+                        {}
                         AND NOT c.relname LIKE '\\_\\_%'
-                   ORDER BY 1;""")
+                   ORDER BY 1;""".format(schema_clause))
 
         self.tablecombo.addItem("Select a table")
         for i, (table_name,) in enumerate(cur.fetchall()):
