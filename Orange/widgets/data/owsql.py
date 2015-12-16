@@ -218,6 +218,10 @@ class OWSql(widget.OWWidget):
         else:
             self.sql = self.table = self.sqltext.toPlainText()
             if self.materialize:
+                if not self.materialize_table_name:
+                    self.error(
+                        0, "Specify a table name to materialize the query")
+                    return
                 try:
                     cur = self._connection.cursor()
                     cur.execute("DROP TABLE IF EXISTS " + self.materialize_table_name)
