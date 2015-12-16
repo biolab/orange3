@@ -5,7 +5,7 @@ import unicodedata
 import itertools
 from functools import partial
 
-import numpy
+import numpy as np
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -38,7 +38,7 @@ def indices_to_mask(indices, size):
     :param int size: Size of the resulting mask.
 
     """
-    mask = numpy.zeros(size, dtype=bool)
+    mask = np.zeros(size, dtype=bool)
     mask[indices] = True
     return mask
 
@@ -59,7 +59,7 @@ def stack_on_condition(a, b, condition):
     shape = list(a.shape)
     shape[axis] = N
     shape = tuple(shape)
-    arr = numpy.empty(shape, dtype=a.dtype)
+    arr = np.empty(shape, dtype=a.dtype)
     arr[condition] = a
     arr[~condition] = b
     return arr
@@ -113,8 +113,8 @@ def transform(command, data):
 
 @transform.register(Append)
 def append(command, data):
-    numpy.clip(command.points[:, :2], 0, 1, out=command.points[:, :2])
-    return (numpy.vstack([data, command.points]),
+    np.clip(command.points[:, :2], 0, 1, out=command.points[:, :2])
+    return (np.vstack([data, command.points]),
             DeleteIndices(slice(len(data),
                                 len(data) + len(command.points))))
 
@@ -131,8 +131,8 @@ def delete(command, data, ):
     if isinstance(command.indices, slice):
         condition = indices_to_mask(command.indices, len(data))
     else:
-        indices = numpy.asarray(command.indices)
-        if indices.dtype == numpy.bool:
+        indices = np.asarray(command.indices)
+        if indices.dtype == np.bool:
             condition = indices
         else:
             condition = indices_to_mask(indices, len(data))
@@ -351,17 +351,17 @@ class AirBrushTool(DataTool):
 
 
 def random_state(rstate):
-    if isinstance(rstate, numpy.random.RandomState):
+    if isinstance(rstate, np.random.RandomState):
         return rstate
     else:
-        return numpy.random.RandomState(rstate)
+        return np.random.RandomState(rstate)
 
 
 def create_data(x, y, radius, size, rstate):
     random = random_state(rstate)
     x = random.normal(x, radius / 2, size=size)
     y = random.normal(y, radius / 2, size=size)
-    return numpy.c_[x, y]
+    return np.c_[x, y]
 
 
 class MagnetTool(DataTool):
@@ -651,7 +651,7 @@ def indices_eq(ind1, ind2):
     elif ind1 is ... and ind2 is ...:
         return True
 
-    ind1, ind1 = numpy.array(ind1), numpy.array(ind2)
+    ind1, ind1 = np.array(ind1), np.array(ind2)
 
     if ind1.shape != ind2.shape or ind1.dtype != ind2.dtype:
         return False
@@ -667,7 +667,7 @@ def merge_cmd(composit):
         g = merge_cmd(g)
 
     if isinstance(f, Append) and isinstance(g, Append):
-        return Append(numpy.vstack((f.points, g.points)))
+        return Append(np.vstack((f.points, g.points)))
     elif isinstance(f, Move) and isinstance(g, Move):
         if indices_eq(f.indices, g.indices):
             return Move(f.indices, f.delta + g.delta)
@@ -675,7 +675,7 @@ def merge_cmd(composit):
             # TODO: union of indices, ...
             return composit
 #     elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
-#         indices = numpy.array(g.indices)
+#         indices = np.array(g.indices)
 #         return DeleteIndices(indices)
     else:
         return composit
@@ -683,21 +683,21 @@ def merge_cmd(composit):
 
 def apply_attractor(data, point, density, radius):
     delta = data - point
-    dist_sq = numpy.sum(delta ** 2, axis=1)
-    dist = numpy.sqrt(dist_sq)
+    dist_sq = np.sum(delta ** 2, axis=1)
+    dist = np.sqrt(dist_sq)
 
     dist[dist < radius] = 0
     dist_sq = dist ** 2
-    valid = (dist_sq > 100 * numpy.finfo(dist.dtype).eps)
+    valid = (dist_sq > 100 * np.finfo(dist.dtype).eps)
     assert valid.shape == (dist.shape[0],)
 
     df = 0.05 * density / dist_sq[valid]
 
     df_bound = 1 - radius / dist[valid]
 
-    df = numpy.clip(df, 0, df_bound)
+    df = np.clip(df, 0, df_bound)
 
-    dx = numpy.zeros_like(delta)
+    dx = np.zeros_like(delta)
     dx[valid] = df.reshape(-1, 1) * delta[valid]
     return dx
 
@@ -706,15 +706,15 @@ def apply_jitter(data, point, density, radius, rstate=None):
     random = random_state(rstate)
 
     delta = data - point
-    dist_sq = numpy.sum(delta ** 2, axis=1)
-    dist = numpy.sqrt(dist_sq)
-    valid = dist_sq > 100 * numpy.finfo(dist_sq.dtype).eps
+    dist_sq = np.sum(delta ** 2, axis=1)
+    dist = np.sqrt(dist_sq)
+    valid = dist_sq > 100 * np.finfo(dist_sq.dtype).eps
 
     df = 0.05 * density / dist_sq[valid]
     df_bound = 1 - radius / dist[valid]
-    df = numpy.clip(df, 0, df_bound)
+    df = np.clip(df, 0, df_bound)
 
-    dx = numpy.zeros_like(delta)
+    dx = np.zeros_like(delta)
     jitter = random.normal(0, 0.1, size=(df.size, data.shape[1]))
 
     dx[valid, :] = df.reshape(-1, 1) * jitter
@@ -798,7 +798,7 @@ class OWPaintData(widget.OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        self.data = numpy.zeros((0, 3))
+        self.data = np.zeros((0, 3))
         self.colors = colorpalette.ColorPaletteGenerator(
             len(colorpalette.DefaultRGBColors))
         self.tools_cache = {}
@@ -975,11 +975,11 @@ class OWPaintData(widget.OWWidget):
                 y = np.ones(X.shape[0])
             else:
                 y = data[:, y].Y
-            while len(self.class_model) < numpy.unique(y).size:
+            while len(self.class_model) < np.unique(y).size:
                 self.add_new_class_label(undoable=False)
 
-            X = numpy.array([scale(vals) for vals in data.X[:, :2].T]).T
-            self.data = numpy.column_stack((X, y))
+            X = np.array([scale(vals) for vals in data.X[:, :2].T]).T
+            self.data = np.column_stack((X, y))
             self._replot()
 
     def add_new_class_label(self, undoable=True):
@@ -1102,7 +1102,7 @@ class OWPaintData(widget.OWWidget):
 
         if isinstance(cmd, Append):
             cls = self.selected_class_label()
-            points = numpy.array([(p.x(), p.y() if self.hasAttr2 else 0, cls)
+            points = np.array([(p.x(), p.y() if self.hasAttr2 else 0, cls)
                                   for p in cmd.points])
             self.undo_stack.push(UndoCommand(Append(points), self, text=name))
         elif isinstance(cmd, Move):
@@ -1110,7 +1110,7 @@ class OWPaintData(widget.OWWidget):
         elif isinstance(cmd, SelectRegion):
             indices = [i for i, (x, y) in enumerate(self.data[:, :2])
                        if cmd.region.contains(QPointF(x, y))]
-            indices = numpy.array(indices, dtype=int)
+            indices = np.array(indices, dtype=int)
             self._selected_indices = indices
         elif isinstance(cmd, DeleteSelection):
             indices = self._selected_indices
@@ -1124,7 +1124,7 @@ class OWPaintData(widget.OWWidget):
                 self.undo_stack.push(
                     UndoCommand(
                         Move((self._selected_indices, slice(0, 2)),
-                             numpy.array([cmd.delta.x(), cmd.delta.y()])),
+                             np.array([cmd.delta.x(), cmd.delta.y()])),
                         self, text="Move")
                 )
         elif isinstance(cmd, DeleteIndices):
@@ -1137,12 +1137,12 @@ class OWPaintData(widget.OWWidget):
                                1 + self.density / 20, cmd.rstate)
             self._add_command(Append([QPointF(*p) for p in zip(*data.T)]))
         elif isinstance(cmd, Jitter):
-            point = numpy.array([cmd.pos.x(), cmd.pos.y()])
+            point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_jitter(self.data[:, :2], point,
                                    self.density / 100.0, 0, cmd.rstate)
             self._add_command(Move((..., slice(0, 2)), delta))
         elif isinstance(cmd, Magnet):
-            point = numpy.array([cmd.pos.x(), cmd.pos.y()])
+            point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_attractor(self.data[:, :2], point,
                                       self.density / 100.0, 0)
             self._add_command(Move((..., slice(0, 2)), delta))
@@ -1164,7 +1164,7 @@ class OWPaintData(widget.OWWidget):
 
         self._scatter_item = pg.ScatterPlotItem(
             self.data[:, 0],
-            self.data[:, 1] if self.hasAttr2 else numpy.zeros(self.data.shape[0]),
+            self.data[:, 1] if self.hasAttr2 else np.zeros(self.data.shape[0]),
             symbol="+",
             pen=[pens[int(ci)] for ci in self.data[:, 2]]
         )
@@ -1185,7 +1185,7 @@ class OWPaintData(widget.OWWidget):
             attrs = (Orange.data.ContinuousVariable(self.attr1),
                      Orange.data.ContinuousVariable(self.attr2))
         else:
-            X, Y = self.data[:, numpy.newaxis, 0], self.data[:, 2]
+            X, Y = self.data[:, np.newaxis, 0], self.data[:, 2]
             attrs = (Orange.data.ContinuousVariable(self.attr1),)
         if len(self.class_model) > 1:
             domain = Orange.data.Domain(
