@@ -129,9 +129,7 @@ class OWSql(widget.OWWidget):
                      "Download data to local memory",
                      callback=self.open_table)
 
-        self.connect()
-        if self.table:
-            QTimer.singleShot(0, self.open_table)
+        QTimer.singleShot(0, self.connect)
 
     def error(self, id=0, text=""):
         super().error(id, text)
@@ -165,11 +163,12 @@ class OWSql(widget.OWWidget):
                 password=self.password
             )
             self.error(0)
-            self.refresh_tables()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
                 ("Database", self.database), ("User name", self.username)
             ))
+            self.refresh_tables()
+            self.select_table()
         except psycopg2.Error as err:
             self.error(0, str(err).split('\n')[0])
             self.database_desc = self.data_desc_table = None
@@ -205,7 +204,6 @@ class OWSql(widget.OWWidget):
             if table_name == self.table:
                 self.tablecombo.setCurrentIndex(i + 1)
         self.tablecombo.addItem("Custom SQL")
-        self.select_table()
 
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
