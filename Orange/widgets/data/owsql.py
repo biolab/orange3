@@ -103,8 +103,10 @@ class OWSql(widget.OWWidget):
         self.custom_sql.layout().addWidget(self.sqltext)
 
         mt = gui.widgetBox(self.custom_sql, orientation='horizontal')
-        gui.checkBox(mt, self, 'materialize', 'materialize to table ')
-        gui.lineEdit(mt, self, 'materialize_table_name')
+        cb = gui.checkBox(mt, self, 'materialize', 'Materialize to table ')
+        cb.setToolTip('Save results of the query in a table')
+        le = gui.lineEdit(mt, self, 'materialize_table_name')
+        le.setToolTip('Save results of the query in a table')
 
         self.executebtn = gui.button(
             self.custom_sql, self, 'Execute', callback=self.open_table)
