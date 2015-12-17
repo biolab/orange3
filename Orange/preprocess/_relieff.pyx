@@ -172,7 +172,7 @@ cdef void k_nearest_reg(arr_f2_t X,
         dist[j] /= distsum
     # Update the counts
     for j in range(k_nearest):
-        cls_diff = fabs(y[i] - y[j])
+        cls_diff = fabs(y[i] - y[knearest[j].second])
         Nc[0] += cls_diff * dist[j]
         # Recalculate the distance that was thrown away before
         calc_difference(X, y, i, knearest[j].second, is_discrete, attr_stats, contingencies, difference)
