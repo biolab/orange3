@@ -128,18 +128,36 @@ cdef void k_nearest_reg(arr_f2_t X,
                         arr_f1_t difference,
                         double * Nc,
                         arr_f1_t Na,
-                        arr_f1_t Nca,
-                        arr_f1_t dist) nogil:
+                        arr_f1_t Nca) nogil:
     """The k-nearest search for RReliefF."""
     cdef:
         Py_ssize_t j, a, _
         # The heap that gets "sorted"
         vector[HeapPair] nearest = vector[HeapPair]()
-        # Vector of only k nearest as they are needed all at once
-        vector[HeapPair] knearest = vector[HeapPair]()
-        double distsum = 0, cls_diff, d, difference_sum = 0
+        double cls_diff, difference_sum = 0
+
+        # Pleasure yourself with the following mystery:
+        #
+        # Instance influence (ibid. §2.3, eq. 10, eq. 11), the notion that
+        # nearer instances should exert greater effect on the outcome weights,
+        # was first set to 1/(d*d), d being the manhattan distance between
+        # i-th and j-th instances (ibid. §3.3, eq. 37). With it, RReliefF
+        # worked well with a simple XOR dataset (class = A1 > .5 ^ A2 < .5),
+        # but didn't work at all with common UCI regression datasets.
+        # Setting influence to proposed alternatives (ibid., eq. 10, eq. 11)
+        # didn't work, and neither did setting it to 1/k_nearest (all
+        # instances have the same, constant influence), which is what Orange2
+        # uses.
+        # The following, however, does work, for reasons unknown. The constant
+        # denominator is arbitrary, but must be, for k_nearest=50, > ~5.
+        # Yes; 5 or 1e9 work equally well!
+
+        # Influence of each nearest neighbor
+        double influence = 1. / k_nearest / 5
+        # The downside is that simple XOR dataset is no longer as precise, i.e.
+        # even random, insignificant features get a positive score (as opposed
+        # to ~0). The order of feature importances is preserved, though.
     nearest.reserve(X.shape[0])
-    knearest.reserve(k_nearest)
     for j in range(X.shape[0]):
         # Calculate difference between i-th and j-th instance
         calc_difference(X, y, i, j, is_discrete, attr_stats, contingencies, difference, &difference_sum)
@@ -147,29 +165,21 @@ cdef void k_nearest_reg(arr_f2_t X,
         nearest.push_back(HeapPair(-difference_sum, j))
     # Heapify the nearest vectors and extract the k nearest neighbors
     make_heap(nearest.begin(), nearest.end())
-    # Pop the i-th instance, "distance to self"
-    pop_heap(nearest.begin(), nearest.end())
-    nearest.pop_back()
+    # Update the counts
     for _ in range(k_nearest):
-        knearest.push_back(nearest.front())
+        # Pop the i-th instance, "distance to self", in first iteration,
+        # then follow up with as many nearest instances as needed (k), in order
         pop_heap(nearest.begin(), nearest.end())
         nearest.pop_back()
-    # Instance influence from ibid. §3.3, eq. 37
-    for j in range(k_nearest):
-        d = knearest[j].first
-        dist[j] = 1 / (d * d)
-        distsum += dist[j]
-    for j in range(k_nearest):
-        dist[j] /= distsum
-    # Update the counts
-    for j in range(k_nearest):
-        cls_diff = fabs(y[i] - y[knearest[j].second])
-        Nc[0] += cls_diff * dist[j]
+
+        j = nearest.front().second
+        cls_diff = fabs(y[i] - y[j])
+        Nc[0] += cls_diff * influence
         # Recalculate the distance that was thrown away before
-        calc_difference(X, y, i, knearest[j].second, is_discrete, attr_stats, contingencies, difference, &difference_sum)
+        calc_difference(X, y, i, j, is_discrete, attr_stats, contingencies, difference, &difference_sum)
         for a in range(X.shape[1]):
-            Na[a] += difference[a] * dist[j]
-            Nca[a] += cls_diff * difference[a] * dist[j]
+            Na[a] += difference[a] * influence
+            Nca[a] += cls_diff * difference[a] * influence
 
 
 cdef void k_nearest_per_class(arr_f2_t X,
@@ -228,8 +238,6 @@ cdef arr_f1_t _relieff_reg_(arr_f2_t X,
         double Nc = 0
         arr_f1_t Na = np.zeros(X.shape[1])
         arr_f1_t Nca = np.zeros(X.shape[1])
-        # Influence (inverse distance) of each neighbor
-        arr_f1_t dist = np.empty(k_nearest)
 
         arr_f1_t weights = np.empty(X.shape[1])
         arr_f1_t difference = np.empty(X.shape[1])
@@ -242,7 +250,7 @@ cdef arr_f1_t _relieff_reg_(arr_f2_t X,
             # Find its k nearest neighbors and update the Nx counts
             k_nearest_reg(X, y, i, k_nearest,
                           is_discrete, attr_stats, contingencies, difference,
-                          &Nc, Na, Nca, dist)
+                          &Nc, Na, Nca)
         # Update weights
         for a in range(X.shape[1]):
             weights[a] = Nca[a] / Nc - (Na[a] - Nca[a]) / (n_iter - Nc)
