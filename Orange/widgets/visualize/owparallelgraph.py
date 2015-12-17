@@ -244,7 +244,8 @@ class OWParallelGraph(OWPlot, ScaleData):
                 nsigma2 = math.sqrt(sigma2) / diff[i + 1]
 
                 polygon = ParallelCoordinatePolygon(i, nmu1, nmu2, nsigma1, nsigma2, phi,
-                                                    tuple(self.colors[j]))
+                                                    tuple(self.colors[j]) if self.colors
+                                                    else (0, 0, 0))
                 polygon.attach(self)
 
         self.replot()
