@@ -83,7 +83,8 @@ class OWDistances(widget.OWWidget):
             if numpy.product(shape) == 0:
                 self.error(1, "Empty data (shape == {})".format(shape))
             else:
-                distances = metric(data, data, 1 - self.axis, impute=True)
+                distances = metric(data if self.axis == 0 else data.X.T, impute=True)
+                distances.axis = self.axis      # store this since other widgets needs this
 
         self.send("Distances", distances)
 
