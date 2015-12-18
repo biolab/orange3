@@ -336,7 +336,7 @@ class TestSpearmanR(TestCase):
                                                  [ 0.25,  0.  ,  0.25,  0.  ,  0.  ,  0.  ,  0.25,  0.  ,  0.75],
                                                  [ 0.25,  0.75,  0.25,  0.75,  0.75,  0.75,  1.  ,  0.75,  0.  ]]))
 
-    def test_spearmanr_distacne_numpy(self):
+    def test_spearmanr_distance_numpy(self):
         np.testing.assert_almost_equal(self.dist(self.breast[0].x, self.breast[1].x, axis=0), np.array([[0.5083333333333333]]))
         np.testing.assert_almost_equal(self.dist(self.breast[:2].X),
                                        np.array([[ 0.                ,  0.5083333333333333],

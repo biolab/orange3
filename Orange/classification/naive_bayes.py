@@ -32,8 +32,8 @@ class NaiveBayesLearner(Learner):
             raise NotImplementedError("Only discrete variables are supported.")
 
         cont = contingency.get_contingencies(table)
-        class_freq = np.diag(
-            contingency.get_contingency(table, table.domain.class_var))
+        class_freq = np.array(np.diag(
+            contingency.get_contingency(table, table.domain.class_var)))
         return NaiveBayesModel(cont, class_freq, table.domain)
 
 

@@ -100,9 +100,9 @@ class TestPCA(unittest.TestCase):
     def test_chain(self):
         zoo = Orange.data.Table('zoo')
         zoo_c = Continuize(zoo)
-        pca = PCA()(zoo_c)(zoo)
-        pca2 = PCA()(zoo_c)(zoo_c)
-        pca3 = PCA(preprocessors=[Continuize()])(zoo)(zoo)
+        pca = PCA(n_components=3)(zoo_c)(zoo)
+        pca2 = PCA(n_components=3)(zoo_c)(zoo_c)
+        pca3 = PCA(n_components=3, preprocessors=[Continuize()])(zoo)(zoo)
         np.testing.assert_almost_equal(pca.X, pca2.X)
         np.testing.assert_almost_equal(pca.X, pca3.X)
 

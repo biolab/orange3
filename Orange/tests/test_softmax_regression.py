@@ -15,19 +15,12 @@ class SoftmaxRegressionTest(unittest.TestCase):
         self.assertTrue(0.9 < ca < 1.0)
 
     def test_SoftmaxRegressionPreprocessors(self):
-        np.random.seed(42)
         table = Table('iris')
-        new_attrs = (ContinuousVariable('c0'),) + table.domain.attributes
-        new_domain = Domain(new_attrs,
-                            table.domain.class_vars,
-                            table.domain.metas)
-        new_table = np.hstack((
-            1000000 * np.random.random((table.X.shape[0], 1)),
-            table))
-        table = table.from_numpy(new_domain, new_table)
+        table.X[:,2] = table.X[:,2] * 0.001
+        table.X[:,3] = table.X[:,3] * 0.001
         learners = [SoftmaxRegressionLearner(preprocessors=[]),
                     SoftmaxRegressionLearner()]
-        results = CrossValidation(table, learners, k=3)
+        results = CrossValidation(table, learners, k=10)
         ca = CA(results)
         self.assertTrue(ca[0] < ca[1])
 
