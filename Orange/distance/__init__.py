@@ -24,9 +24,11 @@ def _orange_to_numpy(x):
     if isinstance(x, data.Table):
         return x.X
     elif isinstance(x, data.RowInstance):
-        return x.x
+        return np.atleast_2d(x.x)
+    elif isinstance(x, np.ndarray):
+        return np.atleast_2d(x)
     else:
-        return x
+        return x    # e.g. None
 
 
 class Distance():
@@ -64,10 +66,6 @@ class SklDistance(Distance):
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        if not sparse.issparse(x1):
-            x1 = np.atleast_2d(x1)
-        if e2 is not None and not sparse.issparse(x2):
-            x2 = np.atleast_2d(x2)
         dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2, axis)
@@ -97,18 +95,7 @@ class SpearmanDistance(Distance):
         x2 = _orange_to_numpy(e2)
         if x2 is None:
             x2 = x1
-        if x1.ndim == 1 or x2.ndim == 1:
-            axis = 0
-            slc = len(x1) if x1.ndim > 1 else 1
-        else:
-            slc = len(x1) if axis == 1 else x1.shape[1]
-        # stats.spearmanr does not work when e1=Table and e2=RowInstance
-        # so we replace e1 and e2 and then transpose the result
-        transpose = False
-        if x1.ndim == 2 and x2.ndim == 1:
-            x1, x2 = x2, x1
-            slc = len(e1) if x1.ndim > 1 else 1
-            transpose = True
+        slc = len(x1) if axis == 1 else x1.shape[1]
         rho, _ = stats.spearmanr(x1, x2, axis=axis)
         if np.isnan(rho).any() and impute:
             rho = np.nan_to_num(rho)
@@ -120,8 +107,6 @@ class SpearmanDistance(Distance):
             dist = np.array([[dist]])
         elif isinstance(dist, np.ndarray):
             dist = dist[:slc, slc:]
-        if transpose:
-           dist = dist.T
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
@@ -151,10 +136,6 @@ class PearsonDistance(Distance):
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        if x1.ndim == 1:
-            x1 = list([x1])
-        if x2.ndim == 1:
-            x2 = list([x2])
         rho = np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
         if np.isnan(rho).any() and impute:
             rho = np.nan_to_num(rho)
