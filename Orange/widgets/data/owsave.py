@@ -22,7 +22,7 @@ class OWSave(widget.OWWidget):
     resizing_enabled = False
 
     last_dir = Setting("")
-    auto_save = Setting(True)
+    auto_save = Setting(False)
 
     def __init__(self, data=None, file_formats=None):
         super().__init__()
@@ -46,8 +46,6 @@ class OWSave(widget.OWWidget):
         self.save = gui.auto_commit(self.controlArea, self, "auto_save",
                                     "Save",
                                     commit=self.save_file)
-#        self.save = gui.button(box, self, "Save", callback=self.save_file,
-#                               default=True, disabled=True)
         gui.separator(box)
         self.saveAs = gui.button(box, self, "Save as ...",
                                  callback=self.save_file_as, disabled=True)
@@ -78,8 +76,7 @@ class OWSave(widget.OWWidget):
             filename += format_extensions[0]
         self.filename = filename
         self.last_dir, file_name = os.path.split(self.filename)
-        self.info.setText("Save as '%s'" %  file_name)
-        self.save.button.setText("Save as '%s'" % file_name)
+        self.info.setText("Saving as '%s'" %  file_name)
         self.save.setDisabled(False)
         self.save_file()
 
