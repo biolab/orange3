@@ -319,6 +319,7 @@ class TestSpearmanR(TestCase):
                                        np.array([[ 0.        ,  0.50833333,  0.075     ,  0.61666667],
                                                  [ 0.50833333,  0.        ,  0.38333333,  0.53333333],
                                                  [ 0.075     ,  0.38333333,  0.        ,  0.63333333]]))
+        print(self.dist(self.breast[2], self.breast[:3]))
         np.testing.assert_almost_equal(self.dist(self.breast[2], self.breast[:3]),
                                        np. array([[ 0.56282809, 0.65526475, 0.3288367 ]]))
         np.testing.assert_almost_equal(self.dist(self.breast[:3], self.breast[2]),
