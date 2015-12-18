@@ -3,7 +3,7 @@ from itertools import chain
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.classification import logistic_regression as lr
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
@@ -18,7 +18,8 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
 
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [("Learner", lr.LogisticRegressionLearner),
-               ("Classifier", lr.LogisticRegressionClassifier)]
+               ("Classifier", lr.LogisticRegressionClassifier),
+               ("Coefficients", Table)]
 
     want_main_area = False
     resizing_enabled = False
@@ -99,6 +100,7 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
         )
         learner.name = self.learner_name
         classifier = None
+        coef_table = None
 
         if self.data is not None:
             self.error([0, 1])
@@ -109,9 +111,11 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
             else:
                 classifier = learner(self.data)
                 classifier.name = self.learner_name
+                coef_table = create_coef_table(classifier)
 
         self.send("Learner", learner)
         self.send("Classifier", classifier)
+        self.send("Coefficients", coef_table)
 
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
@@ -121,6 +125,25 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
         ))
         if self.data:
             self.report_data("Data", self.data)
+
+
+def create_coef_table(classifier):
+    i = classifier.intercept
+    c = classifier.coefficients
+    if len(classifier.domain.class_var.values) > 2:
+        values = classifier.domain.class_var.values
+    else:
+        values = ["coef"]
+    domain = Domain([ContinuousVariable(value, number_of_decimals=7)
+                     for value in values], metas=[StringVariable("name")])
+    coefs = np.vstack((i.reshape(1, len(i)), c.T))
+    names = [[attr.name] for attr in classifier.domain.attributes]
+    names = [["intercept"]] + names
+    names = np.array(names, dtype=object)
+    coef_table = Table.from_numpy(domain, X=coefs, metas=names)
+    coef_table.name = "coefficients"
+    return coef_table
+
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])
