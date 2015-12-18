@@ -384,7 +384,14 @@ class OWVennDiagram(widget.OWWidget):
         colors = colorpalette.ColorPaletteHSV(n)
 
         for i, (key, item) in enumerate(self.itemsets.items()):
-            gr = VennSetItem(text=item.title, count=len(item.items))
+            count = len(set(item.items))
+            count_all = len(item.items)
+            if count != count_all:
+                fmt = '{} <i>(all: {})</i>'
+            else:
+                fmt = '{}'
+            counts = fmt.format(count, count_all)
+            gr = VennSetItem(text=item.title, informativeText=counts)
             color = colors[i]
             color.setAlpha(100)
             gr.setBrush(QBrush(color))
@@ -940,11 +947,12 @@ def disjoint_set_label(i, n, simplify=False):
 
 
 class VennSetItem(QGraphicsPathItem):
-    def __init__(self, parent=None, text=None, count=None):
+    def __init__(self, parent=None, text="", informativeText=""):
         super(VennSetItem, self).__init__(parent)
+        # Plain text title (editable by the VennDiagram)
         self.text = text
-        self.count = count
-
+        # Extra informative text (possibly rich text)
+        self.informativeText = informativeText
 
 # TODO: Use palette's selected/highligted text / background colors to
 # indicate selection
@@ -1127,7 +1135,7 @@ class VennDiagram(QGraphicsWidget):
             text = GraphicsTextEdit(self)
             text.setFont(font)
             text.setDefaultTextColor(QColor("#333"))
-            text.setHtml(fmt(escape(item.text), item.count))
+            text.setHtml(fmt(escape(item.text), item.informativeText))
             text.adjustSize()
             text.editingStarted.connect(self._on_editingStarted)
             text.editingFinished.connect(self._on_editingFinished)
@@ -1283,7 +1291,8 @@ class VennDiagram(QGraphicsWidget):
             self.itemTextEdited.emit(index, text)
 
         item.setHtml(
-            self.TitleFormat.format(escape(text), self._items[index].count))
+            self.TitleFormat.format(
+                escape(text), self._items[index].informativeText))
         item.adjustSize()
 
     def _on_itemTextSizeChanged(self):
