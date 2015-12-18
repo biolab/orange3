@@ -248,10 +248,10 @@ class OWBoxPlot(widget.OWWidget):
         if self.is_continuous:
             heights = 90 if self.show_annotations else 60
             self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
-                                  -30 - len(self.stats) * heights / 2 + 45)
+                                   -30 - len(self.stats) * heights / 2 + 45)
         else:
             self.box_view.centerOn(self.scene_width / 2,
-                                  -30 - len(self.boxes) * 40 / 2 + 45)
+                                   -30 - len(self.boxes) * 40 / 2 + 45)
 
     def compute_box_data(self):
         dataset = self.dataset
