@@ -574,7 +574,7 @@ class OWBoxPlot(widget.OWWidget):
                 self.scale_x = 1
                 return
             _, step = compute_scale(0, max_box)
-            step = int(step)
+            step = int(step) if step > 1 else 1
             steps = int(math.ceil(max_box / step))
         max_box = step * steps
 
