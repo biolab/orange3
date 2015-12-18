@@ -345,7 +345,12 @@ def sample_random_p(table, p, stratified=False, random_state=None):
 
 def sample_bootstrap(size, random_state=None):
     rgen = np.random.RandomState(random_state)
-    return np.arange(0, size), rgen.randint(0, size, size)
+    sample = rgen.randint(0, size, size)
+    sample.sort()  # not needed for the code below, just for the user
+    insample = np.ones((size,), dtype=np.bool)
+    insample[sample] = False
+    remaining = np.flatnonzero(insample)
+    return remaining, sample
 
 
 def test_main():
