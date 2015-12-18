@@ -715,7 +715,6 @@ class OWBoxPlot(widget.OWWidget):
                 v /= ss
             v *= self.scale_x
             rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
-            print(attr.colors[i])
             rect.setBrush(QtGui.QBrush(QtGui.QColor(*attr.colors[i])))
             rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             if self.stretched:
