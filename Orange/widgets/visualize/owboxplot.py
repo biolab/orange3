@@ -195,10 +195,6 @@ class OWBoxPlot(widget.OWWidget):
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
         self.mainArea.setMinimumWidth(650)
 
-        self.warning = gui.widgetBox(self.controlArea, "Warning:")
-        self.warning_info = gui.widgetLabel(self.warning, "")
-        self.warning.hide()
-
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
 
@@ -461,7 +457,6 @@ class OWBoxPlot(widget.OWWidget):
             p = 1 - scipy.special.fdtr(df_between, df_within, F)
             return F, p
 
-        self.warning.hide()
         if self.compare == OWBoxPlot.CompareNone or len(self.stats) < 2:
             t = ""
         elif any(s.N <= 1 for s in self.stats):
