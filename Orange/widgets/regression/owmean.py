@@ -10,8 +10,11 @@ class OWMean(OWProvidesLearner, widget.OWWidget):
     description = "Regression to the average class value from the training set."
     icon = "icons/Mean.svg"
 
+    LEARNER = MeanLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", MeanLearner), ("Predictor", MeanModel)]
+    outputs = [("Learner", LEARNER),
+               ("Predictor", MeanModel)]
 
     learner_name = settings.Setting("Mean Learner")
 
@@ -34,8 +37,6 @@ class OWMean(OWProvidesLearner, widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    LEARNER = MeanLearner
 
     def apply(self):
         learner = self.LEARNER(preprocessors=self.preprocessors)

@@ -12,16 +12,15 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
     description = "Classification tree algorithm with forward pruning."
     priority = 30
 
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
+    LEARNER = TreeLearner
 
+    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
     outputs = [
-        ("Learner", TreeLearner),
+        ("Learner", LEARNER),
         ("Tree", TreeClassifier)
     ]
     want_main_area = False
     resizing_enabled = False
-
-    LEARNER = TreeLearner
 
     model_name = Setting("Classification Tree")
     attribute_score = Setting(0)

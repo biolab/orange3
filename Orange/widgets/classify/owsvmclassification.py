@@ -18,8 +18,10 @@ class OWSVMClassification(OWProvidesLearner, widget.OWWidget):
                   "selection of kernels."
     icon = "icons/SVM.svg"
 
+    LEARNER = SVMLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", SVMLearner, widget.Default),
+    outputs = [("Learner", LEARNER, widget.Default),
                ("Classifier", SVMClassifier),
                ("Support vectors", Table)]
 
@@ -130,8 +132,6 @@ class OWSVMClassification(OWProvidesLearner, widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    LEARNER = SVMLearner  # OWProvidesLearner uses this
 
     def apply(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]

@@ -19,8 +19,10 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
                   "regularization."
     icon = "icons/LinearRegression.svg"
 
+    LEARNER = LinearRegressionLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Linear Regression", LinearRegressionLearner),
+    outputs = [("Linear Regression", LEARNER),
                ("Model", LinearModel),
                ("Coefficients", Table)]
 
@@ -96,8 +98,6 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
     def _alpha_changed(self):
         self._set_alpha_label()
         self.commit()
-
-    LEARNER = LinearRegressionLearner  # OWProvidesLearner uses this
 
     def apply(self):
         return self.commit()

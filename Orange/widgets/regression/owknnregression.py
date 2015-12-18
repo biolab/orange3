@@ -17,8 +17,10 @@ class OWKNNRegression(OWProvidesLearner, widget.OWWidget):
     icon = "icons/kNearestNeighbours.svg"
     priority = 20
 
+    LEARNER = KNNRegressionLearner
+
     inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", KNNRegressionLearner),
+    outputs = [("Learner", LEARNER),
                ("Predictor", SklModel)]
 
     want_main_area = False
@@ -61,8 +63,6 @@ class OWKNNRegression(OWProvidesLearner, widget.OWWidget):
         self.data = data
         if data is not None:
             self.apply()
-
-    LEARNER = KNNRegressionLearner
 
     def apply(self):
         """

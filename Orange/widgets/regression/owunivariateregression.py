@@ -22,9 +22,11 @@ class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
     description = "Univariate regression with polynomial expansion."
     icon = "icons/UnivariateRegression.svg"
 
+    LEARNER = LinearRegressionLearner
+
     inputs = [("Data", Table, "set_data", widget.Default),
               ("Learner", Learner, "set_learner")] + OWProvidesLearner.inputs
-    outputs = [("Learner", Learner),
+    outputs = [("Learner", LEARNER),
                ("Predictor", LinearModel)]
 
     learner_name = settings.Setting("Univariate Regression")
@@ -179,8 +181,6 @@ class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
         )
         self.plotview.addItem(self.plot_item)
         self.plotview.replot()
-
-    LEARNER = LinearRegressionLearner
 
     def apply(self):
         learner = self.learner

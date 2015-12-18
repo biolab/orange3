@@ -10,10 +10,10 @@ class OWRandomForestRegression(OWRandomForest):
     name = "Random Forest Regression"
     description = "Random forest regression algorithm."
 
-    outputs = [("Learner", RandomForestRegressionLearner),
+    LEARNER = RandomForestRegressionLearner
+    outputs = [("Learner", LEARNER),
                ("Model", RandomForestRegressor)]
 
-    LEARNER = RandomForestRegressionLearner
     learner_name = settings.Setting("RF Regression Learner")
     n_estimators = settings.Setting(10)
     max_features = settings.Setting(5)
