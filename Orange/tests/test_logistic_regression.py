@@ -45,3 +45,10 @@ class LogisticRegressionTest(unittest.TestCase):
         self.assertEqual('physician-fee-freeze',
                          data.domain.attributes[np.argmax(scores)].name)
         self.assertEqual(len(scores), len(data.domain.attributes))
+
+    def test_coefficients(self):
+        data = Table("voting")
+        learn = LogisticRegressionLearner()
+        model = learn(data)
+        coef = model.coefficients
+        self.assertEqual(len(coef[0]), len(model.domain.attributes))

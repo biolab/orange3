@@ -16,11 +16,17 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, model):
         # Take the maximum attribute score across all classes
-        return np.max(np.abs(model.skl_model.coef_), axis=0)
+        return np.max(np.abs(model.coefficients), axis=0)
 
 
 class LogisticRegressionClassifier(SklModel):
-    pass
+    @property
+    def intercept(self):
+        return self.skl_model.intercept_
+
+    @property
+    def coefficients(self):
+        return self.skl_model.coef_
 
 
 class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
