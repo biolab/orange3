@@ -1187,7 +1187,7 @@ class OWPaintData(widget.OWWidget):
         else:
             X, Y = self.data[:, np.newaxis, 0], self.data[:, 2]
             attrs = (Orange.data.ContinuousVariable(self.attr1),)
-        if len(self.class_model) > 1:
+        if len(np.unique(Y)) >= 2:
             domain = Orange.data.Domain(
                 attrs,
                 Orange.data.DiscreteVariable(
