@@ -103,9 +103,16 @@ class FeatureScoringTest(unittest.TestCase):
         self.assertEqual(found, reference)
 
     def test_rrelieff(self):
+        X = np.random.random((100, 5))
+        y = ((X[:, 0] > .5) ^ (X[:, 1] < .5) - 1).astype(float)
+        xor = Table.from_numpy(Domain.from_numpy(X, y), X, y)
+
         scorer = score.RReliefF()
-        score.RReliefF.__init__(scorer, n_iterations=100, k_nearest=70)
+        weights = scorer(xor, None)
+        best = {xor.domain[attr].name for attr in weights.argsort()[-2:]}
+        self.assertSetEqual(set(a.name for a in xor.domain.attributes[:2]), best)
+
         weights = scorer(self.housing, None)
-        best_five = [self.housing.domain[attr].name
-                     for attr in reversed(weights.argsort()[-5:])]
-        self.assertTrue('AGE' in best_five)
+        best = {self.housing.domain[attr].name for attr in weights.argsort()[-6:]}
+        for feature in ('LSTAT', 'RM', 'AGE'):
+            self.assertIn(feature, best)
