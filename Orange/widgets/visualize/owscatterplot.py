@@ -561,12 +561,12 @@ class OWScatterPlot(OWWidget):
                     n_neighbors = min(self.k, len(X) - 1)
                     knn = NearestNeighbors(n_neighbors=n_neighbors).fit(X)
                     ind = knn.kneighbors(return_distance=False)
-                    if isinstance(self.parent_widget.data.domain.class_var,
-                            DiscreteVariable):
+                    if self.parent_widget.data.domain.has_discrete_class:
                         score = np.sum(y[ind] == y.reshape(-1, 1)) / (
                             len(y_full) * n_neighbors)
                     else:
-                        score = r2_score(y, np.mean(y[ind], axis=1))
+                        score = r2_score(y, np.mean(y[ind], axis=1)) * (
+                            len(y) / len(y_full))
                     pos = bisect_left(self.scores, score)
                     self.projectionTableModel.insertRow(
                         len(self.scores) - pos,
