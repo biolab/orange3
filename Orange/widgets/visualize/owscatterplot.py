@@ -252,7 +252,7 @@ class OWScatterPlot(OWWidget):
         self.vizrank._initialize()
         self.vizrank_button.setEnabled(
             self.data is not None and self.data.domain.class_var is not None
-            and len(self.data.domain.attributes) > 1)
+            and len(self.data.domain.attributes) > 1 and len(self.data) > 1)
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
@@ -515,6 +515,10 @@ class OWScatterPlot(OWWidget):
                     self.information(
                         0, 'At least 2 unique features are needed.')
                     return
+                if len(self.parent_widget.data) < 2:
+                    self.information(
+                        0, 'At least 2 instances are needed.')
+                    return
                 self.button.setEnabled(True)
 
         def on_selection_changed(self, selected, deselected):
@@ -535,7 +539,6 @@ class OWScatterPlot(OWWidget):
         def run(self):
             graph = self.parent_widget.graph
             y_full = self.parent_widget.data.Y
-            norm = 1 / (len(y_full) * self.k)
             if not self.attrs:
                 self.attrs = self.score_heuristic()
             if not self.progress:
@@ -555,11 +558,13 @@ class OWScatterPlot(OWWidget):
                     valid = graph.get_valid_list([ind1, ind2])
                     X = X[:, valid].T
                     y = y_full[valid]
-                    knn = NearestNeighbors(n_neighbors=self.k).fit(X)
+                    n_neighbors = min(self.k, len(X) - 1)
+                    knn = NearestNeighbors(n_neighbors=n_neighbors).fit(X)
                     ind = knn.kneighbors(return_distance=False)
                     if isinstance(self.parent_widget.data.domain.class_var,
                             DiscreteVariable):
-                        score = norm * np.sum(y[ind] == y.reshape(-1, 1))
+                        score = np.sum(y[ind] == y.reshape(-1, 1)) / (
+                            len(y_full) * n_neighbors)
                     else:
                         score = r2_score(y, np.mean(y[ind], axis=1))
                     pos = bisect_left(self.scores, score)
