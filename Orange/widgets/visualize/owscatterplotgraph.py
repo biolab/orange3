@@ -295,7 +295,7 @@ class DiscretizedScale:
         :type max_v: float
         """
         super().__init__()
-        dif = max_v - min_v
+        dif = max_v - min_v if max_v != min_v else 1
         decimals = -floor(log10(dif))
         resolution = 10 ** -decimals
         bins = ceil(dif / resolution)
