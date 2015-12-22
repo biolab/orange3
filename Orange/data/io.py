@@ -369,7 +369,8 @@ class FileFormat(metaclass=FileFormatMeta):
 
             if type_flag in StringVariable.TYPE_HEADERS:
                 coltype = StringVariable
-
+                values = [None if isinstance(i, float)
+                          else i for i in orig_values]
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
                 try:
