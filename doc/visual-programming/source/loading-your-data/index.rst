@@ -2,77 +2,66 @@ Loading your Data
 =================
 
 Orange comes with its `own data format <http://docs.orange.biolab.si/reference/rst/Orange.data.formats.html#tab-delimited>`_, but can
-also handle Excel (.xlsl), comma or tab delimited data files. The input data
+also handle native Excel (.xlsx or .xls), comma- or tab-delimited data files. The input data
 set is usually a table, with data instances (samples) in rows and
-data attributes in columns. Attributes can be of different types
-(continuous, discrete, and strings), with different elements (input variables, meta attributes, and class). Data attribute type and element can be provided
-in the data table header. and can be changed later, after reading the
-data, with several specialized widgets, such as Select Rows and `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_.
+data attributes in columns. Attributes can be of different type
+(continuous, discrete, and strings) and kind (input features, meta attributes, and class). Data attribute type and kind can be provided
+in the data table header. This can be changed later, after reading the
+data with `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget.
 
 In a Nutshell
 -------------
 
--   Orange can import any comma, .xlsx or tab-delimited data file. Use `File <http://docs.orange.biolab.si/widgets/rst/data/file.html#file>`_
-    widget and then, if needed, select class and meta attributes in
-    `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget.
--   To specify the domain and the type of the attribute, attribute names
+-   Orange can import any comma- or tab-delimited data file, or Excel's native files or Google Sheets document. Use `File <http://docs.orange.biolab.si/3/visual-programming/widgets/data/file.html>`_
+    widget and then, if needed, define the class and meta attributes in
+    `Select Columns <http://docs.orange.biolab.si/3/visual-programming/widgets/data/selectcolumns.html>`_ widget.
+-   Attribute names in the column header
     can be preceded with a label followed by a hash. Use c for class
     and m for meta attribute, i to ignore a column, and C, D, S for
     continuous, discrete and string attribute types. Examples: C\#mpg,
-    mS\#name, i\#dummy. Make sure to set **Import Options** in `File <http://docs.orange.biolab.si/widgets/rst/data/file.html#file>`_
-    widget and set the header to **Orange simplified header**.
--   Orange's native format is a tab-delimited text file with three
-    header rows. The first row contains attribute names, the second the
-    type (**continuous**, **discrete** or **string**), and the third
-    the optional element (**class**, **meta** or **string**).
+    mS\#name, i\#dummy.
+-   An alternative to the hash notation is Orange's native format with three
+    header rows: the first with attribute names, the second specifying
+    the type (**continuous**, **discrete** or **string**), and the third
+    proving information on the kind of attribute (**class**, **meta** or **string**).
 
-Data from Excel
----------------
+An Example: Data from Excel
+---------------------------
 
-Orange 3.0 can read .xlsx files from Excel. Here is an example data set (:download:`sample.xlsx <sample.xlsx>`) in Excel:
+Here is an example data set (download it from :download:`sample.xlsx <sample.xlsx>`) as entered in Excel:
 
 .. image:: spreadsheet1.png
     :width: 600 px
     :align: center
 
-In Orange, let us start with a simple workflow with File and Data Table widgets,
+The file contains a header row, eight data instances (rows) and seven data attributes (columns). Empty cells in the table denote missing data entries. Rows represent genes; their function (class) is provided in the first column and their name in the second. The remaining columns store measurements that characterize each gene. With this data, we could, say, develop a classifier that would predict gene function from its characteristic measurements.
+
+Let us start with a simple workflow that reads the data and displays it in a table:
 
 .. image:: file-data-table-workflow.png
     :align: center
 
-and then load the data from Excel by opening the File widget (double click on the icon and of the widget) and click on the file browser icon ("..."),
+To load the data, open the File widget (double click on the icon of the widget), click on the file browser icon ("...") and locate the downloaded file (from :download:`sample.xlsx <sample.xlsx>`) on your disk:
 
 .. image:: loadingyourdata.png
-    :width: 600 px
+    :width: 401 px
     :align: center
 
-locate the data file (e.g. :download:`sample.xlsx <sample.xlsx>`) and open
-it. The **File** widget sends data to **Data Table** widget, which displays the following result:
+The **File** widget sends the data to the **Data Table** widget. Double click the **Data Table** widget to see its contents:
 
-.. image:: file-widget.png
+.. image:: table-widget.png
     :width: 900 px
     :align: center
 
-Notice that our data contains 8 data instances (rows) and 7 data
-attributes (columns). Question marks in the data table denote missing data entries. These entries correspond to empty cells in the Excel table. Rows in our exemplary data set represent genes, with values in the first column
-denoting a gene class. The second column stores gene names, while the
-remaining columns record measurements that characterize each gene. Gene
-class can be used for classification. Gene name is a meta information, a
-label that is not relevant to any data mining algorithm, but can identify
-a data instance in, say, visualizations like scatter plot. We need to
-tell Orange that these first two columns are special. One way to do this
-within Orange is through `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget:
+Orange correctly assumed that a column with gene names is a meta information, which is displayed in **Data Table** in columns shaded with light-gray. It has wrongly guessed that `heat 20`, the last non-meta column in our data file, is a class column. To correct this in Orange, we can feed the data to the `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget:
 
 .. image:: select-columns-schema.png
     :align: center
 
-Opening the `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget reveals that in our input data file
-all six columns are treated as ordinary attributes (input variables),
-with the only distinction being that the first variable is categorical
-(discrete) and the other five are real-valued (continuous):
+Opening the `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget reveals Orange's classification of attributes. We would like all our continuous attributes to be data features, gene function to be our target variable and gene names considered as meta attributes. We can obtain this by dragging the attribute names around the boxes in **Select Columns**:
 
 .. image:: select-columns-start.png
-    :width: 600 px
+    :width: 413 px
     :align: center
 
 To correctly reassign attribute types, drag attribute named `function`
@@ -80,50 +69,46 @@ to a **Class** box, and attribute named `gene` to a **Meta Attribute**
 box. The `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget should now look like this:
 
 .. image:: select-columns-reassigned.png
-    :width: 500 px
+    :width: 413 px
     :align: center
 
 Change of attribute types in *Select Columns* widget should be confirmed
 by clicking the **Apply** button. The data from this widget is fed into
-`Data Table <http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table>`_ widget, that now renders class and meta attributes in a
-color different from those of input features:
+`Data Table <http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table>`_ that now renders the data just the way we intended:
 
 .. image:: data-table-with-class1.png
-    :width: 500 px
+    :width: 548 px
     :align: center
 
 We could also define the domain for this data set in a different way.
 Say, we could make the data set ready for regression, and use `heat 0`
 as a continuous class variable, keep gene function and name as meta
-variables, and remove `heat 10` and `heat 20` from the data set (making
-these two attributes available for type assignment, without including
-them in the data on the output of `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget):
+variables, and remove `heat 10` and `heat 20` from the data set:
 
 .. image:: select-columns-regression.png
-    :width: 500 px
+    :width: 413 px
     :align: center
 
 By setting the attributes as above, the rendering of the data in the
 Data Table widget gives the following output:
 
 .. image:: data-table-regression1.png
-    :width: 600 px
+    :width: 506 px
     :align: center
 
 Header with Attribute Type Information
 --------------------------------------
 
-Let us open the :download:`sample.xlsx <sample.xlsx>` data set in Excel again. This time,
-however, we will augment the names of the attributes with prefix
-characters expressing attribute type (class or meta attribute) and/or
-its domain (continuous, discrete, string), and separate them from the
-attribute name with a hash sign ("\#"). Abbreviations for the type are:
+Consider again the :download:`sample.xlsx <sample.xlsx>` data set. This time 
+we will augment the names of the attributes with prefixes
+that define attribute type (continuous, discrete, string) and kind (class or meta attribute)
+Prefixes are separated from the attribute name with a hash sign ("\#"). Prefixes for the attribute kind are:
 
 -   c: class attribute
 -   m: meta attribute
 -   i: ignore the attribute
 
-and for the domain:
+and for the type:
 
 -   C: Continuous
 -   D: Discrete
@@ -133,45 +118,41 @@ This is how the header with augmented attribute names looks like in
 Excel (:download:`sample-head.xlsx <sample-head.xlsx>`):
 
 .. image:: spreadsheet-simple-head1.png
-    :width: 500 px
+    :width: 414 px
     :align: center
 
-We can again use a `Data Table <http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table>`_ widget to read the data from Excel file. Orange will automatically recognize attribute values, which is evident in the modified class icons:
+We can again use a **File** widget to load this data set and then render it in the **Data Table**:
 
-.. image:: file-widget-simplified-header-example.png
-    :width: 500 px
+.. image:: select-cols-simplified-header.png
+    :width: 509 px
     :align: center
 
 Notice that the attributes we have ignored (label "i" in the
 attribute name) are not present in the data set.
 
-Native Data Format of Orange
-----------------------------
+Three-Row Header Format
+-----------------------
 
-Orange's native data format is a tab-delimited text file with three
-header rows. The first row lists attribute names, the second row defines
-their domain (continuous, discrete and string, or abbreviated c, d and
-s), and the third row an optional type (class, meta, or ignore). Here is
-an example:
+Orange's legacy native data format is a tab-delimited text file with three header rows. The first row lists the attribute names, the second row defines their type (continuous, discrete and string, or abbreviated c, d and s), and the third row an optional kind (class, meta, or ignore). Here is an example:
 
 .. image:: excel-with-tab1.png
-    :width: 500 px
+    :width: 585 px
     :align: center
 
-The above screenshot is from Excel, but the file was actually saved using "Tab Delimited Text (.txt)" format. If you want to 
-save your files in .tab format, you have to rename the file so that it ends with ".tab" extension (say from sample.txt to 
-sample.tab). In Windows, you can bypass this step by placing the name of the file and the .tab extension in quotes when using
-*Save As* ... command (e.g., "sample.tab"). However, in Orange 3.0 this process is redundant since you can open several file 
-types without having to convert them first.
+Data from Google Sheets
+-----------------------
 
-Saving Files in LibreOffice
----------------------------
+Orange can read data from Google Sheets, as long as it conforms to the data presentation rules we have presented above. In Google Sheets, copy the shareable link (Share button, then Get shareable link) and paste it in the `Data File / URL` box of the File widget. For a taste, here's one such link you can use: `http://bit.ly/1J12Tdp <http://bit.ly/1J12Tdp>`_, and the way we have entered it in the **File** widget:
 
-If you are using LibreOffice, simply save your files in .xlsl format (available from the drop-down menu under *Save As Type*).
+.. image:: file-google-sheets.png
+    :width: 402 px
+    :align: center
+
+Data from LibreOffice
+---------------------
+
+If you are using LibreOffice, simply save your files in Excel (.xlsx or .xls) format (available from the drop-down menu under *Save As Type*).
 
 .. image:: saving-tab-delimited-files.png
     :align: center
 
-.. image:: saving-tab-delimited-files2.png
-    :width: 500 px
-    :align: center
