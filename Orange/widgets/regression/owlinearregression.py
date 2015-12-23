@@ -6,7 +6,7 @@ from PyQt4.QtCore import Qt
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearModel, LinearRegressionLearner,
-    RidgeRegressionLearner)
+    RidgeRegressionLearner, ElasticNetLearner)
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
@@ -27,12 +27,13 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
                ("Coefficients", Table)]
 
     #: Types
-    OLS, Ridge, Lasso = 0, 1, 2
+    OLS, Ridge, Lasso, Elastic = 0, 1, 2, 3
 
     learner_name = settings.Setting("Linear Regression")
     ridge = settings.Setting(False)
     reg_type = settings.Setting(OLS)
     alpha_index = settings.Setting(0)
+    l1_ratio = settings.Setting(0.5)
     autosend = settings.Setting(True)
 
     want_main_area = False
@@ -58,7 +59,7 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
         box = gui.radioButtons(
             box, self, "reg_type",
             btnLabels=["No regularization", "Ridge regression",
-                       "Lasso regression"],
+                       "Lasso regression", "Elastic net regression"],
             callback=self._reg_type_changed)
 
         gui.separator(box)
@@ -73,11 +74,24 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
         self.alpha_label = gui.widgetLabel(box3, "")
         self._set_alpha_label()
 
+        gui.separator(box)
+        box4 = gui.widgetBox(box, margin=0)
+        gui.widgetLabel(box4, "Elastic net mixing parameter")
+        self.l1_ratio_slider = gui.hSlider(
+            box4, self, "l1_ratio", minValue=0.01, maxValue=1,
+            intOnly=False, ticks=0.1, createLabel=False,
+            step=0.01, callback=self._l1_ratio_changed)
+        box5 = gui.widgetBox(box, orientation="horizontal")
+        box5.layout().setAlignment(Qt.AlignCenter)
+        self.l1_ratio_label = gui.widgetLabel(box5, "")
+        self._set_l1_ratio_label()
+
         gui.auto_commit(self.controlArea, self, "autosend", "Apply",
                         checkbox_label="Apply on every change")
 
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
         self.alpha_slider.setEnabled(self.reg_type != self.OLS)
+        self.l1_ratio_slider.setEnabled(self.reg_type == self.Elastic)
         self.commit()
 
     @check_sql_input
@@ -89,6 +103,7 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
 
     def _reg_type_changed(self):
         self.alpha_slider.setEnabled(self.reg_type != self.OLS)
+        self.l1_ratio_slider.setEnabled(self.reg_type == self.Elastic)
         self.commit()
 
     def _set_alpha_label(self):
@@ -97,6 +112,14 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
 
     def _alpha_changed(self):
         self._set_alpha_label()
+        self.commit()
+
+    def _set_l1_ratio_label(self):
+        self.l1_ratio_label.setText(
+            "L1 ratio: {:.{}f}".format(self.l1_ratio, 2))
+
+    def _l1_ratio_changed(self):
+        self._set_l1_ratio_label()
         self.commit()
 
     def apply(self):
@@ -112,8 +135,10 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
                     preprocessors = LinearRegressionLearner.preprocessors
                 elif self.reg_type == OWLinearRegression.Ridge:
                     preprocessors = RidgeRegressionLearner.preprocessors
-                else:
+                elif self.reg_type == OWLinearRegression.Lasso:
                     preprocessors = LassoRegressionLearner.preprocessors
+                else:
+                    preprocessors = ElasticNetLearner.preprocessors
             else:
                 preprocessors = list(self.preprocessors)
             preprocessors.append(RemoveNaNClasses())
@@ -124,6 +149,9 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
             learner = RidgeRegressionLearner(alpha=alpha, **args)
         elif self.reg_type == OWLinearRegression.Lasso:
             learner = LassoRegressionLearner(alpha=alpha, **args)
+        elif self.reg_type == OWLinearRegression.Elastic:
+            learner = ElasticNetLearner(alpha=alpha,
+                                        l1_ratio=self.l1_ratio, **args)
 
         learner.name = self.learner_name
         predictor = None
@@ -156,7 +184,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWLinearRegression()
-    d = Table('iris')
+    d = Table('housing')
     ow.set_data(d)
     ow.show()
     a.exec_()
