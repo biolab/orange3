@@ -7,14 +7,14 @@ set is usually a table, with data instances (samples) in rows and
 data attributes in columns. Attributes can be of different type
 (continuous, discrete, and strings) and kind (input features, meta attributes, and class). Data attribute type and kind can be provided
 in the data table header. This can be changed later, after reading the
-data with `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget.
+data with :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
 
 In a Nutshell
 -------------
 
--   Orange can import any comma- or tab-delimited data file, or Excel's native files or Google Sheets document. Use `File <http://docs.orange.biolab.si/3/visual-programming/widgets/data/file.html>`_
+-   Orange can import any comma- or tab-delimited data file, or Excel's native files or Google Sheets document. Use :doc:`File<../widgets/data/file>`
     widget and then, if needed, define the class and meta attributes in
-    `Select Columns <http://docs.orange.biolab.si/3/visual-programming/widgets/data/selectcolumns.html>`_ widget.
+    :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
 -   Attribute names in the column header
     can be preceded with a label followed by a hash. Use c for class
     and m for meta attribute, i to ignore a column, and C, D, S for
@@ -53,12 +53,12 @@ The **File** widget sends the data to the **Data Table** widget. Double click th
     :width: 900 px
     :align: center
 
-Orange correctly assumed that a column with gene names is a meta information, which is displayed in **Data Table** in columns shaded with light-gray. It has wrongly guessed that `heat 20`, the last non-meta column in our data file, is a class column. To correct this in Orange, we can feed the data to the `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget:
+Orange correctly assumed that a column with gene names is a meta information, which is displayed in **Data Table** in columns shaded with light-gray. It has wrongly guessed that `heat 20`, the last non-meta column in our data file, is a class column. To correct this in Orange, we can feed the data to the :doc:`Select Columns<../widgets/data/selectcolumns>` widget:
 
 .. image:: select-columns-schema.png
     :align: center
 
-Opening the `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget reveals Orange's classification of attributes. We would like all our continuous attributes to be data features, gene function to be our target variable and gene names considered as meta attributes. We can obtain this by dragging the attribute names around the boxes in **Select Columns**:
+Opening the :doc:`Select Columns<../widgets/data/selectcolumns>` widget reveals Orange's classification of attributes. We would like all our continuous attributes to be data features, gene function to be our target variable and gene names considered as meta attributes. We can obtain this by dragging the attribute names around the boxes in **Select Columns**:
 
 .. image:: select-columns-start.png
     :width: 413 px
@@ -66,7 +66,7 @@ Opening the `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selec
 
 To correctly reassign attribute types, drag attribute named `function`
 to a **Class** box, and attribute named `gene` to a **Meta Attribute**
-box. The `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectattributes.html#select-attributes>`_ widget should now look like this:
+box. The :doc:`Select Columns<../widgets/data/selectcolumns>` widget should now look like this:
 
 .. image:: select-columns-reassigned.png
     :width: 413 px
@@ -74,7 +74,7 @@ box. The `Select Columns <http://docs.orange.biolab.si/widgets/rst/data/selectat
 
 Change of attribute types in *Select Columns* widget should be confirmed
 by clicking the **Apply** button. The data from this widget is fed into
-`Data Table <http://docs.orange.biolab.si/widgets/rst/data/datatable.html#data-table>`_ that now renders the data just the way we intended:
+:doc:`Data Table<../widgets/data/datatable>` that now renders the data just the way we intended:
 
 .. image:: data-table-with-class1.png
     :width: 548 px

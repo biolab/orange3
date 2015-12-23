@@ -21,8 +21,8 @@ Attribute-valued data from the input file.
 Description
 -----------
 
-**File** widget `reads the input data
-file <http://docs.orange.biolab.si/data/rst/index.html>`__ (data table
+**File** widget :doc:`reads the input data
+file <../../loading-your-data/index>` (data table
 with data instances) and sends the data set to its output channel.
 History of the most recently opened files is maintained in the widget.
 The widget also includes a directory with sample data sets that come
@@ -72,4 +72,4 @@ Loading your data
 .. figure:: images/spreadsheet-simple-head1.png
 
 Read more on loading your data
-`here <http://docs.orange.biolab.si/data/rst/index.html>`__.
+:doc:`here <../../loading-your-data/index>`.
