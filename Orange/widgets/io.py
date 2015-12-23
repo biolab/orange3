@@ -61,7 +61,7 @@ class ImgFormat(FileFormat):
 class PngFormat(ImgFormat):
     EXTENSIONS = ('.png',)
     DESCRIPTION = 'Portable Network Graphics'
-    OWSAVE_PRIORITY = 50
+    PRIORITY = 50
 
     @staticmethod
     def _get_buffer(size, filename):
@@ -93,7 +93,7 @@ class PngFormat(ImgFormat):
 class SvgFormat(ImgFormat):
     EXTENSIONS = ('.svg',)
     DESCRIPTION = 'Scalable Vector Graphics'
-    OWSAVE_PRIORITY = 100
+    PRIORITY = 100
 
     @staticmethod
     def _get_buffer(size, filename):
