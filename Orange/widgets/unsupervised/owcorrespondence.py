@@ -56,7 +56,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
     selected_var_indices = settings.ContextSetting([])
 
-    want_graph = True
+    graph_name = "plot.plotItem"
 
     def __init__(self):
         super().__init__()
@@ -96,7 +96,6 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.plot = pg.PlotWidget(background="w")
         self.plot.setMenuEnabled(False)
         self.mainArea.layout().addWidget(self.plot)
-        self.graphButton.clicked.connect(self.save_graph)
 
     def set_data(self, data):
         self.closeContext()
@@ -239,13 +238,6 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             ax1, ax2 = self._p_axes()
             self.infotext.setText(fmt.format(inertia[ax1], inertia[ax2]))
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.plot.plotItem,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
         if self.data is None:
             return
@@ -263,7 +255,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                 ", ".join(var.name for var in vars[:-1]), vars[-1].name)
         self.report_items(items)
 
-        self.report_plot(self.plot)
+        self.report_plot()
 
 
 def burt_table(data, variables):

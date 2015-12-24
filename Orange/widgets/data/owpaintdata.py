@@ -775,7 +775,7 @@ class OWPaintData(widget.OWWidget):
     brushRadius = Setting(75)
     density = Setting(7)
 
-    want_graph = True
+    graph_name = "plot"
 
     def __init__(self):
         super().__init__()
@@ -949,7 +949,6 @@ class OWPaintData(widget.OWWidget):
         # enable brush tool
         self.toolActions.actions()[0].setChecked(True)
         self.set_current_tool(self.TOOLS[0][2])
-        self.graphButton.clicked.connect(self.save_graph)
 
         self.set_dimensions()
 
@@ -1207,13 +1206,6 @@ class OWPaintData(widget.OWWidget):
     def onDeleteWidget(self):
         self.plot.clear()
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.plotview.plotItem,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
         if self.data is None:
             return
@@ -1222,7 +1214,7 @@ class OWPaintData(widget.OWWidget):
             settings += [("Axis x", self.attr1), ("Axis y", self.attr2)]
         settings += [("Number of points", len(self.data))]
         self.report_items("Painted data", settings)
-        self.report_plot(self.plot)
+        self.report_plot()
 
 def test():
     import gc

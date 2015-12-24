@@ -136,7 +136,7 @@ class OWBoxPlot(widget.OWWidget):
     _label_font.setPixelSize(11)
     _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
 
-    want_graph = True
+    graph_name = "box_scene"
 
     def __init__(self):
         super().__init__()
@@ -203,7 +203,6 @@ class OWBoxPlot(widget.OWWidget):
         self.is_continuous = False
 
         self.update_display_box()
-        self.graphButton.clicked.connect(self.save_graph)
 
     def eventFilter(self, obj, event):
         if obj is self.box_view.viewport() and \
@@ -781,19 +780,12 @@ class OWBoxPlot(widget.OWWidget):
             self.posthoc_lines.append(it)
             last_to = to
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.box_scene,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def get_widget_name_extension(self):
         if self.attributes_select and len(self.attributes):
             return self.attributes[self.attributes_select[0]][0]
 
     def send_report(self):
-        self.report_plot(self.box_scene)
+        self.report_plot()
         text = ""
         if self.attributes_select and len(self.attributes):
             text += "Box plot for attribute '{}' ".format(

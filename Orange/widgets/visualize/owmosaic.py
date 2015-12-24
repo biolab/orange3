@@ -123,7 +123,7 @@ class OWMosaicDisplay(OWWidget):
     _box_size = 5
     _cellspace = 4
 
-    want_graph = True
+    graph_name = "canvas"
 
     def __init__(self):
         super().__init__()
@@ -242,7 +242,6 @@ class OWMosaicDisplay(OWWidget):
         self.selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
 
         gui.rubber(self.controlArea)
-        self.graphButton.clicked.connect(self.save_graph)
 
     def permutationListToggle(self):
         if self.exploreAttrPermutations:
@@ -1081,15 +1080,8 @@ class OWMosaicDisplay(OWWidget):
                     self.attributeList.item(i + 2).setSelected(True)
                     self.attributeList.takeItem(i)
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.canvas,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
-        self.report_plot(self.canvas)
+        self.report_plot()
 
 
 class OWCanvasText(QGraphicsTextItem):
