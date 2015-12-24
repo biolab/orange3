@@ -66,8 +66,10 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
         box2 = gui.widgetBox(box, orientation="horizontal")
         box2.layout().setAlignment(Qt.AlignCenter)
         self.c_label = gui.widgetLabel(box2)
-        gui.button(self.controlArea, self, "&Apply",
-                   callback=self.apply, default=True)
+        box = gui.widgetBox(self.controlArea, orientation="horizontal",
+                            margin=0)
+        box.layout().addWidget(self.report_button)
+        gui.button(box, self, "&Apply", callback=self.apply, default=True)
         self.set_c()
         self.apply()
 

@@ -29,8 +29,9 @@ class OWMean(OWProvidesLearner, widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Learner Name")
         gui.lineEdit(box, self, "learner_name")
-        gui.button(self.controlArea, self, "Apply", callback=self.apply,
-                   default=True)
+        gui.button(self.controlArea, self, "Apply",
+                   callback=self.apply, default=True)
+        self.controlArea.layout().addWidget(self.report_button)
         self.apply()
 
     def set_data(self, data):

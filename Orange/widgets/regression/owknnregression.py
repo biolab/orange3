@@ -51,6 +51,7 @@ class OWKNNRegression(OWProvidesLearner, widget.OWWidget):
 
         gui.button(self.controlArea, self, "Apply",
                    callback=self.apply, default=True)
+        self.controlArea.layout().addWidget(self.report_button)
 
         layout = self.layout()
         self.layout().setSizeConstraint(layout.SetFixedSize)

@@ -33,6 +33,7 @@ class OWNaiveBayes(OWProvidesLearner, widget.OWWidget):
 
         gui.button(self.controlArea, self, self.tr("&Apply"),
                    callback=self.apply)
+        self.controlArea.layout().addWidget(self.report_button)
 
         self.data = None
         self.preprocessors = None
