@@ -19,7 +19,7 @@ class SVMBaseMixin(OWProvidesLearner):
     #: kernel degree
     degree = settings.Setting(3)
     #: gamma
-    gamma = settings.Setting(0.0)
+    gamma = settings.Setting(1.0)
     #: coef0 (adative constant)
     coef0 = settings.Setting(0.0)
 
@@ -55,9 +55,9 @@ class SVMBaseMixin(OWProvidesLearner):
         gui.rubber(spbox)
         inbox = gui.widgetBox(spbox)
         gamma = gui.doubleSpin(
-            inbox, self, "gamma", 0.0, 10.0, 0.0001, label=" g: ", **common)
+            inbox, self, "gamma", 0.0, 10.0, 0.01, label=" g: ", **common)
         coef0 = gui.doubleSpin(
-            inbox, self, "coef0", 0.0, 10.0, 0.0001, label=" c: ", **common)
+            inbox, self, "coef0", 0.0, 10.0, 0.01, label=" c: ", **common)
         degree = gui.doubleSpin(
             inbox, self, "degree", 0.0, 10.0, 0.5, label=" d: ", **common)
         self._kernel_params = [gamma, coef0, degree]
