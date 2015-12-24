@@ -37,6 +37,16 @@ class TestOWVennDiagram(unittest.TestCase):
         np.testing.assert_equal(data.metas, np.array([[ca, cb, item_id]],
                                                      dtype=object))
 
+    def test_reshape_wide_missing_vals(self):
+        data = Table("../../../tests/test9.tab")
+        reshaped_data = reshape_wide(data, [], [data.domain[0]],
+                                     [data.domain[0]])
+        self.assertEqual(2, len(reshaped_data))
+
+    def test_varying_between_missing_vals(self):
+        data = Table("../../../tests/test9.tab")
+        self.assertEqual(6, len(varying_between(data, [data.domain[0]])))
+
     def test_venn_diagram(self):
         sources = ["SVM Learner", "Naive Bayes", "Random Forest"]
         item_id_var = StringVariable("item_id")
