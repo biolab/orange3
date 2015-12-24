@@ -51,16 +51,19 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def fix_osx_10_9_private_font():
-    """Temporary fix for QTBUG-32789."""
-    from PyQt4.QtCore import QSysInfo, QT_VERSION
+    # Fix fonts on Os X (QTBUG 47206, 40833, 32789)
     if sys.platform == "darwin":
+        import platform
         try:
-            QFont.insertSubstitution(".Helvetica Neue DeskInterface",
-                                     "Helvetica Neue")
-            if QSysInfo.MacintoshVersion > QSysInfo.MV_10_8 and \
-                            QT_VERSION < 0x40806:
-                QFont.insertSubstitution(".Lucida Grande UI",
-                                         "Lucida Grande")
+            version = platform.mac_ver()[0]
+            version = float(version[:version.rfind(".")])
+            if version >= 10.11:  # El Capitan
+                QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
+            elif version >= 10.10:  # Yosemite
+                QFont.insertSubstitution(".Helvetica Neue DeskInterface",
+                                         "Helvetica Neue")
+            elif version >= 10.9:
+                QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
         except AttributeError:
             pass
 
