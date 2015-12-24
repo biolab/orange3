@@ -297,7 +297,7 @@ class OWROCAnalysis(widget.OWWidget):
     display_convex_hull = settings.Setting(False)
     display_convex_curve = settings.Setting(False)
 
-    want_graph = True
+    graph_name = "plot"
 
     def __init__(self):
         super().__init__()
@@ -394,7 +394,6 @@ class OWROCAnalysis(widget.OWWidget):
 
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
-        self.graphButton.clicked.connect(self.save_graph)
         self.inline_graph_report()
 
     def set_results(self, results):
@@ -616,13 +615,6 @@ class OWROCAnalysis(widget.OWWidget):
     def onDeleteWidget(self):
         self.clear()
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.plot,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
         if self.results is None:
             return
@@ -635,7 +627,7 @@ class OWROCAnalysis(widget.OWWidget):
         caption = report.list_legend(self.classifiers_list_box,
                                      self.selected_classifiers)
         self.report_items(items)
-        self.report_plot(self.plot)
+        self.report_plot()
         self.report_caption(caption)
 
 

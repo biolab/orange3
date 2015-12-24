@@ -98,7 +98,8 @@ class OWDistributions(widget.OWWidget):
     smoothing_index = settings.Setting(5)
     show_prob = settings.ContextSetting(0)
 
-    want_graph = True
+    graph_name = "plot"
+
     ASH_HIST = 50
 
     bins = [ 2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50 ]
@@ -204,7 +205,6 @@ class OWDistributions(widget.OWWidget):
         self._legend.setParentItem(self.plot)
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
-        self.graphButton.clicked.connect(self.save_graph)
 
     def update_views(self):
         self.plot_prob.setGeometry(self.plot.sceneBoundingRect())
@@ -549,13 +549,6 @@ class OWDistributions(widget.OWWidget):
         self.plot.clear()
         super().onDeleteWidget()
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.ploti,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def get_widget_name_extension(self):
         if self.variable_idx >= 0:
             return self.varmodel[self.variable_idx]
@@ -563,7 +556,7 @@ class OWDistributions(widget.OWWidget):
     def send_report(self):
         if self.variable_idx < 0:
             return
-        self.report_plot(self.plot_prob)
+        self.report_plot()
         text = "Distribution of '{}'".format(
             self.varmodel[self.variable_idx])
         if self.groupvar_idx:
