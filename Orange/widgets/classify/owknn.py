@@ -40,6 +40,7 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
 
         gui.button(self.controlArea, self, "Apply",
                    callback=self.apply, default=True)
+        self.controlArea.layout().addWidget(self.report_button)
 
         self.apply()
 
