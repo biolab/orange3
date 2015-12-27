@@ -12,12 +12,13 @@ from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
     QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle
 
+from Orange.data import FileFormat
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
-from Orange.widgets.utils import vartype
+from Orange.widgets.utils import vartype, saveplot, getdeepattr
 from .utils.overlay import MessageOverlayWidget
 
 
@@ -114,7 +115,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     want_main_area = True
     #: Should the widget construct a `controlArea`.
     want_control_area = True
-    want_graph = False
+    #: Attribute saved by `Save graph" button or a tuple (attribute, writers)
+    graph_name = None
+    graph_writers = FileFormat.img_writers
     want_status_bar = False
 
     save_position = True
@@ -242,7 +245,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         gui.rubber(self.warning_bar)
         self.warning_bar.setVisible(False)
 
-        self.want_main_area = self.want_graph or self.want_main_area
+        self.want_main_area = self.graph_name is not None or self.want_main_area
 
         splitter = self.Splitter(Qt.Horizontal, self)
         self.layout().addWidget(splitter)
@@ -252,19 +255,15 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                                              orientation="vertical",
                                              margin=0)
             splitter.setSizes([1])  # Results in smallest size allowed by policy
-            if self.want_graph:
-                leftSide = self.controlArea
-                self.controlArea = gui.widgetBox(leftSide,
-                                                 orientation="vertical",
-                                                 margin=0)
-                self.graphButton = gui.button(leftSide, None, "&Save Graph")
-                self.graphButton.setAutoDefault(0)
 
-            if hasattr(self, "send_report"):
+            if self.graph_name is not None or hasattr(self, "send_report"):
                 leftSide = self.controlArea
-                self.controlArea = gui.widgetBox(leftSide,
-                                                 orientation="vertical",
-                                                 margin=0)
+                self.controlArea = gui.widgetBox(leftSide, margin=0)
+            if self.graph_name is not None:
+                self.graphButton = gui.button(leftSide, None, "&Save Graph")
+                self.graphButton.clicked.connect(self.save_graph)
+                self.graphButton.setAutoDefault(0)
+            if hasattr(self, "send_report"):
                 self.report_button = gui.button(leftSide, None, "&Report",
                                                 callback=self.show_report)
                 self.report_button.setAutoDefault(0)
@@ -309,6 +308,12 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
+
+    def save_graph(self):
+        graph_obj = getdeepattr(self, self.graph_name, None)
+        if graph_obj is None:
+            return
+        saveplot.save_plot(graph_obj, self.graph_writers)
 
     def updateStatusBarState(self):
         if not hasattr(self, "widgetStatusArea"):

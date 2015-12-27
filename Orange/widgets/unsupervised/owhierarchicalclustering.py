@@ -736,7 +736,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     cluster_name = settings.Setting("Cluster")
     autocommit = settings.Setting(True)
 
-    want_graph = True
+    graph_name = "scene"
 
     #: Cluster variable domain role
     AttributeRole, ClassRole, MetaRole = 0, 1, 2
@@ -940,7 +940,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.top_axis.line.valueChanged.connect(self._axis_slider_changed)
         self.dendrogram.geometryChanged.connect(self._dendrogram_geom_changed)
         self._set_cut_line_visible(self.selection_method == 1)
-        self.graphButton.clicked.connect(self.save_graph)
 
         self.inline_graph_report()
 
@@ -1295,13 +1294,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.selection_method = 0
         self._selection_method_changed()
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.scene,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def __zoom_in(self):
         def clip(minval, maxval, val):
             return min(max(val, minval), maxval)
@@ -1359,7 +1351,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                  self.cluster_name,
                  self.cluster_roles[self.cluster_role].lower()))
         ))
-        self.report_plot(self.scene)
+        self.report_plot()
 
 
 def qfont_scaled(font, factor):

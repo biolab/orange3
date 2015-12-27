@@ -35,7 +35,7 @@ class OWSieveDiagram(OWWidget):
 
     settingsList = ["showLines", "showCases", "showInColor"]
 
-    want_graph = True
+    graph_name = "canvas"
 
     def __init__(self):
         super().__init__()
@@ -111,8 +111,6 @@ class OWSieveDiagram(OWWidget):
         self.icons = gui.attributeIconDict
         self.resize(800, 550)
         random.seed()
-        self.graphButton.clicked.connect(self.save_graph)
-
 
     # receive new data and update all fields
     def setData(self, data):
@@ -449,19 +447,12 @@ class OWSieveDiagram(OWWidget):
         # self.optimizationDlg.hide()
         QDialog.closeEvent(self, ce)
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.canvas,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attrX, self.attrY)
 
     def send_report(self):
-        self.report_plot(self.canvas)
+        self.report_plot()
 
 
             # class OWSieveOptimization(OWMosaicOptimization, orngMosaic):

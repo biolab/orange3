@@ -6,6 +6,7 @@ from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
 from PyQt4.QtGui import QGraphicsScene, QStandardItemModel, QColor
 from Orange.widgets.io import PngFormat
 from Orange.data.sql.table import SqlTable
+from Orange.widgets.utils import getdeepattr
 
 
 class Report:
@@ -122,22 +123,34 @@ class Report:
         name, data = self._fix_args(name, data)
         self.report_items(name, describe_data_brief(data))
 
-    def report_plot(self, name, plot=None):
+    def report_plot(self, name=None, plot=None):
         """
         Add a plot to the report.
 
-        The first argument, `name` can be omitted.
+        Both arguments can be omitted.
+
+        - `report_plot("graph name", self.plotView)` reports plot
+            `self.plotView` with name `"graph name"`
+        - `report_plot(self.plotView) reports plot without name
+        - `report_plot()` reports plot stored in attribute whose name is
+            taken from `self.graph_name`
+        - `report_plot("graph name")` reports plot stored in attribute
+            whose name is taken from `self.graph_name`
 
         :param name: report section name (can be omitted)
         :param name: str or tuple or OrderedDict
         :param plot: plot widget
         :type plot:
             QGraphicsScene or pyqtgraph.PlotItem or pyqtgraph.PlotWidget
-            or pyqtgraph.GraphicsWidget
+            or pyqtgraph.GraphicsWidget. If omitted, the name of the
+            attribute storing the graph is taken from `self.graph_name`
         """
-        name, plot = self._fix_args(name, plot)
+        if not (isinstance(name, str) and plot is None):
+            name, plot = self._fix_args(name, plot)
         from pyqtgraph import PlotWidget, PlotItem, GraphicsWidget
         self.report_name(name)
+        if plot is None:
+            plot = getdeepattr(self, self.graph_name)
         if isinstance(plot, QGraphicsScene):
             self.report_html += get_html_img(plot)
         elif isinstance(plot, PlotItem):

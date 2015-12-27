@@ -69,7 +69,7 @@ class OWLiftCurve(widget.OWWidget):
     fn_cost = settings.Setting(500)
     target_prior = settings.Setting(50.0)
 
-    want_graph = True
+    graph_name = "plot"
 
     def __init__(self):
         super().__init__()
@@ -123,7 +123,6 @@ class OWLiftCurve(widget.OWWidget):
 
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
-        self.graphButton.clicked.connect(self.save_graph)
 
     def set_results(self, results):
         """Set the input evaluation results."""
@@ -223,20 +222,13 @@ class OWLiftCurve(widget.OWWidget):
     def _on_classifiers_changed(self):
         self._replot()
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.plot,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
         if self.results is None:
             return
         caption = report.list_legend(self.classifiers_list_box,
                                      self.selected_classifiers)
         self.report_items((("Target class", self.target_cb.currentText()),))
-        self.report_plot(self.plot)
+        self.report_plot()
         self.report_caption(caption)
 
 
