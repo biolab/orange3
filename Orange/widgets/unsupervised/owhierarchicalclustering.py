@@ -901,7 +901,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self._main_graphics = QGraphicsWidget()
         self._main_layout = QGraphicsLinearLayout(Qt.Horizontal)
-        self._main_layout.setSpacing(1)
+        self._main_layout.setSpacing(10)
 
         self._main_graphics.setLayout(self._main_layout)
         self.scene.addItem(self._main_graphics)
