@@ -775,10 +775,10 @@ class StringVariable(Variable):
     @staticmethod
     def str_val(val):
         """Return a string representation of the value."""
-        if val is None:
+        if val is "":
             return "?"
         if isinstance(val, Value):
-            if val.value is None:
+            if val.value is "":
                 return "?"
             val = val.value
         return str(val)

@@ -237,8 +237,8 @@ class StringVariableTest(VariableTest):
     def test_val(self):
         a = StringVariable("a")
         self.assertEqual(a.to_val(None), "")
-        self.assertEqual(a.str_val(None), "?")
-        self.assertEqual(a.str_val(Value(a, None)), "?")
+        self.assertEqual(a.str_val(""), "?")
+        self.assertEqual(a.str_val(Value(a, "")), "?")
         self.assertEqual(a.repr_val(Value(a, "foo")), '"foo"')
 
 
