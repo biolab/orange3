@@ -19,7 +19,7 @@ class Discretizer(Transformation):
 
     @staticmethod
     def digitize(x, bins):
-        return np.digitize(x, bins) if bins else [0]*len(x)
+        return np.digitize(x, bins) if len(bins) else [0]*len(x)
 
     def transform(self, c):
         if c.size:
