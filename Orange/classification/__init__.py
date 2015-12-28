@@ -14,3 +14,4 @@ from .tree import *
 from .simple_tree import *
 from .simple_random_forest import *
 from .elliptic_envelope import *
+from .ada_boost import *
