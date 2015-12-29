@@ -694,6 +694,9 @@ class SqlTable(table.Table):
 
         sampled_table = self.copy()
         sampled_table.table_name = self.quote_identifier(sample_table)
+        with sampled_table._execute_sql_query(
+                'ANALYZE {}'.format(sampled_table.table_name)):
+            pass
         return sampled_table
 
     @contextmanager
