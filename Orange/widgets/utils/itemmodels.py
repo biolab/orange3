@@ -827,7 +827,7 @@ class TableModel(QAbstractTableModel):
         else:
             return False
 
-    def parent(self, index):
+    def parent(self, index=QModelIndex()):
         """Reimplemented from `QAbstractTableModel.parent`."""
         return QModelIndex()
 
