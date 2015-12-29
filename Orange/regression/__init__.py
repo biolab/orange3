@@ -10,4 +10,3 @@ from .svm import *
 from .random_forest import *
 from .tree import *
 from Orange.classification.simple_tree import *
-from .ada_boost import *
