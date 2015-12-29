@@ -349,7 +349,7 @@ class OWDistributions(widget.OWWidget):
 
         cvar_values = cvar.values
         palette = colorpalette.ColorPaletteGenerator(len(cvar_values))
-        colors = [palette[i].lighter() for i in range(len(cvar_values))]
+        colors = [palette[i] for i in range(len(cvar_values))]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
