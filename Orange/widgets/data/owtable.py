@@ -28,7 +28,6 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils import datacaching
-from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.itemmodels import TableModel
 
 
@@ -60,7 +59,7 @@ class RichTableDecorator(QIdentityProxyModel):
 
     def setSourceModel(self, source):
         if source is not None and \
-                not isinstance(source, itemmodels.TableModel):
+                not isinstance(source, TableModel):
             raise TypeError()
 
         if source is not None:
