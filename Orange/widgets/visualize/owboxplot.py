@@ -21,6 +21,8 @@ from Orange.widgets.io import FileFormat
 
 
 def compute_scale(min_, max_):
+    if min_ == max_:
+        return math.floor(min_), 1
     magnitude = int(3 * math.log10(abs(max_ - min_)) + 1)
     if magnitude % 3 == 0:
         first_place = 1
@@ -511,11 +513,11 @@ class OWBoxPlot(widget.OWWidget):
         top = max(stat.a_max for stat in self.stats)
 
         first_val, step = compute_scale(bottom, top)
-        while bottom < first_val:
+        while bottom <= first_val:
             first_val -= step
         bottom = first_val
         no_ticks = math.ceil((top - first_val) / step) + 1
-        top = max(top, first_val + (no_ticks - 1) * step)
+        top = max(top, first_val + no_ticks * step)
 
         gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
         gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
