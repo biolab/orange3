@@ -788,7 +788,15 @@ class TableModel(QAbstractTableModel):
         if self.__sortInd is not None:
             row = self.__sortInd[row]
 
-        instance = self._row_instance(row)
+        try:
+            instance = self._row_instance(row)
+        except IndexError:
+            self.layoutAboutToBeChanged.emit()
+            self.beginRemoveRows(self.parent(), row, max(self.rowCount(), row))
+            self.__rowCount = min(row, self.__rowCount)
+            self.endRemoveRows()
+            self.layoutChanged.emit()
+            return None
         coldesc = self.columns[col]
 
         if role == _Qt_DisplayRole:
