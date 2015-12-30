@@ -377,7 +377,7 @@ class OWDistributions(widget.OWWidget):
         bottomaxis.resizeEvent()
 
         cvar_values = cvar.values
-        colors = [QtGui.QColor(*col).lighter() for col in cvar.colors]
+        colors = [QtGui.QColor(*col) for col in cvar.colors]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
