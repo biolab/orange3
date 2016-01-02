@@ -494,7 +494,7 @@ class OWClassificationTreeGraph(OWTreeGraph):
             total = numpy.sum(distr)
             if self.target_class_index:
                 p = distr[self.target_class_index - 1] / total
-                color = colors[self.target_class_index].light(200 - 100 * p)
+                color = colors[self.target_class_index - 1].light(200 - 100 * p)
             else:
                 modus = node.majority()
                 p = distr[modus] / (total or 1)
