@@ -704,10 +704,11 @@ class SqlTable(table.Table):
         connection = self.connection_pool.getconn()
         cur = connection.cursor()
         try:
+            utfquery = cur.mogrify(query, param).decode('utf-8')
             t = time()
             cur.execute(query, param)
             yield cur
-            sql_log.info("{:.2f} ms: {}".format(1000 * (time() - t), query))
+            sql_log.info("{:.2f} ms: {}".format(1000 * (time() - t), utfquery))
         finally:
             connection.commit()
             self.connection_pool.putconn(connection)
