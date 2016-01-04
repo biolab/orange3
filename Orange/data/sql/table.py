@@ -7,7 +7,7 @@ from itertools import islice
 import logging
 import re
 import threading
-from time import time
+from time import time, strftime
 
 import numpy as np
 
@@ -24,6 +24,7 @@ LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
 DEFAULT_SAMPLE_TIME = 1
 sql_log = logging.getLogger('sql_log')
+sql_log.debug("Logging started: {}".format(strftime("%Y-%m-%d %H:%M:%S")))
 
 
 class SqlTable(table.Table):
@@ -705,6 +706,7 @@ class SqlTable(table.Table):
         cur = connection.cursor()
         try:
             utfquery = cur.mogrify(query, param).decode('utf-8')
+            sql_log.debug("Executing: {}".format(utfquery))
             t = time()
             cur.execute(query, param)
             yield cur
