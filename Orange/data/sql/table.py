@@ -225,8 +225,11 @@ class SqlTable(table.Table):
     def _fetch_row(self, row_index):
         attributes = self.domain.variables + self.domain.metas
         rows = [row_index]
-        values = list(self._query(attributes, rows=rows))[0]
-        return SqlRowInstance(self.domain, values)
+        values = list(self._query(attributes, rows=rows))
+        if not values:
+            raise IndexError('Could not retrieve row {} from table {}'.format(
+                row_index, self.name))
+        return SqlRowInstance(self.domain, values[0])
 
     def __iter__(self):
         """ Iterating through the rows executes the query using a cursor and
@@ -691,6 +694,9 @@ class SqlTable(table.Table):
 
         sampled_table = self.copy()
         sampled_table.table_name = self.quote_identifier(sample_table)
+        with sampled_table._execute_sql_query(
+                'ANALYZE {}'.format(sampled_table.table_name)):
+            pass
         return sampled_table
 
     @contextmanager
