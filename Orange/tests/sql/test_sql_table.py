@@ -105,6 +105,11 @@ class SqlTableTests(PostgresTest):
 
         self.assertEqual(len(results), 150)
 
+    def test_unavailable_row(self):
+        table = sql_table.SqlTable(self.conn, self.iris)
+        with self.assertRaises(IndexError):
+            table[151]
+
     def test_query_subset_of_attributes(self):
         table = sql_table.SqlTable(self.conn, self.iris)
         attributes = [
