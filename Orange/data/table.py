@@ -1224,7 +1224,7 @@ class Table(MutableSequence, Storage):
 
         if filter.negate:
             sel = ~sel
-        return Table.from_table_rows(self, sel)
+        return self.from_table(self.domain, self, sel)
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):

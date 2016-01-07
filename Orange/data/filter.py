@@ -534,4 +534,4 @@ class FilterRegex(ValueFilter):
         self._re = re.compile(pattern, flags)
 
     def __call__(self, inst):
-        return bool(self._re.search(inst))
+        return bool(self._re.search(inst or ''))
