@@ -193,8 +193,8 @@ class Domain:
         return self._metas
 
     def __len__(self):
-        """The number of variables (features and class attributes)."""
-        return len(self._variables)
+        """The number of variables in the domain."""
+        return len(self.attributes) + len(self.class_vars) + len(self.metas)
 
     def __getitem__(self, idx):
         """
@@ -224,10 +224,8 @@ class Domain:
         return item in self._indices
 
     def __iter__(self):
-        """
-        Return an iterator through variables (features and class attributes).
-        """
-        return iter(self._variables)
+        """Return an iterator through all variables in the domain."""
+        return chain(self.attributes, self.class_vars, self.metas)
 
     def __str__(self):
         """

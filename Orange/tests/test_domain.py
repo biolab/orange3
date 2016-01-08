@@ -305,14 +305,8 @@ class TestDomainInit(unittest.TestCase):
             [] in d
 
     def test_iter(self):
-        d = Domain((age, gender, income), metas=(ssn,))
-        self.assertEqual([var for var in d], [age, gender, income])
-
-        d = Domain((age, ), metas=(ssn,))
-        self.assertEqual([var for var in d], [age])
-
-        d = Domain((), metas=(ssn,))
-        self.assertEqual([var for var in d], [])
+        d = Domain((age, gender), (income,), metas=(ssn,))
+        self.assertEqual([var for var in d], [age, gender, income, ssn])
 
     def test_str(self):
         cases = (
