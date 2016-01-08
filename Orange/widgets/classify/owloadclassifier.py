@@ -7,6 +7,8 @@ from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
+from Orange.widgets.classify import owsaveclassifier
+
 
 class OWLoadClassifier(widget.OWWidget):
     name = "Load Classifier"
@@ -21,7 +23,7 @@ class OWLoadClassifier(widget.OWWidget):
     #: Current (last selected) filename or None.
     filename = Setting(None)
 
-    FILTER = "Pickle files (*.pickle *.pck)\nAll files (*.*)"
+    FILTER = owsaveclassifier.OWSaveClassifier.FILTER
 
     want_main_area = False
     resizing_enabled = False

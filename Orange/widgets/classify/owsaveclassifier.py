@@ -22,7 +22,9 @@ class OWSaveClassifier(widget.OWWidget):
     #: A list of recent filenames.
     history = Setting([])
 
-    FILTER = "Pickle files (*.pickle *.pck)\nAll files (*.*)"
+
+    FILE_EXT = '.pkcls'
+    FILTER = "Pickled classifier (*" + FILE_EXT + ");;All Files (*)"
 
     want_main_area = False
     resizing_enabled = False
@@ -111,6 +113,8 @@ class OWSaveClassifier(widget.OWWidget):
             self, self.tr("Save"), directory=startdir, filter=self.FILTER
         )
         if filename:
+            if not filename.endswith(self.FILE_EXT):
+                filename += self.FILE_EXT
             if self.model is not None:
                 self.save(filename)
             else:
