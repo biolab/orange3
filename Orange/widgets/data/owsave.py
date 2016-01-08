@@ -7,6 +7,7 @@ from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.data.io import FileFormat
+from Orange.widgets.utils import filedialogs
 
 
 class OWSave(widget.OWWidget):
@@ -35,6 +36,7 @@ class OWSave(widget.OWWidget):
         super().__init__()
         self.data = None
         self.filename = ""
+        self.writer = None
 
         self.save = gui.auto_commit(
             self.controlArea, self, "auto_save", "Save", box=False,
@@ -63,16 +65,12 @@ class OWSave(widget.OWWidget):
         file_name = self.filename or \
             os.path.join(self.last_dir or os.path.expanduser("~"),
                          getattr(self.data, 'name', ''))
-        filename, filter = QtGui.QFileDialog.getSaveFileNameAndFilter(
-            self, 'Save as ...', file_name,
-            ";;".join(self.filters), self.last_filter or self.filters[0])
+        filename, writer, filter = filedialogs.get_file_name(
+                file_name, self.last_filter, FileFormat.writers)
         if not filename:
             return
-        ext = os.path.splitext(filename)[1]
-        format_extensions = self.formats[self.filters.index(filter)][1]
-        if ext not in format_extensions:
-            filename += format_extensions[0]
         self.filename = filename
+        self.writer = writer
         self.unconditional_save_file()
         self.last_dir = os.path.split(self.filename)[0]
         self.last_filter = filter
@@ -85,8 +83,7 @@ class OWSave(widget.OWWidget):
             self.save_file_as()
         else:
             try:
-                ext = os.path.splitext(self.filename)[1]
-                FileFormat.writers[ext].write(self.filename, self.data)
+                self.writer.write(self.filename, self.data)
                 self.error()
             except Exception as errValue:
                 self.error(str(errValue))
