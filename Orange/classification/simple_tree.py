@@ -1,5 +1,3 @@
-import os
-import sysconfig
 import ctypes as ct
 
 import numpy as np
@@ -7,10 +5,8 @@ from Orange.base import Learner, Model
 
 __all__ = ['SimpleTreeLearner']
 
-path = os.path.dirname(os.path.abspath(__file__))
-
-_tree = ct.pydll.LoadLibrary(
-    os.path.join(path, "_simple_tree" + sysconfig.get_config_var("SO")))
+from . import _simple_tree
+_tree = ct.pydll.LoadLibrary(_simple_tree.__file__)
 
 DiscreteNode = 0
 ContinuousNode = 1
