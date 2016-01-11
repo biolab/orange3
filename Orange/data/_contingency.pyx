@@ -17,7 +17,7 @@ def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray
       and class value (indexed by rows),
     - and an array with the number of missing values for each class.
     """
-    cdef np.ndarray[np.int_t, ndim=1] ranks = col_data.argsort()
+    cdef np.ndarray[np.intp_t, ndim=1] ranks = col_data.argsort()
     cdef int N = 0
     cdef np.float64_t v
     cdef np.float64_t last = float("NaN")
