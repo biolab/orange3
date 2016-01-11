@@ -1,12 +1,16 @@
 import sys
 import sysconfig
 import os
+import re
 import errno
 import shlex
+import shutil
 import subprocess
 import itertools
 import concurrent.futures
 
+from site import USER_SITE
+from glob import iglob
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
@@ -396,10 +400,6 @@ class AddonManagerDialog(QDialog):
         info_bar = QWidget()
         info_layout = QHBoxLayout()
         info_bar.setLayout(info_layout)
-        info_icon = QLabel()
-        info_text = QLabel()
-        info_layout.addWidget(info_icon)
-        info_layout.addWidget(info_text)
         self.layout().addWidget(info_bar)
 
         buttons = QDialogButtonBox(
@@ -411,19 +411,9 @@ class AddonManagerDialog(QDialog):
 
         self.layout().addWidget(buttons)
 
-        if not os.access(sysconfig.get_path("purelib"), os.W_OK):
-            if sysconfig.get_platform().startswith("macosx"):
-                info = "You must install Orange by dragging it into" \
-                       " Applications before installing add-ons."
-            else:
-                info = "You do not have permissions to write into Orange " \
-                       "directory.\nYou may need to contact an administrator " \
-                       "for assistance."
-            info_text.setText(info)
-            style = QApplication.instance().style()
-            info_icon.setPixmap(style.standardIcon(
-                QStyle.SP_MessageBoxCritical).pixmap(14, 14))
-            buttons.button(QDialogButtonBox.Ok ).setEnabled(False)
+        # No system access => install into user site-packages
+        self.user_install = not os.access(sysconfig.get_path("purelib"),
+                                          os.W_OK)
 
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         if AddonManagerDialog._packages is None:
@@ -537,7 +527,8 @@ class AddonManagerDialog(QDialog):
             steps = sorted(
                 steps, key=lambda step: 0 if step[0] == Uninstall else 1
             )
-            self.__installer = Installer(steps=steps)
+            self.__installer = Installer(steps=steps,
+                                         user_install=self.user_install)
             self.__thread = QThread(self)
             self.__thread.start()
 
@@ -565,9 +556,11 @@ class AddonManagerDialog(QDialog):
         self.reject()
 
     def __on_installer_finished(self):
-        message_information(
-            "Please restart Orange for changes to take effect.",
-            parent=self)
+        message = (
+            ("Changes successfully applied in <i>{}</i>.<br>".format(
+                USER_SITE) if self.user_install else '') +
+            "Please restart Orange for changes to take effect.")
+        message_information(message, parent=self)
         self.accept()
 
 
@@ -642,10 +635,11 @@ class Installer(QObject):
     finished = Signal()
     error = Signal(str, object, int, list)
 
-    def __init__(self, parent=None, steps=[]):
+    def __init__(self, parent=None, steps=[], user_install=False):
         QObject.__init__(self, parent)
         self.__interupt = False
         self.__queue = deque(steps)
+        self.__user_install = user_install
 
     def start(self):
         QTimer.singleShot(0, self._next)
@@ -660,15 +654,16 @@ class Installer(QObject):
     @Slot()
     def _next(self):
         def fmt_cmd(cmd):
-            return "python " + (" ".join(map(shlex.quote, cmd)))
+            return "Command failed: python " + " ".join(map(shlex.quote, cmd))
 
         command, pkg = self.__queue.popleft()
         if command == Install:
             inst = pkg.installable
             self.setStatusMessage("Installing {}".format(inst.name))
-            links = []
 
-            cmd = ["-m", "pip", "install"] + links + [inst.name]
+            cmd = (["-m", "pip", "install"] +
+                   (["--user"] if self.__user_install else []) +
+                   [inst.name])
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
 
@@ -680,7 +675,9 @@ class Installer(QObject):
             inst = pkg.installable
             self.setStatusMessage("Upgrading {}".format(inst.name))
 
-            cmd = ["-m", "pip", "install", "--upgrade", "--no-deps", inst.name]
+            cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
+                   (["--user"] if self.__user_install else []) +
+                   [inst.name])
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
 
@@ -688,7 +685,10 @@ class Installer(QObject):
                 self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
                 return
 
-            cmd = ["-m", "pip", "install", inst.name]
+            # Why is this here twice??
+            cmd = (["-m", "pip", "install"] +
+                   (["--user"] if self.__user_install else []) +
+                   [inst.name])
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
 
@@ -703,6 +703,28 @@ class Installer(QObject):
             cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
+
+            if self.__user_install:
+                # Remove the package forcefully; pip doesn't (yet) uninstall
+                # --user packages (or any package outside sys.prefix?)
+                # google: pip "Not uninstalling ?" "outside environment"
+                install_path = os.path.join(
+                    USER_SITE, re.sub('[^\w]', '_', dist.project_name))
+                pip_record = next(iglob(install_path + '*.dist-info/RECORD'),
+                                  None)
+                if pip_record:
+                    with open(pip_record) as f:
+                        files = [line.rsplit(',', 2)[0] for line in f]
+                else:
+                    files = [os.path.join(
+                        USER_SITE, 'orangecontrib',
+                        dist.project_name.split('-')[-1].lower()),]
+                for match in itertools.chain(files, iglob(install_path + '*')):
+                    print('rm -rf', match)
+                    if os.path.isdir(match):
+                        shutil.rmtree(match)
+                    elif os.path.exists(match):
+                        os.unlink(match)
 
             if retcode != 0:
                 self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
