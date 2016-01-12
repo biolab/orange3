@@ -733,14 +733,6 @@ class Installer(QObject):
         return process.returncode, output
 
 
-def pip_install(args, **kwargs):
-    return python_process(["-m", "pip", "install"] + args, **kwargs)
-
-
-def pip_uninstall(args, **kwargs):
-    return python_process(["-m", "pip", "uninstall"] + args, **kwargs)
-
-
 def python_process(args, script_name=None, cwd=None, env=None, **kwargs):
     """
     Run a `sys.executable` in a subprocess with `args`.
