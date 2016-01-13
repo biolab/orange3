@@ -1,15 +1,15 @@
-import os
 import ctypes
-import sysconfig
 import numpy as np
 
 from PyQt4.QtCore import QRectF
 from pyqtgraph.graphicsItems.ImageItem import ImageItem
 
 
-# load C++ library
-path = os.path.dirname(os.path.abspath(__file__))
-lib = ctypes.pydll.LoadLibrary(os.path.join(path, "_grid_density" + sysconfig.get_config_var("SO")))
+# load the C++ library; The _grid_density is build and distributed as a
+# python extension but does not export any python objects (apart from PyInit),
+from . import _grid_density
+lib = ctypes.pydll.LoadLibrary(_grid_density.__file__)
+
 
 # compute the color/class density image
 def class_density_image(min_x, max_x, min_y, max_y, resolution, x_data, y_data, rgb_data):
