@@ -320,6 +320,7 @@ class OWMDS(widget.OWWidget):
         self.inline_graph_report()
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
+        self.plot.setAspectLocked(True)
         self.plot.getPlotItem().hideAxis("bottom")
         self.plot.getPlotItem().hideAxis("left")
         self.plot.getPlotItem().hideButtons()
