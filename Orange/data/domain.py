@@ -346,32 +346,28 @@ class Domain:
         except KeyError:
             raise ValueError("Variable '{}' is not in domain".format(var))
 
-    def has_discrete_attributes(self, include_class=False):
-        """
-        Return `True` if domain has any discrete attributes. If `include_class`
-                is set, the check includes the class attribute(s).
-        """
-        if not include_class:
-            return any(var.is_discrete for var in self.attributes)
-        else:
-            return any(var.is_discrete for var in self.variables)
+    @property
+    def has_discrete(self):
+        """Return `True` if domain has any discrete attributes."""
+        return any(var.is_discrete for var in self.attributes)
 
-    def has_continuous_attributes(self, include_class=False):
-        """
-        Return `True` if domain has any continuous attributes. If
-        `include_class` is set, the check includes the class attribute(s).
-        """
-        if not include_class:
-            return any(var.is_continuous for var in self.attributes)
-        else:
-            return any(var.is_continuous for var in self.variables)
+    @property
+    def has_continuous(self):
+        """Return `True` if domain has any continuous attributes."""
+        return any(var.is_continuous for var in self.attributes)
 
     @property
     def has_continuous_class(self):
+        """
+        Returrn `True` if the first class variable of domain is continuous.
+        """
         return bool(self.class_var and self.class_var.is_continuous)
 
     @property
     def has_discrete_class(self):
+        """
+        Returrn `True` if the first class variable of domain is discrete.
+        """
         return bool(self.class_var and self.class_var.is_discrete)
 
     def get_conversion(self, source):
