@@ -136,6 +136,18 @@ class DockableWindow(QDockWidget):
             if self.isFloating():
                 self.__fixWindowFlags()
 
+    def paintEvent(self, event):
+        # HACK: Preventing calls to QDockWidget.paintEvent() seems to fix the
+        #
+        #     QPainter::begin: Paint device returned engine == 0, type: 3
+        #     QPainter...
+        #
+        # wall-of-text error that filled the buffers of our consoles.
+        #
+        # Without understanding reasons or implications, but with
+        # no immediate apparent negative side effects:
+        pass
+
     def floatingWindowFlags(self):
         """
         Return the `windowFlags` used when the widget is floating.
