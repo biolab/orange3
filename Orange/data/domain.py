@@ -7,6 +7,8 @@ import weakref
 from .variable import *
 import numpy as np
 
+from Orange.util import deprecated
+
 
 class DomainConversion:
     """
@@ -445,14 +447,13 @@ class Domain:
             col_idx = self.index(attr)
         return [attr], np.array([col_idx])
 
+    @deprecated
     def checksum(self):
         return hash(self)
 
     def __eq__(self, other):
-        if not isinstance(other, Domain):
-            return False
-
-        return (self.attributes == other.attributes and
+        return (isinstance(other, Domain) and
+                self.attributes == other.attributes and
                 self.class_vars == other.class_vars and
                 self.metas == other.metas)
 
