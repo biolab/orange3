@@ -113,7 +113,6 @@ class Domain:
         self._indices = dict(chain.from_iterable(
             ((var, i), (var.name, i)) for i, var in enumerate(self)))
 
-        self.anonymous = False
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
 
@@ -128,8 +127,6 @@ class Domain:
         "Feature <n>". Target variables are discrete if the only two values
         are 0 and 1; otherwise they are continuous. Discrete
         targets are named "Class <n>" and continuous are named "Target <n>".
-        Domain is marked as :attr:`anonymous`, so data from any other domain of
-        the same shape can be converted into this one and vice-versa.
 
         :param `numpy.ndarray` X: 2-dimensional array with data
         :param Y: 1- of 2- dimensional data for target
@@ -177,7 +174,6 @@ class Domain:
             meta_vars = []
 
         domain = cls(attr_vars, class_vars, meta_vars)
-        domain.anonymous = True
         return domain
 
     @property
