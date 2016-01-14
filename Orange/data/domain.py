@@ -1,3 +1,4 @@
+import logging
 from math import log
 from collections import Iterable
 from itertools import chain
@@ -8,6 +9,9 @@ from .variable import *
 import numpy as np
 
 from Orange.util import deprecated
+
+
+LOG = logging.getLogger()
 
 
 class DomainConversion:
@@ -60,63 +64,94 @@ class DomainConversion:
 
 
 class Domain:
-    def __init__(self, attributes, class_vars=None, metas=None, source=None):
+    def __init__(self, attributes=(), class_vars=(), metas=(), source=None):
         """
-        Initialize a new domain descriptor. Arguments give the features and
-        the class attribute(s). They can be described by descriptors (instances
-        of :class:`Variable`), or by indices or names if the source domain is
-        given.
+        Initialize a new domain descriptor from features and class
+        attribute(s), which are instances of :class:`Variable` or indices or
+        names in the `source` domain if one is provided.
 
-        :param attributes: a list of attributes
-        :type attributes: list of :class:`Variable`
-        :param class_vars: target variable or a list of target variables
-        :type class_vars: :class:`Variable` or list of :class:`Variable`
-        :param metas: a list of meta attributes
-        :type metas: list of :class:`Variable`
-        :param source: the source domain for attributes
-        :type source: Orange.data.Domain
-        :return: a new domain
-        :rtype: :class:`Domain`
+        Parameters
+        ----------
+        attributes : list of Variable
+            A list of feature variables. Any non-primitive variables (i.e.
+            those that can't be coerced to ``float``) are appended to
+            `metas` instead.
+        class_vars : Variable or list of Variable
+            A list of class/target variables. Target variables must be
+            primitive (instances of :class:`DiscreteVariable` or
+            :class:`ContinuousVariable`).
+        metas : list of Variables
+            A list of (meta) variables that describe the data but aren't used
+            for learning (e.g. :class:`StringVariable` holding individual
+            names or example annotations).
+        source : Domain
+            Source domain from which to pull variables if they are specified
+            as ``int`` or ``str`` in `attributes`, `class_vars`, or `metas`.
+
+        Returns
+        -------
+        Domain
+            A new domain.
         """
 
-        if class_vars is None:
-            class_vars = []
-        elif isinstance(class_vars, (Variable, Integral, str)):
+        if isinstance(class_vars, (Variable, int, str)):
             class_vars = [class_vars]
-        elif isinstance(class_vars, Iterable):
+        try:
             class_vars = list(class_vars)
-
-        if not isinstance(attributes, list):
+        except TypeError:
+            raise TypeError('class_vars must be a list of Variable')
+        try:
             attributes = list(attributes)
-        metas = list(metas) if metas else []
+        except TypeError:
+            raise TypeError('attributes must be a list of Variable')
+        try:
+            metas = list(metas)
+        except TypeError:
+            raise TypeError('metas must be a list of Variable')
 
-        # Replace str's and int's with descriptors if 'source' is given;
-        # complain otherwise
-        for lst in (attributes, class_vars, metas):
-            for i, var in enumerate(lst):
-                if not isinstance(var, Variable):
-                    if source and isinstance(var, (str, int)):
-                        lst[i] = source[var]
-                    else:
-                        raise TypeError(
-                            "descriptors must be instances of Variable, "
-                            "not '%s'" % type(var).__name__)
+        # Replace str's and int's with variables if 'source' is given
+        if source is not None:
+            def from_source(iterable):
+                return [var if isinstance(var, Variable) else source[var]
+                        for var in iterable]
+            try:
+                attributes = from_source(attributes)
+                class_vars = from_source(class_vars)
+                metas = from_source(metas)
+            except (ValueError, TypeError):
+                raise ValueError("Can't convert all indices "
+                                 "(attrs={}, class_vars={}, metas={}) "
+                                 "from source domain {}".format(
+                                     attributes, class_vars, metas, source))
 
-        # Store everything
-        self.attributes = tuple(attributes)
-        self.class_vars = tuple(class_vars)
-        self._variables = self.attributes + self.class_vars
-        self._metas = tuple(metas)
-        self.class_var = \
-            self.class_vars[0] if len(self.class_vars) == 1 else None
-        if not all(var.is_primitive() for var in self._variables):
-            raise TypeError("variables must be primitive")
+        if not all(isinstance(var, Variable)
+                   for var in chain(attributes, class_vars, metas)):
+            raise TypeError('Parameters attributes, class_vars, and metas '
+                            'must be lists of Variable objects')
+
+        # Put non-primitive Variables into metas instead
+        append_metas = [var for var in chain(attributes, class_vars)
+                        if not var.is_primitive]
+
+        self.attributes = tuple(var for var in attributes if var.is_primitive)
+        self.class_vars = tuple(var for var in class_vars if var.is_primitive)
+        self.metas = tuple(chain(metas, append_metas))
+        if append_metas:
+            LOG.warning("Non-primitive variables '{}', passed as attributes "
+                        "or class_vars, added to metas instead".format(
+                            "', '".join(v.name for v in append_metas)))
 
         self._indices = dict(chain.from_iterable(
             ((var, i), (var.name, i)) for i, var in enumerate(self)))
 
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
+
+    def copy(self):
+        return self.__copy__()
+
+    def __copy__(self):
+        return self.__class__(self.attributes, self.class_vars, self.metas)
 
     # noinspection PyPep8Naming
     @classmethod
@@ -180,11 +215,12 @@ class Domain:
 
     @property
     def variables(self):
-        return self._variables
+        """Return list of ```attributes` + `class_vars```."""
+        return tuple(chain(self.attributes, self.class_vars))
 
     @property
-    def metas(self):
-        return self._metas
+    def class_var(self):
+        return self.class_vars[0] if self.class_vars else None
 
     def __len__(self):
         """The number of variables in the domain."""
@@ -283,8 +319,8 @@ class Domain:
         if self.class_vars:
             s += " | " + ", ".join(cls.name for cls in self.class_vars)
         s += "]"
-        if self._metas:
-            s += " {" + ", ".join(meta.name for meta in self._metas) + "}"
+        if self.metas:
+            s += " {" + ", ".join(meta.name for meta in self.metas) + "}"
         return s
 
     __repr__ = __str__
@@ -388,17 +424,17 @@ class Domain:
                      else (Unknown if not i else i(inst))
                      for i in c.metas]
         else:
-            nvars = len(self._variables)
-            nmetas = len(self._metas)
+            nvars = len(self.variables)
+            nmetas = len(self.metas)
             if len(inst) != nvars and len(inst) != nvars + nmetas:
                 raise ValueError("invalid data length for domain")
             values = [var.to_val(val)
-                      for var, val in zip(self._variables, inst)]
+                      for var, val in zip(self.variables, inst)]
             if len(inst) == nvars + nmetas:
                 metas = [var.to_val(val)
-                         for var, val in zip(self._metas, inst[nvars:])]
+                         for var, val in zip(self.metas, inst[nvars:])]
             else:
-                metas = [var.Unknown for var in self._metas]
+                metas = [var.Unknown for var in self.metas]
         nattrs = len(self.attributes)
         # Let np.array decide dtype for values
         return np.array(values[:nattrs]), np.array(values[nattrs:]),\
