@@ -111,11 +111,7 @@ class Domain:
             raise TypeError("variables must be primitive")
 
         self._indices = dict(chain.from_iterable(
-            ((var, idx), (var.name, idx), (idx, idx))
-            for idx, var in enumerate(self._variables)))
-        self._indices.update(chain.from_iterable(
-            ((var, -1-idx), (var.name, -1-idx), (-1-idx, -1-idx))
-            for idx, var in enumerate(self.metas)))
+            ((var, i), (var.name, i)) for i, var in enumerate(self)))
 
         self.anonymous = False
         self._known_domains = weakref.WeakKeyDictionary()
@@ -198,23 +194,76 @@ class Domain:
 
     def __getitem__(self, idx):
         """
-        Return a variable descriptor from the given argument, which can be
-        a descriptor, index or name. If `var` is a descriptor, the function
-        returns this same object.
+        Return the domain variable corresponding to given `idx`, which can
+        be a numerical index or variable's name.
 
-        :param idx: index, name or descriptor
-        :type idx: int, str or :class:`Variable`
-        :return: an instance of :class:`Variable` described by `var`
-        :rtype: :class:`Variable`
+        In case `idx` represents multiple values (iterable, slice, ellipsis),
+        a domain object containing those variables is returned.
+
+        Parameters
+        ----------
+        idx : int or str or Variable or Iterable or slice or Ellipsis
+            Index or name of variable to return. If ``Iterable``, a new
+            domain is returned with matching attributes, class variables, and
+            metas. If ``slice``, a new domain is returned with matching
+            variables set as **attributes**. If ``Iterable``, it can contain
+            integer indexes, names, or variables. If ``slice``, it returns
+            the domain with its attributes matching that slice. If `Ellipsis`,
+            self is returned.
+
+        Returns
+        -------
+        var : Variable or Domain
+            The (Domain of) variable(s) corresponding to index(es) `idx`.
         """
-        if isinstance(idx, slice):
-            return self._variables[idx]
+        try:
+            if isinstance(idx, int):
+                if idx < 0:
+                    idx += len(self)
+                which = idx
 
-        idx = self._indices[idx]
-        if idx >= 0:
-            return self.variables[idx]
-        else:
-            return self.metas[-1-idx]
+            elif isinstance(idx, str):
+                which = idx = self._indices[idx]
+
+            elif isinstance(idx, Iterable):
+                vars = [self[val] for val in idx]
+                X = tuple(v for v in vars if v in self.attributes)
+                Y = tuple(v for v in vars if v in self.class_vars)
+                M = tuple(v for v in vars if v in self.metas)
+                return self.__class__(X, Y, M)
+
+            elif idx is Ellipsis:
+                return self
+
+            elif isinstance(idx, slice):
+                idx = range(*idx.indices(len(self)))
+                if idx == range(len(self)):
+                    return self.__class__(self)
+                return self.__class__(self[i] for i in idx)
+
+            elif isinstance(idx, Variable):
+                if idx not in self:
+                    raise KeyError
+                return idx
+
+            else:
+                raise TypeError("Can't get variable by index type '{}'. Names "
+                                "and integers are supported.".format(
+                                    idx.__class__))
+        except KeyError:
+            raise ValueError("Variable '{}' is not in domain".format(idx))
+
+        # Find which group this index belongs to; equivalent to
+        # tuple(self)[idx], but much faster for large domains
+        which -= len(self.attributes)
+        if which < 0:
+            return self.attributes[idx]
+        idx, which = which, which - len(self.class_vars)
+        if which < 0:
+            return self.class_vars[idx]
+        idx, which = which, which - len(self.metas)
+        assert which < 0
+        return self.metas[idx]
 
     def __contains__(self, item):
         """
@@ -253,14 +302,15 @@ class Domain:
 
     def index(self, var):
         """
-        Return the index of the given variable or meta attribute, represented
-        with an instance of :class:`Variable`, `int` or `str`.
+        Return the index of the given variable (represented as
+        `int`, `str`, or instance of :class:`Variable`) in the domain.
         """
-
+        if isinstance(var, int):
+            return var
         try:
             return self._indices[var]
         except KeyError:
-            raise ValueError("'%s' is not in domain" % var)
+            raise ValueError("Variable '{}' is not in domain".format(var))
 
     def has_discrete_attributes(self, include_class=False):
         """
