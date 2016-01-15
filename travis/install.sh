@@ -1,6 +1,6 @@
 pip install -U setuptools pip wheel
 if [ ! "$(ls wheelhouse)" ]; then
-    git clone -b pyqt --depth=1 https://github.com/astaric/orange3-requirements wheelhouse
+    git clone --depth=1 https://github.com/astaric/orange3-requirements wheelhouse
 else
     echo 'Using cached wheelhouse.';
 fi
