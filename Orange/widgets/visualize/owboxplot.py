@@ -225,9 +225,11 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_list_box.clear()
         self.group_list_box.clear()
         if dataset:
-            self.attributes = [(a.name, vartype(a)) for a in dataset.domain]
-            self.grouping = ["None"] + [(a.name, vartype(a))
-                                        for a in dataset.domain
+            domain = dataset.domain
+            self.attributes = [(a.name, vartype(a)) for a in domain.variables +
+                               domain.metas if a.is_primitive()]
+            self.grouping = ["None"] + [(a.name, vartype(a)) for a in
+                                        domain.variables + domain.metas
                                         if a.is_discrete]
             self.grouping_select = [0]
             self.attributes_select = [0]
@@ -262,23 +264,22 @@ class OWBoxPlot(widget.OWWidget):
         if dataset is None:
             self.stats = self.dist = self.conts = []
             return
-        attr_ind = self.attributes_select[0]
-        attr = dataset.domain[attr_ind]
+        attr = self.attributes[self.attributes_select[0]][0]
+        attr = dataset.domain[attr]
         self.is_continuous = attr.is_continuous
         group_by = self.grouping_select[0]
         if group_by:
-            group_attr = self.grouping[group_by][0]
-            group_ind = dataset.domain.index(group_attr)
+            group = self.grouping[group_by][0]
             self.dist = []
             self.conts = datacaching.getCached(
                 dataset, contingency.get_contingency,
-                (dataset, attr_ind, group_ind))
+                (dataset, attr, group))
             if self.is_continuous:
                 self.stats = [BoxData(cont) for cont in self.conts]
-            self.label_txts_all = dataset.domain[group_ind].values
+            self.label_txts_all = dataset.domain[group].values
         else:
             self.dist = datacaching.getCached(
-                dataset, distribution.get_distribution, (dataset, attr_ind))
+                dataset, distribution.get_distribution, (dataset, attr))
             self.conts = []
             if self.is_continuous:
                 self.stats = [BoxData(self.dist)]
@@ -418,7 +419,8 @@ class OWBoxPlot(widget.OWWidget):
                 self.box_scene.addItem(label)
 
             if selected_attribute != selected_grouping:
-                selected_attr = self.dataset.domain[self.attributes_select[0]]
+                attr = self.attributes[self.attributes_select[0]][0]
+                selected_attr = self.dataset.domain[attr]
                 for label_text, bar_part in zip(selected_attr.values,
                                                 box.childItems()):
                     label = QtGui.QGraphicsSimpleTextItem(label_text)
@@ -700,8 +702,8 @@ class OWBoxPlot(widget.OWWidget):
         return box
 
     def strudel(self, dist):
-        attr_ind = self.attributes_select[0]
-        attr = self.dataset.domain[attr_ind]
+        attr = self.attributes[self.attributes_select[0]][0]
+        attr = self.dataset.domain[attr]
 
         ss = np.sum(dist)
         box = QtGui.QGraphicsItemGroup()
@@ -715,7 +717,6 @@ class OWBoxPlot(widget.OWWidget):
                 v /= ss
             v *= self.scale_x
             rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
-            print(attr.colors[i])
             rect.setBrush(QtGui.QBrush(QtGui.QColor(*attr.colors[i])))
             rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
             if self.stretched:
@@ -798,7 +799,7 @@ class OWBoxPlot(widget.OWWidget):
         if self.attributes_select and len(self.attributes):
             text += "Box plot for attribute '{}' ".format(
                 self.attributes[self.attributes_select[0]][0])
-        if self.grouping_select  and len(self.grouping):
+        if self.grouping_select and len(self.grouping):
             text += "grouped by '{}'".format(
                 self.grouping[self.grouping_select[0]][0])
         if text:
