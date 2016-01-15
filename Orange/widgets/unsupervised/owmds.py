@@ -1,11 +1,14 @@
-from itertools import chain
-import pkg_resources
 import sys
 import warnings
+
 from xml.sax.saxutils import escape
+from itertools import chain
+
+import pkg_resources
 
 import numpy
 import scipy.spatial.distance
+
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, QEvent
 import pyqtgraph as pg
@@ -92,8 +95,10 @@ class OWMDS(widget.OWWidget):
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
     icon = "icons/MDS.svg"
-    inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Distances", Orange.misc.DistMatrix, "set_disimilarity")]
+    inputs = [("Data", Orange.data.Table, "set_data", widget.Default),
+              ("Distances", Orange.misc.DistMatrix, "set_disimilarity"),
+              ("Data Subset", Orange.data.Table, "set_subset_data")]
+
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
                ("Data", Orange.data.Table)]
 
@@ -150,10 +155,12 @@ class OWMDS(widget.OWWidget):
         super().__init__()
         self.matrix = None
         self.data = None
+        self.subset_data = None  # type: Optional[Orange.data.Table]
         self.matrix_data = None
         self.signal_data = None
 
         self._pen_data = None
+        self._brush_data = None
         self._shape_data = None
         self._size_data = None
         self._label_data = None
@@ -161,6 +168,7 @@ class OWMDS(widget.OWWidget):
         self._scatter_item = None
         self._legend_item = None
         self._selection_mask = None
+        self._subset_mask = None  # type: Optional[numpy.ndarray]
         self._invalidated = False
         self._effective_matrix = None
 
@@ -356,6 +364,12 @@ class OWMDS(widget.OWWidget):
 
     @check_sql_input
     def set_data(self, data):
+        """Set the input data set.
+
+        Parameters
+        ----------
+        data : Optional[Orange.data.Table]
+        """
         self.signal_data = data
 
         if self.matrix is not None and data is not None and len(self.matrix) == len(data):
@@ -368,6 +382,12 @@ class OWMDS(widget.OWWidget):
         self._selection_mask = None
 
     def set_disimilarity(self, matrix):
+        """Set the dissimilarity (distance) matrix.
+
+        Parameters
+        ----------
+        matrix : Optional[Orange.misc.DistMatrix]
+        """
         self.matrix = matrix
         if matrix is not None and matrix.row_items:
             self.matrix_data = matrix.row_items
@@ -376,8 +396,21 @@ class OWMDS(widget.OWWidget):
         self._invalidated = True
         self._selection_mask = None
 
+    def set_subset_data(self, subset_data):
+        """Set a subset of `data` input to highlight in the plot.
+
+        Parameters
+        ----------
+        subset_data: Optional[Orange.data.Table]
+        """
+        self.subset_data = subset_data
+        # invalidate the pen/brush when the subset is changed
+        self._pen_data = self._brush_data = None
+        self._subset_mask = None  # type: Optional[numpy.ndarray]
+
     def _clear(self):
         self._pen_data = None
+        self._brush_data = None
         self._shape_data = None
         self._size_data = None
         self._label_data = None
@@ -663,6 +696,11 @@ class OWMDS(widget.OWWidget):
             self._initialize()
             self.start()
         self.__draw_similar_pairs = False
+
+        if self._subset_mask is None and self.subset_data is not None and \
+                self.data is not None:
+            self._subset_mask = numpy.in1d(self.data.ids, self.subset_data.ids)
+
         self._update_plot()
         self.plot.autoRange(padding=0.1)
         self.unconditional_commit()
@@ -700,6 +738,8 @@ class OWMDS(widget.OWWidget):
         have_data = self.data is not None
         have_matrix_transposed = self.matrix is not None and not self.matrix.axis
         plotstyle = mdsplotutils.plotstyle
+
+        size = self._effective_matrix.shape[0]
 
         def column(data, variable):
             a, _ = data.get_column_view(variable)
@@ -749,7 +789,8 @@ class OWMDS(widget.OWWidget):
                     self.data, color_var, plotstyle=plotstyle)
                 color_data = numpy.hstack(
                     (color_data,
-                     numpy.full((len(color_data), 1), self.symbol_opacity))
+                     numpy.full((len(color_data), 1), self.symbol_opacity,
+                                dtype=float))
                 )
                 pen_data = mdsplotutils.pen_data(color_data * 0.8, pointflags)
                 brush_data = mdsplotutils.brush_data(color_data)
@@ -760,7 +801,8 @@ class OWMDS(widget.OWWidget):
                 color_data = [palette.getRGB(i) for i in range(len(attr))]
                 color_data = numpy.hstack((
                     color_data,
-                    numpy.full((len(color_data), 1), self.symbol_opacity))
+                    numpy.full((len(color_data), 1), self.symbol_opacity,
+                               dtype=float))
                 )
                 pen_data = mdsplotutils.pen_data(color_data * 0.8, pointflags)
                 brush_data = mdsplotutils.brush_data(color_data)
@@ -771,12 +813,16 @@ class OWMDS(widget.OWWidget):
                         [pen_data, plotstyle.selected_pen])
                     pen_data = pen_data[self._selection_mask.astype(int)]
                 else:
-                    pen_data = numpy.full(len(self.data), pen_data,
+                    pen_data = numpy.full(self._effective_matrix.dim, pen_data,
                                           dtype=object)
                 brush_data = numpy.full(
-                    len(self.data),
-                    pg.mkColor((192, 192, 192, self.symbol_opacity)),
+                    size, pg.mkColor((192, 192, 192, self.symbol_opacity)),
                     dtype=object)
+
+            if self._subset_mask is not None and have_data and \
+                    self._subset_mask.shape == (size, ):
+                # clear brush fill for non subset data
+                brush_data[~self._subset_mask] = QtGui.QBrush(Qt.NoBrush)
 
             self._pen_data = pen_data
             self._brush_data = brush_data
@@ -877,7 +923,7 @@ class OWMDS(widget.OWWidget):
                 item.setPen(pen)
                 self.plot.addItem(item)
 
-        data = numpy.arange(len(self.data if have_data else self.matrix))
+        data = numpy.arange(size)
         self._scatter_item = item = ScatterPlotItem(
             x=emb_x, y=emb_y,
             pen=self._pen_data, brush=self._brush_data, symbol=self._shape_data,
@@ -1303,11 +1349,16 @@ def main_test(argv=sys.argv):
     data = Orange.data.Table(filename)
     w = OWMDS()
     w.set_data(data)
+    w.set_subset_data(data[numpy.random.choice(len(data), 10)])
     w.handleNewSignals()
 
     w.show()
     w.raise_()
     rval = app.exec_()
+
+    w.set_subset_data(None)
+    w.set_data(None)
+    w.handleNewSignals()
 
     w.saveSettings()
     w.onDeleteWidget()
