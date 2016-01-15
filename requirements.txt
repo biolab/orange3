@@ -1,5 +1,5 @@
 beautifulsoup4
-bottlechest>=0.7.0
+bottlechest>=0.7.1
 chardet>=2.3.0
 docutils
 Jinja2==2.6
