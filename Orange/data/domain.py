@@ -187,7 +187,7 @@ class Domain:
         attr_vars = [ContinuousVariable(name=get_name("Feature", a, places))
                      for a in range(n_attrs)]
         class_vars = []
-        if Y is not None:
+        if Y is not None and Y.size:
             if Y.ndim == 1:
                 Y = Y.reshape(len(Y), 1)
             elif Y.ndim != 2:
@@ -195,14 +195,14 @@ class Domain:
             n_classes = Y.shape[1]
             places = get_places(n_classes)
             for i, values in enumerate(Y.T):
-                if set(values) == {0, 1}:
+                values = is_discrete_values(values)
+                if values:
                     name = get_name('Class', i, places)
-                    values = ['v1', 'v2']
-                    class_vars.append(DiscreteVariable(name, values))
+                    class_vars.append(DiscreteVariable(name, sorted(values)))
                 else:
                     name = get_name('Target', i + 1, places)
                     class_vars.append(ContinuousVariable(name))
-        if metas is not None:
+        if metas is not None and metas.size:
             n_metas = metas.shape[1]
             places = get_places(n_metas)
             meta_vars = [StringVariable(get_name("Meta", m, places))
