@@ -14,6 +14,7 @@ import numpy as np
 
 from chardet.universaldetector import UniversalDetector
 
+from Orange.data import Table, Domain
 from Orange.data.variable import *
 from Orange.util import abstract, Registry, flatten, namegen
 
@@ -531,7 +532,7 @@ class CSVFormat(FileFormat):
 
     @classmethod
     def read_file(cls, filename, wrapper=None):
-        wrapper = wrapper or _IDENTITY
+        wrapper = wrapper if wrapper and wrapper != Table else _IDENTITY
         import csv, sys, locale
         for encoding in (lambda: ('us-ascii', None),                 # fast
                          lambda: (detect_encoding(filename), None),  # precise
@@ -595,7 +596,7 @@ class PickleFormat(FileFormat):
 
     @staticmethod
     def read_file(filename, wrapper=None):
-        wrapper = wrapper or _IDENTITY
+        wrapper = wrapper if wrapper and wrapper != Table else _IDENTITY
         import pickle
         with open(filename, 'rb') as f:
             return wrapper(pickle.load(f))
@@ -640,7 +641,7 @@ class ExcelFormat(FileFormat):
 
     @classmethod
     def read_file(cls, filename, wrapper=None):
-        wrapper = wrapper or _IDENTITY
+        wrapper = wrapper if wrapper and wrapper != Table else _IDENTITY
         file_name, _, sheet_name = filename.rpartition(':')
         if not path.isfile(file_name):
             file_name, sheet_name = filename, ''

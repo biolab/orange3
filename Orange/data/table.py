@@ -18,8 +18,7 @@ from scipy import sparse as sp
 
 from .instance import *
 from Orange.util import flatten
-from Orange.data import Domain, io, Variable, StringVariable
-from Orange.data.io import FileFormat
+from Orange.data import Domain, Variable, StringVariable
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
@@ -479,6 +478,7 @@ class Table(MutableSequence, Storage):
         :type filename: str
         """
         ext = os.path.splitext(filename)[1]
+        from Orange.data.io import FileFormat
         writer = FileFormat.writers.get(ext)
         if not writer:
             desc = FileFormat.names.get(ext)
@@ -489,8 +489,8 @@ class Table(MutableSequence, Storage):
                 raise IOError("Unknown file name extension.")
         writer().write_file(filename, self)
 
-    @staticmethod
-    def from_file(filename, wrapper=None):
+    @classmethod
+    def from_file(cls, filename, wrapper=None):
         """
         Read a data table from a file. The path can be absolute or relative.
 
@@ -499,6 +499,7 @@ class Table(MutableSequence, Storage):
         :return: a new data table
         :rtype: Orange.data.Table
         """
+        from Orange.data.io import FileFormat
         for dir in dataset_dirs:
             absolute_filename = os.path.join(dir, filename)
             if os.path.exists(absolute_filename):
@@ -516,7 +517,7 @@ class Table(MutableSequence, Storage):
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
-        data = FileFormat.read(absolute_filename, wrapper)
+        data = FileFormat.read(absolute_filename, wrapper or cls)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
