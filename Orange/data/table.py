@@ -219,7 +219,7 @@ class Table(MutableSequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        self = cls.__new__(Table)
+        self = cls()
         self.domain = domain
         self.n_rows = n_rows
         self.X = np.zeros((n_rows, len(domain.attributes)))
@@ -290,16 +290,16 @@ class Table(MutableSequence, Storage):
                     a[:, i] = source._Y[row_indices, col - n_src_attrs]
             return a
 
-        new_cache = Table.conversion_cache is None
+        new_cache = cls.conversion_cache is None
         try:
             if new_cache:
-                Table.conversion_cache = {}
+                cls.conversion_cache = {}
             else:
-                cached = Table.conversion_cache.get((id(domain), id(source)))
+                cached = cls.conversion_cache.get((id(domain), id(source)))
                 if cached:
                     return cached
             if domain == source.domain:
-                return Table.from_table_rows(source, row_indices)
+                return cls.from_table_rows(source, row_indices)
 
             if isinstance(row_indices, slice):
                 start, stop, stride = row_indices.indices(source.X.shape[0])
@@ -311,7 +311,7 @@ class Table(MutableSequence, Storage):
             else:
                 n_rows = len(row_indices)
 
-            self = cls.__new__(Table)
+            self = cls()
             self.domain = domain
             conversion = domain.get_conversion(source.domain)
             self.X = get_columns(row_indices, conversion.attributes, n_rows)
@@ -335,11 +335,11 @@ class Table(MutableSequence, Storage):
                 self.ids = np.array(source.ids[row_indices])
             else:
                 cls._init_ids(self)
-            Table.conversion_cache[(id(domain), id(source))] = self
+            cls.conversion_cache[(id(domain), id(source))] = self
             return self
         finally:
             if new_cache:
-                Table.conversion_cache = None
+                cls.conversion_cache = None
 
     @classmethod
     def from_table_rows(cls, source, row_indices):
@@ -353,7 +353,7 @@ class Table(MutableSequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        self = cls.__new__(Table)
+        self = cls()
         self.domain = source.domain
         self.X = source.X[row_indices]
         if self.X.ndim == 1:
@@ -427,7 +427,7 @@ class Table(MutableSequence, Storage):
             raise ValueError(
                 "Parts of data contain different numbers of rows.")
 
-        self = Table.__new__(Table)
+        self = cls()
         self.domain = domain
         self.X = X
         self.Y = Y
@@ -654,7 +654,7 @@ class Table(MutableSequence, Storage):
         if isinstance(key, Integral):
             return RowInstance(self, key)
         if not isinstance(key, tuple):
-            return Table.from_table_rows(self, key)
+            return self.from_table_rows(self, key)
 
         if len(key) != 2:
             raise IndexError("Table indices must be one- or two-dimensional")
@@ -692,7 +692,7 @@ class Table(MutableSequence, Storage):
             domain = Domain(r_attrs, r_classes, r_metas)
         else:
             domain = self.domain
-        return Table.from_table(domain, self, row_idx)
+        return self.from_table(domain, self, row_idx)
 
     def __setitem__(self, key, value):
         if not self._check_all_dense():
@@ -961,7 +961,7 @@ class Table(MutableSequence, Storage):
         """
         Return a copy of the table
         """
-        t = Table(self)
+        t = self.__class__(self)
         t.ensure_copy()
         return t
 
@@ -981,17 +981,17 @@ class Table(MutableSequence, Storage):
 
     def X_density(self):
         if not hasattr(self, "_X_density"):
-            self._X_density = Table.__determine_density(self.X)
+            self._X_density = self.__determine_density(self.X)
         return self._X_density
 
     def Y_density(self):
         if not hasattr(self, "_Y_density"):
-            self._Y_density = Table.__determine_density(self._Y)
+            self._Y_density = self.__determine_density(self._Y)
         return self._Y_density
 
     def metas_density(self):
         if not hasattr(self, "_metas_density"):
-            self._metas_density = Table.__determine_density(self.metas)
+            self._metas_density = self.__determine_density(self.metas)
         return self._metas_density
 
     def set_weights(self, weight=1):
@@ -1094,7 +1094,7 @@ class Table(MutableSequence, Storage):
                 else:
                     remove = np.logical_or(remove, bn.anynan([col], axis=0))
         retain = remove if negate else np.logical_not(remove)
-        return Table.from_table_rows(self, retain)
+        return self.from_table_rows(self, retain)
 
     def _filter_has_class(self, negate=False):
         if sp.issparse(self._Y):
@@ -1108,7 +1108,7 @@ class Table(MutableSequence, Storage):
             retain = bn.anynan(self._Y, axis=1)
             if not negate:
                 retain = np.logical_not(retain)
-        return Table.from_table_rows(self, retain)
+        return self.from_table_rows(self, retain)
 
     def _filter_same_value(self, column, value, negate=False):
         if not isinstance(value, Real):
@@ -1116,7 +1116,7 @@ class Table(MutableSequence, Storage):
         sel = self.get_column_view(column)[0] == value
         if negate:
             sel = np.logical_not(sel)
-        return Table.from_table_rows(self, sel)
+        return self.from_table_rows(self, sel)
 
     def _filter_values(self, filter):
         from Orange.data import filter as data_filter
