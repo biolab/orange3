@@ -1,3 +1,4 @@
+import re
 import logging
 from math import log
 from collections import Iterable
@@ -12,6 +13,10 @@ from Orange.util import deprecated
 
 
 LOG = logging.getLogger()
+
+
+def _normcase(str, replace_special=re.compile(r'[^\w]+').sub):
+    return replace_special('_', str).lower()
 
 
 class DomainConversion:
@@ -143,6 +148,12 @@ class Domain:
 
         self._indices = dict(chain.from_iterable(
             ((var, i), (var.name, i)) for i, var in enumerate(self)))
+
+        # Allow attribute-like access to variables in the domain
+        for var in self:
+            name = _normcase(var.name)
+            if not hasattr(self, name):
+                setattr(self, name, var)
 
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
