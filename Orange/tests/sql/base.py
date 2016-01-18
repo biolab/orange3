@@ -7,7 +7,6 @@ import uuid
 
 import Orange
 from Orange.data.sql.table import SqlTable
-from Orange.data.sql import table as sql_table
 
 
 def sql_test(f):
