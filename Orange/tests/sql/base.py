@@ -86,6 +86,7 @@ def create_iris():
                     values.append(iris.domain.class_var.values[int(val)])
             cur.execute("""INSERT INTO iris VALUES
             (%s, %s, %s, %s, '%s')""" % tuple(values))
+        cur.execute("ANALYZE iris")
     return get_dburi(), 'iris'
 
 
