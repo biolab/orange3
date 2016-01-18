@@ -557,7 +557,7 @@ class Table(MutableSequence, Storage):
             except ValueError: continue
             else: break
 
-        name = urlparse(url)[2].replace('/', '_')
+        name = re.sub(r'[\\:/]', '_', urlparse(url).path)
 
         def suggested_filename(content_disposition):
             # See https://tools.ietf.org/html/rfc6266#section-4.1
