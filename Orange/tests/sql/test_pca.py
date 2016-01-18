@@ -16,7 +16,7 @@ class PCATest(unittest.TestCase):
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))
         for batch_size in (50, 500):
-            rpca = RemotePCA(table, batch_size, 10)
+            rpca = RemotePCA(table, batch_size, 20)
             self.assertEqual(rpca.components_.shape, (4, 4))
 
 
