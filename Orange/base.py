@@ -5,7 +5,8 @@ import scipy
 import bottlechest as bn
 
 from Orange.data import Table, Storage, Instance, Value
-from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
+from Orange.preprocess import (RemoveNaNClasses, Continuize,
+                               RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
@@ -203,7 +204,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     ${skldoc}
     Additional Orange parameters
 
-    preprocessors : list, optional (default=[Continuize(), SklImpute(), RemoveNaNColumns()])
+    preprocessors : list, optional (default=[RemoveNaNClasses(), Continuize(), SklImpute(), RemoveNaNColumns()])
         An ordered list of preprocessors applied to data before
         training or testing.
     """
@@ -212,7 +213,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     _params = {}
 
     name = 'skl learner'
-    preprocessors = [Continuize(),
+    preprocessors = [RemoveNaNClasses(),
+                     Continuize(),
                      RemoveNaNColumns(),
                      SklImpute()]
 

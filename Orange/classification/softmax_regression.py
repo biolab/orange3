@@ -2,7 +2,8 @@ import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
-from Orange.preprocess import Continuize, RemoveNaNColumns, Impute, Normalize
+from Orange.preprocess import (RemoveNaNClasses, Continuize, RemoveNaNColumns,
+                               Impute, Normalize)
 
 __all__ = ["SoftmaxRegressionLearner"]
 
@@ -27,7 +28,7 @@ class SoftmaxRegressionLearner(Learner):
         data and keeping parameters small. Higher values of lambda\_ force
         parameters to be smaller.
 
-    preprocessors : list, optional (default=[RemoveNaNColumns(), Impute(), Continuize(), Normalize()])
+    preprocessors : list, optional (default=[RemoveNaNClasses(), RemoveNaNColumns(), Impute(), Continuize(), Normalize()])
         Preprocessors are applied to data before training or testing. Default preprocessors:
 
         - remove columns with all values as NaN
@@ -39,7 +40,8 @@ class SoftmaxRegressionLearner(Learner):
         Parameters for L-BFGS algorithm.
     """
     name = 'softmax'
-    preprocessors = [RemoveNaNColumns(),
+    preprocessors = [RemoveNaNClasses(),
+                     RemoveNaNColumns(),
                      Impute(),
                      Continuize(),
                      Normalize()]

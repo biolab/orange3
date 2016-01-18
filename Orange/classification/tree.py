@@ -1,6 +1,7 @@
 import sklearn.tree as skl_tree
 from Orange.classification import SklLearner, SklModel
-from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
+from Orange.preprocess import (RemoveNaNClasses, Continuize,
+                               RemoveNaNColumns, SklImpute)
 
 __all__ = ["TreeLearner"]
 
@@ -13,7 +14,8 @@ class TreeLearner(SklLearner):
     __wraps__ = skl_tree.DecisionTreeClassifier
     __returns__ = TreeClassifier
     name = 'tree'
-    preprocessors = [RemoveNaNColumns(),
+    preprocessors = [RemoveNaNClasses(),
+                     RemoveNaNColumns(),
                      SklImpute(),
                      Continuize()]
 
