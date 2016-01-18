@@ -1,4 +1,4 @@
-VERSION=9.5alpha1
+VERSION=9.5.0
 POSTGRES=$TRAVIS_BUILD_DIR/postgres/$VERSION
 
 if [ ! "$(ls $POSTGRES)" ]; then
