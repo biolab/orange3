@@ -7,7 +7,6 @@ from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearModel, LinearRegressionLearner,
     RidgeRegressionLearner, ElasticNetLearner)
-from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
@@ -136,20 +135,6 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
     def commit(self):
         alpha = self.alphas[self.alpha_index]
         preprocessors = self.preprocessors
-        if self.data is not None and np.isnan(self.data.Y).any():
-            self.warning(0, "Missing values of target variable(s)")
-            if not self.preprocessors:
-                if self.reg_type == OWLinearRegression.OLS:
-                    preprocessors = LinearRegressionLearner.preprocessors
-                elif self.reg_type == OWLinearRegression.Ridge:
-                    preprocessors = RidgeRegressionLearner.preprocessors
-                elif self.reg_type == OWLinearRegression.Lasso:
-                    preprocessors = LassoRegressionLearner.preprocessors
-                else:
-                    preprocessors = ElasticNetLearner.preprocessors
-            else:
-                preprocessors = list(self.preprocessors)
-            preprocessors.append(RemoveNaNClasses())
         args = {"preprocessors": preprocessors}
         if self.reg_type == OWLinearRegression.OLS:
             learner = LinearRegressionLearner(**args)
