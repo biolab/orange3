@@ -1712,8 +1712,9 @@ class OrangeComboBox(QtGui.QComboBox):
     A QtGui.QComboBox subclass extened to support bounded contents width hint.
     """
     def __init__(self, parent=None, maximumContentsLength=-1, **kwargs):
-        super().__init__(parent, **kwargs)
+        # Forward-declared for sizeHint()
         self.__maximumContentsLength = maximumContentsLength
+        super().__init__(parent, **kwargs)
 
     def setMaximumContentsLength(self, length):
         """
