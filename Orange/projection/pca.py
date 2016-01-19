@@ -147,7 +147,8 @@ class RemotePCA:
         cont = Continuize(multinomial_treatment=Continuize.Remove)
         data = cont(data)
         model = Orange.projection.IncrementalPCA()
-        percent = batch / data.approx_len() * 100
+        n = data.approx_len()
+        percent = batch / n * 100 if n else 100
         for i in range(max_iter):
             data_sample = data.sample_percentage(percent, no_cache=True)
             if not data_sample:

@@ -7,7 +7,6 @@ import uuid
 
 import Orange
 from Orange.data.sql.table import SqlTable
-from Orange.data.sql import table as sql_table
 
 
 def sql_test(f):
@@ -86,6 +85,7 @@ def create_iris():
                     values.append(iris.domain.class_var.values[int(val)])
             cur.execute("""INSERT INTO iris VALUES
             (%s, %s, %s, %s, '%s')""" % tuple(values))
+        cur.execute("ANALYZE iris")
     return get_dburi(), 'iris'
 
 
