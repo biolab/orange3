@@ -552,7 +552,7 @@ class OWDistributions(widget.OWWidget):
     def save_graph(self):
         from Orange.widgets.data.owsave import OWSave
 
-        save_img = OWSave(data=self.plot,
+        save_img = OWSave(data=self.ploti,
                           file_formats=FileFormat.img_writers)
         save_img.exec_()
 
