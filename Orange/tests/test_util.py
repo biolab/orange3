@@ -70,7 +70,8 @@ class UtilTest(unittest.TestCase):
         @deprecated
         def identity(x): return x
 
-        with self.assertLogs() as cm: x = identity(10)
+        with self.assertWarns(DeprecationWarning) as cm:
+            x = identity(10)
         self.assertTrue(x == 10)
-        self.assertTrue('deprecated' in cm.output[0])
-        self.assertTrue('identity' in cm.output[0])
+        self.assertTrue('deprecated' in cm.warning.args[0])
+        self.assertTrue('identity' in cm.warning.args[0])

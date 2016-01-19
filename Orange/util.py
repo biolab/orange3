@@ -3,12 +3,16 @@
 from functools import wraps
 from itertools import chain, count
 from collections import OrderedDict
-import logging
+import warnings
 
 import numpy as np
 
 
-log = logging.getLogger()
+class OrangeDeprecationWarning(DeprecationWarning):
+    pass
+
+
+warnings.simplefilter('default', OrangeDeprecationWarning)
 
 
 def deprecated(obj):
@@ -16,7 +20,7 @@ def deprecated(obj):
     @wraps(obj)
     def wrapper(*args, **kwargs):
         name = '{}.{}'.format(obj.__self__.__class__, obj.__name__) if hasattr(obj, '__self__') else obj
-        log.warning('Call to deprecated {}'.format(name))
+        warnings.warn('Call to deprecated {}'.format(name), OrangeDeprecationWarning, stacklevel=2)
         return obj(*args, **kwargs)
     return wrapper
 
