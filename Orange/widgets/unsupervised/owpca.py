@@ -109,7 +109,7 @@ class OWPCA(widget.OWWidget):
         # Options
         self.options_box = gui.widgetBox(self.controlArea, "Options")
         gui.checkBox(self.options_box, self, "normalize", "Normalize data",
-                     callback=self.fit)
+                     callback=self._update_normalize)
         self.maxp_spin = gui.spin(
             self.options_box, self, "maxp", 1, 100,
             label="Show only first", callback=self._setup_plot,
@@ -182,10 +182,6 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Start remote computation")
             self.start_button.setEnabled(True)
         else:
-            # TODO move the following normalization outside
-            # so it is applied for SqlTables as well (when it works on them)
-            if self.normalize:
-                data = Normalize(data)
             self.sampling_box.setVisible(False)
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
@@ -293,6 +289,16 @@ class OWPCA(widget.OWWidget):
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
         self._invalidate_selection()
+
+    def _update_normalize(self):
+        if self.normalize:
+            pp = self._pca_preprocessors + [Normalize()]
+        else:
+            pp = self._pca_preprocessors
+        self._pca_projector.preprocessors = pp
+        self.fit()
+        if self.data is None:
+            self._invalidate_selection()
 
     def _nselected_components(self):
         """Return the number of selected components."""
