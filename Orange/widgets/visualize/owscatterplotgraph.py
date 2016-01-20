@@ -729,7 +729,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                           QBrush(QColor(128, 128, 128, self.alpha_value)))[s]
                          for s in subset]
             else:
-                brush = [QBrush(QColor(128, 128, 128))] * self.n_points
+                brush = [QBrush(QColor(128, 128, 128, self.alpha_value))] \
+                        * self.n_points
             return pen, brush
 
         c_data = self.original_data[color_index, self.valid_data]
