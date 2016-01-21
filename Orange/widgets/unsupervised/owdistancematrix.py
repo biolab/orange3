@@ -1,4 +1,6 @@
 import itertools
+from contextlib import contextmanager
+
 import numpy as np
 
 from PyQt4 import QtCore
@@ -6,14 +8,17 @@ from PyQt4 import QtGui
 
 from PyQt4.QtGui import QTableView, QBrush, QColor, QItemSelectionModel
 from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex
+from math import isnan
 
 import Orange.data
 import Orange.misc
 
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import ranges
+from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
 
 
@@ -24,26 +29,43 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.fact = 70
         self.labels = None
         self.colors = None
+        self.variable = None
+        self.label_colors = None
+        self.zero_diag = True
+        self.has_labels = False
 
-    def set_data(self, distances):
+    @contextmanager
+    def model_reset_signal(self):
         self.emit(SIGNAL("modelAboutToBeReset()"))
-        self.distances = distances
-        if distances is None:
-            return
-        span = distances.max()
-        self.colors = (distances * (170 / span if span > 1e-10 else 0)
-                       ).astype(np.int)
+        yield
         self.emit(SIGNAL("modelReset()"))
 
-    def set_labels(self, labels):
-        if bool(self.labels) != bool(labels):
-            self.emit(SIGNAL("modelAboutToBeReset()"))
+    def set_data(self, distances):
+        with self.model_reset_signal():
+            self.distances = distances
+            if distances is None:
+                return
+            span = distances.max()
+            self.colors = \
+                (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
+            self.zero_diag = not self.distances.diagonal().any()
+
+    def set_labels(self, labels, variable=None, values=None):
+        # TODO keep selection when changing annotation from None to ... whatever
+        with self.model_reset_signal():
             self.labels = labels
-            self.emit(SIGNAL("modelReset()"))
-        else:
-            self.emit(SIGNAL("modelAboutToBeReset()"))
-            self.labels = labels
-            self.emit(SIGNAL("modelReset()"))
+            self.has_labels = bool(self.labels)
+            self.variable = variable
+            self.values = values
+            if isinstance(variable, Orange.data.ContinuousVariable):
+                palette = ContinuousPaletteGenerator(*variable.colors)
+                off, m = values.min(), values.max()
+                fact = off != m and 1 / (m - off)
+                self.label_colors = [
+                    palette[x] if not isnan(x) else Qt.lightGray
+                    for x in (values - off) * fact]
+            else:
+                self.label_colors = None
 
     def dimension(self, parent=None):
         if parent and parent.isValid() or self.distances is None or \
@@ -54,19 +76,65 @@ class DistanceMatrixModel(QAbstractTableModel):
     columnCount = rowCount = dimension
 
     def data(self, index, role=Qt.DisplayRole):
+        def color_for_ind(ind, light=100):
+            color = Qt.lightGray
+            if self.variable is not None:
+                if ind == -1:
+                    color = Qt.white
+                elif isinstance(self.variable, Orange.data.ContinuousVariable):
+                    color = self.label_colors[ind].lighter(light)
+                elif isinstance(self.variable, Orange.data.DiscreteVariable):
+                    value = self.values[ind]
+                    if not isnan(value):
+                        color = QColor(*self.variable.colors[value])
+            return QBrush(color)
+
+        if role == Qt.TextAlignmentRole:
+            return Qt.AlignRight | Qt.AlignVCenter
         row, col = index.row(), index.column()
-        if row == col or self.distances is None:
-            return
-        has_labels = bool(self.labels)
-        row -= has_labels
-        col -= has_labels
+        row -= self.has_labels
+        col -= self.has_labels
         if row == -1 or col == -1:
-            if has_labels and role == Qt.DisplayRole:
-                return self.labels[row + col + 1]
-        elif role == Qt.DisplayRole:
-            return "{:5f}".format(self.distances[row, col])
-        elif role == Qt.BackgroundColorRole and self.colors is not None:
+            ind = row + col + 1
+            if role == Qt.DisplayRole:
+                if not row == col == -1:
+                    return self.labels[ind]
+            if role == Qt.BackgroundColorRole:
+                return color_for_ind(ind, 200)
+            return
+        if self.distances is None:
+            return
+        if row == col and self.zero_diag:
+            if role == Qt.BackgroundColorRole and self.variable:
+                return color_for_ind(row, 200)
+            return
+        if role == Qt.DisplayRole:
+            return "{:.3f}".format(self.distances[row, col])
+        if role == Qt.BackgroundColorRole and self.colors is not None:
             return QBrush(QColor.fromHsv(120, self.colors[row, col], 255))
+        if role == TableBorderItem.BorderColorRole and self.variable:
+            return color_for_ind(row), color_for_ind(col)
+
+
+class TableBorderItem(QtGui.QItemDelegate):
+    BorderColorRole = next(OrangeUserRole)
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+        colors = index.data(self.BorderColorRole)
+        vcolor, hcolor = colors or (None, None)
+        if vcolor is not None or hcolor is not None:
+            painter.save()
+            x1, y1, x2, y2 = option.rect.getCoords()
+            if vcolor is not None:
+                painter.setPen(QtGui.QPen(QtGui.QBrush(vcolor), 1,
+                                          Qt.SolidLine, Qt.RoundCap))
+                painter.drawLine(x1, y1, x1, y2)
+            if hcolor is not None:
+                painter.setPen(QtGui.QPen(QtGui.QBrush(hcolor), 1,
+                                          Qt.SolidLine, Qt.RoundCap))
+                painter.drawLine(x1, y1, x2, y1)
+            painter.restore()
 
 
 class SymmetricSelectionModel(QItemSelectionModel):
@@ -84,6 +152,8 @@ class SymmetricSelectionModel(QItemSelectionModel):
             indexes = selection.indexes()
             selected |= {ind.row() for ind in indexes} | \
                         {ind.column() for ind in indexes}
+            if self.model().has_labels and 0 in selected:
+                selected.remove(0)
             regions = list(ranges(sorted(selected)))
             for r_start, r_end in regions:
                 for c_start, c_end in regions:
@@ -111,7 +181,7 @@ class SymmetricSelectionModel(QItemSelectionModel):
         QItemSelectionModel.select(self, new_selection, flags)
 
     def selected_items(self):
-        has_labels = bool(self.model().labels)
+        has_labels = self.model().has_labels
         return list({ind.row() - has_labels for ind in self.selectedIndexes()})
 
 
@@ -125,29 +195,23 @@ class OWDistanceMatrix(widget.OWWidget):
     outputs = [("Distances", Orange.misc.DistMatrix),
                ("Table", Orange.data.Table)]
 
-    annotation_idx = Setting(0)
     auto_commit = Setting(True)
+    # TODO this should be contex setting
+    annotation_idx = Setting(0)
+    # TODO save selection as setting
     selection = ContextSetting([])
+
+    want_control_area = False
 
     def __init__(self):
         super().__init__()
         self.distances = None
         self.items = None
 
-        box = gui.widgetBox(self.controlArea, "Annotations")
-        self.annot_combo = gui.comboBox(
-            box, self, "annotation_idx", callback=self._invalidate_annotations,
-            contentsLength=12)
-        self.annot_combo.setModel(VariableListModel())
-        self.annot_combo.model()[:] = ["None", "Enumeration"]
-
-        gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selected Data", "Auto send is on")
-
         self.tablemodel = DistanceMatrixModel()
         view = self.tableview = QTableView(
             editTriggers=QTableView.NoEditTriggers)
+        view.setItemDelegate(TableBorderItem())
         view.setModel(self.tablemodel)
         view.horizontalHeader().hide()
         view.verticalHeader().hide()
@@ -155,6 +219,19 @@ class OWDistanceMatrix(widget.OWWidget):
         selmodel.selectionChanged.connect(self.commit)
         view.setSelectionModel(selmodel)
         self.mainArea.layout().addWidget(view)
+
+        settings_box = gui.widgetBox(self.mainArea, orientation="horizontal")
+
+        self.annot_combo = gui.comboBox(
+            settings_box, self, "annotation_idx", label="Labels: ",
+            orientation="horizontal",
+            callback=self._invalidate_annotations, contentsLength=12)
+        self.annot_combo.setModel(VariableListModel())
+        self.annot_combo.model()[:] = ["None", "Enumeration"]
+        gui.rubber(settings_box)
+        gui.auto_commit(
+            settings_box, self, "auto_commit",
+            "Send Selected Data", "Auto send is on", box=None)
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)
@@ -166,12 +243,14 @@ class OWDistanceMatrix(widget.OWWidget):
             self.set_items(distances.row_items, distances.axis)
         else:
             self.set_items(None)
+        self.tableview.resizeColumnsToContents()
 
     def _invalidate_annotations(self):
         if self.distances is not None:
             self._update_labels()
 
-    def _update_labels(self, ):
+    def _update_labels(self):
+        var = column = None
         if self.annotation_idx == 0:
             labels = None
         elif self.annotation_idx == 1:
@@ -186,7 +265,8 @@ class OWDistanceMatrix(widget.OWWidget):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
             labels = [var.repr_val(value) for value in column]
-        self.tablemodel.set_labels(labels)
+        self.tablemodel.set_labels(labels, var, column)
+        self.tableview.resizeColumnsToContents()
 
     def set_items(self, items, axis=1):
         self.items = items
@@ -205,6 +285,7 @@ class OWDistanceMatrix(widget.OWWidget):
         else:
             model[:] = ["None", "Enumeration"]
         self.annotation_idx = min(self.annotation_idx, len(model) - 1)
+        self._update_labels()
 
     def commit(self):
         if self.distances is None:
