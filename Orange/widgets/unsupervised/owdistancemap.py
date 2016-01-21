@@ -239,7 +239,7 @@ _default_colormap_index = len(_color_palettes) - 1
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
     description = "Visualize a distance matrix."
-    icon = "icons/DistanceMatrix.svg"
+    icon = "icons/DistanceMap.svg"
     priority = 1200
 
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
