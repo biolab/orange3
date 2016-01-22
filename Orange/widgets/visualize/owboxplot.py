@@ -21,6 +21,8 @@ from Orange.widgets.io import FileFormat
 
 
 def compute_scale(min_, max_):
+    if min_ == max_:
+        return math.floor(min_), 1
     magnitude = int(3 * math.log10(abs(max_ - min_)) + 1)
     if magnitude % 3 == 0:
         first_place = 1
@@ -195,10 +197,6 @@ class OWBoxPlot(widget.OWWidget):
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
         self.mainArea.setMinimumWidth(650)
 
-        self.warning = gui.widgetBox(self.controlArea, "Warning:")
-        self.warning_info = gui.widgetLabel(self.warning, "")
-        self.warning.hide()
-
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
 
@@ -253,10 +251,10 @@ class OWBoxPlot(widget.OWWidget):
         if self.is_continuous:
             heights = 90 if self.show_annotations else 60
             self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
-                                  -30 - len(self.stats) * heights / 2 + 45)
+                                   -30 - len(self.stats) * heights / 2 + 45)
         else:
             self.box_view.centerOn(self.scene_width / 2,
-                                  -30 - len(self.boxes) * 40 / 2 + 45)
+                                   -30 - len(self.boxes) * 40 / 2 + 45)
 
     def compute_box_data(self):
         dataset = self.dataset
@@ -462,7 +460,6 @@ class OWBoxPlot(widget.OWWidget):
             p = 1 - scipy.special.fdtr(df_between, df_within, F)
             return F, p
 
-        self.warning.hide()
         if self.compare == OWBoxPlot.CompareNone or len(self.stats) < 2:
             t = ""
         elif any(s.N <= 1 for s in self.stats):
@@ -517,11 +514,11 @@ class OWBoxPlot(widget.OWWidget):
         top = max(stat.a_max for stat in self.stats)
 
         first_val, step = compute_scale(bottom, top)
-        while bottom < first_val:
+        while bottom <= first_val:
             first_val -= step
         bottom = first_val
         no_ticks = math.ceil((top - first_val) / step) + 1
-        top = max(top, first_val + (no_ticks - 1) * step)
+        top = max(top, first_val + no_ticks * step)
 
         gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
         gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
@@ -575,7 +572,7 @@ class OWBoxPlot(widget.OWWidget):
                 self.scale_x = 1
                 return
             _, step = compute_scale(0, max_box)
-            step = int(step)
+            step = int(step) if step > 1 else 1
             steps = int(math.ceil(max_box / step))
         max_box = step * steps
 
