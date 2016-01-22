@@ -1,23 +1,20 @@
+from math import isnan
 import itertools
 from contextlib import contextmanager
 
 import numpy as np
 
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-
-from PyQt4.QtGui import QTableView, QBrush, QColor, QItemSelectionModel
-from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex
-from math import isnan
+from PyQt4.QtGui import QTableView, QColor, QItemSelectionModel, \
+    QItemDelegate, QPen, QBrush, QItemSelection
+from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex, QSize
 
 import Orange.data
 import Orange.misc
-
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import ranges
 from Orange.widgets.gui import OrangeUserRole
-from Orange.widgets.settings import (Setting, ContextSetting,
-                                     DomainContextHandler)
+from Orange.widgets.settings \
+    import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
 
@@ -30,6 +27,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.labels = None
         self.colors = None
         self.variable = None
+        self.values = None
         self.label_colors = None
         self.zero_diag = True
         self.has_labels = False
@@ -51,7 +49,6 @@ class DistanceMatrixModel(QAbstractTableModel):
             self.zero_diag = not self.distances.diagonal().any()
 
     def set_labels(self, labels, variable=None, values=None):
-        # TODO keep selection when changing annotation from None to ... whatever
         with self.model_reset_signal():
             self.labels = labels
             self.has_labels = bool(self.labels)
@@ -116,7 +113,7 @@ class DistanceMatrixModel(QAbstractTableModel):
             return color_for_ind(row), color_for_ind(col)
 
 
-class TableBorderItem(QtGui.QItemDelegate):
+class TableBorderItem(QItemDelegate):
     BorderColorRole = next(OrangeUserRole)
 
     def paint(self, painter, option, index):
@@ -127,12 +124,12 @@ class TableBorderItem(QtGui.QItemDelegate):
             painter.save()
             x1, y1, x2, y2 = option.rect.getCoords()
             if vcolor is not None:
-                painter.setPen(QtGui.QPen(QtGui.QBrush(vcolor), 1,
-                                          Qt.SolidLine, Qt.RoundCap))
+                painter.setPen(
+                    QPen(QBrush(vcolor), 1, Qt.SolidLine, Qt.RoundCap))
                 painter.drawLine(x1, y1, x1, y2)
             if hcolor is not None:
-                painter.setPen(QtGui.QPen(QtGui.QBrush(hcolor), 1,
-                                          Qt.SolidLine, Qt.RoundCap))
+                painter.setPen(
+                    QPen(QBrush(hcolor), 1, Qt.SolidLine, Qt.RoundCap))
                 painter.drawLine(x1, y1, x2, y1)
             painter.restore()
 
@@ -140,12 +137,12 @@ class TableBorderItem(QtGui.QItemDelegate):
 class SymmetricSelectionModel(QItemSelectionModel):
     def select(self, selection, flags):
         if isinstance(selection, QModelIndex):
-            selection = QtGui.QItemSelection(selection, selection)
+            selection = QItemSelection(selection, selection)
 
         model = self.model()
         indexes = self.selectedIndexes()
         selected = {ind.row() for ind in indexes}
-        new_selection = QtGui.QItemSelection()
+        new_selection = QItemSelection()
         if flags & QItemSelectionModel.Select:
             if flags & QItemSelectionModel.Clear:
                 selected = set()
@@ -181,8 +178,24 @@ class SymmetricSelectionModel(QItemSelectionModel):
         QItemSelectionModel.select(self, new_selection, flags)
 
     def selected_items(self):
+        """
+        Return indices of selected items.
+
+        These are indices from selectedIndexes, but minus 1 if labels are shown.
+
+        Returns: set of int
+        """
         has_labels = self.model().has_labels
         return list({ind.row() - has_labels for ind in self.selectedIndexes()})
+
+    def set_selected_items(self, inds):
+        model = self.model()
+        has_labels = model.has_labels
+        selection = QItemSelection()
+        for i in inds:
+            i += has_labels
+            selection.select(model.index(i, i), model.index(i, i))
+        self.select(selection, QItemSelectionModel.Select)
 
 
 class OWDistanceMatrix(widget.OWWidget):
@@ -196,7 +209,7 @@ class OWDistanceMatrix(widget.OWWidget):
                ("Table", Orange.data.Table)]
 
     auto_commit = Setting(True)
-    # TODO this should be contex setting
+    # TODO this should be context setting
     annotation_idx = Setting(0)
     # TODO save selection as setting
     selection = ContextSetting([])
@@ -234,7 +247,7 @@ class OWDistanceMatrix(widget.OWWidget):
             "Send Selected Data", "Auto send is on", box=None)
 
     def sizeHint(self):
-        return QtCore.QSize(800, 500)
+        return QSize(800, 500)
 
     def set_distances(self, distances):
         self.distances = distances
@@ -250,6 +263,7 @@ class OWDistanceMatrix(widget.OWWidget):
             self._update_labels()
 
     def _update_labels(self):
+        prev_has_labels = self.tablemodel.has_labels
         var = column = None
         if self.annotation_idx == 0:
             labels = None
@@ -265,8 +279,12 @@ class OWDistanceMatrix(widget.OWWidget):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
             labels = [var.repr_val(value) for value in column]
+        saved_selection = bool(labels) != prev_has_labels and \
+                          self.tableview.selectionModel().selected_items()
         self.tablemodel.set_labels(labels, var, column)
         self.tableview.resizeColumnsToContents()
+        if saved_selection:
+            self.tableview.selectionModel().set_selected_items(saved_selection)
 
     def set_items(self, items, axis=1):
         self.items = items
