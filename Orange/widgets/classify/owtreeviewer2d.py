@@ -1,11 +1,13 @@
 from itertools import chain
-from Orange.widgets import gui
-from Orange.widgets.widget import OWWidget
-from Orange.widgets.settings import Setting
-from Orange.widgets.io import FileFormat
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+
+from Orange.widgets import gui
+from Orange.widgets.widget import OWWidget
+from Orange.widgets.settings import Setting
+from Orange.widgets.utils.saveplot import save_plot
+from Orange.widgets.io import FileFormat
 
 DefDroppletBrush = QBrush(Qt.darkGray)
 
@@ -357,7 +359,7 @@ class OWTreeViewer2D(OWWidget):
     _DEF_NODE_WIDTH = 24
     _DEF_NODE_HEIGHT = 20
 
-    want_graph = True
+    graph_name = True
 
     def __init__(self):
         super().__init__()
@@ -404,7 +406,6 @@ class OWTreeViewer2D(OWWidget):
                          addToLayout=False,
                          callback=self.toggle_line_width, sizePolicy=policy))
         self.resize(800, 500)
-        self.graphButton.clicked.connect(self.save_graph)
 
     def send_report(self):
         from PyQt4.QtSvg import QSvgGenerator
@@ -545,10 +546,6 @@ class OWTreeViewer2D(OWWidget):
         # else None)
 
     def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data={'scene': self.scene, 'tree': self.tree},
-                          file_formats=dict(chain(
-                              FileFormat.img_writers.items(),
-                              FileFormat.graph_writers.items())))
-        save_img.exec_()
+        save_plot(data=dict(scene=self.scene, tree=self.tree),
+                  file_formats=dict(chain(FileFormat.img_writers.items(),
+                                          FileFormat.graph_writers.items())))

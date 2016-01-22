@@ -16,7 +16,6 @@ from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
-from Orange.widgets.io import FileFormat
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar
@@ -65,7 +64,7 @@ class OWScatterPlot(OWWidget):
 
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
-    want_graph = True
+    graph_name = "graph.plot_widget.plotItem"
 
     def __init__(self):
         super().__init__()
@@ -197,7 +196,6 @@ class OWScatterPlot(OWWidget):
             triggered=fit_to_view
         )
         self.addActions([zoom_in, zoom_out, zoom_fit])
-        self.graphButton.clicked.connect(self.save_graph)
 
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
@@ -423,13 +421,6 @@ class OWScatterPlot(OWWidget):
         self.vizrank.hide()
         super().hideEvent(he)
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.graph.plot_widget.plotItem,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.combo_value(self.cb_attr_x),
@@ -448,7 +439,7 @@ class OWScatterPlot(OWWidget):
              ("Size", self.combo_value(self.cb_attr_size)),
              ("Jittering", (self.graph.jitter_continuous or disc_attr) and
               self.graph.jitter_size)))
-        self.report_plot(self.graph.plot_widget)
+        self.report_plot()
         if caption:
             self.report_caption(caption)
 

@@ -51,7 +51,7 @@ class OWVennDiagram(widget.OWWidget):
     useidentifiers = settings.Setting(True)
     autocommit = settings.Setting(True)
 
-    want_graph = True
+    graph_name = "scene"
 
     def __init__(self):
         super().__init__()
@@ -126,7 +126,6 @@ class OWVennDiagram(widget.OWWidget):
                     max(self.controlArea.sizeHint().height(), 550))
 
         self._queue = []
-        self.graphButton.clicked.connect(self.save_graph)
 
     @check_sql_input
     def setData(self, data, key=None):
@@ -560,15 +559,8 @@ class OWVennDiagram(widget.OWWidget):
         self._storeHints()
         return super().getSettings(self, *args, **kwargs)
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.scene,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
-        self.report_plot(self.scene)
+        self.report_plot()
 
 
 def pairwise(iterable):

@@ -335,7 +335,7 @@ class OWImageViewer(widget.OWWidget):
     zoom = settings.Setting(25)
     autoCommit = settings.Setting(False)
 
-    want_graph = True
+    graph_name = "scene"
 
     def __init__(self):
         super().__init__()
@@ -390,7 +390,6 @@ class OWImageViewer(widget.OWWidget):
         self.scene.selectionRectPointChanged.connect(
             self.onSelectionRectPointChanged, Qt.QueuedConnection
         )
-        self.graphButton.clicked.connect(self.saveScene)
         self.resize(800, 600)
 
         self.thumbnailWidget = None
@@ -596,13 +595,6 @@ class OWImageViewer(widget.OWWidget):
             self.send("Data", selected)
         else:
             self.send("Data", None)
-
-    def saveScene(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.scene,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
 
     def _updateStatus(self, future):
         if future.cancelled():

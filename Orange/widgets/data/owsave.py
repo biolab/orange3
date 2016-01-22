@@ -1,4 +1,5 @@
 import os.path
+from operator import attrgetter
 
 from PyQt4 import QtGui
 
@@ -6,6 +7,7 @@ from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.data.io import FileFormat
+from Orange.widgets.utils import filedialogs
 
 
 class OWSave(widget.OWWidget):
@@ -22,66 +24,66 @@ class OWSave(widget.OWWidget):
     resizing_enabled = False
 
     last_dir = Setting("")
+    last_filter = Setting("")
+    auto_save = Setting(False)
 
-    def __init__(self, data=None, file_formats=None):
+    formats = [(f.DESCRIPTION, f.EXTENSIONS)
+               for f in sorted(set(FileFormat.writers.values()),
+                               key=attrgetter("PRIORITY"))]
+    filters = ['{} (*{})'.format(x[0], ' *'.join(x[1])) for x in formats]
+
+    def __init__(self):
         super().__init__()
         self.data = None
         self.filename = ""
-        self.format_index = 0
-        self.file_formats = file_formats or FileFormat.writers
-        self.formats = [(f.DESCRIPTION, f.EXTENSIONS)
-                        for f in sorted(set(self.file_formats.values()),
-                                        key=lambda f: f.OWSAVE_PRIORITY)]
-        self.comboBoxFormat = gui.comboBox(
-            self.controlArea, self, value='format_index',
-            items=['{} (*{})'.format(x[0], ' *'.join(x[1]))
-                   for x in self.formats],
-            box='File Format')
-        box = gui.widgetBox(self.controlArea)
-        self.save = gui.button(box, self, "Save", callback=self.save_file,
-                               default=True, disabled=True)
-        gui.separator(box)
-        self.saveAs = gui.button(box, self, "Save as ...",
-                                 callback=self.save_file_as, disabled=True)
-        self.setMinimumWidth(320)
+        self.writer = None
+
+        self.save = gui.auto_commit(
+            self.controlArea, self, "auto_save", "Save", box=False,
+            commit=self.save_file, callback=self.adjust_label,
+            disabled=True, addSpace=True)
+        self.saveAs = gui.button(
+            self.controlArea, self, "Save as ...",
+            callback=self.save_file_as, disabled=True)
+        self.saveAs.setMinimumWidth(220)
         self.adjustSize()
-        if data:
-            self.dataset(data)
+
+    def adjust_label(self):
+        if self.filename:
+            filename = os.path.split(self.filename)[1]
+            text = ["Save as '{}'", "Auto save as '{}'"][self.auto_save]
+            self.save.button.setText(text.format(filename))
 
     def dataset(self, data):
         self.data = data
         self.save.setDisabled(data is None)
         self.saveAs.setDisabled(data is None)
+        if data is not None:
+            self.save_file()
 
     def save_file_as(self):
-        format_name, format_extensions = self.formats[self.format_index]
-        home_dir = os.path.expanduser("~")
-        filename = QtGui.QFileDialog.getSaveFileName(
-            self, 'Save as ...',
-            self.filename or os.path.join((self.last_dir or home_dir), getattr(self.data, 'name', '')),
-            '{} (*{})'.format(format_name, ' *'.join(format_extensions)))
+        file_name = self.filename or \
+            os.path.join(self.last_dir or os.path.expanduser("~"),
+                         getattr(self.data, 'name', ''))
+        filename, writer, filter = filedialogs.get_file_name(
+                file_name, self.last_filter, FileFormat.writers)
         if not filename:
             return
-        for ext in format_extensions:
-            if filename.endswith(ext):
-                break
-        else:
-            filename += format_extensions[0]
         self.filename = filename
-        self.last_dir, file_name = os.path.split(self.filename)
-        self.save.setText("Save as '%s'" % file_name)
-        self.save.setDisabled(False)
-        self.save_file()
+        self.writer = writer
+        self.unconditional_save_file()
+        self.last_dir = os.path.split(self.filename)[0]
+        self.last_filter = filter
+        self.adjust_label()
 
     def save_file(self):
+        if self.data is None:
+            return
         if not self.filename:
             self.save_file_as()
-        elif self.data is not None:
+        else:
             try:
-                ext = self.formats[self.format_index][1]
-                if not isinstance(ext, str):
-                    ext = ext[0]  # is e.g. a tuple of extensions
-                self.file_formats[ext].write(self.filename, self.data)
+                self.writer.write(self.filename, self.data)
                 self.error()
             except Exception as errValue:
                 self.error(str(errValue))

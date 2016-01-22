@@ -149,7 +149,7 @@ class OWMDS(widget.OWWidget):
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
 
-    want_graph = True
+    graph_name = "plot.plotItem"
 
     def __init__(self):
         super().__init__()
@@ -358,7 +358,6 @@ class OWMDS(widget.OWWidget):
             self.plot.getViewBox().setCursor(QtGui.QCursor(cur))
 
         group.triggered[QtGui.QAction].connect(activate_tool)
-        self.graphButton.clicked.connect(self.save_graph)
 
         self._initialize()
 
@@ -1051,17 +1050,10 @@ class OWMDS(widget.OWWidget):
         else:
             self._selection_mask[indices] = True
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.plot.plotItem,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def send_report(self):
         if self.data is None:
             return
-        self.report_plot(self.plot)
+        self.report_plot()
         caption = report.render_items_vert((
             ("Color", self.color_value != "Same color" and self.color_value),
             ("Shape", self.shape_value != "Same shape" and self.shape_value),

@@ -450,7 +450,7 @@ class OWHeatMap(widget.OWWidget):
 
     auto_commit = settings.Setting(True)
 
-    want_graph = True
+    graph_name = "scene"
 
     def __init__(self):
         super().__init__()
@@ -609,7 +609,6 @@ class OWHeatMap(widget.OWWidget):
 
         self.selection_rects = []
         self.selected_rows = []
-        self.graphButton.clicked.connect(self.save_graph)
 
     def sizeHint(self):
         return QSize(800, 400)
@@ -1497,13 +1496,6 @@ class OWHeatMap(widget.OWWidget):
 
         self.send("Selected Data", data)
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.scene,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
@@ -1516,7 +1508,7 @@ class OWHeatMap(widget.OWWidget):
              self.annotation_index > 0 and
              self.annotation_vars[self.annotation_index])
         ))
-        self.report_plot(self.heatmap_scene)
+        self.report_plot()
 
 
 class GraphicsWidget(QtGui.QGraphicsWidget):

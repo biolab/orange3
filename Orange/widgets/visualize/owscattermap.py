@@ -480,7 +480,7 @@ class OWScatterMap(widget.OWWidget):
 
     mouse_mode = 0
 
-    want_graph = True
+    graph_name = "plot.plotItem"
 
     def __init__(self):
         super().__init__()
@@ -567,7 +567,6 @@ class OWScatterMap(widget.OWWidget):
         self.plot.getViewBox().sigTransformChanged.connect(
             self._on_transform_changed)
         self.mainArea.layout().addWidget(self.plot)
-        self.graphButton.clicked.connect(self.save_graph)
 
     def set_data(self, dataset):
         self.closeContext()
@@ -973,13 +972,6 @@ class OWScatterMap(widget.OWWidget):
         self.clear()
         super().onDeleteWidget()
 
-    def save_graph(self):
-        from Orange.widgets.data.owsave import OWSave
-
-        save_img = OWSave(data=self.plot.plotItem,
-                          file_formats=FileFormat.img_writers)
-        save_img.exec_()
-
     def get_widget_name_extension(self):
         if self.dataset is None:
             return
@@ -994,7 +986,7 @@ class OWScatterMap(widget.OWWidget):
             return
         caption = report.list_legend(self.z_values_view,
                                      self.selected_z_values)
-        self.report_plot(self.plot.plotItem)
+        self.report_plot()
         self.report_caption(caption)
 
 

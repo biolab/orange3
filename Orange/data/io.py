@@ -213,7 +213,7 @@ class FileFormat(metaclass=FileFormatMeta):
     desired output class (if other than Table).
     """
 
-    OWSAVE_PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
+    PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
 
     @staticmethod
     def open(filename, *args, **kwargs):
@@ -531,7 +531,7 @@ class CSVFormat(FileFormat):
     DESCRIPTION = 'Comma-separated values'
     DELIMITERS = ',;:\t$ '
     SUPPORT_COMPRESSED = True
-    OWSAVE_PRIORITY = 20
+    PRIORITY = 20
 
     @classmethod
     def read_file(cls, filename, wrapper=None):
@@ -590,7 +590,7 @@ class TabFormat(CSVFormat):
     EXTENSIONS = ('.tab', '.tsv')
     DESCRIPTION = 'Tab-separated values'
     DELIMITERS = '\t'
-    OWSAVE_PRIORITY = 10
+    PRIORITY = 10
 
 
 class PickleFormat(FileFormat):
