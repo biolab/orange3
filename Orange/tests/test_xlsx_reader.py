@@ -15,32 +15,30 @@ class TestExcelHeader0(unittest.TestCase):
     def test_read(self):
         table = read_file("header_0.xlsx")
         domain = table.domain
-        self.assertEqual(len(domain.class_vars), 1)
-        self.assertIsNotNone(domain.class_var)
+        self.assertIsNone(domain.class_var)
         self.assertEqual(len(domain.metas), 0)
-        self.assertEqual(len(domain.attributes), 3)
+        self.assertEqual(len(domain.attributes), 4)
         for i, var in enumerate(domain.attributes):
             self.assertIsInstance(var, ContinuousVariable)
             self.assertEqual(var.name, "Feature {}".format(i + 1))
         np.testing.assert_almost_equal(table.X,
-                                       np.array([[0.1, 0.5, 0.1],
-                                                 [0.2, 0.1, 2.5],
-                                                 [0, 0, 0]]))
+                                       np.array([[0.1, 0.5, 0.1, 21],
+                                                 [0.2, 0.1, 2.5, 123],
+                                                 [0, 0, 0, 0]]))
 
 
 class TextExcelSheets(unittest.TestCase):
     def test_named_sheet(self):
         table = read_file("header_0_sheet.xlsx:my_sheet")
-        self.assertEqual(len(table.domain.attributes), 3)
+        self.assertEqual(len(table.domain.attributes), 4)
 
 
 class TestExcelHeader1(unittest.TestCase):
     def test_no_flags(self):
         table = read_file("header_1_no_flags.xlsx")
         domain = table.domain
-        self.assertEqual(len(domain.class_vars), 1)
         self.assertEqual(len(domain.metas), 0)
-        self.assertEqual(len(domain.attributes), 3)
+        self.assertEqual(len(domain.attributes), 4)
         self.assertIsInstance(domain.variables[0], DiscreteVariable)
         self.assertIsInstance(domain.variables[1], ContinuousVariable)
         self.assertIsInstance(domain.variables[2], DiscreteVariable)
@@ -49,10 +47,10 @@ class TestExcelHeader1(unittest.TestCase):
             self.assertEqual(var.name, chr(97 + i))
         self.assertEqual(domain[0].values, ["green", "red"])
         np.testing.assert_almost_equal(table.X,
-                                       np.array([[1, 0.5, 0],
-                                                 [1, 0.1, 0],
-                                                 [0, 0, float("nan")]]))
-        np.testing.assert_almost_equal(table.Y, np.array([21, 123, 0]))
+                                       np.array([[1, 0.5, 0, 21],
+                                                 [1, 0.1, 0, 123],
+                                                 [0, 0, np.nan, 0]]))
+        np.testing.assert_equal(table.Y, np.array([]).reshape(3, 0))
 
     def test_flags(self):
         table = read_file("header_1_flags.xlsx")
