@@ -973,6 +973,12 @@ class TableTestCase(unittest.TestCase):
         d[:5, v.hair] = Unknown
         self.assertEqual(len(filter.Values([f])(d)), len(d) - 5)
 
+    def test_valueFilter_string_is_defined(self):
+        d = data.Table("test9.tab")
+        f = filter.FilterString(-5, filter.FilterString.IsDefined)
+        x = filter.Values([f])(d)
+        self.assertEqual(len(x), 7)
+
     def test_valueFilter_string_case_sens(self):
         d = data.Table("zoo")
         col = d[:, "name"].metas[:, 0]

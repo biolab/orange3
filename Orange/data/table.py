@@ -1144,9 +1144,9 @@ class Table(MutableSequence, Storage):
             elif isinstance(f, data_filter.FilterString) and \
                             f.oper == f.IsDefined:
                 if conjunction:
-                    sel *= (col != "")
+                    sel *= col.astype(bool)
                 else:
-                    sel += (col != "")
+                    sel += col.astype(bool)
             elif isinstance(f, data_filter.FilterDiscrete):
                 if conjunction:
                     s2 = np.zeros(len(self), dtype=bool)
