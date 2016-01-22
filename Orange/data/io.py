@@ -354,10 +354,8 @@ class FileFormat(metaclass=FileFormatMeta):
 
             type_flag = types and types[col].strip()
             try:
-                orig_values = [np.nan if i.strip() in MISSING_VALUES and
-                                         type_flag not in
-                                         StringVariable.TYPE_HEADERS
-                               else i.strip() for i in data[:, col]]
+                orig_values = [np.nan if i in MISSING_VALUES else i
+                               for i in (i.strip() for i in data[:, col])]
             except IndexError:
                 # No data instances leads here
                 orig_values = []
@@ -412,6 +410,10 @@ class FileFormat(metaclass=FileFormatMeta):
                 values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
                 coltype = DiscreteVariable
                 coltype_kwargs.update(values=valuemap)
+
+            if coltype is StringVariable:
+                values = ['' if i is np.nan else i
+                          for i in orig_values]
 
             # Write back the changed data. This is needeed to pass the
             # correct, converted values into Table.from_numpy below
