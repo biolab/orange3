@@ -1287,8 +1287,10 @@ class Table(MutableSequence, Storage):
         Xcsc = Ycsc = None
         for col in columns:
             var = self.domain[col]
-            if col < self.X.shape[1]:
+            if 0 <= col < self.X.shape[1]:
                 m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
+            elif col < 0:
+                m, W, Xcsc = _get_matrix(self.metas, Xcsc, col * (-1) - 1)
             else:
                 m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
             if var.is_discrete:
@@ -1306,7 +1308,7 @@ class Table(MutableSequence, Storage):
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     vals[0, :].sort()
-                    unknowns = bn.countnans(m)
+                    unknowns = bn.countnans(m.astype(float))
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))
 
@@ -1384,8 +1386,9 @@ class Table(MutableSequence, Storage):
                         contingencies[col_i] = (conts[arr_i], nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
-                        contingencies[col_i] = bn.contingency(arr[:, arr_i],
-                                                              row_data, len(var.values) - 1, n_rows - 1, W)
+                        contingencies[col_i] = bn.contingency(
+                            arr[:, arr_i].astype(float),
+                            row_data, len(var.values) - 1, n_rows - 1, W)
 
             cont_vars = [v for v in vars if v[2].is_continuous]
             if cont_vars:
