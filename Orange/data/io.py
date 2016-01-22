@@ -449,12 +449,6 @@ class FileFormat(metaclass=FileFormatMeta):
                             except ValueError: continue
                             bn.replace(column, offset + oldval, new_order.index(val))
 
-        # If single-header or no-header mode and no class variable marked,
-        # use the last attribute as class var
-        if len(headers) <= 1 and not clses and len(attrs) > 1:
-            clses.append(attrs.pop())
-            Ycols.append(Xcols.pop())
-
         from Orange.data import Table, Domain
         domain = Domain(attrs, clses, metas)
 
