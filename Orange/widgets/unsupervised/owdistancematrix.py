@@ -8,13 +8,12 @@ from PyQt4.QtGui import QTableView, QColor, QItemSelectionModel, \
     QItemDelegate, QPen, QBrush, QItemSelection
 from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex, QSize
 
-import Orange.data
-import Orange.misc
+from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
+from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import ranges
 from Orange.widgets.gui import OrangeUserRole
-from Orange.widgets.settings \
-    import Setting, ContextSetting, DomainContextHandler
+from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
 
@@ -54,7 +53,7 @@ class DistanceMatrixModel(QAbstractTableModel):
             self.has_labels = bool(self.labels)
             self.variable = variable
             self.values = values
-            if isinstance(variable, Orange.data.ContinuousVariable):
+            if isinstance(variable, ContinuousVariable):
                 palette = ContinuousPaletteGenerator(*variable.colors)
                 off, m = values.min(), values.max()
                 fact = off != m and 1 / (m - off)
@@ -78,9 +77,9 @@ class DistanceMatrixModel(QAbstractTableModel):
             if self.variable is not None:
                 if ind == -1:
                     color = Qt.white
-                elif isinstance(self.variable, Orange.data.ContinuousVariable):
+                elif isinstance(self.variable, ContinuousVariable):
                     color = self.label_colors[ind].lighter(light)
-                elif isinstance(self.variable, Orange.data.DiscreteVariable):
+                elif isinstance(self.variable, DiscreteVariable):
                     value = self.values[ind]
                     if not isnan(value):
                         color = QColor(*self.variable.colors[value])
@@ -181,9 +180,8 @@ class SymmetricSelectionModel(QItemSelectionModel):
         """
         Return indices of selected items.
 
-        These are indices from selectedIndexes, but minus 1 if labels are shown.
-
-        Returns: set of int
+        Indices come from selectedIndexes, but decreased by 1 if labels
+        are shown.
         """
         has_labels = self.model().has_labels
         return list({ind.row() - has_labels for ind in self.selectedIndexes()})
@@ -198,20 +196,50 @@ class SymmetricSelectionModel(QItemSelectionModel):
         self.select(selection, QItemSelectionModel.Select)
 
 
+class DistanceMatrixContextHandler(ContextHandler):
+    @staticmethod
+    def _var_names(annotations):
+        return [a.name if isinstance(a, Variable) else a for a in annotations]
+
+    def new_context(self, matrix, annotations):
+        context = super().new_context()
+        context.dim = matrix.shape[0]
+        context.annotations = self._var_names(annotations)
+        context.annotation_idx = 1
+        context.selection = []
+        return context
+
+    def match(self, context, matrix, annotations):
+        annotations = self._var_names(annotations)
+        if context.dim != matrix.shape[0] or \
+                context.annotation not in annotations:
+            return 0
+        return 1 + (context.annotations == annotations)
+
+    def settings_from_widget(self, widget):
+        context = widget.current_context
+        context.annotation = widget.annot_combo.currentText()
+        context.selection = widget.tableview.selectionModel().selected_items()
+
+    def settings_to_widget(self, widget):
+        context = widget.current_context
+        widget.annotation_idx = context.annotations.index(context.annotation)
+        widget.tableview.selectionModel().set_selected_items(context.selection)
+
+
 class OWDistanceMatrix(widget.OWWidget):
     name = "Distance Matrix"
     description = "View distance matrix"
     icon = "icons/DistanceMatrix.svg"
     priority = 200
 
-    inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
-    outputs = [("Distances", Orange.misc.DistMatrix),
-               ("Table", Orange.data.Table)]
+    inputs = [("Distances", DistMatrix, "set_distances")]
+    outputs = [("Distances", DistMatrix),
+               ("Table", Table)]
 
+    settingsHandler = DistanceMatrixContextHandler()
     auto_commit = Setting(True)
-    # TODO this should be context setting
-    annotation_idx = Setting(0)
-    # TODO save selection as setting
+    annotation_idx = ContextSetting(1)
     selection = ContextSetting([])
 
     want_control_area = False
@@ -250,12 +278,26 @@ class OWDistanceMatrix(widget.OWWidget):
         return QSize(800, 500)
 
     def set_distances(self, distances):
+        self.closeContext()
         self.distances = distances
         self.tablemodel.set_data(self.distances)
-        if distances is not None:
-            self.set_items(distances.row_items, distances.axis)
-        else:
-            self.set_items(None)
+        self.selected_indices = []
+
+        self.items = items = distances.row_items
+        annotations = ["None", "Enumerate"]
+        if items and not distances.axis:
+            annotations.append("Attribute names")
+        elif isinstance(items, list) and \
+                 all(isinstance(item, Variable) for item in items):
+            annotations.append("Name")
+        elif isinstance(items, Table):
+            annotations.extend(itertools.chain(items.domain, items.domain.metas))
+
+        self.annot_combo.model()[:] = annotations
+        self.annotation_idx = 1 + len(annotations) == 3
+
+        self.openContext(distances, annotations)
+        self._update_labels()
         self.tableview.resizeColumnsToContents()
 
     def _invalidate_annotations(self):
@@ -263,7 +305,6 @@ class OWDistanceMatrix(widget.OWWidget):
             self._update_labels()
 
     def _update_labels(self):
-        prev_has_labels = self.tablemodel.has_labels
         var = column = None
         if self.annotation_idx == 0:
             labels = None
@@ -275,35 +316,14 @@ class OWDistanceMatrix(widget.OWWidget):
         elif self.annotation_idx == 2 and \
                 isinstance(self.items, widget.AttributeList):
             labels = [v.name for v in self.items]
-        elif isinstance(self.items, Orange.data.Table):
+        elif isinstance(self.items, Table):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
             labels = [var.repr_val(value) for value in column]
-        saved_selection = bool(labels) != prev_has_labels and \
-                          self.tableview.selectionModel().selected_items()
+        saved_selection = self.tableview.selectionModel().selected_items()
         self.tablemodel.set_labels(labels, var, column)
         self.tableview.resizeColumnsToContents()
-        if saved_selection:
-            self.tableview.selectionModel().set_selected_items(saved_selection)
-
-    def set_items(self, items, axis=1):
-        self.items = items
-        model = self.annot_combo.model()
-        if items is None:
-            model[:] = ["None", "Enumeration"]
-        elif not axis:
-            model[:] = ["None", "Enumeration", "Attribute names"]
-            self.annotation_idx = 2
-        elif isinstance(items, Orange.data.Table):
-            model[:] = (["None", "Enumeration"] +
-                        list(items.domain) + list(items.domain.metas))
-        elif isinstance(items, list) and \
-                all(isinstance(item, Orange.data.Variable) for item in items):
-            model[:] = ["None", "Enumeration", "Name"]
-        else:
-            model[:] = ["None", "Enumeration"]
-        self.annotation_idx = min(self.annotation_idx, len(model) - 1)
-        self._update_labels()
+        self.tableview.selectionModel().set_selected_items(saved_selection)
 
     def commit(self):
         if self.distances is None:
@@ -313,12 +333,12 @@ class OWDistanceMatrix(widget.OWWidget):
 
         inds = self.tableview.selectionModel().selected_items()
         dist = self.distances
-        if isinstance(self.items, Orange.data.Table):
+        if isinstance(self.items, Table):
             items = self.items[inds]
         elif isinstance(self.items, list):
             items = [self.items[i] for i in inds]
         else:
             items = None
-        table = items if isinstance(items, Orange.data.Table) else None
+        table = items if isinstance(items, Table) else None
         self.send("Table", table)
         self.send("Distances", dist.submatrix(inds))
