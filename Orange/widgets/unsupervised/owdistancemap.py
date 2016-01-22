@@ -245,6 +245,8 @@ class OWDistanceMap(widget.OWWidget):
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
     outputs = [("Data", Orange.data.Table), ("Features", widget.AttributeList)]
 
+    settingsHandler = settings.PerfectDomainContextHandler()
+
     #: type of ordering to apply to matrix rows/columns
     NoOrdering, Clustering, OrderedClustering = 0, 1, 2
 
@@ -255,7 +257,7 @@ class OWDistanceMap(widget.OWWidget):
     color_low = settings.Setting(0.0)
     color_high = settings.Setting(1.0)
 
-    annotation_idx = settings.Setting(0)
+    annotation_idx = settings.ContextSetting(0, exclude_metas=False)
 
     autocommit = settings.Setting(True)
 
@@ -385,6 +387,7 @@ class OWDistanceMap(widget.OWWidget):
         self.graphButton.clicked.connect(self.save_graph)
 
     def set_distances(self, matrix):
+        self.closeContext()
         self.clear()
         self.error(0)
         if matrix is not None:
@@ -436,10 +439,11 @@ class OWDistanceMap(widget.OWWidget):
             model[:] = ["None", "Enumeration"]
         elif not axis:
             model[:] = ["None", "Enumeration", "Attribute names"]
-            self.annotation_idx = 2
         elif isinstance(items, Orange.data.Table):
-            model[:] = (["None", "Enumeration"] +
-                        list(items.domain) + list(items.domain.metas))
+            annot_vars = list(items.domain) + list(items.domain.metas)
+            model[:] = ["None", "Enumeration"] + annot_vars
+            self.annotation_idx = 0
+            self.openContext(items.domain)
         elif isinstance(items, list) and \
                 all(isinstance(item, Orange.data.Variable) for item in items):
             model[:] = ["None", "Enumeration", "Name"]
@@ -733,6 +737,9 @@ def init_color_combo(cb, palettes, iconsize):
 
 
 def test(argv=sys.argv):
+    app = QApplication(list(argv))
+    argv = app.arguments()
+
     if len(argv) > 1:
         filename = argv[1]
     else:
@@ -740,7 +747,7 @@ def test(argv=sys.argv):
 
     import sip
     import Orange.distance
-    app = QApplication(argv)
+
     w = OWDistanceMap()
     w.show()
     w.raise_()
