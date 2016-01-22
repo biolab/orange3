@@ -13,7 +13,7 @@ class SVRLearner(SklLearner):
     name = 'svr'
     preprocessors = svm_pps
 
-    def __init__(self, kernel='rbf', degree=3, gamma=0.0, coef0=0.0,
+    def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
                  tol=0.001, C=1.0, epsilon=0.1, shrinking=True,
                  cache_size=200, max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -26,7 +26,7 @@ class NuSVRLearner(SklLearner):
     name = 'nu svr'
     preprocessors = svm_pps
 
-    def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma=0.0,
+    def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma="auto",
                  coef0=0.0, shrinking=True, tol=0.001,
                  cache_size=200, max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)

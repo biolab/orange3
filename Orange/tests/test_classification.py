@@ -1,5 +1,4 @@
 import inspect
-import os
 import pickle
 import pkgutil
 import unittest
@@ -9,10 +8,10 @@ import traceback
 from Orange.base import SklLearner
 
 import Orange.classification
-from Orange.classification import (
-    Learner, Model, NaiveBayesLearner, LogisticRegressionLearner)
-from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table, Variable
-from Orange.data.io import BasketFormat
+from Orange.classification import (Learner, Model, NaiveBayesLearner,
+                                   LogisticRegressionLearner, NuSVMLearner)
+from Orange.data import (ContinuousVariable, DiscreteVariable,
+                         Domain, Table, Variable)
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 from Orange.data.table import dataset_dirs
@@ -221,10 +220,30 @@ class ClassfierListInputTest(unittest.TestCase):
 
 
 class UnknownValuesInPrediction(unittest.TestCase):
+    def setUp(self):
+        Variable._clear_all_caches()
+        dataset_dirs.append("Orange/tests")
+
+    def tearDown(self):
+        dataset_dirs.pop()
+
     def test_unknown(self):
         table = Table("iris")
         tree = LogisticRegressionLearner()(table)
         tree([1, 2, None])
+
+    def test_missing_class(self):
+        table = Table("adult_sample_missing")
+        for learner in LearnerAccessibility().all_learners():
+            try:
+                learner = learner()
+                if isinstance(learner, NuSVMLearner):
+                    learner.params["nu"] = 0.01
+                model = learner(table)
+                model(table)
+            except TypeError:
+                traceback.print_exc()
+                continue
 
 
 class LearnerAccessibility(unittest.TestCase):

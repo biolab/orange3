@@ -51,3 +51,16 @@ class RegressionLearnersTest(unittest.TestCase):
             except TypeError as err:
                 traceback.print_exc()
                 continue
+
+
+class MissingValuesTest(unittest.TestCase):
+    def test_missing_class(self):
+        table = Table("imports-85")
+        for learner in RegressionLearnersTest().all_learners():
+            try:
+                learner = learner()
+                model = learner(table)
+                model(table)
+            except TypeError:
+                traceback.print_exc()
+                continue

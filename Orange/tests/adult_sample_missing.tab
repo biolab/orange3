@@ -1,0 +1,23 @@
+age	workclass	fnlwgt	education	education-num	marital-status	occupation	relationship	race	sex	capital-gain	capital-loss	hours-per-week	native-country	y
+continuous	Private Self-emp-not-inc Self-emp-inc Federal-gov Local-gov State-gov Without-pay Never-worked	continuous	Bachelors Some-college 11th HS-grad Prof-school Assoc-acdm Assoc-voc 9th 7th-8th 12th Masters 1st-4th 10th Doctorate 5th-6th Preschool	continuous	Married-civ-spouse Divorced Never-married Separated Widowed Married-spouse-absent Married-AF-spouse	Tech-support Craft-repair Other-service Sales Exec-managerial Prof-specialty Handlers-cleaners Machine-op-inspct Adm-clerical Farming-fishing Transport-moving Priv-house-serv Protective-serv Armed-Forces	Wife Own-child Husband Not-in-family Other-relative Unmarried	White Asian-Pac-Islander Amer-Indian-Eskimo Other Black	Female Male	continuous	continuous	continuous	United-States Cuba Jamaica India Mexico South Puerto-Rico Honduras England Canada Germany Iran Philippines Italy Poland Columbia Cambodia Thailand Ecuador Laos Taiwan Haiti Portugal Dominican-Republic El-Salvador France Guatemala China Japan Yugoslavia Peru Outlying-US(Guam-USVI-etc) Scotland Trinadad&Tobago Greece Nicaragua Vietnam Hong Ireland Hungary Holand-Netherlands	>50K <=50K
+														class
+49	Private	193366	HS-grad	9	Married-civ-spouse	Craft-repair	Husband	White	Male	0	0	40	United-States	<=50K
+44	Private	128354	Masters	14	Divorced	Exec-managerial	Unmarried	White	Female	0	0	40	United-States	<=50K
+29	Private	105598	Some-college	10	Divorced	Tech-support	Not-in-family	White	Male	0	0	58	United-States	<=50K
+76	Private	124191	Masters	14	Married-civ-spouse	Exec-managerial	Husband	White	Male	0	0	40	United-States	>50K
+59	Private	146013	Some-college	10	Married-civ-spouse	Sales	Husband	White	Male	4064	0	40	United-States	
+17	Private	191260	9th	5	Never-married	Other-service	Own-child	White	Male	1055	0	24	United-States	<=50K
+65	Private	111095	HS-grad	9	Married-civ-spouse	Transport-moving	Husband	White	Male	0	0	16	United-States	<=50K
+24	Private	303296	Some-college	10	Married-civ-spouse	Adm-clerical	Wife	Asian-Pac-Islander	Female	0	0	40	Laos	<=50K
+23		211601	Assoc-voc	11	Never-married		Own-child	Black	Female	0	0	15	United-States	
+43	Private	187728	Some-college	10	Married-civ-spouse	Prof-specialty	Wife	White	Female	0	1887	50	United-States	>50K
+22	State-gov	293364	Some-college	10	Never-married	Protective-serv	Own-child	Black	Female	0	0	40	United-States	<=50K
+34	State-gov	98101	Bachelors	13	Married-civ-spouse	Exec-managerial	Husband	White	Male	7688	0	45		>50K
+46	Private	188386	Doctorate	16	Married-civ-spouse	Exec-managerial	Husband	White	Male	15024	0	60	United-States	>50K
+38	Private	91039	Bachelors		Married-civ-spouse	Sales	Husband	White	Male	15024	0	60	United-States
+74	Private	99183	Some-college	10	Divorced	Adm-clerical	Not-in-family	White	Female	0	0	9	United-States	<=50K
+45	Private	433665	7th-8th	4	Separated	Other-service	Unmarried	White	Female	0	0	40	Mexico	<=50K
+29	Private	34292	Some-college	10		Adm-clerical	Not-in-family	White	Male	0	0	60	United-States
+18	Private	156764	11th		Never-married	Other-service	Own-child	White	Male	0	0	40	United-States	<=50K
+24	Private	247564	HS-grad	9	Never-married	Craft-repair	Not-in-family	White	Male	0	0	40	United-States	<=50K
+47	Private	241832	9th	5	Married-spouse-absent	Handlers-cleaners	Unmarried	White	Male	0	0	40	El-Salvador	<=50K

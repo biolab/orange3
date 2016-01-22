@@ -2,7 +2,8 @@ import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.regression import Learner, Model
-from Orange.preprocess import Normalize, Continuize, Impute, RemoveNaNColumns
+from Orange.preprocess import (RemoveNaNClasses, Normalize, Continuize,
+                               Impute, RemoveNaNColumns)
 
 __all__ = ["LinearRegressionLearner"]
 
@@ -50,7 +51,8 @@ class LinearRegressionLearner(Learner):
         print(c(data)) # predict
     '''
     name = 'linear_bfgs'
-    preprocessors = [Normalize(),
+    preprocessors = [RemoveNaNClasses(),
+                     Normalize(),
                      Continuize(),
                      Impute(),
                      RemoveNaNColumns()]
