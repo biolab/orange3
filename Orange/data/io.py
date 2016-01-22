@@ -255,7 +255,6 @@ class FileFormat(metaclass=FileFormatMeta):
 
         data = iter(data)
         header_rows = []
-        try_single_header = False
 
         # Try to parse a three-line header
         lines = []
@@ -279,7 +278,7 @@ class FileFormat(metaclass=FileFormatMeta):
             except StopIteration: pass
             if lines:
                 # Header if none of the values in line 1 parses as a number
-                if not any(is_number(i) for i in lines[0]):
+                if not all(is_number(i) for i in lines[0]):
                     header_rows = [lines[0]]
                 else:
                     data = chain(lines, data)
