@@ -1,9 +1,7 @@
 from math import isnan
 import itertools
-from contextlib import contextmanager
 
 import numpy as np
-
 from PyQt4.QtGui import QTableView, QColor, QItemSelectionModel, \
     QItemDelegate, QPen, QBrush, QItemSelection
 from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex, QSize
@@ -31,37 +29,31 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.zero_diag = True
         self.has_labels = False
 
-    @contextmanager
-    def model_reset_signal(self):
-        self.emit(SIGNAL("modelAboutToBeReset()"))
-        yield
-        self.emit(SIGNAL("modelReset()"))
-
     def set_data(self, distances):
-        with self.model_reset_signal():
-            self.distances = distances
-            if distances is None:
-                return
-            span = distances.max()
-            self.colors = \
-                (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
-            self.zero_diag = not self.distances.diagonal().any()
+        self.emit(SIGNAL("modelAboutToBeReset()"))
+        self.distances = distances
+        if distances is None:
+            return
+        span = distances.max()
+        self.colors = \
+            (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
+        self.zero_diag = all(self.distances.diagonal() < 1e-6)
 
     def set_labels(self, labels, variable=None, values=None):
-        with self.model_reset_signal():
-            self.labels = labels
-            self.has_labels = bool(self.labels)
-            self.variable = variable
-            self.values = values
-            if isinstance(variable, ContinuousVariable):
-                palette = ContinuousPaletteGenerator(*variable.colors)
-                off, m = values.min(), values.max()
-                fact = off != m and 1 / (m - off)
-                self.label_colors = [
-                    palette[x] if not isnan(x) else Qt.lightGray
-                    for x in (values - off) * fact]
-            else:
-                self.label_colors = None
+        self.emit(SIGNAL("modelReset()"))
+        self.labels = labels
+        self.has_labels = bool(self.labels)
+        self.variable = variable
+        self.values = values
+        if isinstance(variable, ContinuousVariable):
+            palette = ContinuousPaletteGenerator(*variable.colors)
+            off, m = values.min(), values.max()
+            fact = off != m and 1 / (m - off)
+            self.label_colors = [palette[x] if not isnan(x) else Qt.lightGray
+                                 for x in (values - off) * fact]
+        else:
+            self.label_colors = None
+        self.emit(SIGNAL("modelReset()"))
 
     def dimension(self, parent=None):
         if parent and parent.isValid() or self.distances is None or \
@@ -109,7 +101,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         if role == Qt.BackgroundColorRole and self.colors is not None:
             return QBrush(QColor.fromHsv(120, self.colors[row, col], 255))
         if role == TableBorderItem.BorderColorRole and self.variable:
-            return color_for_ind(row), color_for_ind(col)
+            return color_for_ind(col), color_for_ind(row)
 
 
 class TableBorderItem(QItemDelegate):
@@ -138,51 +130,29 @@ class SymmetricSelectionModel(QItemSelectionModel):
         if isinstance(selection, QModelIndex):
             selection = QItemSelection(selection, selection)
 
+        indexes = selection.indexes()
+        sel_inds = {ind.row() for ind in indexes} | \
+                   {ind.column() for ind in indexes}
         model = self.model()
-        indexes = self.selectedIndexes()
-        selected = {ind.row() for ind in indexes}
-        new_selection = QItemSelection()
+        if flags == QItemSelectionModel.ClearAndSelect:
+            selected = set()
+        else:
+            selected = {ind.row() for ind in self.selectedIndexes()}
         if flags & QItemSelectionModel.Select:
-            if flags & QItemSelectionModel.Clear:
-                selected = set()
-            indexes = selection.indexes()
-            selected |= {ind.row() for ind in indexes} | \
-                        {ind.column() for ind in indexes}
-            if self.model().has_labels and 0 in selected:
-                selected.remove(0)
-            regions = list(ranges(sorted(selected)))
-            for r_start, r_end in regions:
-                for c_start, c_end in regions:
-                    top_left = model.index(r_start, c_start)
-                    bottom_right = model.index(r_end - 1, c_end - 1)
-                    new_selection.select(top_left, bottom_right)
+            selected |= sel_inds - {0}
         elif flags & QItemSelectionModel.Deselect:
-            indexes = selection.indexes()
-
-            def to_ranges(indices):
-                return [range(*r) for r in ranges(indices)]
-
-            regions = to_ranges(sorted(selected))
-            de_regions = {ind.row() for ind in indexes}
-
-            for row_range, col_range in \
-                    itertools.product(regions, de_regions):
-                new_selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1))
-                new_selection.select(
-                    model.index(col_range.start, row_range.start),
-                    model.index(col_range.stop - 1, row_range.stop - 1))
-
-        QItemSelectionModel.select(self, new_selection, flags)
+            selected -= sel_inds
+        new_selection = QItemSelection()
+        regions = list(ranges(sorted(selected)))
+        for r_start, r_end in regions:
+            for c_start, c_end in regions:
+                top_left = model.index(r_start, c_start)
+                bottom_right = model.index(r_end - 1, c_end - 1)
+                new_selection.select(top_left, bottom_right)
+        QItemSelectionModel.select(self, new_selection,
+                                   QItemSelectionModel.ClearAndSelect)
 
     def selected_items(self):
-        """
-        Return indices of selected items.
-
-        Indices come from selectedIndexes, but decreased by 1 if labels
-        are shown.
-        """
         has_labels = self.model().has_labels
         return list({ind.row() - has_labels for ind in self.selectedIndexes()})
 
@@ -209,6 +179,7 @@ class DistanceMatrixContextHandler(ContextHandler):
         context.selection = []
         return context
 
+    # noinspection PyMethodOverriding
     def match(self, context, matrix, annotations):
         annotations = self._var_names(annotations)
         if context.dim != matrix.shape[0] or \
@@ -250,12 +221,13 @@ class OWDistanceMatrix(widget.OWWidget):
         self.items = None
 
         self.tablemodel = DistanceMatrixModel()
-        view = self.tableview = QTableView(
-            editTriggers=QTableView.NoEditTriggers)
+        view = self.tableview = QTableView()
+        view.setEditTriggers(QTableView.NoEditTriggers)
         view.setItemDelegate(TableBorderItem())
         view.setModel(self.tablemodel)
         view.horizontalHeader().hide()
         view.verticalHeader().hide()
+        view.setShowGrid(False)
         selmodel = SymmetricSelectionModel(view.model(), view)
         selmodel.selectionChanged.connect(self.commit)
         view.setSelectionModel(selmodel)
@@ -281,24 +253,26 @@ class OWDistanceMatrix(widget.OWWidget):
         self.closeContext()
         self.distances = distances
         self.tablemodel.set_data(self.distances)
-        self.selected_indices = []
+        self.selection = []
 
-        self.items = items = distances.row_items
+        self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
         if items and not distances.axis:
             annotations.append("Attribute names")
         elif isinstance(items, list) and \
-                 all(isinstance(item, Variable) for item in items):
+                all(isinstance(item, Variable) for item in items):
             annotations.append("Name")
         elif isinstance(items, Table):
-            annotations.extend(itertools.chain(items.domain, items.domain.metas))
+            annotations.extend(
+                    itertools.chain(items.domain, items.domain.metas))
 
         self.annot_combo.model()[:] = annotations
         self.annotation_idx = 1 + len(annotations) == 3
 
-        self.openContext(distances, annotations)
-        self._update_labels()
-        self.tableview.resizeColumnsToContents()
+        if items:
+            self.openContext(distances, annotations)
+            self._update_labels()
+            self.tableview.resizeColumnsToContents()
 
     def _invalidate_annotations(self):
         if self.distances is not None:
@@ -333,12 +307,10 @@ class OWDistanceMatrix(widget.OWWidget):
 
         inds = self.tableview.selectionModel().selected_items()
         dist = self.distances
-        if isinstance(self.items, Table):
-            items = self.items[inds]
-        elif isinstance(self.items, list):
-            items = [self.items[i] for i in inds]
-        else:
-            items = None
-        table = items if isinstance(items, Table) else None
-        self.send("Table", table)
         self.send("Distances", dist.submatrix(inds))
+
+        if dist.axis and isinstance(self.items, Table):
+            table = self.items[inds]
+        else:
+            table = None
+        self.send("Table", table)
