@@ -63,20 +63,23 @@ class DistanceMatrixModel(QAbstractTableModel):
 
     columnCount = rowCount = dimension
 
-    def data(self, index, role=Qt.DisplayRole):
-        def color_for_ind(ind, light=100):
-            color = Qt.lightGray
-            if self.variable is not None:
-                if ind == -1:
-                    color = Qt.white
-                elif isinstance(self.variable, ContinuousVariable):
-                    color = self.label_colors[ind].lighter(light)
-                elif isinstance(self.variable, DiscreteVariable):
-                    value = self.values[ind]
-                    if not isnan(value):
-                        color = QColor(*self.variable.colors[value])
-            return QBrush(color)
+    def color_for_label(self, ind, light=100):
+        color = Qt.lightGray
+        if self.variable is not None:
+            if ind == -1:
+                color = Qt.white
+            elif isinstance(self.variable, ContinuousVariable):
+                color = self.label_colors[ind].lighter(light)
+            elif isinstance(self.variable, DiscreteVariable):
+                value = self.values[ind]
+                if not isnan(value):
+                    color = QColor(*self.variable.colors[value])
+        return QBrush(color)
 
+    def color_for_cell(self, row, col):
+        return QBrush(QColor.fromHsv(120, self.colors[row, col], 255))
+
+    def data(self, index, role=Qt.DisplayRole):
         if role == Qt.TextAlignmentRole:
             return Qt.AlignRight | Qt.AlignVCenter
         row, col = index.row(), index.column()
@@ -88,20 +91,20 @@ class DistanceMatrixModel(QAbstractTableModel):
                 if not row == col == -1:
                     return self.labels[ind]
             if role == Qt.BackgroundColorRole:
-                return color_for_ind(ind, 200)
+                return self.color_for_label(ind, 200)
             return
         if self.distances is None:
             return
         if row == col and self.zero_diag:
             if role == Qt.BackgroundColorRole and self.variable:
-                return color_for_ind(row, 200)
+                return self.color_for_label(row, 200)
             return
         if role == Qt.DisplayRole:
             return "{:.3f}".format(self.distances[row, col])
         if role == Qt.BackgroundColorRole and self.colors is not None:
-            return QBrush(QColor.fromHsv(120, self.colors[row, col], 255))
+            return self.color_for_cell(row, col)
         if role == TableBorderItem.BorderColorRole and self.variable:
-            return color_for_ind(col), color_for_ind(row)
+            return self.color_for_label(col), self.color_for_label(row)
 
 
 class TableBorderItem(QItemDelegate):
@@ -242,6 +245,10 @@ class OWDistanceMatrix(widget.OWWidget):
         self.annot_combo.setModel(VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         gui.rubber(settings_box)
+        self.report_button = gui.button(
+            settings_box, None, "&Report", callback=self.show_report)
+        self.report_button.setAutoDefault(0)
+        gui.separator(settings_box, 40)
         gui.auto_commit(
             settings_box, self, "auto_commit",
             "Send Selected Data", "Auto send is on", box=None)
@@ -265,9 +272,11 @@ class OWDistanceMatrix(widget.OWWidget):
         elif isinstance(items, Table):
             annotations.extend(
                     itertools.chain(items.domain, items.domain.metas))
-
         self.annot_combo.model()[:] = annotations
-        self.annotation_idx = 1 + len(annotations) == 3
+        if isinstance(items, Table) and items.domain.class_var:
+            self.annotation_idx = 2 + len(items.domain.attributes)
+        else:
+            self.annotation_idx = 1 + len(annotations) == 3
 
         if items:
             self.openContext(distances, annotations)
@@ -314,3 +323,48 @@ class OWDistanceMatrix(widget.OWWidget):
         else:
             table = None
         self.send("Table", table)
+
+    def send_report(self):
+        if self.distances is None:
+            return
+        model = self.tablemodel
+        dim = self.distances.shape[0]
+        col_cell = model.color_for_cell
+
+        def _rgb(brush):
+            return "rgb({}, {}, {})".format(*brush.color().getRgb())
+        if model.has_labels:
+            col_label = model.color_for_label
+            label_colors = [_rgb(col_label(i)) for i in range(dim)]
+            self.report_raw('<table style="border-collapse:collapse">')
+            self.report_raw("<tr><td></td>")
+            self.report_raw("".join(
+                    '<td style="background-color: {}">{}</td>'.format(*cv)
+                    for cv in zip(label_colors, model.labels)))
+            self.report_raw("</tr>")
+            for i in range(dim):
+                self.report_raw("<tr>")
+                self.report_raw(
+                    '<td style="background-color: {}">{}</td>'.
+                    format(label_colors[i], model.labels[i]))
+                self.report_raw(
+                    "".join(
+                        '<td style="background-color: {};'
+                        'border-top:1px solid {}; border-left:1px solid {};">'
+                        '{:.3f}</td>'.format(
+                            _rgb(col_cell(i, j)),
+                            label_colors[i], label_colors[j],
+                            self.distances[i, j])
+                        for j in range(dim)))
+                self.report_raw("</tr>")
+            self.report_raw("</table>")
+        else:
+            self.report_raw('<table>')
+            for i in range(dim):
+                self.report_raw(
+                    "<tr>" +
+                    "".join('<td style="background-color: {}">{:.3f}</td>'.
+                            format(_rgb(col_cell(i, j)), self.distances[i, j])
+                            for j in range(dim)) +
+                    "</tr>")
+            self.report_raw("</table>")
