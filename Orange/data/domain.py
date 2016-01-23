@@ -385,7 +385,7 @@ class Domain:
             if col_idx.indices(s) == (0, s, 1):
                 return None, None
             else:
-                return (self.variables[col_idx],
+                return (self[col_idx],
                         np.arange(start, end, stride))
         elif isinstance(col_idx, Iterable) and not isinstance(col_idx, str):
             attributes = [self[col] for col in col_idx]

@@ -17,7 +17,7 @@ class TestEqualFreq(TestCase):
         X = np.array(s).reshape((100, 1))
         table = data.Table(X)
         disc = discretize.EqualFreq(n=4)
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
 
@@ -25,7 +25,7 @@ class TestEqualFreq(TestCase):
         X = np.arange(100).reshape((100, 1))
         table = data.Table(X)
         disc = discretize.EqualFreq(n=4)
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [24.5, 49.5, 74.5])
 
@@ -33,7 +33,7 @@ class TestEqualFreq(TestCase):
         X = np.array([[1], [2], [3], [4]])
         table = data.Table(X)
         disc = discretize.EqualFreq(n=4)
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [1.5, 2.5, 3.5])
 
@@ -46,7 +46,7 @@ class TestEqualWidth(TestCase):
         X = np.array(s).reshape((100, 1))
         table = data.Table(X)
         disc = discretize.EqualWidth(n=4)
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [0.25, 0.5, 0.75])
 
@@ -54,7 +54,7 @@ class TestEqualWidth(TestCase):
         X = np.arange(101).reshape((101, 1))
         table = data.Table(X)
         disc = discretize.EqualWidth(n=4)
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [25, 50, 75])
 
@@ -62,7 +62,7 @@ class TestEqualWidth(TestCase):
         X = np.ones((100, 1))
         table = data.Table(X)
         disc = discretize.EqualFreq(n=4)
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
 
@@ -75,7 +75,7 @@ class TestEntropyMDL(TestCase):
         X = np.array(s).reshape((100, 1))
         table = data.Table(X, X)
         disc = discretize.EntropyMDL()
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
 
@@ -84,7 +84,7 @@ class TestEntropyMDL(TestCase):
         Y = np.array([0] * 25 + [1] * 50 + [0] * 25)
         table = data.Table(X, Y)
         disc = discretize.EntropyMDL()
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
 
@@ -94,7 +94,7 @@ class TestEntropyMDL(TestCase):
                         [DiscreteVariable('c1', values=[1])])
         table = data.Table(domain, X, X)
         disc = discretize.EntropyMDL()
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
 
@@ -104,7 +104,7 @@ class TestEntropyMDL(TestCase):
         Y = np.array([0] * 25 + [1] * 75)
         table = data.Table(X, Y)
         disc = discretize.EntropyMDL()
-        dvar = disc(table, table.domain.variables[0])
+        dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
         self.assertEqual(dvar.compute_value.points, [0.5])
 

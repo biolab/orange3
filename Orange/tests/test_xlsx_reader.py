@@ -39,11 +39,11 @@ class TestExcelHeader1(unittest.TestCase):
         domain = table.domain
         self.assertEqual(len(domain.metas), 0)
         self.assertEqual(len(domain.attributes), 4)
-        self.assertIsInstance(domain.variables[0], DiscreteVariable)
-        self.assertIsInstance(domain.variables[1], ContinuousVariable)
-        self.assertIsInstance(domain.variables[2], DiscreteVariable)
-        self.assertIsInstance(domain.variables[3], ContinuousVariable)
-        for i, var in enumerate(domain.variables):
+        self.assertIsInstance(domain[0], DiscreteVariable)
+        self.assertIsInstance(domain[1], ContinuousVariable)
+        self.assertIsInstance(domain[2], DiscreteVariable)
+        self.assertIsInstance(domain[3], ContinuousVariable)
+        for i, var in enumerate(domain):
             self.assertEqual(var.name, chr(97 + i))
         self.assertEqual(domain[0].values, ["green", "red"])
         np.testing.assert_almost_equal(table.X,
