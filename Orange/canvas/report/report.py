@@ -61,7 +61,7 @@ class Report:
         The first argument, `name` can be omitted.
 
         :param name: report section name (can be omitted)
-        :param name: str or tuple or OrderedDict
+        :type name: str or tuple or OrderedDict
         :param items: a sequence of items
         :type items: list or tuple or OrderedDict
         """
@@ -83,7 +83,7 @@ class Report:
         The first argument, `name` can be omitted.
 
         :param name: report section name (can be omitted)
-        :param name: str or tuple or OrderedDict
+        :type name: str or tuple or OrderedDict
         :param data: data whose description is added to the report
         :type data: Orange.data.Table
         """
@@ -100,7 +100,7 @@ class Report:
         The first argument, `name` can be omitted.
 
         :param name: report section name (can be omitted)
-        :param name: str or tuple or OrderedDict
+        :type name: str or tuple or OrderedDict
         :param domain: domain whose description is added to the report
         :type domain: Orange.data.Domain
         """
@@ -116,7 +116,7 @@ class Report:
         The first argument, `name` can be omitted.
 
         :param name: report section name (can be omitted)
-        :param name: str or tuple or OrderedDict
+        :type name: str or tuple or OrderedDict
         :param data: data whose description is added to the report
         :type data: Orange.data.Table
         """
@@ -138,7 +138,7 @@ class Report:
             whose name is taken from `self.graph_name`
 
         :param name: report section name (can be omitted)
-        :param name: str or tuple or OrderedDict
+        :type name: str or tuple or OrderedDict
         :param plot: plot widget
         :type plot:
             QGraphicsScene or pyqtgraph.PlotItem or pyqtgraph.PlotWidget

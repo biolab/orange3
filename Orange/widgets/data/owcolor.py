@@ -254,10 +254,11 @@ class OWColor(widget.OWWidget):
         self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(self.cont_view)
 
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        gui.auto_commit(box, self, "auto_apply", "Send data", box=box,
-                        checkbox_label="Resend data on every change  ")
-        gui.rubber(box)
+        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send data",
+                              orientation="horizontal",
+                              checkbox_label="Resend data on every change")
+        box.layout().insertSpacing(0, 20)
+        box.layout().insertWidget(0, self.report_button)
 
     def set_data(self, data):
         self.closeContext()
@@ -320,6 +321,19 @@ class OWColor(widget.OWWidget):
 
     def commit(self):
         self.send("Data", self.data)
+
+    def send_report(self):
+        if not self.data:
+            return
+        disc_vars = [var.name for var in self.disc_colors if "colors" in
+                     var.attributes and var.colors is not False]
+        cont_vars = [var.name for var in self.cont_colors if "colors" in
+                     var.attributes and var.colors is not False]
+        disc_text = ", ".join(disc_vars) if len(disc_vars) else "No changes."
+        cont_text = ", ".join(cont_vars) if len(cont_vars) else "No changes."
+        self.report_domain("Data", self.data.domain)
+        self.report_items("Changed variables",
+                          (("Discrete", disc_text), ("Numeric", cont_text)))
 
 
 if __name__ == "__main__":
