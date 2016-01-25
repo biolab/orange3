@@ -12,6 +12,7 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import Orange
+from Orange.base import Learner
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.preprocess import score
 from Orange.canvas import report
@@ -313,16 +314,15 @@ class OWRank(widget.OWWidget):
                 self.measure_scores[index] = estimator(data)
             else:
                 learner = meas.score
-                if not learner.check_learner_adequacy(self.data.domain):
+                if isinstance(learner, Learner) and \
+                        not learner.check_learner_adequacy(self.data.domain):
                     self.error(1, learner.learner_adequacy_err_msg)
                 else:
                     self.measure_scores[index] = meas.score.score_data(data)
 
         self.updateRankModel(measuresMask)
         self.ranksProxyModel.invalidate()
-
-        if self.selectMethod in [0, 2]:
-            self.autoSelection()
+        self.selectMethodChanged()
 
     def updateRankModel(self, measuresMask=None):
         """
