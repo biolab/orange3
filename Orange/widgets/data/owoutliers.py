@@ -28,7 +28,7 @@ class OWOutliers(widget.OWWidget):
 
     outlier_method = Setting(OneClassSVM)
     nu = Setting(50)
-    gamma = Setting(0)
+    gamma = Setting(0.01)
     cont = Setting(10)
     empirical_covariance = Setting(False)
     support_fraction = Setting(1)
@@ -60,7 +60,7 @@ class OWOutliers(widget.OWWidget):
             labelFormat="%d %%", callback=self.nu_changed, tooltip=tooltip)
         self.gamma_spin = gui.spin(
             ibox, self, "gamma", label="Kernel coefficient:", step=1e-2,
-            spinType=float, minv=0, maxv=10, callback=self.gamma_changed)
+            spinType=float, minv=0.01, maxv=10, callback=self.gamma_changed)
         gui.separator(detection, 12)
 
         self.rb_cov = gui.appendRadioButton(detection, "Covariance estimator:")
