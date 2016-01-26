@@ -627,6 +627,9 @@ def describe_data_brief(data):
     items.update(describe_domain_brief(data.domain))
     return items
 
+def colored_square(r, g, b):
+    return '<span class="legend-square" ' \
+           'style="background-color: rgb({}, {}, {})"></span>'.format(r, g, b)
 
 def list_legend(model, selected=None):
     """
@@ -654,8 +657,6 @@ def list_legend(model, selected=None):
         r, g, b, a = QColor(
             icon.pixmap(12, 12).toImage().pixel(0, 0)).getRgb()
         text = model.data(index, Qt.DisplayRole)
-        legend += '<span class="legend-square" ' \
-                  'style="background-color: rgb({}, {}, {})"></span>' \
-                  '<span class="legend-item">{}</span>'.format(
-                      r, g, b, text)
+        legend += colored_square(r, g, b) + \
+                  '<span class="legend-item">{}</span>'.format(text)
     return legend
