@@ -73,7 +73,9 @@ class TestInstance(unittest.TestCase):
         self.assertTrue(all(isnan(x) for x in inst._y))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", FutureWarning)
-            assert_array_equal(inst._metas, np.array([Unknown, Unknown, Unknown], dtype=object))
+            assert_array_equal(inst._metas,
+                               np.array([var.Unknown for var in domain.metas],
+                                        dtype=object))
 
     def test_init_x_arr(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")])
