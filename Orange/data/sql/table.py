@@ -533,7 +533,7 @@ class SqlTable(table.Table):
     def _filter_is_defined(self, columns=None, negate=False):
         if columns is None:
             columns = range(len(self.domain.variables))
-        columns = [self.domain.variables[i].to_sql() for i in columns]
+        columns = [self.domain[i].to_sql() for i in columns]
 
         t2 = self.copy()
         t2.row_filters += (sql_filter.IsDefinedSql(columns, negate),)
