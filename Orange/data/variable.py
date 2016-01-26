@@ -135,15 +135,16 @@ class Value(float):
         :type variable: Orange.data.Variable
         :param value: value
         """
-        if not isinstance(value, str):
-            try:
-                self = super().__new__(cls, value)
-            except:
-                self = super().__new__(cls, -1)
+        if variable.is_primitive():
+            self = super().__new__(cls, value)
+            self.variable = variable
+            self._value = None
         else:
-            self = super().__new__(cls, -1)
-        self._value = value
-        self.variable = variable
+            isunknown = value == variable.Unknown
+            self = super().__new__(
+                cls, np.nan if isunknown else np.finfo(float).min)
+            self.variable = variable
+            self._value = value
         return self
 
     def __init__(self, _, __=Unknown):
@@ -757,6 +758,7 @@ class StringVariable(Variable):
     Descriptor for string variables. String variables can only appear as
     meta attributes.
     """
+    Unknown = ""
     TYPE_HEADERS = ('string', 's', 'text')
 
     def to_val(self, s):
