@@ -175,10 +175,10 @@ class Value(float):
         raise TypeError("invalid operation on Value()")
 
     def __hash__(self):
-        if self.value is None:
+        if self._value is None:
             return super().__hash__()
         else:
-            return super().__hash__() ^ hash(self.value)
+            return hash((super().__hash__(), self._value))
 
     @property
     def value(self):
