@@ -349,10 +349,22 @@ class Domain:
         """
         Return the index of the given variable (represented as
         `int`, `str`, or instance of :class:`Variable`) in the domain.
+
+        If `var` is an iterable of above values, then return three tuples:
+        indices in attributes, indices in class_vars, and indices in metas.
         """
         if isinstance(var, (int, np.integer)):
             return int(var)
         try:
+            if isinstance(var, Iterable):
+                vars = [self[val] for val in var]
+                Xind = tuple(self.attributes.index(v)
+                             for v in vars if v in self.attributes)
+                Yind = tuple(self.class_vars.index(v)
+                             for v in vars if v in self.class_vars)
+                Mind = tuple(self.metas.index(v)
+                             for v in vars if v in self.metas)
+                return Xind, Yind, Mind
             return self._indices[var]
         except KeyError:
             raise ValueError("Variable '{}' is not in domain".format(var))
