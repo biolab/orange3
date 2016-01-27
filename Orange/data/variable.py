@@ -168,10 +168,10 @@ class Value(float):
         return super().__eq__(other)
 
     def __contains__(self, other):
-        if (self.value is not None
-                and isinstance(self.value, str)
+        if (self._value is not None
+                and isinstance(self._value, str)
                 and isinstance(other, str)):
-            return other in self.value
+            return other in self._value
         raise TypeError("invalid operation on Value()")
 
     def __hash__(self):
