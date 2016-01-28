@@ -17,6 +17,7 @@ from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils import colorpalette
 
 QWIDGETSIZE_MAX = 16777215
 
@@ -51,6 +52,8 @@ class OWPredictions(widget.OWWidget):
     show_probabilities = settings.Setting(True)
     #: List of selected class value indices in the "Show probabilities" list
     selected_classes = settings.ContextSetting([])
+    #: Draw colored distribution bars
+    draw_dist = settings.Setting(True)
 
     output_attrs = settings.Setting(True)
     output_predictions = settings.Setting(True)
@@ -91,6 +94,8 @@ class OWPredictions(widget.OWWidget):
                     callback=self._update_prediction_delegate,
                     selectionMode=QtGui.QListWidget.MultiSelection,
                     addSpace=False)
+        gui.checkBox(box, self, "draw_dist", "Draw distribution bars",
+                     callback=self._update_prediction_delegate)
 
         box = gui.widgetBox(self.controlArea, "Data view")
         gui.checkBox(box, self, "show_attrs", "Show full data set",
@@ -160,6 +165,7 @@ class OWPredictions(widget.OWWidget):
         if data is None:
             self.dataview.setModel(None)
             self.predictionsview.setModel(None)
+            self.predictionsview.setItemDelegate(PredictionsItemDelegate())
         else:
             # force full reset of the view's HeaderView state
             self.dataview.setModel(None)
@@ -285,6 +291,7 @@ class OWPredictions(widget.OWWidget):
         predmodel = PredictionsSortProxyModel()
         predmodel.setSourceModel(model)
         predmodel.setDynamicSortFilter(True)
+        self.predictionsview.setItemDelegate(PredictionsItemDelegate())
         self.predictionsview.setModel(predmodel)
         self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
         predmodel.layoutChanged.connect(self._update_data_sort_order)
@@ -336,8 +343,10 @@ class OWPredictions(widget.OWWidget):
     def _update_prediction_delegate(self):
         """Update the predicted probability visibility state"""
         delegate = PredictionsItemDelegate()
+        colors = None
         if self.class_var is not None:
             if self.class_var.is_discrete:
+                colors = [QtGui.QColor(*rgb) for rgb in self.class_var.colors]
                 dist_fmt = ""
                 pred_fmt = ""
                 if self.show_probabilities:
@@ -360,6 +369,8 @@ class OWPredictions(widget.OWWidget):
                     self.class_var.number_of_decimals)
 
             delegate.setFormat(fmt)
+            if self.draw_dist and colors is not None:
+                delegate.setColors(colors)
             self.predictionsview.setItemDelegate(delegate)
             self.predictionsview.resizeColumnsToContents()
 
@@ -508,14 +519,26 @@ class OWPredictions(widget.OWWidget):
 
 
 class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
+    """
+    A Item Delegate for custom formatting of predictions/probabilities
+    """
     def __init__(self, parent=None, **kwargs):
         self.__fmt = "{value!s}"
+        self.__colors = None
         super().__init__(parent, **kwargs)
 
     def setFormat(self, fmt):
         if fmt != self.__fmt:
             self.__fmt = fmt
             self.sizeHintChanged.emit(QtCore.QModelIndex())
+
+    def setColors(self, colortable):
+        if colortable is not None:
+            colortable = list(colortable)
+            if not all(isinstance(c, QtGui.QColor) for c in colortable):
+                raise TypeError
+
+        self.__colors = colortable
 
     def displayText(self, value, locale):
         try:
@@ -546,6 +569,129 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
             return True
         else:
             return super().helpEvent(event, view, option, index)
+
+    def initStyleOption(self, option,  index):
+        super().initStyleOption(option, index)
+        dist = self.distribution(index)
+        if dist is None:
+            option.displayAlignment = \
+                (option.displayAlignment & Qt.AlignVertical_Mask) | \
+                Qt.AlignRight
+
+    def sizeHint(self, option, index):
+        # reimplemented
+        sh = super().sizeHint(option, index)
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+        margin = style.pixelMetric(
+            QtGui.QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
+        metrics = option.fontMetrics
+        height = sh.height() + metrics.leading() + 2 * margin
+        return QtCore.QSize(sh.width(), height)
+
+    def distribution(self, index):
+        value = index.data(Qt.DisplayRole)
+        if isinstance(value, tuple) and len(value) == 2:
+            _, dist = value
+            return dist
+        else:
+            return None
+
+    def paint(self, painter, option, index):
+        dist = self.distribution(index)
+        if dist is None or self.__colors is None:
+            return super().paint(painter, option, index)
+        if not numpy.isfinite(numpy.sum(dist)):
+            return super().paint(painter, option, index)
+
+        nvalues = len(dist)
+        if len(self.__colors) < nvalues:
+            colors = colorpalette.ColorPaletteGenerator(nvalues)
+            colors = [colors[i] for i in range(nvalues)]
+        else:
+            colors = self.__colors
+
+        if option.widget is not None:
+            style = option.widget.style()
+        else:
+            style = QtGui.QApplication.style()
+
+        self.initStyleOption(option, index)
+
+        text = option.text
+        metrics = option.fontMetrics
+
+        margin = style.pixelMetric(
+            QtGui.QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
+        bottommargin = min(margin, 1)
+        rect = option.rect.adjusted(margin, margin, -margin, -bottommargin)
+
+        textrect = style.subElementRect(
+            QtGui.QStyle.SE_ItemViewItemText, option, option.widget)
+        # Are the margins included in the subElementRect?? -> No!
+        textrect = textrect.adjusted(margin, margin, -margin, -bottommargin)
+
+        text = option.fontMetrics.elidedText(
+            text, option.textElideMode, textrect.width())
+
+        spacing = max(metrics.leading(), 1)
+
+        distheight = rect.height() - metrics.height() - spacing
+        distheight = numpy.clip(distheight, 2, metrics.height())
+
+        painter.save()
+        painter.setClipRect(option.rect)
+        painter.setFont(option.font)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewRow, option, painter, option.widget)
+        style.drawPrimitive(
+            QtGui.QStyle.PE_PanelItemViewItem, option, painter, option.widget)
+
+        if option.state & QtGui.QStyle.State_Selected:
+            color = option.palette.highlightedText().color()
+        else:
+            color = option.palette.text().color()
+        painter.setPen(QtGui.QPen(color))
+
+        textrect = textrect.adjusted(0, 0, 0, -distheight - spacing)
+        distrect = QtCore.QRect(
+            textrect.bottomLeft() + QtCore.QPoint(0, spacing),
+            QtCore.QSize(rect.width(), distheight)
+        )
+        painter.setPen(QtGui.QPen(Qt.lightGray, 0.3))
+        drawDistBar(painter, distrect, dist, colors)
+        painter.restore()
+        if text:
+            style.drawItemText(
+                painter, textrect, option.displayAlignment, option.palette,
+                option.state & QtGui.QStyle.State_Enabled, text)
+
+
+def drawDistBar(painter, rect, distribution, colortable):
+    """
+    Parameters
+    ----------
+    painter : QtGui.QPainter
+    rect : QtCore.QRect
+    distribution : numpy.ndarray
+    colortable : List[QtGui.QColor]
+    """
+    # assert numpy.isclose(numpy.sum(distribution), 1.0)
+    # assert numpy.all(distribution >= 0)
+    painter.save()
+    painter.translate(rect.topLeft())
+    for i, (dvalue, color) in enumerate(zip(distribution, colortable)):
+        if dvalue and numpy.isfinite(dvalue):
+            painter.setBrush(color)
+            width = rect.width() * dvalue
+            painter.drawRoundedRect(
+                QtCore.QRectF(0, 0, width, rect.height()), 1, 2)
+            painter.translate(width, 0.0)
+    painter.restore()
 
 
 class PredictionsSortProxyModel(QtGui.QSortFilterProxyModel):
