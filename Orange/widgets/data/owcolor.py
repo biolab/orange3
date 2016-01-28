@@ -237,6 +237,7 @@ class OWColor(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.data = None
+        self.orig_domain = None
         self.disc_colors = []
         self.cont_colors = []
 
@@ -254,10 +255,11 @@ class OWColor(widget.OWWidget):
         self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(self.cont_view)
 
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        gui.auto_commit(box, self, "auto_apply", "Send data", box=box,
-                        checkbox_label="Resend data on every change  ")
-        gui.rubber(box)
+        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send data",
+                              orientation="horizontal",
+                              checkbox_label="Resend data on every change")
+        box.layout().insertSpacing(0, 20)
+        box.layout().insertWidget(0, self.report_button)
 
     def set_data(self, data):
         self.closeContext()
@@ -279,7 +281,7 @@ class OWColor(widget.OWWidget):
                     vars.append(var)
                 return vars
 
-            domain = data.domain
+            domain = self.orig_domain = data.domain
             domain = Orange.data.Domain(create_part(domain.attributes),
                                         create_part(domain.class_vars),
                                         create_part(domain.metas))
@@ -320,6 +322,64 @@ class OWColor(widget.OWWidget):
 
     def commit(self):
         self.send("Data", self.data)
+
+    def send_report(self):
+        def report_variables(variables, orig_variables):
+            from Orange.canvas.report import colored_square as square
+
+            def was(n, o):
+                return n if n == o else "{} (was: {})".format(n, o)
+
+            # definition of td element for continuous gradient
+            # with support for pre-standard css (needed at least for Qt 4.8)
+            max_values = max(
+                (len(var.values) for var in variables if var.is_discrete),
+                default=1)
+            defs = ("-webkit-", "-o-", "-moz-", "")
+            cont_tpl = '<td colspan="{}">' \
+                       '<span class="legend-square" style="width: 100px; '.\
+                format(max_values) + \
+                " ".join(map(
+                    "background: {}linear-gradient("
+                    "left, rgb({{}}, {{}}, {{}}), {{}}rgb({{}}, {{}}, {{}}));"
+                    .format, defs)) + \
+                '"></span></td>'
+
+            rows = ""
+            for var, ovar in zip(variables, orig_variables):
+                if var.is_discrete:
+                    values = "    \n".join(
+                        "<td>{} {}</td>".
+                        format(square(*var.colors[i]), was(value, ovalue))
+                        for i, (value, ovalue) in
+                        enumerate(zip(var.values, ovar.values)))
+                elif var.is_continuous:
+                    col = var.colors
+                    colors = col[0][:3] + ("black, " * col[2], ) + col[1][:3]
+                    values = cont_tpl.format(*colors * len(defs))
+                else:
+                    continue
+                name = was(var.name, ovar.name)
+                rows += '<tr style="height: 2em">\n' \
+                        '  <th style="text-align: right">{}</th>{}\n</tr>\n'. \
+                    format(name, values)
+            return rows
+
+        if not self.data:
+            return
+        domain = self.data.domain
+        orig_domain = self.orig_domain
+        sections = (
+            (name, report_variables(vars, ovars))
+            for name, vars, ovars in (
+                ("Features", domain.attributes, orig_domain.attributes),
+                ("Outcome" + "s" * (len(domain.class_vars) > 1),
+                    domain.class_vars, orig_domain.class_vars),
+                ("Meta attributes", domain.metas, orig_domain.metas)))
+        table = "".join("<tr><th>{}</th></tr>{}".format(name, rows)
+                        for name, rows in sections if rows)
+        if table:
+            self.report_raw("<table>{}</table>".format(table))
 
 
 if __name__ == "__main__":
