@@ -133,16 +133,18 @@ class SymmetricSelectionModel(QItemSelectionModel):
         if isinstance(selection, QModelIndex):
             selection = QItemSelection(selection, selection)
 
+        model = self.model()
         indexes = selection.indexes()
         sel_inds = {ind.row() for ind in indexes} | \
                    {ind.column() for ind in indexes}
-        model = self.model()
+        if model.has_labels:
+            sel_inds -= {0}
         if flags == QItemSelectionModel.ClearAndSelect:
             selected = set()
         else:
             selected = {ind.row() for ind in self.selectedIndexes()}
         if flags & QItemSelectionModel.Select:
-            selected |= sel_inds - {0}
+            selected |= sel_inds
         elif flags & QItemSelectionModel.Deselect:
             selected -= sel_inds
         new_selection = QItemSelection()
@@ -166,7 +168,7 @@ class SymmetricSelectionModel(QItemSelectionModel):
         for i in inds:
             i += has_labels
             selection.select(model.index(i, i), model.index(i, i))
-        self.select(selection, QItemSelectionModel.Select)
+        self.select(selection, QItemSelectionModel.ClearAndSelect)
 
 
 class DistanceMatrixContextHandler(ContextHandler):
@@ -261,6 +263,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.distances = distances
         self.tablemodel.set_data(self.distances)
         self.selection = []
+        self.tableview.selectionModel().set_selected_items([])
 
         self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
