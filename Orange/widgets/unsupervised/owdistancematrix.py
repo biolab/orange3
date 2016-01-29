@@ -3,7 +3,7 @@ import itertools
 
 import numpy as np
 from PyQt4.QtGui import QTableView, QColor, QItemSelectionModel, \
-    QItemDelegate, QPen, QBrush, QItemSelection
+    QItemDelegate, QPen, QBrush, QItemSelection, QHeaderView
 from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex, QSize
 
 from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
@@ -27,7 +27,6 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.values = None
         self.label_colors = None
         self.zero_diag = True
-        self.has_labels = False
 
     def set_data(self, distances):
         self.emit(SIGNAL("modelAboutToBeReset()"))
@@ -37,12 +36,11 @@ class DistanceMatrixModel(QAbstractTableModel):
         span = distances.max()
         self.colors = \
             (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
-        self.zero_diag = all(self.distances.diagonal() < 1e-6)
+        self.zero_diag = all(distances.diagonal() < 1e-6)
 
     def set_labels(self, labels, variable=None, values=None):
         self.emit(SIGNAL("modelReset()"))
         self.labels = labels
-        self.has_labels = bool(self.labels)
         self.variable = variable
         self.values = values
         if isinstance(variable, ContinuousVariable):
@@ -56,24 +54,20 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.emit(SIGNAL("modelReset()"))
 
     def dimension(self, parent=None):
-        if parent and parent.isValid() or self.distances is None or \
-                self.distances is None:
+        if parent and parent.isValid() or self.distances is None:
             return 0
-        return len(self.distances) + bool(self.labels)
+        return len(self.distances)
 
     columnCount = rowCount = dimension
 
     def color_for_label(self, ind, light=100):
         color = Qt.lightGray
-        if self.variable is not None:
-            if ind == -1:
-                color = Qt.white
-            elif isinstance(self.variable, ContinuousVariable):
-                color = self.label_colors[ind].lighter(light)
-            elif isinstance(self.variable, DiscreteVariable):
-                value = self.values[ind]
-                if not isnan(value):
-                    color = QColor(*self.variable.colors[value])
+        if isinstance(self.variable, ContinuousVariable):
+            color = self.label_colors[ind].lighter(light)
+        elif isinstance(self.variable, DiscreteVariable):
+            value = self.values[ind]
+            if not isnan(value):
+                color = QColor(*self.variable.colors[value])
         return QBrush(color)
 
     def color_for_cell(self, row, col):
@@ -83,28 +77,29 @@ class DistanceMatrixModel(QAbstractTableModel):
         if role == Qt.TextAlignmentRole:
             return Qt.AlignRight | Qt.AlignVCenter
         row, col = index.row(), index.column()
-        row -= self.has_labels
-        col -= self.has_labels
-        if row == -1 or col == -1:
-            ind = row + col + 1
-            if role == Qt.DisplayRole:
-                if not row == col == -1:
-                    return self.labels[ind]
-            if role == Qt.BackgroundColorRole:
-                return self.color_for_label(ind, 200)
-            return
         if self.distances is None:
             return
+        if role == TableBorderItem.BorderColorRole:
+            return self.color_for_label(col), self.color_for_label(row)
         if row == col and self.zero_diag:
             if role == Qt.BackgroundColorRole and self.variable:
                 return self.color_for_label(row, 200)
             return
         if role == Qt.DisplayRole:
             return "{:.3f}".format(self.distances[row, col])
-        if role == Qt.BackgroundColorRole and self.colors is not None:
+        if role == Qt.BackgroundColorRole:
             return self.color_for_cell(row, col)
-        if role == TableBorderItem.BorderColorRole and self.variable:
-            return self.color_for_label(col), self.color_for_label(row)
+
+    def headerData(self, ind, orientation, role):
+        if not self.labels:
+            return
+        if role == Qt.DisplayRole:
+            return self.labels[ind]
+        # On some systems, Qt doesn't respect the following two roles
+        if role == Qt.BackgroundRole:
+            return self.color_for_label(ind, 200)
+        if role == Qt.TextAlignmentRole and orientation == Qt.Horizontal:
+            return Qt.AlignRight | Qt.AlignVCenter
 
 
 class TableBorderItem(QItemDelegate):
@@ -137,8 +132,6 @@ class SymmetricSelectionModel(QItemSelectionModel):
         indexes = selection.indexes()
         sel_inds = {ind.row() for ind in indexes} | \
                    {ind.column() for ind in indexes}
-        if model.has_labels:
-            sel_inds -= {0}
         if flags == QItemSelectionModel.ClearAndSelect:
             selected = set()
         else:
@@ -158,16 +151,13 @@ class SymmetricSelectionModel(QItemSelectionModel):
                                    QItemSelectionModel.ClearAndSelect)
 
     def selected_items(self):
-        has_labels = self.model().has_labels
-        return list({ind.row() - has_labels for ind in self.selectedIndexes()})
+        return list({ind.row() for ind in self.selectedIndexes()})
 
     def set_selected_items(self, inds):
-        model = self.model()
-        has_labels = model.has_labels
+        index = self.model().index
         selection = QItemSelection()
         for i in inds:
-            i += has_labels
-            selection.select(model.index(i, i), model.index(i, i))
+            selection.select(index(i, i), index(i, i))
         self.select(selection, QItemSelectionModel.ClearAndSelect)
 
 
@@ -230,9 +220,9 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setEditTriggers(QTableView.NoEditTriggers)
         view.setItemDelegate(TableBorderItem())
         view.setModel(self.tablemodel)
-        view.horizontalHeader().hide()
-        view.verticalHeader().hide()
         view.setShowGrid(False)
+        view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
+        view.verticalHeader().setResizeMode(QHeaderView.ResizeToContents)
         selmodel = SymmetricSelectionModel(view.model(), view)
         selmodel.selectionChanged.connect(self.commit)
         view.setSelectionModel(selmodel)
@@ -274,7 +264,7 @@ class OWDistanceMatrix(widget.OWWidget):
             annotations.append("Name")
         elif isinstance(items, Table):
             annotations.extend(
-                    itertools.chain(items.domain, items.domain.metas))
+                itertools.chain(items.domain, items.domain.metas))
         self.annot_combo.model()[:] = annotations
         if isinstance(items, Table) and items.domain.class_var:
             self.annotation_idx = 2 + len(items.domain.attributes)
@@ -308,6 +298,12 @@ class OWDistanceMatrix(widget.OWWidget):
             labels = [var.repr_val(value) for value in column]
         saved_selection = self.tableview.selectionModel().selected_items()
         self.tablemodel.set_labels(labels, var, column)
+        if labels:
+            self.tableview.horizontalHeader().show()
+            self.tableview.verticalHeader().show()
+        else:
+            self.tableview.horizontalHeader().hide()
+            self.tableview.verticalHeader().hide()
         self.tableview.resizeColumnsToContents()
         self.tableview.selectionModel().set_selected_items(saved_selection)
 
@@ -318,10 +314,9 @@ class OWDistanceMatrix(widget.OWWidget):
             return
 
         inds = self.tableview.selectionModel().selected_items()
-        dist = self.distances
-        self.send("Distances", dist.submatrix(inds))
+        self.send("Distances", self.distances.submatrix(inds))
 
-        if dist.axis and isinstance(self.items, Table):
+        if self.distances.axis and isinstance(self.items, Table):
             table = self.items[inds]
         else:
             table = None
@@ -336,7 +331,7 @@ class OWDistanceMatrix(widget.OWWidget):
 
         def _rgb(brush):
             return "rgb({}, {}, {})".format(*brush.color().getRgb())
-        if model.has_labels:
+        if model.labels:
             col_label = model.color_for_label
             label_colors = [_rgb(col_label(i)) for i in range(dim)]
             self.report_raw('<table style="border-collapse:collapse">')
