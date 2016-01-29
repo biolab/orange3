@@ -77,7 +77,7 @@ class OWRegressionTreeGraph(OWTreeGraph):
         for node in self.scene.nodes():
             li = [0.5, node.num_instances() / all_instances,
                   node.impurity() / max_impurity][self.color_index]
-            node.backgroundBrush = QBrush(palette[self.color_index].light(
+            node.backgroundBrush = QBrush(palette[self.color_index].lighter(
                 180 - li * 150))
         self.scene.update()
 

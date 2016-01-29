@@ -234,7 +234,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             return w
 
         self.setLayout(QVBoxLayout())
-        self.layout().setMargin(2)
+        self.layout().setContentsMargins(2, 2, 2, 2)
 
         self.warning_bar = gui.widgetBox(self, orientation="horizontal",
                                          margin=0, spacing=0)
@@ -291,7 +291,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self.widgetStatusArea.setLayout(QHBoxLayout(self.widgetStatusArea))
             self.widgetStatusArea.layout().addWidget(self.statusBarIconArea)
             self.widgetStatusArea.layout().addWidget(self.widgetStatusBar)
-            self.widgetStatusArea.layout().setMargin(0)
+            self.widgetStatusArea.layout().setContentsMargins(0, 0, 0, 0)
             self.widgetStatusArea.setFrameShape(QFrame.StyledPanel)
 
             self.statusBarIconArea.setLayout(QHBoxLayout())

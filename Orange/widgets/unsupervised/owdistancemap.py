@@ -496,7 +496,7 @@ class OWDistanceMap(widget.OWWidget):
         self._clear_plot()
         self.matrix_item = DistanceMapItem(self._sorted_matrix)
         # Scale the y axis to compensate for pg.ViewBox's y axis invert
-        self.matrix_item.scale(1, -1)
+        self.matrix_item.setTransform(QTransform.fromScale(1, -1), )
         self.viewbox.addItem(self.matrix_item)
         # Set fixed view box range.
         h, w = self._sorted_matrix.shape

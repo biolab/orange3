@@ -98,7 +98,7 @@ class OverlayWidget(QWidget):
 
     def paintEvent(self, event):
         opt = QStyleOption()
-        opt.init(self)
+        opt.initFrom(self)
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, painter, self)
 

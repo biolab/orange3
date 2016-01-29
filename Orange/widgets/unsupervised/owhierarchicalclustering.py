@@ -1449,7 +1449,7 @@ class WrapperLayoutItem(QGraphicsLayoutItem):
         self.orientation = orientation
         self.item = item
         if orientation == Qt.Vertical:
-            self.item.rotate(-90)
+            self.item.setRotation(-90)
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         else:
             self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)

@@ -95,7 +95,8 @@ class VariablesListItemModel(itemmodels.VariableListModel):
             descriptors.append((var.name, vartype(var)))
             vars.append(var)
         mime = QtCore.QMimeData()
-        mime.setData(self.MIME_TYPE, QtCore.QByteArray(str(descriptors).encode()))
+        mime.setData(self.MIME_TYPE,
+                     QtCore.QByteArray(str(descriptors).encode("utf-8")))
         mime._vars = vars
         return mime
 
@@ -312,7 +313,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.layout().addWidget(self.controlArea)
         layout = QtGui.QGridLayout()
         self.controlArea.setLayout(layout)
-        layout.setMargin(4)
+        layout.setContentsMargins(4, 4, 4, 4)
         box = gui.widgetBox(self.controlArea, "Available Variables",
                             addToLayout=False)
         self.filter_edit = QtGui.QLineEdit()

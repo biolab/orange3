@@ -585,7 +585,8 @@ class OWHeatMap(widget.OWWidget):
             self.on_selection_finished)
         self.heatmap_scene.set_selection_manager(self.selection_manager)
 
-        item = QtGui.QGraphicsRectItem(0, 0, 10, 10, None, self.heatmap_scene)
+        item = QtGui.QGraphicsRectItem(0, 0, 10, 10, None)
+        self.heatmap_scene.addItem(item)
         self.heatmap_scene.itemsBoundingRect()
         self.heatmap_scene.removeItem(item)
 
@@ -1041,10 +1042,10 @@ class OWHeatMap(widget.OWWidget):
                 if sort_j[j] is not None:
                     X_part = X_part[:, sort_j[j]]
 
-                hw.set_heatmap_data(X_part)
                 hw.set_levels(parts.levels)
                 hw.set_color_table(palette)
                 hw.set_show_averages(self.averages)
+                hw.set_heatmap_data(X_part)
 
                 grid.addItem(hw, Row0 + i * 2 + 1, Col0 + j)
                 grid.setRowStretchFactor(Row0 + i * 2 + 1, X_part.shape[0] * 100)

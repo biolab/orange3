@@ -547,7 +547,7 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
             margin = 0
     setLayout(b, orientation)
     b.layout().setSpacing(spacing)
-    b.layout().setMargin(margin)
+    b.layout().setContentsMargins(margin, margin, margin, margin)
     misc.setdefault('addSpace', bool(box))
     miscellanea(b, None, widget, **misc)
     return b

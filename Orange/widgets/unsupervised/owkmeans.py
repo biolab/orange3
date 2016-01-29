@@ -77,7 +77,7 @@ class OWKMeans(widget.OWWidget):
         layout.addWidget(
             gui.appendRadioButton(bg, "Optimized", addToLayout=False), 2, 1)
         ftobox = gui.widgetBox(None, orientation="horizontal")
-        ftobox.layout().setMargin(0)
+        ftobox.layout().setContentsMargins(0, 0, 0, 0)
         layout.addWidget(ftobox)
         gui.spin(
             ftobox, self, "k_from", minv=2, maxv=29,

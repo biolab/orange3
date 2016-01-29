@@ -35,8 +35,10 @@ class GraphEdge:
         self.node1 = node1
         self.node2 = node2
         self.type = atype
-        node1.graph_add_edge(self)
-        node2.graph_add_edge(self)
+        if node1 is not None:
+            node1.graph_add_edge(self)
+        if node2 is not None:
+            node2.graph_add_edge(self)
 
 
 class GraphicsDroplet(QGraphicsEllipseItem):
@@ -98,7 +100,7 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
         font = self.font()
         font.setPointSize(10)
         self.setFont(font)
-        self.droplet = GraphicsDroplet(-5, 0, 10, 10, self, self.scene())
+        self.droplet = GraphicsDroplet(-5, 0, 10, 10, self)
         self.droplet.setPos(self.rect().center().x(), self.rect().height())
         self.document().contentsChanged.connect(self.update_contents)
         self.isOpen = True

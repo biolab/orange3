@@ -913,7 +913,7 @@ class OWScatterMap(widget.OWWidget):
         with self.progressBar(len(scored_rects)) as progress_bar:
             for i, (_, rect) in enumerate(scored_rects):
                 root = sharpen_region_recur(
-                    root, rect.intersect(region),
+                    root, rect.intersected(region),
                     nbins, depth + 1, bin_func)
                 tick = time.time() - update_time
                 if tick > 2.0:
@@ -1217,7 +1217,7 @@ def stack_tile_blocks(blocks):
 
 def bindices(node, rect):
     assert rect.normalized() == rect
-    assert not rect.intersect(QRectF(*node.brect)).isEmpty()
+    assert not rect.intersected(QRectF(*node.brect)).isEmpty()
 
     xs = np.searchsorted(node.xbins, rect.left(), side="left") - 1
     xe = np.searchsorted(node.xbins, rect.right(), side="right")
