@@ -93,13 +93,11 @@ class DistanceMatrixModel(QAbstractTableModel):
     def headerData(self, ind, orientation, role):
         if not self.labels:
             return
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole and ind < len(self.labels):
             return self.labels[ind]
-        # On some systems, Qt doesn't respect the following two roles
+        # On some systems, Qt doesn't respect the following role in the header
         if role == Qt.BackgroundRole:
             return self.color_for_label(ind, 200)
-        if role == Qt.TextAlignmentRole and orientation == Qt.Horizontal:
-            return Qt.AlignRight | Qt.AlignVCenter
 
 
 class TableBorderItem(QItemDelegate):
@@ -221,11 +219,16 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setItemDelegate(TableBorderItem())
         view.setModel(self.tablemodel)
         view.setShowGrid(False)
-        view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
-        view.verticalHeader().setResizeMode(QHeaderView.ResizeToContents)
+        for header in (view.horizontalHeader(), view.verticalHeader()):
+            header.setResizeMode(QHeaderView.ResizeToContents)
+            header.setHighlightSections(True)
+            header.setClickable(False)
+        view.verticalHeader().setDefaultAlignment(
+            Qt.AlignRight | Qt.AlignVCenter)
         selmodel = SymmetricSelectionModel(view.model(), view)
         selmodel.selectionChanged.connect(self.commit)
         view.setSelectionModel(selmodel)
+        view.setSelectionBehavior(QTableView.SelectItems)
         self.mainArea.layout().addWidget(view)
 
         settings_box = gui.widgetBox(self.mainArea, orientation="horizontal")
@@ -257,24 +260,26 @@ class OWDistanceMatrix(widget.OWWidget):
 
         self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
+        self.annotation_idx = 1
         if items and not distances.axis:
             annotations.append("Attribute names")
+            self.annotation_idx = 2
         elif isinstance(items, list) and \
                 all(isinstance(item, Variable) for item in items):
             annotations.append("Name")
+            self.annotation_idx = 2
         elif isinstance(items, Table):
             annotations.extend(
                 itertools.chain(items.domain, items.domain.metas))
+            if items.domain.class_var:
+                self.annotation_idx = 2 + len(items.domain.attributes)
         self.annot_combo.model()[:] = annotations
-        if isinstance(items, Table) and items.domain.class_var:
-            self.annotation_idx = 2 + len(items.domain.attributes)
-        else:
-            self.annotation_idx = 1 + len(annotations) == 3
 
         if items:
             self.openContext(distances, annotations)
             self._update_labels()
             self.tableview.resizeColumnsToContents()
+        self.commit()
 
     def _invalidate_annotations(self):
         if self.distances is not None:
