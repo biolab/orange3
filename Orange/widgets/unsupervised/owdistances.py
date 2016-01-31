@@ -3,6 +3,7 @@ import numpy
 import Orange.data
 import Orange.misc
 from Orange import distance
+from Orange.preprocess import SklImpute
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.sql import check_sql_input
 
@@ -63,20 +64,20 @@ class OWDistances(widget.OWWidget):
     def commit(self):
         self.warning(1)
         self.error(1)
+        self.information(1)
+        self.information(2)
 
-        data = distances = None
-        if self.data is not None:
+        data = self.data
+        if data is not None:
             metric = _METRICS[self.metric_idx][1]
-            if not any(a.is_continuous for a in self.data.domain.attributes):
-                self.error(1, "No continuous features")
+            if data.domain.has_discrete_attributes():
+                self.information(1, "Assuming distance between different values of categorical variables is 1")
+            if data.has_missing() and isinstance(data, Orange.data.Table):
+                self.information(2, "Imputing missing values")
+                data = SklImpute(data)
+            if not data.domain.attributes:
+                self.error(1, "Data has no features")
                 data = None
-            elif (any(a.is_discrete for a in self.data.domain.attributes) or
-                  numpy.any(numpy.isnan(self.data.X))):
-                data = distance._preprocess(self.data)
-                if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
-                    self.warning(1, "Ignoring discrete features")
-            else:
-                data = self.data
 
         if data is not None:
             shape = (len(data), len(data.domain.attributes))
