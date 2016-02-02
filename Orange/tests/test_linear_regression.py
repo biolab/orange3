@@ -50,9 +50,9 @@ class LinearRegressionTest(unittest.TestCase):
     def test_linear_scorer(self):
         learner = LinearRegressionLearner()
         scores = learner.score_data(self.housing)
-        self.assertEqual('LSTAT',
-                         self.housing.domain.attributes[np.argmax(scores)].name)
-        self.assertEqual(len(scores), len(self.housing.domain.attributes))
+        self.assertEqual(
+            'LSTAT', self.housing.domain.attributes[np.argmax(scores[0])].name)
+        self.assertEqual(scores.shape[1], len(self.housing.domain.attributes))
 
     def test_scorer(self):
         learners = [LinearRegressionLearner(),
@@ -61,9 +61,11 @@ class LinearRegressionTest(unittest.TestCase):
                     ElasticNetLearner(alpha=0.01)]
         for learner in learners:
             scores = learner.score_data(self.housing)
-            self.assertEqual('LSTAT',
-                             self.housing.domain.attributes[np.argmax(scores)].name)
-            self.assertEqual(len(scores), len(self.housing.domain.attributes))
+            self.assertEqual(
+                'LSTAT',
+                self.housing.domain.attributes[np.argmax(scores[0])].name)
+            self.assertEqual(scores.shape[1],
+                             len(self.housing.domain.attributes))
 
     def test_scorer_feature(self):
         learners = [LinearRegressionLearner(),
@@ -74,7 +76,7 @@ class LinearRegressionTest(unittest.TestCase):
             scores = learner.score_data(self.housing)
             for i, attr in enumerate(self.housing.domain.attributes):
                 score = learner.score_data(self.housing, attr)
-                self.assertEqual(score, scores[i])
+                np.testing.assert_array_almost_equal(score, scores[:, i])
 
     def test_coefficients(self):
         data = Table([[11], [12], [13]], [0, 1, 2])

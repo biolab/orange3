@@ -116,10 +116,11 @@ class TestPCA(unittest.TestCase):
     def test_PCA_scorer(self):
         data = self.iris
         pca = PCA(preprocessors=[Normalize()])
+        pca.component = 1
         scores = pca.score_data(data)
-        self.assertEqual(len(scores), len(data.domain.attributes))
+        self.assertEqual(scores.shape[1], len(data.domain.attributes))
         self.assertEqual(['petal length', 'petal width'],
                          sorted([data.domain.attributes[i].name
-                                 for i in np.argsort(scores)[-2:]]))
-        self.assertEqual([round(s, 4) for s in scores],
+                                 for i in np.argsort(scores[0])[-2:]]))
+        self.assertEqual([round(s, 4) for s in scores[0]],
                          [0.5224, 0.2634, 0.5813, 0.5656])

@@ -64,7 +64,35 @@ class LogisticRegressionTest(unittest.TestCase):
         scores = learner.score_data(self.voting)
         self.assertEqual('physician-fee-freeze',
                          self.voting.domain.attributes[np.argmax(scores)].name)
-        self.assertEqual(len(scores), len(self.voting.domain.attributes))
+        self.assertEqual(scores.shape, (1, len(self.voting.domain.attributes)))
+
+    def test_learner_scorer_feature(self):
+        learner = LogisticRegressionLearner()
+        scores = learner.score_data(self.voting)
+        for i, attr in enumerate(self.voting.domain.attributes):
+            score = learner.score_data(self.voting, attr)
+            np.testing.assert_array_almost_equal(score, scores[:, i])
+
+    def test_learner_scorer_multiclass(self):
+        attr = self.zoo.domain.attributes
+        learner = LogisticRegressionLearner()
+        scores = learner.score_data(self.zoo)
+        self.assertEqual('aquatic', attr[np.argmax(scores[0])].name)
+        self.assertEqual('feathers', attr[np.argmax(scores[1])].name)
+        self.assertEqual('fins', attr[np.argmax(scores[2])].name)
+        self.assertEqual('backbone', attr[np.argmax(scores[3])].name)
+        self.assertEqual('backbone', attr[np.argmax(scores[4])].name)
+        self.assertEqual('milk', attr[np.argmax(scores[5])].name)
+        self.assertEqual('hair', attr[np.argmax(scores[6])].name)
+        self.assertEqual(scores.shape,
+                         (len(self.zoo.domain.class_var.values), len(attr)))
+
+    def test_learner_scorer_multiclass_feature(self):
+        learner = LogisticRegressionLearner()
+        scores = learner.score_data(self.zoo)
+        for i, attr in enumerate(self.zoo.domain.attributes):
+            score = learner.score_data(self.zoo, attr)
+            np.testing.assert_array_almost_equal(score, scores[:, i])
 
     def test_coefficients(self):
         learn = LogisticRegressionLearner()

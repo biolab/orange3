@@ -290,13 +290,8 @@ class OWRank(widget.OWWidget):
         attrs_len = 0 if not self.data else len(self.data.domain.attributes)
         shape = (len(self.measures) + len(self.learners), attrs_len)
         self.measure_scores = table(shape, None)
-        labels = [v.shortname for k, v in self.learners.items()]
-        self.contRanksModel.setHorizontalHeaderLabels(
-            self.contRanksLabels + labels
-        )
-        self.discRanksModel.setHorizontalHeaderLabels(
-            self.discRanksLabels + labels
-        )
+        self.contRanksModel.setHorizontalHeaderLabels(self.contRanksLabels)
+        self.discRanksModel.setHorizontalHeaderLabels(self.discRanksLabels)
         self.updateScores()
         self.commit()
 
@@ -327,6 +322,8 @@ class OWRank(widget.OWWidget):
 
         data = self.data
         self.error(1)
+        learner_col = len(self.measures)
+        labels = []
         for index, (meas, mask) in enumerate(zip(measures, measuresMask)):
             if not mask:
                 continue
@@ -347,21 +344,33 @@ class OWRank(widget.OWWidget):
                         not learner.check_learner_adequacy(self.data.domain):
                     self.error(1, learner.learner_adequacy_err_msg)
                 else:
-                    self.measure_scores[index] = meas.score.score_data(data)
-
+                    scores = meas.score.score_data(data)
+                    for i, row in enumerate(scores):
+                        labels.append(meas.shortname + str(i + 1))
+                        if len(self.measure_scores) > learner_col:
+                            self.measure_scores[learner_col] = row
+                        else:
+                            self.measure_scores.append(row)
+                        learner_col += 1
+        self.contRanksModel.setHorizontalHeaderLabels(
+            self.contRanksLabels + labels
+        )
+        self.discRanksModel.setHorizontalHeaderLabels(
+            self.discRanksLabels + labels
+        )
         self.updateRankModel(measuresMask)
         self.ranksProxyModel.invalidate()
         self.selectMethodChanged()
 
-        self.send("Scores", self.create_scores_table())
+        self.send("Scores", self.create_scores_table(labels))
 
     def updateRankModel(self, measuresMask=None):
         """
         Update the rankModel.
         """
         values = []
-        for i in range(len(self.measure_scores) + 1,
-                       self.ranksModel.columnCount()):
+        for i in range(self.ranksModel.columnCount() - 1,
+                       len(self.measure_scores), -1):
             self.ranksModel.removeColumn(i)
 
         for i, scores in enumerate(self.measure_scores):
@@ -518,8 +527,8 @@ class OWRank(widget.OWWidget):
         else:
             return []
 
-    def create_scores_table(self):
-        measures = self.measures + [v for k, v in self.learners.items()]
+    def create_scores_table(self, labels):
+        measures = self.measures + [(label,) for label in labels]
         features = [ContinuousVariable(s[0]) for s in measures]
         metas = [StringVariable("Feature name")]
         domain = Domain(features, metas=metas)
