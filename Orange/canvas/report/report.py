@@ -42,10 +42,11 @@ class Report:
     def create_report_html(self):
         """ Start a new section in report and call :obj:`send_report` method
         to add content."""
-        self.report_html = get_html_section(self.name)
+        self.report_html = '<section class="section">'
+        self.report_html += get_html_section(self.name)
         self.report_html += '<div class="content">\n'
         self.send_report()
-        self.report_html += '</div>\n\n'
+        self.report_html += '</div></section>\n\n'
 
     @staticmethod
     def _fix_args(name, items):
