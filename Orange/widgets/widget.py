@@ -360,7 +360,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             # Update the saved geometry only between explicit show/hide
             # events (i.e. changes initiated by the user not by Qt's default
             # window management).
-            self.savedWidgetGeometry = self.saveGeometry()
+            self.savedWidgetGeometry = bytes(self.saveGeometry())
 
     # when widget is resized, save the new width and height
     def resizeEvent(self, ev):
