@@ -51,7 +51,7 @@ class OWPCA(widget.OWWidget):
         self._cumulative = None
         self._line = False
         self._pca_projector = PCA()
-        self._pca_projector.component = 0
+        self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = PCA.preprocessors
 
         # Components Selection
@@ -263,6 +263,7 @@ class OWPCA(widget.OWWidget):
     def _update_selection_component_spin(self):
         # cut changed by "ncomponents" spin.
         if self._pca is None:
+            self._invalidate_selection()
             return
 
         if self.ncomponents == 0:
@@ -351,6 +352,7 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
+        self._pca_projector.component = self.ncomponents
         self.send("Transformed data", transformed)
         self.send("Components", components)
         self.send("PCA", self._pca_projector)

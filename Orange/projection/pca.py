@@ -26,7 +26,8 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data):
         model = self(data)
-        return np.abs(model.components_[self.component])
+        return np.abs(model.components_[:self.component]) \
+            if self.component else np.abs(model.components_)
 
 
 class PCA(SklProjector, _FeatureScorerMixin):
