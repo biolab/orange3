@@ -164,10 +164,14 @@ class OWFile(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
+    FILE, URL = range(2)
+
     #: back-compatibility: List[str] saved files list
     recent_files = Setting([])
     #: List[RecentPath]
     recent_paths = Setting([])
+    source = Setting(0)
+    url = Setting("")
 
     new_variables = Setting(False)
 
@@ -187,28 +191,24 @@ class OWFile(widget.OWWidget):
         self.loaded_file = ""
         self._relocate_recent_files()
 
-        vbox = gui.widgetBox(self.controlArea, "Data File / URL",
-                             addSpace=True)
+        vbox = gui.radioButtons(self.controlArea, self, "source", box="Source",
+                                addSpace=True)
         box = gui.widgetBox(vbox, orientation=0)
+        gui.appendRadioButton(vbox, "File", insertInto=box)
         self.file_combo = QtGui.QComboBox(box, sizeAdjustPolicy=QtGui.QComboBox.AdjustToContents)
         self.file_combo.setMinimumWidth(300)
-        self.file_combo.setEditable(True)
-        self.file_combo.lineEdit().setStyleSheet("padding-left: 1px;")
         box.layout().addWidget(self.file_combo)
         self.file_combo.activated[int].connect(self.select_file)
-
         button = gui.button(box, self, '...', callback=self.browse_file,
                             autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
         button.setSizePolicy(
-            QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
+                QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
 
-        button = gui.button(box, self, "Reload",
-                            callback=self.reload, autoDefault=False)
-        button.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        button.setSizePolicy(
-            QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        box = gui.widgetBox(vbox, orientation=0)
+        gui.appendRadioButton(vbox, "URL", insertInto=box)
+        gui.lineEdit(box, self, "url")
+        gui.separator(vbox, height=16)
 
         gui.checkBox(vbox, self, "new_variables",
                      "Columns with same name in different files " +
@@ -218,7 +218,21 @@ class OWFile(widget.OWWidget):
         self.info = gui.widgetLabel(box, 'No data loaded.')
         self.warnings = gui.widgetLabel(box, ' ')
         gui.rubber(box)
-        #Set word wrap, so long warnings won't expand the widget
+
+
+        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        button = gui.button(box, self, "Reload",
+                            callback=self.reload, autoDefault=False)
+        button.setIcon(
+                self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
+        button.setSizePolicy(
+                QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        gui.rubber(box)
+        box.layout().addWidget(self.report_button)
+        self.report_button.setMaximumWidth(150)
+
+
+    #Set word wrap, so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
         self.warnings.setSizePolicy(
             QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
@@ -266,7 +280,7 @@ class OWFile(widget.OWWidget):
             self.file_combo.model().item(0).setEnabled(False)
         else:
             for i, recent in enumerate(self.recent_paths):
-                self.file_combo.addItem(recent.icon, recent.value)
+                self.file_combo.addItem(recent.value)
                 self.file_combo.model().item(i).setToolTip(recent.abspath)
         self.file_combo.addItem("Browse documentation data sets...")
 
