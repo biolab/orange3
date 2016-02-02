@@ -1,11 +1,46 @@
+import multiprocessing as mp
+from threading import Thread
+from collections import namedtuple
+import pickle
+import warnings
+
 import numpy as np
 
+import joblib
 import sklearn.cross_validation as skl_cross_validation
 
+from Orange.util import OrangeWarning
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "ShuffleSplit", "TestOnTestData", "sample"]
+
+
+_MpResults = namedtuple('_MpResults', ('fold_i', 'learner_i', 'model',
+                                       'failed', 'n_values', 'values', 'probs'))
+
+
+def _identity(x):
+    return x
+
+
+def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
+               store_models, mp_queue):
+    predicted, probs, model, failed = None, None, None, False
+    try:
+        if len(train_data) == 0 or len(test_data) == 0:
+            raise RuntimeError('Test fold is empty')
+        model = learner(train_data)
+        if train_data.domain.has_discrete_class:
+            predicted, probs = model(test_data, model.ValueProbs)
+        elif train_data.domain.has_continuous_class:
+            predicted = model(test_data, model.Value)
+    # Different models can fail at any time raising any exception
+    except Exception as ex:  # pylint: disable=broad-except
+        failed = ex
+    mp_queue.put("dummy text; use for printing when debugging")
+    return _MpResults(fold_i, learner_i, store_models and model,
+                      failed, len(test_data), predicted, probs)
 
 
 class Results:
@@ -95,9 +130,8 @@ class Results:
         self.indices = None
 
         self.row_indices = row_indices
-        self.preprocessor = preprocessor
-        self.callback = callback
-
+        self.preprocessor = preprocessor or _identity
+        self._callback = callback or _identity
         self.learners = learners
         if learners:
             nmethods = len(learners)
@@ -165,31 +199,18 @@ class Results:
             self.probabilities = \
                 np.empty((nmethods, nrows, nclasses), dtype=np.float32)
 
-    def prepare_prediction_arrays(self, data):
-        """Initialize `predicted` and `probabilities` (only for discrete classes)
-        arrays to store fitting results.
-        """
+    def _prepare_arrays(self, data):
+        """Initialize some mandatory arrays for results"""
         nmethods = len(self.learners)
         self.nrows = len(self.row_indices)
+        if self.store_models:
+            self.models = np.tile(None, (len(self.indices), nmethods))
+        # Initialize `predicted` and `probabilities` (only for discrete classes)
         self.predicted = np.empty((nmethods, self.nrows), dtype=self.dtype)
-
         if data.domain.has_discrete_class:
             nclasses = len(data.domain.class_var.values)
             self.probabilities = np.empty((nmethods, self.nrows, nclasses),
                                           dtype=np.float32)
-
-    def train_if_succ(self, learner_index, learner, data):
-        if self.failed[learner_index]:
-            return False
-        try:
-            return learner(data)
-        except Exception as ex:
-            self.failed[learner_index] = ex
-            return False
-
-    def call_callback(self, progress):
-        if self.callback:
-            self.callback(progress)
 
     def get_fold(self, fold):
         results = Results()
@@ -289,40 +310,76 @@ class Results:
         test_data = test_data or train_data
         self.setup_indices(train_data, test_data)
         self.prepare_arrays(test_data)
-        self.prepare_prediction_arrays(test_data)
+        self._prepare_arrays(test_data)
 
         n_callbacks = len(self.learners) * len(self.indices)
-        if self.store_models:
-            self.models = np.tile(None, (len(self.indices), len(self.learners)))
+        n_jobs = max(1, min(joblib.cpu_count(), n_callbacks) - 1)
 
-        for idx, (train_indices, test_indices) in enumerate(self.indices):
-            train_fold = train_data[train_indices]
-            test_fold = test_data[test_indices]
+        def _is_picklable(obj):
+            try:
+                return bool(pickle.dumps(obj))
+            except (AttributeError, TypeError, pickle.PicklingError):
+                return False
 
-            if self.preprocessor is not None:
-                train_fold = self.preprocessor(train_fold)
+        if n_jobs > 1 and not all(_is_picklable(learner) for learner in self.learners):
+            n_jobs = 1
+            warnings.warn("Not all arguments (learners) are picklable. "
+                          "Setting n_jobs=1", OrangeWarning)
 
-            for k, learner in enumerate(self.learners):
-                model = self.train_if_succ(k, learner, train_fold)
-                self.call_callback((len(self.learners) * idx + k) / n_callbacks)
-                if not model:
-                    continue
+        mp_queue = mp.Manager().Queue()
 
-                if self.store_models:
-                    self.models[idx][k] = model
+        data_splits = (
+            (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
+            for fold_i, (train_i, test_i) in enumerate(self.indices))
 
-                result_slice = self.folds[idx]
-                if train_data.domain.has_discrete_class:
-                    values, probs = model(test_fold, model.ValueProbs)
-                    self.predicted[k][result_slice] = values
-                    self.probabilities[k][result_slice, :] = probs
-                elif train_data.domain.has_continuous_class:
-                    values = model(test_fold, model.Value)
-                    self.predicted[k][result_slice] = values
-                else:
-                    raise ValueError("Unknown table's target type")
+        args_iter = (
+            (fold_i, train_data, test_data, learner_i, learner,
+             self.store_models, mp_queue)
+            # NOTE: If this nested for loop doesn't work, try
+            # itertools.product
+            for (fold_i, train_data, test_data) in data_splits
+            for (learner_i, learner) in enumerate(self.learners))
 
-        self.call_callback(1)
+        def _callback_percent(n_steps, queue):
+            """Block until one of the subprocesses completes, before
+            signalling callback with percent"""
+            for percent in np.linspace(.0, .99, n_steps + 1)[1:]:
+                queue.get()
+                self._callback(percent)
+
+        results = []
+        with joblib.Parallel(n_jobs=n_jobs) as parallel:
+            tasks = (joblib.delayed(_mp_worker)(*args) for args in args_iter)
+            # Start the tasks from another thread ...
+            thread = Thread(target=lambda: results.append(parallel(tasks)))
+            thread.start()
+            # ... so that we can update the GUI (callback) from the main thread
+            _callback_percent(n_callbacks, mp_queue)
+            thread.join()
+
+        results = sorted(results[0])
+
+        ptr, prev_fold_i, prev_n_values = 0, 0, 0
+        for res in results:
+            if res.fold_i != prev_fold_i:
+                ptr += prev_n_values
+                prev_fold_i = res.fold_i
+            result_slice = slice(ptr, ptr + res.n_values)
+            prev_n_values = res.n_values
+
+            if res.failed:
+                self.failed[res.learner_i] = res.failed
+                continue
+
+            if self.store_models:
+                self.models[res.fold_i][res.learner_i] = res.model
+
+            self.predicted[res.learner_i][result_slice] = res.values
+            if train_data.domain.has_discrete_class:
+                self.probabilities[res.learner_i][result_slice, :] = res.probs
+
+        self._callback(1)
+        return self
 
     def prepare_arrays(self, test_data):
         """Initialize arrays that will be used by `fit` method.
@@ -338,7 +395,6 @@ class Results:
 
         self.row_indices = np.concatenate(row_indices, axis=0)
         self.actual = test_data[self.row_indices].Y.ravel()
-        self.predicted = np.empty((len(self.learners), len(self.row_indices)))
 
     def setup_indices(self, train_data, test_data):
         """Initializes `self.indices` with iterable objects with slices
@@ -433,7 +489,7 @@ class LeaveOneOut(Results):
         self.indices = skl_cross_validation.LeaveOneOut(len(test_data))
 
     def prepare_arrays(self, test_data):
-        # speed up version of super().prepare_arrays(data)
+        # sped up version of super().prepare_arrays(data)
         self.row_indices = np.arange(len(test_data))
         self.folds = self.row_indices
         self.actual = test_data.Y.flatten()

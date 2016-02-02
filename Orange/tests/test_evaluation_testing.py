@@ -8,8 +8,9 @@ from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table
 from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrainingData,
-                               TestOnTestData, ShuffleSplit, sample)
+                               TestOnTestData, ShuffleSplit, sample, RMSE)
 from Orange.preprocess import discretize, preprocess
+from Orange.util import OrangeWarning
 
 
 def random_data(nrows, ncols):
@@ -33,7 +34,7 @@ class TestSampling(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.nrows = 50
+        cls.nrows = 200
         cls.ncols = 5
         cls.random_table = random_data(cls.nrows, cls.ncols)
 
@@ -57,7 +58,7 @@ class TestSampling(unittest.TestCase):
         self.assertIsInstance(res.failed[1], Exception)
         self.assertFalse(res.failed[2])
         self.assertEqual(major_call, succ_calls)
-        self.assertEqual(fail_calls, 1)
+        self.assertEqual(fail_calls, succ_calls / 2)
 
     def run_test_callback(self, method, expected_progresses):
         def record_progress(p):
@@ -89,11 +90,15 @@ class TestSampling(unittest.TestCase):
             for model, learner in zip(models, learners):
                 self.assertIsInstance(model, learner.__returns__)
 
+    def _callback_values(self, iterations):
+        return np.hstack((np.linspace(0., .99, iterations + 1)[1:], [1]))
+
 
 class TestCrossValidation(TestSampling):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
+        cls.housing = Table('housing')
         cls.nrows = 50
         cls.ncols = 5
         cls.random_table = random_data(cls.nrows, cls.ncols)
@@ -109,6 +114,10 @@ class TestCrossValidation(TestSampling):
         np.testing.assert_equal(np.argmax(res.probabilities[0], axis=1),
                                 y[res.row_indices].reshape(nrows))
         self.check_folds(res, 10, nrows)
+
+    def test_continuous(self):
+        res = CrossValidation(self.housing, [LinearRegressionLearner()], k=3, n_jobs=1)
+        self.assertLess(RMSE(res), 5)
 
     def test_folds(self):
         res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=5)
@@ -188,7 +197,7 @@ class TestCrossValidation(TestSampling):
         self.run_test_failed(CrossValidation, 20)
 
     def test_callback(self):
-        self.run_test_callback(CrossValidation, np.arange(0, 1.05, 0.05))
+        self.run_test_callback(CrossValidation, self._callback_values(20))
 
     def test_preprocessor(self):
         self.run_test_preprocessor(CrossValidation, [135] * 10)
@@ -235,6 +244,14 @@ class TestCrossValidation(TestSampling):
         self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
         # +2 for class, +1 for fold
         self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)
+
+    def test_unpicklable_params(self):
+
+        class NonPicklableLearner(MajorityLearner):
+            pass
+
+        self.assertWarns(OrangeWarning,
+                         CrossValidation, self.iris, [NonPicklableLearner()], k=3)
 
 
 class TestLeaveOneOut(TestSampling):
@@ -315,7 +332,7 @@ class TestLeaveOneOut(TestSampling):
         self.run_test_failed(LeaveOneOut, 100)
 
     def test_callback(self):
-        self.run_test_callback(LeaveOneOut, np.arange(0, 1.005, 0.01))
+        self.run_test_callback(LeaveOneOut, self._callback_values(2 * self.nrows))
 
     def test_preprocessor(self):
         self.run_test_preprocessor(LeaveOneOut, [149] * 150)
@@ -385,7 +402,7 @@ class TestTestOnTrainingData(TestSampling):
         self.run_test_failed(TestOnTrainingData, 2)
 
     def test_callback(self):
-        self.run_test_callback(TestOnTrainingData, np.array([0, 0.5, 1]))
+        self.run_test_callback(TestOnTrainingData, self._callback_values(2))
 
     def test_preprocessor(self):
         self.run_test_preprocessor(TestOnTrainingData, [150])
@@ -496,7 +513,7 @@ class TestTestOnTestData(TestSampling):
         data = random_data(50, 4)
         TestOnTestData(data, data, [MajorityLearner(), MajorityLearner()],
                        callback=record_progress)
-        self.assertEqual(progress, [0, 0.5, 1])
+        np.testing.assert_almost_equal(progress, self._callback_values(2))
 
     def test_preprocessor(self):
         def preprocessor(data):
