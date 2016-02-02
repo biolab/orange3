@@ -1,7 +1,8 @@
+<!DOCTYPE html>
 <html>
 <head>
-    <title>Orange viewer</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8" />
+    <title>Orange Report</title>
 
     <style>
     html, body, table {
@@ -51,6 +52,14 @@
     div.selected {
         background: #ddd;
     }
+    @media print{
+        div.selected {
+            background: inherit;
+        }
+        ::-webkit-input-placeholder {
+            color: transparent;
+        }
+    }
 
     div.content {
         margin-left: 15px;
@@ -68,8 +77,8 @@
 
     img {
         display: block;
-        margin-left: auto;
-        margin-right: auto
+        margin: auto;
+        max-height: 20cm;
     }
 
     span.legend-square {
@@ -100,6 +109,12 @@
 
     div.selected textarea {
         display: block;
+    }
+
+    @media print{
+        section.section, img {
+            page-break-inside: avoid;
+        }
     }
     </style>
 
