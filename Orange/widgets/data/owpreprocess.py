@@ -1336,8 +1336,9 @@ class SequenceFlow(QWidget):
 
         def focusOutEvent(self, event):
             event.accept()
-            self.__focusframe.deleteLater()
-            self.__focusframe = None
+            if self.__focusframe is not None:
+                self.__focusframe.deleteLater()
+                self.__focusframe = None
             self.__deleteaction.setEnabled(False)
 
         def closeEvent(self, event):
