@@ -266,6 +266,21 @@
             "values": 2
         }
     },
+    "dermatology": {
+        "features": {
+            "continuous": 33,
+            "discrete": 1,
+            "meta": 0
+        },
+        "location": "dermatology.tab",
+        "missing": true,
+        "name": "dermatology",
+        "rows": 366,
+        "target": {
+            "type": "discrete",
+            "values": 6
+        }
+    },
     "echocardiogram": {
         "features": {
             "continuous": 8,
