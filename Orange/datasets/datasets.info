@@ -296,6 +296,21 @@
             "values": null
         }
     },
+    "ecoli": {
+        "features": {
+            "continuous": 5,
+            "discrete": 2,
+            "meta": 1
+        },
+        "location": "ecoli.tab",
+        "missing": false,
+        "name": "ecoli",
+        "rows": 336,
+        "target": {
+            "type": "discrete",
+            "values": 8
+        }
+    },
     "emotions": {
         "features": {
             "continuous": 72,
