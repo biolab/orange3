@@ -123,7 +123,7 @@ class OWTreeGraph(OWTreeViewer2D):
     def node_tooltip(self, node):
         if node.i > 0:
             text = " AND\n".join(
-                "%s %s %s" % (n, s, v) for n, s, v in node.rule())
+                "%s %s %s" % (n, s, v) for (n, s), v in node.rule().items())
         else:
             text = "Root"
         return text
@@ -323,10 +323,19 @@ class TreeNode(GraphicsNode):
                 attr_name = parent_attr.name
                 sign = [">", "<="][is_left_child]
                 value = "%.3f" % self.tree.threshold[self.parent.i]
-            pr.append((attr_name, sign, value))
+            if (attr_name, sign) in pr:
+                old_val = pr[(attr_name, sign)]
+                if sign == ">":
+                    pr[(attr_name, sign)] = max(float(value), float(old_val))
+                elif sign == "≠":
+                    pr[(attr_name, sign)] = "{}, {}".format(old_val, value)
+                elif sign == "<=":
+                    pr[(attr_name, sign)] = min(float(value), float(old_val))
+            else:
+                pr[(attr_name, sign)] = value
             return pr
         else:
-            return []
+            return {}
 
     def is_leaf(self):
         """
