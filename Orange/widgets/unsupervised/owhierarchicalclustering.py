@@ -579,7 +579,6 @@ class DendrogramWidget(QGraphicsWidget):
 
             item.setPath(Path_toQtPath(geom))
             item.setZValue(-node.value.height)
-            item.setPen(QPen(Qt.blue))
             r = item.boundingRect()
             base = self._root.value.height
 
