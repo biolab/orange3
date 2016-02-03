@@ -177,7 +177,7 @@ class MLPLearner(Learner):
         if np.isnan(np.sum(X)) or np.isnan(np.sum(Y)):
             raise ValueError('MLP does not support unknown values')
 
-        if Y.shape[1] == 1:
+        if Y.ndim == 1 or Y.shape[1] == 1:
             num_classes = np.unique(Y).size
             Y = np.eye(num_classes)[Y.ravel().astype(int)]
 
