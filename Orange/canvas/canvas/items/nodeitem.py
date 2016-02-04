@@ -103,12 +103,12 @@ class NodeBodyItem(GraphicsPathObject):
         self.setGraphicsEffect(self.shadow)
         self.shadow.setEnabled(True)
 
-        self.__blurAnimation = QPropertyAnimation(self.shadow, "blurRadius",
+        self.__blurAnimation = QPropertyAnimation(self.shadow, b"blurRadius",
                                                   self)
         self.__blurAnimation.setDuration(100)
         self.__blurAnimation.finished.connect(self.__on_finished)
 
-        self.__pingAnimation = QPropertyAnimation(self, "scale", self)
+        self.__pingAnimation = QPropertyAnimation(self, b"scale", self)
         self.__pingAnimation.setDuration(250)
         self.__pingAnimation.setKeyValues([(0.0, 1.0), (0.5, 1.1), (1.0, 1.0)])
 
