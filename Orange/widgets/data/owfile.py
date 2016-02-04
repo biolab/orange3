@@ -186,7 +186,9 @@ class OWFile(widget.OWWidget):
         self._relocate_recent_files()
 
         vbox = gui.radioButtons(
-            self.controlArea, self, "source", box="Source", addSpace=True)
+            self.controlArea, self, "source", box=True, addSpace=True,
+            callback=self.load_data)
+
         box = gui.widgetBox(vbox, orientation="horizontal")
         gui.appendRadioButton(vbox, "File", insertInto=box)
         self.file_combo = QtGui.QComboBox(
@@ -204,13 +206,12 @@ class OWFile(widget.OWWidget):
             self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-
         box = gui.widgetBox(vbox, orientation="horizontal")
         gui.appendRadioButton(vbox, "URL", insertInto=box)
         self.le_url = le_url = QLineEdit(self.url)
         l, t, r, b = le_url.getTextMargins()
         le_url.setTextMargins(l + 5, t, r, b)
-        le_url.returnPressed.connect(self.read_url)
+        le_url.returnPressed.connect(self._url_set)
         box.layout().addWidget(le_url)
 
         self.completer_model = PyListModel()
@@ -219,22 +220,20 @@ class OWFile(widget.OWWidget):
         completer.setModel(self.completer_model)
         completer.setCompletionMode(QCompleter.PopupCompletion)
         completer.setCaseSensitivity(Qt.CaseInsensitive)
-        completer.setCompletionRole(Qt.DisplayRole)
         le_url.setCompleter(completer)
 
         box = gui.widgetBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, 'No data loaded.')
-        self.warnings = gui.widgetLabel(box, ' ')
+        self.warnings = gui.widgetLabel(box, '')
 
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        gui.button(box, self, "Browse demo files",
+        gui.button(box, self, "Browse documentation data sets",
                    callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
         box.layout().addWidget(self.report_button)
-        self.report_button.setMaximumWidth(250)
+        self.report_button.setFixedWidth(170)
 
-
-    #Set word wrap, so long warnings won't expand the widget
+        # Set word wrap, so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
         self.warnings.setSizePolicy(
             QSizePolicy.Ignored, QSizePolicy.MinimumExpanding)
@@ -242,10 +241,7 @@ class OWFile(widget.OWWidget):
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
-        QtCore.QTimer.singleShot(0, [self.reload, self.read_url][self.source])
-
-    def _url_focused(self):
-        self.source = self.URL
+        QtCore.QTimer.singleShot(0, self.load_data)
 
     def _relocate_recent_files(self):
         paths = [("sample-datasets", get_sample_datasets_dir())]
@@ -264,7 +260,6 @@ class OWFile(widget.OWWidget):
 
     def set_file_list(self):
         self.file_combo.clear()
-
         if not self.recent_paths:
             self.file_combo.addItem("(none)")
             self.file_combo.model().item(0).setEnabled(False)
@@ -272,51 +267,40 @@ class OWFile(widget.OWWidget):
             for i, recent in enumerate(self.recent_paths):
                 self.file_combo.addItem(recent.value)
                 self.file_combo.model().item(i).setToolTip(recent.abspath)
-        self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
-        self.source = self.LOCAL_FILE
         if self.recent_paths:
             basename = self.file_combo.currentText()
-            if (basename == self.recent_paths[0].relpath or
-                basename == self.recent_paths[0].value):
-                return self.load_data(self.recent_paths[0].abspath)
+            if basename in [self.recent_paths[0].relpath,
+                            self.recent_paths[0].value]:
+                self.source = self.LOCAL_FILE
+                return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
 
     def select_file(self, n):
-        self.source = self.LOCAL_FILE
         if n < len(self.recent_paths):
             recent = self.recent_paths[n]
             del self.recent_paths[n]
             self.recent_paths.insert(0, recent)
         elif n:
             path = self.file_combo.currentText()
-            if path == "Browse documentation data sets...":
-                self.browse_file(True)
-            elif os.path.exists(path):
+            if os.path.exists(path):
                 self._add_path(path)
             else:
-                self.info.setText('Data was not loaded.')
+                self.info.setText('Data was not loaded:')
                 self.warnings.setText("File {} does not exist".format(path))
                 self.file_combo.removeItem(n)
                 self.file_combo.lineEdit().setText(path)
                 return
 
         if len(self.recent_paths) > 0:
-            self.load_data(self.recent_paths[0].abspath)
+            self.source = self.LOCAL_FILE
+            self.load_data()
             self.set_file_list()
 
-    def read_url(self):
+    def _url_set(self):
         self.source = self.URL
-        self.url = url = self.le_url.text()
-        if not url:
-            return
-        try:
-            self.completer_model.remove(url or self.url)
-        except ValueError:
-            pass
-        self.completer_model.insert(0, url)
-        self.load_data(url)
+        self.load_data()
 
     def browse_file(self, in_demos=False):
         if in_demos:
@@ -339,7 +323,7 @@ class OWFile(widget.OWWidget):
                     "Cannot find the directory with example data sets")
                 return
         else:
-            if self.recent_paths and self.recent_paths[0].prefix != 'url-datasets':
+            if self.recent_paths:
                 start_file = self.recent_paths[0].abspath
             else:
                 start_file = os.path.expanduser("~/")
@@ -351,7 +335,8 @@ class OWFile(widget.OWWidget):
 
         self._add_path(filename)
         self.set_file_list()
-        self.load_data(self.recent_paths[0].abspath)
+        self.source = self.LOCAL_FILE
+        self.load_data()
 
     def _add_path(self, filename):
         searchpaths = [("sample-datasets", get_sample_datasets_dir())]
@@ -367,82 +352,99 @@ class OWFile(widget.OWWidget):
         self.recent_paths.insert(0, recent)
 
     # Open a file, create data from it and send it over the data channel
-    def load_data(self, fn):
-        self.warning()
-        self.information()
-        fn_original = fn
-        if self.source == self.LOCAL_FILE:
+    def load_data(self):
+        def load(method, fn):
+            with catch_warnings(record=True) as warnings:
+                data = method(fn)
+                self.warning(
+                    33, warnings[-1].message.args[0] if warnings else '')
+            return data, fn
+
+        def load_from_file():
+            fn = fn_original = self.recent_paths[0].abspath
+            if fn == "(none)":
+                return None, ""
             if not os.path.exists(fn):
                 dir_name, basename = os.path.split(fn)
                 if os.path.exists(os.path.join(".", basename)):
                     fn = os.path.join(".", basename)
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
-        else:
-            if not fn:
-                fn = "(none)"
-            elif "://" not in fn:
-                fn = "http://" + fn
-
-        if fn == "(none)":
-            self.send("Data", None)
-            self.info.setText("No data loaded")
-            self.warnings.setText("")
-            return
-
-        self.loaded_file = ""
-
-        data = None
-        progress = gui.ProgressBar(self, 3)
-        progress.advance()
-        try:
-            with catch_warnings(record=True) as warnings:
-                data = Table(fn)
-            self.warning(33, warnings[-1].message.args[0] if warnings else '')
-            self.loaded_file = fn
-        except Exception as exc:
-            self.info.setText('Data was not loaded:')
-            if self.source == self.LOCAL_FILE:
+            try:
+                return load(Table.from_file, fn)
+            except Exception as exc:
                 self.warnings.setText(str(exc))
                 ind = self.file_combo.currentIndex()
                 self.file_combo.removeItem(ind)
                 if ind < len(self.recent_paths) and \
                         self.recent_paths[ind].abspath == fn_original:
                     del self.recent_paths[ind]
-            else:
-                self.warning.setText(
-                    "URL '{}' does not contain valid data".format(fn))
-                # Don't remove; resource may reappear, or the user mistyped it
-                # and would like to retrieve it from history and fix it.
-        finally:
-            progress.finish()
+                raise
 
-        if data is None:
+        def load_from_network():
+            self.url = url = self.le_url.text()
+            if url:
+                try:
+                    self.completer_model.remove(url or self.url)
+                except ValueError:
+                    pass
+                self.completer_model.insert(0, url)
+            if not url:
+                return None, ""
+            elif "://" not in url:
+                url = "http://" + url
+            try:
+                return load(Table.from_url, url)
+            except:
+                self.warnings.setText(
+                    "URL '{}' does not contain valid data".format(url))
+                # Don't remove from recent_urls:
+                # resource may reappear, or the user mistyped it
+                # and would like to retrieve it from history and fix it.
+                raise
+
+        self.warning()
+        self.information()
+
+        try:
+            with self.progressBar(3) as progress:
+                progress.advance()
+                self.data, self.loaded_file = \
+                    [load_from_file, load_from_network][self.source]()
+        except:
+            self.info.setText("Data was not loaded:")
             self.data = None
+            self.loaded_file = ""
+            return
         else:
-            domain = data.domain
-            text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
-                len(data), len(domain.attributes), len(domain.metas))
-            if domain.has_continuous_class:
-                text += "\nRegression; numerical class."
-            elif domain.has_discrete_class:
-                text += "\nClassification; discrete class with {} values.".format(
-                    len(domain.class_var.values))
-            elif data.domain.class_vars:
-                text += "\nMulti-target; {} target variables.".format(
-                    len(data.domain.class_vars))
-            else:
-                text += "\nData has no target variable."
-            if 'Timestamp' in data.domain:
-                # Google Forms uses this header to timestamp responses
-                text += '\n\nFirst entry: {}\nLast entry: {}'.format(
-                    data[0, 'Timestamp'], data[-1, 'Timestamp'])
-            self.info.setText(text)
             self.warnings.setText("")
 
-            add_origin(data, fn)
+        data = self.data
+        if data is None:
+            self.send("Data", None)
+            self.info.setText("No data loaded")
+            return
 
-            self.data = data
+        domain = data.domain
+        text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
+            len(data), len(domain.attributes), len(domain.metas))
+        if domain.has_continuous_class:
+            text += "\nRegression; numerical class."
+        elif domain.has_discrete_class:
+            text += "\nClassification; discrete class with {} values.".format(
+                len(domain.class_var.values))
+        elif data.domain.class_vars:
+            text += "\nMulti-target; {} target variables.".format(
+                len(data.domain.class_vars))
+        else:
+            text += "\nData has no target variable."
+        if 'Timestamp' in data.domain:
+            # Google Forms uses this header to timestamp responses
+            text += '\n\nFirst entry: {}\nLast entry: {}'.format(
+                data[0, 'Timestamp'], data[-1, 'Timestamp'])
+        self.info.setText(text)
+
+        add_origin(data, self.loaded_file)
         self.send("Data", data)
 
     def get_widget_name_extension(self):
