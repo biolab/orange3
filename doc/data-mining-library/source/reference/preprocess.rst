@@ -308,7 +308,7 @@ Feature selection
 `Feature scoring`
 -----------------
 
-Feature score is an assessment of the usefulness of the feature for
+Feature scoring is an assessment of the usefulness of features for
 prediction of the dependant (class) variable. Orange provides classes
 that compute the common feature scores for classification and regression.
 
@@ -316,37 +316,70 @@ The code below computes the information gain of feature "tear_rate"
 in the Lenses data set:
 
     >>> data = Orange.data.Table("lenses")
-    >>> Orange.preprocess.score.InfoGain("tear_rate", data)
+    >>> Orange.preprocess.score.InfoGain(data, "tear_rate")
     0.54879494069539858
 
 An alternative way of invoking the scorers is to construct the scoring
-object, like in the following example:
+object and calculate the scores for all the features at once, like in the
+following example:
 
     >>> gain = Orange.preprocess.score.InfoGain()
-    >>> for att in data.domain.attributes:
-    ...     print("%s %.3f" % (att.name, gain(att, data)))
-    age 0.039
-    prescription 0.040
-    astigmatic 0.377
-    tear_rate 0.549
+    >>> scores = gain(data)
+    >>> for attr, score in zip(data.domain.attributes, scores):
+    ...     print('%.3f' % score, attr.name)
+    0.039 age
+    0.040 prescription
+    0.377 astigmatic
+    0.549 tear_rate
 
 Feature scoring methods work on different feature types (continuous or discrete)
-and different types of target variables (classification or regression problem).
+and different types of target variables (i.e. in classification or regression
+problems).
 Refer to method's `feature_type` and `class_type` attributes for intended type
 or employ preprocessing methods (e.g. discretization) for conversion between
 data types.
 
 .. autoclass:: Orange.preprocess.score.ANOVA
+   :members: feature_type, class_type
 
 .. autoclass:: Orange.preprocess.score.Chi2
+   :members: feature_type, class_type
 
 .. autoclass:: Orange.preprocess.score.GainRatio
+   :members: feature_type, class_type
 
 .. autoclass:: Orange.preprocess.score.Gini
+   :members: feature_type, class_type
 
 .. autoclass:: Orange.preprocess.score.InfoGain
+   :members: feature_type, class_type
 
 .. autoclass:: Orange.preprocess.score.UnivariateLinearRegression
+   :members: feature_type, class_type
+
+.. autoclass:: Orange.preprocess.score.FCBF
+   :members: feature_type, class_type
+
+.. autoclass:: Orange.preprocess.score.ReliefF
+   :members: feature_type, class_type
+
+.. autoclass:: Orange.preprocess.score.RReliefF
+   :members: feature_type, class_type
+
+Additionally, you can use the ``score_data()`` method of some learners (\
+:obj:`Orange.classification.LinearRegressionLearner`,
+:obj:`Orange.regression.LogisticRegressionLearner`,
+:obj:`Orange.classification.RandomForestLearner`, and
+:obj:`Orange.regression.RandomForestRegressionLearner`)
+to obtain the feature scores as calculated by these learners. For example:
+
+    >>> learner = Orange.classification.LogisticRegressionLearner()
+    >>> learner.score_data(data)
+    [0.31571299907366146,
+     0.28286199971877485,
+     0.67496525667835794,
+     0.99930286901257692]
+
 
 `Feature selection`
 -------------------

@@ -27,7 +27,7 @@ from libcpp.map cimport map as cpp_map
 # Import C99 features from numpy's npy_math (MSVC 2010)
 # Note we cannot import isnan due to mixing C++ and C
 # (at least on OSX the <cmath> undefines the isnan macro)
-from numpy.math cimport INFINITY
+from numpy.math cimport INFINITY, NAN
 
 ctypedef np.float64_t   double
 ctypedef np.int8_t[:]   arr_i1_t
@@ -50,6 +50,8 @@ cdef inline double nanmax(arr_f1_t A) nogil:
         ai = A[i]
         if not isnan(ai) and ai > max:
             max = ai
+    if max == -INFINITY:
+        return NAN
     return max
 
 
@@ -300,12 +302,12 @@ cdef arr_f1_t _relieff_cls_(arr_f2_t X,
     return weights
 
 
-cdef inline void contingency_table(np.ndarray x1,
-                                   int n_unique1,
-                                   np.ndarray x2,
-                                   int n_unique2,
-                                   Contingencies &tables,
-                                   Py_ssize_t attribute):
+cdef inline void _contingency_table(np.ndarray x1,
+                                    int n_unique1,
+                                    np.ndarray x2,
+                                    int n_unique2,
+                                    Contingencies &tables,
+                                    Py_ssize_t attribute):
     cdef:
         np.ndarray table = np.zeros((n_unique1, n_unique2))
         np.ndarray row_sums
@@ -322,6 +324,19 @@ cdef inline void contingency_table(np.ndarray x1,
     tables.insert((attribute, table))
 
 
+def contingency_table(x1, x2):
+    """Return contingency array between x1 and x2."""
+    cdef:
+        Contingencies tables = Contingencies()
+        arr_f2_t table
+        int n1 = int(nanmax(x1) + 1), n2 = int(nanmax(x2) + 1)
+    if isnan(n1) or isnan(n2):
+        return np.array([])
+    _contingency_table(x1, n1, x2, n2, tables, 0)
+    table = tables[0]
+    return np.asarray(table)
+
+
 cdef void contingency_tables(np.ndarray X,
                              np.ndarray y,
                              arr_i1_t is_discrete,
@@ -335,7 +350,7 @@ cdef void contingency_tables(np.ndarray X,
         if (is_discrete[a] and
             # Don't calculate+store contingencies if not required
             np.isnan(X[:, a]).any()):
-            contingency_table(X[:, a], int(nanmax(X[:, a]) + 1),
+            _contingency_table(X[:, a], int(nanmax(X[:, a]) + 1),
                               y, ny, tables, a)
 
 
