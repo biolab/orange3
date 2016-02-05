@@ -440,7 +440,7 @@ class OWMDS(widget.OWWidget):
             self._legend_item = None
 
     def update_controls(self):
-        if getattr(self.matrix, 'axis', 1) == 0:
+        if self.data is None and getattr(self.matrix, 'axis', 1) == 0:
             # Column-wise distances
             attr = "Attribute names"
             self.labelvar_model[:] = ["No labels", attr]
