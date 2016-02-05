@@ -206,7 +206,7 @@ class OWFile(widget.OWWidget):
         self.le_url = le_url = QtGui.QLineEdit(self.url)
         l, t, r, b = le_url.getTextMargins()
         le_url.setTextMargins(l + 5, t, r, b)
-        le_url.returnPressed.connect(self._url_set)
+        le_url.editingFinished.connect(self._url_set)
         box.layout().addWidget(le_url)
 
         self.completer_model = PyListModel()
@@ -266,8 +266,8 @@ class OWFile(widget.OWWidget):
     def reload(self):
         if self.recent_paths:
             basename = self.file_combo.currentText()
-            if basename in [self.recent_paths[0].relpath,
-                            self.recent_paths[0].value]:
+            path = self.recent_paths[0]
+            if basename in [path.relpath, path.value]:
                 self.source = self.LOCAL_FILE
                 return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
@@ -374,13 +374,16 @@ class OWFile(widget.OWWidget):
                 raise
 
         def load_from_network():
-            self.url = url = self.le_url.text()
-            if url:
+            def update_model():
                 try:
                     self.completer_model.remove(url or self.url)
                 except ValueError:
                     pass
                 self.completer_model.insert(0, url)
+
+            self.url = url = self.le_url.text()
+            if url:
+                QtCore.QTimer.singleShot(0, update_model)
             if not url:
                 return None, ""
             elif "://" not in url:
@@ -399,10 +402,8 @@ class OWFile(widget.OWWidget):
         self.information()
 
         try:
-            with self.progressBar(3) as progress:
-                progress.advance()
-                self.data, self.loaded_file = \
-                    [load_from_file, load_from_network][self.source]()
+            self.data, self.loaded_file = \
+                [load_from_file, load_from_network][self.source]()
         except:
             self.info.setText("Data was not loaded:")
             self.data = None
