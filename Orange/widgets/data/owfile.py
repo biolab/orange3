@@ -1,18 +1,14 @@
 import os
-import sys
-import urllib
 from warnings import catch_warnings
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QCompleter, QLineEdit, QSizePolicy
+from PyQt4.QtGui import QSizePolicy
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat
-from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.widget import OutputSignal
 
 
 def add_origin(examples, filename):
@@ -155,7 +151,7 @@ class OWFile(widget.OWWidget):
     priority = 10
     category = "Data"
     keywords = ["data", "file", "load", "read"]
-    outputs = [OutputSignal(
+    outputs = [widget.OutputSignal(
         "Data", Table,
         doc="Attribute-valued data set read from the input file.")]
 
@@ -170,7 +166,7 @@ class OWFile(widget.OWWidget):
     source = Setting(LOCAL_FILE)
     url = Setting("")
 
-    dlgFormats = (
+    dlg_formats = (
         "All readable files ({});;".format(
             '*' + ' *'.join(FileFormat.readers.keys())) +
         ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
@@ -182,7 +178,6 @@ class OWFile(widget.OWWidget):
         self.domain = None
         self.data = None
         self.loaded_file = ""
-        self.recent_urls = ["asdf", "qwer"]  # TODO Remove!
         self._relocate_recent_files()
 
         vbox = gui.radioButtons(
@@ -208,7 +203,7 @@ class OWFile(widget.OWWidget):
 
         box = gui.widgetBox(vbox, orientation="horizontal")
         gui.appendRadioButton(vbox, "URL", insertInto=box)
-        self.le_url = le_url = QLineEdit(self.url)
+        self.le_url = le_url = QtGui.QLineEdit(self.url)
         l, t, r, b = le_url.getTextMargins()
         le_url.setTextMargins(l + 5, t, r, b)
         le_url.returnPressed.connect(self._url_set)
@@ -216,10 +211,10 @@ class OWFile(widget.OWWidget):
 
         self.completer_model = PyListModel()
         self.completer_model.wrap(self.recent_urls)
-        completer = QCompleter()
+        completer = QtGui.QCompleter()
         completer.setModel(self.completer_model)
-        completer.setCompletionMode(QCompleter.PopupCompletion)
-        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        completer.setCompletionMode(completer.PopupCompletion)
+        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
         le_url.setCompleter(completer)
 
         box = gui.widgetBox(self.controlArea, "Info")
@@ -329,7 +324,7 @@ class OWFile(widget.OWWidget):
                 start_file = os.path.expanduser("~/")
 
         filename = QtGui.QFileDialog.getOpenFileName(
-            self, 'Open Orange Data File', start_file, self.dlgFormats)
+            self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
 
@@ -343,12 +338,9 @@ class OWFile(widget.OWWidget):
         basedir = self.workflowEnv().get("basedir", None)
         if basedir is not None:
             searchpaths.append(("basedir", basedir))
-
         recent = RecentPath.create(filename, searchpaths)
-
         if recent in self.recent_paths:
             self.recent_paths.remove(recent)
-
         self.recent_paths.insert(0, recent)
 
     # Open a file, create data from it and send it over the data channel
@@ -485,6 +477,7 @@ class OWFile(widget.OWWidget):
 
 
 if __name__ == "__main__":
+    import sys
     a = QtGui.QApplication(sys.argv)
     ow = OWFile()
     ow.show()
