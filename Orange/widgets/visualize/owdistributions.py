@@ -281,7 +281,8 @@ class OWDistributions(widget.OWWidget):
         if self.disc_cont:
             data = self.data[:, (self.var, self.cvar) if self.cvar else self.var ]
             disc = Orange.preprocess.discretize.EqualWidth(n=self.bins[self.smoothing_index])
-            data = Orange.preprocess.Discretize(data, method=disc)
+            data = Orange.preprocess.Discretize(data, method=disc,
+                                                remove_const=False)
             self.var = data.domain[0]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
@@ -324,6 +325,8 @@ class OWDistributions(widget.OWWidget):
         self.set_left_axis_name()
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
+            if not len(dist[0]):
+                return
             edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST,
                 smoothing_factor=self.smoothing_facs[self.smoothing_index])
             edges = edges + (edges[1] - edges[0])/2
@@ -332,8 +335,7 @@ class OWDistributions(widget.OWWidget):
             pen = QtGui.QPen(QtGui.QBrush(Qt.white), 3)
             pen.setCosmetic(True)
             item.setData(edges, curve, antialias=True, stepMode=False,
-                         fillLevel=0, brush=QtGui.QBrush(Qt.gray),
-                         pen=pen)
+                         fillLevel=0, brush=QtGui.QBrush(Qt.gray), pen=pen)
             self.plot.addItem(item)
             item.tooltip = "Density"
             self.tooltip_items.append((self.plot, item))
