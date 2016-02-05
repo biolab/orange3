@@ -12,6 +12,20 @@ import numpy as np
 from unittest.mock import Mock, MagicMock, patch
 
 
+@np.vectorize
+def naneq(a, b):
+    try:
+        return (isnan(a) and isnan(b)) or a == b
+    except TypeError:
+        return a == b
+
+
+def assert_array_nanequal(*args, **kwargs):
+    # similar as np.testing.assert_array_equal but with better handling of
+    # object arrays
+    return np.testing.utils.assert_array_compare(naneq, *args, **kwargs)
+
+
 class TableTestCase(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
@@ -564,6 +578,11 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(2, len(d))
         self.assertEqual(d[1], [42, "0", None])
 
+        assert_array_nanequal(
+            d.metas,
+            np.array([[v.Unknown for v in d.domain.metas]] * 2,
+                     dtype=object))
+
     def test_append2(self):
         d = data.Table("iris")
         d.shuffle()
@@ -603,6 +622,15 @@ class TableTestCase(unittest.TestCase):
         x.extend(y)
         np.testing.assert_almost_equal(x[-2:, 1].X, y.X)
         self.assertEqual(np.isnan(x).sum(), 8)
+
+    def test_extend2(self):
+        d = data.Table("test3")
+        d.extend([[None] * 3,
+                  [None] * 3])
+        assert_array_nanequal(
+            d.metas,
+            np.array([[v.Unknown for v in d.domain.metas]] * 2,
+                     dtype=object))
 
     def test_copy(self):
         t = data.Table(np.zeros((5, 3)), np.arange(5), np.zeros((5, 3)))

@@ -388,7 +388,7 @@ class Table(MutableSequence, Storage):
         :return:
         """
         X, Y, W = _check_arrays(X, Y, W, dtype='float64')
-        metas, = _check_arrays(metas)
+        metas, = _check_arrays(metas, dtype=object)
 
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)

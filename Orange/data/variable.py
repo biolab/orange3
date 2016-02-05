@@ -135,15 +135,16 @@ class Value(float):
         :type variable: Orange.data.Variable
         :param value: value
         """
-        if not isinstance(value, str):
-            try:
-                self = super().__new__(cls, value)
-            except:
-                self = super().__new__(cls, -1)
+        if variable.is_primitive():
+            self = super().__new__(cls, value)
+            self.variable = variable
+            self._value = None
         else:
-            self = super().__new__(cls, -1)
-        self._value = value
-        self.variable = variable
+            isunknown = value == variable.Unknown
+            self = super().__new__(
+                cls, np.nan if isunknown else np.finfo(float).min)
+            self.variable = variable
+            self._value = value
         return self
 
     def __init__(self, _, __=Unknown):
@@ -167,17 +168,17 @@ class Value(float):
         return super().__eq__(other)
 
     def __contains__(self, other):
-        if (self.value is not None
-                and isinstance(self.value, str)
+        if (self._value is not None
+                and isinstance(self._value, str)
                 and isinstance(other, str)):
-            return other in self.value
+            return other in self._value
         raise TypeError("invalid operation on Value()")
 
     def __hash__(self):
-        if self.value is None:
+        if self._value is None:
             return super().__hash__()
         else:
-            return super().__hash__() ^ hash(self.value)
+            return hash((super().__hash__(), self._value))
 
     @property
     def value(self):
@@ -757,6 +758,7 @@ class StringVariable(Variable):
     Descriptor for string variables. String variables can only appear as
     meta attributes.
     """
+    Unknown = ""
     TYPE_HEADERS = ('string', 's', 'text')
 
     def to_val(self, s):

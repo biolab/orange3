@@ -1,4 +1,6 @@
 from time import time
+from numbers import Real
+from itertools import starmap
 import unittest
 import pickle
 
@@ -425,7 +427,16 @@ class TestDomainInit(unittest.TestCase):
         x, y, metas = domain.convert([42, 13, "White"])
         assert_array_equal(x, np.array([42, 13]))
         assert_array_equal(y, np.array([0]))
-        self.assertTrue(all(np.isnan(np.array(metas, dtype=float))))
+        metas_exp = [gender.Unknown, education.Unknown, ssn.Unknown]
+
+        def eq(a, b):
+            if isinstance(a, Real) and isinstance(b, Real) and \
+                    np.isnan(a) and np.isnan(b):
+                return True
+            else:
+                return a == b
+
+        self.assertTrue(all(starmap(eq, zip(metas, metas_exp))))
 
         x, y, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
         assert_array_equal(x, np.array([42, 13]))
