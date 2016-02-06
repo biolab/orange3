@@ -8,7 +8,7 @@ from PyQt4.QtGui import QSizePolicy, QTableView
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owcolor import HorizontalGridDelegate
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.itemmodels import PyListModel
+from Orange.widgets.utils.itemmodels import PyListModel, TableModel
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat
 from Orange.data import \
@@ -159,15 +159,27 @@ class VarTableModel(QtCore.QAbstractTableModel):
         self.variables = []
 
     def set_domain(self, domain):
-        self.emit(QtCore.SIGNAL("modelAboutToBeReset()"))
+        def may_be_numeric(var):
+            if var.is_continuous:
+                return True
+            if var.is_discrete:
+                try:
+                    [float(x) for x in var.values]
+                    return True
+                except ValueError:
+                    return False
+            return False
+
+        self.modelAboutToBeReset.emit()
         self.variables = self.original = [
             [var.name, type(var), place,
-             ", ".join(var.values) if var.is_discrete else ""]
+             ", ".join(var.values) if var.is_discrete else "",
+             may_be_numeric(var)]
             for place, vars in enumerate(
                 (domain.attributes, domain.class_vars, domain.metas))
             for var in vars
         ]
-        self.emit(QtCore.SIGNAL("modelReset()"))
+        self.modelReset.emit()
 
     def rowCount(self, parent):
         return 0 if parent.isValid() else len(self.variables)
@@ -189,8 +201,11 @@ class VarTableModel(QtCore.QAbstractTableModel):
             if col == 1:
                 return gui.attributeIconDict[self.vartypes.index(val) + 1]
         if role == QtCore.Qt.ForegroundRole:
-            if self.variables[row][3] == 3:
-                return QtGui.QColor(208, 208, 208)
+            if self.variables[row][2] == 3 and col != 2:
+                return QtGui.QColor(160, 160, 160)
+        if role == QtCore.Qt.BackgroundRole:
+            place = self.variables[row][2]
+            return TableModel.ColorForRole.get(place, None)
 
     def setData(self, index, value, role):
         row, col = index.row(), index.column()
@@ -201,14 +216,16 @@ class VarTableModel(QtCore.QAbstractTableModel):
             elif col == 1:
                 vartype = self.name2type[value]
                 row_data[col] = vartype
-                if not vartype.is_primitive():
+                if not vartype.is_primitive() and row_data[2] < 2:
                     row_data[2] = 2
-                right = index.sibling(row, 2)
-                self.dataChanged.emit(index, right)
             elif col == 2:
                 row_data[col] = self.places.index(value)
             else:
                 return False
+            # Settings may change background colors
+            if col > 0:
+                self.dataChanged.emit(
+                    index.sibling(row, 0), index.sibling(row, 3))
             self.widget.apply_button.show()
             return True
 
@@ -251,7 +268,7 @@ class ComboDelegate(HorizontalGridDelegate):
 class VarTypeDelegate(ComboDelegate):
     def setEditorData(self, combo, index):
         combo.clear()
-        no_numeric = self.view.model().original[index.row()][1] != ContinuousVariable
+        no_numeric = not self.view.model().variables[index.row()][4]
         ind = self.items.index(index.data())
         combo.addItems(self.items[:1] + self.items[1 + no_numeric:])
         combo.setCurrentIndex(ind - (no_numeric and ind > 1))
@@ -260,10 +277,9 @@ class VarTypeDelegate(ComboDelegate):
 class PlaceDelegate(ComboDelegate):
     def setEditorData(self, combo, index):
         combo.clear()
-        skip = 2 * (
-            not self.view.model().variables[index.row()][1].is_primitive())
-        combo.addItems(self.items[skip:])
-        combo.setCurrentIndex(self.items.index(index.data()) - skip)
+        to_meta = not self.view.model().variables[index.row()][1].is_primitive()
+        combo.addItems(self.items[2 * to_meta:])
+        combo.setCurrentIndex(self.items.index(index.data()) - 2 * to_meta)
 
 
 class OWFile(widget.OWWidget):
