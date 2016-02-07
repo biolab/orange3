@@ -552,6 +552,14 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     return b
 
 
+def hBox(*args, **kwargs):
+    return widgetBox(orientation="horizontal", *args, **kwargs)
+
+
+def vBox(*args, **kwargs):
+    return widgetBox(orientation="vertical", *args, **kwargs)
+
+
 def indentedBox(widget, sep=20, orientation="vertical", **misc):
     """
     Creates an indented box. The function can also be used "on the fly"::
