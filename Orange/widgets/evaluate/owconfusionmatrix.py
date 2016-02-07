@@ -159,7 +159,11 @@ class OWConfusionMatrix(widget.OWWidget):
         elif results is not None:
             raise NotImplementedError
 
-        if results is not None:
+        if results is None:
+            self.report_button.setDisabled(True)
+        else:
+            self.report_button.setDisabled(False)
+
             nmodels, ntests = results.predicted.shape
             self.headers = class_values + \
                            [unicodedata.lookup("N-ARY SUMMATION")]
@@ -419,6 +423,14 @@ class OWConfusionMatrix(widget.OWWidget):
 
             model.setItem(N + 2, N + 2, sum_item(int(total)))
 
+    def send_report(self):
+        if self.results is not None and self.selected_learner:
+            index = self.selected_learner[0]
+            self.report_table(
+                "Confusion matrix for {} (showing {})".
+                format(self.learners[index],
+                       self.quantities[self.selected_quantity].lower()),
+                self.tablemodel)
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
