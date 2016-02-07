@@ -189,15 +189,18 @@ class Report:
         name, table = self._fix_args(name, table)
         join = "".join
 
+        def data(item):
+            return item and item.data(Qt.DisplayRole) or ""
+
         def report_standard_model(model):
-            content = ((model.item(row, col).data(Qt.DisplayRole)
+            content = ((data(model.item(row, col))
                         for col in range(model.columnCount())
                         ) for row in range(model.rowCount()))
             has_header = not hasattr(table, "isHeaderHidden") or \
                 not table.isHeaderHidden()
             if has_header:
                 try:
-                    header = (model.horizontalHeaderItem(col).data(Qt.DisplayRole)
+                    header = (data(model.horizontalHeaderItem(col))
                               for col in range(model.columnCount())),
                     content = chain(header, content)
                 except:
