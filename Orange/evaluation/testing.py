@@ -1,3 +1,4 @@
+import sys
 import multiprocessing as mp
 from threading import Thread
 from collections import namedtuple
@@ -14,7 +15,6 @@ from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "ShuffleSplit", "TestOnTestData", "sample"]
-
 
 _MpResults = namedtuple('_MpResults', ('fold_i', 'learner_i', 'model',
                                        'failed', 'n_values', 'values', 'probs'))
@@ -326,7 +326,12 @@ class Results:
             warnings.warn("Not all arguments (learners) are picklable. "
                           "Setting n_jobs=1", OrangeWarning)
 
-        mp_queue = mp.Manager().Queue()
+        # Workaround for NumPy locking on Macintosh.
+        # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
+        mp_ctx = mp.get_context(
+            'forkserver' if sys.platform == 'darwin' else None)
+
+        mp_queue = mp_ctx.Manager().Queue()
 
         data_splits = (
             (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
@@ -348,7 +353,7 @@ class Results:
                 self._callback(percent)
 
         results = []
-        with joblib.Parallel(n_jobs=n_jobs) as parallel:
+        with joblib.Parallel(n_jobs=n_jobs, backend=mp_ctx) as parallel:
             tasks = (joblib.delayed(_mp_worker)(*args) for args in args_iter)
             # Start the tasks from another thread ...
             thread = Thread(target=lambda: results.append(parallel(tasks)))
