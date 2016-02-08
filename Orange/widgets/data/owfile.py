@@ -142,6 +142,22 @@ class RecentPath:
     __str__ = __repr__
 
 
+class NamedURLModel(PyListModel):
+    def __init__(self, mapping):
+        self.mapping = mapping
+        super().__init__()
+
+    def data(self, index, role):
+        data = super().data(index, role)
+        if role == QtCore.Qt.DisplayRole:
+            return self.mapping.get(data, data)
+        return data
+
+    def add_name(self, url, name):
+        self.mapping[url] = name
+        self.modelReset.emit()
+
+
 class OWFile(widget.OWWidget):
     name = "File"
     id = "orange.widgets.data.file"
@@ -164,6 +180,7 @@ class OWFile(widget.OWWidget):
     recent_paths = Setting([])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
+    sheet_names = Setting({})
     url = Setting("")
 
     dlg_formats = (
@@ -209,7 +226,7 @@ class OWFile(widget.OWWidget):
 
         box = gui.hBox(vbox, addToLayout=False)
         self.url_combo = url_combo = QtGui.QComboBox()
-        url_model = PyListModel()
+        url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
@@ -354,7 +371,7 @@ class OWFile(widget.OWWidget):
             with catch_warnings(record=True) as warnings:
                 data = method(fn)
                 self.warning(
-                    33, warnings[-1].message.args[0] if warnings else '')
+                        33, warnings[-1].message.args[0] if warnings else '')
             return data, fn
 
         def load_from_file():
@@ -379,20 +396,34 @@ class OWFile(widget.OWWidget):
                 raise
 
         def load_from_network():
-            self.url = url = self.url_combo.currentText()
+            combo = self.url_combo
+            model = combo.model()
+            # combo.currentText does not work when the widget is initialized
+            url = model.data(model.index(combo.currentIndex()),
+                             QtCore.Qt.EditRole)
             if not url:
                 return None, ""
             elif "://" not in url:
                 url = "http://" + url
             try:
-                return load(Table.from_url, url)
+                data, url = load(Table.from_url, url)
             except:
                 self.warnings.setText(
-                    "URL '{}' does not contain valid data".format(url))
+                        "URL '{}' does not contain valid data".format(url))
                 # Don't remove from recent_urls:
                 # resource may reappear, or the user mistyped it
                 # and would like to retrieve it from history and fix it.
                 raise
+            combo.clearFocus()
+            if "://docs.google.com/spreadsheets" in url:
+                model.add_name(url, data.name)
+                self.url = \
+                    "{} from {}".format(data.name.replace("- Sheet1", ""), url)
+                combo.lineEdit().setPlaceholderText(self.url)
+                return data, data.name
+            else:
+                self.url = url
+                return data, url
 
         self.warning()
         self.information()
@@ -462,7 +493,7 @@ class OWFile(widget.OWWidget):
             self.report_items("File", [("File name", name),
                                        ("Format", get_ext_name(name))])
         else:
-            self.report_items("Data", [("URL", self.url),
+            self.report_items("Data", [("Resource", self.url),
                                        ("Format", get_ext_name(self.url))])
 
         self.report_data("Data", self.data)
