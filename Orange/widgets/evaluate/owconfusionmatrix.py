@@ -2,12 +2,13 @@ import unicodedata
 
 from PyQt4.QtGui import (
     QGridLayout, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont, QHeaderView, QBrush, QColor
-)
+    QItemSelectionModel, QItemSelection, QFont, QHeaderView, QBrush, QColor,
+    QStyledItemDelegate)
 from PyQt4.QtCore import Qt, QSize
 
 import numpy
 import sklearn.metrics as skl_metrics
+from math import isnan, isinf
 
 import Orange
 from Orange.widgets import widget, settings, gui
@@ -16,6 +17,32 @@ from Orange.widgets import widget, settings, gui
 def confusion_matrix(res, index):
     return skl_metrics.confusion_matrix(
         res.actual, res.predicted[index])
+
+
+BorderRole = next(gui.OrangeUserRole)
+BorderColorRole = next(gui.OrangeUserRole)
+
+
+class BorderedItemDelegate(QStyledItemDelegate):
+    def __init__(self, color=Qt.black):
+        super().__init__()
+        self.color = color
+
+    def paint(self, painter, option, index):
+        QStyledItemDelegate.paint(self, painter, option, index)
+        borders = index.data(BorderRole)
+        if borders:
+            color = index.data(BorderColorRole) or self.color
+            painter.save()
+            painter.setPen(color)
+            r = option.rect
+            for side, p1, p2 in (("t", r.topLeft(), r.topRight()),
+                                 ("r", r.topRight(), r.bottomRight()),
+                                 ("b", r.bottomLeft(), r.bottomRight()),
+                                 ("l", r.topLeft(), r.bottomLeft())):
+                if side in borders:
+                    painter.drawLine(p1, p2)
+            painter.restore()
 
 
 class OWConfusionMatrix(widget.OWWidget):
@@ -93,6 +120,7 @@ class OWConfusionMatrix(widget.OWWidget):
         view.horizontalHeader().setMinimumSectionSize(60)
         view.selectionModel().selectionChanged.connect(self._invalidate)
         view.setShowGrid(False)
+        view.setItemDelegate(BorderedItemDelegate(Qt.white))
         view.clicked.connect(self.cell_clicked)
         grid.addWidget(view, 0, 0)
         self.mainArea.layout().addLayout(grid)
@@ -131,7 +159,11 @@ class OWConfusionMatrix(widget.OWWidget):
         elif results is not None:
             raise NotImplementedError
 
-        if results is not None:
+        if results is None:
+            self.report_button.setDisabled(True)
+        else:
+            self.report_button.setDisabled(False)
+
             nmodels, ntests = results.predicted.shape
             self.headers = class_values + \
                            [unicodedata.lookup("N-ARY SUMMATION")]
@@ -159,6 +191,10 @@ class OWConfusionMatrix(widget.OWWidget):
             self.tableview.setSpan(0, 2, 1, len(class_values))
             self.tableview.setSpan(2, 0, len(class_values), 1)
 
+            font = self.tablemodel.invisibleRootItem().font()
+            bold_font = QFont(font)
+            bold_font.setBold(True)
+
             for i in (0, 1):
                 for j in (0, 1):
                     item = self._item(i, j)
@@ -169,10 +205,12 @@ class OWConfusionMatrix(widget.OWWidget):
                 for i, j in ((1, p + 2), (p + 2, 1)):
                     item = self._item(i, j)
                     item.setData(label, Qt.DisplayRole)
-                    item.setData(QBrush(QColor(208, 208, 208)),
-                                 Qt.BackgroundColorRole)
+                    item.setFont(bold_font)
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     item.setFlags(Qt.ItemIsEnabled)
+                    if p < len(self.headers) - 1:
+                        item.setData("br"[j == 1], BorderRole)
+                        item.setData(QColor(192, 192, 192), BorderColorRole)
                     self._set_item(i, j, item)
 
             hor_header = self.tableview.horizontalHeader()
@@ -312,6 +350,9 @@ class OWConfusionMatrix(widget.OWWidget):
         self.commit()
 
     def _update(self):
+        def isinvalid(x):
+            return isnan(x) or isinf(x)
+
         # Update the displayed confusion matrix
         if self.results is not None and self.selected_learner:
             index = self.selected_learner[0]
@@ -319,26 +360,43 @@ class OWConfusionMatrix(widget.OWWidget):
             colsum = cmatrix.sum(axis=0)
             rowsum = cmatrix.sum(axis=1)
             total = rowsum.sum()
+            n = len(cmatrix)
+            diag = numpy.diag_indices(n)
 
+            colors = cmatrix.astype(numpy.double)
+            colors[diag] = 0
             if self.selected_quantity == 0:
-                value = lambda i, j: int(cmatrix[i, j])
-            elif self.selected_quantity == 1:
-                value = lambda i, j: \
-                    ("{:2.1f} %".format(100 * cmatrix[i, j] / colsum[i])
-                     if colsum[i] else "N/A")
-            elif self.selected_quantity == 2:
-                value = lambda i, j: \
-                    ("{:2.1f} %".format(100 * cmatrix[i, j] / rowsum[i])
-                     if colsum[i] else "N/A")
+                normalized = cmatrix.astype(numpy.int)
+                formatstr = "{}"
+                div = numpy.array([colors.max()])
             else:
-                assert False
+                if self.selected_quantity == 1:
+                    normalized = 100 * cmatrix / colsum
+                    div = colors.max(axis=0)
+                else:
+                    normalized = 100 * cmatrix / rowsum[:, numpy.newaxis]
+                    div = colors.max(axis=1)[:, numpy.newaxis]
+                formatstr = "{:2.1f} %"
+            div[div == 0] = 1
+            colors /= div
+            colors[diag] = normalized[diag] / normalized[diag].max()
 
-            for i, row in enumerate(cmatrix):
-                for j, _ in enumerate(row):
+            hue = [0, 240]
+            for i in range(n):
+                for j in range(n):
+                    val = normalized[i, j]
+                    col_val = colors[i, j]
                     item = self._item(i + 2, j + 2)
-                    item.setData(value(i, j), Qt.DisplayRole)
+                    item.setData(
+                        "NA" if isinvalid(val) else formatstr.format(val),
+                        Qt.DisplayRole)
+                    bkcolor = QColor.fromHsl(
+                        hue[i == j], 160,
+                        255 if isinvalid(col_val) else int(255 - 30 * col_val))
+                    item.setData(QBrush(bkcolor), Qt.BackgroundRole)
+                    item.setData("trbl", BorderRole)
                     item.setToolTip("actual: {}\npredicted: {}".format(
-                        self.headers[i], self.headers[j]))
+                            self.headers[i], self.headers[j]))
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                     self._set_item(i + 2, j + 2, item)
@@ -348,21 +406,31 @@ class OWConfusionMatrix(widget.OWWidget):
             bold_font = QFont(font)
             bold_font.setBold(True)
 
-            def sum_item(value):
+            def sum_item(value, border=""):
                 item = QStandardItem()
                 item.setData(value, Qt.DisplayRole)
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 item.setFlags(Qt.ItemIsEnabled)
                 item.setFont(bold_font)
+                item.setData(border, BorderRole)
+                item.setData(QColor(192, 192, 192), BorderColorRole)
                 return item
 
             N = len(colsum)
             for i in range(N):
-                model.setItem(N + 2, i + 2, sum_item(int(colsum[i])))
-                model.setItem(i + 2, N + 2, sum_item(int(rowsum[i])))
+                model.setItem(N + 2, i + 2, sum_item(int(colsum[i]), "t"))
+                model.setItem(i + 2, N + 2, sum_item(int(rowsum[i]), "l"))
 
             model.setItem(N + 2, N + 2, sum_item(int(total)))
 
+    def send_report(self):
+        if self.results is not None and self.selected_learner:
+            index = self.selected_learner[0]
+            self.report_table(
+                "Confusion matrix for {} (showing {})".
+                format(self.learners[index],
+                       self.quantities[self.selected_quantity].lower()),
+                self.tablemodel)
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
