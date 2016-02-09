@@ -897,7 +897,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
             context.attributes, context.class_vars, context.metas) and 2
 
     def encode_setting(self, context, setting, value):
-        if isinstance(value, str):
+        if isinstance(setting, ContextSetting) and isinstance(value, str):
             atype = -1
             if not setting.exclude_attributes:
                 for aname, atype in itertools.chain(context.attributes,
