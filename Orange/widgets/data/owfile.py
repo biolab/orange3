@@ -7,7 +7,7 @@ from PyQt4.QtGui import QSizePolicy, QTableView
 
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owcolor import HorizontalGridDelegate
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, PerfectDomainContextHandler
 from Orange.widgets.utils.itemmodels import PyListModel, TableModel
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat
@@ -153,10 +153,10 @@ class VarTableModel(QtCore.QAbstractTableModel):
     name2type = dict(zip(typenames, vartypes))
     type2name = dict(zip(vartypes, typenames))
 
-    def __init__(self, widget):
+    def __init__(self, widget, variables):
         super().__init__()
         self.widget = widget
-        self.variables = []
+        self.variables = variables
 
     def set_domain(self, domain):
         def may_be_numeric(var):
@@ -171,7 +171,7 @@ class VarTableModel(QtCore.QAbstractTableModel):
             return False
 
         self.modelAboutToBeReset.emit()
-        self.variables = self.original = [
+        self.variables[:] = self.original = [
             [var.name, type(var), place,
              ", ".join(var.values) if var.is_discrete else "",
              may_be_numeric(var)]
@@ -300,11 +300,15 @@ class OWFile(widget.OWWidget):
 
     LOCAL_FILE, URL = range(2)
 
+    settingsHandler = PerfectDomainContextHandler()
+
     #: List[RecentPath]
     recent_paths = Setting([])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
     url = Setting("")
+
+    variables = []
 
     dlg_formats = (
         "All readable files ({});;".format(
@@ -365,7 +369,7 @@ class OWFile(widget.OWWidget):
         self.info.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Minimum)
 
         box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
-        self.tablemodel = VarTableModel(self)
+        self.tablemodel = VarTableModel(self, self.variables)
         self.tableview = QTableView()
         self.tableview.setSizePolicy(
             QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
@@ -510,6 +514,8 @@ class OWFile(widget.OWWidget):
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
+        self.closeContext()
+
         def load(method, fn):
             with catch_warnings(record=True) as warnings:
                 data = method(fn)
@@ -603,7 +609,15 @@ class OWFile(widget.OWWidget):
 
         add_origin(data, self.loaded_file)
         self.tablemodel.set_domain(data.domain)
+        self.openContext(data.domain)
         self.send("Data", data)
+
+    def storeSpecificSettings(self):
+        self.current_context.modified_variables = self.variables[:]
+
+    def retrieveSpecificSettings(self):
+        if hasattr(self.current_context, "modified_variables"):
+            self.variables[:] = self.current_context.modified_variables
 
     def get_widget_name_extension(self):
         _, name = os.path.split(self.loaded_file)
