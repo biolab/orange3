@@ -18,8 +18,7 @@ from PyQt4.QtGui import QGraphicsScene, QPainter, QBrush, QColor, QFont, \
 from PyQt4.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, QEvent
 
 from PyQt4.QtCore import pyqtSignal as Signal
-from PyQt4.QtCore import PYQT_VERSION_STR
-
+from PyQt4.QtCore import PYQT_VERSION
 
 from .. import scheme
 
@@ -778,7 +777,7 @@ class CanvasScene(QGraphicsScene):
 
         return items[0] if items else None
 
-    if list(map(int, PYQT_VERSION_STR.split('.'))) < [4, 9]:
+    if PYQT_VERSION < 0x40900:
         # For QGraphicsObject subclasses items, itemAt ... return a
         # QGraphicsItem wrapper instance and not the actual class instance.
         def itemAt(self, *args, **kwargs):
