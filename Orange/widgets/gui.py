@@ -2899,18 +2899,28 @@ class TableBarItem(QtGui.QItemDelegate):
                     not math.isnan(class_):
                 color = self.color_schema[int(class_)]
 
+        rect = option.rect
         if ratio is not None:
+            pw = 5
+            hmargin = 3 + pw / 2  # + half pen width for the round line cap
+            vmargin = 1
+            textoffset = pw + vmargin * 2
+            baseline = rect.bottom() - textoffset / 2
+            width = (rect.width() - 2 * hmargin) * ratio
             painter.save()
-            painter.setPen(QtGui.QPen(QtGui.QBrush(color), 5,
+            painter.setRenderHint(QtGui.QPainter.Antialiasing)
+            painter.setPen(QtGui.QPen(QtGui.QBrush(color), pw,
                                       Qt.SolidLine, Qt.RoundCap))
-            rect = option.rect.adjusted(3, 0, -3, -5)
-            x, y = rect.x(), rect.y() + rect.height()
-            painter.drawLine(x, y, x + rect.width() * ratio, y)
+            line = QtCore.QLineF(
+                rect.left() + hmargin, baseline,
+                rect.left() + hmargin + width, baseline
+            )
+            painter.drawLine(line)
             painter.restore()
-            text_rect = option.rect.adjusted(0, 0, 0, -3)
+            text_rect = rect.adjusted(0, 0, 0, -textoffset)
         else:
-            text_rect = option.rect
-        text = index.data(Qt.DisplayRole)
+            text_rect = rect
+        text = str(index.data(Qt.DisplayRole))
         self.drawDisplay(painter, option, text_rect, text)
         painter.restore()
 
