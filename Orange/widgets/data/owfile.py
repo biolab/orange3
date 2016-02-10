@@ -1,5 +1,5 @@
 import os
-from itertools import chain
+from itertools import chain, count
 from warnings import catch_warnings
 
 from PyQt4 import QtGui, QtCore
@@ -659,9 +659,11 @@ class OWFile(widget.OWWidget):
         attributes = []
         class_vars = []
         metas = []
-        places = [attributes, class_vars, metas]
-        for (name, tpe, place, vals), orig_var in \
-                zip(self.tablemodel.variables,
+        weight =[]
+        places = [attributes, class_vars, metas, weight]
+        cols = [[], [], [], []]  # Xcols, Ycols, Mcols, Wcols
+        for column, (name, tpe, place, vals), orig_var in \
+                zip(count(), self.tablemodel.variables,
                     chain(self.data.domain.variables, self.data.domain.metas)):
             if place == 3:
                 continue
@@ -670,7 +672,9 @@ class OWFile(widget.OWWidget):
             else:
                 var = tpe(name)
             places[place].append(var)
+            cols[place].append(column)  # This assumes that no columns were skipped in the original file!
         domain = Domain(attributes, class_vars, metas)
+        data = Table.from_file(self.loaded_file, domain=domain, columns=cols)
         self.apply_button.hide()
 
 
