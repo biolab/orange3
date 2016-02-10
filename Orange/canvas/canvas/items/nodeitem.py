@@ -310,7 +310,6 @@ class AnchorPoint(QGraphicsObject):
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self.scenePositionChanged.emit(value)
-
         return QGraphicsObject.itemChange(self, change, value)
 
     def boundingRect(self,):

@@ -49,8 +49,8 @@ log = logging.getLogger(__name__)
 # TODO: Should this be moved to CanvasScene?
 class GraphicsSceneFocusEventListener(QGraphicsObject):
 
-    itemFocusedIn = Signal(QGraphicsItem)
-    itemFocusedOut = Signal(QGraphicsItem)
+    itemFocusedIn = Signal(object)
+    itemFocusedOut = Signal(object)
 
     def __init__(self, parent=None):
         QGraphicsObject.__init__(self, parent)
