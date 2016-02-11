@@ -17,10 +17,6 @@ class ModelClassification(Model):
     pass
 
 
-class SklLearnerClassification(SklLearner, LearnerClassification):
-    pass
-
-
 class SklModelClassification(SklModel, ModelClassification):
     def __call__(self, data, ret=Model.Value):
         prediction = super().__call__(data, ret=ret)
@@ -58,3 +54,7 @@ class SklModelClassification(SklModel, ModelClassification):
             return probs
         else:  # ret == Model.ValueProbs
             return value, probs
+
+
+class SklLearnerClassification(SklLearner, LearnerClassification):
+    __returns__ = SklModelClassification
