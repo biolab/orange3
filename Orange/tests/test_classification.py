@@ -24,14 +24,15 @@ class MultiClassTest(unittest.TestCase):
         x = np.random.random_integers(1, 3, (nrows, ncols))
 
         # multiple class variables
-        y = np.random.random_integers(10, 11, (nrows, 2))
+        y = np.random.random_integers(0, 1, (nrows, 2))
         t = Table(x, y)
         learn = DummyLearner()
-        with self.assertRaises(TypeError):
+        # TODO: Errors raised from various data checks should be made consistent
+        with self.assertRaises((ValueError, TypeError)):
             clf = learn(t)
 
         # single class variable
-        y = np.random.random_integers(10, 11, (nrows, 1))
+        y = np.random.random_integers(0, 1, (nrows, 1))
         t = Table(x, y)
         learn = DummyLearner()
         clf = learn(t)
@@ -42,7 +43,7 @@ class MultiClassTest(unittest.TestCase):
         nrows = 20
         ncols = 10
         x = np.random.random_integers(1, 3, (nrows, ncols))
-        y = np.random.random_integers(10, 11, (nrows, 2))
+        y = np.random.random_integers(0, 1, (nrows, 2))
         t = Table(x, y)
         learn = DummyMulticlassLearner()
         clf = learn(t)
