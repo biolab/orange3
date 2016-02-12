@@ -49,9 +49,9 @@ class OWVennDiagram(widget.OWWidget):
     inputhints = settings.Setting({})
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
-    #: Output 'unique' items only (one output row for every unique
-    #: instance `key`)
-    output_uniqueonly = settings.Setting(True)
+    #: Output unique items (one output row for every unique instance `key`)
+    #: or preserve all duplicates in the output.
+    output_duplicates = settings.Setting(False)
     autocommit = settings.Setting(True)
 
     graph_name = "scene"
@@ -108,7 +108,7 @@ class OWVennDiagram(widget.OWWidget):
         gui.rubber(self.controlArea)
 
         box = gui.widgetBox(self.controlArea, "Output")
-        gui.checkBox(box, self, "output_uniqueonly", "Unique items only",
+        gui.checkBox(box, self, "output_duplicates", "Output duplicates",
                      callback=lambda: self.commit())
         gui.auto_commit(box, self, "autocommit", "Commit", box=False)
 
@@ -539,7 +539,7 @@ class OWVennDiagram(widget.OWWidget):
 
             # add columns with source table id and set id
 
-            if self.output_uniqueonly:
+            if not self.output_duplicates:
                 id_column = numpy.array([[instance_key(inst)] for inst in subset],
                                         dtype=object)
                 source_names = numpy.array([[names[i]]] * len(subset),
@@ -550,7 +550,7 @@ class OWVennDiagram(widget.OWWidget):
 
             selected_subsets.append(subset)
 
-        if selected_subsets and self.output_uniqueonly:
+        if selected_subsets and not self.output_duplicates:
             data = table_concat(selected_subsets)
             # Get all variables which are not constant between the same
             # item set
