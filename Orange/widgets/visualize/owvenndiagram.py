@@ -82,7 +82,7 @@ class OWVennDiagram(widget.OWWidget):
         self.useequalityButton = gui.appendRadioButton(
             self.identifiersBox, "Use instance equality"
         )
-        rb = gui.appendRadioButton(
+        self.useidentifiersButton = rb = gui.appendRadioButton(
             self.identifiersBox, "Use identifiers"
         )
         self.inputsBox = gui.indentedBox(
@@ -163,13 +163,18 @@ class OWVennDiagram(widget.OWWidget):
         domains = [input.table.domain for input in self.data.values()]
         samedomain = all(domain_eq(d1, d2) for d1, d2 in pairwise(domains))
 
-        self.useequalityButton.setEnabled(samedomain)
         self.samedomain = samedomain
 
         has_identifiers = all(source_attributes(input.table.domain)
                               for input in self.data.values())
+        has_any_identifiers = any(source_attributes(input.table.domain)
+                              for input in self.data.values())
+        self.useequalityButton.setEnabled(samedomain)
+        self.useidentifiersButton.setEnabled(
+            has_any_identifiers or len(self.data) == 0)
+        self.inputsBox.setEnabled(has_any_identifiers)
 
-        if not samedomain and not self.useidentifiers:
+        if not samedomain and has_any_identifiers and not self.useidentifiers:
             self.useidentifiers = 1
         elif samedomain and not has_identifiers:
             self.useidentifiers = 0
