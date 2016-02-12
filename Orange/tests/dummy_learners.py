@@ -1,4 +1,4 @@
-from Orange.base import SklLearner, SklModel, Model
+from Orange.classification import SklLearner, SklModel
 import numpy as np
 
 
@@ -15,59 +15,19 @@ class DummyPredictor(SklModel):
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
-        self.ret = Model.ValueProbs
 
     def predict(self, X):
         rows = X.shape[0]
         value = np.tile(self.value, rows)
         probs = np.tile(self.prob, (rows, 1))
-        if self.ret == Model.Value:
-            return value
-        elif self.ret == Model.Value:
-            return probs
-        else:
-            return value, probs
-
-    def __call__(self, data, ret=Model.Value):
-        prediction = super().__call__(data, ret=ret)
-
-        if ret == Model.Value:
-            return prediction
-
-        if ret == Model.Probs:
-            probs = prediction
-        else:  # ret == Model.ValueProbs
-            value, probs = prediction
-
-        # Expand probability predictions for class values which are not present
-        if ret != self.Value:
-            n_class = len(self.domain.class_vars)
-            max_values = max(len(cv.values) for cv in self.domain.class_vars)
-            if max_values != probs.shape[-1]:
-                if not self.supports_multiclass:
-                    probs = probs[:, np.newaxis, :]
-                probs_ext = np.zeros((len(probs), n_class, max_values))
-                for c in range(n_class):
-                    i = 0
-                    class_values = len(self.domain.class_vars[c].values)
-                    for cv in range(class_values):
-                        if (i < len(self.used_vals[c]) and
-                                    cv == self.used_vals[c][i]):
-                            probs_ext[:, c, cv] = probs[:, c, i]
-                            i += 1
-                if self.supports_multiclass:
-                    probs = probs_ext
-                else:
-                    probs = probs_ext[:, 0, :]
-
-        if ret == Model.Probs:
-            return probs
-        else:  # ret == Model.ValueProbs
-            return value, probs
+        return value, probs
 
 
 class DummyMulticlassLearner(SklLearner):
     supports_multiclass = True
+
+    def check_learner_adequacy(self, domain):
+        return all(c.is_discrete for c in domain.class_vars)
 
     def fit(self, X, Y, W):
         rows, class_vars = Y.shape
@@ -87,52 +47,9 @@ class DummyMulticlassPredictor(SklModel):
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
-        self.ret = Model.ValueProbs
 
     def predict(self, X):
         rows = X.shape[0]
         value = np.tile(self.value, (rows, 1))
         probs = np.tile(self.prob, (rows, 1, 1))
-        if self.ret == Model.Value:
-            return value
-        elif self.ret == Model.Value:
-            return probs
-        else:
-            return value, probs
-
-    def __call__(self, data, ret=Model.Value):
-        prediction = super().__call__(data, ret=ret)
-
-        if ret == Model.Value:
-            return prediction
-
-        if ret == Model.Probs:
-            probs = prediction
-        else:  # ret == Model.ValueProbs
-            value, probs = prediction
-
-        # Expand probability predictions for class values which are not present
-        if ret != self.Value:
-            n_class = len(self.domain.class_vars)
-            max_values = max(len(cv.values) for cv in self.domain.class_vars)
-            if max_values != probs.shape[-1]:
-                if not self.supports_multiclass:
-                    probs = probs[:, np.newaxis, :]
-                probs_ext = np.zeros((len(probs), n_class, max_values))
-                for c in range(n_class):
-                    i = 0
-                    class_values = len(self.domain.class_vars[c].values)
-                    for cv in range(class_values):
-                        if (i < len(self.used_vals[c]) and
-                                    cv == self.used_vals[c][i]):
-                            probs_ext[:, c, cv] = probs[:, c, i]
-                            i += 1
-                if self.supports_multiclass:
-                    probs = probs_ext
-                else:
-                    probs = probs_ext[:, 0, :]
-
-        if ret == Model.Probs:
-            return probs
-        else:  # ret == Model.ValueProbs
-            return value, probs
+        return value, probs
