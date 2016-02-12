@@ -19,34 +19,11 @@ def _preprocess(table):
     return new_data
 
 
-def one_hot_encode(domain, X):
-    """
-    Encode discrete Orange.data.Variables into one binary column for each value.
-    Return a dummy table.
-    """
-    if not domain.has_discrete_attributes():
-        return X
-    cols = []
-    for i, (var, x) in enumerate(zip(domain.attributes, X.T)):
-        if var.is_discrete:
-            n_values = len(var.values)
-            for val in range(n_values):
-                # Make the diffs across cols of same variable sum to 1
-                cols.append((x == val) / n_values)
-        else:
-            cols.append(x)
-    return np.column_stack(cols)
-
-
-def _orange_to_numpy(x, axis=1):
+def _orange_to_numpy(x):
     """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance` to :class:`numpy.ndarray`."""
     if isinstance(x, data.Table):
-        if axis == 1 and x.domain.has_discrete_attributes():
-            return one_hot_encode(x.domain, x.X)
         return x.X
     elif isinstance(x, data.RowInstance):
-        if axis == 1 and x.domain.has_discrete_attributes():
-            return one_hot_encode(x.domain, x.x)
         return np.atleast_2d(x.x)
     elif isinstance(x, np.ndarray):
         return np.atleast_2d(x)
@@ -83,8 +60,8 @@ class SklDistance(Distance):
         self.metric = metric
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
-        x1 = _orange_to_numpy(e1, axis)
-        x2 = _orange_to_numpy(e2, axis)
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
         if axis == 0:
             x1 = x1.T
             if x2 is not None:

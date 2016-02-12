@@ -603,13 +603,3 @@ class TestDistances(TestCase):
         table = Table('test5.tab')
         new_table = _preprocess(table)
         self.assertFalse(np.isnan(new_table.X).any())
-
-    def test_discrete(self):
-        data = Table(Domain([DiscreteVariable('a', values='01'),
-                             DiscreteVariable('b', values='01')]),
-                     np.array([[1, 0],
-                               [0, 1]]))
-        dist = Manhattan(data)
-        dist = np.diag(np.rot90(dist))
-        self.assertEqual(*dist)
-        np.testing.assert_almost_equal(dist[0], 2)
