@@ -41,6 +41,8 @@ A three-line header consists of:
      needs to be escaped (prefixed) with, as common, a backslash ('\\') character.
    * ``continuous`` (or ``c``) — imported as :obj:`Orange.data.ContinuousVariable`,
    * ``string`` (or ``s``, or ``text``) — imported as :obj:`Orange.data.StringVariable`,
+   * ``time`` (or ``t``) — imported as :obj:`Orange.data.TimeVariable`, if the
+     values parse as ISO 8601 date/time formats,
    * ``basket`` — used for storing sparse data. More on basket formats in a
      dedicated section.
 
@@ -75,6 +77,8 @@ combination of:
 * ``m`` for meta attributes (not used in learning),
 * ``C`` for features that are continuous,
 * ``D`` for features that are discrete,
+* ``T`` for features that represent date and/or time in one of the ISO 8601
+  formats,
 * ``S`` for string features.
 
 If some (all) names or flags are omitted, the names, types, and flags are

@@ -1,12 +1,15 @@
 import math
 import unittest
 import pickle
+from io import StringIO
 
 import numpy as np
 
 from Orange.testing import create_pickling_tests
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
-    StringVariable, Unknown, Value
+    StringVariable, TimeVariable, Unknown, Value
+from Orange.data import Table
+from Orange.data.io import CSVFormat
 
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
@@ -240,6 +243,76 @@ class StringVariableTest(VariableTest):
         self.assertEqual(a.str_val(""), "?")
         self.assertEqual(a.str_val(Value(a, "")), "?")
         self.assertEqual(a.repr_val(Value(a, "foo")), '"foo"')
+
+
+@variabletest(TimeVariable)
+class TimeVariableTest(VariableTest):
+    TESTS = [
+        # in str, UTC timestamp, out str (in UTC)
+        ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.009999+0200'),
+        ('2015-10-12T14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.009999+0200'),
+        ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
+        ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
+        ('20151012T141311+0200',     1444651991, '2015-10-12 14:13:11+0200'),
+        ('20151012141311+0200',      1444651991, '2015-10-12 14:13:11+0200'),
+        ('2015-10-12 14:13:11', 1444659191, '2015-10-12 14:13:11'),
+        ('2015-10-12T14:13:11', 1444659191, '2015-10-12 14:13:11'),
+        ('2015-10-12 14:13',    1444659180, '2015-10-12 14:13:00'),
+        ('20151012T141311',     1444659191, '2015-10-12 14:13:11'),
+        ('20151012141311',      1444659191, '2015-10-12 14:13:11'),
+        ('2015-10-12', 1444608000, '2015-10-12'),
+        ('20151012',   1444608000, '2015-10-12'),
+        ('2015-285',   1444608000, '2015-10-12'),
+        ('2015-10', 1443657600, '2015-10-01'),
+        ('2015',    1420070400, '2015-01-01'),
+        ('01:01:01.01', 3661.01, '01:01:01.010000'),
+        ('010101.01',   3661.01, '01:01:01.010000'),
+        ('01:01:01', 3661, '01:01:01'),
+        ('01:01',    3660, '01:01:00'),
+        ('1970-01-01 00:00:00', 0, '1970-01-01 00:00:00'),
+        ('1969-12-31 23:59:59', -1, '1969-12-31 23:59:59'),
+        ('1900-01-01', -2208988800, '1900-01-01'),
+    ]
+
+    def test_parse_repr(self):
+        for datestr, timestamp, outstr in self.TESTS:
+            var = TimeVariable('time')
+            ts = var.parse(datestr)
+            self.assertEqual(ts, timestamp, msg=datestr)
+            self.assertEqual(var.repr_val(ts), outstr, msg=datestr)
+
+    def test_parse_utc(self):
+        var = TimeVariable('time')
+        datestr, offset = '2015-10-18 22:48:20', '+0200'
+        ts1 = var.parse(datestr + offset)
+        self.assertEqual(var.repr_val(ts1), datestr + offset)
+        # Once a value is without a TZ, all the values lose it
+        ts2 = var.parse(datestr)
+        self.assertEqual(var.repr_val(ts2), datestr)
+        self.assertEqual(var.repr_val(ts1), '2015-10-18 20:48:20')
+
+    def test_have_date(self):
+        var = TimeVariable('time')
+        ts = var.parse('1937-08-02')  # parse date
+        self.assertEqual(var.repr_val(ts), '1937-08-02')
+        ts = var.parse('16:20')  # parse time
+        # observe have datetime
+        self.assertEqual(var.repr_val(ts), '1970-01-01 16:20:00')
+
+    def test_read_timevariable(self):
+        example_csv = StringIO("""\
+Date,Feature
+time,continuous
+,
+1920-12-12,1
+1920-12-13,3
+1920-12-14,5.5
+""")
+        table = CSVFormat.read_file(example_csv)
+        self.assertIsInstance(table.domain['Date'], TimeVariable)
+        self.assertEqual(table[0, 'Date'], '1920-12-12')
+        # Dates before 1970 are negative
+        self.assertTrue(all(inst['Date'] < 0 for inst in table))
 
 
 PickleContinuousVariable = create_pickling_tests(

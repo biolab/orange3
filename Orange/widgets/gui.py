@@ -13,7 +13,8 @@ from PyQt4.QtGui import QCursor, QApplication
 
 import Orange.data
 from Orange.widgets.utils import getdeepattr
-from Orange.data import ContinuousVariable, StringVariable, DiscreteVariable, Variable
+from Orange.data import \
+    ContinuousVariable, StringVariable, TimeVariable, DiscreteVariable, Variable
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 from Orange.util import namegen
@@ -1286,6 +1287,8 @@ class __AttributeIconDict(dict):
                                     "D", (26, 150, 65)),
                                    (vartype(StringVariable()),
                                     "S", (0, 0, 0)),
+                                   (vartype(TimeVariable()),
+                                    "T", (68, 170, 255)),
                                    (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))
         if key not in self:

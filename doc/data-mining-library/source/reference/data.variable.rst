@@ -167,3 +167,13 @@ String variables
     .. automethod:: str_val
     .. automethod:: to_val
     .. automethod:: val_from_str_add
+
+Time variables
+--------------
+Time variables are continuous variables with value 0 on the Unix epoch,
+1 January 1970 00:00:00.0 UTC. Positive numbers are dates beyond this date,
+and negative dates before. Due to limitation of Python ``datetime`` module,
+only dates in 1 A.D. or later are supported.
+
+.. autoclass:: TimeVariable
+    .. automethod:: parse

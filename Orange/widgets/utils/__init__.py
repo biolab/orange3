@@ -1,10 +1,13 @@
 from functools import reduce
+from Orange.data.variable import TimeVariable
 
 
 def vartype(var):
     if var.is_discrete:
         return 1
     elif var.is_continuous:
+        if isinstance(var, TimeVariable):
+            return 4
         return 2
     elif var.is_string:
         return 3
