@@ -12,6 +12,7 @@ from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
+from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
                                                OWCanvasLine)
@@ -34,23 +35,24 @@ class OWSieveDiagram(OWWidget):
 
     want_control_area = False
 
+    settingsHandler = DomainContextHandler()
+    attrX = ContextSetting("")
+    attrY = ContextSetting("")
+
     def __init__(self):
         super().__init__()
 
         self.data = None
-
-        self.attrX = ""
-        self.attrY = ""
         self.attributeSelectionList = None
-        self.stopCalculating = 0
 
-        controlArea = gui.hBox(self.mainArea)
+        box = gui.hBox(self.mainArea)
         self.attrXCombo = gui.comboBox(
-            controlArea, self, value="attrX", contentsLength=12,
+            box, self, value="attrX", contentsLength=12,
             callback=self.updateGraph, sendSelectedValue=True, valueType=str)
-        gui.widgetLabel(controlArea, "\u2715").setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        gui.widgetLabel(box, "\u2715").\
+            setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.attrYCombo = gui.comboBox(
-            controlArea, self, value="attrY", contentsLength=12,
+            box, self, value="attrY", contentsLength=12,
             callback=self.updateGraph, sendSelectedValue=True, valueType=str)
 
         self.canvas = QGraphicsScene()
@@ -59,13 +61,11 @@ class OWSieveDiagram(OWWidget):
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        # want_control_area = False also disables creation of these buttons
         box = gui.hBox(self.mainArea)
-        self.graphButton = gui.button(
-                box, None, "&Save Graph", callback=self.save_graph)
-        self.graphButton.setAutoDefault(0)
-        self.report_button = gui.button(
-                box, None, "&Report", callback=self.show_report)
+        gui.button(box, None, "&Save Graph",
+                   callback=self.save_graph, autoDefault=False)
+        gui.button(box, None, "&Report",
+                   callback=self.show_report, autoDefault=False)
 
     def sizeHint(self):
         return QSize(450, 550)
@@ -74,25 +74,19 @@ class OWSieveDiagram(OWWidget):
     def setData(self, data):
         if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
-
-        self.information(0)
-        self.information(1)
-        sameDomain = self.data and data and self.data.domain.checksum() == data.domain.checksum() # preserve attribute choice if the domain is the same
-        # self.data = self.optimizationDlg.setData(data, 0)
+        self.closeContext()
         self.data = data
-
-        if not sameDomain:
-            self.initCombos()
-
+        self.initCombos()
+        self.openContext(self.data)
         self.warning(0, "")
         if data:
             if any(attr.is_continuous for attr in data.domain):
                 self.warning(0, "Data contains continuous variables. " +
-                             "Discretize the data to use them.")
-
+                                "Discretize the data to use them.")
         self.setShownAttributes(self.attributeSelectionList)
 
     ## Attribute selection signal
+    # TODO: This signal has to disable or hide the combo boxes
     def setShownAttributes(self, attrList):
         self.attributeSelectionList = attrList
         if self.data and self.attributeSelectionList and len(attrList) >= 2:
