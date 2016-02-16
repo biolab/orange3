@@ -771,6 +771,7 @@ class OWLinearProjection(widget.OWWidget):
         for i, axis in enumerate(axes.T):
             axis_item = AxisItem(line=QLineF(0, 0, axis[0], axis[1]),
                                  label=variables[i].name)
+            axis_item.setPen(QtGui.QPen(Qt.darkGray, 0))
             self.viewbox.addItem(axis_item)
 
         if reset_view:
