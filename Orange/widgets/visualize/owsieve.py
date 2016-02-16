@@ -1,7 +1,6 @@
 from collections import defaultdict
 from itertools import product
 from math import sqrt, floor, ceil
-import sys
 
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
@@ -14,6 +13,7 @@ from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
                                                OWCanvasLine)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
@@ -27,8 +27,8 @@ class OWSieveDiagram(OWWidget):
     icon = "icons/SieveDiagram.svg"
     priority = 4200
 
-    inputs = [("Data", Table, "setData", Default),
-              ("Features", AttributeList, "setShownAttributes")]
+    inputs = [("Data", Table, "set_data", Default),
+              ("Features", AttributeList, "set_input_features")]
     outputs = []
 
     graph_name = "canvas"
@@ -43,17 +43,22 @@ class OWSieveDiagram(OWWidget):
         super().__init__()
 
         self.data = None
-        self.attributeSelectionList = None
+        self.input_features = None
+        self.attrs = []
 
-        box = gui.hBox(self.mainArea)
+        self.attr_box = gui.hBox(self.mainArea)
+        model = VariableListModel()
+        model.wrap(self.attrs)
         self.attrXCombo = gui.comboBox(
-            box, self, value="attrX", contentsLength=12,
+            self.attr_box, self, value="attrX", contentsLength=12,
             callback=self.updateGraph, sendSelectedValue=True, valueType=str)
-        gui.widgetLabel(box, "\u2715").\
+        self.attrXCombo.setModel(model)
+        gui.widgetLabel(self.attr_box, "\u2715").\
             setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.attrYCombo = gui.comboBox(
-            box, self, value="attrY", contentsLength=12,
+            self.attr_box, self, value="attrY", contentsLength=12,
             callback=self.updateGraph, sendSelectedValue=True, valueType=str)
+        self.attrYCombo.setModel(model)
 
         self.canvas = QGraphicsScene()
         self.canvasView = QGraphicsView(self.canvas, self.mainArea)
@@ -70,58 +75,47 @@ class OWSieveDiagram(OWWidget):
     def sizeHint(self):
         return QSize(450, 550)
 
-    # receive new data and update all fields
-    def setData(self, data):
+    def set_data(self, data):
         if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
+
         self.closeContext()
         self.data = data
-        self.initCombos()
-        self.openContext(self.data)
-        self.warning(0, "")
-        if data:
-            if any(attr.is_continuous for attr in data.domain):
-                self.warning(0, "Data contains continuous variables. " +
-                                "Discretize the data to use them.")
-        self.setShownAttributes(self.attributeSelectionList)
-
-    ## Attribute selection signal
-    # TODO: This signal has to disable or hide the combo boxes
-    def setShownAttributes(self, attrList):
-        self.attributeSelectionList = attrList
-        if self.data and self.attributeSelectionList and len(attrList) >= 2:
-            attrs = [attr.name for attr in self.data.domain]
-            if attrList[0] in attrs and attrList[1] in attrs:
-                self.attrX = attrList[0]
-                self.attrY = attrList[1]
-        self.updateGraph()
-
-    def getData(self, xAttr=None, yAttr=None, dropMissingData=1):
-        if not self.data:
-            return None
-        xAttr = xAttr or self.attrX
-        yAttr = yAttr or self.attrY
-        if not (xAttr and yAttr):
-            return
-        return self.data[:, [xAttr, yAttr]]
-
-    # initialize lists for shown and hidden attributes
-    def initCombos(self):
-        self.attrXCombo.clear()
-        self.attrYCombo.clear()
-
-        if not self.data: return
-        for i, var in enumerate(self.data.domain):
-            if var.is_discrete:
-                self.attrXCombo.addItem(gui.attributeIconDict[self.data.domain[i]], self.data.domain[i].name)
-                self.attrYCombo.addItem(gui.attributeIconDict[self.data.domain[i]], self.data.domain[i].name)
-
-        if self.attrXCombo.count() > 0:
-            self.attrX = str(self.attrXCombo.itemText(0))
-            self.attrY = str(self.attrYCombo.itemText(self.attrYCombo.count() > 1))
+        if self.data is None:
+            self.attrs[:] = []
         else:
-            self.attrX = None
-            self.attrY = None
+            self.attrs[:] = [var for var in self.data.domain if var.is_discrete]
+        if self.attrs:
+            self.attrX = self.attrs[0].name
+            self.attrY = self.attrs[len(self.attrs) > 1].name
+        else:
+            self.attrX = self.attrY = None
+        self.openContext(self.data)
+
+        self.warning(0, "")
+        if data and any(attr.is_continuous for attr in data.domain):
+            self.warning(0, "Data contains continuous variables. " +
+                            "Discretize the data to use them.")
+        self.resolve_shown_attributes()
+
+    def set_input_features(self, attrList):
+        self.input_features = attrList
+        self.resolve_shown_attributes()
+
+    def resolve_shown_attributes(self):
+        self.warning(1)
+        self.attr_box.setEnabled(True)
+        if self.input_features:  # non-None and non-empty!
+            features = [f for f in self.input_features if f in self.attrs]
+            if not features:
+                self.warning(1, "Features from the input signal "
+                                "are not present in the data")
+            else:
+                self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]
+                self.attr_box.setEnabled(False)
+        # else: do nothing; keep current features, even if input with the
+        # features just changed to None
+        self.updateGraph()
 
     def resizeEvent(self, e):
         OWWidget.resizeEvent(self,e)
@@ -131,16 +125,18 @@ class OWSieveDiagram(OWWidget):
         OWWidget.showEvent(self, ev)
         self.updateGraph()
 
-    ## updateGraph - gets called every time the graph has to be updated
+    # -----------------------------------------------------------------------
+    # Everything from here on is ancient and has been changed only according
+    # to what has been changed above. Some clean-up may be in order some day
+    #
     def updateGraph(self, *args):
         for item in self.canvas.items():
-            self.canvas.removeItem(item)    # remove all canvas items
-        if not self.data: return
-        if not self.attrX or not self.attrY: return
+            self.canvas.removeItem(item)
+        if self.data is None or len(self.data) == 0 or \
+                self.attrX is None or self.attrY is None:
+            return
 
-        data = self.getData()
-        if not data or len(data) == 0: return
-
+        data = self.data[:, [self.attrX, self.attrY]]
         valsX = []
         valsY = []
         contX = get_contingency(data, self.attrX, self.attrX)
@@ -351,6 +347,7 @@ class OWSieveDiagram(OWWidget):
 
 # test widget appearance
 if __name__=="__main__":
+    import sys
     a=QApplication(sys.argv)
     ow=OWSieveDiagram()
     ow.show()
