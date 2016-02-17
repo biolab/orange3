@@ -239,7 +239,7 @@ class Discrete_Test(unittest.TestCase):
 
     def test_compute_contingency_metas(self):
         d = data.Table("test9.tab")
-        var1, var2 = d.domain[-2], d.domain[-4]
+        var1, var2 = d.domain.metas[1], d.domain.metas[3]
         cont, _ = d._compute_contingency([var1], var2)[0][0]
         np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],
                                               [0, 0, 2], [0, 1, 0]])

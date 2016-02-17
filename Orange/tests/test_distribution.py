@@ -446,7 +446,7 @@ class Domain_Distribution_Test(unittest.TestCase):
 
     def test_compute_distributions_metas(self):
         d = data.Table("test9.tab")
-        variable = d.domain[-2]
+        variable = d.domain.metas[1]
         dist, _ = d._compute_distributions([variable])[0]
         np.testing.assert_almost_equal(dist, [3, 3, 2])
 

@@ -87,22 +87,23 @@ class RowInstance(Instance):
         if isinstance(value, str):
             var = self._domain[key]
             value = var.to_val(value)
-        if key >= 0:
+        n_attr = len(self._x)
+        n_cls = len(self._y)
+        if 0 <= key < n_attr:
+            self._x[key] = value
+            if self.sparse_x:
+                self.table.X[self.row_index, key] = value
+        elif n_attr <= key <= n_attr + n_cls:
+            self._y[key - n_attr] = value
+            if self.sparse_y:
+                self.table._Y[self.row_index, key - n_attr] = value
+        else:
             if not isinstance(value, Real):
                 raise TypeError("Expected primitive value, got '%s'" %
                                 type(value).__name__)
-            if key < len(self._x):
-                self._x[key] = value
-                if self.sparse_x:
-                    self.table.X[self.row_index, key] = value
-            else:
-                self._y[key - len(self._x)] = value
-                if self.sparse_y:
-                    self.table._Y[self.row_index, key - len(self._x)] = value
-        else:
-            self._metas[-1 - key] = value
+            self._metas[key - n_attr - n_cls] = value
             if self.sparse_metas:
-                self.table.metas[self.row_index, -1 - key] = value
+                self.table.metas[self.row_index, key - n_attr, n_cls] = value
 
     def _str(self, limit):
         def sp_values(matrix, variables):
@@ -259,16 +260,18 @@ class Table(MutableSequence, Storage):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
             n_src_attrs = len(source.domain.attributes)
+            n_src_cls = len(source.domain.class_vars)
             if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
                    for x in src_cols):
                 return _subarray(source.X, row_indices, src_cols)
-            if all(isinstance(x, Integral) and x < 0 for x in src_cols):
+            elif all(isinstance(x, Integral) and n_src_attrs + n_src_cls <= x
+                   for x in src_cols):
                 arr = _subarray(source.metas, row_indices,
-                                 [-1 - x for x in src_cols])
+                                 [x - n_src_attrs - n_src_cls for x in src_cols])
                 if arr.dtype != dtype:
                     return arr.astype(dtype)
                 return arr
-            if all(isinstance(x, Integral) and x >= n_src_attrs
+            elif all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
                 return _subarray(source._Y, row_indices,
                                  [x - n_src_attrs for x in src_cols])
@@ -282,8 +285,8 @@ class Table(MutableSequence, Storage):
                         a[:, i] = col(source)[row_indices]
                     else:
                         a[:, i] = col(source)
-                elif col < 0:
-                    a[:, i] = source.metas[row_indices, -1 - col]
+                elif n_src_attrs + n_src_cls <= col:
+                    a[:, i] = source.metas[row_indices, col - n_src_attrs - n_src_cls]
                 elif col < n_src_attrs:
                     a[:, i] = source.X[row_indices, col]
                 else:
@@ -664,15 +667,17 @@ class Table(MutableSequence, Storage):
             if isinstance(col_idx, (str, Integral, Variable)):
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                if 0 <= col_idx < len(self.domain.attributes):
+                n_attr = len(self.domain.attributes)
+                n_cls = len(self.domain.class_vars)
+                if 0 <= col_idx < n_attr:
                     return Value(var, self.X[row_idx, col_idx])
-                elif col_idx >= len(self.domain.attributes):
+                elif n_attr <= col_idx < n_attr + n_cls:
                     return Value(
                         var,
                         self._Y[row_idx,
-                                col_idx - len(self.domain.attributes)])
-                elif col_idx < 0:
-                    return Value(var, self.metas[row_idx, -1 - col_idx])
+                                col_idx - n_attr - n_cls])
+                else:
+                    return Value(var, self.metas[row_idx, col_idx - n_attr - n_cls])
             else:
                 row_idx = [row_idx]
 
@@ -709,6 +714,9 @@ class Table(MutableSequence, Storage):
             raise IndexError("Table indices must be one- or two-dimensional")
         row_idx, col_idx = key
 
+        n_attrs = self.X.shape[1]
+        n_cls = self._Y.shape[1]
+
         # single row
         if isinstance(row_idx, Integral):
             if isinstance(col_idx, slice):
@@ -732,36 +740,35 @@ class Table(MutableSequence, Storage):
                     value = self.domain[col_idx].to_val(value)
                 if not isinstance(col_idx, Integral):
                     col_idx = self.domain.index(col_idx)
-                if col_idx >= 0:
-                    if col_idx < self.X.shape[1]:
-                        self.X[row_idx, col_idx] = value
-                    else:
-                        self._Y[row_idx, col_idx - self.X.shape[1]] = value
+                if
+                if 0 <= col_idx < n_attrs:
+                    self.X[row_idx, col_idx] = value
+                elif n_attrs <= col_idx < n_attrs + n_cls:
+                    self._Y[row_idx, col_idx - n_attrs] = value
                 else:
-                    self.metas[row_idx, -1 - col_idx] = value
+                    self.metas[row_idx, col_idx - n_attrs - n_cls] = value
 
         # multiple rows, multiple columns
         attributes, col_indices = self.domain._compute_col_indices(col_idx)
         if col_indices is ...:
             col_indices = range(len(self.domain))
-        n_attrs = self.X.shape[1]
         if isinstance(value, str):
             if not attributes:
                 attributes = self.domain.attributes
             for var, col in zip(attributes, col_indices):
                 if 0 <= col < n_attrs:
                     self.X[row_idx, col] = var.to_val(value)
-                elif col >= n_attrs:
+                elif n_cls <= col < n_attrs + n_cls:
                     self._Y[row_idx, col - n_attrs] = var.to_val(value)
                 else:
-                    self.metas[row_idx, -1 - col] = var.to_val(value)
+                    self.metas[row_idx, col - n_attrs - n_cls] = var.to_val(value)
         else:
             attr_cols = np.fromiter(
                 (col for col in col_indices if 0 <= col < n_attrs), int)
             class_cols = np.fromiter(
-                (col - n_attrs for col in col_indices if col >= n_attrs), int)
+                (col - n_attrs for col in col_indices if n_attrs <= col < n_attrs + n_cls), int)
             meta_cols = np.fromiter(
-                (-1 - col for col in col_indices if col < 0), int)
+                (col - n_attrs - n_cls for col in col_indices if n_attrs + n_cls <= col), int)
             if value is None:
                 value = Unknown
 
@@ -1065,13 +1072,14 @@ class Table(MutableSequence, Storage):
 
         if not isinstance(index, Integral):
             index = self.domain.index(index)
-        if index >= 0:
-            if index < self.X.shape[1]:
-                return rx(self.X[:, index])
-            else:
-                return rx(self._Y[:, index - self.X.shape[1]])
+        n_attr = self.X.shape[1]
+        n_cls = self._Y.shape[1]
+        if index < n_attr:
+            return rx(self.X[:, index])
+        elif n_attr <= index < n_attr + n_cls:
+            return rx(self._Y[:, index - n_attr])
         else:
-            return rx(self.metas[:, -1 - index])
+            return rx(self.metas[:, index - n_attr - n_cls])
 
     def _filter_is_defined(self, columns=None, negate=False):
         if columns is None:
@@ -1246,16 +1254,17 @@ class Table(MutableSequence, Storage):
         else:
             columns = [self.domain.index(c) for c in columns]
             nattrs = len(self.domain.attributes)
+            ncls = len(self.domain.class_vars)
             Xs = any(0 <= c < nattrs for c in columns) and bn.stats(self.X, W)
             Ys = any(c >= nattrs for c in columns) and bn.stats(self._Y, W)
             ms = any(c < 0 for c in columns) and bn.stats(self.metas, W)
             for column in columns:
                 if 0 <= column < nattrs:
                     stats.append(Xs[column, :])
-                elif column >= nattrs:
+                elif nattrs <= column < ncls:
                     stats.append(Ys[column - nattrs, :])
                 else:
-                    stats.append(ms[-1 - column])
+                    stats.append(ms[column - nattrs - ncls])
         return stats
 
     def _compute_distributions(self, columns=None):
@@ -1285,14 +1294,16 @@ class Table(MutableSequence, Storage):
             single_column = len(columns) == 1 and len(self.domain) > 1
         distributions = []
         Xcsc = Ycsc = None
+        n_attrs = self.X.shape[1]
+        n_cls = self._Y.shape[1]
         for col in columns:
             var = self.domain[col]
-            if 0 <= col < self.X.shape[1]:
+            if 0 <= col < n_attrs:
                 m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
-            elif col < 0:
-                m, W, Xcsc = _get_matrix(self.metas, Xcsc, col * (-1) - 1)
+            elif n_attrs + n_cls <= col:
+                m, W, Xcsc = _get_matrix(self.metas, Xcsc, col - n_attrs - n_cls)
             else:
-                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
+                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - n_attrs)
             if var.is_discrete:
                 if W is not None:
                     W = W.ravel()
@@ -1316,6 +1327,7 @@ class Table(MutableSequence, Storage):
 
     def _compute_contingency(self, col_vars=None, row_var=None):
         n_atts = self.X.shape[1]
+        n_cls = self._Y.shape[1]
 
         if col_vars is None:
             col_vars = range(len(self.domain.variables))
@@ -1335,8 +1347,8 @@ class Table(MutableSequence, Storage):
         n_rows = len(row_desc.values)
         if 0 <= row_indi < n_atts:
             row_data = self.X[:, row_indi]
-        elif row_indi < 0:
-            row_data = self.metas[:, -1 - row_indi]
+        elif row_indi >= n_atts + n_cls:
+            row_data = self.metas[:, row_indi - n_atts - n_cls]
         else:
             row_data = self._Y[:, row_indi - n_atts]
 
@@ -1365,8 +1377,8 @@ class Table(MutableSequence, Storage):
         contingencies = [None] * len(col_desc)
         for arr, f_cond, f_ind in (
                 (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
-                (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
-                (self.metas, lambda i: i < 0, lambda i: -1 - i)):
+                (self._Y, lambda i: n_atts <= i < n_atts + n_cls, lambda i: i - n_atts),
+                (self.metas, lambda i: n_atts + n_cls < i, lambda i: i - n_atts - n_cls)):
 
             if nan_inds is not None:
                 arr = arr[~nan_inds]

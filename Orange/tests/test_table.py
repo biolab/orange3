@@ -572,7 +572,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("test3")
         d.append([None] * 3)
         self.assertEqual(1, len(d))
-        self.assertTrue(all(isnan(i) for i in d[0]))
+        self.assertTrue(all(isnan(i) for i in d[0].x))
 
         d.append([42, "0", None])
         self.assertEqual(2, len(d))

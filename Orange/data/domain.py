@@ -217,7 +217,7 @@ class Domain:
             The (Domain of) variable(s) corresponding to index(es) `idx`.
         """
         try:
-            if isinstance(idx, int):
+            if isinstance(idx, (int, np.integer)):
                 if idx < 0:
                     idx += len(self)
                 which = idx
@@ -305,8 +305,8 @@ class Domain:
         Return the index of the given variable (represented as
         `int`, `str`, or instance of :class:`Variable`) in the domain.
         """
-        if isinstance(var, int):
-            return var
+        if isinstance(var, (int, np.integer)):
+            return int(var)
         try:
             return self._indices[var]
         except KeyError:
@@ -376,15 +376,16 @@ class Domain:
                 return inst._x, inst._y, inst._metas
             c = self.get_conversion(inst.domain)
             l = len(inst.domain.attributes)
+            lc = len(inst.domain.class_vars)
             values = [(inst._x[i] if 0 <= i < l
-                       else inst._y[i - l] if i >= l
-                       else inst._metas[-i - 1])
+                       else inst._y[i - l] if l <= i < l + lc
+                       else inst._metas[i - l - lc])
                       if isinstance(i, int)
                       else (Unknown if not i else i(inst))
                       for i in c.variables]
             metas = [(inst._x[i] if 0 <= i < l
-                      else inst._y[i - l] if i >= l
-                      else inst._metas[-i - 1])
+                      else inst._y[i - l] if l <= i < l + lc
+                      else inst._metas[i - l - lc])
                      if isinstance(i, int)
                      else (Unknown if not i else i(inst))
                      for i in c.metas]

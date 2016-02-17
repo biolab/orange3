@@ -46,7 +46,5 @@ class DomainBasicStats:
         """
         if not isinstance(index, int):
             index = self.domain.index(index)
-        if index < 0:
-            index = len(self.domain) + (-1 - index)
         return self.stats[index]
 
