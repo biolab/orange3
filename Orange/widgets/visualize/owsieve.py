@@ -2,6 +2,8 @@ from collections import defaultdict
 from itertools import product
 from math import sqrt, floor, ceil
 
+import numpy as np
+
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
                          QDialog, QApplication, QSizePolicy)
@@ -19,6 +21,16 @@ from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
+class _ViewWithPress(QGraphicsView):
+    def __init__(self, *args, **kwargs):
+        self.handler = kwargs.pop("handler")
+        super().__init__(*args, **kwargs)
+
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        if not ev.isAccepted():
+            self.handler()
+
 class OWSieveDiagram(OWWidget):
     name = "Sieve Diagram"
     description = "A two-way contingency table providing information in " \
@@ -29,7 +41,7 @@ class OWSieveDiagram(OWWidget):
 
     inputs = [("Data", Table, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
-    outputs = []
+    outputs = [("Selection", Table)]
 
     graph_name = "canvas"
 
@@ -38,6 +50,7 @@ class OWSieveDiagram(OWWidget):
     settingsHandler = DomainContextHandler()
     attrX = ContextSetting("")
     attrY = ContextSetting("")
+    selection = ContextSetting(set())
 
     def __init__(self):
         super().__init__()
@@ -51,17 +64,18 @@ class OWSieveDiagram(OWWidget):
         model.wrap(self.attrs)
         self.attrXCombo = gui.comboBox(
             self.attr_box, self, value="attrX", contentsLength=12,
-            callback=self.updateGraph, sendSelectedValue=True, valueType=str)
+            callback=self.change_attr, sendSelectedValue=True, valueType=str)
         self.attrXCombo.setModel(model)
         gui.widgetLabel(self.attr_box, "\u2715").\
             setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.attrYCombo = gui.comboBox(
             self.attr_box, self, value="attrY", contentsLength=12,
-            callback=self.updateGraph, sendSelectedValue=True, valueType=str)
+            callback=self.change_attr, sendSelectedValue=True, valueType=str)
         self.attrYCombo.setModel(model)
 
         self.canvas = QGraphicsScene()
-        self.canvasView = QGraphicsView(self.canvas, self.mainArea)
+        self.canvasView = _ViewWithPress(self.canvas, self.mainArea,
+                                         handler=self.reset_selection)
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -81,6 +95,7 @@ class OWSieveDiagram(OWWidget):
 
         self.closeContext()
         self.data = data
+        self.areas = []
         if self.data is None:
             self.attrs[:] = []
         else:
@@ -97,10 +112,17 @@ class OWSieveDiagram(OWWidget):
             self.warning(0, "Data contains continuous variables. " +
                             "Discretize the data to use them.")
         self.resolve_shown_attributes()
+        self.update_selection()
+
+    def change_attr(self):
+        self.selection = set()
+        self.updateGraph()
+        self.update_selection()
 
     def set_input_features(self, attrList):
         self.input_features = attrList
         self.resolve_shown_attributes()
+        self.update_selection()
 
     def resolve_shown_attributes(self):
         self.warning(1)
@@ -111,8 +133,11 @@ class OWSieveDiagram(OWWidget):
                 self.warning(1, "Features from the input signal "
                                 "are not present in the data")
             else:
+                old_attrs = self.attrX, self.attrY
                 self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]
                 self.attr_box.setEnabled(False)
+                if (self.attrX, self.attrY) != old_attrs:
+                    self.selection = set()
         # else: do nothing; keep current features, even if input with the
         # features just changed to None
         self.updateGraph()
@@ -125,6 +150,40 @@ class OWSieveDiagram(OWWidget):
         OWWidget.showEvent(self, ev)
         self.updateGraph()
 
+    def reset_selection(self):
+        self.selection = set()
+        self.update_selection()
+
+    def select_area(self, area, ev):
+        if ev.button() != Qt.LeftButton:
+            return
+        index = self.areas.index(area)
+        if ev.modifiers() & Qt.ControlModifier:
+            self.selection ^= {index}
+        else:
+            self.selection = {index}
+        self.update_selection()
+
+    def update_selection(self):
+        if self.areas is None:
+            self.send("Selection", None)
+            return
+
+        selected = np.zeros(len(self.data), dtype=bool)
+        col_x = self.data.get_column_view(self.data.domain.index(self.attrX))[0]
+        col_y = self.data.get_column_view(self.data.domain.index(self.attrY))[0]
+        for i, area in enumerate(self.areas):
+            if i in self.selection:
+                width = 4
+                val_x, val_y = area.value_pair
+                selected |= ((col_x == val_x) & (col_y == val_y))
+            else:
+                width = 1
+            pen = area.pen()
+            pen.setWidth(width)
+            area.setPen(pen)
+        self.send("Selection", self.data[selected])
+
     # -----------------------------------------------------------------------
     # Everything from here on is ancient and has been changed only according
     # to what has been changed above. Some clean-up may be in order some day
@@ -135,13 +194,11 @@ class OWSieveDiagram(OWWidget):
         if self.data is None or len(self.data) == 0 or \
                 self.attrX is None or self.attrY is None:
             return
-
         data = self.data[:, [self.attrX, self.attrY]]
         valsX = []
         valsY = []
         contX = get_contingency(data, self.attrX, self.attrX)
         contY = get_contingency(data, self.attrY, self.attrY)
-
         # compute contingency of x and y attributes
         for entry in contX:
             sum_ = 0
@@ -158,7 +215,6 @@ class OWSieveDiagram(OWWidget):
             valsY.append(sum_)
 
         contXY = self.getConditionalDistributions(data, [data.domain[self.attrX], data.domain[self.attrY]])
-
         # compute probabilities
         probs = {}
         for i in range(len(valsX)):
@@ -180,13 +236,12 @@ class OWSieveDiagram(OWWidget):
             xl = OWCanvasText(self.canvas, "", 0, 0, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]), show=False)
             max_ylabel_w = max(int(xl.boundingRect().width()), max_ylabel_w)
         max_ylabel_w = min(max_ylabel_w, 200) #upper limit for label widths
-
         # get text width of Y attribute name
         text = OWCanvasText(self.canvas, data.domain[self.attrY].name, x  = 0, y = 0, bold = 1, show = 0, vertical=True)
         xOff = int(text.boundingRect().height() + max_ylabel_w)
         yOff = 55
         sqareSize = min(self.canvasView.width() - xOff - 35, self.canvasView.height() - yOff - 50)
-        if sqareSize < 0: return    # canvas is too small to draw rectangles
+        sqareSize = max(sqareSize, 10)
         self.canvasView.setSceneRect(0, 0, self.canvasView.width(), self.canvasView.height())
 
         # print graph name
@@ -209,8 +264,8 @@ class OWSieveDiagram(OWWidget):
         # draw rectangles
         currX = xOff
         max_xlabel_h = 0
-
         normX, normY = sum(valsX), sum(valsY)
+        self.areas = []
         for i in range(len(valsX)):
             if valsX[i] == 0: continue
             currY = yOff
@@ -222,8 +277,17 @@ class OWSieveDiagram(OWWidget):
                 height = int(float(sqareSize * valsY[j])/float(normY))
 
                 # create rectangle
-                rect = OWCanvasRectangle(self.canvas, currX+2, currY+2, width-4, height-4, z = -10)
-                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum_)
+                selected = len(self.areas) in self.selection
+                rect = OWCanvasRectangle(
+                    self.canvas, currX+2, currY+2, width-4, height-4, z = -10,
+                    onclick=self.select_area)
+                rect.value_pair = i, j
+                self.areas.append(rect)
+                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum_,
+                    width=1 + 3 * selected,  # Ugly! This is needed since
+                    # resize redraws the graph! When this is handled by resizing
+                    # just the viewer, update_selection will take care of this
+                    )
 
                 expected = float(xVal*yVal)/float(sum_)
                 pearson = (actual - expected) / sqrt(expected)
@@ -281,7 +345,7 @@ class OWSieveDiagram(OWWidget):
 
     ######################################################################
     ## show deviations from attribute independence with standardized pearson residuals
-    def addRectIndependencePearson(self, rect, x, y, w, h, xAttr_xVal, yAttr_yVal, actual, sum):
+    def addRectIndependencePearson(self, rect, x, y, w, h, xAttr_xVal, yAttr_yVal, actual, sum, width):
         xAttr, xVal = xAttr_xVal
         yAttr, yVal = yAttr_yVal
         expected = float(xVal*yVal)/float(sum)
@@ -289,19 +353,19 @@ class OWSieveDiagram(OWWidget):
 
         if pearson > 0:     # if there are more examples that we would expect under the null hypothesis
             intPearson = floor(pearson)
-            pen = QPen(QColor(0,0,255), 1); rect.setPen(pen)
+            pen = QPen(QColor(0,0,255), width); rect.setPen(pen)
             b = 255
             r = g = 255 - intPearson*20
             r = g = max(r, 55)  #
         elif pearson < 0:
             intPearson = ceil(pearson)
-            pen = QPen(QColor(255,0,0), 1)
+            pen = QPen(QColor(255,0,0), width)
             rect.setPen(pen)
             r = 255
             b = g = 255 + intPearson*20
             b = g = max(b, 55)
         else:
-            pen = QPen(QColor(255,255,255), 1)
+            pen = QPen(QColor(255,255,255), width)
             r = g = b = 255         # white
         color = QColor(r,g,b)
         brush = QBrush(color); rect.setBrush(brush)
@@ -352,6 +416,6 @@ if __name__=="__main__":
     ow=OWSieveDiagram()
     ow.show()
     data = Table(r"zoo.tab")
-    ow.setData(data)
+    ow.set_data(data)
     a.exec_()
     ow.saveSettings()
