@@ -1,4 +1,6 @@
 import numpy as np
+
+from Orange.data import Table, StringVariable, Domain
 from Orange.util import deprecated
 
 
@@ -100,3 +102,110 @@ class DistMatrix(np.ndarray):
         if obj.col_items:
             obj.col_items = self.col_items[col_items]
         return obj
+
+    @classmethod
+    def from_file(cls, filename):
+        fle = open(filename)
+        line = fle.readline()
+        if not line:
+            raise ValueError("Empty file")
+        data = line.strip().split("\t")
+        if not data[0].strip().isdigit():
+            raise ValueError("distance file must begin with dimensions")
+        n = int(data.pop(0))
+        symmetric = True
+        axis = 1
+        col_labels = row_labels = None
+        for flag in data:
+            if flag in ("labelled", "labeled", "row_labels"):
+                row_labels = []
+            elif flag == "col_labels":
+                col_labels = []
+            elif flag == "symmetric":
+                symmetric = True
+            elif flag == "asymmetric":
+                symmetric = False
+            else:
+                flag_data = flag.split("=")
+                if len(flag_data) == 2:
+                    name, value = map(str.strip, flag_data)
+                else:
+                    name, value = "", None
+                if name == "axis" and value.isdigit():
+                    axis = int(value)
+                else:
+                    raise ValueError("invalid flag '{}' in distance file '{}'"
+                                     .format(flag, filename))
+        if col_labels is not None:
+            col_labels = fle.readline().split("\t")
+            if len(col_labels) != n:
+                raise ValueError("mismatching number of column labels")
+
+        matrix = np.zeros((n, n))
+        for i, line in enumerate(fle):
+            if i >= n:
+                raise ValueError(
+                        "too many rows in distance file {}".format(filename))
+            line = line.split("\t")
+            if row_labels is not None:
+                row_labels.append(line.pop(0))
+            for j, e in enumerate(line):
+                if j >= n:
+                    raise ValueError(
+                            "too many columns in matrix row {}".format(i))
+                try:
+                    matrix[i, j] = float(e)
+                except ValueError:
+                    raise ValueError("invalid element at ({}, {})".
+                        format(
+                            "'{}'".format(row_labels[i] if row_labels else i),
+                            "'{}'".format(col_labels[j] if col_labels else j)))
+                if symmetric:
+                    matrix[j, i] = matrix[i, j]
+        if col_labels:
+            col_labels = Table.from_list(
+                Domain([], metas=[StringVariable("label")]),
+                [[item] for item in col_labels])
+        if row_labels:
+            if len(row_labels) != n:
+                raise ValueError("mismatching number of rows")
+            row_labels = Table.from_list(
+                Domain([], metas=[StringVariable("label")]),
+                [[item] for item in row_labels])
+        return cls(matrix, row_labels, col_labels, axis)
+
+    @staticmethod
+    def _trivial_labels(items):
+        return items and len(items.domain.metas) == 1 and \
+            isinstance(items.domain.metas[0], StringVariable)
+
+    def has_row_labels(self):
+        return self._trivial_labels(self.row_items)
+
+    def has_col_labels(self):
+        return self._trivial_labels(self.col_items)
+
+    def save(self, filename):
+        n = len(self)
+        data = "{}\taxis={}".format(n, self.axis)
+        row_labels = col_labels = None
+        if self.has_col_labels():# and self.col_items is not self.row_items:
+            data += "\tcol_labels"
+            col_labels = self.col_items
+        if self.has_row_labels():
+            data += "\trow_labels"
+            row_labels = self.row_items
+        symmetric = np.allclose(self, self.T)
+        if not symmetric:
+            data += "\tasymmetric"
+        fle = open(filename, "wt")
+        fle.write(data + "\n")
+        if col_labels is not None:
+            fle.write("\t".join(str(e.metas[0]) for e in col_labels) + "\n")
+        for i, row in enumerate(self):
+            if row_labels is not None:
+                fle.write(str(row_labels[i].metas[0]) + "\t")
+            if symmetric:
+                fle.write("\t".join(map(str, row[:i + 1])) + "\n")
+            else:
+                fle.write("\t".join(map(str, row)) + "\n")
