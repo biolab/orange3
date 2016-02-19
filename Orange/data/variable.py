@@ -860,10 +860,13 @@ class TimeVariable(ContinuousVariable):
         return s[:-6] if s.endswith(('+00:00', '-00:00')) else _subtz(r'\1\2\3', s)
 
     def repr_val(self, val):
+        seconds = round(val)
+        microseconds = round((val - seconds) * 1e6)
         if val < 0:
-            date = str(datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=val))
+            date = datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=seconds)
         else:
-            date = str(datetime.fromtimestamp(val, tz=self.timezone))
+            date = datetime.fromtimestamp(seconds, tz=self.timezone)
+        date = str(date.replace(microsecond=microseconds))
         if self.have_date and not self.have_time:
             date = date.split()[0]
         elif not self.have_date and self.have_time:
