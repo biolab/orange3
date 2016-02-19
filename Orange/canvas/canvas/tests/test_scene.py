@@ -220,15 +220,15 @@ class TestScene(QAppTestCase):
         reg = small_testing_registry()
 
         file_desc = reg.widget(
-            "Orange.OrangeWidgets.Data.OWFile.OWFile"
+            "Orange.widgets.data.owfile.OWFile"
         )
 
         discretize_desc = reg.widget(
-            "Orange.OrangeWidgets.Data.OWDiscretize.OWDiscretize"
+            "Orange.widgets.data.owdiscretize.OWDiscretize"
         )
 
         bayes_desc = reg.widget(
-            "Orange.OrangeWidgets.Classify.OWNaiveBayes.OWNaiveBayes"
+            "Orange.widgets.classify.ownaivebayes.OWNaiveBayes"
         )
 
         return file_desc, discretize_desc, bayes_desc

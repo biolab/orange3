@@ -53,7 +53,7 @@ class TestAnchorLayout(QAppTestCase):
         layout.activate()
 
         p1, p2 = file_item.outputAnchorItem.anchorPositions()
-        self.assertTrue(p1 > p2)
+        self.assertGreater(p1, p2)
 
         self.scene.node_item_position_changed.connect(layout.invalidateNode)
 
@@ -76,15 +76,15 @@ class TestAnchorLayout(QAppTestCase):
         reg = small_testing_registry()
 
         file_desc = reg.widget(
-            "Orange.OrangeWidgets.Data.OWFile.OWFile"
+            "Orange.widgets.data.owfile.OWFile"
         )
 
         discretize_desc = reg.widget(
-            "Orange.OrangeWidgets.Data.OWDiscretize.OWDiscretize"
+            "Orange.widgets.data.owdiscretize.OWDiscretize"
         )
 
         bayes_desc = reg.widget(
-            "Orange.OrangeWidgets.Classify.OWNaiveBayes.OWNaiveBayes"
+            "Orange.widgets.classify.ownaivebayes.OWNaiveBayes"
         )
 
         return file_desc, discretize_desc, bayes_desc

@@ -13,8 +13,8 @@ class TestLinksEditDialog(test.QAppTestCase):
 
         dlg = EditLinksDialog()
         reg = small_testing_registry()
-        file_desc = reg.widget("Orange.OrangeWidgets.Data.OWFile.OWFile")
-        bayes_desc = reg.widget("Orange.OrangeWidgets.Classify.OWNaiveBayes."
+        file_desc = reg.widget("Orange.widgets.data.owfile.OWFile")
+        bayes_desc = reg.widget("Orange.widgets.classify.ownaivebayes."
                                 "OWNaiveBayes")
         source_node = SchemeNode(file_desc, title="This is File")
         sink_node = SchemeNode(bayes_desc)
@@ -50,8 +50,8 @@ class TestLinksEditDialog(test.QAppTestCase):
         from ...registry.tests import small_testing_registry
 
         reg = small_testing_registry()
-        file_desc = reg.widget("Orange.OrangeWidgets.Data.OWFile.OWFile")
-        bayes_desc = reg.widget("Orange.OrangeWidgets.Classify.OWNaiveBayes."
+        file_desc = reg.widget("Orange.widgets.data.owfile.OWFile")
+        bayes_desc = reg.widget("Orange.widgets.classify.ownaivebayes."
                                 "OWNaiveBayes")
         source_node = SchemeNode(file_desc, title="This is File")
         sink_node = SchemeNode(bayes_desc)

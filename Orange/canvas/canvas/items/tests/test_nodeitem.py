@@ -15,13 +15,13 @@ class TestNodeItem(TestItems):
         self.classify_desc = self.reg.category("Classify")
 
         self.file_desc = self.reg.widget(
-            "Orange.OrangeWidgets.Data.OWFile.OWFile"
+            "Orange.widgets.data.owfile.OWFile"
         )
         self.discretize_desc = self.reg.widget(
-            "Orange.OrangeWidgets.Data.OWDiscretize.OWDiscretize"
+            "Orange.widgets.data.owdiscretize.OWDiscretize"
         )
         self.bayes_desc = self.reg.widget(
-            "Orange.OrangeWidgets.Classify.OWNaiveBayes.OWNaiveBayes"
+            "Orange.widgets.classify.ownaivebayes.OWNaiveBayes"
         )
 
     def test_nodeitem(self):

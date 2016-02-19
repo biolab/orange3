@@ -1,7 +1,7 @@
 """Test read write
 """
 from xml.etree import ElementTree as ET
-from io import StringIO
+from io import BytesIO
 
 from ...gui import test
 from ...registry import global_registry, WidgetRegistry, WidgetDescription
@@ -17,10 +17,10 @@ class TestReadWrite(test.QAppTestCase):
     def test_io(self):
         reg = global_registry()
 
-        base = "Orange.OrangeWidgets"
-        file_desc = reg.widget(base + ".Data.OWFile.OWFile")
-        discretize_desc = reg.widget(base + ".Data.OWDiscretize.OWDiscretize")
-        bayes_desc = reg.widget(base + ".Classify.OWNaiveBayes.OWNaiveBayes")
+        base = "Orange.widgets"
+        file_desc = reg.widget(base + ".data.owfile.OWFile")
+        discretize_desc = reg.widget(base + ".data.owdiscretize.OWDiscretize")
+        bayes_desc = reg.widget(base + ".classify.ownaivebayes.OWNaiveBayes")
 
         scheme = Scheme()
         file_node = SchemeNode(file_desc)
@@ -40,7 +40,7 @@ class TestReadWrite(test.QAppTestCase):
         scheme.add_annotation(SchemeArrowAnnotation((0, 0), (10, 10)))
         scheme.add_annotation(SchemeTextAnnotation((0, 100, 200, 200), "$$"))
 
-        stream = StringIO()
+        stream = BytesIO()
         scheme_to_ows_stream(scheme, stream)
 
         stream.seek(0)
@@ -79,10 +79,10 @@ class TestReadWrite(test.QAppTestCase):
     def test_io2(self):
         reg = global_registry()
 
-        base = "Orange.OrangeWidgets"
-        file_desc = reg.widget(base + ".Data.OWFile.OWFile")
-        discretize_desc = reg.widget(base + ".Data.OWDiscretize.OWDiscretize")
-        bayes_desc = reg.widget(base + ".Classify.OWNaiveBayes.OWNaiveBayes")
+        base = "Orange.widgets"
+        file_desc = reg.widget(base + ".data.owfile.OWFile")
+        discretize_desc = reg.widget(base + ".data.owdiscretize.OWDiscretize")
+        bayes_desc = reg.widget(base + ".classify.ownaivebayes.OWNaiveBayes")
 
         scheme = Scheme()
         file_node = SchemeNode(file_desc)
@@ -102,7 +102,7 @@ class TestReadWrite(test.QAppTestCase):
         scheme.add_annotation(SchemeArrowAnnotation((0, 0), (10, 10)))
         scheme.add_annotation(SchemeTextAnnotation((0, 100, 200, 200), "$$"))
 
-        stream = StringIO()
+        stream = BytesIO()
         scheme_to_ows_stream(scheme, stream)
 
         stream.seek(0)
@@ -178,7 +178,7 @@ class TestReadWrite(test.QAppTestCase):
             readwrite.literal_dumps(self)
 
     def test_1_0_parse(self):
-        tree = ET.parse(StringIO(FOOBAR_v10))
+        tree = ET.parse(BytesIO(FOOBAR_v10))
         parsed = readwrite.parse_ows_etree_v_1_0(tree)
         self.assertIsInstance(parsed, readwrite._scheme)
         self.assertEqual(parsed.version, "1.0")
@@ -199,7 +199,7 @@ class TestReadWrite(test.QAppTestCase):
         self.assertSetEqual(set(projects), set(["Foo", "Bar"]))
 
     def test_resolve_replaced(self):
-        tree = ET.parse(StringIO(FOOBAR_v20))
+        tree = ET.parse(BytesIO(FOOBAR_v20))
         parsed = readwrite.parse_ows_etree_v_2_0(tree)
 
         self.assertIsInstance(parsed, readwrite._scheme)
@@ -244,7 +244,7 @@ def foo_registry():
     return reg
 
 
-FOOBAR_v10 = """<?xml version="1.0" ?>
+FOOBAR_v10 = b"""<?xml version="1.0" ?>
 <schema>
     <widgets>
         <widget caption="Foo" widgetName="foo" xPos="1" yPos="2"/>
@@ -260,7 +260,7 @@ FOOBAR_v10 = """<?xml version="1.0" ?>
 </schema>
 """
 
-FOOBAR_v20 = """<?xml version="1.0" ?>
+FOOBAR_v20 = b"""<?xml version="1.0" ?>
 <scheme title="FooBar" description="Foo to the bar" version="2.0">
     <nodes>
         <node id="0" title="Foo" position="1, 2" project_name="Foo"
