@@ -226,7 +226,6 @@ class OWDistanceMatrix(widget.OWWidget):
         view.verticalHeader().setDefaultAlignment(
             Qt.AlignRight | Qt.AlignVCenter)
         selmodel = SymmetricSelectionModel(view.model(), view)
-        selmodel.selectionChanged.connect(self.commit)
         view.setSelectionModel(selmodel)
         view.setSelectionBehavior(QTableView.SelectItems)
         self.mainArea.layout().addWidget(view)
@@ -247,6 +246,8 @@ class OWDistanceMatrix(widget.OWWidget):
         gui.auto_commit(
             settings_box, self, "auto_commit",
             "Send Selected Data", "Auto send is on", box=None)
+        # Signal must be connected after self.commit is redirected
+        selmodel.selectionChanged.connect(self.commit)
 
     def sizeHint(self):
         return QSize(800, 500)
@@ -313,19 +314,15 @@ class OWDistanceMatrix(widget.OWWidget):
         self.tableview.selectionModel().set_selected_items(saved_selection)
 
     def commit(self):
-        if self.distances is None:
-            self.send("Table", None)
-            self.send("Distances", None)
-            return
-
-        inds = self.tableview.selectionModel().selected_items()
-        self.send("Distances", self.distances.submatrix(inds))
-
-        if self.distances.axis and isinstance(self.items, Table):
-            table = self.items[inds]
-        else:
-            table = None
-        self.send("Table", table)
+        sub_table = sub_distances = None
+        if self.distances is not None:
+            inds = self.tableview.selectionModel().selected_items()
+            if inds:
+                sub_distances = self.distances.submatrix(inds)
+                if self.distances.axis and isinstance(self.items, Table):
+                    sub_table = self.items[inds]
+        self.send("Distances", sub_distances)
+        self.send("Table", sub_table)
 
     def send_report(self):
         if self.distances is None:
