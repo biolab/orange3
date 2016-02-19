@@ -865,6 +865,18 @@ class TableTestCase(unittest.TestCase):
             self.assertTrue(all(ex[pos] == r for ex in e))
             self.assertTrue(all(ex[pos] != r for ex in f))
 
+    def test_filter_values_nested(self):
+        d = data.Table("iris")
+        f1 = filter.FilterContinuous(d.columns.sepal_length,
+                                     filter.FilterContinuous.Between,
+                                     min=4.5, max=5.0)
+        f2 = filter.FilterContinuous(d.columns.sepal_width,
+                                     filter.FilterContinuous.Between,
+                                     min=3.1, max=3.4)
+        f3 = filter.FilterDiscrete(d.columns.iris, [0, 1])
+        f = filter.Values([filter.Values([f1, f2], conjunction=False), f3])
+        self.assertEqual(41, len(f(d)))
+
     def test_filter_value_continuous(self):
         d = data.Table("iris")
         col = d.X[:, 2]
