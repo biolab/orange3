@@ -181,11 +181,12 @@ class SameValue(Filter):
 class Values(Filter):
     """
     Select the data instances based on conjunction or disjunction of filters
-    derived from :obj:`ValueFilter` that check values of individual features.
+    derived from :obj:`ValueFilter` that check values of individual features
+    or another (nested) Values filter.
 
     .. attribute:: conditions
 
-        A list of conditions, derived from :obj:`ValueFilter`
+        A list of conditions, derived from :obj:`ValueFilter` or :obj:`Values`
 
     .. attribute:: conjunction
 

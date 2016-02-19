@@ -1118,7 +1118,7 @@ class Table(MutableSequence, Storage):
             sel = np.logical_not(sel)
         return Table.from_table_rows(self, sel)
 
-    def _filter_values(self, filter):
+    def _filter_values_indicators(self, filter):
         from Orange.data import filter as data_filter
 
         if isinstance(filter, data_filter.Values):
@@ -1133,6 +1133,12 @@ class Table(MutableSequence, Storage):
             sel = np.zeros(len(self), dtype=bool)
 
         for f in conditions:
+            if isinstance(f, data_filter.Values):
+                if conjunction:
+                    sel *= self._filter_values_indicators(f)
+                else:
+                    sel += self._filter_values_indicators(f)
+                continue
             col = self.get_column_view(f.column)[0]
             if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
                     or isinstance(f, data_filter.FilterContinuous) and \
@@ -1224,6 +1230,10 @@ class Table(MutableSequence, Storage):
 
         if filter.negate:
             sel = ~sel
+        return sel
+
+    def _filter_values(self, filter):
+        sel = self._filter_values_indicators(filter)
         return self.from_table(self.domain, self, sel)
 
     def _compute_basic_stats(self, columns=None,
