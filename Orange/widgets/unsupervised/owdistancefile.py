@@ -1,14 +1,14 @@
 import os, sys
 
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
 from Orange.data import get_sample_datasets_dir
+from Orange.widgets.utils.filedialogs import RecentPathsWidgetMixin
 
 
-class OWDistanceFile(widget.OWWidget):
+class OWDistanceFile(widget.OWWidget, RecentPathsWidgetMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
     description = "Read distances from file"
@@ -21,12 +21,11 @@ class OWDistanceFile(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    recent_files = Setting(["(none)"])
+    # recent_paths = Setting([]) comes from RecentPathsWidgetMixin
 
     def __init__(self):
         super().__init__()
-        self.recent_files = [fn for fn in self.recent_files
-                             if os.path.exists(fn)]
+        RecentPathsWidgetMixin.__init__(self)
         self.loaded_file = ""
 
         vbox = gui.vBox(self.controlArea, "Distance File", addSpace=True)
@@ -55,35 +54,25 @@ class OWDistanceFile(widget.OWWidget):
             QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
 
         self.set_file_list()
-        if len(self.recent_files) > 0:
-            self.open_file(self.recent_files[0])
+        QtCore.QTimer.singleShot(0, self.open_file)
 
     def set_file_list(self):
-        self.file_combo.clear()
-        if not self.recent_files:
-            self.file_combo.addItem("(none)")
-        for file in self.recent_files:
-            if file == "(none)":
-                self.file_combo.addItem("(none)")
-            else:
-                self.file_combo.addItem(os.path.split(file)[1])
+        super().set_file_list()
         self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
-        if self.recent_files:
-            return self.open_file(self.recent_files[0])
+        return self.open_file()
 
     def select_file(self, n):
-        if n < len(self.recent_files) :
-            name = self.recent_files[n]
-            del self.recent_files[n]
-            self.recent_files.insert(0, name)
+        if n < len(self.recent_paths) :
+            name = self.recent_paths[n]
+            del self.recent_paths[n]
+            self.recent_paths.insert(0, name)
         elif n:
             self.browse_file(True)
 
-        if len(self.recent_files) > 0:
-            self.set_file_list()
-            self.open_file(self.recent_files[0])
+        self.set_file_list()
+        self.open_file()
 
     def browse_file(self, in_demos=0):
         if in_demos:
@@ -106,8 +95,8 @@ class OWDistanceFile(widget.OWWidget):
                     "Cannot find the directory with example files")
                 return
         else:
-            if self.recent_files and self.recent_files[0] != "(none)":
-                start_file = self.recent_files[0]
+            if self.recent_paths and self.recent_paths[0].abspath != "(none)":
+                start_file = self.recent_paths[0]
             else:
                 start_file = os.path.expanduser("~/")
 
@@ -115,18 +104,19 @@ class OWDistanceFile(widget.OWWidget):
             self, 'Open Distance File', start_file)
         if not filename:
             return
-        if filename in self.recent_files:
-            self.recent_files.remove(filename)
-        self.recent_files.insert(0, filename)
+        self.add_path(filename)
         self.set_file_list()
-        self.open_file(self.recent_files[0])
+        self.open_file()
 
     # Open a file, create data from it and send it over the data channel
-    def open_file(self, fn):
+    def open_file(self):
         self.error()
         self.warning()
         self.information()
 
+        if not self.recent_paths or self.recent_paths[0].abspath == "(none)":
+            return
+        fn = self.recent_paths[0].abspath
         if not os.path.exists(fn):
             dir_name, basename = os.path.split(fn)
             if os.path.exists(os.path.join(".", basename)):
