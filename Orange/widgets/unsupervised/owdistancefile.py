@@ -5,10 +5,10 @@ from PyQt4 import QtGui, QtCore
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
-from Orange.widgets.utils.filedialogs import RecentPathsWidgetMixin
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 
 
-class OWDistanceFile(widget.OWWidget, RecentPathsWidgetMixin):
+class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
     description = "Read distances from file"
@@ -21,16 +21,13 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWidgetMixin):
     want_main_area = False
     resizing_enabled = False
 
-    # recent_paths = Setting([]) comes from RecentPathsWidgetMixin
-
     def __init__(self):
         super().__init__()
-        RecentPathsWidgetMixin.__init__(self)
+        RecentPathsWComboMixin.__init__(self)
         self.loaded_file = ""
 
         vbox = gui.vBox(self.controlArea, "Distance File", addSpace=True)
         box = gui.hBox(vbox)
-        self.file_combo = QtGui.QComboBox(box)
         self.file_combo.setMinimumWidth(300)
         box.layout().addWidget(self.file_combo)
         self.file_combo.activated[int].connect(self.select_file)
@@ -64,10 +61,8 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWidgetMixin):
         return self.open_file()
 
     def select_file(self, n):
-        if n < len(self.recent_paths) :
-            name = self.recent_paths[n]
-            del self.recent_paths[n]
-            self.recent_paths.insert(0, name)
+        if n < len(self.recent_paths):
+            super().select_file(n)
         elif n:
             self.browse_file(True)
 
@@ -95,17 +90,13 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWidgetMixin):
                     "Cannot find the directory with example files")
                 return
         else:
-            if self.recent_paths and self.recent_paths[0].abspath != "(none)":
-                start_file = self.recent_paths[0]
-            else:
-                start_file = os.path.expanduser("~/")
+            start_file = self.last_path() or os.path.expanduser("~/")
 
         filename = QtGui.QFileDialog.getOpenFileName(
             self, 'Open Distance File', start_file)
         if not filename:
             return
         self.add_path(filename)
-        self.set_file_list()
         self.open_file()
 
     # Open a file, create data from it and send it over the data channel
@@ -114,9 +105,9 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWidgetMixin):
         self.warning()
         self.information()
 
-        if not self.recent_paths or self.recent_paths[0].abspath == "(none)":
+        fn = self.last_path()
+        if not fn:
             return
-        fn = self.recent_paths[0].abspath
         if not os.path.exists(fn):
             dir_name, basename = os.path.split(fn)
             if os.path.exists(os.path.join(".", basename)):

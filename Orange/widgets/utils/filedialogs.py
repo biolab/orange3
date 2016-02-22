@@ -1,6 +1,6 @@
 import os
 
-from PyQt4.QtGui import QMessageBox, QFileDialog, QFileIconProvider
+from PyQt4.QtGui import QMessageBox, QFileDialog, QFileIconProvider, QComboBox
 
 from Orange.widgets.settings import Setting
 
@@ -211,6 +211,36 @@ class RecentPath:
 
 
 class RecentPathsWidgetMixin:
+    """
+    Provide a setting with recent paths and relocation capabilities
+
+    The mixin provides methods `add_path` to add paths to the top of the list,
+    and `last_path` to retrieve the most recent path. The widget must also call
+    `select_file(n)` to push the n-th file to the top when the user selects it
+    in the combo. The recommended usage is to connect the combo box signal
+    to `select_file`::
+
+        self.file_combo.activated[int].connect(self.select_file)
+
+    and overload the method `select_file`, for instance like this
+
+        def select_file(self, n):
+            super().select_file(n)
+            self.open_file()
+
+    The mixin works by adding a `recent_path` setting storing a list of
+    instances of :obj:`RecentPath` (not pure strings). The widget can also
+    manipulate the settings directly when `add_path` and `last_path` do not
+    suffice.
+
+    If the widget has a simple combo box with file names, use
+    :obj:`RecentPathsWComboMixin`, which also manages the combo box.
+
+    Since this is a mixin, make sure to explicitly call its constructor by
+    `RecentPathsWidgetMixin.__init__(self)`.
+    """
+
+    #: list with search paths; overload to add, say, documentation data sets dir
     SEARCH_PATHS = []
 
     #: List[RecentPath]
@@ -221,7 +251,7 @@ class RecentPathsWidgetMixin:
     def __init__(self):
         super().__init__()
         self._init_called = True
-        self.relocate_recent_files()
+        self._relocate_recent_files()
 
     def _check_init(self):
         if not self._init_called:
@@ -233,7 +263,7 @@ class RecentPathsWidgetMixin:
             return self.SEARCH_PATHS
         return self.SEARCH_PATHS + [("basedir", basedir)]
 
-    def relocate_recent_files(self):
+    def _relocate_recent_files(self):
         self._check_init()
         search_paths = self._search_paths()
         rec = []
@@ -246,9 +276,69 @@ class RecentPathsWidgetMixin:
                 rec.append(
                     RecentPath.create(recent.search(search_paths), search_paths)
                 )
-        self.recent_paths = rec
+        # change the list in-place for the case the widgets wraps this list
+        # in some model (untested!)
+        self.recent_paths[:] = rec
+
+    def workflowEnvChanged(self, key, value, oldvalue):
+        """
+        Handle changes of the working directory
+
+        The function is triggered by a signal from the canvas when the user
+        saves the schema.
+        """
+        if key == "basedir":
+            self._relocate_recent_files()
+
+    def add_path(self, filename):
+        """Add (or move) a file name to the top of recent paths"""
+        self._check_init()
+        recent = RecentPath.create(filename, self._search_paths())
+        if recent in self.recent_paths:
+            self.recent_paths.remove(recent)
+        self.recent_paths.insert(0, recent)
+
+    def select_file(self, n):
+        """Move the n-th file to the top of the list"""
+        recent = self.recent_paths[n]
+        del self.recent_paths[n]
+        self.recent_paths.insert(0, recent)
+
+    def last_path(self):
+        """Return the most recent absolute path or `None` if there is none"""
+        abspath = self.recent_paths and self.recent_paths[0].abspath
+        if abspath != "(none)":
+            return abspath
+
+
+class RecentPathsWComboMixin(RecentPathsWidgetMixin):
+    """
+    Adds file combo handling to :obj:`RecentPathsWidgetMixin`.
+
+    The mixin constructs a combo box `self.file_combo` and provides a method
+    `set_file_list` for updating its content. The mixin also overloads the
+    inherited `add_path` and `select_file` to call `set_file_list`.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.file_combo = \
+            QComboBox(self, sizeAdjustPolicy=QComboBox.AdjustToContents)
+
+    def add_path(self, filename):
+        """Add (or move) a file name to the top of recent paths"""
+        super().add_path(filename)
+        self.set_file_list()
+
+    def select_file(self, n):
+        """Move the n-th file to the top of the list"""
+        super().select_file(n)
+        self.set_file_list()
 
     def set_file_list(self):
+        """
+        Sets the items in the file list combo
+        """
         self._check_init()
         self.file_combo.clear()
         if not self.recent_paths:
@@ -259,14 +349,7 @@ class RecentPathsWidgetMixin:
                 self.file_combo.addItem(recent.value)
                 self.file_combo.model().item(i).setToolTip(recent.abspath)
 
-    def add_path(self, filename):
-        self._check_init()
-        recent = RecentPath.create(filename, self._search_paths())
-        if recent in self.recent_paths:
-            self.recent_paths.remove(recent)
-        self.recent_paths.insert(0, recent)
-
     def workflowEnvChanged(self, key, value, oldvalue):
+        super().workflowEnvChanged(key, value, oldvalue)
         if key == "basedir":
-            self.relocate_recent_files()
             self.set_file_list()
