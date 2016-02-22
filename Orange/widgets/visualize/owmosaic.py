@@ -461,11 +461,11 @@ class OWMosaicDisplay(OWWidget):
             return
 
         selectList = attrList
-        if type(data) == SqlTable and data.domain.class_var:
+        if type(data) == SqlTable and data.domain.has_discrete_class:
             cv = data.domain.class_var  # shranim class_var, ker se v naslednji vrstici zbrise (v primeru da je SqlTable)
             data = data[:, attrList + [data.domain.class_var]]
             data.domain.class_var = cv
-        elif data.domain.class_var:
+        elif data.domain.has_discrete_class:
             cv = data.domain.class_var  # shranim class_var, ker se v naslednji vrstici zbrise (v primeru da si izbral atribut, ki je class_var)
             name = data.name
             data = data[:, attrList + [data.domain.class_var]]
