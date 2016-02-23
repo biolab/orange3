@@ -102,6 +102,7 @@ class OWMosaicDisplay(OWWidget):
     _cellspace = 4
 
     graph_name = "canvas"
+    want_control_area = False
 
     def __init__(self):
         super().__init__()
@@ -132,6 +133,31 @@ class OWMosaicDisplay(OWWidget):
                            QColor(255, 100, 100), QColor(255, 0, 0)]
         self.selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
 
+        cbox = gui.hBox(self.mainArea)
+        box = gui.vBox(cbox, box=True)
+        self.attr_combos = [
+            gui.comboBox(
+                    box, self, value="variable{}".format(i),
+                    contentsLength=12,
+                    callback=self.reset_graph,
+                    sendSelectedValue=True, valueType=str)
+            for i in range(1, 5)]
+
+        box = gui.vBox(cbox)
+        self.rb_colors = gui.radioButtonsInBox(
+                box, self, "interior_coloring",
+                self.interior_coloring_opts, box=True,#"Interior coloring",
+                callback=self.update_graph)
+        gui.checkBox(gui.indentedBox(self.rb_colors),
+                     self, 'use_boxes', label='Compare with total',
+                     callback=self._compare_with_total)
+
+        bbox = gui.hBox(box)
+        gui.button(bbox, None, "&Save Graph",
+                   callback=self.save_graph, autoDefault=False)
+        gui.button(bbox, None, "&Report",
+                   callback=self.show_report, autoDefault=False)
+
         self.canvas = QGraphicsScene()
         self.canvas_view = MosaicSceneView(self, self.canvas, self.mainArea)
         self.mainArea.layout().addWidget(self.canvas_view)
@@ -139,25 +165,8 @@ class OWMosaicDisplay(OWWidget):
         self.canvas_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvas_view.setRenderHint(QPainter.Antialiasing)
 
-        box = gui.vBox(self.controlArea, box=True)
-        self.attr_combos = [
-            gui.comboBox(
-                    box, self, value="variable{}".format(i),
-                    orientation="horizontal", contentsLength=12,
-                    callback=self.reset_graph,
-                    sendSelectedValue=True, valueType=str)
-            for i in range(1, 5)]
-        self.rb_colors = gui.radioButtonsInBox(
-                self.controlArea, self, "interior_coloring",
-                self.interior_coloring_opts, box="Interior coloring",
-                callback=self.update_graph)
-        gui.checkBox(gui.indentedBox(self.rb_colors),
-                     self, 'use_boxes', label='Compare with total',
-                     callback=self._compare_with_total)
-        gui.rubber(self.controlArea)
-
     def size(self):
-        return QSize(830, 550)
+        return QSize(500, 700)
 
     def _compare_with_total(self):
         self.interior_coloring = 1
@@ -801,6 +810,8 @@ class OWMosaicDisplay(OWWidget):
         self.selectionConditions = []
         self.sendSelectedData()
 
+    def show_report(self):
+        self.report_plot()
 
 class OWCanvasText(QGraphicsTextItem):
     def __init__(self, canvas, text="", x=0, y=0, alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
