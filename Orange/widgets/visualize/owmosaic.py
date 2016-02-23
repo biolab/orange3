@@ -151,13 +151,17 @@ class OWMosaicDisplay(OWWidget):
                 self.controlArea, self, "interior_coloring",
                 self.interior_coloring_opts, box="Interior coloring",
                 callback=self.update_graph)
-        gui.checkBox(self.controlArea, self, 'use_boxes', box=True,
-                     label='Show overal distribution',
-                     callback=self.update_graph)
+        gui.checkBox(gui.indentedBox(self.rb_colors),
+                     self, 'use_boxes', label='Compare with total',
+                     callback=self._compare_with_total)
         gui.rubber(self.controlArea)
 
     def size(self):
         return QSize(830, 550)
+
+    def _compare_with_total(self):
+        self.interior_coloring = 1
+        self.update_graph()
 
     def init_combos(self, data):
         for combo in self.attr_combos:
@@ -263,8 +267,8 @@ class OWMosaicDisplay(OWWidget):
         if data.domain.class_var:
             sql = type(data) == SqlTable
             name = not sql and data.name
-            cv = data.domain.class_var  # save class_var because it is removed
-                                        # in the next line
+            # save class_var because it is removed in the next line
+            cv = data.domain.class_var
             data = data[:, attr_list + [data.domain.class_var]]
             data.domain.class_var = cv
             if not sql:
@@ -294,27 +298,27 @@ class OWMosaicDisplay(OWWidget):
             return maxw
 
         # get the maximum width of rectangle
-        xOff = 20
+        xoff = 20
         width = 20
         if len(attr_list) > 1:
             text = OWCanvasText(self.canvas, attr_list[1], bold=1, show=0)
             self.max_ylabel_w1 = min(get_max_label_width(attr_list[1]), 150)
             width = 5 + text.boundingRect().height() + \
-                    self.attributeValueOffset + self.max_ylabel_w1
-            xOff = width
+                self.attributeValueOffset + self.max_ylabel_w1
+            xoff = width
             if len(attr_list) == 4:
                 text = OWCanvasText(self.canvas, attr_list[3], bold=1, show=0)
                 self.max_ylabel_w2 = min(get_max_label_width(attr_list[3]), 150)
                 width += text.boundingRect().height() + \
-                         self.attributeValueOffset + self.max_ylabel_w2 - 10
+                    self.attributeValueOffset + self.max_ylabel_w2 - 10
 
         # get the maximum height of rectangle
         height = 100
-        yOff = 45
-        squareSize = min(self.canvas_view.width() - width - 20,
-                         self.canvas_view.height() - height - 20)
+        yoff = 45
+        square_size = min(self.canvas_view.width() - width - 20,
+                          self.canvas_view.height() - height - 20)
 
-        if squareSize < 0:
+        if square_size < 0:
             return  # canvas is too small to draw rectangles
         self.canvas_view.setSceneRect(
                 0, 0, self.canvas_view.width(), self.canvas_view.height())
@@ -331,14 +335,13 @@ class OWMosaicDisplay(OWWidget):
 
         # draw rectangles
         self.draw_data(
-            attr_list, (xOff, xOff + squareSize), (yOff, yOff + squareSize),
+            attr_list, (xoff, xoff + square_size), (yoff, yoff + square_size),
             0, "", len(attr_list))
         self.DrawLegend(
-            data, (xOff, xOff + squareSize), (yOff, yOff + squareSize))
-
+            data, (xoff, xoff + square_size), (yoff, yoff + square_size))
 
     # create a dictionary "combination-of-attr-values" : count
-    ## TODO: this function is also used in owsieve --> where to put it?
+    # TODO: this function is also used in owsieve --> where to put it?
     def getConditionalDistributions(self, data, attrs):
         cond_dist = defaultdict(int)
         dist = defaultdict(int)
@@ -401,7 +404,8 @@ class OWMosaicDisplay(OWWidget):
             # we remove the space needed for separating different attr. values
             whole = max(0, (x1 - x0) - edge * (
                 len(values) - 1))
-            if whole == 0: edge = (x1 - x0) / float(len(values) - 1)
+            if whole == 0:
+                edge = (x1 - x0) / float(len(values) - 1)
         else:  # we are drawing on the y axis
             whole = max(0, (y1 - y0) - edge * (len(values) - 1))
             if whole == 0:
