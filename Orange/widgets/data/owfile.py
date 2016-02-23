@@ -203,7 +203,7 @@ class OWFile(widget.OWWidget):
                                 callback=self.load_data, addToLayout=False)
 
         rb_button = gui.appendRadioButton(vbox, "File", addToLayout=False)
-        layout.addWidget(rb_button, 0, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(rb_button, 0, 0, QtCore.Qt.AlignVCenter)
 
         box = gui.hBox(None, addToLayout=False, margin=0)
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
@@ -222,7 +222,7 @@ class OWFile(widget.OWWidget):
         layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
-        layout.addWidget(rb_button, 1, 0, QtCore.Qt.AlignCenter)
+        layout.addWidget(rb_button, 1, 0, QtCore.Qt.AlignVCenter)
 
         box = gui.hBox(vbox, addToLayout=False)
         self.url_combo = url_combo = QtGui.QComboBox()
@@ -237,7 +237,7 @@ class OWFile(widget.OWWidget):
         url_edit.setTextMargins(l + 5, t, r, b)
         box.layout().addWidget(url_combo)
         url_combo.activated.connect(self._url_set)
-        layout.addWidget(box, 1, 1, QtCore.Qt.AlignCenter)
+        layout.addWidget(box, 1, 1, QtCore.Qt.AlignVCenter)
 
         box = gui.vBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, 'No data loaded.')
