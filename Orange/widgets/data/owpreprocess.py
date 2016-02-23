@@ -868,13 +868,13 @@ PREPROCESSORS = [
         Randomize
     ),
     PreprocessAction(
-        "PCA", "orange.preprocess.preprocess", "PCA",
+        "PCA", "orange.preprocess.pca", "PCA",
         Description("Principal Component Analysis",
                     icon_path("PCA.svg")),
         PCA
     ),
     PreprocessAction(
-        "CUR", "orange.preprocess.preprocess", "CUR",
+        "CUR", "orange.preprocess.cur", "CUR",
         Description("CUR Matrix Decomposition",
                     icon_path("SelectColumns.svg")),
         CUR
