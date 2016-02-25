@@ -32,7 +32,7 @@ class ValuesSql(filter.Values):
         sql = aggregator.join(c.to_sql() for c in self.conditions)
         if self.negate:
             sql = 'NOT (%s)' % sql
-        return sql
+        return sql if self.conjunction else '({})'.format(sql)
 
 
 class FilterDiscreteSql(filter.FilterDiscrete):
