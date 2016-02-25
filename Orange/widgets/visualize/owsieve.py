@@ -9,7 +9,7 @@ from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
                          QDialog, QApplication, QSizePolicy)
 
 import Orange
-from Orange.data import Table
+from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
@@ -165,24 +165,30 @@ class OWSieveDiagram(OWWidget):
         self.update_selection()
 
     def update_selection(self):
-        if self.areas is None:
+        if self.areas is None or not self.selection:
             self.send("Selection", None)
             return
 
-        selected = np.zeros(len(self.data), dtype=bool)
-        col_x = self.data.get_column_view(self.data.domain.index(self.attrX))[0]
-        col_y = self.data.get_column_view(self.data.domain.index(self.attrY))[0]
+        filters = []
         for i, area in enumerate(self.areas):
             if i in self.selection:
                 width = 4
                 val_x, val_y = area.value_pair
-                selected |= ((col_x == val_x) & (col_y == val_y))
+                filters.append(
+                    filter.Values([
+                        filter.FilterDiscrete(self.attrX, [val_x]),
+                        filter.FilterDiscrete(self.attrY, [val_y])
+                    ]))
             else:
                 width = 1
             pen = area.pen()
             pen.setWidth(width)
             area.setPen(pen)
-        self.send("Selection", self.data[selected])
+        if len(filters) == 1:
+            filters = filters[0]
+        else:
+            filters = filter.Values(filters, conjunction=False)
+        self.send("Selection", filters(self.data))
 
     # -----------------------------------------------------------------------
     # Everything from here on is ancient and has been changed only according
