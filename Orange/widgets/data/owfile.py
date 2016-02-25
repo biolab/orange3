@@ -1,14 +1,18 @@
 import os
+from itertools import chain
 from warnings import catch_warnings
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import QSizePolicy
+from PyQt4.QtGui import QSizePolicy, QTableView
 
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
-from Orange.widgets.utils.itemmodels import PyListModel
+from Orange.widgets.data.owcolor import HorizontalGridDelegate
+from Orange.widgets.settings import Setting, PerfectDomainContextHandler
+from Orange.widgets.utils.itemmodels import PyListModel, TableModel
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat
+from Orange.data import \
+    DiscreteVariable, ContinuousVariable, StringVariable, Domain
 
 
 def add_origin(examples, filename):
@@ -142,6 +146,142 @@ class RecentPath:
     __str__ = __repr__
 
 
+class VarTableModel(QtCore.QAbstractTableModel):
+    places = "feature", "class", "meta", "skip"
+    typenames = "nominal", "numeric", "string"
+    vartypes = DiscreteVariable, ContinuousVariable, StringVariable
+    name2type = dict(zip(typenames, vartypes))
+    type2name = dict(zip(vartypes, typenames))
+
+    def __init__(self, widget, variables):
+        super().__init__()
+        self.widget = widget
+        self.variables = variables
+
+    def set_domain(self, domain):
+        def may_be_numeric(var):
+            if var.is_continuous:
+                return True
+            if var.is_discrete:
+                try:
+                    [float(x) for x in var.values]
+                    return True
+                except ValueError:
+                    return False
+            return False
+
+        self.modelAboutToBeReset.emit()
+        self.variables[:] = self.original = [
+            [var.name, type(var), place,
+             ", ".join(var.values) if var.is_discrete else "",
+             may_be_numeric(var)]
+            for place, vars in enumerate(
+                (domain.attributes, domain.class_vars, domain.metas))
+            for var in vars
+        ]
+        self.modelReset.emit()
+
+    def rowCount(self, parent):
+        return 0 if parent.isValid() else len(self.variables)
+
+    def columnCount(self, parent):
+        return 0 if parent.isValid() else 4
+
+    def data(self, index, role):
+        row, col = index.row(), index.column()
+        val = self.variables[row][col]
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
+            if col == 1:
+                return self.type2name[val]
+            if col == 2:
+                return self.places[val]
+            else:
+                return val
+        if role == QtCore.Qt.DecorationRole:
+            if col == 1:
+                return gui.attributeIconDict[self.vartypes.index(val) + 1]
+        if role == QtCore.Qt.ForegroundRole:
+            if self.variables[row][2] == 3 and col != 2:
+                return QtGui.QColor(160, 160, 160)
+        if role == QtCore.Qt.BackgroundRole:
+            place = self.variables[row][2]
+            return TableModel.ColorForRole.get(place, None)
+
+    def setData(self, index, value, role):
+        row, col = index.row(), index.column()
+        row_data = self.variables[row]
+        if role == QtCore.Qt.EditRole:
+            if col == 0:
+                row_data[col] = value
+            elif col == 1:
+                vartype = self.name2type[value]
+                row_data[col] = vartype
+                if not vartype.is_primitive() and row_data[2] < 2:
+                    row_data[2] = 2
+            elif col == 2:
+                row_data[col] = self.places.index(value)
+            else:
+                return False
+            # Settings may change background colors
+            if col > 0:
+                self.dataChanged.emit(
+                    index.sibling(row, 0), index.sibling(row, 3))
+            self.widget.apply_button.show()
+            return True
+
+    def flags(self, index):
+        return super().flags(index) | QtCore.Qt.ItemIsEditable
+
+
+class ComboDelegate(HorizontalGridDelegate):
+    def __init__(self, view, items):
+        super().__init__()
+        self.view = view
+        self.items = items
+
+    def createEditor(self, parent, option, index):
+        # This ugly hack closes the combo when the user selects an item
+        class Combo(QtGui.QComboBox):
+            def __init__(self, *args):
+                super().__init__(*args)
+                self.popup_shown = False
+
+            def highlight(self, index):
+                self.highlighted_text = index
+
+            def showPopup(self, *args):
+                super().showPopup(*args)
+                self.popup_shown = True
+
+            def hidePopup(me):
+                if me.popup_shown:
+                    self.view.model().setData(
+                            index, me.highlighted_text, QtCore.Qt.EditRole)
+                    self.popup_shown = False
+                super().hidePopup()
+                self.view.closeEditor(me, self.NoHint)
+
+        combo = Combo(parent)
+        combo.highlighted[str].connect(combo.highlight)
+        return combo
+
+class VarTypeDelegate(ComboDelegate):
+    def setEditorData(self, combo, index):
+        combo.clear()
+        no_numeric = not self.view.model().variables[index.row()][4]
+        ind = self.items.index(index.data())
+        combo.addItems(self.items[:1] + self.items[1 + no_numeric:])
+        combo.setCurrentIndex(ind - (no_numeric and ind > 1))
+
+
+class PlaceDelegate(ComboDelegate):
+    def setEditorData(self, combo, index):
+        combo.clear()
+        to_meta = not self.view.model().variables[index.row()][1].is_primitive()
+        combo.addItems(self.items[2 * to_meta:])
+        combo.setCurrentIndex(self.items.index(index.data()) - 2 * to_meta)
+
+
 class OWFile(widget.OWWidget):
     name = "File"
     id = "orange.widgets.data.file"
@@ -156,15 +296,19 @@ class OWFile(widget.OWWidget):
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
-    resizing_enabled = False
+    resizing_enabled = True
 
     LOCAL_FILE, URL = range(2)
+
+    settingsHandler = PerfectDomainContextHandler()
 
     #: List[RecentPath]
     recent_paths = Setting([])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
     url = Setting("")
+
+    variables = []
 
     dlg_formats = (
         "All readable files ({});;".format(
@@ -189,6 +333,7 @@ class OWFile(widget.OWWidget):
         self.file_combo = QtGui.QComboBox(
             box, sizeAdjustPolicy=QtGui.QComboBox.AdjustToContents)
         self.file_combo.setMinimumWidth(250)
+        self.file_combo.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         box.layout().addWidget(self.file_combo)
         self.file_combo.activated[int].connect(self.select_file)
         button = gui.button(
@@ -217,9 +362,31 @@ class OWFile(widget.OWWidget):
         completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
         le_url.setCompleter(completer)
 
-        box = gui.widgetBox(self.controlArea, "Info")
-        self.info = gui.widgetLabel(box, 'No data loaded.')
-        self.warnings = gui.widgetLabel(box, '')
+        gui.separator(vbox, 12, 12)
+        self.info = gui.widgetLabel(vbox, 'No data loaded.')
+        # Set word wrap, so long warnings won't expand the widget
+        self.info.setWordWrap(True)
+        self.info.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Minimum)
+
+        box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
+        self.tablemodel = VarTableModel(self, self.variables)
+        self.tableview = QTableView()
+        self.tableview.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.tableview.setModel(self.tablemodel)
+        self.tableview.setSelectionMode(QTableView.NoSelection)
+        self.tableview.horizontalHeader().hide()
+        self.tableview.horizontalHeader().setStretchLastSection(True)
+        self.tableview.setEditTriggers(
+            QTableView.SelectedClicked | QTableView.DoubleClicked)
+        self.tableview.setShowGrid(False)
+        self.grid_delegate = HorizontalGridDelegate()
+        self.tableview.setItemDelegate(self.grid_delegate)
+        self.vartype_delegate = VarTypeDelegate(self.tableview, VarTableModel.typenames)
+        self.tableview.setItemDelegateForColumn(1, self.vartype_delegate)
+        self.place_delegate = PlaceDelegate(self.tableview, VarTableModel.places)
+        self.tableview.setItemDelegateForColumn(2, self.place_delegate)
+        box.layout().addWidget(self.tableview)
 
         box = gui.widgetBox(self.controlArea, orientation="horizontal")
         gui.button(box, self, "Browse documentation data sets",
@@ -227,16 +394,18 @@ class OWFile(widget.OWWidget):
         gui.rubber(box)
         box.layout().addWidget(self.report_button)
         self.report_button.setFixedWidth(170)
-
-        # Set word wrap, so long warnings won't expand the widget
-        self.warnings.setWordWrap(True)
-        self.warnings.setSizePolicy(
-            QSizePolicy.Ignored, QSizePolicy.MinimumExpanding)
+        self.apply_button = gui.button(
+            box, self, "Apply", callback=self.apply_domain_edit)
+        self.apply_button.hide()
+        self.apply_button.setFixedWidth(170)
 
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
         QtCore.QTimer.singleShot(0, self.load_data)
+
+    def sizeHint(self):
+        return QtCore.QSize(600, 550)
 
     def _relocate_recent_files(self):
         paths = [("sample-datasets", get_sample_datasets_dir())]
@@ -282,8 +451,8 @@ class OWFile(widget.OWWidget):
             if os.path.exists(path):
                 self._add_path(path)
             else:
-                self.info.setText('Data was not loaded:')
-                self.warnings.setText("File {} does not exist".format(path))
+                self.info.setText(
+                    "Data was not loaded: File {} does not exist".format(path))
                 self.file_combo.removeItem(n)
                 self.file_combo.lineEdit().setText(path)
                 return
@@ -345,6 +514,8 @@ class OWFile(widget.OWWidget):
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
+        self.closeContext()
+
         def load(method, fn):
             with catch_warnings(record=True) as warnings:
                 data = method(fn)
@@ -365,7 +536,7 @@ class OWFile(widget.OWWidget):
             try:
                 return load(Table.from_file, fn)
             except Exception as exc:
-                self.warnings.setText(str(exc))
+                self.info.setText("Error: {}".format(exc))
                 ind = self.file_combo.currentIndex()
                 self.file_combo.removeItem(ind)
                 if ind < len(self.recent_paths) and \
@@ -391,8 +562,8 @@ class OWFile(widget.OWWidget):
             try:
                 return load(Table.from_url, url)
             except:
-                self.warnings.setText(
-                    "URL '{}' does not contain valid data".format(url))
+                self.info.setText(
+                    "Error: URL '{}' does not contain valid data".format(url))
                 # Don't remove from recent_urls:
                 # resource may reappear, or the user mistyped it
                 # and would like to retrieve it from history and fix it.
@@ -405,12 +576,11 @@ class OWFile(widget.OWWidget):
             self.data, self.loaded_file = \
                 [load_from_file, load_from_network][self.source]()
         except:
-            self.info.setText("Data was not loaded:")
             self.data = None
             self.loaded_file = ""
             return
         else:
-            self.warnings.setText("")
+            self.info.setText("")
 
         data = self.data
         if data is None:
@@ -419,26 +589,35 @@ class OWFile(widget.OWWidget):
             return
 
         domain = data.domain
-        text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
+        text = "{} instance(s), {} feature(s), {} meta attribute(s). ".format(
             len(data), len(domain.attributes), len(domain.metas))
         if domain.has_continuous_class:
-            text += "\nRegression; numerical class."
+            text += "Regression; numerical class."
         elif domain.has_discrete_class:
-            text += "\nClassification; discrete class with {} values.".format(
+            text += "Classification; discrete class with {} values.".format(
                 len(domain.class_var.values))
         elif data.domain.class_vars:
-            text += "\nMulti-target; {} target variables.".format(
+            text += "Multi-target; {} target variables.".format(
                 len(data.domain.class_vars))
         else:
-            text += "\nData has no target variable."
+            text += "Data has no target variable."
         if 'Timestamp' in data.domain:
             # Google Forms uses this header to timestamp responses
-            text += '\n\nFirst entry: {}\nLast entry: {}'.format(
+            text += '\nFirst entry: {} Last entry: {}'.format(
                 data[0, 'Timestamp'], data[-1, 'Timestamp'])
         self.info.setText(text)
 
         add_origin(data, self.loaded_file)
+        self.tablemodel.set_domain(data.domain)
+        self.openContext(data.domain)
         self.send("Data", data)
+
+    def storeSpecificSettings(self):
+        self.current_context.modified_variables = self.variables[:]
+
+    def retrieveSpecificSettings(self):
+        if hasattr(self.current_context, "modified_variables"):
+            self.variables[:] = self.current_context.modified_variables
 
     def get_widget_name_extension(self):
         _, name = os.path.split(self.loaded_file)
@@ -475,6 +654,24 @@ class OWFile(widget.OWWidget):
         if key == "basedir":
             self._relocate_recent_files()
             self.set_file_list()
+
+    def apply_domain_edit(self):
+        attributes = []
+        class_vars = []
+        metas = []
+        places = [attributes, class_vars, metas]
+        for (name, tpe, place, vals), orig_var in \
+                zip(self.tablemodel.variables,
+                    chain(self.data.domain.variables, self.data.domain.metas)):
+            if place == 3:
+                continue
+            if name == orig_var.name and tpe == type(orig_var):
+                var = orig_var
+            else:
+                var = tpe(name)
+            places[place].append(var)
+        domain = Domain(attributes, class_vars, metas)
+        self.apply_button.hide()
 
 
 if __name__ == "__main__":
