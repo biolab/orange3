@@ -8,12 +8,14 @@ Rank (score) features for prediction.
 
 from collections import namedtuple
 
+import numpy as np
+
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 import Orange
 from Orange.base import Learner
-from Orange.data import ContinuousVariable, DiscreteVariable
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain, StringVariable
 from Orange.preprocess import score
 from Orange.canvas import report
 from Orange.widgets import widget, settings, gui
@@ -54,7 +56,8 @@ class OWRank(widget.OWWidget):
 
     inputs = [("Data", Orange.data.Table, "setData"),
               ("Scorer", score.Scorer, "set_learner", widget.Multiple)]
-    outputs = [("Reduced Data", Orange.data.Table)]
+    outputs = [("Reduced Data", Orange.data.Table, widget.Default),
+               ("Scores", Orange.data.Table)]
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 
@@ -325,6 +328,11 @@ class OWRank(widget.OWWidget):
         self.ranksProxyModel.invalidate()
         self.selectMethodChanged()
 
+        if self.data:
+            self.send("Scores", self.create_scores_table())
+        else:
+            self.send("Scores", None)
+
     def updateRankModel(self, measuresMask=None):
         """
         Update the rankModel.
@@ -488,6 +496,18 @@ class OWRank(widget.OWWidget):
             return [self.data.domain.attributes[i] for i in inds]
         else:
             return []
+
+    def create_scores_table(self):
+        features = [ContinuousVariable(s[0]) for s in self.measures]
+        metas = [StringVariable("Feature name")]
+        domain = Domain(features, metas=metas)
+
+        scores = np.array(self.measure_scores).T
+        feature_names = np.array([a.name for a in self.data.domain.attributes])
+        # Reshape to 2d array as Table does not like 1d arrays
+        feature_names = feature_names[:, None]
+
+        return Orange.data.Table(domain, scores, metas=feature_names)
 
 
 class ScoreValueItem(QtGui.QStandardItem):
