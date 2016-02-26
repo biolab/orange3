@@ -2,7 +2,7 @@ import os
 from warnings import catch_warnings
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import QSizePolicy
+from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -142,6 +142,22 @@ class RecentPath:
     __str__ = __repr__
 
 
+class NamedURLModel(PyListModel):
+    def __init__(self, mapping):
+        self.mapping = mapping
+        super().__init__()
+
+    def data(self, index, role):
+        data = super().data(index, role)
+        if role == QtCore.Qt.DisplayRole:
+            return self.mapping.get(data, data)
+        return data
+
+    def add_name(self, url, name):
+        self.mapping[url] = name
+        self.modelReset.emit()
+
+
 class OWFile(widget.OWWidget):
     name = "File"
     id = "orange.widgets.data.file"
@@ -164,6 +180,7 @@ class OWFile(widget.OWWidget):
     recent_paths = Setting([])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
+    sheet_names = Setting({})
     url = Setting("")
 
     dlg_formats = (
@@ -180,58 +197,63 @@ class OWFile(widget.OWWidget):
         self.loaded_file = ""
         self._relocate_recent_files()
 
-        vbox = gui.radioButtons(
-            self.controlArea, self, "source", box=True, addSpace=True,
-            callback=self.load_data)
+        layout = QtGui.QGridLayout()
+        gui.widgetBox(self.controlArea, margin=0, orientation=layout)
+        vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
+                                callback=self.load_data, addToLayout=False)
 
-        box = gui.widgetBox(vbox, orientation="horizontal")
-        gui.appendRadioButton(vbox, "File", insertInto=box)
-        self.file_combo = QtGui.QComboBox(
-            box, sizeAdjustPolicy=QtGui.QComboBox.AdjustToContents)
-        self.file_combo.setMinimumWidth(250)
-        box.layout().addWidget(self.file_combo)
-        self.file_combo.activated[int].connect(self.select_file)
+        rb_button = gui.appendRadioButton(vbox, "File", addToLayout=False)
+        layout.addWidget(rb_button, 0, 0, QtCore.Qt.AlignVCenter)
+
+        box = gui.hBox(None, addToLayout=False, margin=0)
+        box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.file_combo = file_combo = QtGui.QComboBox(box)
+        file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        file_combo.activated[int].connect(self.select_file)
+        box.layout().addWidget(file_combo)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        button.setSizePolicy(Policy.Maximum, Policy.Fixed)
         button = gui.button(
             box, self, "Reload", callback=self.reload, autoDefault=False)
-        button.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
+        button.setSizePolicy(Policy.Fixed, Policy.Fixed)
+        layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
 
-        box = gui.widgetBox(vbox, orientation="horizontal")
-        gui.appendRadioButton(vbox, "URL", insertInto=box)
-        self.le_url = le_url = QtGui.QLineEdit(self.url)
-        l, t, r, b = le_url.getTextMargins()
-        le_url.setTextMargins(l + 5, t, r, b)
-        le_url.editingFinished.connect(self._url_set)
-        box.layout().addWidget(le_url)
+        rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
+        layout.addWidget(rb_button, 1, 0, QtCore.Qt.AlignVCenter)
 
-        self.completer_model = PyListModel()
-        self.completer_model.wrap(self.recent_urls)
-        completer = QtGui.QCompleter()
-        completer.setModel(self.completer_model)
-        completer.setCompletionMode(completer.PopupCompletion)
-        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        le_url.setCompleter(completer)
+        box = gui.hBox(vbox, addToLayout=False)
+        self.url_combo = url_combo = QtGui.QComboBox()
+        url_model = NamedURLModel(self.sheet_names)
+        url_model.wrap(self.recent_urls)
+        url_combo.setModel(url_model)
+        url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        url_combo.setEditable(True)
+        url_combo.setInsertPolicy(url_combo.InsertAtTop)
+        url_edit = url_combo.lineEdit()
+        l, t, r, b = url_edit.getTextMargins()
+        url_edit.setTextMargins(l + 5, t, r, b)
+        box.layout().addWidget(url_combo)
+        url_combo.activated.connect(self._url_set)
+        layout.addWidget(box, 1, 1, QtCore.Qt.AlignVCenter)
 
-        box = gui.widgetBox(self.controlArea, "Info")
+        box = gui.vBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, 'No data loaded.')
         self.warnings = gui.widgetLabel(box, '')
 
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        gui.button(box, self, "Browse documentation data sets",
-                   callback=lambda: self.browse_file(True), autoDefault=False)
+        box = gui.hBox(self.controlArea)
+        gui.button(
+            box, self, "Browse documentation data sets",
+            callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
         box.layout().addWidget(self.report_button)
         self.report_button.setFixedWidth(170)
 
         # Set word wrap, so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
-        self.warnings.setSizePolicy(
-            QSizePolicy.Ignored, QSizePolicy.MinimumExpanding)
+        self.warnings.setSizePolicy(Policy.Ignored, Policy.MinimumExpanding)
 
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
@@ -349,7 +371,7 @@ class OWFile(widget.OWWidget):
             with catch_warnings(record=True) as warnings:
                 data = method(fn)
                 self.warning(
-                    33, warnings[-1].message.args[0] if warnings else '')
+                        33, warnings[-1].message.args[0] if warnings else '')
             return data, fn
 
         def load_from_file():
@@ -374,36 +396,41 @@ class OWFile(widget.OWWidget):
                 raise
 
         def load_from_network():
-            def update_model():
-                try:
-                    self.completer_model.remove(url or self.url)
-                except ValueError:
-                    pass
-                self.completer_model.insert(0, url)
-
-            self.url = url = self.le_url.text()
-            if url:
-                QtCore.QTimer.singleShot(0, update_model)
+            combo = self.url_combo
+            model = combo.model()
+            # combo.currentText does not work when the widget is initialized
+            url = model.data(model.index(combo.currentIndex()),
+                             QtCore.Qt.EditRole)
             if not url:
                 return None, ""
             elif "://" not in url:
                 url = "http://" + url
             try:
-                return load(Table.from_url, url)
+                data, url = load(Table.from_url, url)
             except:
                 self.warnings.setText(
-                    "URL '{}' does not contain valid data".format(url))
+                        "URL '{}' does not contain valid data".format(url))
                 # Don't remove from recent_urls:
                 # resource may reappear, or the user mistyped it
                 # and would like to retrieve it from history and fix it.
                 raise
+            combo.clearFocus()
+            if "://docs.google.com/spreadsheets" in url:
+                model.add_name(url, data.name)
+                self.url = \
+                    "{} from {}".format(data.name.replace("- Sheet1", ""), url)
+                combo.lineEdit().setPlaceholderText(self.url)
+                return data, data.name
+            else:
+                self.url = url
+                return data, url
 
         self.warning()
         self.information()
 
         try:
-            self.data, self.loaded_file = \
-                [load_from_file, load_from_network][self.source]()
+            loader = [load_from_file, load_from_network][self.source]
+            self.data, self.loaded_file = loader()
         except:
             self.info.setText("Data was not loaded:")
             self.data = None
@@ -466,7 +493,7 @@ class OWFile(widget.OWWidget):
             self.report_items("File", [("File name", name),
                                        ("Format", get_ext_name(name))])
         else:
-            self.report_items("Data", [("URL", self.url),
+            self.report_items("Data", [("Resource", self.url),
                                        ("Format", get_ext_name(self.url))])
 
         self.report_data("Data", self.data)
