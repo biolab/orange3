@@ -38,6 +38,7 @@ class OWMosaicDisplay(OWWidget):
     variable2 = ContextSetting("")
     variable3 = ContextSetting("")
     variable4 = ContextSetting("")
+    selection = ContextSetting({})
     # interior_coloring is context setting to properly reset it
     # if the widget switches to regression and back (set setData)
     interior_coloring = ContextSetting(1)
@@ -72,18 +73,7 @@ class OWMosaicDisplay(OWWidget):
         self.unprocessed_subset_data = None
         self.subset_data = None
 
-        self.aprioriDistributions = []
-        self.conditionalDict = None
-        self.conditionalSubsetDict = None
-        self.distributionDict = None
-        self.distributionSubsetDict = None
-
-        self.selection = {}
         self.areas = []
-
-        self.max_ylabel_w1 = self.max_ylabel_w2 = 0
-        self.drawn_sides = set()
-        self.draw_positions = {}
 
         cbox = gui.hBox(self.mainArea)
         box = gui.vBox(cbox, box=True)
@@ -255,7 +245,373 @@ class OWMosaicDisplay(OWWidget):
             filters = filters[0]
         self.send("Selected Data", filters(self.data))
 
+    def show_report(self):
+        self.report_plot()
+
     def update_graph(self):
+        def draw_data(attr_list, x0_x1, y0_y1, side, condition,
+                      total_attrs, used_attrs=[], used_vals=[],
+                      attr_vals=""):
+            x0, x1 = x0_x1
+            y0, y1 = y0_y1
+            if conditionaldict[attr_vals] == 0:
+                add_rect(x0, x1, y0, y1, "",
+                         used_attrs, used_vals, attr_vals=attr_vals)
+                # store coordinates for later drawing of labels
+                draw_text(side, attr_list[0], (x0, x1), (y0, y1), total_attrs,
+                          used_attrs, used_vals, attr_vals)
+                return
+
+            attr = attr_list[0]
+            # how much smaller rectangles do we draw
+            edge = len(attr_list) * self._cellspace
+            values = get_variable_values_sorted(self.data.domain[attr])
+            if side % 2:
+                values = values[::-1]  # reverse names if necessary
+
+            if side % 2 == 0:  # we are drawing on the x axis
+                # remove the space needed for separating different attr. values
+                whole = max(0, (x1 - x0) - edge * (
+                    len(values) - 1))
+                if whole == 0:
+                    edge = (x1 - x0) / float(len(values) - 1)
+            else:  # we are drawing on the y axis
+                whole = max(0, (y1 - y0) - edge * (len(values) - 1))
+                if whole == 0:
+                    edge = (y1 - y0) / float(len(values) - 1)
+
+            if attr_vals == "":
+                counts = [conditionaldict[val] for val in values]
+            else:
+                counts = [conditionaldict[attr_vals + "-" + val]
+                          for val in values]
+            total = sum(counts)
+
+            # if we are visualizing the third attribute and the first attribute
+            # has the last value, we have to reverse the order in which the
+            # boxes will be drawn otherwise, if the last cell, nearest to the
+            # labels of the fourth attribute, is empty, we wouldn't be able to
+            # position the labels
+            valrange = list(range(len(values)))
+            if len(attr_list + used_attrs) == 4 and len(used_attrs) == 2:
+                attr1values = get_variable_values_sorted(
+                        self.data.domain[used_attrs[0]])
+                if used_vals[0] == attr1values[-1]:
+                    valrange = valrange[::-1]
+
+            for i in valrange:
+                start = i * edge + whole * float(sum(counts[:i]) / total)
+                end = i * edge + whole * float(sum(counts[:i + 1]) / total)
+                val = values[i]
+                htmlval = getHtmlCompatibleString(val)
+                if attr_vals != "":
+                    newattrvals = attr_vals + "-" + val
+                else:
+                    newattrvals = val
+
+                tooltip = condition + 4 * "&nbsp;" + attr + \
+                          ": <b>" + htmlval + "</b><br>"
+                attrs = used_attrs + [attr]
+                vals = used_vals + [val]
+                common_args = attrs, vals, newattrvals
+                if side % 2 == 0:  # if we are moving horizontally
+                    if len(attr_list) == 1:
+                        add_rect(x0 + start, x0 + end, y0, y1,
+                                 tooltip, *common_args)
+                    else:
+                        draw_data(attr_list[1:], (x0 + start, x0 + end),
+                                  (y0, y1), side + 1,
+                                  tooltip, total_attrs, *common_args)
+                else:
+                    if len(attr_list) == 1:
+                        add_rect(x0, x1, y0 + start, y0 + end,
+                                 tooltip, *common_args)
+                    else:
+                        draw_data(attr_list[1:], (x0, x1),
+                                  (y0 + start, y0 + end), side + 1,
+                                  tooltip, total_attrs, *common_args)
+
+            draw_text(side, attr_list[0], (x0, x1), (y0, y1),
+                      total_attrs, used_attrs, used_vals, attr_vals)
+
+        def draw_text(side, attr, x0_x1, y0_y1,
+                      total_attrs, used_attrs, used_vals, attr_vals):
+            x0, x1 = x0_x1
+            y0, y1 = y0_y1
+            if side in drawn_sides:
+                return
+
+            # the text on the right will be drawn when we are processing
+            # visualization of the last value of the first attribute
+            if side == 3:
+                attr1values = \
+                    get_variable_values_sorted(self.data.domain[used_attrs[0]])
+                if used_vals[0] != attr1values[-1]:
+                    return
+
+            if not conditionaldict[attr_vals]:
+                if side not in draw_positions:
+                    draw_positions[side] = (x0, x1, y0, y1)
+                return
+            else:
+                if side in draw_positions:
+                    # restore the positions of attribute values and name
+                    (x0, x1, y0, y1) = draw_positions[side]
+
+            drawn_sides.add(side)
+
+            values = get_variable_values_sorted(self.data.domain[attr])
+            if side % 2:
+                values = values[::-1]
+
+            spaces = self._cellspace * (total_attrs - side) * (len(values) - 1)
+            width = x1 - x0 - spaces * (side % 2 == 0)
+            height = y1 - y0 - spaces * (side % 2 == 1)
+
+            # calculate position of first attribute
+            currpos = 0
+
+            if attr_vals == "":
+                counts = [conditionaldict.get(val, 1) for val in values]
+            else:
+                counts = [conditionaldict.get(attr_vals + "-" + val, 1)
+                          for val in values]
+            total = sum(counts)
+            if total == 0:
+                counts = [1] * len(values)
+                total = sum(counts)
+
+            aligns = [Qt.AlignTop | Qt.AlignHCenter,
+                      Qt.AlignRight | Qt.AlignVCenter,
+                      Qt.AlignBottom | Qt.AlignHCenter,
+                      Qt.AlignLeft | Qt.AlignVCenter]
+            align = aligns[side]
+            for i in range(len(values)):
+                val = values[i]
+                perc = counts[i] / float(total)
+                if distributiondict[val] != 0:
+                    if side == 0:
+                        OWCanvasText(self.canvas, str(val),
+                                     x0 + currpos + width * 0.5 * perc,
+                                     y1 + self.attributeValueOffset, align)
+                    elif side == 1:
+                        OWCanvasText(self.canvas, str(val),
+                                     x0 - self.attributeValueOffset,
+                                     y0 + currpos + height * 0.5 * perc, align)
+                    elif side == 2:
+                        OWCanvasText(self.canvas, str(val),
+                                     x0 + currpos + width * perc * 0.5,
+                                     y0 - self.attributeValueOffset, align)
+                    else:
+                        OWCanvasText(self.canvas, str(val),
+                                     x1 + self.attributeValueOffset,
+                                     y0 + currpos + height * 0.5 * perc, align)
+
+                if side % 2 == 0:
+                    currpos += perc * width + self._cellspace * \
+                                              (total_attrs - side)
+                else:
+                    currpos += perc * height + self._cellspace * \
+                                              (total_attrs - side)
+
+            if side == 0:
+                OWCanvasText(
+                        self.canvas, attr,
+                        x0 + (x1 - x0) / 2,
+                        y1 + self.attributeValueOffset +
+                        self.attributeNameOffset,
+                        align, bold=1)
+            elif side == 1:
+                OWCanvasText(
+                        self.canvas, attr,
+                        x0 - max_ylabel_w1 - self.attributeValueOffset,
+                        y0 + (y1 - y0) / 2,
+                        align, bold=1, vertical=True)
+            elif side == 2:
+                OWCanvasText(
+                        self.canvas, attr,
+                        x0 + (x1 - x0) / 2,
+                        y0 - self.attributeValueOffset -
+                        self.attributeNameOffset,
+                        align, bold=1)
+            else:
+                OWCanvasText(
+                        self.canvas, attr,
+                        x1 + max_ylabel_w2 + self.attributeValueOffset,
+                        y0 + (y1 - y0) / 2,
+                        align, bold=1, vertical=True)
+
+        def add_rect(x0, x1, y0, y1, condition="",
+                     used_attrs=[], used_vals=[], attr_vals=""):
+            area_index = len(self.areas)
+            if x0 == x1:
+                x1 += 1
+            if y0 == y1:
+                y1 += 1
+
+            # rectangles of width and height 1 are not shown - increase
+            if x1 - x0 + y1 - y0 == 2:
+                y1 += 1
+
+            if class_var.is_discrete:
+                colors = [QColor(*col) for col in class_var.colors]
+            else:
+                colors = None
+
+            def select_area(_, ev):
+                self.select_area(area_index, ev)
+
+            def rect(x, y, w, h, z, pen_color=None, brush_color=None, **args):
+                if pen_color is None:
+                    return OWCanvasRectangle(
+                            self.canvas, x, y, w, h, z=z, onclick=select_area,
+                            **args)
+                if brush_color is None:
+                    brush_color = pen_color
+                return OWCanvasRectangle(
+                        self.canvas, x, y, w, h, pen_color, brush_color, z=z,
+                        onclick=select_area, **args)
+
+            outer_rect = rect(x0, y0, x1 - x0, y1 - y0, 30)
+            self.areas.append((used_attrs, used_vals, outer_rect))
+            if not conditionaldict[attr_vals]:
+                return
+
+            if self.interior_coloring == self.PEARSON:
+                s = sum(apriori_dists[0])
+                expected = s * reduce(
+                        mul,
+                        (apriori_dists[i][used_vals[i]] / float(s)
+                         for i in range(len(used_vals))))
+                actual = conditionaldict[attr_vals]
+                pearson = (actual - expected) / sqrt(expected)
+                ind = min(int(log(abs(pearson), 2)), 3)
+                color = [self.red_colors, self.blue_colors][pearson > 0][ind]
+                rect(x0, y0, x1 - x0, y1 - y0, -20, color)
+                outer_rect.setToolTip(
+                        condition + "<hr/>" +
+                        "Expected instances: %.1f<br>"
+                        "Actual instances: %d<br>"
+                        "Standardized (Pearson) residual: %.1f" %
+                        (expected, conditionaldict[attr_vals], pearson))
+            else:
+                cls_values = get_variable_values_sorted(class_var)
+                prior = get_distribution(self.data, class_var.name)
+                total = 0
+                for i, value in enumerate(cls_values):
+                    val = conditionaldict[attr_vals + "-" + value]
+                    if val == 0:
+                        continue
+                    if i == len(cls_values) - 1:
+                        v = y1 - y0 - total
+                    else:
+                        v = ((y1 - y0) * val) / conditionaldict[attr_vals]
+                    rect(x0, y0 + total, x1 - x0, v, -20, colors[i])
+                    total += v
+
+                if self.use_boxes and \
+                        abs(x1 - x0) > self._box_size and \
+                        abs(y1 - y0) > self._box_size:
+                    total = 0
+                    OWCanvasLine(
+                        self.canvas,
+                        x0 + self._box_size, y0, x0 + self._box_size, y1, z=30)
+                    n = sum(prior)
+                    for i, (val, color) in enumerate(zip(prior, colors)):
+                        if i == len(prior) - 1:
+                            h = y1 - y0 - total
+                        else:
+                            h = (y1 - y0) * val / n
+                        rect(x0, y0 + total, self._box_size, h, 20, color)
+                        total += h
+
+                if conditionalsubsetdict:
+                    if conditionalsubsetdict[attr_vals]:
+                        counts = [conditionalsubsetdict[attr_vals + "-" + val]
+                                  for val in cls_values]
+                        if sum(counts) == 1:
+                            rect(x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5, -550,
+                                 colors[counts.index(1)], Qt.white,
+                                 penWidth=2, penStyle=Qt.DashLine)
+                        if self.subset_data is not None:
+                            OWCanvasLine(
+                                self.canvas,
+                                x1 - self._box_size, y0, x1 - self._box_size,
+                                y1, z=30)
+                            total = 0
+                            n = conditionalsubsetdict[attr_vals]
+                            if n:
+                                for i, (cls, color) in \
+                                        enumerate(zip(cls_values, colors)):
+                                    val = conditionalsubsetdict[
+                                        attr_vals + "-" + cls]
+                                    if val == 0:
+                                        continue
+                                    if i == len(prior) - 1:
+                                        v = y1 - y0 - total
+                                    else:
+                                        v = ((y1 - y0) * val) / n
+                                    rect(x1 - self._box_size, y0 + total,
+                                         self._box_size, v, 15, color)
+                                    total += v
+
+                actual = [conditionaldict[attr_vals + "-" + cls_values[i]]
+                          for i in range(len(prior))]
+                n_actual = sum(actual)
+                if n_actual > 0:
+                    apriori = [prior[key] for key in cls_values]
+                    n_apriori = sum(apriori)
+                    text = "<br/>".join(
+                            "<b>%s</b>: %d / %.1f%% (Expected %.1f / %.1f%%)" %
+                            (cls, act, 100.0 * act / n_actual,
+                             apr / n_apriori * n_actual, 100.0 * apr / n_apriori
+                            )
+                            for cls, act, apr in zip(cls_values, actual, apriori
+                                                     ))
+                else:
+                    text = ""
+                outer_rect.setToolTip(
+                        "{}<hr>Instances: {}<br><br>{}".format(
+                                condition, n_actual, text[:-4]))
+
+        def draw_legend(data, x0_x1, y0_y1):
+            x0, x1 = x0_x1
+            y0, y1 = y0_y1
+            if self.interior_coloring == self.PEARSON:
+                names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8",
+                         "Residuals:"]
+                colors = self.red_colors[::-1] + self.blue_colors[1:]
+            else:
+                names = get_variable_values_sorted(class_var) + \
+                        [class_var.name + ":"]
+                colors = [QColor(*col) for col in class_var.colors]
+
+            names = [OWCanvasText(self.canvas, name, alignment=Qt.AlignVCenter)
+                     for name in names]
+            totalwidth = sum(text.boundingRect().width() for text in names)
+
+            # compute the x position of the center of the legend
+            y = y1 + self.attributeNameOffset + self.attributeValueOffset + 35
+            distance = 30
+            startx = (x0 + x1) / 2 - (totalwidth + (len(names)) * distance) / 2
+
+            names[-1].setPos(startx + 15, y)
+            names[-1].show()
+            xoffset = names[-1].boundingRect().width() + distance
+
+            size = 8
+
+            for i in range(len(names) - 1):
+                if self.interior_coloring == self.PEARSON:
+                    edgecolor = Qt.black
+                else:
+                    edgecolor = colors[i]
+
+                OWCanvasRectangle(self.canvas, startx + xoffset, y - size / 2,
+                                  size, size, edgecolor, colors[i])
+                names[i].setPos(startx + xoffset + 10, y)
+                xoffset += distance + names[i].boundingRect().width()
+
         self.canvas.clear()
         self.areas = []
 
@@ -264,13 +620,13 @@ class OWMosaicDisplay(OWWidget):
             return
         subset = self.subset_data
         attr_list = self.get_attr_list()
-        if data.domain.class_var:
+        class_var = data.domain.class_var
+        if class_var:
             sql = type(data) == SqlTable
             name = not sql and data.name
             # save class_var because it is removed in the next line
-            cv = data.domain.class_var
-            data = data[:, attr_list + [data.domain.class_var]]
-            data.domain.class_var = cv
+            data = data[:, attr_list + [class_var]]
+            data.domain.class_var = class_var
             if not sql:
                 data.name = name
         else:
@@ -284,10 +640,9 @@ class OWMosaicDisplay(OWWidget):
             self.warning(5)
 
         if self.interior_coloring == self.PEARSON:
-            self.aprioriDistributions = \
-                [get_distribution(data, attr) for attr in attr_list]
+            apriori_dists = [get_distribution(data, attr) for attr in attr_list]
         else:
-            self.aprioriDistributions = []
+            apriori_dists = []
 
         def get_max_label_width(attr):
             values = get_variable_values_sorted(self.data.domain[attr])
@@ -302,15 +657,15 @@ class OWMosaicDisplay(OWWidget):
         width = 20
         if len(attr_list) > 1:
             text = OWCanvasText(self.canvas, attr_list[1], bold=1, show=0)
-            self.max_ylabel_w1 = min(get_max_label_width(attr_list[1]), 150)
+            max_ylabel_w1 = min(get_max_label_width(attr_list[1]), 150)
             width = 5 + text.boundingRect().height() + \
-                self.attributeValueOffset + self.max_ylabel_w1
+                self.attributeValueOffset + max_ylabel_w1
             xoff = width
             if len(attr_list) == 4:
                 text = OWCanvasText(self.canvas, attr_list[3], bold=1, show=0)
-                self.max_ylabel_w2 = min(get_max_label_width(attr_list[3]), 150)
+                max_ylabel_w2 = min(get_max_label_width(attr_list[3]), 150)
                 width += text.boundingRect().height() + \
-                    self.attributeValueOffset + self.max_ylabel_w2 - 10
+                    self.attributeValueOffset + max_ylabel_w2 - 10
 
         # get the maximum height of rectangle
         height = 100
@@ -323,426 +678,62 @@ class OWMosaicDisplay(OWWidget):
         self.canvas_view.setSceneRect(
                 0, 0, self.canvas_view.width(), self.canvas_view.height())
 
-        self.drawn_sides = set()
-        self.draw_positions = {}
+        drawn_sides = set()
+        draw_positions = {}
 
-        self.conditionalDict, self.distributionDict = \
-            self.get_conditional_distribution(data, attr_list)
-        self.conditionalSubsetDict = self.distributionSubsetDict = None
+        conditionaldict, distributiondict = \
+            get_conditional_distribution(data, attr_list)
+        conditionalsubsetdict = None
         if subset:
-            self.conditionalSubsetDict, self.distributionSubsetDict = \
-                self.get_conditional_distribution(subset, attr_list)
+            conditionalsubsetdict, _ = \
+                get_conditional_distribution(subset, attr_list)
 
         # draw rectangles
-        self.draw_data(
+        draw_data(
             attr_list, (xoff, xoff + square_size), (yoff, yoff + square_size),
             0, "", len(attr_list))
-        self.draw_legend(
+        draw_legend(
             data, (xoff, xoff + square_size), (yoff, yoff + square_size))
         self.update_selection_rects()
 
-    # create a dictionary "combination-of-attr-values" : count
-    # TODO: this function is also used in owsieve --> where to put it?
-    @staticmethod
-    def get_conditional_distribution(data, attrs):
-        cond_dist = defaultdict(int)
-        dist = defaultdict(int)
-        cond_dist[""] = dist[""] = len(data)
-        all_attrs = [data.domain[a] for a in attrs]
-        if data.domain.class_var is not None:
-            all_attrs.append(data.domain.class_var)
 
-        for i in range(1, len(all_attrs) + 1):
-            attr = all_attrs[:i]
-            if type(data) == SqlTable:
-                # make all possible pairs of attributes + class_var
-                attr = [a.to_sql() for a in attr]
-                fields = attr + ["COUNT(*)"]
-                query = data._sql_query(fields, group_by=attr)
-                with data._execute_sql_query(query) as cur:
-                    res = cur.fetchall()
-                for r in res:
-                    str_values = [a.repr_val(a.to_val(x))
-                                  for a, x in zip(all_attrs, r[:-1])]
-                    str_values = [x if x != '?' else 'None' for x in str_values]
-                    cond_dist['-'.join(str_values)] = r[-1]
-                    dist[str_values[-1]] += r[-1]
-            else:
-                for indices in product(*(range(len(a.values)) for a in attr)):
-                    vals = []
-                    conditions = []
-                    for k, ind in enumerate(indices):
-                        vals.append(attr[k].values[ind])
-                        fd = filter.FilterDiscrete(
-                                column=attr[k], values=[attr[k].values[ind]])
-                        conditions.append(fd)
-                    filt = filter.Values(conditions)
-                    filtdata = filt(data)
-                    cond_dist['-'.join(vals)] = len(filtdata)
-                    dist[vals[-1]] += len(filtdata)
-        return cond_dist, dist
+def get_conditional_distribution(data, attrs):
+    cond_dist = defaultdict(int)
+    dist = defaultdict(int)
+    cond_dist[""] = dist[""] = len(data)
+    all_attrs = [data.domain[a] for a in attrs]
+    if data.domain.class_var is not None:
+        all_attrs.append(data.domain.class_var)
 
-    def draw_data(self, attr_list, x0_x1, y0_y1, side, condition,
-                  total_attrs, used_attrs=[], used_vals=[],
-                  attr_vals=""):
-        x0, x1 = x0_x1
-        y0, y1 = y0_y1
-        if self.conditionalDict[attr_vals] == 0:
-            self.add_rect(x0, x1, y0, y1, "",
-                          used_attrs, used_vals, attr_vals=attr_vals)
-            # store coordinates for later drawing of labels
-            self.draw_text(side, attr_list[0], (x0, x1), (y0, y1), total_attrs,
-                           used_attrs, used_vals, attr_vals)
-            return
-
-        attr = attr_list[0]
-        # how much smaller rectangles do we draw
-        edge = len(attr_list) * self._cellspace
-        values = get_variable_values_sorted(self.data.domain[attr])
-        if side % 2:
-            values = values[::-1]  # reverse names if necessary
-
-        if side % 2 == 0:  # we are drawing on the x axis
-            # we remove the space needed for separating different attr. values
-            whole = max(0, (x1 - x0) - edge * (
-                len(values) - 1))
-            if whole == 0:
-                edge = (x1 - x0) / float(len(values) - 1)
-        else:  # we are drawing on the y axis
-            whole = max(0, (y1 - y0) - edge * (len(values) - 1))
-            if whole == 0:
-                edge = (y1 - y0) / float(len(values) - 1)
-
-        if attr_vals == "":
-            counts = [self.conditionalDict[val] for val in values]
+    for i in range(1, len(all_attrs) + 1):
+        attr = all_attrs[:i]
+        if type(data) == SqlTable:
+            # make all possible pairs of attributes + class_var
+            attr = [a.to_sql() for a in attr]
+            fields = attr + ["COUNT(*)"]
+            query = data._sql_query(fields, group_by=attr)
+            with data._execute_sql_query(query) as cur:
+                res = cur.fetchall()
+            for r in res:
+                str_values = [a.repr_val(a.to_val(x))
+                              for a, x in zip(all_attrs, r[:-1])]
+                str_values = [x if x != '?' else 'None' for x in str_values]
+                cond_dist['-'.join(str_values)] = r[-1]
+                dist[str_values[-1]] += r[-1]
         else:
-            counts = [self.conditionalDict[attr_vals + "-" + val]
-                      for val in values]
-        total = sum(counts)
-
-        # if we are visualizing the third attribute and the first attribute
-        # has the last value, we have to reverse the order in which the boxes
-        # will be drawn otherwise, if the last cell, nearest to the labels of
-        # the fourth attribute, is empty, we wouldn't be able to position the
-        # labels
-        valrange = list(range(len(values)))
-        if len(attr_list + used_attrs) == 4 and len(used_attrs) == 2:
-            attr1values = get_variable_values_sorted(
-                self.data.domain[used_attrs[0]])
-            if used_vals[0] == attr1values[-1]:
-                valrange = valrange[::-1]
-
-        for i in valrange:
-            start = i * edge + whole * float(sum(counts[:i]) / float(total))
-            end = i * edge + whole * float(sum(counts[:i + 1]) / float(total))
-            val = values[i]
-            htmlval = getHtmlCompatibleString(val)
-            if attr_vals != "":
-                newattrvals = attr_vals + "-" + val
-            else:
-                newattrvals = val
-
-            tooltip = condition + 4 * "&nbsp;" + attr + \
-                ": <b>" + htmlval + "</b><br>"
-            attrs = used_attrs + [attr]
-            vals = used_vals + [val]
-            common_args = attrs, vals, newattrvals
-            if side % 2 == 0:  # if we are moving horizontally
-                if len(attr_list) == 1:
-                    self.add_rect(x0 + start, x0 + end, y0, y1,
-                                  tooltip, *common_args)
-                else:
-                    self.draw_data(attr_list[1:], (x0 + start, x0 + end),
-                                   (y0, y1), side + 1,
-                                   tooltip, total_attrs, *common_args)
-            else:
-                if len(attr_list) == 1:
-                    self.add_rect(x0, x1, y0 + start, y0 + end,
-                                  tooltip, *common_args)
-                else:
-                    self.draw_data(attr_list[1:], (x0, x1),
-                                   (y0 + start, y0 + end), side + 1,
-                                   tooltip, total_attrs, *common_args)
-
-        self.draw_text(side, attr_list[0], (x0, x1), (y0, y1),
-                       total_attrs, used_attrs, used_vals, attr_vals)
-
-    def draw_text(self, side, attr, x0_x1, y0_y1,
-                  total_attrs, used_attrs, used_vals, attr_vals):
-        x0, x1 = x0_x1
-        y0, y1 = y0_y1
-        if side in self.drawn_sides:
-            return
-
-        # the text on the right will be drawn when we are processing
-        # visualization of the last value of the first attribute
-        if side == 3:
-            attr1values = \
-                get_variable_values_sorted(self.data.domain[used_attrs[0]])
-            if used_vals[0] != attr1values[-1]:
-                return
-
-        if not self.conditionalDict[attr_vals]:
-            if side not in self.draw_positions:
-                self.draw_positions[side] = (x0, x1, y0, y1)
-            return
-        else:
-            if side in self.draw_positions:
-                # restore the positions of attribute values and name
-                (x0, x1, y0, y1) = self.draw_positions[side]
-
-        self.drawn_sides.add(side)
-
-        values = get_variable_values_sorted(self.data.domain[attr])
-        if side % 2:
-            values = values[::-1]
-
-        spaces = self._cellspace * (total_attrs - side) * (len(values) - 1)
-        width = x1 - x0 - spaces * (side % 2 == 0)
-        height = y1 - y0 - spaces * (side % 2 == 1)
-
-        # calculate position of first attribute
-        currpos = 0
-
-        if attr_vals == "":
-            counts = [self.conditionalDict.get(val, 1) for val in values]
-        else:
-            counts = [self.conditionalDict.get(attr_vals + "-" + val, 1)
-                      for val in values]
-        total = sum(counts)
-        if total == 0:
-            counts = [1] * len(values)
-            total = sum(counts)
-
-        aligns = [Qt.AlignTop | Qt.AlignHCenter,
-                  Qt.AlignRight | Qt.AlignVCenter,
-                  Qt.AlignBottom | Qt.AlignHCenter,
-                  Qt.AlignLeft | Qt.AlignVCenter]
-        align = aligns[side]
-        for i in range(len(values)):
-            val = values[i]
-            perc = counts[i] / float(total)
-            if self.distributionDict[val] != 0:
-                if side == 0:
-                    OWCanvasText(self.canvas, str(val),
-                                 x0 + currpos + width * 0.5 * perc,
-                                 y1 + self.attributeValueOffset, align)
-                elif side == 1:
-                    OWCanvasText(self.canvas, str(val),
-                                 x0 - self.attributeValueOffset,
-                                 y0 + currpos + height * 0.5 * perc, align)
-                elif side == 2:
-                    OWCanvasText(self.canvas, str(val),
-                                 x0 + currpos + width * perc * 0.5,
-                                 y0 - self.attributeValueOffset, align)
-                else:
-                    OWCanvasText(self.canvas, str(val),
-                                 x1 + self.attributeValueOffset,
-                                 y0 + currpos + height * 0.5 * perc, align)
-
-            if side % 2 == 0:
-                currpos += perc * width + self._cellspace * (total_attrs - side)
-            else:
-                currpos += perc * height + self._cellspace * (total_attrs -
-                                                              side)
-
-        if side == 0:
-            OWCanvasText(
-                self.canvas, attr,
-                x0 + (x1 - x0) / 2,
-                y1 + self.attributeValueOffset + self.attributeNameOffset,
-                align, bold=1)
-        elif side == 1:
-            OWCanvasText(
-                self.canvas, attr,
-                x0 - self.max_ylabel_w1 - self.attributeValueOffset,
-                y0 + (y1 - y0) / 2,
-                align, bold=1, vertical=True)
-        elif side == 2:
-            OWCanvasText(
-                self.canvas, attr,
-                x0 + (x1 - x0) / 2,
-                y0 - self.attributeValueOffset - self.attributeNameOffset,
-                align, bold=1)
-        else:
-            OWCanvasText(
-                self.canvas, attr,
-                x1 + self.max_ylabel_w2 + self.attributeValueOffset,
-                y0 + (y1 - y0) / 2,
-                align, bold=1, vertical=True)
-
-    # draw a rectangle, set it to back and add it to rect list
-    def add_rect(self, x0, x1, y0, y1, condition="",
-                 used_attrs=[], used_vals=[], attr_vals=""):
-        area_index = len(self.areas)
-        if x0 == x1:
-            x1 += 1
-        if y0 == y1:
-            y1 += 1
-
-        # rectangles of width and height 1 are not shown - increase
-        if x1 - x0 + y1 - y0 == 2:
-            y1 += 1
-
-        if self.data.domain.has_discrete_class:
-            colors = [QColor(*col) for col in self.data.domain.class_var.colors]
-        else:
-            colors = None
-
-        def select_area(_, ev):
-            self.select_area(area_index, ev)
-
-        def rect(x, y, w, h, z, pen_color=None, brush_color=None, **args):
-            if pen_color is None:
-                return OWCanvasRectangle(
-                    self.canvas, x, y, w, h, z=z, onclick=select_area, **args)
-            if brush_color is None:
-                brush_color = pen_color
-            return OWCanvasRectangle(
-                self.canvas, x, y, w, h, pen_color, brush_color, z=z,
-                onclick=select_area, **args)
-
-        outer_rect = rect(x0, y0, x1 - x0, y1 - y0, 30)
-        self.areas.append((used_attrs, used_vals, outer_rect))
-        if not self.conditionalDict[attr_vals]:
-            return
-
-        if self.interior_coloring == self.PEARSON:
-            s = sum(self.aprioriDistributions[0])
-            expected = s * reduce(
-                mul,
-                (self.aprioriDistributions[i][used_vals[i]] / float(s)
-                 for i in range(len(used_vals))))
-            actual = self.conditionalDict[attr_vals]
-            pearson = (actual - expected) / sqrt(expected)
-            ind = min(int(log(abs(pearson), 2)), 3)
-            color = [self.red_colors, self.blue_colors][pearson > 0][ind]
-            rect(x0, y0, x1 - x0, y1 - y0, -20, color)
-            outer_rect.setToolTip(
-                condition + "<hr/>" +
-                "Expected instances: %.1f<br>"
-                "Actual instances: %d<br>"
-                "Standardized (Pearson) residual: %.1f" %
-                (expected, self.conditionalDict[attr_vals], pearson))
-        else:
-            cls_values = get_variable_values_sorted(self.data.domain.class_var)
-            prior = get_distribution(self.data, self.data.domain.class_var.name)
-            total = 0
-            for i, value in enumerate(cls_values):
-                val = self.conditionalDict[attr_vals + "-" + value]
-                if val == 0:
-                    continue
-                if i == len(cls_values) - 1:
-                    v = y1 - y0 - total
-                else:
-                    v = ((y1 - y0) * val) / self.conditionalDict[attr_vals]
-                rect(x0, y0 + total, x1 - x0, v, -20, colors[i])
-                total += v
-
-            if self.use_boxes and \
-                    abs(x1 - x0) > self._box_size and \
-                    abs(y1 - y0) > self._box_size:
-                total = 0
-                OWCanvasLine(
-                    self.canvas,
-                    x0 + self._box_size, y0, x0 + self._box_size, y1, z=30)
-                n = sum(prior)
-                for i, (val, color) in enumerate(zip(prior, colors)):
-                    if i == len(prior) - 1:
-                        h = y1 - y0 - total
-                    else:
-                        h = (y1 - y0) * val / n
-                    rect(x0, y0 + total, self._box_size, h, 20, color)
-                    total += h
-
-            if self.conditionalSubsetDict:
-                if self.conditionalSubsetDict[attr_vals]:
-                    counts = [self.conditionalSubsetDict[attr_vals + "-" + val]
-                              for val in cls_values]
-                    if sum(counts) == 1:
-                        rect(x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5, -550,
-                             colors[counts.index(1)], Qt.white,
-                             penWidth=2, penStyle=Qt.DashLine)
-                    if self.subset_data is not None:
-                        OWCanvasLine(
-                            self.canvas,
-                            x1 - self._box_size, y0, x1 - self._box_size, y1,
-                            z=30)
-                        total = 0
-                        n = self.conditionalSubsetDict[attr_vals]
-                        if n:
-                            for i, (cls, color) in \
-                                    enumerate(zip(cls_values, colors)):
-                                val = self.conditionalSubsetDict[
-                                    attr_vals + "-" + cls]
-                                if val == 0:
-                                    continue
-                                if i == len(prior) - 1:
-                                    v = y1 - y0 - total
-                                else:
-                                    v = ((y1 - y0) * val) / n
-                                rect(x1 - self._box_size, y0 + total,
-                                     self._box_size, v, 15, color)
-                                total += v
-
-            actual = [self.conditionalDict[attr_vals + "-" + cls_values[i]]
-                      for i in range(len(prior))]
-            n_actual = sum(actual)
-            if n_actual > 0:
-                apriori = [prior[key] for key in cls_values]
-                n_apriori = sum(apriori)
-                text = "<br/>".join(
-                    "<b>%s</b>: %d / %.1f%% (Expected %.1f / %.1f%%)" % (
-                        cls, act, 100.0 * act / n_actual,
-                        apr / n_apriori * n_actual, 100.0 * apr / n_apriori)
-                    for cls, act, apr in zip(cls_values, actual, apriori))
-            else:
-                text = ""
-            outer_rect.setToolTip(
-                "{}<hr>Instances: {}<br><br>{}".format(
-                    condition, n_actual, text[:-4]))
-
-    # draw the class legend below the square
-    def draw_legend(self, data, x0_x1, y0_y1):
-        x0, x1 = x0_x1
-        y0, y1 = y0_y1
-        if self.interior_coloring == self.PEARSON:
-            names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8",
-                     "Residuals:"]
-            colors = self.red_colors[::-1] + self.blue_colors[1:]
-        else:
-            names = get_variable_values_sorted(data.domain.class_var) + \
-                    [data.domain.class_var.name + ":"]
-            colors = [QColor(*col) for col in data.domain.class_var.colors]
-
-        names = [OWCanvasText(self.canvas, name, alignment=Qt.AlignVCenter)
-                      for name in names]
-        totalwidth = sum(text.boundingRect().width() for text in names)
-
-        # compute the x position of the center of the legend
-        y = y1 + self.attributeNameOffset + self.attributeValueOffset + 35
-        distance = 30
-        startx = (x0 + x1) / 2 - (totalwidth + (len(names)) * distance) / 2
-
-        names[-1].setPos(startx + 15, y)
-        names[-1].show()
-        xoffset = names[-1].boundingRect().width() + distance
-
-        size = 8
-
-        for i in range(len(names) - 1):
-            if self.interior_coloring == self.PEARSON:
-                edgecolor = Qt.black
-            else:
-                edgecolor = colors[i]
-
-            OWCanvasRectangle(self.canvas, startx + xoffset, y - size / 2,
-                              size, size, edgecolor, colors[i])
-            names[i].setPos(startx + xoffset + 10, y)
-            xoffset += distance + names[i].boundingRect().width()
-
-    def show_report(self):
-        self.report_plot()
+            for indices in product(*(range(len(a.values)) for a in attr)):
+                vals = []
+                conditions = []
+                for k, ind in enumerate(indices):
+                    vals.append(attr[k].values[ind])
+                    fd = filter.FilterDiscrete(
+                            column=attr[k], values=[attr[k].values[ind]])
+                    conditions.append(fd)
+                filt = filter.Values(conditions)
+                filtdata = filt(data)
+                cond_dist['-'.join(vals)] = len(filtdata)
+                dist[vals[-1]] += len(filtdata)
+    return cond_dist, dist
 
 
 class OWCanvasText(QGraphicsTextItem):
