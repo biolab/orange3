@@ -15,19 +15,9 @@ from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
-                                               OWCanvasLine)
+                                               OWCanvasLine, ViewWithPress)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
-
-class _ViewWithPress(QGraphicsView):
-    def __init__(self, *args, **kwargs):
-        self.handler = kwargs.pop("handler")
-        super().__init__(*args, **kwargs)
-
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
-        if not ev.isAccepted():
-            self.handler()
 
 class OWSieveDiagram(OWWidget):
     name = "Sieve Diagram"
@@ -72,7 +62,7 @@ class OWSieveDiagram(OWWidget):
         self.attrYCombo.setModel(model)
 
         self.canvas = QGraphicsScene()
-        self.canvasView = _ViewWithPress(self.canvas, self.mainArea,
+        self.canvasView = ViewWithPress(self.canvas, self.mainArea,
                                          handler=self.reset_selection)
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
