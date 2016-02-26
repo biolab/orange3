@@ -1131,23 +1131,30 @@ class OWCanvasText(QGraphicsTextItem):
         QGraphicsTextItem.setPos(self, x, y)
 
 
-def OWCanvasRectangle(canvas, x=0, y=0, width=0, height=0, penColor=QColor(128, 128, 128), brushColor=None, penWidth=1,
-                      z=0,
-                      penStyle=Qt.SolidLine, pen=None, tooltip=None, show=1):
-    rect = QGraphicsRectItem(x, y, width, height, None, canvas)
-    if brushColor: rect.setBrush(QBrush(brushColor))
-    if pen:
-        rect.setPen(pen)
-    else:
-        rect.setPen(QPen(penColor, penWidth, penStyle))
-    rect.setZValue(z)
-    if tooltip: rect.setToolTip(tooltip)
-    if show:
-        rect.show()
-    else:
-        rect.hide()
-    return rect
+class OWCanvasRectangle(QGraphicsRectItem):
+    def __init__(self, canvas, x=0, y=0, width=0, height=0,
+                 penColor=QColor(128, 128, 128), brushColor=None, penWidth=1,
+                 z=0, penStyle=Qt.SolidLine, pen=None, tooltip=None, show=1,
+                 onclick=None):
+        super().__init__(x, y, width, height, None, canvas)
+        self.onclick = onclick
+        if brushColor:
+            self.setBrush(QBrush(brushColor))
+        if pen:
+            self.setPen(pen)
+        else:
+            self.setPen(QPen(QBrush(penColor), penWidth, penStyle))
+        self.setZValue(z)
+        if tooltip:
+            self.setToolTip(tooltip)
+        if show:
+            self.show()
+        else:
+            self.hide()
 
+    def mousePressEvent(self, ev):
+        if self.onclick:
+            self.onclick(self, ev)
 
 def OWCanvasLine(canvas, x1=0, y1=0, x2=0, y2=0, penWidth=2, penColor=QColor(255, 255, 255, 128), pen=None, z=0,
                  tooltip=None, show=1):

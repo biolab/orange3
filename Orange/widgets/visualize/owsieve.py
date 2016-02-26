@@ -1,25 +1,33 @@
 from collections import defaultdict
 from itertools import product
 from math import sqrt, floor, ceil
-import random
-import sys
 
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
-                         QDialog, QApplication)
-
+                         QDialog, QApplication, QSizePolicy)
 
 import Orange
-from Orange.data import Table
+from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
+from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
-                                               OWCanvasEllipse, OWCanvasLine)
+                                               OWCanvasLine)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
-from Orange.widgets.io import FileFormat
 
+
+class _ViewWithPress(QGraphicsView):
+    def __init__(self, *args, **kwargs):
+        self.handler = kwargs.pop("handler")
+        super().__init__(*args, **kwargs)
+
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        if not ev.isAccepted():
+            self.handler()
 
 class OWSieveDiagram(OWWidget):
     name = "Sieve Diagram"
@@ -29,178 +37,108 @@ class OWSieveDiagram(OWWidget):
     icon = "icons/SieveDiagram.svg"
     priority = 4200
 
-    inputs = [("Data", Table, "setData", Default),
-              ("Features", AttributeList, "setShownAttributes")]
-    outputs = []
-
-    settingsList = ["showLines", "showCases", "showInColor"]
+    inputs = [("Data", Table, "set_data", Default),
+              ("Features", AttributeList, "set_input_features")]
+    outputs = [("Selection", Table)]
 
     graph_name = "canvas"
+
+    want_control_area = False
+
+    settingsHandler = DomainContextHandler()
+    attrX = ContextSetting("")
+    attrY = ContextSetting("")
+    selection = ContextSetting(set())
 
     def __init__(self):
         super().__init__()
 
-        #self.controlArea.setMinimumWidth(250)
-
-        #set default settings
         self.data = None
+        self.input_features = None
+        self.attrs = []
 
-        self.attrX = ""
-        self.attrY = ""
-        self.attrCondition = ""
-        self.attrConditionValue = ""
-        self.showLines = 1
-        self.showCases = 0
-        self.showInColor = 1
-        self.attributeSelectionList = None
-        self.stopCalculating = 0
+        self.attr_box = gui.hBox(self.mainArea)
+        model = VariableListModel()
+        model.wrap(self.attrs)
+        self.attrXCombo = gui.comboBox(
+            self.attr_box, self, value="attrX", contentsLength=12,
+            callback=self.change_attr, sendSelectedValue=True, valueType=str)
+        self.attrXCombo.setModel(model)
+        gui.widgetLabel(self.attr_box, "\u2715").\
+            setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.attrYCombo = gui.comboBox(
+            self.attr_box, self, value="attrY", contentsLength=12,
+            callback=self.change_attr, sendSelectedValue=True, valueType=str)
+        self.attrYCombo.setModel(model)
 
         self.canvas = QGraphicsScene()
-        self.canvasView = QGraphicsView(self.canvas, self.mainArea)
+        self.canvasView = _ViewWithPress(self.canvas, self.mainArea,
+                                         handler=self.reset_selection)
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        #GUI
-        self.attrSelGroup = gui.widgetBox(self.controlArea, box = "Shown attributes")
+        box = gui.hBox(self.mainArea)
+        gui.button(box, None, "&Save Graph",
+                   callback=self.save_graph, autoDefault=False)
+        gui.button(box, None, "&Report",
+                   callback=self.show_report, autoDefault=False)
 
-        self.attrXCombo = gui.comboBox(
-            self.attrSelGroup, self, value="attrX", label="X attribute:",
-            orientation="horizontal", tooltip="Select an attribute to be shown on the X axis",
-            callback=self.updateGraph, sendSelectedValue=1, valueType=str,
-            labelWidth=70, contentsLength=12)
+    def sizeHint(self):
+        return QSize(450, 550)
 
-        self.attrYCombo = gui.comboBox(
-            self.attrSelGroup, self, value="attrY", label="Y attribute:",
-            orientation="horizontal", tooltip="Select an attribute to be shown on the Y axis",
-            callback=self.updateGraph, sendSelectedValue=1, valueType=str,
-            labelWidth=70, contentsLength=12)
-
-        gui.separator(self.controlArea)
-
-        self.conditionGroup = gui.widgetBox(self.controlArea, box = "Condition")
-        self.attrConditionCombo = gui.comboBox(
-            self.conditionGroup, self, value="attrCondition",
-            label="Attribute:", orientation="horizontal",
-            callback=self.updateConditionAttr, sendSelectedValue=True,
-            valueType=str, labelWidth=70, contentsLength=12)
-        self.attrConditionValueCombo = gui.comboBox(
-            self.conditionGroup, self, value="attrConditionValue",
-            label="Value:", orientation="horizontal", callback=self.updateGraph,
-            sendSelectedValue=True, valueType=str, labelWidth=70,
-            contentsLength=10)
-
-        gui.separator(self.controlArea)
-
-        box2 = gui.widgetBox(self.controlArea, box = "Visual settings")
-        gui.checkBox(box2, self, "showLines", "Show squares (observed frequency)", callback = self.updateGraph)
-        hbox = gui.widgetBox(box2, orientation = "horizontal")
-        gui.checkBox(hbox, self, "showCases", "Show data instances...", callback = self.updateGraph)
-        gui.checkBox(hbox, self, "showInColor", "...in color", callback = self.updateGraph)
-
-        gui.separator(self.controlArea)
-        # self.optimizationDlg = OWSieveOptimization(self, self.signalManager)
-        # optimizationButtons = gui.widgetBox(self.controlArea, "Dialogs", orientation = "horizontal")
-        # gui.button(optimizationButtons, self, "VizRank", callback = self.optimizationDlg.reshow, debuggingEnabled = 0, tooltip = "Find attribute groups with highest value dependency")
-
-        gui.rubber(self.controlArea)
-        self.inline_graph_report()
-
-        # self.wdChildDialogs = [self.optimizationDlg]        # used when running widget debugging
-        # self.graphButton.clicked.connect(self.saveToFileCanvas)
-        self.icons = gui.attributeIconDict
-        self.resize(800, 550)
-        random.seed()
-
-    # receive new data and update all fields
-    def setData(self, data):
+    def set_data(self, data):
         if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
 
-        self.information(0)
-        self.information(1)
-        sameDomain = self.data and data and self.data.domain.checksum() == data.domain.checksum() # preserve attribute choice if the domain is the same
-        # self.data = self.optimizationDlg.setData(data, 0)
+        self.closeContext()
         self.data = data
-
-        if not sameDomain:
-            self.initCombos()
-
-        self.warning(0, "")
-        if data:
-            if any(attr.is_continuous for attr in data.domain):
-                self.warning(0, "Data contains continuous variables. " +
-                             "Discretize the data to use them.")
-
-        self.setShownAttributes(self.attributeSelectionList)
-
-    ## Attribute selection signal
-    def setShownAttributes(self, attrList):
-        self.attributeSelectionList = attrList
-        if self.data and self.attributeSelectionList and len(attrList) >= 2:
-            attrs = [attr.name for attr in self.data.domain]
-            if attrList[0] in attrs and attrList[1] in attrs:
-                self.attrX = attrList[0]
-                self.attrY = attrList[1]
-        self.updateGraph()
-
-
-
-    # create data subset depending on conditional attribute and value
-    def getConditionalData(self, xAttr = None, yAttr = None, dropMissingData = 1):
-        if not self.data: return None
-
-        if not xAttr: xAttr = self.attrX
-        if not yAttr: yAttr = self.attrY
-        if not (xAttr and yAttr): return
-
-        if self.attrCondition == "(None)":
-            data = self.data[:, [xAttr, yAttr]]
-            # data = self.data.select([xAttr, yAttr])
+        self.areas = []
+        if self.data is None:
+            self.attrs[:] = []
         else:
-            # data = orange.Preprocessor_dropMissing(self.data.select([xAttr, yAttr, self.attrCondition]))
-            # data = self.data.select({self.attrCondition:self.attrConditionValue})
-            fd = Orange.data.filter.FilterDiscrete(column=self.attrCondition, values=[self.attrConditionValue])
-            filt = Orange.data.filter.Values([fd])
-            filt.domain = self.data.domain
-            data = filt(self.data)
-
-        # if dropMissingData: return orange.Preprocessor_dropMissing(data)
-        #else:
-        return data
-
-    # new conditional attribute was set - update graph
-    def updateConditionAttr(self):
-        self.attrConditionValueCombo.clear()
-
-        if self.attrCondition != "(None)":
-            for val in self.data.domain[self.attrCondition].values:
-                self.attrConditionValueCombo.addItem(val)
-            self.attrConditionValue = str(self.attrConditionValueCombo.itemText(0))
-        self.updateGraph()
-
-    # initialize lists for shown and hidden attributes
-    def initCombos(self):
-        self.attrXCombo.clear()
-        self.attrYCombo.clear()
-        self.attrConditionCombo.clear()
-        self.attrConditionCombo.addItem("(None)")
-        self.attrConditionValueCombo.clear()
-
-        if not self.data: return
-        for i, var in enumerate(self.data.domain):
-            if var.is_discrete:
-                self.attrXCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
-                self.attrYCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
-                self.attrConditionCombo.addItem(self.icons[self.data.domain[i]], self.data.domain[i].name)
-        self.attrCondition = str(self.attrConditionCombo.itemText(0))
-
-        if self.attrXCombo.count() > 0:
-            self.attrX = str(self.attrXCombo.itemText(0))
-            self.attrY = str(self.attrYCombo.itemText(self.attrYCombo.count() > 1))
+            self.attrs[:] = [var for var in self.data.domain if var.is_discrete]
+        if self.attrs:
+            self.attrX = self.attrs[0].name
+            self.attrY = self.attrs[len(self.attrs) > 1].name
         else:
-            self.attrX = None
-            self.attrY = None
+            self.attrX = self.attrY = None
+        self.openContext(self.data)
+
+        self.information(0, "")
+        if data and any(attr.is_continuous for attr in data.domain):
+            self.information(0, "Data contains continuous variables. "
+                                "Discretize the data to use them.")
+        self.resolve_shown_attributes()
+        self.update_selection()
+
+    def change_attr(self):
+        self.selection = set()
+        self.updateGraph()
+        self.update_selection()
+
+    def set_input_features(self, attrList):
+        self.input_features = attrList
+        self.resolve_shown_attributes()
+        self.update_selection()
+
+    def resolve_shown_attributes(self):
+        self.warning(1)
+        self.attr_box.setEnabled(True)
+        if self.input_features:  # non-None and non-empty!
+            features = [f for f in self.input_features if f in self.attrs]
+            if not features:
+                self.warning(1, "Features from the input signal "
+                                "are not present in the data")
+            else:
+                old_attrs = self.attrX, self.attrY
+                self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]
+                self.attr_box.setEnabled(False)
+                if (self.attrX, self.attrY) != old_attrs:
+                    self.selection = set()
+        # else: do nothing; keep current features, even if input with the
+        # features just changed to None
+        self.updateGraph()
 
     def resizeEvent(self, e):
         OWWidget.resizeEvent(self,e)
@@ -210,23 +148,61 @@ class OWSieveDiagram(OWWidget):
         OWWidget.showEvent(self, ev)
         self.updateGraph()
 
-    ## updateGraph - gets called every time the graph has to be updated
+    def reset_selection(self):
+        self.selection = set()
+        self.update_selection()
+
+    def select_area(self, area, ev):
+        if ev.button() != Qt.LeftButton:
+            return
+        index = self.areas.index(area)
+        if ev.modifiers() & Qt.ControlModifier:
+            self.selection ^= {index}
+        else:
+            self.selection = {index}
+        self.update_selection()
+
+    def update_selection(self):
+        if self.areas is None or not self.selection:
+            self.send("Selection", None)
+            return
+
+        filters = []
+        for i, area in enumerate(self.areas):
+            if i in self.selection:
+                width = 4
+                val_x, val_y = area.value_pair
+                filters.append(
+                    filter.Values([
+                        filter.FilterDiscrete(self.attrX, [val_x]),
+                        filter.FilterDiscrete(self.attrY, [val_y])
+                    ]))
+            else:
+                width = 1
+            pen = area.pen()
+            pen.setWidth(width)
+            area.setPen(pen)
+        if len(filters) == 1:
+            filters = filters[0]
+        else:
+            filters = filter.Values(filters, conjunction=False)
+        self.send("Selection", filters(self.data))
+
+    # -----------------------------------------------------------------------
+    # Everything from here on is ancient and has been changed only according
+    # to what has been changed above. Some clean-up may be in order some day
+    #
     def updateGraph(self, *args):
         for item in self.canvas.items():
-            self.canvas.removeItem(item)    # remove all canvas items
-        if not self.data: return
-        if not self.attrX or not self.attrY: return
-
-        data = self.getConditionalData()
-        if not data or len(data) == 0: return
-
+            self.canvas.removeItem(item)
+        if self.data is None or len(self.data) == 0 or \
+                self.attrX is None or self.attrY is None:
+            return
+        data = self.data[:, [self.attrX, self.attrY]]
         valsX = []
         valsY = []
-        # contX = orange.ContingencyAttrAttr(self.attrX, self.attrX, data)   # distribution of X attribute
-        # contY = orange.ContingencyAttrAttr(self.attrY, self.attrY, data)   # distribution of Y attribute
         contX = get_contingency(data, self.attrX, self.attrX)
         contY = get_contingency(data, self.attrY, self.attrY)
-
         # compute contingency of x and y attributes
         for entry in contX:
             sum_ = 0
@@ -242,13 +218,7 @@ class OWSieveDiagram(OWWidget):
             except: pass
             valsY.append(sum_)
 
-        # create cartesian product of selected attributes and compute contingency
-        # (cart, profit) = FeatureByCartesianProduct(data, [data.domain[self.attrX], data.domain[self.attrY]])
-        # tempData = data.select(list(data.domain) + [cart])
-        # contXY = orange.ContingencyAttrAttr(cart, cart, tempData)   # distribution of X attribute
-        # contXY = get_contingency(tempData, cart, cart)
         contXY = self.getConditionalDistributions(data, [data.domain[self.attrX], data.domain[self.attrY]])
-
         # compute probabilities
         probs = {}
         for i in range(len(valsX)):
@@ -270,20 +240,16 @@ class OWSieveDiagram(OWWidget):
             xl = OWCanvasText(self.canvas, "", 0, 0, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]), show=False)
             max_ylabel_w = max(int(xl.boundingRect().width()), max_ylabel_w)
         max_ylabel_w = min(max_ylabel_w, 200) #upper limit for label widths
-
         # get text width of Y attribute name
         text = OWCanvasText(self.canvas, data.domain[self.attrY].name, x  = 0, y = 0, bold = 1, show = 0, vertical=True)
         xOff = int(text.boundingRect().height() + max_ylabel_w)
         yOff = 55
         sqareSize = min(self.canvasView.width() - xOff - 35, self.canvasView.height() - yOff - 50)
-        if sqareSize < 0: return    # canvas is too small to draw rectangles
+        sqareSize = max(sqareSize, 10)
         self.canvasView.setSceneRect(0, 0, self.canvasView.width(), self.canvasView.height())
 
         # print graph name
-        if self.attrCondition == "(None)":
-            name  = "<b>P(%s, %s) &#8800; P(%s)&times;P(%s)</b>" %(self.attrX, self.attrY, self.attrX, self.attrY)
-        else:
-            name = "<b>P(%s, %s | %s = %s) &#8800; P(%s | %s = %s)&times;P(%s | %s = %s)</b>" %(self.attrX, self.attrY, self.attrCondition, getHtmlCompatibleString(self.attrConditionValue), self.attrX, self.attrCondition, getHtmlCompatibleString(self.attrConditionValue), self.attrY, self.attrCondition, getHtmlCompatibleString(self.attrConditionValue))
+        name  = "<b>P(%s, %s) &#8800; P(%s)&times;P(%s)</b>" %(self.attrX, self.attrY, self.attrX, self.attrY)
         OWCanvasText(self.canvas, "" , xOff+ sqareSize/2, 20, Qt.AlignCenter, htmlText = name)
         OWCanvasText(self.canvas, "N = " + str(len(data)), xOff+ sqareSize/2, 38, Qt.AlignCenter, bold = 0)
 
@@ -302,22 +268,30 @@ class OWSieveDiagram(OWWidget):
         # draw rectangles
         currX = xOff
         max_xlabel_h = 0
-
         normX, normY = sum(valsX), sum(valsY)
+        self.areas = []
         for i in range(len(valsX)):
             if valsX[i] == 0: continue
             currY = yOff
             width = int(float(sqareSize * valsX[i])/float(normX))
 
-            #for j in range(len(valsY)):
             for j in range(len(valsY)-1, -1, -1):   # this way we sort y values correctly
                 ((xAttr, xVal), (yAttr, yVal), actual, sum_) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
                 if valsY[j] == 0: continue
                 height = int(float(sqareSize * valsY[j])/float(normY))
 
                 # create rectangle
-                rect = OWCanvasRectangle(self.canvas, currX+2, currY+2, width-4, height-4, z = -10)
-                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum_)
+                selected = len(self.areas) in self.selection
+                rect = OWCanvasRectangle(
+                    self.canvas, currX+2, currY+2, width-4, height-4, z = -10,
+                    onclick=self.select_area)
+                rect.value_pair = i, j
+                self.areas.append(rect)
+                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum_,
+                    width=1 + 3 * selected,  # Ugly! This is needed since
+                    # resize redraws the graph! When this is handled by resizing
+                    # just the viewer, update_selection will take care of this
+                    )
 
                 expected = float(xVal*yVal)/float(sum_)
                 pearson = (actual - expected) / sqrt(expected)
@@ -339,8 +313,6 @@ class OWSieveDiagram(OWWidget):
         # show attribute names
         OWCanvasText(self.canvas, self.attrY, 0, yOff + sqareSize/2, Qt.AlignLeft | Qt.AlignVCenter, bold = 1, vertical=True)
         OWCanvasText(self.canvas, self.attrX, xOff + sqareSize/2, yOff + sqareSize + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop, bold = 1)
-
-        #self.canvas.update()
 
     # create a dictionary with all possible pairs of "combination-of-attr-values" : count
     def getConditionalDistributions(self, data, attrs):
@@ -377,7 +349,7 @@ class OWSieveDiagram(OWWidget):
 
     ######################################################################
     ## show deviations from attribute independence with standardized pearson residuals
-    def addRectIndependencePearson(self, rect, x, y, w, h, xAttr_xVal, yAttr_yVal, actual, sum):
+    def addRectIndependencePearson(self, rect, x, y, w, h, xAttr_xVal, yAttr_yVal, actual, sum, width):
         xAttr, xVal = xAttr_xVal
         yAttr, yVal = yAttr_yVal
         expected = float(xVal*yVal)/float(sum)
@@ -385,30 +357,22 @@ class OWSieveDiagram(OWWidget):
 
         if pearson > 0:     # if there are more examples that we would expect under the null hypothesis
             intPearson = floor(pearson)
-            pen = QPen(QColor(0,0,255), 1); rect.setPen(pen)
+            pen = QPen(QColor(0,0,255), width); rect.setPen(pen)
             b = 255
             r = g = 255 - intPearson*20
             r = g = max(r, 55)  #
         elif pearson < 0:
             intPearson = ceil(pearson)
-            pen = QPen(QColor(255,0,0), 1)
+            pen = QPen(QColor(255,0,0), width)
             rect.setPen(pen)
             r = 255
             b = g = 255 + intPearson*20
             b = g = max(b, 55)
         else:
-            pen = QPen(QColor(255,255,255), 1)
+            pen = QPen(QColor(255,255,255), width)
             r = g = b = 255         # white
         color = QColor(r,g,b)
         brush = QBrush(color); rect.setBrush(brush)
-
-        if self.showCases and w > 6 and h > 6:
-            if self.showInColor:
-                if pearson > 0: c = QColor(0,0,255)
-                else: c = QColor(255, 0,0)
-            else: c = Qt.black
-            for i in range(int(actual)):
-                OWCanvasEllipse(self.canvas, random.randint(x+1, x + w-4), random.randint(y+1, y + h-4), 3, 3, penColor = c, brushColor = c, z = 100)
 
         if pearson > 0:
             pearson = min(pearson, 10)
@@ -423,7 +387,6 @@ class OWSieveDiagram(OWWidget):
     ##################################################
     # add lines
     def addLines(self, x,y,w,h, diff, pen):
-        if not self.showLines: return
         if w == 0 or h == 0: return
 
         # create lines
@@ -439,12 +402,7 @@ class OWSieveDiagram(OWWidget):
             OWCanvasLine(self.canvas, x, y+temp, x+w, y+temp, 1, pen.color())
             temp += dist
 
-    def saveToFileCanvas(self):
-        sizeDlg = OWChooseImageSizeDlg(self.canvas, parent=self)
-        sizeDlg.exec_()
-
     def closeEvent(self, ce):
-        # self.optimizationDlg.hide()
         QDialog.closeEvent(self, ce)
 
     def get_widget_name_extension(self):
@@ -455,174 +413,13 @@ class OWSieveDiagram(OWWidget):
         self.report_plot()
 
 
-            # class OWSieveOptimization(OWMosaicOptimization, orngMosaic):
-#     settingsList = ["percentDataUsed", "ignoreTooSmallCells",
-#                     "timeLimit", "useTimeLimit", "lastSaveDirName", "projectionLimit", "useProjectionLimit"]
-#
-#     def __init__(self, visualizationWidget = None, signalManager = None):
-#         OWWidget.__init__(self, None, signalManager, "Sieve Evaluation Dialog", savePosition = True, wantMainArea = 0, wantStatusBar = 1)
-#         orngMosaic.__init__(self)
-#
-#         self.resize(390,620)
-#         self.setCaption("Sieve Diagram Evaluation Dialog")
-#
-#         loaded variables
-        # self.visualizationWidget = visualizationWidget
-        # self.useTimeLimit = 0
-        # self.useProjectionLimit = 0
-        # self.qualityMeasure = CHI_SQUARE        # we will always compute only chi square with sieve diagram
-        # self.optimizationType = EXACT_NUMBER_OF_ATTRS
-        # self.attributeCount = 2
-        # self.attrCondition = None
-        # self.attrConditionValue = None
-        #
-        # self.lastSaveDirName = os.getcwd()
-        #
-        # self.attrLenDict = {}
-        # self.shownResults = []
-        # self.loadSettings()
-        #
-        # self.layout().setMargin(0)
-        # self.tabs = gui.tabWidget(self.controlArea)
-        # self.MainTab = gui.createTabPage(self.tabs, "Main")
-        # self.SettingsTab = gui.createTabPage(self.tabs, "Settings")
-        # self.ManageTab = gui.createTabPage(self.tabs, "Manage")
-        #
-        ###########################
-        # MAIN TAB
-        # box = gui.widgetBox(self.MainTab, box = "Condition")
-        # self.attrConditionCombo      = gui.comboBoxWithCaption(box, self, "attrCondition", "Attribute:", callback = self.updateConditionAttr, sendSelectedValue = 1, valueType = str, labelWidth = 70)
-        # self.attrConditionValueCombo = gui.comboBoxWithCaption(box, self, "attrConditionValue", "Value:", sendSelectedValue = 1, valueType = str, labelWidth = 70)
-        #
-        # self.optimizationBox = gui.widgetBox(self.MainTab, "Evaluate")
-        # self.buttonBox = gui.widgetBox(self.optimizationBox, orientation = "horizontal")
-        # self.resultsBox = gui.widgetBox(self.MainTab, "Projection List Ordered by Chi-Square")
-#
-#        self.label1 = gui.widgetLabel(self.buttonBox, 'Projections with ')
-#        self.optimizationTypeCombo = gui.comboBox(self.buttonBox, self, "optimizationType", items = ["    exactly    ", "  maximum  "] )
-#        self.attributeCountCombo = gui.comboBox(self.buttonBox, self, "attributeCount", items = range(1, 5), tooltip = "Evaluate only projections with exactly (or maximum) this number of attributes", sendSelectedValue = 1, valueType = int)
-#        self.attributeLabel = gui.widgetLabel(self.buttonBox, ' attributes')
-        #
-        # self.startOptimizationButton = gui.button(self.optimizationBox, self, "Start Evaluating Projections", callback = self.evaluateProjections)
-        # f = self.startOptimizationButton.font(); f.setBold(1);   self.startOptimizationButton.setFont(f)
-        # self.stopOptimizationButton = gui.button(self.optimizationBox, self, "Stop Evaluation", callback = self.stopEvaluationClick)
-        # self.stopOptimizationButton.setFont(f)
-        # self.stopOptimizationButton.hide()
-        #
-        # self.resultList = gui.listBox(self.resultsBox, self, callback = self.showSelectedAttributes)
-        # self.resultList.setMinimumHeight(200)
-        #
-        ##########################
-        # SETTINGS TAB
-        # gui.checkBox(self.SettingsTab, self, "ignoreTooSmallCells", "Ignore cells where expected number of cases is less than 5", box = "Ignore small cells", tooltip = "Statisticians advise that in cases when the number of expected examples is less than 5 we ignore the cell \nsince it can significantly influence the chi-square value.")
-        #
-        # gui.comboBoxWithCaption(self.SettingsTab, self, "percentDataUsed", "Percent of data used: ", box = "Data settings", items = self.percentDataNums, sendSelectedValue = 1, valueType = int, tooltip = "In case that we have a large dataset the evaluation of each projection can take a lot of time.\nWe can therefore use only a subset of randomly selected examples, evaluate projection on them and thus make evaluation faster.")
-        #
-        # self.stopOptimizationBox = gui.widgetBox(self.SettingsTab, "When to Stop Evaluation or Optimization?")
-        # gui.checkWithSpin(self.stopOptimizationBox, self, "Time limit:                     ", 1, 1000, "useTimeLimit", "timeLimit", "  (minutes)", debuggingEnabled = 0)      # disable debugging. we always set this to 1 minute
-        # gui.checkWithSpin(self.stopOptimizationBox, self, "Use projection count limit:  ", 1, 1000000, "useProjectionLimit", "projectionLimit", "  (projections)", debuggingEnabled = 0)
-        # gui.rubber(self.SettingsTab)
-        #
-        ##########################
-        # SAVE TAB
-       # self.visualizedAttributesBox = gui.widgetBox(self.ManageTab, "Number of Concurrently Visualized Attributes")
-        # self.dialogsBox = gui.widgetBox(self.ManageTab, "Dialogs")
-        # self.manageResultsBox = gui.widgetBox(self.ManageTab, "Manage projections")
-#
-#        self.attrLenList = gui.listBox(self.visualizedAttributesBox, self, selectionMode = QListWidget.MultiSelection, callback = self.attrLenListChanged)
-#        self.attrLenList.setMinimumHeight(60)
-        #
-        # self.buttonBox7 = gui.widgetBox(self.dialogsBox, orientation = "horizontal")
-        # gui.button(self.buttonBox7, self, "Attribute Ranking", self.attributeAnalysis, debuggingEnabled = 0)
-        # gui.button(self.buttonBox7, self, "Graph Projection Scores", self.graphProjectionQuality, debuggingEnabled = 0)
-        #
-        # hbox = gui.widgetBox(self.manageResultsBox, orientation = "horizontal")
-        # gui.button(hbox, self, "Load", self.load, debuggingEnabled = 0)
-        # gui.button(hbox, self, "Save", self.save, debuggingEnabled = 0)
-        #
-        # hbox = gui.widgetBox(self.manageResultsBox, orientation = "horizontal")
-        # gui.button(hbox, self, "Clear results", self.clearResults)
-        # gui.rubber(self.ManageTab)
-        #
-        # reset some parameters if we are debugging so that it won't take too much time
-        # if orngDebugging.orngDebuggingEnabled:
-        #     self.useTimeLimit = 1
-        #     self.timeLimit = 0.3
-        #     self.useProjectionLimit = 1
-        #     self.projectionLimit = 100
-        # self.icons = self.createAttributeIconDict()
-    #
-    #
-    # when we start evaluating projections save info on the condition - this has to be stored in the
-    # def evaluateProjections(self):
-    #     if not self.data: return
-    #     self.usedAttrCondition = self.attrCondition
-    #     self.usedAttrConditionValue = self.attrConditionValue
-    #     self.wholeDataSet = self.data           # we have to create a datasubset based on the attrCondition
-    #     if self.attrCondition != "(None)":
-    #         self.data = self.data.select({self.attrCondition : self.attrConditionValue})
-    #     orngMosaic.setData(self, self.data)
-    #     OWMosaicOptimization.evaluateProjections(self)
-    #
-    # this is a handler that is called after we finish evaluating projections (when evaluated all projections, or stop was pressed)
-    # def finishEvaluation(self, evaluatedProjections):
-    #     self.data = self.wholeDataSet           # restore the whole data after projection evaluation
-    #     OWMosaicOptimization.finishEvaluation(self, evaluatedProjections)
-    #
-    #
-    # def showSelectedAttributes(self, attrs = None):
-    #     if not self.visualizationWidget: return
-    #     if not attrs:
-    #         projection = self.getSelectedProjection()
-    #         if not projection: return
-    #         self.visualizationWidget.attrCondition = self.usedAttrCondition
-    #         self.visualizationWidget.updateConditionAttr()
-    #         self.visualizationWidget.attrConditionValue = self.usedAttrConditionValue
-    #         (score, attrs, index, extraInfo) = projection
-    #
-    #     self.resultList.setFocus()
-    #     self.visualizationWidget.setShownAttributes(attrs)
-    #
-    #
-    # def clearResults(self):
-    #     orngMosaic.clearResults(self)
-    #     self.resultList.clear()
-    #
-    # def setData(self, data, removeUnusedValues = 0):
-    #     self.attrConditionCombo.clear()
-    #     self.attrConditionCombo.addItem("(None)")
-    #     self.attrConditionValueCombo.clear()
-    #     self.resultList.clear()
-    #
-    #     orngMosaic.setData(self, data, removeUnusedValues)
-    #
-    #     self.setStatusBarText("")
-    #     if not self.data: return None
-    #
-    #     for i in range(len(self.data.domain)):
-    #         self.attrConditionCombo.addItem(self.icons[self.data.domain[i].varType], self.data.domain[i].name)
-    #     self.attrCondition = str(self.attrConditionCombo.itemText(0))
-    #
-    #     return self.data
-    #
-    # def finishedAddingResults(self):
-    #     self.resultList.setCurrentItem(self.resultList.item(0))
-    #
-    # def updateConditionAttr(self):
-    #     self.attrConditionValueCombo.clear()
-    #
-    #     if self.attrCondition != "(None)":
-    #         for val in self.data.domain[self.attrCondition].values:
-    #             self.attrConditionValueCombo.addItem(val)
-    #         self.attrConditionValue = str(self.attrConditionValueCombo.itemText(0))
-
-
 # test widget appearance
 if __name__=="__main__":
+    import sys
     a=QApplication(sys.argv)
     ow=OWSieveDiagram()
     ow.show()
     data = Table(r"zoo.tab")
-    ow.setData(data)
+    ow.set_data(data)
     a.exec_()
     ow.saveSettings()
