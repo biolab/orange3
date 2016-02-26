@@ -56,7 +56,7 @@ class OWRank(widget.OWWidget):
 
     inputs = [("Data", Orange.data.Table, "setData"),
               ("Scorer", score.Scorer, "set_learner", widget.Multiple)]
-    outputs = [("Reduced Data", Orange.data.Table),
+    outputs = [("Reduced Data", Orange.data.Table, widget.Default),
                ("Scores", Orange.data.Table)]
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
