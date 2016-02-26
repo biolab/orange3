@@ -328,6 +328,11 @@ class OWRank(widget.OWWidget):
         self.ranksProxyModel.invalidate()
         self.selectMethodChanged()
 
+        if self.data:
+            self.send("Scores", self.create_scores_table())
+        else:
+            self.send("Scores", None)
+
     def updateRankModel(self, measuresMask=None):
         """
         Update the rankModel.
@@ -481,11 +486,6 @@ class OWRank(widget.OWWidget):
             data = Orange.data.Table(domain, self.data)
             self.send("Reduced Data", data)
             self.out_domain_desc = report.describe_domain(data.domain)
-
-        if self.data:
-            self.send("Scores", self.create_scores_table())
-        else:
-            self.send("Scores", None)
 
     def selectedAttrs(self):
         if self.data:
