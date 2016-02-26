@@ -3,7 +3,7 @@ from math import sqrt, floor, ceil
 
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush,
-                         QDialog, QApplication, QSizePolicy)
+                         QDialog, QApplication, QSizePolicy, QGraphicsLineItem)
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -12,9 +12,8 @@ from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.itemmodels import VariableListModel
-from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
-                                               OWCanvasLine, ViewWithPress,
-                                               get_conditional_distribution)
+from Orange.widgets.visualize.owmosaic import (
+    CanvasText, CanvasRectangle, ViewWithPress, get_conditional_distribution)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
@@ -229,11 +228,11 @@ class OWSieveDiagram(OWWidget):
         #get text width of Y labels
         max_ylabel_w = 0
         for j in range(len(valsY)):
-            xl = OWCanvasText(self.canvas, "", 0, 0, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]), show=False)
+            xl = CanvasText(self.canvas, "", 0, 0, html_text= getHtmlCompatibleString(data.domain[self.attrY].values[j]), show=False)
             max_ylabel_w = max(int(xl.boundingRect().width()), max_ylabel_w)
         max_ylabel_w = min(max_ylabel_w, 200) #upper limit for label widths
         # get text width of Y attribute name
-        text = OWCanvasText(self.canvas, data.domain[self.attrY].name, x  = 0, y = 0, bold = 1, show = 0, vertical=True)
+        text = CanvasText(self.canvas, data.domain[self.attrY].name, x  = 0, y = 0, bold = 1, show = 0, vertical=True)
         xOff = int(text.boundingRect().height() + max_ylabel_w)
         yOff = 55
         sqareSize = min(self.canvasView.width() - xOff - 35, self.canvasView.height() - yOff - 50)
@@ -242,8 +241,8 @@ class OWSieveDiagram(OWWidget):
 
         # print graph name
         name  = "<b>P(%s, %s) &#8800; P(%s)&times;P(%s)</b>" %(self.attrX, self.attrY, self.attrX, self.attrY)
-        OWCanvasText(self.canvas, "" , xOff+ sqareSize/2, 20, Qt.AlignCenter, htmlText = name)
-        OWCanvasText(self.canvas, "N = " + str(len(data)), xOff+ sqareSize/2, 38, Qt.AlignCenter, bold = 0)
+        CanvasText(self.canvas, "", xOff + sqareSize / 2, 20, Qt.AlignCenter, html_text= name)
+        CanvasText(self.canvas, "N = " + str(len(data)), xOff + sqareSize / 2, 38, Qt.AlignCenter, bold = 0)
 
         ######################
         # compute chi-square
@@ -274,7 +273,7 @@ class OWSieveDiagram(OWWidget):
 
                 # create rectangle
                 selected = len(self.areas) in self.selection
-                rect = OWCanvasRectangle(
+                rect = CanvasRectangle(
                     self.canvas, currX+2, currY+2, width-4, height-4, z = -10,
                     onclick=self.select_area)
                 rect.value_pair = i, j
@@ -295,16 +294,16 @@ class OWSieveDiagram(OWWidget):
 
                 currY += height
                 if currX == xOff:
-                    OWCanvasText(self.canvas, "", xOff, currY - height/2, Qt.AlignRight | Qt.AlignVCenter, htmlText = getHtmlCompatibleString(data.domain[self.attrY].values[j]))
+                    CanvasText(self.canvas, "", xOff, currY - height / 2, Qt.AlignRight | Qt.AlignVCenter, html_text= getHtmlCompatibleString(data.domain[self.attrY].values[j]))
 
-            xl = OWCanvasText(self.canvas, "", currX + width/2, yOff + sqareSize, Qt.AlignHCenter | Qt.AlignTop, htmlText = getHtmlCompatibleString(data.domain[self.attrX].values[i]))
+            xl = CanvasText(self.canvas, "", currX + width / 2, yOff + sqareSize, Qt.AlignHCenter | Qt.AlignTop, html_text= getHtmlCompatibleString(data.domain[self.attrX].values[i]))
             max_xlabel_h = max(int(xl.boundingRect().height()), max_xlabel_h)
 
             currX += width
 
         # show attribute names
-        OWCanvasText(self.canvas, self.attrY, 0, yOff + sqareSize/2, Qt.AlignLeft | Qt.AlignVCenter, bold = 1, vertical=True)
-        OWCanvasText(self.canvas, self.attrX, xOff + sqareSize/2, yOff + sqareSize + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop, bold = 1)
+        CanvasText(self.canvas, self.attrY, 0, yOff + sqareSize / 2, Qt.AlignLeft | Qt.AlignVCenter, bold = 1, vertical=True)
+        CanvasText(self.canvas, self.attrX, xOff + sqareSize / 2, yOff + sqareSize + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop, bold = 1)
 
 
     ######################################################################
@@ -332,7 +331,8 @@ class OWSieveDiagram(OWWidget):
             pen = QPen(QColor(255,255,255), width)
             r = g = b = 255         # white
         color = QColor(r,g,b)
-        brush = QBrush(color); rect.setBrush(brush)
+        brush = QBrush(color)
+        rect.setBrush(brush)
 
         if pearson > 0:
             pearson = min(pearson, 10)
@@ -341,25 +341,28 @@ class OWSieveDiagram(OWWidget):
             pearson = max(pearson, -10)
             kvoc = 1 - 0.4*pearson
 
+        pen.setWidth(1)
         self.addLines(x,y,w,h, kvoc, pen)
 
 
     ##################################################
     # add lines
-    def addLines(self, x,y,w,h, diff, pen):
-        if w == 0 or h == 0: return
+    def addLines(self, x, y, w, h, diff, pen):
+        if w == 0 or h == 0:
+            return
 
-        # create lines
-        dist = 20   # original distance between two lines in pixels
-        dist = dist * diff
+        dist = 20 * diff  # original distance between two lines in pixels
         temp = dist
-        while (temp < w):
-            OWCanvasLine(self.canvas, temp+x, y, temp+x, y+h, 1, pen.color())
+        canvas = self.canvas
+        while temp < w:
+            r = QGraphicsLineItem(temp + x, y, temp + x, y + h, None, canvas)
+            r.setPen(pen)
             temp += dist
 
         temp = dist
-        while (temp < h):
-            OWCanvasLine(self.canvas, x, y+temp, x+w, y+temp, 1, pen.color())
+        while temp < h:
+            r = QGraphicsLineItem(x, y + temp, x + w, y + temp, None, canvas)
+            r.setPen(pen)
             temp += dist
 
     def closeEvent(self, ce):
@@ -374,7 +377,7 @@ class OWSieveDiagram(OWWidget):
 
 
 # test widget appearance
-if __name__=="__main__":
+if __name__ == "__main__":
     import sys
     a=QApplication(sys.argv)
     ow=OWSieveDiagram()
