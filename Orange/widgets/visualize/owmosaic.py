@@ -5,7 +5,7 @@ from itertools import product, chain
 from math import sqrt, log
 from operator import mul
 
-from PyQt4.QtCore import QPoint, Qt, QRectF, QSize
+from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsView, QColor,
                          QGraphicsScene, QPainter, QPen, QApplication,
                          QGraphicsTextItem, QBrush, QGraphicsLineItem,
@@ -21,54 +21,6 @@ from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.colorpalette import DefaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
-
-
-class SelectionRectangle(QGraphicsRectItem):
-    pass
-
-
-class MosaicSceneView(QGraphicsView):
-    def __init__(self, widget, *args):
-        super().__init__(*args)
-        self.widget = widget
-        self.bMouseDown = False
-        self.mouseDownPosition = QPoint(0, 0)
-        self.tempRect = None
-
-    def mousePressEvent(self, ev):
-        QGraphicsView.mousePressEvent(self, ev)
-        self.mouseDownPosition = QPoint(ev.pos().x(), ev.pos().y())
-        self.bMouseDown = True
-        self.mouseMoveEvent(ev)
-
-    def mouseMoveEvent(self, ev):
-        QGraphicsView.mouseMoveEvent(self, ev)
-        if ev.button() == Qt.RightButton:
-            return
-        if not self.bMouseDown:
-            if self.tempRect:
-                self.scene().removeItem(self.tempRect)
-                self.tempRect = None
-        else:
-            if not self.tempRect:
-                self.tempRect = SelectionRectangle(None, self.scene())
-            rect = QRectF(
-                    min(self.mouseDownPosition.x(), ev.pos().x()),
-                    min(self.mouseDownPosition.y(), ev.pos().y()),
-                    max(abs(self.mouseDownPosition.x() - ev.pos().x()), 1),
-                    max(abs(self.mouseDownPosition.y() - ev.pos().y()), 1))
-            self.tempRect.setRect(rect)
-
-    def mouseReleaseEvent(self, ev):
-        self.bMouseDown = False
-        self.widget.key_modifier = ev.modifiers()
-        if self.tempRect:
-            if ev.button() == Qt.LeftButton and not ev.modifiers() & \
-                    (Qt.AltModifier | Qt.ControlModifier | Qt.ShiftModifier):
-                self.widget.selectionConditions = []
-            self.widget.addSelection(self.tempRect)
-            self.scene().removeItem(self.tempRect)
-            self.tempRect = None
 
 
 class OWMosaicDisplay(OWWidget):
@@ -101,6 +53,15 @@ class OWMosaicDisplay(OWWidget):
     _box_size = 5
     _cellspace = 4
 
+    # color paletes for visualizing pearsons residuals
+    blue_colors = [QColor(255, 255, 255), QColor(210, 210, 255),
+                   QColor(110, 110, 255), QColor(0, 0, 255)]
+    red_colors = [QColor(255, 255, 255), QColor(255, 200, 200),
+                  QColor(255, 100, 100), QColor(255, 0, 0)]
+    selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
+    attributeNameOffset = 20
+    attributeValueOffset = 3
+
     graph_name = "canvas"
 
     def __init__(self):
@@ -109,31 +70,23 @@ class OWMosaicDisplay(OWWidget):
         self.data = None
         self.unprocessed_subset_data = None
         self.subset_data = None
-        self.names = []  # class values
 
-        self.attributeNameOffset = 20
-        self.attributeValueOffset = 3
-        self.residuals = []  # residual values if the residuals are visualized
         self.aprioriDistributions = []
         self.conditionalDict = None
         self.conditionalSubsetDict = None
         self.distributionDict = None
         self.distributionSubsetDict = None
 
-        self.selectionRectangle = None
-        self.selectionConditions = []
-        self.recentlyAdded = []
-        self.key_modifier = Qt.NoModifier
+        self.selection = {}
+        self.areas = []
 
-        # color paletes for visualizing pearsons residuals
-        self.blue_colors = [QColor(255, 255, 255), QColor(210, 210, 255),
-                            QColor(110, 110, 255), QColor(0, 0, 255)]
-        self.red_colors = [QColor(255, 255, 255), QColor(255, 200, 200),
-                           QColor(255, 100, 100), QColor(255, 0, 0)]
-        self.selectionColorPalette = [QColor(*col) for col in DefaultRGBColors]
+        self.max_ylabel_w1 = self.max_ylabel_w2 = 0
+        self.drawn_sides = set()
+        self.draw_positions = {}
 
         self.canvas = QGraphicsScene()
-        self.canvas_view = MosaicSceneView(self, self.canvas, self.mainArea)
+        self.canvas_view = ViewWithPress(self.canvas,
+                                         handler=self.clear_selection)
         self.mainArea.layout().addWidget(self.canvas_view)
         self.canvas_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvas_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -250,14 +203,52 @@ class OWMosaicDisplay(OWWidget):
     def handleNewSignals(self):
         self.reset_graph()
 
+    def clear_selection(self):
+        self.selection = {}
+        self.update_selection_rects()
+        self.send_selection()
+
     def reset_graph(self):
-        self.removeAllSelections()
+        self.clear_selection()
         self.update_graph()
 
+    def update_selection_rects(self):
+        for i, (attr, vals, area) in enumerate(self.areas):
+            if i in self.selection:
+                area.setPen(QPen(Qt.black, 3, Qt.DotLine))
+            else:
+                area.setPen(QPen())
+
+    def select_area(self, index, ev):
+        if ev.button() != Qt.LeftButton:
+            return
+        if ev.modifiers() & Qt.ControlModifier:
+            self.selection ^= {index}
+        else:
+            self.selection = {index}
+        self.update_selection_rects()
+        self.send_selection()
+
+    def send_selection(self):
+        if not self.selection or self.data is None:
+            self.send("Selected Data", None)
+            return
+        filters = []
+        for i in self.selection:
+            cols, vals, area = self.areas[i]
+            filters.append(
+                    filter.Values(
+                            filter.FilterDiscrete(col, val)
+                            for col, val in zip(cols, vals)))
+        if len(filters) > 1:
+            filters = filter.Values(filters, conjunction=False)
+        else:
+            filters = filters[0]
+        self.send("Selected Data", filters(self.data))
+
     def update_graph(self):
-        for item in self.canvas.items():
-            if not isinstance(item, SelectionRectangle):
-                self.canvas.removeItem(item)
+        self.canvas.clear()
+        self.areas = []
 
         data = self.data
         if data is None:
@@ -323,26 +314,28 @@ class OWMosaicDisplay(OWWidget):
         self.canvas_view.setSceneRect(
                 0, 0, self.canvas_view.width(), self.canvas_view.height())
 
-        self.drawnSides = dict([(0, 0), (1, 0), (2, 0), (3, 0)])
-        self.drawPositions = {}
+        self.drawn_sides = set()
+        self.draw_positions = {}
 
         self.conditionalDict, self.distributionDict = \
-            self.getConditionalDistributions(data, attr_list)
+            self.get_conditional_distribution(data, attr_list)
         self.conditionalSubsetDict = self.distributionSubsetDict = None
         if subset:
             self.conditionalSubsetDict, self.distributionSubsetDict = \
-                self.getConditionalDistributions(subset, attr_list)
+                self.get_conditional_distribution(subset, attr_list)
 
         # draw rectangles
         self.draw_data(
             attr_list, (xoff, xoff + square_size), (yoff, yoff + square_size),
             0, "", len(attr_list))
-        self.DrawLegend(
+        self.draw_legend(
             data, (xoff, xoff + square_size), (yoff, yoff + square_size))
+        self.update_selection_rects()
 
     # create a dictionary "combination-of-attr-values" : count
     # TODO: this function is also used in owsieve --> where to put it?
-    def getConditionalDistributions(self, data, attrs):
+    @staticmethod
+    def get_conditional_distribution(data, attrs):
         cond_dist = defaultdict(int)
         dist = defaultdict(int)
         cond_dist[""] = dist[""] = len(data)
@@ -380,22 +373,22 @@ class OWMosaicDisplay(OWWidget):
                     dist[vals[-1]] += len(filtdata)
         return cond_dist, dist
 
-    def draw_data(self, attrList, x0_x1, y0_y1, side, condition,
-                  totalAttrs, used_attrs=[], used_vals=[],
-                  attrVals="", **args):
+    def draw_data(self, attr_list, x0_x1, y0_y1, side, condition,
+                  total_attrs, used_attrs=[], used_vals=[],
+                  attr_vals=""):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
-        if self.conditionalDict[attrVals] == 0:
-            self.addRect(x0, x1, y0, y1, "",
-                         used_attrs, used_vals, attrVals=attrVals)
+        if self.conditionalDict[attr_vals] == 0:
+            self.add_rect(x0, x1, y0, y1, "",
+                          used_attrs, used_vals, attr_vals=attr_vals)
             # store coordinates for later drawing of labels
-            self.draw_text(side, attrList[0], (x0, x1), (y0, y1), totalAttrs,
-                           used_attrs, used_vals, attrVals)
+            self.draw_text(side, attr_list[0], (x0, x1), (y0, y1), total_attrs,
+                           used_attrs, used_vals, attr_vals)
             return
 
-        attr = attrList[0]
+        attr = attr_list[0]
         # how much smaller rectangles do we draw
-        edge = len(attrList) * self._cellspace
+        edge = len(attr_list) * self._cellspace
         values = get_variable_values_sorted(self.data.domain[attr])
         if side % 2:
             values = values[::-1]  # reverse names if necessary
@@ -411,10 +404,10 @@ class OWMosaicDisplay(OWWidget):
             if whole == 0:
                 edge = (y1 - y0) / float(len(values) - 1)
 
-        if attrVals == "":
+        if attr_vals == "":
             counts = [self.conditionalDict[val] for val in values]
         else:
-            counts = [self.conditionalDict[attrVals + "-" + val]
+            counts = [self.conditionalDict[attr_vals + "-" + val]
                       for val in values]
         total = sum(counts)
 
@@ -423,89 +416,89 @@ class OWMosaicDisplay(OWWidget):
         # will be drawn otherwise, if the last cell, nearest to the labels of
         # the fourth attribute, is empty, we wouldn't be able to position the
         # labels
-        valRange = list(range(len(values)))
-        if len(attrList + used_attrs) == 4 and len(used_attrs) == 2:
-            attr1Values = get_variable_values_sorted(
+        valrange = list(range(len(values)))
+        if len(attr_list + used_attrs) == 4 and len(used_attrs) == 2:
+            attr1values = get_variable_values_sorted(
                 self.data.domain[used_attrs[0]])
-            if used_vals[0] == attr1Values[-1]:
-                valRange = valRange[::-1]
+            if used_vals[0] == attr1values[-1]:
+                valrange = valrange[::-1]
 
-        for i in valRange:
+        for i in valrange:
             start = i * edge + whole * float(sum(counts[:i]) / float(total))
             end = i * edge + whole * float(sum(counts[:i + 1]) / float(total))
             val = values[i]
-            htmlVal = getHtmlCompatibleString(val)
-            if attrVals != "":
-                newAttrVals = attrVals + "-" + val
+            htmlval = getHtmlCompatibleString(val)
+            if attr_vals != "":
+                newattrvals = attr_vals + "-" + val
             else:
-                newAttrVals = val
+                newattrvals = val
 
             tooltip = condition + 4 * "&nbsp;" + attr + \
-                ": <b>" + htmlVal + "</b><br>"
+                ": <b>" + htmlval + "</b><br>"
             attrs = used_attrs + [attr]
             vals = used_vals + [val]
-            common_args = attrs, vals, newAttrVals
+            common_args = attrs, vals, newattrvals
             if side % 2 == 0:  # if we are moving horizontally
-                if len(attrList) == 1:
-                    self.addRect(x0 + start, x0 + end, y0, y1,
-                                 tooltip, *common_args, **args)
+                if len(attr_list) == 1:
+                    self.add_rect(x0 + start, x0 + end, y0, y1,
+                                  tooltip, *common_args)
                 else:
-                    self.draw_data(attrList[1:], (x0 + start, x0 + end),
+                    self.draw_data(attr_list[1:], (x0 + start, x0 + end),
                                    (y0, y1), side + 1,
-                                   tooltip, totalAttrs, *common_args, **args)
+                                   tooltip, total_attrs, *common_args)
             else:
-                if len(attrList) == 1:
-                    self.addRect(x0, x1, y0 + start, y0 + end,
-                                 tooltip, *common_args, **args)
+                if len(attr_list) == 1:
+                    self.add_rect(x0, x1, y0 + start, y0 + end,
+                                  tooltip, *common_args)
                 else:
-                    self.draw_data(attrList[1:], (x0, x1),
+                    self.draw_data(attr_list[1:], (x0, x1),
                                    (y0 + start, y0 + end), side + 1,
-                                   tooltip, totalAttrs, *common_args, **args)
+                                   tooltip, total_attrs, *common_args)
 
-        self.draw_text(side, attrList[0], (x0, x1), (y0, y1),
-                       totalAttrs, used_attrs, used_vals, attrVals)
+        self.draw_text(side, attr_list[0], (x0, x1), (y0, y1),
+                       total_attrs, used_attrs, used_vals, attr_vals)
 
     def draw_text(self, side, attr, x0_x1, y0_y1,
-                  totalAttrs, used_attrs, used_vals, attrVals):
+                  total_attrs, used_attrs, used_vals, attr_vals):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
-        if self.drawnSides[side]:
+        if side in self.drawn_sides:
             return
 
         # the text on the right will be drawn when we are processing
         # visualization of the last value of the first attribute
         if side == 3:
-            attr1Values = \
+            attr1values = \
                 get_variable_values_sorted(self.data.domain[used_attrs[0]])
-            if used_vals[0] != attr1Values[-1]:
+            if used_vals[0] != attr1values[-1]:
                 return
 
-        if not self.conditionalDict[attrVals]:
-            if side not in self.drawPositions:
-                self.drawPositions[side] = (x0, x1, y0, y1)
+        if not self.conditionalDict[attr_vals]:
+            if side not in self.draw_positions:
+                self.draw_positions[side] = (x0, x1, y0, y1)
             return
         else:
-            if side in self.drawPositions:
+            if side in self.draw_positions:
                 # restore the positions of attribute values and name
-                (x0, x1, y0, y1) = self.drawPositions[side]
+                (x0, x1, y0, y1) = self.draw_positions[side]
 
-        self.drawnSides[side] = True
+        self.drawn_sides.add(side)
 
         values = get_variable_values_sorted(self.data.domain[attr])
         if side % 2:
             values = values[::-1]
 
-        spaces = self._cellspace * (totalAttrs - side) * (len(values) - 1)
+        spaces = self._cellspace * (total_attrs - side) * (len(values) - 1)
         width = x1 - x0 - spaces * (side % 2 == 0)
         height = y1 - y0 - spaces * (side % 2 == 1)
 
         # calculate position of first attribute
-        currPos = 0
+        currpos = 0
 
-        if attrVals == "":
+        if attr_vals == "":
             counts = [self.conditionalDict.get(val, 1) for val in values]
         else:
-            counts = [self.conditionalDict.get(attrVals + "-" + val, 1)
+            counts = [self.conditionalDict.get(attr_vals + "-" + val, 1)
                       for val in values]
         total = sum(counts)
         if total == 0:
@@ -523,25 +516,26 @@ class OWMosaicDisplay(OWWidget):
             if self.distributionDict[val] != 0:
                 if side == 0:
                     OWCanvasText(self.canvas, str(val),
-                                 x0 + currPos + width * 0.5 * perc,
+                                 x0 + currpos + width * 0.5 * perc,
                                  y1 + self.attributeValueOffset, align)
                 elif side == 1:
                     OWCanvasText(self.canvas, str(val),
                                  x0 - self.attributeValueOffset,
-                                 y0 + currPos + height * 0.5 * perc, align)
+                                 y0 + currpos + height * 0.5 * perc, align)
                 elif side == 2:
                     OWCanvasText(self.canvas, str(val),
-                                 x0 + currPos + width * perc * 0.5,
+                                 x0 + currpos + width * perc * 0.5,
                                  y0 - self.attributeValueOffset, align)
                 else:
                     OWCanvasText(self.canvas, str(val),
                                  x1 + self.attributeValueOffset,
-                                 y0 + currPos + height * 0.5 * perc, align)
+                                 y0 + currpos + height * 0.5 * perc, align)
 
             if side % 2 == 0:
-                currPos += perc * width + self._cellspace * (totalAttrs - side)
+                currpos += perc * width + self._cellspace * (total_attrs - side)
             else:
-                currPos += perc * height + self._cellspace * (totalAttrs - side)
+                currpos += perc * height + self._cellspace * (total_attrs -
+                                                              side)
 
         if side == 0:
             OWCanvasText(
@@ -569,8 +563,9 @@ class OWMosaicDisplay(OWWidget):
                 align, bold=1, vertical=True)
 
     # draw a rectangle, set it to back and add it to rect list
-    def addRect(self, x0, x1, y0, y1, condition="",
-                used_attrs=[], used_vals=[], attrVals="", **args):
+    def add_rect(self, x0, x1, y0, y1, condition="",
+                 used_attrs=[], used_vals=[], attr_vals=""):
+        area_index = len(self.areas)
         if x0 == x1:
             x1 += 1
         if y0 == y1:
@@ -580,230 +575,168 @@ class OWMosaicDisplay(OWWidget):
         if x1 - x0 + y1 - y0 == 2:
             y1 += 1
 
-        if "selectionDict" in args and \
-                tuple(used_vals) in args["selectionDict"]:
-            d = 2
-            OWCanvasRectangle(
-                    self.canvas,
-                    x0 - d, y0 - d, x1 - x0 + 1 + 2 * d, y1 - y0 + 1 + 2 * d,
-                    penColor=args["selectionDict"][tuple(used_vals)],
-                    penWidth=2, z=-100)
-
         if self.data.domain.has_discrete_class:
             colors = [QColor(*col) for col in self.data.domain.class_var.colors]
         else:
             colors = None
 
-        prior = ()
-        pearson = None
-        expected = None
-        outerRect = OWCanvasRectangle(
-                self.canvas, x0, y0, x1 - x0, y1 - y0, z=30)
+        def select_area(_, ev):
+            self.select_area(area_index, ev)
 
-        if not self.conditionalDict[attrVals]:
+        def rect(x, y, w, h, z, pen_color=None, brush_color=None, **args):
+            if pen_color is None:
+                return OWCanvasRectangle(
+                    self.canvas, x, y, w, h, z=z, onclick=select_area, **args)
+            if brush_color is None:
+                brush_color = pen_color
+            return OWCanvasRectangle(
+                self.canvas, x, y, w, h, pen_color, brush_color, z=z,
+                onclick=select_area, **args)
+
+        outer_rect = rect(x0, y0, x1 - x0, y1 - y0, 30)
+        self.areas.append((used_attrs, used_vals, outer_rect))
+        if not self.conditionalDict[attr_vals]:
             return
 
-        # we have to remember which conditions were new in this update so that
-        # when we right click we can only remove the last added selections
-        if self.selectionRectangle is not None and \
-                self.selectionRectangle.collidesWithItem(outerRect):
-            if tuple(used_vals) in self.selectionConditions and \
-                            self.key_modifier & (Qt.AltModifier
-                                                     | Qt.ControlModifier):
-                self.selectionConditions.remove(tuple(used_vals))
-            elif tuple(used_vals) not in self.selectionConditions:
-                self.recentlyAdded += [tuple(used_vals)]
-                if self.key_modifier & (Qt.ControlModifier | Qt.ShiftModifier):
-                    self.selectionConditions = self.selectionConditions \
-                                               + [tuple(used_vals)]
-                elif not self.key_modifier & (Qt.AltModifier | Qt.ShiftModifier
-                                                  | Qt.ControlModifier):
-                    self.selectionConditions = self.recentlyAdded
-
-        # show rectangle selected or not
-        if tuple(used_vals) in self.selectionConditions:
-            outerRect.setPen(QPen(Qt.black, 3, Qt.DotLine))
-
-        if (self.interior_coloring == self.CLASS_DISTRIBUTION and
-                not self.data.domain.has_discrete_class):
-            return
-
-        # draw pearsons residuals
         if self.interior_coloring == self.PEARSON:
             s = sum(self.aprioriDistributions[0])
             expected = s * reduce(
                 mul,
                 (self.aprioriDistributions[i][used_vals[i]] / float(s)
                  for i in range(len(used_vals))))
-            actual = self.conditionalDict[attrVals]
+            actual = self.conditionalDict[attr_vals]
             pearson = (actual - expected) / sqrt(expected)
             ind = min(int(log(abs(pearson), 2)), 3)
             color = [self.red_colors, self.blue_colors][pearson > 0][ind]
-            OWCanvasRectangle(
-                self.canvas, x0, y0, x1 - x0, y1 - y0,
-                color, color, z=-20)
+            rect(x0, y0, x1 - x0, y1 - y0, -20, color)
+            outer_rect.setToolTip(
+                condition + "<hr/>" +
+                "Expected instances: %.1f<br>"
+                "Actual instances: %d<br>"
+                "Standardized (Pearson) residual: %.1f" %
+                (expected, self.conditionalDict[attr_vals], pearson))
         else:
             cls_values = get_variable_values_sorted(self.data.domain.class_var)
             prior = get_distribution(self.data, self.data.domain.class_var.name)
             total = 0
             for i, value in enumerate(cls_values):
-                val = self.conditionalDict[attrVals + "-" + value]
+                val = self.conditionalDict[attr_vals + "-" + value]
                 if val == 0:
                     continue
                 if i == len(cls_values) - 1:
                     v = y1 - y0 - total
                 else:
-                    v = ((y1 - y0) * val) / self.conditionalDict[attrVals]
-                OWCanvasRectangle(self.canvas, x0, y0 + total, x1 - x0, v,
-                                  colors[i], colors[i], z=-20)
+                    v = ((y1 - y0) * val) / self.conditionalDict[attr_vals]
+                rect(x0, y0 + total, x1 - x0, v, -20, colors[i])
                 total += v
 
-            # show apriori boxes and lines
             if self.use_boxes and \
-                            abs(x1 - x0) > self._box_size and \
-                            abs(y1 - y0) > self._box_size:
-                apriori = [prior[val] / float(len(self.data))
-                           for val in cls_values]
-                total1 = 0
-                total2 = 0
-                OWCanvasLine(self.canvas,
-                             x0 + self._box_size, y0, x0 + self._box_size, y1,
-                             z=30)
-
-                for i in range(len(cls_values)):
-                    val1 = apriori[i]
-                    val2 = apriori[i]
-                    if i == len(cls_values) - 1:
-                        v1 = y1 - y0 - total1
-                        v2 = y1 - y0 - total2
+                    abs(x1 - x0) > self._box_size and \
+                    abs(y1 - y0) > self._box_size:
+                total = 0
+                OWCanvasLine(
+                    self.canvas,
+                    x0 + self._box_size, y0, x0 + self._box_size, y1, z=30)
+                n = sum(prior)
+                for i, (val, color) in enumerate(zip(prior, colors)):
+                    if i == len(prior) - 1:
+                        h = y1 - y0 - total
                     else:
-                        v1 = (y1 - y0) * val1
-                        v2 = (y1 - y0) * val2
-                    OWCanvasRectangle(self.canvas,
-                                      x0, y0 + total2, self._box_size, v2,
-                                      colors[i], colors[i], z=20)
-                    total1 += v1
-                    total2 += v2
+                        h = (y1 - y0) * val / n
+                    rect(x0, y0 + total, self._box_size, h, 20, color)
+                    total += h
 
-            # show subset distribution
             if self.conditionalSubsetDict:
-                # show a rect around the box if subset examples belong to this box
-                if self.conditionalSubsetDict[attrVals]:
-                    counts = [self.conditionalSubsetDict[attrVals + "-" + val] for val in cls_values]
+                if self.conditionalSubsetDict[attr_vals]:
+                    counts = [self.conditionalSubsetDict[attr_vals + "-" + val]
+                              for val in cls_values]
                     if sum(counts) == 1:
-                        OWCanvasRectangle(self.canvas, x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5,
-                                          colors[counts.index(1)],
-                                          QColor(Qt.white), penWidth=2, z=-50,
-                                          penStyle=Qt.DashLine)
-
+                        rect(x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5, -550,
+                             colors[counts.index(1)], Qt.white,
+                             penWidth=2, penStyle=Qt.DashLine)
                     if self.subset_data is not None:
-                        OWCanvasLine(self.canvas, x1 - self._box_size, y0, x1 - self._box_size, y1, z=30)
+                        OWCanvasLine(
+                            self.canvas,
+                            x1 - self._box_size, y0, x1 - self._box_size, y1,
+                            z=30)
                         total = 0
-                        for i in range(len(prior)):
-                            val = self.conditionalSubsetDict[attrVals + "-" + cls_values[i]]
-                            if not self.conditionalSubsetDict[attrVals] or val == 0: continue
-                            if i == len(prior) - 1:
-                                v = y1 - y0 - total
-                            else:
-                                v = ((y1 - y0) * val) / float(self.conditionalSubsetDict[attrVals])
-                            OWCanvasRectangle(self.canvas, x1 - self._box_size, y0 + total, self._box_size, v,
-                                              colors[i], colors[i], z=15)
-                            total += v
+                        n = self.conditionalSubsetDict[attr_vals]
+                        if n:
+                            for i, (cls, color) in \
+                                    enumerate(zip(cls_values, colors)):
+                                val = self.conditionalSubsetDict[
+                                    attr_vals + "-" + cls]
+                                if val == 0:
+                                    continue
+                                if i == len(prior) - 1:
+                                    v = y1 - y0 - total
+                                else:
+                                    v = ((y1 - y0) * val) / n
+                                rect(x1 - self._box_size, y0 + total,
+                                     self._box_size, v, 15, color)
+                                total += v
 
-        tooltipText = condition + "<hr/>"
-        if any(prior):
-            clsValues = get_variable_values_sorted(self.data.domain.class_var)
-            actual = [self.conditionalDict[attrVals + "-" + clsValues[i]]
+            actual = [self.conditionalDict[attr_vals + "-" + cls_values[i]]
                       for i in range(len(prior))]
-            if sum(actual) > 0:
-                apriori = [prior[key] for key in clsValues]
+            n_actual = sum(actual)
+            if n_actual > 0:
+                apriori = [prior[key] for key in cls_values]
+                n_apriori = sum(apriori)
                 text = "<br/>".join(
                     "<b>%s</b>: %d / %.1f%% (Expected %.1f / %.1f%%)" % (
-                        clsValues[i], actual[i],
-                        100.0 * actual[i] / float(sum(actual)),
-                        (apriori[i] * sum(actual)) / float(sum(apriori)),
-                        100.0 * apriori[i] / float(sum(apriori)))
-                    for i in range(len(clsValues)))
-                tooltipText += "Instances: " + str(int(sum(actual))) + \
-                               "<br><br>" + text[:-4]
-        elif pearson and expected:
-            tooltipText += "Expected instances: %.1f<br>" \
-                           "Actual instances: %d<br>" \
-                           "Standardized (Pearson) residual: %.1f" % (
-                expected, self.conditionalDict[attrVals], pearson)
-        outerRect.setToolTip(tooltipText)
+                        cls, act, 100.0 * act / n_actual,
+                        apr / n_apriori * n_actual, 100.0 * apr / n_apriori)
+                    for cls, act, apr in zip(cls_values, actual, apriori))
+            else:
+                text = ""
+            outer_rect.setToolTip(
+                "{}<hr>Instances: {}<br><br>{}".format(
+                    condition, n_actual, text[:-4]))
 
     # draw the class legend below the square
-    def DrawLegend(self, data, x0_x1, y0_y1):
+    def draw_legend(self, data, x0_x1, y0_y1):
         x0, x1 = x0_x1
         y0, y1 = y0_y1
-        if (self.interior_coloring == self.CLASS_DISTRIBUTION and
-                data.domain.has_continuous_class):
-            return
-
         if self.interior_coloring == self.PEARSON:
-            names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8", "Residuals:"]
+            names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8",
+                     "Residuals:"]
             colors = self.red_colors[::-1] + self.blue_colors[1:]
         else:
-            names = get_variable_values_sorted(data.domain.class_var) + [data.domain.class_var.name + ":"]
+            names = get_variable_values_sorted(data.domain.class_var) + \
+                    [data.domain.class_var.name + ":"]
             colors = [QColor(*col) for col in data.domain.class_var.colors]
 
-        self.names = [OWCanvasText(self.canvas, name, alignment=Qt.AlignVCenter) for name in names]
-        totalWidth = sum([text.boundingRect().width() for text in self.names])
+        names = [OWCanvasText(self.canvas, name, alignment=Qt.AlignVCenter)
+                      for name in names]
+        totalwidth = sum(text.boundingRect().width() for text in names)
 
         # compute the x position of the center of the legend
         y = y1 + self.attributeNameOffset + self.attributeValueOffset + 35
         distance = 30
-        startX = (x0 + x1) / 2 - (totalWidth + (len(names)) * distance) / 2
+        startx = (x0 + x1) / 2 - (totalwidth + (len(names)) * distance) / 2
 
-        self.names[-1].setPos(startX + 15, y)
-        self.names[-1].show()
-        xOffset = self.names[-1].boundingRect().width() + distance
+        names[-1].setPos(startx + 15, y)
+        names[-1].show()
+        xoffset = names[-1].boundingRect().width() + distance
 
         size = 8
 
         for i in range(len(names) - 1):
             if self.interior_coloring == self.PEARSON:
-                edgeColor = Qt.black
+                edgecolor = Qt.black
             else:
-                edgeColor = colors[i]
+                edgecolor = colors[i]
 
-            OWCanvasRectangle(self.canvas, startX + xOffset, y - size / 2, size, size, edgeColor, colors[i])
-            self.names[i].setPos(startX + xOffset + 10, y)
-            xOffset += distance + self.names[i].boundingRect().width()
+            OWCanvasRectangle(self.canvas, startx + xoffset, y - size / 2,
+                              size, size, edgecolor, colors[i])
+            names[i].setPos(startx + xoffset + 10, y)
+            xoffset += distance + names[i].boundingRect().width()
 
-
-    # ########################################
-    # cell/example selection
-    def sendSelectedData(self):
-        selected_data = None
-        if self.data and not isinstance(self.data, SqlTable):
-            attributes = self.get_attr_list()
-            row_indices = []
-            for i, row in enumerate(self.data):
-                for condition in self.selectionConditions:
-                    if len([attr for attr, val in zip(attributes, condition)
-                            if row[attr] == val]) == len(condition):
-                        row_indices.append(i)
-            selected_data = Table.from_table_rows(self.data, row_indices)
-        self.send("Selected Data", selected_data)
-
-    # add a new rectangle. update the graph and see which mosaics does it intersect. add this mosaics to the recentlyAdded list
-    def addSelection(self, rect):
-        self.selectionRectangle = rect
-        self.update_graph()
-        self.sendSelectedData()
-        self.recentlyAdded = []
-
-        self.selectionRectangle = None
-
-    def removeAllSelections(self):
-        self.selectionConditions = []
-        self.sendSelectedData()
 
 
 class OWCanvasText(QGraphicsTextItem):
-    def __init__(self, canvas, text="", x=0, y=0, alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
+    def __init__(self, canvas, text="", x=0, y=0,
+                 alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
                  htmlText=None, tooltip=None, show=1, vertical=False):
         QGraphicsTextItem.__init__(self, text, None, canvas)
 
@@ -824,8 +757,8 @@ class OWCanvasText(QGraphicsTextItem):
         self.setPos(x, y)
         self.x, self.y = x, y
         self.setZValue(z)
-        if tooltip: self.setToolTip(tooltip)
-
+        if tooltip:
+            self.setToolTip(tooltip)
         if show:
             self.show()
         else:
@@ -874,16 +807,18 @@ class OWCanvasRectangle(QGraphicsRectItem):
         if self.onclick:
             self.onclick(self, ev)
 
-def OWCanvasLine(canvas, x1=0, y1=0, x2=0, y2=0, penWidth=2, penColor=QColor(255, 255, 255, 128), pen=None, z=0,
+
+def OWCanvasLine(canvas, x1=0, y1=0, x2=0, y2=0, penWidth=2,
+                 penColor=QColor(255, 255, 255, 128), pen=None, z=0,
                  tooltip=None, show=1):
     r = QGraphicsLineItem(x1, y1, x2, y2, None, canvas)
-    if pen != None:
+    if pen is not None:
         r.setPen(pen)
     else:
         r.setPen(QPen(penColor, penWidth))
     r.setZValue(z)
-    if tooltip: r.setToolTip(tooltip)
-
+    if tooltip:
+        r.setToolTip(tooltip)
     if show:
         r.show()
     else:
@@ -892,26 +827,39 @@ def OWCanvasLine(canvas, x1=0, y1=0, x2=0, y2=0, penWidth=2, penColor=QColor(255
     return r
 
 
-def OWCanvasEllipse(canvas, x=0, y=0, width=0, height=0, penWidth=1, startAngle=0, angles=360, penColor=Qt.black,
-                    brushColor=None, z=0, penStyle=Qt.SolidLine, pen=None, tooltip=None, show=1):
+def OWCanvasEllipse(canvas, x=0, y=0, width=0, height=0, penWidth=1,
+                    startAngle=0, angles=360, penColor=Qt.black,
+                    brushColor=None, z=0, penStyle=Qt.SolidLine, pen=None,
+                    tooltip=None, show=1):
     e = QGraphicsEllipseItem(x, y, width, height, None, canvas)
     e.setZValue(z)
-    if brushColor != None:
+    if brushColor is not None:
         e.setBrush(QBrush(brushColor))
-    if pen != None:
+    if pen is not None:
         e.setPen(pen)
     else:
         e.setPen(QPen(penColor, penWidth))
     e.setStartAngle(startAngle)
     e.setSpanAngle(angles * 16)
-    if tooltip: e.setToolTip(tooltip)
-
+    if tooltip:
+        e.setToolTip(tooltip)
     if show:
         e.show()
     else:
         e.hide()
 
     return e
+
+
+class ViewWithPress(QGraphicsView):
+    def __init__(self, *args, **kwargs):
+        self.handler = kwargs.pop("handler")
+        super().__init__(*args, **kwargs)
+
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        if not ev.isAccepted():
+            self.handler()
 
 
 # test widget appearance
