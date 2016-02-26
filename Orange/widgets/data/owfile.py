@@ -91,10 +91,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         box = gui.hBox(None, addToLayout=False, margin=0)
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        file_combo = self.file_combo
-        file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        file_combo.activated[int].connect(self.select_file)
-        box.layout().addWidget(file_combo)
+        self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.file_combo.activated[int].connect(self.select_file)
+        box.layout().addWidget(self.file_combo)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
