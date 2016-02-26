@@ -1,12 +1,10 @@
-from collections import defaultdict
-from itertools import product, chain
+from itertools import chain
 from math import sqrt, floor, ceil
 
 from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
+from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush,
                          QDialog, QApplication, QSizePolicy)
 
-import Orange
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.statistics.contingency import get_contingency
@@ -15,7 +13,8 @@ from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
-                                               OWCanvasLine, ViewWithPress)
+                                               OWCanvasLine, ViewWithPress,
+                                               get_conditional_distribution)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
@@ -212,15 +211,14 @@ class OWSieveDiagram(OWWidget):
             except: pass
             valsY.append(sum_)
 
-        contXY = self.getConditionalDistributions(data, [data.domain[self.attrX], data.domain[self.attrY]])
+        contXY, _ = get_conditional_distribution(
+            data, [data.domain[self.attrX], data.domain[self.attrY]])
         # compute probabilities
         probs = {}
         for i in range(len(valsX)):
             valx = valsX[i]
             for j in range(len(valsY)):
                 valy = valsY[j]
-
-                actualProb = 0
                 try:
                     actualProb = contXY['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
                     # for val in contXY['%s-%s' %(i, j)]: actualProb += val
@@ -308,38 +306,6 @@ class OWSieveDiagram(OWWidget):
         OWCanvasText(self.canvas, self.attrY, 0, yOff + sqareSize/2, Qt.AlignLeft | Qt.AlignVCenter, bold = 1, vertical=True)
         OWCanvasText(self.canvas, self.attrX, xOff + sqareSize/2, yOff + sqareSize + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop, bold = 1)
 
-    # create a dictionary with all possible pairs of "combination-of-attr-values" : count
-    def getConditionalDistributions(self, data, attrs):
-        cond_dist = defaultdict(int)
-        all_attrs = [data.domain[a] for a in attrs]
-        if data.domain.class_var is not None:
-            all_attrs.append(data.domain.class_var)
-
-        for i in range(1, len(all_attrs) + 1):
-            attr = all_attrs[:i]
-            if type(data) == SqlTable:
-                # make all possible pairs of attributes + class_var
-                attr = [a.to_sql() for a in attr]
-                fields = attr + ["COUNT(*)"]
-                query = data._sql_query(fields, group_by=attr)
-                with data._execute_sql_query(query) as cur:
-                    res = cur.fetchall()
-                for r in res:
-                    str_values =[a.repr_val(a.to_val(x)) for a, x in zip(all_attrs, r[:-1])]
-                    str_values = [x if x != '?' else 'None' for x in str_values]
-                    cond_dist['-'.join(str_values)] = r[-1]
-            else:
-                for indices in product(*(range(len(a.values)) for a in attr)):
-                    vals = []
-                    conditions = []
-                    for k, ind in enumerate(indices):
-                        vals.append(attr[k].values[ind])
-                        fd = Orange.data.filter.FilterDiscrete(column=attr[k], values=[attr[k].values[ind]])
-                        conditions.append(fd)
-                    filt = Orange.data.filter.Values(conditions)
-                    filtdata = filt(data)
-                    cond_dist['-'.join(vals)] = len(filtdata)
-        return cond_dist
 
     ######################################################################
     ## show deviations from attribute independence with standardized pearson residuals
