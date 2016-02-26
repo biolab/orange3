@@ -2,8 +2,6 @@ from collections import defaultdict
 from itertools import product
 from math import sqrt, floor, ceil
 
-import numpy as np
-
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsScene, QGraphicsView, QColor, QPen, QBrush,
                          QDialog, QApplication, QSizePolicy)
@@ -107,10 +105,10 @@ class OWSieveDiagram(OWWidget):
             self.attrX = self.attrY = None
         self.openContext(self.data)
 
-        self.warning(0, "")
+        self.information(0, "")
         if data and any(attr.is_continuous for attr in data.domain):
-            self.warning(0, "Data contains continuous variables. " +
-                            "Discretize the data to use them.")
+            self.information(0, "Data contains continuous variables. "
+                                "Discretize the data to use them.")
         self.resolve_shown_attributes()
         self.update_selection()
 
