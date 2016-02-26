@@ -189,12 +189,12 @@ class DistMatrix(np.ndarray):
             for j, e in enumerate(line[:i + 1 if symmetric else n]):
                 try:
                     matrix[i, j] = float(e)
-                except ValueError:
+                except ValueError as exc:
                     raise ValueError("invalid element at row {}, column {}".
                                      format("'{}'".format(row_labels[i])
                                             if row_labels else i + 1,
                                             "'{}'".format(col_labels[j])
-                                            if col_labels else j + 1))
+                                            if col_labels else j + 1)) from exc
                 if symmetric:
                     matrix[j, i] = matrix[i, j]
         if col_labels:
