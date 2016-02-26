@@ -1,5 +1,6 @@
 import os
 
+from PyQt4.QtCore import QFileInfo
 from PyQt4.QtGui import QMessageBox, QFileDialog, QFileIconProvider, QComboBox
 
 from Orange.widgets.settings import Setting
@@ -190,13 +191,13 @@ class RecentPath:
         return None
 
     @property
-    def value(self):
+    def basename(self):
         return os.path.basename(self.abspath)
 
     @property
     def icon(self):
         provider = QFileIconProvider()
-        return provider.icon(QFileIconProvider.Drive)
+        return provider.icon(QFileInfo(self.abspath))
 
     @property
     def dirname(self):
@@ -306,9 +307,7 @@ class RecentPathsWidgetMixin:
 
     def last_path(self):
         """Return the most recent absolute path or `None` if there is none"""
-        abspath = self.recent_paths and self.recent_paths[0].abspath
-        if abspath != "(none)":
-            return abspath
+        return self.recent_paths and self.recent_paths[0].abspath or None
 
 
 class RecentPathsWComboMixin(RecentPathsWidgetMixin):
@@ -346,7 +345,7 @@ class RecentPathsWComboMixin(RecentPathsWidgetMixin):
             self.file_combo.model().item(0).setEnabled(False)
         else:
             for i, recent in enumerate(self.recent_paths):
-                self.file_combo.addItem(recent.value)
+                self.file_combo.addItem(recent.basename)
                 self.file_combo.model().item(i).setToolTip(recent.abspath)
 
     def workflowEnvChanged(self, key, value, oldvalue):

@@ -11,6 +11,7 @@ from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
                              Jaccard, _preprocess)
 from Orange.misc import DistMatrix
+from Orange.tests import named_file
 from Orange.util import OrangeDeprecationWarning
 
 
@@ -37,18 +38,6 @@ class TestDistMatrix(TestCase):
         self.assertTrue(tables_equal(unpickled_dist.col_items, self.dist.col_items))
         self.assertEqual(unpickled_dist.axis, self.dist.axis)
 
-    @contextmanager
-    def named_file(self, content, encoding=None):
-        import tempfile
-        import os
-        file = tempfile.NamedTemporaryFile(
-                "wt", delete=False, encoding=encoding)
-        file.write(content)
-        name = file.name
-        file.close()
-        yield name
-        os.remove(name)
-
     def test_deprecated(self):
         a9 = np.arange(9).reshape(3, 3)
         m = DistMatrix(a9)
@@ -58,7 +47,7 @@ class TestDistMatrix(TestCase):
             np.testing.assert_almost_equal(m.X, a9)
 
     def test_from_file(self):
-        with self.named_file(
+        with named_file(
                 """3 axis=0 asymmetric col_labels row_labels
                          ann	bert	chad
                 danny	0.12	3.45	6.78
@@ -76,7 +65,7 @@ class TestDistMatrix(TestCase):
                              ["danny", "eve", "frank"])
             self.assertEqual(m.axis, 0)
 
-        with self.named_file(
+        with named_file(
                 """3 axis=1 row_labels
                 danny	0.12	3.45	6.78
                 eve 	9.01	2.34	5.67
@@ -91,7 +80,7 @@ class TestDistMatrix(TestCase):
                              ["danny", "eve", "frank"])
             self.assertEqual(m.axis, 1)
 
-        with self.named_file(
+        with named_file(
                 """3 axis=1 symmetric
                 0.12	3.45	6.78
                 9.01	2.34	5.67
@@ -101,7 +90,7 @@ class TestDistMatrix(TestCase):
                                                     [9.01, 2.34, 0],
                                                     [8.90, 0, 0]]))
 
-        with self.named_file(
+        with named_file(
                 """3 row_labels
                 starič	0.12	3.45	6.78
                 aleš	9.01	2.34	5.67
@@ -118,7 +107,7 @@ class TestDistMatrix(TestCase):
 
 
         def assertErrorMsg(content, msg):
-            with self.named_file(content) as name:
+            with named_file(content) as name:
                 with self.assertRaises(ValueError) as cm:
                     DistMatrix.from_file(name)
                 self.assertEqual(str(cm.exception), msg)
@@ -151,7 +140,7 @@ class TestDistMatrix(TestCase):
                        "invalid element at row 2, column 'd'")
 
     def test_save(self):
-        with self.named_file(
+        with named_file(
                 """3 axis=1 row_labels
                 danny	0.12	3.45	6.78
                 eve 	9.01	2.34	5.67
@@ -168,7 +157,7 @@ class TestDistMatrix(TestCase):
                              ["danny", "eve", "frank"])
             self.assertEqual(m.axis, 1)
 
-        with self.named_file(
+        with named_file(
                 """3 axis=0 asymmetric col_labels row_labels
                          ann	bert	chad
                 danny	0.12	3.45	6.78

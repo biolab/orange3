@@ -10,6 +10,10 @@ from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat
 
+# Backward compatibility: class RecentPath used to be defined in this module,
+# and it is used in saved (pickled) settings. It must be imported into the
+# module's namespace so that old saved settings still work
+from Orange.widgets.utils.filedialogs import RecentPath
 
 def add_origin(examples, filename):
     """Adds attribute with file location to each variable"""
@@ -289,7 +293,7 @@ class OWFile(widget.OWWidget):
         if self.recent_paths:
             basename = self.file_combo.currentText()
             path = self.recent_paths[0]
-            if basename in [path.relpath, path.value]:
+            if basename in [path.relpath, path.basename]:
                 self.source = self.LOCAL_FILE
                 return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
@@ -321,23 +325,11 @@ class OWFile(widget.OWWidget):
 
     def browse_file(self, in_demos=False):
         if in_demos:
-            try:
-                start_file = get_sample_datasets_dir()
-            except AttributeError:
-                start_file = ""
-            if not start_file or not os.path.exists(start_file):
-                widgets_dir = os.path.dirname(gui.__file__)
-                orange_dir = os.path.dirname(widgets_dir)
-                start_file = os.path.join(orange_dir, "doc", "datasets")
-            if not start_file or not os.path.exists(start_file):
-                d = os.getcwd()
-                if os.path.basename(d) == "canvas":
-                    d = os.path.dirname(d)
-                start_file = os.path.join(os.path.dirname(d), "doc", "datasets")
+            start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
                 QtGui.QMessageBox.information(
                     None, "File",
-                    "Cannot find the directory with example data sets")
+                    "Cannot find the directory with documentation data sets")
                 return
         else:
             if self.recent_paths:

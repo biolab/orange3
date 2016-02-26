@@ -71,23 +71,11 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def browse_file(self, in_demos=0):
         if in_demos:
-            try:
-                start_file = get_sample_datasets_dir()
-            except AttributeError:
-                start_file = ""
-            if not start_file or not os.path.exists(start_file):
-                widgets_dir = os.path.dirname(gui.__file__)
-                orange_dir = os.path.dirname(widgets_dir)
-                start_file = os.path.join(orange_dir, "doc", "datasets")
-            if not start_file or not os.path.exists(start_file):
-                d = os.getcwd()
-                if os.path.basename(d) == "canvas":
-                    d = os.path.dirname(d)
-                start_file = os.path.join(os.path.dirname(d), "doc", "datasets")
+            start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
                 QtGui.QMessageBox.information(
                     None, "File",
-                    "Cannot find the directory with example files")
+                    "Cannot find the directory with documentation data sets")
                 return
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
