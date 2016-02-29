@@ -39,5 +39,5 @@ $POSTGRES/bin/createdb -p 12345 test
 $POSTGRES/bin/psql test -c 'CREATE EXTENSION quantile;' -p 12345
 $POSTGRES/bin/psql test -c 'CREATE EXTENSION tsm_system_time;' -p 12345
 
-pip install psycopg2
+pip install -r requirements-sql.txt
 export ORANGE_TEST_DB_URI=postgres://localhost:12345/test

@@ -1,9 +1,11 @@
 language: python
 
 sudo: false
+dist: trusty
 
 python:
     - '3.4'
+    - '3.5'
 
 cache:
     apt: true
@@ -22,6 +24,7 @@ addons:
             - liblapack-dev
             - postgresql-server-dev-9.1
             - libqt4-dev
+            - gfortran
 
 before_install:
     - pip install codecov
@@ -41,7 +44,7 @@ before_script:
 script:
     - cd $TRAVIS_BUILD_DIR
     - python -c "from Orange.tests import *"
-    - coverage run --source=Orange setup.py test
+    - PYTHONUNBUFFERED=x coverage run --source=Orange setup.py test
 
 after_success:
     - cd $TRAVIS_BUILD_DIR
