@@ -6,6 +6,7 @@ dist: trusty
 python:
     - '3.4'
     - '3.5'
+    - 'nightly'
 
 cache:
     apt: true
