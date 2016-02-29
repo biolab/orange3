@@ -30,14 +30,14 @@ addons:
 before_install:
     - pip install codecov
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ]; then
-        source $TRAVIS_BUILD_DIR/travis/decrypt_upload_doc_id.sh;
+        source $TRAVIS_BUILD_DIR/.travis/decrypt_upload_doc_id.sh;
       fi
 
 install:
-    - source $TRAVIS_BUILD_DIR/travis/install.sh
-    - source $TRAVIS_BUILD_DIR/travis/install_postgres.sh
-    - source $TRAVIS_BUILD_DIR/travis/install_pyqt.sh
-    - source $TRAVIS_BUILD_DIR/travis/build_doc.sh
+    - source $TRAVIS_BUILD_DIR/.travis/install.sh
+    - source $TRAVIS_BUILD_DIR/.travis/install_postgres.sh
+    - source $TRAVIS_BUILD_DIR/.travis/install_pyqt.sh
+    - source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
 
 before_script:
     - pip install coveralls
@@ -51,5 +51,5 @@ after_success:
     - cd $TRAVIS_BUILD_DIR
     - codecov
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
-        source $TRAVIS_BUILD_DIR/travis/upload_doc.sh;
+        source $TRAVIS_BUILD_DIR/.travis/upload_doc.sh;
       fi
