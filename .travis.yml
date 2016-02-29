@@ -8,7 +8,6 @@ python:
 cache:
     apt: true
     directories:
-        - $TRAVIS_BUILD_DIR/wheelhouse
         - $TRAVIS_BUILD_DIR/postgres
         - $TRAVIS_BUILD_DIR/pyqt
         - $HOME/.cache/pip
