@@ -43,7 +43,7 @@ before_script:
     - pip install coveralls
 
 script:
-    - cd $TRAVIS_BUILD_DIR
+    - cd $TRAVIS_BUILD_DIR/dist/Orange-*
     - python -c "from Orange.tests import *"
     - PYTHONUNBUFFERED=x coverage run --source=Orange setup.py test
 
