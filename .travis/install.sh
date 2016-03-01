@@ -10,4 +10,10 @@ cat requirements-core.txt \
             pip install $dep
     done
 
+# Create a source tarball, unpack it, and run its tests
+python setup.py sdist
+cd dist
+tar xzf Orange-*.tar.gz
+cd Orange-*
 python setup.py build_ext -i
+cd $TRAVIS_BUILD_DIR
