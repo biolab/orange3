@@ -21,7 +21,7 @@ constants in the widget's class namespace:
 
     class IntConstant(OWWidget):
         name = "Integer Constant"
-        description "A simple integer constant"
+        description = "A simple integer constant"
 
         outputs = [("Constant", int)]
 
