@@ -178,7 +178,7 @@ class icon_loader(resource_loader):
         else:
             icons = [path]
 
-        from PyQt4.QtGui import QIcon
+        from AnyQt.QtGui import QIcon
 
         icon = QIcon()
         for path in icons:
@@ -197,7 +197,7 @@ import unittest
 
 class TestIconLoader(unittest.TestCase):
     def setUp(self):
-        from PyQt4.QtGui import QApplication
+        from AnyQt.QtWidgets import QApplication
         self.app = QApplication([])
 
     def tearDown(self):

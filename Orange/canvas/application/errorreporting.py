@@ -14,9 +14,10 @@ from urllib.parse import urljoin, urlencode
 from urllib.request import pathname2url, urlopen
 from unittest.mock import patch
 
-from PyQt4.QtCore import pyqtSlot, QSettings, Qt
-from PyQt4.QtGui import (
-    QApplication, QCheckBox, QDesktopServices, QDialog, QFont, QHBoxLayout,
+from AnyQt.QtCore import pyqtSlot, QSettings, Qt
+from AnyQt.QtGui import QDesktopServices, QFont
+from AnyQt.QtWidgets import (
+    QApplication, QCheckBox, QDialog, QHBoxLayout,
     QLabel, QMessageBox, QPushButton, QStyle, QTextBrowser,
     QVBoxLayout, QWidget
 )

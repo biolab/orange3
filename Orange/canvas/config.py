@@ -11,16 +11,13 @@ import itertools
 
 import pkg_resources
 
-from PyQt4.QtGui import (
+from AnyQt.QtGui import (
     QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 )
 
-from PyQt4.QtCore import Qt, QCoreApplication, QPoint, QRect
+from AnyQt.QtCore import Qt, QCoreApplication, QPoint, QRect, QSettings
 
 from .utils.settings import Settings, config_slot
-
-# Import QSettings from qtcompat module (compatibility with PyQt < 4.8.3
-from .utils.qtcompat import QSettings
 
 log = logging.getLogger(__name__)
 

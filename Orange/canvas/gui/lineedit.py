@@ -3,13 +3,13 @@ A LineEdit class with a button on left/right side.
 """
 from collections import namedtuple
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QLineEdit, QToolButton, QStyleOptionToolButton, QStylePainter,
-    QStyle, QPalette, QFontMetrics, QAction
+    QStyle, QAction
 )
-
-from PyQt4.QtCore import Qt, QSize, QRect, qVersion
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtProperty as Property
+from AnyQt.QtGui import QPalette, QFontMetrics
+from AnyQt.QtCore import Qt, QSize, QRect, QT_VERSION
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 
 _ActionSlot = \
@@ -159,7 +159,7 @@ class LineEdit(QLineEdit):
         QLineEdit.resizeEvent(self, event)
         self.__layoutActions()
 
-    if qVersion() < "4.7":
+    if QT_VERSION < 0x40700:
         # Qt 4.6 does not yet have placeholder text
         def setPlaceholderText(self, text):
             self.__placeholderText = text

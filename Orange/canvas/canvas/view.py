@@ -3,8 +3,9 @@ Canvas Graphics View
 """
 import logging
 
-from PyQt4.QtGui import QGraphicsView, QCursor, QIcon
-from PyQt4.QtCore import Qt, QRect, QSize, QRectF, QPoint, QTimer
+from AnyQt.QtWidgets import QGraphicsView
+from AnyQt.QtGui import QCursor, QIcon
+from AnyQt.QtCore import Qt, QRect, QSize, QRectF, QPoint, QTimer
 
 log = logging.getLogger(__name__)
 

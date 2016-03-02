@@ -1,10 +1,6 @@
 import numpy
 
-import sip
-
-from PyQt4.QtGui import QColor, QRadialGradient, QPainterPathStroker
-from PyQt4.QtCore import QObject, QSignalMapper
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import QColor, QRadialGradient, QPainterPathStroker
 
 
 def saturated(color, factor=150):

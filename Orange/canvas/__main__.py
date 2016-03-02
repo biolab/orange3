@@ -17,8 +17,15 @@ from unittest.mock import patch
 
 import pkg_resources
 
-from PyQt4.QtGui import QFont, QColor, QDesktopServices, QMessageBox
-from PyQt4.QtCore import Qt, QDir, QUrl
+from AnyQt.QtGui import QFont, QColor, QDesktopServices
+from AnyQt.QtWidgets import QMessageBox
+from AnyQt.QtCore import Qt, QDir, QUrl, QSettings
+
+import AnyQt.importhooks
+
+if AnyQt.USED_API == "pyqt5":
+    # Use a backport shim to fake leftover PyQt4 imports
+    AnyQt.importhooks.install_backport_hook('pyqt4')
 
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
@@ -29,7 +36,6 @@ from Orange.canvas.application.errorreporting import ErrorReporting
 from Orange.canvas.gui.splashscreen import SplashScreen
 from Orange.canvas.config import cache_dir
 from Orange.canvas import config
-from Orange.canvas.utils.qtcompat import QSettings
 
 from Orange.canvas.registry import qt
 from Orange.canvas.registry import WidgetRegistry, set_global_registry

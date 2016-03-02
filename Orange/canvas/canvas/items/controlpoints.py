@@ -1,9 +1,10 @@
 import logging
 
-from PyQt4.QtGui import QGraphicsItem, QGraphicsObject, QBrush, QPainterPath
-from PyQt4.QtCore import Qt, QPointF, QLineF, QRectF, QMargins, QEvent
+from AnyQt.QtWidgets import QGraphicsItem, QGraphicsObject
+from AnyQt.QtGui import QBrush, QPainterPath
+from AnyQt.QtCore import Qt, QPointF, QLineF, QRectF, QMargins, QEvent
 
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtProperty as Property
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from .graphicspathobject import GraphicsPathObject
 from .utils import toGraphicsObjectIfPossible

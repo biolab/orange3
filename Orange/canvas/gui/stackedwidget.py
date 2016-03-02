@@ -10,13 +10,10 @@ transitions between widgets.
 
 import logging
 
-from PyQt4.QtGui import QWidget, QFrame, QStackedLayout, QPixmap, \
-                        QPainter, QSizePolicy
-
-from PyQt4.QtCore import Qt, QPoint, QRect, QSize, QPropertyAnimation
-
-from PyQt4.QtCore import pyqtSignal as Signal
-from PyQt4.QtCore import pyqtProperty as Property
+from AnyQt.QtWidgets import QWidget, QFrame, QStackedLayout, QSizePolicy
+from AnyQt.QtGui import QPixmap, QPainter
+from AnyQt.QtCore import Qt, QPoint, QRect, QSize, QPropertyAnimation
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from .utils import updates_disabled
 
@@ -230,8 +227,8 @@ class AnimatedStackedWidget(QFrame):
         current = self.__widgets[self.__currentIndex]
         next_widget = self.__widgets[index]
 
-        current_pix = QPixmap.grabWidget(current)
-        next_pix = QPixmap.grabWidget(next_widget)
+        current_pix = current.grab()
+        next_pix = next_widget.grab()
 
         with updates_disabled(self):
             self.__fadeWidget.setPixmap(current_pix)

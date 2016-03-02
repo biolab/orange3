@@ -1,8 +1,8 @@
 import math
 import time
 
-from PyQt4.QtGui import QColor
-from PyQt4.QtCore import Qt, QRectF, QLineF
+from AnyQt.QtGui import QColor
+from AnyQt.QtCore import Qt, QRectF, QLineF
 
 from ..annotationitem import TextAnnotation, ArrowAnnotation, ArrowItem
 

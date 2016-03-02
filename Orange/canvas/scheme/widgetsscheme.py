@@ -24,13 +24,12 @@ from collections import namedtuple, deque
 from urllib.parse import urlencode
 
 import sip
-from PyQt4.QtGui import (
-    QShortcut, QKeySequence, QWhatsThisClickedEvent, QWidget, QLabel,
-    QSizePolicy
-)
 
-from PyQt4.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy
+from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
+
+from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
+from AnyQt.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
 from .scheme import Scheme, SchemeNode, SchemeLink

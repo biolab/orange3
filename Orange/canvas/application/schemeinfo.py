@@ -3,12 +3,12 @@ Scheme Info editor widget.
 
 """
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QTextEdit, QCheckBox, QFormLayout,
     QVBoxLayout, QHBoxLayout, QDialogButtonBox, QSizePolicy
 )
 
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from ..gui.lineedit import LineEdit
 from ..gui.utils import StyledWidget_paintEvent, StyledWidget

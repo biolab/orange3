@@ -13,13 +13,13 @@ from ..utils.propertybindings import (
     AbstractBoundProperty, PropertyBinding, BindingManager
 )
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QWidget, QMainWindow, QComboBox, QCheckBox, QListView, QTabWidget,
     QToolBar, QAction, QStackedWidget, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QStandardItemModel, QSizePolicy
+    QFormLayout, QSizePolicy
 )
 
-from PyQt4.QtCore import (
+from AnyQt.QtCore import (
     Qt, QEventLoop, QAbstractItemModel, QModelIndex
 )
 

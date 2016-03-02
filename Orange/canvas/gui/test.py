@@ -10,8 +10,8 @@ except ImportError:
 
 import gc
 
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import QCoreApplication, QTimer
+from AnyQt.QtWidgets import QApplication
+from AnyQt.QtCore import QCoreApplication, QTimer
 
 
 class QAppTestCase(unittest.TestCase):

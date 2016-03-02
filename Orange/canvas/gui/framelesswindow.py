@@ -3,9 +3,9 @@ A frameless window widget
 
 """
 
-from PyQt4.QtGui import QWidget, QPalette, QPainter, QStyleOption, QBitmap
-
-from PyQt4.QtCore import Qt, pyqtProperty as Property
+from AnyQt.QtWidgets import QWidget, QStyleOption
+from AnyQt.QtGui import QPalette, QPainter, QBitmap
+from AnyQt.QtCore import Qt, pyqtProperty as Property
 
 from .utils import is_transparency_supported, StyledWidget_paintEvent
 

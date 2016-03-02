@@ -3,11 +3,11 @@ A splash screen widget with support for positioning of the message text.
 
 """
 
-from PyQt4.QtGui import (
-    QSplashScreen,  QWidget, QPixmap, QPainter, QTextDocument,
-    QTextBlockFormat, QTextCursor, QApplication
+from AnyQt.QtWidgets import QSplashScreen,  QWidget, QApplication
+from AnyQt.QtGui import (
+    QPixmap, QPainter, QTextDocument, QTextBlockFormat, QTextCursor
 )
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from .utils import is_transparency_supported
 
@@ -76,7 +76,7 @@ class SplashScreen(QSplashScreen):
             rect = self.__textRect
         else:
             rect = self.rect().adjusted(5, 5, -5, -5)
-        if Qt.mightBeRichText(self.__message):
+        if False: # and Qt.mightBeRichText(self.__message):
             doc = QTextDocument()
             doc.setHtml(self.__message)
             doc.setTextWidth(rect.width())
