@@ -26,7 +26,7 @@ class TestGraphicsPathObject(TestItems):
                         msg="setPath stores the path not a copy")
 
         brect = obj.boundingRect()
-        self.assertTrue(area(brect) == 50 ** 2)
+        self.assertTrue(brect.contains(path.boundingRect()))
 
         with self.assertRaises(TypeError):
             obj.setPath("This is not a path")
