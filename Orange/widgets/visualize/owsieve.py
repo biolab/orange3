@@ -17,6 +17,8 @@ from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (OWCanvasText, OWCanvasRectangle,
                                                OWCanvasLine)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 
 
 class _ViewWithPress(QGraphicsView):
@@ -111,8 +113,12 @@ class OWSieveDiagram(OWWidget):
 
         self.information(0, "")
         if data and any(attr.is_continuous for attr in data.domain):
+            self.data = Discretize(method=EqualFreq(n=4))(self.data)
+
+        if data and any(attr.is_continuous for attr in data.domain):
             self.information(0, "Data contains continuous variables. "
                                 "Discretize the data to use them.")
+
         self.resolve_shown_attributes()
         self.update_selection()
 

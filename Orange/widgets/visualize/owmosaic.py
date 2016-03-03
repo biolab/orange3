@@ -24,6 +24,8 @@ from Orange.widgets.utils.colorpalette import DefaultRGBColors
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
 from Orange.widgets.io import FileFormat
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 
 PEARSON = 0
 CLASS_DISTRIBUTION = 1
@@ -130,6 +132,7 @@ class OWMosaicDisplay(OWWidget):
 
         # set default settings
         self.data = None
+        self.discrete_data = None
         self.unprocessed_subset_data = None
         self.subset_data = None
         self.names = []  # class values
@@ -295,9 +298,8 @@ class OWMosaicDisplay(OWWidget):
         self.attr4Combo.addItem("(None)")
 
         for attr in chain(data.domain, data.domain.metas):
-            if attr.is_discrete:
-                for combo in [self.attr1Combo, self.attr2Combo, self.attr3Combo, self.attr4Combo]:
-                    combo.addItem(self.icons[attr], attr.name)
+            for combo in [self.attr1Combo, self.attr2Combo, self.attr3Combo, self.attr4Combo]:
+                combo.addItem(self.icons[attr], attr.name)
 
         if self.attr1Combo.count() > 0:
             self.variable1 = str(self.attr1Combo.itemText(0))
@@ -334,10 +336,6 @@ class OWMosaicDisplay(OWWidget):
 
         if not self.data:
             return
-
-        if any(attr.is_continuous for attr in self.data.domain):
-            self.information(0, "Data contains continuous variables. "
-                                "Discretize the data to use them.")
 
         """ TODO: check
         if data.has_missing_class():
@@ -447,13 +445,19 @@ class OWMosaicDisplay(OWWidget):
         if data == -1:
             data = self.data
 
+        if data != None:
+            if any(attr.is_continuous for attr in data.domain):
+                self.discrete_data = Discretize(method=EqualFreq(n=4))(data)
+            else:
+                self.discrete_data = self.data
+
         if subsetData == -1:
             subsetData = self.subset_data
 
         if attrList == -1:
             attrList = [self.variable1, self.variable2, self.variable3, self.variable4]
 
-        if data == None: return
+        if self.discrete_data == None: return
 
         while "(None)" in attrList: attrList.remove("(None)")
         while "" in attrList:       attrList.remove("")
@@ -531,7 +535,7 @@ class OWMosaicDisplay(OWWidget):
 
         # compute distributions
 
-        self.conditionalDict, self.distributionDict = self.getConditionalDistributions(data, attrList)
+        self.conditionalDict, self.distributionDict = self.getConditionalDistributions(self.discrete_data, attrList)
         self.conditionalSubsetDict = self.distributionSubsetDict = None
         if subsetData:
             self.conditionalSubsetDict, self.distributionSubsetDict = \
@@ -540,7 +544,7 @@ class OWMosaicDisplay(OWWidget):
         # draw rectangles
         self.DrawData(attrList, (xOff, xOff + squareSize), (yOff, yOff + squareSize), 0, "", len(attrList), **args)
         if args.get("drawLegend", 1):
-            self.DrawLegend(data, (xOff, xOff + squareSize), (yOff, yOff + squareSize))  # draw class legend
+            self.DrawLegend(self.discrete_data, (xOff, xOff + squareSize), (yOff, yOff + squareSize))  # draw class legend
 
         if args.get("drillUpdateSelection", 1):
             # self.optimizationDlg.mtUpdateState()
@@ -602,7 +606,7 @@ class OWMosaicDisplay(OWWidget):
 
         attr = attrList[0]
         edge = len(attrList) * self._cellspace  # how much smaller rectangles do we draw
-        values = self.attributeValuesDict.get(attr, None) or get_variable_values_sorted(self.data.domain[attr])
+        values = self.attributeValuesDict.get(attr, None) or get_variable_values_sorted(self.discrete_data.domain[attr])
         if side % 2: values = values[::-1]  # reverse names if necessary
 
         if side % 2 == 0:  # we are drawing on the x axis
@@ -624,7 +628,7 @@ class OWMosaicDisplay(OWWidget):
         valRange = list(range(len(values)))
         if len(attrList + used_attrs) == 4 and len(used_attrs) == 2:
             attr1Values = self.attributeValuesDict.get(used_attrs[0], None) or get_variable_values_sorted(
-                self.data.domain[used_attrs[0]])
+                self.discrete_data.domain[used_attrs[0]])
             if used_vals[0] == attr1Values[-1]:
                 valRange = valRange[::-1]
 
@@ -669,7 +673,7 @@ class OWMosaicDisplay(OWWidget):
         # the text on the right will be drawn when we are processing visualization of the last value of the first attribute
         if side == RIGHT:
             attr1Values = self.attributeValuesDict.get(used_attrs[0], None) or get_variable_values_sorted(
-                self.data.domain[used_attrs[0]])
+                self.discrete_data.domain[used_attrs[0]])
             if used_vals[0] != attr1Values[-1]:
                 return
 
@@ -682,7 +686,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.drawnSides[side] = 1
 
-        values = self.attributeValuesDict.get(attr, None) or get_variable_values_sorted(self.data.domain[attr])
+        values = self.attributeValuesDict.get(attr, None) or get_variable_values_sorted(self.discrete_data.domain[attr])
         if side % 2:  values = values[::-1]
 
         width = x1 - x0 - (side % 2 == 0) * self._cellspace * (totalAttrs - side) * (len(values) - 1)
@@ -1005,11 +1009,13 @@ class OWMosaicDisplay(OWWidget):
     # ########################################
     # cell/example selection
     def sendSelectedData(self):
+        if(self.data == None):
+            return
         selected_data = None
-        if self.data and not isinstance(self.data, SqlTable):
+        if self.discrete_data and not isinstance(self.discrete_data, SqlTable):
             attributes = self.getShownAttributeList()
             row_indices = []
-            for i, row in enumerate(self.data):
+            for i, row in enumerate(self.discrete_data):
                 for condition in self.selectionConditions:
                     if len([attr for attr, val in zip(attributes, condition)
                             if row[attr] == val]) == len(condition):
