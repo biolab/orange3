@@ -24,8 +24,21 @@ class RandomForestLearner(SklLearner, _FeatureScorerMixin):
     __returns__ = RandomForestClassifier
     name = 'random forest'
 
-    def __init__(self, n_estimators=10, max_features="auto",
-                 random_state=None, max_depth=None, max_leaf_nodes=None,
+    def __init__(self,
+                 n_estimators=10,
+                 criterion="gini",
+                 max_depth=None,
+                 min_samples_split=2,
+                 min_samples_leaf=1,
+                 min_weight_fraction_leaf=0.,
+                 max_features="auto",
+                 max_leaf_nodes=None,
+                 bootstrap=True,
+                 oob_score=False,
+                 n_jobs=1,
+                 random_state=None,
+                 verbose=0,
+                 class_weight=None,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
