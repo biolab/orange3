@@ -1,6 +1,7 @@
 import os
 import re
 import zlib
+import copy
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
 from numbers import Real, Integral
@@ -962,9 +963,7 @@ class Table(MutableSequence, Storage):
         """
         Return a copy of the table
         """
-        t = self.__class__(self)
-        t.ensure_copy()
-        return t
+        return copy.deepcopy(self)
 
     @staticmethod
     def __determine_density(data):
