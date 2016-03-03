@@ -11,6 +11,12 @@ from AnyQt.QtCore import Qt
 
 from .utils import is_transparency_supported
 
+if hasattr(Qt, "mightBeRichText"):
+    mightBeRichText = Qt.mightBeRichText
+else:
+    def mightBeRichText(text):
+        return False
+
 
 class SplashScreen(QSplashScreen):
     """
@@ -27,13 +33,17 @@ class SplashScreen(QSplashScreen):
     textRect : :class:`QRect`
         Bounding rectangle of the shown message on the widget.
 
+    textFormat : Qt.TextFormat
+        How message text format should be interpreted.
     """
-    def __init__(self, parent=None, pixmap=None, textRect=None, **kwargs):
+    def __init__(self, parent=None, pixmap=None, textRect=None,
+                 textFormat=Qt.PlainText, **kwargs):
         QSplashScreen.__init__(self, parent, **kwargs)
         self.__textRect = textRect
         self.__message = ""
         self.__color = Qt.black
         self.__alignment = Qt.AlignLeft
+        self.__textFormat = textFormat
 
         if pixmap is None:
             pixmap = QPixmap()
@@ -58,6 +68,14 @@ class SplashScreen(QSplashScreen):
         """
         return self.__textRect
 
+    def textFormat(self):
+        return self.__textFormat
+
+    def setTextFormat(self, format):
+        if format != self.__textFormat:
+            self.__textFormat = format
+            self.update()
+
     def showEvent(self, event):
         QSplashScreen.showEvent(self, event)
         # Raise to top on show.
@@ -76,7 +94,16 @@ class SplashScreen(QSplashScreen):
             rect = self.__textRect
         else:
             rect = self.rect().adjusted(5, 5, -5, -5)
-        if False: # and Qt.mightBeRichText(self.__message):
+
+        tformat = self.__textFormat
+
+        if tformat == Qt.AutoText:
+            if mightBeRichText(self.__message):
+                tformat = Qt.RichText
+            else:
+                tformat = Qt.PlainText
+
+        if tformat == Qt.RichText:
             doc = QTextDocument()
             doc.setHtml(self.__message)
             doc.setTextWidth(rect.width())
