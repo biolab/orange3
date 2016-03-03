@@ -908,6 +908,21 @@
             "values": null
         }
     },
+    "sonar": {
+        "features": {
+            "continuous": 60,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "sonar.tab",
+        "missing": false,
+        "name": "sonar",
+        "rows": 208,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
     "sponge": {
         "features": {
             "continuous": 0,
