@@ -82,17 +82,19 @@ class OWMosaicDisplay(OWWidget):
                 self.controlArea, self, "interior_coloring",
                 self.interior_coloring_opts, box="Interior coloring",
                 callback=self.update_graph)
-        gui.checkBox(gui.indentedBox(self.rb_colors),
-                     self, 'use_boxes', label='Compare with total',
-                     callback=self._compare_with_total)
+        self.bar_button = gui.checkBox(
+                gui.indentedBox(self.rb_colors),
+                self, 'use_boxes', label='Compare with total',
+                callback=self._compare_with_total)
         gui.rubber(self.controlArea)
 
-    def size(self):
-        return QSize(830, 550)
+    def sizeHint(self):
+        return QSize(530, 720)
 
     def _compare_with_total(self):
-        self.interior_coloring = 1
-        self.update_graph()
+        if self.data and self.data.domain.has_discrete_class:
+            self.interior_coloring = 1
+            self.update_graph()
 
     def init_combos(self, data):
         for combo in self.attr_combos:
@@ -153,6 +155,7 @@ class OWMosaicDisplay(OWWidget):
             self.rb_colors.setDisabled(False)
             disc_class = self.data.domain.has_discrete_class
             self.rb_colors.group.button(2).setDisabled(not disc_class)
+            self.bar_button.setDisabled(not disc_class)
             self.interior_coloring = bool(disc_class)
         self.openContext(self.data)
 
@@ -215,9 +218,9 @@ class OWMosaicDisplay(OWWidget):
         for i in self.selection:
             cols, vals, area = self.areas[i]
             filters.append(
-                    filter.Values(
-                            filter.FilterDiscrete(col, val)
-                            for col, val in zip(cols, vals)))
+                filter.Values(
+                    filter.FilterDiscrete(col, [val])
+                    for col, val in zip(cols, vals)))
         if len(filters) > 1:
             filters = filter.Values(filters, conjunction=False)
         else:
@@ -470,7 +473,7 @@ class OWMosaicDisplay(OWWidget):
                          for i in range(len(used_vals))))
                 actual = conditionaldict[attr_vals]
                 pearson = (actual - expected) / sqrt(expected)
-                ind = min(int(log(abs(pearson), 2)), 3)
+                ind = max(0, min(int(log(abs(pearson), 2)), 3))
                 color = [self.RED_COLORS, self.BLUE_COLORS][pearson > 0][ind]
                 rect(x0, y0, x1 - x0, y1 - y0, -20, color)
                 outer_rect.setToolTip(
@@ -681,7 +684,7 @@ def get_conditional_distribution(data, attrs):
     dist = defaultdict(int)
     cond_dist[""] = dist[""] = len(data)
     all_attrs = [data.domain[a] for a in attrs]
-    if data.domain.class_var is not None:
+    if data.domain.has_discrete_class:
         all_attrs.append(data.domain.class_var)
 
     for i in range(1, len(all_attrs) + 1):
