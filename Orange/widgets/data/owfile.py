@@ -349,8 +349,8 @@ class OWFile(widget.OWWidget):
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
-
-        self._add_path(filename)
+        for files in filename:
+            self._add_path(files)
         self.set_file_list()
         self.source = self.LOCAL_FILE
         self.load_data()
