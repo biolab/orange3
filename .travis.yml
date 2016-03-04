@@ -29,19 +29,13 @@ addons:
 
 before_install:
     - set -e  # fail on any error
-    - pip install codecov
-    - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ]; then
-        source $TRAVIS_BUILD_DIR/.travis/decrypt_upload_doc_id.sh;
-      fi
 
 install:
     - source $TRAVIS_BUILD_DIR/.travis/install.sh
     - source $TRAVIS_BUILD_DIR/.travis/install_postgres.sh
     - source $TRAVIS_BUILD_DIR/.travis/install_pyqt.sh
     - source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
-
-before_script:
-    - pip install coveralls
+    - pip install codecov
 
 script:
     - cd $TRAVIS_BUILD_DIR/dist/Orange-*
@@ -49,8 +43,8 @@ script:
     - PYTHONUNBUFFERED=x coverage run --source=Orange setup.py test
 
 after_success:
-    - cd $TRAVIS_BUILD_DIR
     - codecov
+    - cd $TRAVIS_BUILD_DIR
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
         source $TRAVIS_BUILD_DIR/.travis/upload_doc.sh;
       fi

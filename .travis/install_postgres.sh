@@ -27,6 +27,8 @@ if [ ! "$(ls $POSTGRES)" ]; then
     # Install quantile extension
     cd $POSTGRES/quantile-1.1.4
     make install
+
+    cd $TRAVIS_BUILD_DIR
 else
     echo "Using cached PostgreSQL."
 fi
