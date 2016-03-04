@@ -30,20 +30,20 @@ from ..registry.qt import QtWidgetRegistry
 
 
 class SplitterResizer(QObject):
-    """An object able to control the size of a widget in a
-    QSpliter instance.
-
     """
-
+    An object able to control the size of a widget in a QSplitter instance.
+    """
     def __init__(self, parent=None):
         QObject.__init__(self, parent)
         self.__splitter = None
         self.__widget = None
+        self.__updateOnShow = True  # Need __update on next show event
         self.__animationEnabled = True
         self.__size = -1
         self.__expanded = False
-        self.__animation = QPropertyAnimation(self, b"size_", self)
-
+        self.__animation = QPropertyAnimation(
+            self, b"size_", self, duration=200
+        )
         self.__action = QAction("toogle-expanded", self, checkable=True)
         self.__action.triggered[bool].connect(self.setExpanded)
 
@@ -51,6 +51,8 @@ class SplitterResizer(QObject):
         """Set the size of the controlled widget (either width or height
         depending on the orientation).
 
+        .. note::
+            The controlled widget's size is only updated when it it is shown.
         """
         if self.__size != size:
             self.__size = size
@@ -87,15 +89,26 @@ class SplitterResizer(QObject):
         if splitter and widget and not splitter.indexOf(widget) > 0:
             raise ValueError("Widget must be in a spliter.")
 
-        if self.__widget:
-            self.__widget.removeEventFilter()
+        if self.__widget is not None:
+            self.__widget.removeEventFilter(self)
+        if self.__splitter is not None:
+            self.__splitter.removeEventFilter(self)
+
         self.__splitter = splitter
         self.__widget = widget
 
-        if widget:
+        if widget is not None:
             widget.installEventFilter(self)
+        if splitter is not None:
+            splitter.installEventFilter(self)
 
         self.__update()
+
+        size = self.size()
+        if self.__expanded and size == 0:
+            self.open()
+        elif not self.__expanded and size > 0:
+            self.close()
 
     def toogleExpandedAction(self):
         """Return a QAction that can be used to toggle expanded state.
@@ -103,17 +116,12 @@ class SplitterResizer(QObject):
         return self.__action
 
     def open(self):
-        """Open the controlled widget (expand it to it sizeHint).
+        """Open the controlled widget (expand it to sizeHint).
         """
         self.__expanded = True
         self.__action.setChecked(True)
 
-        if not (self.__splitter and self.__widget):
-            return
-
-        size = self.size()
-        if size > 0:
-            # Already has non zero size.
+        if self.__splitter is None or self.__widget is None:
             return
 
         hint = self.__widget.sizeHint()
@@ -133,7 +141,7 @@ class SplitterResizer(QObject):
         self.__expanded = False
         self.__action.setChecked(False)
 
-        if not (self.__splitter and self.__widget):
+        if self.__splitter is None or self.__widget is None:
             return
 
         self.__animation.setStartValue(self.size())
@@ -159,6 +167,11 @@ class SplitterResizer(QObject):
         """Update the splitter sizes.
         """
         if self.__splitter and self.__widget:
+            if sum(self.__splitter.sizes()) == 0:
+                # schedule update on next show event
+                self.__updateOnShow = True
+                return
+
             splitter = self.__splitter
             index = splitter.indexOf(self.__widget)
             sizes = splitter.sizes()
@@ -166,11 +179,13 @@ class SplitterResizer(QObject):
             diff = current - self.__size
             sizes[index] = self.__size
             sizes[index - 1] = sizes[index - 1] + diff
-
             self.__splitter.setSizes(sizes)
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.Resize:
+        if obj is self.__widget and event.type() == QEvent.Resize and \
+                self.__animation.state() == QPropertyAnimation.Stopped:
+            # Update the expanded state when the user opens/closes the widget
+            # by dragging the splitter handle.
             if self.__splitter.orientation() == Qt.Vertical:
                 size = event.size().height()
             else:
@@ -183,6 +198,11 @@ class SplitterResizer(QObject):
                 self.__action.setChecked(True)
                 self.__expanded = True
 
+        if obj is self.__splitter and event.type() == QEvent.Show and \
+                self.__updateOnShow:
+            # Update the splitter state after receiving valid geometry
+            self.__updateOnShow = False
+            self.__update()
         return QObject.eventFilter(self, obj, event)
 
 
@@ -232,7 +252,7 @@ class CanvasToolDock(QWidget):
         layout.addWidget(self.toolbar)
 
         self.setLayout(layout)
-        self.__splitterResizer = SplitterResizer()
+        self.__splitterResizer = SplitterResizer(self)
         self.__splitterResizer.setSplitterAndWidget(self.__splitter, self.help)
 
     def setQuickHelpVisible(self, state):
