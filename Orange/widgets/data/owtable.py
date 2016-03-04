@@ -33,7 +33,6 @@ from Orange.widgets.utils.itemmodels import TableModel
 
 class RichTableDecorator(QIdentityProxyModel):
     """A proxy model for a TableModel with some bells and whistles
-
     (adds support for gui.BarRole, include variable labels and icons
     in the header)
     """
@@ -203,19 +202,13 @@ class BlockSelectionModel(QItemSelectionModel):
     """
     Item selection model ensuring the selection maintains a simple block
     like structure.
-
     e.g.
-
         [a b] c [d e]
         [f g] h [i j]
-
     is allowed but this is not
-
         [a] b  c  d e
         [f  g] h [i j]
-
     I.e. select the Cartesian product of row and column indices.
-
     """
     def __init__(self, model, parent=None, selectBlocks=True, **kwargs):
         super().__init__(model, parent, **kwargs)
@@ -282,10 +275,8 @@ class BlockSelectionModel(QItemSelectionModel):
 
     def setSelectBlocks(self, state):
         """Set the block selection state.
-
         If set to False, the selection model behaves as the base
         QItemSelectionModel
-
         """
         self.__selectBlocks = state
 
@@ -293,10 +284,8 @@ class BlockSelectionModel(QItemSelectionModel):
 def ranges(indices):
     """
     Group consecutive indices into `(start, stop)` tuple 'ranges'.
-
     >>> list(ranges([1, 2, 3, 5, 3, 4]))
     >>> [(1, 4), (5, 6), (3, 5)]
-
     """
     g = itertools.groupby(enumerate(indices),
                           key=lambda t: t[1] - t[0])
@@ -351,7 +340,7 @@ def table_selection_to_list(table):
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class OWDataTable(widget.OWWidget):
+class owtable(widget.OWWidget):
     name = "Data Table"
     description = "View data set in a spreadsheet."
     icon = "icons/Table.svg"
@@ -799,7 +788,6 @@ class OWDataTable(widget.OWWidget):
             def select(data, rows, domain):
                 """
                 Select the data subset with specified rows and domain subsets.
-
                 If either rows or domain is None they mean select all.
                 """
                 if rows is not None and domain is not None:
@@ -1008,8 +996,7 @@ def is_sortable(table):
 
 def test_main():
     a = QtGui.QApplication(sys.argv)
-    ow = OWDataTable()
-
+    ow = owtable()
     iris = Table("iris")
     brown = Table("brown-selected")
     housing = Table("housing")

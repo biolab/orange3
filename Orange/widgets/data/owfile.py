@@ -158,7 +158,7 @@ class NamedURLModel(PyListModel):
         self.modelReset.emit()
 
 
-class OWFile(widget.OWWidget):
+class owfile(widget.OWWidget):
     name = "File"
     id = "orange.widgets.data.file"
     description = "Read a data from an input file or network" \
@@ -189,6 +189,13 @@ class OWFile(widget.OWWidget):
         ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
                   for f in sorted(set(FileFormat.readers.values()),
                                   key=list(FileFormat.readers.values()).index)))
+#Current Changing Index of comboBox
+    def changeIndex(self):
+        index = self.file_combo.currentIndex()
+        if index < self.file_combo.count() - 1:
+            self.file_combo.setCurrentIndex(index + 1)
+        else:
+            self.file_combo.setCurrentIndex(0)
 
     def __init__(self):
         super().__init__()
@@ -209,7 +216,9 @@ class OWFile(widget.OWWidget):
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo = file_combo = QtGui.QComboBox(box)
         file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.changeIndex()
         file_combo.activated[int].connect(self.select_file)
+        self.changeIndex()
         box.layout().addWidget(file_combo)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
@@ -345,12 +354,13 @@ class OWFile(widget.OWWidget):
             else:
                 start_file = os.path.expanduser("~/")
 
-        filename = QtGui.QFileDialog.getOpenFileName(
+        filename = QtGui.QFileDialog.getOpenFileNames(
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
-            return
-
-        self._add_path(filename)
+            return 
+        for files in filename:
+            #Selecting multiple xls sheets
+            self._add_path(files)
         self.set_file_list()
         self.source = self.LOCAL_FILE
         self.load_data()
@@ -507,7 +517,7 @@ class OWFile(widget.OWWidget):
 if __name__ == "__main__":
     import sys
     a = QtGui.QApplication(sys.argv)
-    ow = OWFile()
+    ow = owfile()
     ow.show()
     a.exec_()
     ow.saveSettings()
