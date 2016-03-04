@@ -345,7 +345,7 @@ class OWFile(widget.OWWidget):
             else:
                 start_file = os.path.expanduser("~/")
 
-        filename = QtGui.QFileDialog.getOpenFileName(
+        filename = QtGui.QFileDialog.getOpenFileNames(
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
