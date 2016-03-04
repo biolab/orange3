@@ -28,6 +28,7 @@ addons:
             - gfortran
 
 before_install:
+    - set -e  # fail on any error
     - pip install codecov
     - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ]; then
         source $TRAVIS_BUILD_DIR/.travis/decrypt_upload_doc_id.sh;
