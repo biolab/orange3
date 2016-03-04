@@ -15,5 +15,6 @@ python setup.py sdist
 cd dist
 tar xzf Orange-*.tar.gz
 cd Orange-*
+export ORANGE_DIR="$(pwd)"
 python setup.py build_ext -i
 cd $TRAVIS_BUILD_DIR
