@@ -1,5 +1,5 @@
 from collections import defaultdict
-from itertools import product
+from itertools import product, chain
 from math import sqrt, floor, ceil
 
 from PyQt4.QtCore import Qt, QSize
@@ -97,7 +97,11 @@ class OWSieveDiagram(OWWidget):
         if self.data is None:
             self.attrs[:] = []
         else:
-            self.attrs[:] = [var for var in self.data.domain if var.is_discrete]
+            self.attrs[:] = [
+                var for var in chain(self.data.domain.attributes,
+                                     self.data.domain.metas)
+                if var.is_discrete
+            ]
         if self.attrs:
             self.attrX = self.attrs[0].name
             self.attrY = self.attrs[len(self.attrs) > 1].name
