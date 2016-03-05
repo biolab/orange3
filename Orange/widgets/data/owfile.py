@@ -345,12 +345,11 @@ class OWFile(widget.OWWidget):
             else:
                 start_file = os.path.expanduser("~/")
 
-        filename = QtGui.QFileDialog.getOpenFileNames(
+        filename = QtGui.QFileDialog.getOpenFileName(
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
-        for files in filename:
-            self._add_path(files)
+        self._add_path(files)
         self.set_file_list()
         self.source = self.LOCAL_FILE
         self.load_data()
