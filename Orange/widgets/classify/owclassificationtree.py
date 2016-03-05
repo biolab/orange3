@@ -94,8 +94,11 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
             preprocessors=self.preprocessors
         )
         self.learner.name = self.model_name
-        self.model = None
+        self.send("Learner", self.learner)
+        self.update_model()
 
+    def update_model(self):
+        self.model = None
         if self.data is not None:
             self.error(1)
             if not self.learner.check_learner_adequacy(self.data.domain):
@@ -105,7 +108,6 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
                 self.model.name = self.model_name
                 self.model.instances = self.data
 
-        self.send("Learner", self.learner)
         self.send("Tree", self.model)
 
     @check_sql_input
@@ -115,7 +117,7 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
         if data is not None and data.domain.class_var is None:
             self.error(0, "Data has no target variable")
             self.data = None
-        self.apply()
+        self.update_model()
 
 
 if __name__ == "__main__":
