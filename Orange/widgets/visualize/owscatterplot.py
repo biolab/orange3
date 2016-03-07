@@ -387,10 +387,10 @@ class OWScatterPlot(OWWidget):
         idy = self.data.domain.index(self.attr_y)
         flag = 0
         for x in self.data[:,idx]:
-            if x == '?' || x == '':
+            if x == '?' or not x:
                 flag = 1
         for y in self.data[:,idy]:
-            if y == '?' || x == '':
+            if y == '?' or not y:
                 flag = 1
         if flag == 1:
             self.warning("Some of the attributes contain missing values")    
