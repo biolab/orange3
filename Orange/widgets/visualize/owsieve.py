@@ -98,6 +98,8 @@ class OWSieveDiagram(OWWidget):
             self.attrs[:] = []
         else:
             self.attrs[:] = [var for var in self.data.domain if var.is_discrete]
+        print ("hello ")
+        print (self.data.domain.metas)    
         if self.attrs:
             self.attrX = self.attrs[0].name
             self.attrY = self.attrs[len(self.attrs) > 1].name
