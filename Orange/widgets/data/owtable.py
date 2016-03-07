@@ -434,7 +434,6 @@ class OWDataTable(widget.OWWidget):
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
         self.closeContext()
-        print (data)
         if data is not None:
             if tid in self.inputs:
                 # update existing input slot
