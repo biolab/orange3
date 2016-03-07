@@ -380,10 +380,24 @@ class OWScatterPlot(OWWidget):
         self.graph.zoomStack = []
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
+        # print (self.attr_x)
+        # print (self.attr_y)
+        # print (self.data[0])
+        idx = self.data.domain.index(self.attr_x)
+        idy = self.data.domain.index(self.attr_y)
+        flag = 0
+        for x in self.data[:,idx]:
+            if x == '?' || x == '':
+                flag = 1
+        for y in self.data[:,idy]:
+            if y == '?' || x == '':
+                flag = 1
+        if flag == 1:
+            self.warning("Some of the attributes contain missing values")    
         if not self.graph.have_data:
             return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
-
+    
     def selection_changed(self):
         self.send_data()
 
