@@ -159,7 +159,6 @@ class ColorTable(QTableView):
         self.setShowGrid(False)
         self.setSelectionMode(QTableView.NoSelection)
         self.setItemDelegate(HorizontalGridDelegate())
-        self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.setModel(model)
 
     def mouseReleaseEvent(self, ev):
@@ -244,16 +243,18 @@ class OWColor(widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Discrete variables",
                             orientation="horizontal")
         self.disc_model = DiscColorTableModel()
-        self.disc_view = DiscreteTable(self.disc_model)
+        disc_view = self.disc_view = DiscreteTable(self.disc_model)
+        disc_view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.disc_model.dataChanged.connect(self._on_data_changed)
-        box.layout().addWidget(self.disc_view)
+        box.layout().addWidget(disc_view)
 
         box = gui.widgetBox(self.controlArea, "Numeric variables",
                             orientation="horizontal")
         self.cont_model = ContColorTableModel()
-        self.cont_view = ContinuousTable(self, self.cont_model)
+        cont_view = self.cont_view = ContinuousTable(self, self.cont_model)
+        cont_view.setColumnWidth(1, 256)
         self.cont_model.dataChanged.connect(self._on_data_changed)
-        box.layout().addWidget(self.cont_view)
+        box.layout().addWidget(cont_view)
 
         box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send data",
                               orientation="horizontal",
