@@ -9,6 +9,9 @@ from Orange.data import (Table, Domain, ContinuousVariable,
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
                              Jaccard, _preprocess)
+from Orange.misc import DistMatrix
+from Orange.tests import named_file
+from Orange.util import OrangeDeprecationWarning
 
 
 def tables_equal(tab1, tab2):
@@ -33,6 +36,145 @@ class TestDistMatrix(TestCase):
         self.assertTrue(tables_equal(unpickled_dist.row_items, self.dist.row_items))
         self.assertTrue(tables_equal(unpickled_dist.col_items, self.dist.col_items))
         self.assertEqual(unpickled_dist.axis, self.dist.axis)
+
+    def test_deprecated(self):
+        a9 = np.arange(9).reshape(3, 3)
+        m = DistMatrix(a9)
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertEqual(m.dim, 3)
+        with self.assertWarns(OrangeDeprecationWarning):
+            np.testing.assert_almost_equal(m.X, a9)
+
+    def test_from_file(self):
+        with named_file(
+                """3 axis=0 asymmetric col_labels row_labels
+                         ann	bert	chad
+                danny	0.12	3.45	6.78
+                  eve	9.01	2.34	5.67
+                frank	8.90	1.23	4.56""") as name:
+            m = DistMatrix.from_file(name)
+            np.testing.assert_almost_equal(m, np.array([[0.12, 3.45, 6.78],
+                                                        [9.01, 2.34, 5.67],
+                                                        [8.90, 1.23, 4.56]]))
+            self.assertIsInstance(m.row_items, Table)
+            self.assertIsInstance(m.col_items, Table)
+            self.assertEqual([e.metas[0] for e in m.col_items],
+                             ["ann", "bert", "chad"])
+            self.assertEqual([e.metas[0] for e in m.row_items],
+                             ["danny", "eve", "frank"])
+            self.assertEqual(m.axis, 0)
+
+        with named_file(
+                """3 axis=1 row_labels
+                danny	0.12	3.45	6.78
+                eve 	9.01	2.34	5.67
+                frank	8.90""") as name:
+            m = DistMatrix.from_file(name)
+            np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
+                                                        [9.01, 2.34, 0],
+                                                        [8.90, 0, 0]]))
+            self.assertIsInstance(m.row_items, Table)
+            self.assertIsNone(m.col_items)
+            self.assertEqual([e.metas[0] for e in m.row_items],
+                             ["danny", "eve", "frank"])
+            self.assertEqual(m.axis, 1)
+
+        with named_file(
+                """3 axis=1 symmetric
+                0.12	3.45	6.78
+                9.01	2.34	5.67
+                8.90""") as name:
+            m = DistMatrix.from_file(name)
+        np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
+                                                    [9.01, 2.34, 0],
+                                                    [8.90, 0, 0]]))
+
+        with named_file(
+                """3 row_labels
+                starič	0.12	3.45	6.78
+                aleš	9.01	2.34	5.67
+                anže	8.90""", encoding="utf-8""") as name:
+            m = DistMatrix.from_file(name)
+            np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
+                                                        [9.01, 2.34, 0],
+                                                        [8.90, 0, 0]]))
+            self.assertIsInstance(m.row_items, Table)
+            self.assertIsNone(m.col_items)
+            self.assertEqual([e.metas[0] for e in m.row_items],
+                             ["starič", "aleš", "anže"])
+            self.assertEqual(m.axis, 1)
+
+
+        def assertErrorMsg(content, msg):
+            with named_file(content) as name:
+                with self.assertRaises(ValueError) as cm:
+                    DistMatrix.from_file(name)
+                self.assertEqual(str(cm.exception), msg)
+
+        assertErrorMsg("",
+                       "empty file")
+        assertErrorMsg("axis=1\n1\t3\n4",
+                       "distance file must begin with dimension")
+        assertErrorMsg("3 col_labels\na\tb\n1\n\2\n3",
+                       "mismatching number of column labels")
+        assertErrorMsg("3 col_labels\na\tb\tc\td\n1\n\2\n3",
+                       "mismatching number of column labels")
+        assertErrorMsg("2\n  1\t2\t3\n  5",
+                       "too many columns in matrix row 1")
+        assertErrorMsg("2 row_labels\na\t1\t2\t3\nb\t5",
+                       "too many columns in matrix row 'a'")
+        assertErrorMsg("2 noflag\n  1\t2\t3\n  5",
+                       "invalid flag 'noflag'")
+        assertErrorMsg("2 noflag=5\n  1\t2\t3\n  5",
+                       "invalid flag 'noflag=5'")
+        assertErrorMsg("2\n1\n2\n3",
+                       "too many rows")
+        assertErrorMsg("2\n1\nasd",
+                       "invalid element at row 2, column 1")
+        assertErrorMsg("2 row_labels\na\t1\nb\tasd",
+                       "invalid element at row 'b', column 1")
+        assertErrorMsg("2 col_labels row_labels\nd\te\na\t1\nb\tasd",
+                       "invalid element at row 'b', column 'd'")
+        assertErrorMsg("2 col_labels\nd\te\n1\nasd",
+                       "invalid element at row 2, column 'd'")
+
+    def test_save(self):
+        with named_file(
+                """3 axis=1 row_labels
+                danny	0.12	3.45	6.78
+                eve 	9.01	2.34	5.67
+                frank	8.90""") as name:
+            m = DistMatrix.from_file(name)
+            m.save(name)
+            m = DistMatrix.from_file(name)
+            np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
+                                                        [9.01, 2.34, 0],
+                                                        [8.90, 0, 0]]))
+            self.assertIsInstance(m.row_items, Table)
+            self.assertIsNone(m.col_items)
+            self.assertEqual([e.metas[0] for e in m.row_items],
+                             ["danny", "eve", "frank"])
+            self.assertEqual(m.axis, 1)
+
+        with named_file(
+                """3 axis=0 asymmetric col_labels row_labels
+                         ann	bert	chad
+                danny	0.12	3.45	6.78
+                  eve	9.01	2.34	5.67
+                frank	8.90	1.23	4.56""") as name:
+            m = DistMatrix.from_file(name)
+            m.save(name)
+            m = DistMatrix.from_file(name)
+            np.testing.assert_almost_equal(m, np.array([[0.12, 3.45, 6.78],
+                                                        [9.01, 2.34, 5.67],
+                                                        [8.90, 1.23, 4.56]]))
+            self.assertIsInstance(m.row_items, Table)
+            self.assertIsInstance(m.col_items, Table)
+            self.assertEqual([e.metas[0] for e in m.col_items],
+                             ["ann", "bert", "chad"])
+            self.assertEqual([e.metas[0] for e in m.row_items],
+                             ["danny", "eve", "frank"])
+            self.assertEqual(m.axis, 0)
 
 
 class TestEuclidean(TestCase):
