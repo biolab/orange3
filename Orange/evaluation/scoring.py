@@ -1,3 +1,15 @@
+"""
+Methods for scoring prediction results (CA, AUC, ...).
+
+Examples
+--------
+>>> import Orange
+>>> data = Orange.data.Table('iris')
+>>> learner = Orange.classification.LogisticRegressionLearner()
+>>> results = Orange.evaluation.TestOnTrainingData(data, [learner])
+
+"""
+
 import math
 import sys
 
@@ -101,12 +113,9 @@ class F1(Score):
 
     Examples
     --------
-    >>> import Orange
-    >>> data = Orange.data.Table('iris')
-    >>> learner = Orange.classification.LogisticRegressionLearner()
-    >>> results = Orange.evaluation.TestOnTrainingData(data, [learner])
     >>> Orange.evaluation.F1(results)
-    array([ 0.9599359])
+    array([ 0.9...])
+
     """
     __wraps__ = skl_metrics.f1_score
 
@@ -210,12 +219,9 @@ class LogLoss(Score):
 
     Examples
     --------
-    >>> import Orange
-    >>> data = Orange.data.Table('iris')
-    >>> majority = Orange.classification.MajorityLearner()
-    >>> results = Orange.evaluation.TestOnTrainingData(data, [majority])
     >>> Orange.evaluation.LogLoss(results)
-    array([ 1.09861231])
+    array([ 0.3...])
+
     """
     __wraps__ = skl_metrics.log_loss
 
