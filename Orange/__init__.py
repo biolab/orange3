@@ -9,7 +9,7 @@ from Orange import data
 
 for mod_name in ['classification', 'clustering', 'distance', 'ensembles',
                  'evaluation', 'misc', 'preprocess', 'projection', 'regression',
-                 'statistics', 'widgets']:
+                 'statistics', 'version', 'widgets']:
     globals()[mod_name] = _LazyModule(mod_name)
 
 datasets = _DatasetInfo()

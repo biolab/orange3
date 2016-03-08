@@ -1498,6 +1498,7 @@ def _rxc_ix(rows, cols):
 
     Examples
     --------
+    >>> import numpy as np
     >>> a = np.arange(10).reshape(2, 5)
     >>> a[_rxc_ix([0, 1], [3, 4])]
     array([[3, 4],
