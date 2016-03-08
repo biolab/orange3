@@ -1,24 +1,21 @@
 from Orange.data import Table
 from Orange.classification.tree import TreeLearner, TreeClassifier
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
-from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.owlearnerwidget import OWProvidesLearnerI
 
 
-class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
+class OWClassificationTree(OWProvidesLearnerI):
     name = "Classification Tree"
     icon = "icons/ClassificationTree.svg"
     description = "Classification tree algorithm with forward pruning."
     priority = 30
 
     LEARNER = TreeLearner
+    OUTPUT_MODEL_CLASS = TreeClassifier
+    OUTPUT_MODEL_NAME = "Tree"
 
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [
-        ("Learner", LEARNER),
-        ("Tree", TreeClassifier)
-    ]
+    # + OWProvidesLearner.outputs
     want_main_area = False
     resizing_enabled = False
 
@@ -36,10 +33,11 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.data = None
-        self.learner = None
+        super(OWProvidesLearnerI, self).__init__()
+        # self.data = None
+        # self.learner = None
+        # self.model = None
         self.preprocessors = None
-        self.model = None
 
         gui.lineEdit(self.controlArea, self, 'model_name', box='Name',
                      tooltip='The name will identify this model in other '
@@ -84,7 +82,7 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
         if self.data:
             self.report_data("Data", self.data)
 
-    def apply(self):
+    def update_learner(self):
         self.learner = self.LEARNER(
             criterion=self.scores[self.attribute_score][1],
             max_depth=self.max_depth if self.limit_depth else None,
@@ -94,28 +92,7 @@ class OWClassificationTree(OWProvidesLearner, widget.OWWidget):
             preprocessors=self.preprocessors
         )
         self.learner.name = self.model_name
-        self.model = None
-
-        if self.data is not None:
-            self.error(1)
-            if not self.learner.check_learner_adequacy(self.data.domain):
-                self.error(1, self.learner.learner_adequacy_err_msg)
-            else:
-                self.model = self.learner(self.data)
-                self.model.name = self.model_name
-                self.model.instances = self.data
-
         self.send("Learner", self.learner)
-        self.send("Tree", self.model)
-
-    @check_sql_input
-    def set_data(self, data):
-        self.error(0)
-        self.data = data
-        if data is not None and data.domain.class_var is None:
-            self.error(0, "Data has no target variable")
-            self.data = None
-        self.apply()
 
 
 if __name__ == "__main__":
