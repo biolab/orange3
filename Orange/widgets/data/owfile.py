@@ -1,4 +1,5 @@
 import os
+import xlrd
 from warnings import catch_warnings
 
 from PyQt4 import QtGui, QtCore
@@ -9,7 +10,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat
+from Orange.data.io import FileFormat, ExcelFormat
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -93,7 +94,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.activated[int].connect(self.select_file)
+        self.sheet_combo = sheet_combo = QtGui.QComboBox(box) 
+        sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed) 
+        sheet_combo.setVisible(False)  
         box.layout().addWidget(self.file_combo)
+        box.layout().addWidget(sheet_combo)
+     
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
@@ -179,6 +185,30 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.source = self.URL
         self.load_data()
 
+    #Filling comboBox With Sheet Names
+    def fill_sheet_combo(self, filename):
+        _, filename = os.path.split(filename)
+        _,sheetname = filename.split(':')
+        self.sheet_combo.addItem(sheetname)
+
+    #Checking For multiple sheets otherwise default legacy code        
+    def multiple_excelsheets(self, filename):
+        book = xlrd.open_workbook(filename)
+        if book.nsheets > 1:
+            self.sheet_combo.setVisible(True)
+            self.sheet_combo.clear()
+            for i in range(0,book.nsheets): 
+                sheet = filename+':'+str(book.sheet_by_index(i).name)
+                self.fill_sheet_combo(sheet)
+        else:
+            self.sheet_combo.setVisible(False)
+            self.sheet_combo.clear()
+            self.add_path(filename)
+            self.set_file_list()
+            self.source = self.LOCAL_FILE
+            self.load_data()
+            return 
+
     def browse_file(self, in_demos=False):
         if in_demos:
             start_file = get_sample_datasets_dir()
@@ -194,11 +224,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
-
-        self.add_path(filename)
-        self.source = self.LOCAL_FILE
-        self.load_data()
-
+        self.multiple_excelsheets(filename)
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
