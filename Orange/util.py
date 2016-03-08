@@ -16,13 +16,55 @@ warnings.simplefilter('default', OrangeDeprecationWarning)
 
 
 def deprecated(obj):
-    """Mark called object deprecated."""
-    @wraps(obj)
-    def wrapper(*args, **kwargs):
-        name = '{}.{}'.format(obj.__self__.__class__, obj.__name__) if hasattr(obj, '__self__') else obj
-        warnings.warn('Call to deprecated {}'.format(name), OrangeDeprecationWarning, stacklevel=2)
-        return obj(*args, **kwargs)
-    return wrapper
+    """
+    Decorator. Mark called object deprecated.
+
+    Parameters
+    ----------
+    obj: callable or str
+        If callable, it is marked as deprecated and its calling raises
+        OrangeDeprecationWarning. If str, it is the alternative to be used
+        instead of the decorated function.
+
+    Returns
+    -------
+    f: wrapped callable or decorator
+        Returns decorator if obj was str.
+
+    Examples
+    --------
+    >>> import sys; old_stderr, sys.stderr = sys.stderr, sys.stdout  # So doctest can catch that warning
+    >>> @deprecated
+    ... def old():
+    ...     return 'old behavior'
+    >>> old()
+    /... OrangeDeprecationWarning: Call to deprecated ... old ...
+    'old behavior'
+
+    >>> class C:
+    ...     @deprecated('C.new()')
+    ...     def old(self):
+    ...         return 'old behavior'
+    ...     def new(self):
+    ...         return 'new behavior'
+    >>> C().old()
+    /... OrangeDeprecationWarning: Call to deprecated ... C.old ...
+      Instead, use C.new() ...
+    'old behavior'
+    >>> sys.stderr = old_stderr  # !!
+    """
+    alternative = ('; Instead, use ' + obj) if isinstance(obj, str) else ''
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            name = '{}.{}'.format(func.__self__.__class__, func.__name__) if hasattr(func, '__self__') else func
+            warnings.warn('Call to deprecated {}{}'.format(name, alternative),
+                          OrangeDeprecationWarning, stacklevel=2)
+            return func(*args, **kwargs)
+        return wrapper
+
+    return decorator if alternative else decorator(obj)
 
 
 def flatten(lst):

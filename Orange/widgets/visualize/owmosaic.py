@@ -2,7 +2,7 @@ import os
 import sys
 from collections import defaultdict
 from functools import reduce
-from itertools import product
+from itertools import product, chain
 from math import sqrt
 
 import numpy
@@ -294,7 +294,7 @@ class OWMosaicDisplay(OWWidget):
         self.attr3Combo.addItem("(None)")
         self.attr4Combo.addItem("(None)")
 
-        for attr in data.domain:
+        for attr in chain(data.domain, data.domain.metas):
             if attr.is_discrete:
                 for combo in [self.attr1Combo, self.attr2Combo, self.attr3Combo, self.attr4Combo]:
                     combo.addItem(self.icons[attr], attr.name)
