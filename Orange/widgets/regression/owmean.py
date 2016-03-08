@@ -1,66 +1,27 @@
-from Orange.widgets import widget, settings, gui
-
-from Orange.data import Table
-from Orange.regression.mean import MeanLearner, MeanModel
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
+from Orange.widgets import settings
+from Orange.regression.mean import MeanLearner
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class OWMean(OWProvidesLearner, widget.OWWidget):
+class OWMean(OWBaseLearner):
     name = "Mean Learner"
     description = "Regression to the average class value from the training set."
     icon = "icons/Mean.svg"
+    priority = 10
 
     LEARNER = MeanLearner
-
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", LEARNER),
-               ("Predictor", MeanModel)]
+    OUTPUT_MODEL_NAME = "Predictor"
 
     learner_name = settings.Setting("Mean Learner")
 
-    want_main_area = False
-    resizing_enabled = False
-
-    def __init__(self):
-        super().__init__()
-
-        self.data = None
-        self.preprocessors = None
-
-        box = gui.widgetBox(self.controlArea, "Learner Name")
-        gui.lineEdit(box, self, "learner_name")
-        gui.button(self.controlArea, self, "Apply",
-                   callback=self.apply, default=True)
-        self.controlArea.layout().addWidget(self.report_button)
-        self.apply()
-
-    def set_data(self, data):
-        self.data = data
-        if data is not None:
-            self.apply()
-
-    def apply(self):
-        learner = self.LEARNER(preprocessors=self.preprocessors)
-        learner.name = self.learner_name
-        predictor = None
-        if self.data is not None:
-            self.error(0)
-            if not learner.check_learner_adequacy(self.data.domain):
-                self.error(0, learner.learner_adequacy_err_msg)
-            else:
-                predictor = learner(self.data)
-                predictor.name = learner.name
-
-        self.send("Learner", learner)
-        self.send("Predictor", predictor)
-
-    def send_report(self):
-        self.report_items((("Name", self.learner_name),))
+    def create_learner(self):
+        return self.LEARNER(preprocessors=self.preprocessors)
 
 
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+    from Orange.data import Table
 
     a = QApplication(sys.argv)
     ow = OWMean()

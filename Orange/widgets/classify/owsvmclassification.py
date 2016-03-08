@@ -1,17 +1,15 @@
-import numpy as np
 from collections import OrderedDict
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.classification.svm import SVMLearner, SVMClassifier, NuSVMLearner
-from Orange.widgets import widget, settings, gui
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
-from Orange.widgets.utils.sql import check_sql_input
+from Orange.classification.svm import SVMLearner, NuSVMLearner
+from Orange.widgets import settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class SVMBaseMixin(OWProvidesLearner):
+class SVMBaseMixin(OWBaseLearner):
     #: Kernel types
     Linear, Poly, RBF, Sigmoid = 0, 1, 2, 3
     #: Selected kernel type
@@ -79,17 +77,10 @@ class SVMBaseMixin(OWProvidesLearner):
                 decimals=6, alignment=Qt.AlignRight, controlWidth=100
         )
 
-    def _setup_layout(self):
-        gui.lineEdit(self.controlArea, self, "learner_name", box="Name")
-
+    def add_main_layout(self):
         self._add_type_box()
         self._add_kernel_box()
         self._add_optimization_box()
-
-        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
-        box.layout().addWidget(self.report_button)
-        gui.separator(box, 20)
-        gui.button(box, self, "&Apply", callback=self.apply, default=True)
 
     def _on_kernel_changed(self):
         enabled = [[False, False, False],  # linear
@@ -115,19 +106,26 @@ class SVMBaseMixin(OWProvidesLearner):
             items["Kernel"] = "Sigmoid, tanh({g:.4} x⋅y + {c:.4})".format(
                     g=self.gamma, c=self.coef0)
 
+    def update_model(self):
+        super().update_model()
 
-class OWSVMClassification(SVMBaseMixin, widget.OWWidget):
+        sv = None
+        if self.good_data:
+            sv = self.data[self.model.skl_model.support_]
+        self.send("Support vectors", sv)
+
+
+class OWSVMClassification(SVMBaseMixin):
     name = "SVM"
     description = "Support vector machines classifier with standard " \
                   "selection of kernels."
     icon = "icons/SVM.svg"
+    priority = 50
 
     LEARNER = SVMLearner
+    OUTPUT_MODEL_NAME = "Classifier"
 
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", LEARNER, widget.Default),
-               ("Classifier", SVMClassifier),
-               ("Support vectors", Table)]
+    outputs = [("Support vectors", Table)]
 
     learner_name = settings.Setting("SVM Learner")
 
@@ -139,15 +137,6 @@ class OWSVMClassification(SVMBaseMixin, widget.OWWidget):
     probability = settings.Setting(False)
     max_iter = settings.Setting(100)
     limit_iter = settings.Setting(True)
-
-    def __init__(self):
-        super().__init__()
-        self.data = None
-        self.preprocessors = None
-
-        self._setup_layout()
-        self._on_kernel_changed()
-        self.apply()
 
     def _add_type_box(self):
         form = QtGui.QGridLayout()
@@ -179,14 +168,7 @@ class OWSVMClassification(SVMBaseMixin, widget.OWWidget):
                  label="Iteration Limit", checked="limit_iter",
                  alignment=Qt.AlignRight, controlWidth=100)
 
-    @check_sql_input
-    def set_data(self, data):
-        """Set the input train data set."""
-        self.data = data
-        if data is not None:
-            self.apply()
-
-    def apply(self):
+    def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
         common_args = dict(
             kernel=kernel,
@@ -199,30 +181,11 @@ class OWSVMClassification(SVMBaseMixin, widget.OWWidget):
             preprocessors=self.preprocessors
         )
         if self.svmtype == 0:
-            learner = SVMLearner(C=self.C, **common_args)
+            return SVMLearner(C=self.C, **common_args)
         else:
-            learner = NuSVMLearner(nu=self.nu, **common_args)
-        learner.name = self.learner_name
-        classifier = None
-        sv = None
-        if self.data is not None:
-            self.error([0, 1])
-            if not learner.check_learner_adequacy(self.data.domain):
-                self.error(0, learner.learner_adequacy_err_msg)
-            elif len(np.unique(self.data.Y)) < 2:
-                self.error(1, "Data contains only one target value.")
-            else:
-                classifier = learner(self.data)
-                classifier.name = self.learner_name
-                sv = self.data[classifier.skl_model.support_]
+            return NuSVMLearner(nu=self.nu, **common_args)
 
-        self.send("Learner", learner)
-        self.send("Classifier", classifier)
-        self.send("Support vectors", sv)
-
-    def send_report(self):
-        self.report_items((("Name", self.learner_name),))
-
+    def get_model_parameters(self):
         items = OrderedDict()
         if self.svmtype == 0:
             items["SVM type"] = "C-SVM, C={}".format(self.C)
@@ -230,12 +193,9 @@ class OWSVMClassification(SVMBaseMixin, widget.OWWidget):
             items["SVM type"] = "ν-SVM, ν={}".format(self.nu)
         self._report_kernel_parameters(items)
         items["Numerical tolerance"] = "{:.6}".format(self.tol)
-        items["Iteration limt"] = \
-            self.max_iter if self.limit_iter else "unlimited"
-        self.report_items("Model parameters", items)
+        items["Iteration limt"] = self.max_iter if self.limit_iter else "unlimited"
+        return items
 
-        if self.data:
-            self.report_data("Data", self.data)
 
 if __name__ == "__main__":
     app = QtGui.QApplication([])

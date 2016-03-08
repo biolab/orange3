@@ -1,30 +1,25 @@
 # -*- coding: utf-8 -*-
-
 from PyQt4 import QtGui
 from PyQt4.QtGui import QLabel, QGridLayout
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.classification.random_forest import (RandomForestLearner,
-                                                 RandomForestClassifier)
-from Orange.widgets import widget, settings, gui
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
-from Orange.widgets.utils.sql import check_sql_input
+from Orange.classification.random_forest import RandomForestLearner
+from Orange.widgets import settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class OWRandomForest(OWProvidesLearner, widget.OWWidget):
+class OWRandomForest(OWBaseLearner):
     name = "Random Forest Classification"
     description = "Random forest classification algorithm."
     icon = "icons/RandomForest.svg"
+    priority = 40
 
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", RandomForestLearner),
-               ("Model", RandomForestClassifier)]
+    LEARNER = RandomForestLearner
+    OUTPUT_MODEL_NAME = "Model"
 
     want_main_area = False
     resizing_enabled = False
-
-    LEARNER = RandomForestLearner
 
     learner_name = settings.Setting("RF Classification Learner")
     n_estimators = settings.Setting(10)
@@ -38,16 +33,7 @@ class OWRandomForest(OWProvidesLearner, widget.OWWidget):
     use_max_leaf_nodes = settings.Setting(True)
     index_output = settings.Setting(0)
 
-    def __init__(self):
-        super().__init__()
-
-        self.data = None
-        self.preprocessors = None
-
-        # Learner name
-        box = gui.widgetBox(self.controlArea, self.tr("Name"))
-        gui.lineEdit(box, self, "learner_name")
-
+    def add_main_layout(self):
         # Basic properties
         form = QGridLayout()
         basic_box = gui.widgetBox(
@@ -120,24 +106,10 @@ class OWRandomForest(OWProvidesLearner, widget.OWWidget):
 #         gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1,
 #                        label="Index of tree on the output")
 
-        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
-        box.layout().addWidget(self.report_button)
-        gui.separator(box, 20)
-        gui.button(box, self, "&Apply", callback=self.apply, default=True)
-
         self.settingsChanged()
-        self.apply()
 
-    @check_sql_input
-    def set_data(self, data):
-        """Set the input train data set."""
-        self.data = data
-        if data is not None:
-            self.apply()
-
-    def apply(self):
-        common_args = dict()
-        common_args["n_estimators"] = self.n_estimators
+    def create_learner(self):
+        common_args = {"n_estimators": self.n_estimators}
         if self.use_max_features:
             common_args["max_features"] = self.max_features
         if self.use_random_state:
@@ -147,20 +119,7 @@ class OWRandomForest(OWProvidesLearner, widget.OWWidget):
         if self.use_max_leaf_nodes:
             common_args["max_leaf_nodes"] = self.max_leaf_nodes
 
-        learner = self.LEARNER(preprocessors=self.preprocessors, **common_args)
-        learner.name = self.learner_name
-        model = None
-
-        if self.data is not None:
-            self.error(0)
-            if not learner.check_learner_adequacy(self.data.domain):
-                self.error(0, learner.learner_adequacy_err_msg)
-            else:
-                model = learner(self.data)
-                model.name = self.learner_name
-
-        self.send("Learner", learner)
-        self.send("Model", model)
+        return self.LEARNER(preprocessors=self.preprocessors, **common_args)
 
     def settingsChanged(self):
         self._max_features_spin.setEnabled(self.use_max_features)
@@ -168,20 +127,15 @@ class OWRandomForest(OWProvidesLearner, widget.OWWidget):
         self._max_depth_spin.setEnabled(self.use_max_depth)
         self._max_leaf_nodes_spin.setEnabled(self.use_max_leaf_nodes)
 
-    def send_report(self):
-        self.report_items((("Name", self.learner_name),))
-        self.report_items(
-            "Model parameters",
-            (("Number of trees", self.n_estimators),
-             ("Maximal number of considered features",
-              self.max_features if self.use_max_features else "unlimited"),
-             ("Fixed random seed", self.use_random_state and self.random_state),
-             ("Maximal tree depth",
-              self.max_depth if self.use_max_depth else "unlimited"),
-             ("Stop splitting nodes with maximum instances",
-              self.max_leaf_nodes if self.use_max_leaf_nodes else "unlimited")))
-        if self.data:
-            self.report_data("Data", self.data)
+    def get_model_parameters(self):
+        return (("Number of trees", self.n_estimators),
+                ("Maximal number of considered features",
+                 self.max_features if self.use_max_features else "unlimited"),
+                ("Fixed random seed", self.use_random_state and self.random_state),
+                ("Maximal tree depth",
+                 self.max_depth if self.use_max_depth else "unlimited"),
+                ("Stop splitting nodes with maximum instances",
+                 self.max_leaf_nodes if self.use_max_leaf_nodes else "unlimited"))
 
 
 if __name__ == "__main__":

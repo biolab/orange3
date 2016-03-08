@@ -1,126 +1,187 @@
+import numpy as np
+
 from Orange.data import Table
 from Orange.preprocess.preprocess import Preprocess
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass
 
 
-class _OWAcceptsPreprocessor:
-    """
-    Accepts Preprocessor input.
-
-    Requires `LEARNER` attribute with default `LEARNER.preprocessors` be set on it.
-
-    Sets `self.preprocessors` tuple.
-
-    Calls `apply()` method after setting preprocessors.
-    """
-    inputs = [("Preprocessor", Preprocess, "set_preprocessor")]
-
-    def set_preprocessor(self, preproc):
-        """Add user-set preprocessors before the default, mandatory ones"""
-        self.preprocessors = ((preproc,) if preproc else ()) + tuple(self.LEARNER.preprocessors)
-        self.apply()
-
-
-class OWProvidesLearner(_OWAcceptsPreprocessor):
-    """
-    Base class for all classification / regression learner-providing widgets
-    that extend it.
+class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
+    """Metaclass that adds default inputs and outputs objects.
     """
 
+    REQUIRED_ATTRIBUTES = []
+
+    def __new__(mcls, name, bases, attrib):
+        # check whether it is abstract class
+        if attrib.get('name', False):
+            # Ensure all needed attributes are present
+            if not all(attr in attrib for attr in mcls.REQUIRED_ATTRIBUTES):
+                raise AttributeError("'{name}' must have '{attrs}' attributes"
+                                     .format(name=name, attrs="', '".join(mcls.REQUIRED_ATTRIBUTES)))
+
+            attrib['outputs'] = mcls.update_channel(
+                mcls.default_outputs(attrib),
+                attrib.get('outputs', [])
+            )
+
+            attrib['inputs'] = mcls.update_channel(
+                mcls.default_inputs(attrib),
+                attrib.get('inputs', [])
+            )
+
+            mcls.add_extra_attributes(attrib)
+
+        return super().__new__(mcls, name, bases, attrib)
+
+    @classmethod
+    def default_inputs(cls, attrib):
+        return []
+
+    @classmethod
+    def default_outputs(cls, attrib):
+        return []
+
+    @classmethod
+    def update_channel(cls, channel, items):
+        item_names = set(item[0] for item in channel)
+
+        for item in items:
+            if not item[0] in item_names:
+                channel.append(item)
+
+        return channel
+
+    @classmethod
+    def add_extra_attributes(cls, attrib):
+        return attrib
+
+
+class DefaultLearnerWidgetChannelsMetaClass(DefaultWidgetChannelsMetaClass):
+    """Metaclass that adds default inputs (table, preprocess) and
+    outputs (learner, model) for learner widgets.
+    """
+
+    REQUIRED_ATTRIBUTES = ['LEARNER', 'OUTPUT_MODEL_NAME']
+
+    @classmethod
+    def default_inputs(cls, attrib):
+        return [("Data", Table, "set_data"), ("Preprocessor", Preprocess, "set_preprocessor")]
+
+    @classmethod
+    def default_outputs(cls, attrib):
+        return [("Learner", attrib['LEARNER']),
+                (attrib['OUTPUT_MODEL_NAME'], attrib['LEARNER'].__returns__)]
+
+    @classmethod
+    def add_extra_attributes(cls, attrib):
+        if attrib.get('model_name', None) is None:
+            attrib['model_name'] = Setting(attrib['LEARNER'].__returns__)
+        return attrib
+
+
+class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
     LEARNER = None
     OUTPUT_MODEL_NAME = None
-    OUTPUT_MODEL_CLASS = None
 
-    # because of backward compatibility we can't overwrite this attributes
-    # inputs = [("Data", Table, "set_data")] + _OWAcceptsPreprocessor.inputs
-    # outputs = [
-    #     ("Learner", LEARNER),
-    #     (OUTPUT_MODEL_NAME, OUTPUT_MODEL_CLASS)
-    # ]
-    # model_name = Setting(OUTPUT_MODEL_NAME)
+    want_main_area = False
+    resizing_enabled = False
+
+    DATA_ERROR_ID = 1
+    OUTDATED_LEARNER_WARNING_ID = 2
 
     def __init__(self):
         super().__init__()
-
         self.data = None
         self.learner = None
         self.model = None
-        # here can be gui configuration (e.g. gui.lineEdit for model_name)
-        # we can add method get_setting_box()
-        #
-        # gui.lineEdit
-        # box = get_setting_box()
-        # apply and report buttons
+        self.preprocessors = None
+        self.outdated_settings = False
+        self.setup_layout()
+        self.apply()
+
+    def set_preprocessor(self, preprocessor):
+        """Add user-set preprocessors before the default, mandatory ones"""
+        self.preprocessors = ((preprocessor,) if preprocessor else ()) + tuple(self.LEARNER.preprocessors)
+        self.apply()
 
     @check_sql_input
     def set_data(self, data):
         """Set the input train data set."""
-        self.error(0)
+        self.error(self.DATA_ERROR_ID)
         self.data = data
         if data is not None and data.domain.class_var is None:
-            self.error(0, "Data has no target variable")
+            self.error(self.DATA_ERROR_ID, "Data has no target variable")
             self.data = None
+
         self.update_model()
 
     def apply(self):
         self.update_learner()
         self.update_model()
 
-    def update_learner(self):
-        # self.learner.name = self.model_name
-        # self.send("Learner", self.learner)
+    def create_learner(self):
         raise NotImplementedError()
+
+    def update_learner(self):
+        self.learner = self.create_learner()
+        self.send("Learner", self.learner)
+        self.outdated_settings = False
+        self.warning(self.OUTDATED_LEARNER_WARNING_ID)
 
     def update_model(self):
         self.model = None
+        self.good_data = False
         if self.data is not None:
-            self.error(1)
+            self.error(self.DATA_ERROR_ID)
             if not self.learner.check_learner_adequacy(self.data.domain):
-                self.error(1, self.learner.learner_adequacy_err_msg)
+                self.error(self.DATA_ERROR_ID, self.learner.learner_adequacy_err_msg)
+            elif len(np.unique(self.data.Y)) < 2:
+                self.error(self.DATA_ERROR_ID, "Data contains only one target value.")
             else:
                 self.model = self.learner(self.data)
-                self.model.name = self.model_name
+                self.model.name = self.learner_name
                 self.model.instances = self.data
+                self.good_data = True
 
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
+    def settings_changed(self, *args, **kwargs):
+        self.outdated_settings = True
+        self.warning(self.OUTDATED_LEARNER_WARNING_ID,
+                     "Press Apply to submit changes.")
+
+    def get_model_parameters(self):
+        return None
+
     def send_report(self):
-        raise NotImplementedError()
+        self.report_items((("Name", self.learner_name),))
 
+        model_parameters = self.get_model_parameters()
+        if model_parameters:
+            self.report_items("Model parameters", model_parameters)
 
-class ProviderMetaClass(WidgetMetaClass):
-    """ Metaclass that add inputs, outputs and model_name setting.
-    """
-    def __new__(mcls, name, bases, attrib):
+        if self.data:
+            self.report_data("Data", self.data)
 
-        # check whether it is abstract class
-        if attrib.get('name', False):
+    # GUI
+    def add_learner_name_widget(self):
+        gui.lineEdit(self.controlArea, self, 'learner_name', box='Name',
+                     tooltip='The name will identify this model in other widgets')
 
-            for attr in ['LEARNER', 'OUTPUT_MODEL_NAME', 'OUTPUT_MODEL_CLASS']:
-                if attr not in attrib:
-                    raise AttributeError("'{name}' must have  ")
+    def add_main_layout(self):
+        pass
 
-            # allows have outputs = []
-            if attrib.get('outputs', None) is None:
-                attrib['outputs'] = [
-                    ("Learner", attrib['LEARNER']),
-                    (attrib['OUTPUT_MODEL_NAME'], attrib['OUTPUT_MODEL_CLASS'])
-                ]
-            # adds extra outputs
-            if attrib.get('extra_outputs', None):
-                attrib['outputs'] += attrib.pop('extra_outputs')
+    def add_bottom_buttons(self):
+        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
+        box.layout().addWidget(self.report_button)
+        gui.separator(box, 15)
+        gui.button(box, self, "&Apply", callback=self.apply, disabled=0,
+                   default=True)
 
-            if attrib.get('inputs', None) is None:
-                attrib['inputs'] = [("Data", Table, "set_data")] + \
-                                   _OWAcceptsPreprocessor.inputs
-
-            if attrib.get('model_name', None) is None:
-                attrib['model_name'] = Setting(attrib['OUTPUT_MODEL_CLASS'])
-
-        return super(ProviderMetaClass, mcls).__new__(mcls, name, bases, attrib)
-
-
-class OWProvidesLearnerI(OWProvidesLearner, OWWidget, metaclass=ProviderMetaClass):
-    pass
+    def setup_layout(self):
+        self.add_learner_name_widget()
+        self.add_main_layout()
+        self.add_bottom_buttons()

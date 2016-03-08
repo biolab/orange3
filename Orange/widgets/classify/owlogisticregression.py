@@ -5,21 +5,21 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.classification import logistic_regression as lr
-from Orange.widgets import widget, settings, gui
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
-from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets import settings, gui
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
+class OWLogisticRegression(OWBaseLearner):
     name = "Logistic Regression"
     description = "Logistic regression classification algorithm with " \
                   "LASSO (L1) or ridge (L2) regularization."
     icon = "icons/LogisticRegression.svg"
+    priority = 60
 
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", lr.LogisticRegressionLearner),
-               ("Classifier", lr.LogisticRegressionClassifier),
-               ("Coefficients", Table)]
+    LEARNER = lr.LogisticRegressionLearner
+    OUTPUT_MODEL_NAME = "Classifier"
+
+    outputs = [("Coefficients", Table)]
 
     want_main_area = False
     resizing_enabled = False
@@ -43,15 +43,7 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
 
     penalty_types = ("Lasso (L1)", "Ridge (L2)")
 
-    def __init__(self):
-        super().__init__()
-
-        self.data = None
-        self.preprocessors = None
-
-        box = gui.widgetBox(self.controlArea, self.tr("Name"))
-        gui.lineEdit(box, self, "learner_name")
-
+    def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, box=True)
         gui.comboBox(box, self, "penalty_type", label="Regularization type: ",
                      items=self.penalty_types,
@@ -66,12 +58,7 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
         box2 = gui.widgetBox(box, orientation="horizontal")
         box2.layout().setAlignment(Qt.AlignCenter)
         self.c_label = gui.widgetLabel(box2)
-        box = gui.widgetBox(self.controlArea, orientation="horizontal",
-                            margin=0)
-        box.layout().addWidget(self.report_button)
-        gui.button(box, self, "&Apply", callback=self.apply, default=True)
         self.set_c()
-        self.apply()
 
     def set_c(self):
         self.C = self.C_s[self.C_index]
@@ -81,17 +68,9 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
             frmt = "C={:.3f}"
         self.c_label.setText(frmt.format(self.C))
 
-    @check_sql_input
-    def set_data(self, data):
-        self.data = data
-        if data is not None:
-            self.apply()
-
-    LEARNER = lr.LogisticRegressionLearner
-
-    def apply(self):
+    def create_learner(self):
         penalty = ["l1", "l2"][self.penalty_type]
-        learner = self.LEARNER(
+        return self.LEARNER(
             penalty=penalty,
             dual=self.dual,
             tol=self.tol,
@@ -100,33 +79,17 @@ class OWLogisticRegression(OWProvidesLearner, widget.OWWidget):
             intercept_scaling=self.intercept_scaling,
             preprocessors=self.preprocessors
         )
-        learner.name = self.learner_name
-        classifier = None
+
+    def update_model(self):
+        super().update_model()
         coef_table = None
-
-        if self.data is not None:
-            self.error([0, 1])
-            if not learner.check_learner_adequacy(self.data.domain):
-                self.error(0, learner.learner_adequacy_err_msg)
-            elif len(np.unique(self.data.Y)) < 2:
-                self.error(1, "Data contains only one target value.")
-            else:
-                classifier = learner(self.data)
-                classifier.name = self.learner_name
-                coef_table = create_coef_table(classifier)
-
-        self.send("Learner", learner)
-        self.send("Classifier", classifier)
+        if self.good_data:
+            coef_table = create_coef_table(self.model)
         self.send("Coefficients", coef_table)
 
-    def send_report(self):
-        self.report_items((("Name", self.learner_name),))
-        self.report_items("Model parameters", (
-            ("Regularization", "{}, C={}".format(
-                self.penalty_types[self.penalty_type], self.C_s[self.C_index])),
-        ))
-        if self.data:
-            self.report_data("Data", self.data)
+    def get_model_parameters(self):
+        return (("Regularization", "{}, C={}".format(
+                self.penalty_types[self.penalty_type], self.C_s[self.C_index])),)
 
 
 def create_coef_table(classifier):

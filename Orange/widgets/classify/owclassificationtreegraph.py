@@ -15,6 +15,7 @@ from Orange.widgets import gui
 
 
 class OWTreeGraph(OWTreeViewer2D):
+    priority = 35
     outputs = [("Data", Table)]
 
     def __init__(self):

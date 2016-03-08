@@ -22,7 +22,6 @@ class OWSaveClassifier(widget.OWWidget):
     #: A list of recent filenames.
     history = Setting([])
 
-
     FILE_EXT = '.pkcls'
     FILTER = "Pickled classifier (*" + FILE_EXT + ");;All Files (*)"
 

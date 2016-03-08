@@ -1,35 +1,30 @@
-from collections import OrderedDict
-from PyQt4.QtGui import QLayout
-from PyQt4 import QtCore
 from PyQt4 import QtGui
-from PyQt4.QtGui import QColor, QPen
+from PyQt4.QtGui import QColor
 from PyQt4.QtCore import QRectF
 
 import pyqtgraph as pg
 import numpy as np
 
 from Orange.data import Table, Domain
-from Orange.regression.linear import (RidgeRegressionLearner, LinearModel,
-                                      LinearRegressionLearner, PolynomialLearner)
+from Orange.regression.linear import (RidgeRegressionLearner, PolynomialLearner,
+                                      LinearRegressionLearner)
 from Orange.regression import Learner
-from Orange.widgets import widget, settings, gui
+from Orange.widgets import settings, gui
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
 
 
-class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
+class OWUnivariateRegression(OWBaseLearner):
     name = "Univariate Regression"
     description = "Univariate regression with polynomial expansion."
     icon = "icons/UnivariateRegression.svg"
 
     LEARNER = LinearRegressionLearner
+    OUTPUT_MODEL_NAME = "Predictor"
 
-    inputs = [("Data", Table, "set_data", widget.Default),
-              ("Learner", Learner, "set_learner")] + OWProvidesLearner.inputs
-    outputs = [("Learner", LEARNER),
-               ("Predictor", LinearModel)]
+    inputs = [("Learner", Learner, "set_learner")]
 
     learner_name = settings.Setting("Univariate Regression")
 
@@ -40,20 +35,12 @@ class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
 
     want_main_area = True
 
-    def __init__(self):
-        super().__init__()
-
-        self.data = None
-        self.preprocessors = None
-        self.learner = None
+    def add_main_layout(self):
         self.scatterplot_item = None
         self.plot_item = None
 
         self.x_label = 'x'
         self.y_label = 'y'
-
-        box = gui.widgetBox(self.controlArea, "Learner/Predictor Name")
-        gui.lineEdit(box, self, "learner_name")
 
         box = gui.widgetBox(self.controlArea, "Variables")
 
@@ -108,8 +95,6 @@ class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
                            disableAutoRange=True)
 
         self.mainArea.layout().addWidget(self.plotview)
-
-        self.apply()
 
     def send_report(self):
         if self.data is None:
