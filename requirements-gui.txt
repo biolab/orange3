@@ -1,2 +1,9 @@
 pyqtgraph>=0.9.10
+
+# This is required for, and only used by, Parallel Coordinates widget.
+# Once that is ported to whatever, this can be removed, along with
+# Orange/widgets/utils/plot/*
 qt-graph-helpers>=0.1.3
+
+# For add-ons' descriptions
+docutils
