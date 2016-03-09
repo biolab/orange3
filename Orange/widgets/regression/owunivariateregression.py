@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from PyQt4.QtGui import QLayout
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -15,6 +16,7 @@ from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.canvas import report
 
 
 class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
@@ -108,6 +110,16 @@ class OWUnivariateRegression(OWProvidesLearner, widget.OWWidget):
         self.mainArea.layout().addWidget(self.plotview)
 
         self.apply()
+
+    def send_report(self):
+        if self.data is None:
+            return
+        caption = report.render_items_vert((
+             ("Polynomial Expansion: ", self.polynomialexpansion),
+        ))
+        self.report_plot(self.plot)
+        if caption:
+            self.report_caption(caption)
 
     def clear(self):
         self.data = None
