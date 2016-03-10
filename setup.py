@@ -66,11 +66,8 @@ ENTRY_POINTS = {
     "orange.canvas.help": (
         "html-index = Orange.widgets:WIDGET_HELP_PATH",
     ),
-    "console_scripts": (
-        "orange = Orange.canvas.__main__:main",
-    ),
     "gui_scripts": (
-        "orange = Orange.canvas.__main__:main",
+        "orange-canvas = Orange.canvas.__main__:main",
     ),
 }
 

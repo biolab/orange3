@@ -59,7 +59,7 @@ have access to the installed PyQt4.
 To start Orange GUI from the command line, assuming it was successfully
 installed, run:
 
-    orange
+    orange-canvas
     # or
     python3 -m Orange.canvas
 
