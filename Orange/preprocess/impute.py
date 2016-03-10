@@ -26,7 +26,43 @@ class ReplaceUnknowns(Transformation):
         return numpy.where(numpy.isnan(c), self.value, c)
 
 
-class Average:
+class BaseImputeMethod:
+    name = "Don't impute"
+    short_name = "leave"
+    description = ""
+    format = "{var.name} -> {short_name}"
+    columns_only = False
+    support_discrete = True
+    support_continuous = True
+
+    def __call__(self, data, variable):
+        return variable
+
+    def str(self, var):
+        return self.format.format(var=var, short_name=self.short_name)
+
+    def __str__(self):
+        return self.name
+
+    def copy(self):
+        return self
+
+
+class DropInstances(BaseImputeMethod):
+    name = "Remove instances with unknown values"
+    short_name = "drop"
+    description = ""
+
+    def __call__(self, data, variable):
+        index = data.domain.index(variable)
+        return numpy.isnan(data[:, index]).reshape(-1)
+
+
+class Average(BaseImputeMethod):
+    name = "Average/Most frequent"
+    short_name = "average"
+    description = "Replace with average/modus for the column"
+
     def __call__(self, data, variable, value=None):
         variable = data.domain[variable]
         if value is None:
@@ -53,15 +89,25 @@ class ImputeSql:
         return 'coalesce(%s, %s)' % (self.var.to_sql(), str(self.default))
 
 
-class Default:
+class Default(BaseImputeMethod):
+    name = "Value"
+    short_name = "value"
+    description = ""
+    columns_only = True
+
     def __init__(self, default=0):
         self.default = default
 
     def __call__(self, data, variable, *, default=None):
         variable = data.domain[variable]
         default = default if default is not None else self.default
-        return variable.copy(
-            compute_value=ReplaceUnknowns(variable, default))
+        return variable.copy(compute_value=ReplaceUnknowns(variable, default))
+
+    def copy(self):
+        return Default(self.default)
+
+    def str(self, var):
+        return self.format.format(var=var, short_name=self.default)
 
 
 class ReplaceUnknownsModel:
@@ -99,18 +145,46 @@ class ReplaceUnknownsModel:
         return column
 
 
-class Model:
-    def __init__(self, learner):
+class Model(BaseImputeMethod):
+    name = "Model-based imputer"
+    short_name = "model"
+    description = ""
+
+    def __init__(self, learner=None):
         self.learner = learner
 
-    def __call__(self, data, variable):
+    def __call__(self, data, variable, copy=False):
         variable = data.domain[variable]
         domain = domain_with_class_var(data.domain, variable)
         data = data.from_table(domain, data)
-        model = self.learner(data)
-        assert model.domain.class_var == variable
-        return variable.copy(
-            compute_value=ReplaceUnknownsModel(variable, model))
+
+        if self.learner.check_learner_adequacy(domain):
+            model = self.learner(data)
+            assert model.domain.class_var == variable
+            return variable.copy(
+                compute_value=ReplaceUnknownsModel(variable, model))
+        else:
+            return variable.copy()
+
+    def str(self, var):
+        return super().str(var) + " ({})".format(self.learner)
+
+    def copy(self):
+        return Model(self.learner)
+
+    @property
+    def support_discrete(self):
+        if self.learner is None:
+            return False
+        from Orange.regression.base_regression import LearnerRegression
+        return not isinstance(self.learner, LearnerRegression)
+
+    @property
+    def support_continuous(self):
+        if self.learner is None:
+            return False
+        from Orange.classification.base_classification import LearnerClassification
+        return not isinstance(self.learner, LearnerClassification)
 
 
 def domain_with_class_var(domain, class_var):
@@ -152,7 +226,13 @@ class Lookup(Lookup):
         return numpy.where(mask, unknown, values)
 
 
-class AsValue:
+class AsValue(BaseImputeMethod):
+    # name = "Value"
+    # short_name = "value"
+    name = "As a distinct value"
+    short_name = "new value"
+    description = ""
+
     def __call__(self, data, variable):
         variable = data.domain[variable]
         if variable.is_discrete:
@@ -231,7 +311,11 @@ class ReplaceUnknownsRandom(Transformation):
         return c
 
 
-class Random:
+class Random(BaseImputeMethod):
+    name = "Random values"
+    short_name = "random"
+    description = "Replace with a random value"
+
     def __call__(self, data, variable):
         variable = data.domain[variable]
         dist = distribution.get_distribution(data, variable)

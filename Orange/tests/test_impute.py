@@ -23,6 +23,16 @@ class TestReplaceUnknowns(unittest.TestCase):
         np.testing.assert_equal(ia, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
 
 
+class TestDropInstances(unittest.TestCase):
+    def test_drop(self):
+        X = np.random.rand(5, 3)
+        X[3:5, 1] = np.nan
+        table = data.Table.from_numpy(None, X)
+        drop = impute.DropInstances()
+        ind = drop(table, table.domain[1])
+        self.assertEqual(list(ind), [False, False, False, True, True])
+
+
 class TestAverage(unittest.TestCase):
     def test_replacement(self):
         s = [0] * 50 + [1] * 50
