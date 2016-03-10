@@ -203,8 +203,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.fill_sheet_combo(filename)
         self.load_data()
 
+
     def fill_sheet_combo(self, path):
-        if os.path.exists(path) and self.excel_has_sheets(path):
+        if os.path.exists(path) and self.is_multisheet_excel(path):
             book = open_workbook(path)
             sheets = book.nsheets
             if sheets > 1:
@@ -215,7 +216,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             else:
                 self.sheet_combo.setVisible(False)
 
-    def excel_has_sheets(self, fn):
+    @staticmethod
+    def is_multisheet_excel(fn):
         try:
             book = open_workbook(fn)
             has_sheets = book.nsheets
@@ -247,13 +249,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     fn = os.path.join(".", basename)
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
-            if self.excel_has_sheets(fn):
+            if self.is_multisheet_excel(fn):
                 book = open_workbook(fn)
-                if book.nsheets > 1:
-                    self.sheet_combo.setVisible(True)
-                    data = ExcelFormat.read(fn)
-                    if data:
-                        return data, fn
+                self.sheet_combo.setVisible(True)
+                data = ExcelFormat.read(fn)
+                if data:
+                    return data, fn
 
             try:
                 return load(Table.from_file, fn)
