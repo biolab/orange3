@@ -1,6 +1,5 @@
 import itertools
 import time
-from bs4 import BeautifulSoup
 from collections import OrderedDict
 from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
@@ -206,10 +205,7 @@ class Report:
                     content = chain(header, content)
                 except:
                     has_header = False
-            X = (report_list(content, header_rows + bool(header)))
-            y = X.split('</tr>')
-            y = ''.join(e for e in y[1:])
-            return y
+            return report_list(content, header_rows + has_header)
 
         # noinspection PyBroadException
         def report_abstract_model(model):
@@ -237,11 +233,7 @@ class Report:
 
         def report_list(data,
                         header_rows=header_rows, header_columns=header_columns):
-            # for x,y in enumerate(data):
-            #     print (x)
-            #     for i in enumerate(y):
-            #         print (i)
-            cells = ["<td>{}</td>", "<th>{}</th>"]
+            cells = ["<td style=\"border : 1px solid black\">{}</td>", "<th>{}</th>"]
             return join("  <tr>\n    {}</tr>\n".format(
                 join(cells[rowi < header_rows or coli < header_columns]
                      .format(fmtnum(elm)) for coli, elm in enumerate(row))
@@ -264,7 +256,7 @@ class Report:
         else:
             body = None
         if body:
-            self.report_html += "<table border = '1' style = 'empty-cells:hide;border-collapse: collapse'>\n" + body + "</table>"
+            self.report_html += "<table border = '1px' style = 'border-collapse: collapse;'>\n" + body + "</table>"
 
     # noinspection PyBroadException
     def report_list(self, name, data=None, limit=1000):
