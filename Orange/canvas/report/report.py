@@ -162,8 +162,7 @@ class Report:
             self.report_html += get_html_img(plot.scene())
 
     # noinspection PyBroadException
-    def report_table(self, name, table=None, header_rows=0, header_columns=0,
-                     num_format=None):
+    def report_table(self, name, table=None, header_rows=0, header_columns=0, tot_rows = 0, num_format=None):
         """
         Add content of a table to the report.
 
@@ -230,12 +229,11 @@ class Report:
         else:
             def fmtnum(s):
                 return s
-
         def report_list(data,
-                        header_rows=header_rows, header_columns=header_columns):
+                        header_rows=header_rows, header_columns=header_columns, tot_rows = tot_rows):
             cells = ["<td>{}</td>", "<th>{}</th>"]
             return join("  <tr>\n    {}</tr>\n".format(
-                join(cells[rowi < header_rows or coli < header_columns]
+                join(cells[rowi < header_rows or coli < header_columns or rowi == 3 + tot_rows]
                      .format(fmtnum(elm)) for coli, elm in enumerate(row))
             ) for rowi, row in enumerate(data))
 
@@ -256,7 +254,7 @@ class Report:
         else:
             body = None
         if body:
-            self.report_html += "<table>\n" + body + "</table>"
+            self.report_html += "<table border = '1px' style = 'border-collapse:collapse'>\n" + body + "</table>"
 
     # noinspection PyBroadException
     def report_list(self, name, data=None, limit=1000):

@@ -58,7 +58,7 @@ class OWConfusionMatrix(widget.OWWidget):
     quantities = ["Number of instances",
                   "Proportion of predicted",
                   "Proportion of actual"]
-
+    val = 2
     selected_learner = settings.Setting([])
     selected_quantity = settings.Setting(0)
     append_predictions = settings.Setting(True)
@@ -426,11 +426,13 @@ class OWConfusionMatrix(widget.OWWidget):
     def send_report(self):
         if self.results is not None and self.selected_learner:
             index = self.selected_learner[0]
+            cmatrix = confusion_matrix(self.results, index)
+            n= len(cmatrix)
             self.report_table(
                 "Confusion matrix for {} (showing {})".
                 format(self.learners[index],
                        self.quantities[self.selected_quantity].lower()),
-                self.tablemodel)
+                self.tablemodel, 2, 2, n)
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
