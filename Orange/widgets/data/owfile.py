@@ -1,7 +1,6 @@
 import os
-import xlrd
 from warnings import catch_warnings
-
+from xlrd import open_workbook, XLRDError
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
@@ -94,12 +93,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.activated[int].connect(self.select_file)
-        self.sheet_combo = sheet_combo = QtGui.QComboBox(box) 
-        sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed) 
-        sheet_combo.setVisible(False)  
+        self.sheet_combo = QtGui.QComboBox(box)
+        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         box.layout().addWidget(self.file_combo)
-        box.layout().addWidget(sheet_combo)
-     
+        box.layout().addWidget(self.sheet_combo)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
@@ -185,30 +182,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.source = self.URL
         self.load_data()
 
-    #Filling comboBox With Sheet Names
-    def fill_sheet_combo(self, filename):
-        _, filename = os.path.split(filename)
-        _,sheetname = filename.split(':')
-        self.sheet_combo.addItem(sheetname)
-
-    #Checking For multiple sheets otherwise default legacy code        
-    def multiple_excelsheets(self, filename):
-        book = xlrd.open_workbook(filename)
-        if book.nsheets > 1:
-            self.sheet_combo.setVisible(True)
-            self.sheet_combo.clear()
-            for i in range(0,book.nsheets): 
-                sheet = filename+':'+str(book.sheet_by_index(i).name)
-                self.fill_sheet_combo(sheet)
-        else:
-            self.sheet_combo.setVisible(False)
-            self.sheet_combo.clear()
-            self.add_path(filename)
-            self.set_file_list()
-            self.source = self.LOCAL_FILE
-            self.load_data()
-            return 
-
     def browse_file(self, in_demos=False):
         if in_demos:
             start_file = get_sample_datasets_dir()
@@ -224,7 +197,36 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
-        self.multiple_excelsheets(filename)
+
+        self.add_path(filename)
+        self.source = self.LOCAL_FILE
+        self.fill_sheet_combo(filename)
+        self.load_data()
+
+    def fill_sheet_combo(self, path):
+        if os.path.exists(path) and self.excel_has_sheets(path):
+            book = open_workbook(path)
+            sheets = book.nsheets
+            if sheets > 1:
+                self.sheet_combo.clear()
+                for i in range(0, sheets):
+                    sheetname = str(book.sheet_by_index(i).name)
+                    self.sheet_combo.addItem(sheetname)
+            else:
+                self.sheet_combo.setVisible(False)
+
+    def excel_has_sheets(self, fn):
+        try:
+            book = open_workbook(fn)
+            has_sheets = book.nsheets
+            if has_sheets > 1:
+                return True
+
+        except XLRDError:
+            return False
+
+        else:
+            return False
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
@@ -245,6 +247,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     fn = os.path.join(".", basename)
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
+            if self.excel_has_sheets(fn):
+                book = open_workbook(fn)
+                if book.nsheets > 1:
+                    self.sheet_combo.setVisible(True)
+                    data = ExcelFormat.read(fn)
+                    if data:
+                        return data, fn
+
             try:
                 return load(Table.from_file, fn)
             except Exception as exc:
