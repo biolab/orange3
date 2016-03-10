@@ -383,7 +383,7 @@ class OWScatterPlot(OWWidget):
         X = BasicStats(self.data[:, self.attr_x], self.attr_x)
         Y = BasicStats(self.data[:, self.attr_y], self.attr_y)
         if X.nans or Y.nans:
-            self.warning("Some of the attributes contain missing values") 
+            self.warning("Some attributes contain missing values") 
         else:
              self.warning()      
         if not self.graph.have_data:
