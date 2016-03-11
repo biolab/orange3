@@ -569,6 +569,36 @@ class TestShuffleSplit(unittest.TestCase):
         self.assertEqual(len(res.predicted[0]),
                          n_resamples * nrows * (1 - train_size))
 
+    def test_stratified(self):
+        # strata size
+        n = 50
+        data = Table('iris')
+
+        res = ShuffleSplit(data, [NaiveBayesLearner()], train_size=.5, test_size=.5,
+                           n_resamples=3, stratified=True, random_state=0)
+
+        strata_samples = []
+        for train, test in res.indices:
+            strata_samples.append(np.count_nonzero(train < n) == n/2)
+            strata_samples.append(np.count_nonzero(train < 2 * n) == n)
+
+        self.assertTrue(all(strata_samples))
+
+    def test_not_stratified(self):
+        # strata size
+        n = 50
+        data = Table('iris')
+
+        res = ShuffleSplit(data, [NaiveBayesLearner()], train_size=.5, test_size=.5,
+                           n_resamples=3, stratified=False, random_state=0)
+
+        strata_samples = []
+        for train, test in res.indices:
+            strata_samples.append(np.count_nonzero(train < n) == n/2)
+            strata_samples.append(np.count_nonzero(train < 2 * n) == n)
+
+        self.assertTrue(not all(strata_samples))
+
 
 class TestAugmentedData(unittest.TestCase):
     def test_augmented_data_classification(self):
