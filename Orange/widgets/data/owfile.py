@@ -213,21 +213,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 for i in range(0, sheets):
                     sheetname = str(book.sheet_by_index(i).name)
                     self.sheet_combo.addItem(sheetname)
-            else:
-                self.sheet_combo.setVisible(False)
+        else:
+            self.sheet_combo.hide()
 
     @staticmethod
     def is_multisheet_excel(fn):
         try:
-            book = open_workbook(fn)
-            has_sheets = book.nsheets
-            if has_sheets > 1:
-                return True
-
+            return open_workbook(fn).nsheets > 1
         except XLRDError:
-            return False
-
-        else:
             return False
 
     # Open a file, create data from it and send it over the data channel
