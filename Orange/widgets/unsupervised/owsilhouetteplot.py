@@ -19,6 +19,7 @@ import Orange.distance
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
 
@@ -103,6 +104,7 @@ class OWSilhouettePlot(widget.OWWidget):
         sh = self.controlArea.sizeHint()
         return sh.expandedTo(QtCore.QSize(600, 720))
 
+    @check_sql_input
     def set_data(self, data):
         """
         Set the input data set.
