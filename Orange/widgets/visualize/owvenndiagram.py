@@ -218,6 +218,8 @@ class OWVennDiagram(widget.OWWidget):
         attr_index = combo.currentIndex()
         if attr_index >= 0:
             return model[attr_index]
+        elif combo.count() == 0:
+            return -1
         else:
             return None
 
@@ -298,7 +300,9 @@ class OWVennDiagram(widget.OWWidget):
 
         def items_by_key(key, input):
             attr = self.itemsetAttr(key)
-            if attr is not None:
+            if attr == -1:
+                return [str(inst) for inst in input.table]
+            elif attr is not None:
                 return [str(inst[attr]) for inst in input.table
                         if not numpy.isnan(inst[attr])]
             else:
@@ -348,7 +352,7 @@ class OWVennDiagram(widget.OWWidget):
                 attrs = source_attributes(input.table.domain)
                 attrs = tuple(attr.name for attr in attrs)
                 selected = self.itemsetAttr(key)
-                if selected is not None:
+                if selected is not None and not selected == -1:
                     attr_name = selected.name
                 else:
                     attr_name = None
@@ -521,7 +525,7 @@ class OWVennDiagram(widget.OWWidget):
         for i, (key, input) in enumerate(self.data.items()):
             if self.useidentifiers:
                 attr = self.itemsetAttr(key)
-                if attr is not None:
+                if attr is not None and not attr == -1:
                     mask = list(map(match, (inst[attr] for inst in input.table)))
                 else:
                     mask = [False] * len(input.table)
