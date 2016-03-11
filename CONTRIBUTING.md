@@ -9,6 +9,13 @@ Please submit contributions in accordance with the flow explained in the
 [GitHub Guides]: https://guides.github.com/
 
 
+Installing for development
+--------------------------
+See the relevant section in the [README file].
+
+[README file]: https://github.com/biolab/orange3
+
+
 Reporting bugs
 --------------
 Please report bugs according to established [bug reporting guidelines].
@@ -128,3 +135,12 @@ commits). The resulting example pull request should look clean:
 Read more [about squashing commits].
 
 [about squashing commits]: https://www.google.com/search?q=git+squash+commits
+
+
+Documentation
+-------------
+Documentation in located in doc folder. You can build it with:
+
+    cd doc
+    make html
+    # Now open build/html/index.html to see it
