@@ -197,6 +197,16 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
         for spin, enabled in zip(self._lrate_params, mask):
             spin.setEnabled(enabled)
 
+    def send_report(self):
+        """ report learner name,model and data"""
+        self.report_items((("Name",self.learner_name),))
+        self.report_items("Model Parameters",(("Loss function to be used ",self.loss_function)
+                                            ,("Penalty ",self.penalty_type)
+                                            ,("Learning rate",self.learning_rate)
+                                            ,("Constant",self.constant))
+        if self.data:
+            self.report_items("Data",self.data)
+
 
 
 if __name__ == "__main__":
