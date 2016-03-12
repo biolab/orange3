@@ -140,63 +140,66 @@ class DistMatrix(np.ndarray):
         Args:
             filename: file name
         """
-        fle = open(filename, encoding=detect_encoding(filename))
-        line = fle.readline()
-        if not line:
-            raise ValueError("empty file")
-        data = line.strip().split()
-        if not data[0].strip().isdigit():
-            raise ValueError("distance file must begin with dimension")
-        n = int(data.pop(0))
-        symmetric = True
-        axis = 1
-        col_labels = row_labels = None
-        for flag in data:
-            if flag in ("labelled", "labeled", "row_labels"):
-                row_labels = []
-            elif flag == "col_labels":
-                col_labels = []
-            elif flag == "symmetric":
-                symmetric = True
-            elif flag == "asymmetric":
-                symmetric = False
-            else:
-                flag_data = flag.split("=")
-                if len(flag_data) == 2:
-                    name, value = map(str.strip, flag_data)
+        with open(filename, encoding=detect_encoding(filename)) as fle:
+            line = fle.readline()
+            if not line:
+                raise ValueError("empty file")
+            data = line.strip().split()
+            if not data[0].strip().isdigit():
+                raise ValueError("distance file must begin with dimension")
+            n = int(data.pop(0))
+            symmetric = True
+            axis = 1
+            col_labels = row_labels = None
+            for flag in data:
+                if flag in ("labelled", "labeled", "row_labels"):
+                    row_labels = []
+                elif flag == "col_labels":
+                    col_labels = []
+                elif flag == "symmetric":
+                    symmetric = True
+                elif flag == "asymmetric":
+                    symmetric = False
                 else:
-                    name, value = "", None
-                if name == "axis" and value.isdigit():
-                    axis = int(value)
-                else:
-                    raise ValueError("invalid flag '{}'".format(flag, filename))
-        if col_labels is not None:
-            col_labels = [x.strip() for x in fle.readline().strip().split("\t")]
-            if len(col_labels) != n:
-                raise ValueError("mismatching number of column labels")
+                    flag_data = flag.split("=")
+                    if len(flag_data) == 2:
+                        name, value = map(str.strip, flag_data)
+                    else:
+                        name, value = "", None
+                    if name == "axis" and value.isdigit():
+                        axis = int(value)
+                    else:
+                        raise ValueError("invalid flag '{}'".format(
+                            flag, filename))
+            if col_labels is not None:
+                col_labels = [x.strip()
+                              for x in fle.readline().strip().split("\t")]
+                if len(col_labels) != n:
+                    raise ValueError("mismatching number of column labels")
 
-        matrix = np.zeros((n, n))
-        for i, line in enumerate(fle):
-            if i >= n:
-                raise ValueError("too many rows".format(filename))
-            line = line.strip().split("\t")
-            if row_labels is not None:
-                row_labels.append(line.pop(0).strip())
-            if len(line) > n:
-                raise ValueError("too many columns in matrix row {}".
-                                 format("'{}'".format(row_labels[i])
-                                        if row_labels else i + 1))
-            for j, e in enumerate(line[:i + 1 if symmetric else n]):
-                try:
-                    matrix[i, j] = float(e)
-                except ValueError as exc:
-                    raise ValueError("invalid element at row {}, column {}".
+            matrix = np.zeros((n, n))
+            for i, line in enumerate(fle):
+                if i >= n:
+                    raise ValueError("too many rows".format(filename))
+                line = line.strip().split("\t")
+                if row_labels is not None:
+                    row_labels.append(line.pop(0).strip())
+                if len(line) > n:
+                    raise ValueError("too many columns in matrix row {}".
                                      format("'{}'".format(row_labels[i])
-                                            if row_labels else i + 1,
-                                            "'{}'".format(col_labels[j])
-                                            if col_labels else j + 1)) from exc
-                if symmetric:
-                    matrix[j, i] = matrix[i, j]
+                                            if row_labels else i + 1))
+                for j, e in enumerate(line[:i + 1 if symmetric else n]):
+                    try:
+                        matrix[i, j] = float(e)
+                    except ValueError as exc:
+                        raise ValueError(
+                            "invalid element at row {}, column {}".format(
+                                "'{}'".format(row_labels[i])
+                                if row_labels else i + 1,
+                                "'{}'".format(col_labels[j])
+                                if col_labels else j + 1)) from exc
+                    if symmetric:
+                        matrix[j, i] = matrix[i, j]
         if col_labels:
             col_labels = Table.from_list(
                 Domain([], metas=[StringVariable("label")]),
@@ -255,14 +258,14 @@ class DistMatrix(np.ndarray):
         symmetric = np.allclose(self, self.T)
         if not symmetric:
             data += "\tasymmetric"
-        fle = open(filename, "wt")
-        fle.write(data + "\n")
-        if col_labels is not None:
-            fle.write("\t".join(str(e.metas[0]) for e in col_labels) + "\n")
-        for i, row in enumerate(self):
-            if row_labels is not None:
-                fle.write(str(row_labels[i].metas[0]) + "\t")
-            if symmetric:
-                fle.write("\t".join(map(str, row[:i + 1])) + "\n")
-            else:
-                fle.write("\t".join(map(str, row)) + "\n")
+        with open(filename, "wt") as fle:
+            fle.write(data + "\n")
+            if col_labels is not None:
+                fle.write("\t".join(str(e.metas[0]) for e in col_labels) + "\n")
+            for i, row in enumerate(self):
+                if row_labels is not None:
+                    fle.write(str(row_labels[i].metas[0]) + "\t")
+                if symmetric:
+                    fle.write("\t".join(map(str, row[:i + 1])) + "\n")
+                else:
+                    fle.write("\t".join(map(str, row)) + "\n")

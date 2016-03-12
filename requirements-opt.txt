@@ -1,0 +1,5 @@
+# This is required for, and only used by, Parallel Coordinates widget.
+# Once that is ported to whatever, this can be removed, along with
+# Orange/widgets/utils/plot/*
+# Optional because it's hard to install everywhere.
+qt-graph-helpers>=0.1.3

@@ -171,7 +171,26 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
         self.send("Coefficients", coef_table)
 
     def send_report(self):
-        pass
+        if self.reg_type == OWLinearRegression.OLS:
+            regularization = "No Regularization"
+        elif self.reg_type == OWLinearRegression.Ridge:
+            regularization = ("Ridge Regression (L2) with α={}"
+                             .format(self.alphas[self.alpha_index]))
+        elif self.reg_type == OWLinearRegression.Lasso:
+            regularization = ("Lasso Regression (L1) with α={}"
+                             .format(self.alphas[self.alpha_index]))
+        elif self.reg_type == OWLinearRegression.Elastic:
+            regularization = ("Elastic Net Regression with α={}"
+                             " and L1:L2 ratio of {}:{}"
+                             .format(self.alphas[self.alpha_index],
+                                     self.l1_ratio,
+                                     1 - self.l1_ratio))
+
+        self.report_items((("Name", self.learner_name),
+                           ("Regularization", regularization)))
+        
+        if self.data:
+            self.report_data("Data", self.data)
 
 if __name__ == "__main__":
     import sys
