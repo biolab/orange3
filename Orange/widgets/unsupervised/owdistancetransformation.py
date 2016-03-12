@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 from Orange.util import scale
 from Orange.misc import DistMatrix
@@ -9,6 +10,8 @@ class OWDistanceTransformation(widget.OWWidget):
     name = "Distance Transformation"
     description = "Transform distances according to selected criteria."
     icon = "icons/DistancesTransformation.svg"
+
+    learner_name = settings.Setting("Distance Transformation")
 
     inputs = [("Distances", DistMatrix, "set_data")]
     outputs = [("Distances", DistMatrix)]
@@ -52,6 +55,8 @@ class OWDistanceTransformation(widget.OWWidget):
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply",
                         checkbox_label="Apply on any change")
+        gui.separator(box)
+        box.layout().addWidget(self.report_button)
 
     def set_data(self, data):
         self.data = data
@@ -68,6 +73,30 @@ class OWDistanceTransformation(widget.OWWidget):
             inv = self.inversion_options[self.inversion_method][1]
             distances = inv(distances)
         self.send("Distances", distances)
+
+    def send_report(self):
+        items = OrderedDict()
+        if self.normalization_method == 0:
+            if self.inversion_method == 0:
+                items['Transformation'] = 'None'
+            else:
+                items['Transformation'] = 'Inversion (' + \
+                    self.inversion_options[self.inversion_method][0] + ')'
+        else:
+            if self.inversion_method == 0:
+                items['Transformation'] = ('Normalization {}'.
+                                            format(self.normalization_options
+                                            [self.normalization_method][0])
+                                            .lower())
+            else:
+                items['Transformation'] = ('Inversion (' + 
+                                            self.inversion_options
+                                            [self.inversion_method][0].lower()
+                                            + '), Normalization ' + 
+                                            self.normalization_options
+                                            [self.normalization_method][0]
+                                            .lower())
+        self.report_items("Model parameters", items)
 
     def _invalidate(self):
         self.commit()

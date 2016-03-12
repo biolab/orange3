@@ -131,7 +131,9 @@ if not release:
         GIT_REVISION = "Unknown"
 
     if not ISRELEASED:
-        FULLVERSION += '.dev0+' + GIT_REVISION[:7]
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%y%m%d')
+        FULLVERSION += '.{}.dev0+{}'.format(timestamp, GIT_REVISION[:7])
 
     a = open(filename, 'w')
     try:
