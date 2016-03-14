@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
+
 import os
 import sys
 import subprocess
-from itertools import chain
 from setuptools import find_packages
 
 if sys.version_info < (3, 4):
@@ -11,7 +11,6 @@ try:
     from numpy.distutils.core import setup
 except ImportError:
     sys.exit('setup requires numpy; install numpy first')
-
 
 NAME = 'Orange'
 
@@ -59,8 +58,6 @@ INSTALL_REQUIRES = sorted(set(
                  for file in requirements)
     for line in open(file)
 ) - {''})
-
-SETUP_REQUIRES = ["setuptools-git"]
 
 ENTRY_POINTS = {
     "orange.canvas.help": (
@@ -159,86 +156,30 @@ def configuration(parent_package='', top_path=None):
     return config
 
 
-def find_package_data(
-    where='.',
-    package='',
-    exclude=('*.py', '*.pyc', '*$py.class', '*~', '.*', '*.bak'),
-    exclude_directories=('.*', 'CVS', '_darcs', './build',
-                         './dist', 'EGG-INFO', '*.egg-info'),
-    only_in_packages=True,
-    show_ignored=False):
+PACKAGES = find_packages()
 
-    """
-    Adapted from: http://svn.w4py.org/Paste/trunk/paste/util/finddata.py :
-    (c) 2005 Ian Bicking and contributors; written for Paste (http://pythonpaste.org)
-    Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
-    ------
-
-    Return a dictionary suitable for use in ``package_data``
-    in a distutils ``setup.py`` file.
-
-    The dictionary looks like::
-
-        {'package': [files]}
-
-    Where ``files`` is a list of all the files in that package that
-    don't match anything in ``exclude``.
-
-    If ``only_in_packages`` is true, then top-level directories that
-    are not packages won't be included (but directories under packages
-    will).
-
-    Directories matching any pattern in ``exclude_directories`` will
-    be ignored.
-
-    If ``show_ignored`` is true, then all the files that aren't
-    included in package data are shown on stderr (for debugging
-    purposes).
-
-    Note patterns use wildcards, or can be exact paths (including
-    leading ``./``), and all searching is case-insensitive.
-    """
-    from fnmatch import fnmatchcase
-    from distutils.util import convert_path
-    from os.path import join, isfile, isdir, sep
-    out = {}
-    stack = [(convert_path(where), '', package, only_in_packages)]
-    while stack:
-        where, prefix, package, only_in_packages = stack.pop(0)
-        for name in os.listdir(where):
-            fn = join(where, name)
-            if isdir(fn):
-                bad_name = False
-                for pattern in exclude_directories:
-                    if fnmatchcase(name, pattern) or fn.lower() == pattern.lower():
-                        bad_name = True
-                        if show_ignored:
-                            print("find_package_data: Directory %s ignored"
-                                  "by pattern %s" % (fn, pattern),
-                                  file=sys.stderr)
-                        break
-                if bad_name:
-                    continue
-                if isfile(join(fn, '__init__.py')) and not prefix:
-                    new_package = (package + '.' + name) if package else name
-                    stack.append((fn, '', new_package, False))
-                else:
-                    stack.append((fn, prefix + name + sep, package, only_in_packages))
-            elif package or not only_in_packages:
-                # is a file
-                bad_name = False
-                for pattern in exclude:
-                    if fnmatchcase(name, pattern) or fn.lower() == pattern.lower():
-                        bad_name = True
-                        if show_ignored:
-                            print("find_package_data: File %s ignored"
-                                  "by pattern %s" % (fn, pattern),
-                                  file=sys.stderr)
-                        break
-                if bad_name:
-                    continue
-                out.setdefault(package, []).append(prefix + name)
-    return out
+# Extra non .py, .{so,pyd} files that are installed within the package dir
+# hierarchy
+PACKAGE_DATA = {
+    "Orange": ["datasets/*.{}".format(ext)
+               for ext in ["tab", "csv", "basket", "info"]],
+    "Orange.canvas": ["icons/*.png", "icons/*.svg"],
+    "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
+    "Orange.canvas.application.tutorials": ["*.ows"],
+    "Orange.canvas.report": ["icons/*.svg", "*.html"],
+    "Orange.widgets": ["icons/*.png", "icons/*.svg"],
+    "Orange.widgets.classify": ["icons/*.svg"],
+    "Orange.widgets.data": ["icons/*.svg",
+                            "icons/paintdata/*.png",
+                            "icons/paintdata/*.svg"],
+    "Orange.widgets.evaluate": ["icons/*.svg"],
+    "Orange.widgets.visualize": ["icons/*.svg"],
+    "Orange.widgets.regression": ["icons/*.svg"],
+    "Orange.widgets.unsupervised": ["icons/*.svg"],
+    "Orange.widgets.utils.plot": ["*.fs", "*.gs", "*.vs"],
+    "Orange.widgets.utils.plot.primitives": ["*.obj"],
+    "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]
+}
 
 
 def setup_package():
@@ -254,13 +195,11 @@ def setup_package():
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
-        packages=find_packages(),
-        package_data=find_package_data('Orange', 'Orange'),
+        packages=PACKAGES,
+        package_data=PACKAGE_DATA,
         install_requires=INSTALL_REQUIRES,
-        setup_requires=SETUP_REQUIRES,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
-        include_package_data=True,
         test_suite='Orange.tests.test_suite',
     )
 
