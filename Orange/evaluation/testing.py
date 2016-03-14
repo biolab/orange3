@@ -402,41 +402,6 @@ class LeaveOneOut(Results):
         self.call_callback(1)
 
 
-class TestOnTrainingData(Results):
-    """Trains and test on the same data"""
-
-    def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None):
-        super().__init__(data, len(learners), store_data=store_data,
-                         store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
-        self.row_indices = np.arange(len(data))
-        nmethods = len(learners)
-        if self.store_models:
-            models = [None] * nmethods
-            self.models = [models]
-        self.actual = data.Y.flatten()
-        if self.preprocessor is not None:
-            train_data = self.preprocessor(data)
-        else:
-            train_data = data
-        for i, learner in enumerate(learners):
-            model = self.train_if_succ(i, learner, train_data)
-            self.call_callback(i / nmethods)
-            if not model:
-                continue
-            if self.store_models:
-                models[i] = model
-            if data.domain.has_discrete_class:
-                values, probs = model(data, model.ValueProbs)
-                self.predicted[i] = values
-                self.probabilities[i] = probs
-            elif data.domain.has_continuous_class:
-                values = model(data, model.Value)
-                self.predicted[i] = values
-        self.call_callback(1)
-
-
 class ShuffleSplit(Results):
     def __init__(self, data, learners, n_resamples=10, train_size=None,
                  test_size=0.1, stratified=True, random_state=0, store_data=False,
@@ -560,6 +525,22 @@ class TestOnTestData(Results):
         self.nrows = len(test_data)
         self.folds = [slice(0, len(test_data))]
         self.call_callback(1)
+
+
+class TestOnTrainingData(TestOnTestData):
+    """
+    Trains and test on the same data
+    """
+
+    def __init__(self, data, learners, store_data=False, store_models=False,
+                 preprocessor=None, callback=None):
+
+        if preprocessor is not None:
+            data = preprocessor(data)
+
+        super().__init__(train_data=data, test_data=data, learners=learners,
+                         store_data=store_data, store_models=store_models,
+                         preprocessor=None, callback=callback)
 
 
 def sample(table, n=0.7, stratified=False, replace=False,
