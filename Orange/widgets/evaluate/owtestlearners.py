@@ -20,7 +20,7 @@ import Orange.classification
 import Orange.regression
 
 from Orange.base import Learner
-from Orange.evaluation import scoring
+from Orange.evaluation import scoring, Results
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
@@ -129,14 +129,13 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Learner,
-               "set_learner", widget.Multiple),
+    inputs = [("Learner", Learner, "set_learner", widget.Multiple),
               ("Data", Table, "set_train_data", widget.Default),
               ("Test Data", Table, "set_test_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
-    outputs = [("Predictions", Orange.data.Table),
-               ("Evaluation Results", Orange.evaluation.Results)]
+    outputs = [("Predictions", Table),
+               ("Evaluation Results", Results)]
 
     settingsHandler = settings.ClassValuesContextHandler()
 
@@ -202,7 +201,7 @@ class OWTestLearners(widget.OWWidget):
 
         rbox.layout().addSpacing(5)
         self.apply_button = gui.button(
-            rbox, self, "Apply", callback=self.apply, default=True)
+            rbox, self, "&Apply", callback=self.apply, default=True)
 
         self.cbox = gui.vBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
@@ -390,7 +389,6 @@ class OWTestLearners(widget.OWWidget):
                     if len(self.data) < self.k_folds:
                         self.error(4, "Number of folds exceeds the data size")
                         return
-
                     warnings = []
                     results = Orange.evaluation.CrossValidation(
                         self.data, learners, k=self.k_folds,
@@ -415,7 +413,7 @@ class OWTestLearners(widget.OWWidget):
                         self.data, self.test_data, learners, **common_args)
                 else:
                     assert False
-            except RuntimeError as e:
+            except (RuntimeError, Results.DataError, ValueError) as e:
                 self.error(2, str(e))
                 self.setStatusMessage("")
                 return
