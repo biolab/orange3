@@ -284,6 +284,11 @@ function prepare_req {
 }
 
 function prepare_orange {
+    # ensure that correct numpy and scipy are installed in the build env
+    pip install --no-index -f "$BUILDBASE/wheelhouse" \
+                --only-binary numpy,scipy \
+                numpy==$NUMPY_VER, scipy==$SCIPY_VER
+
     python setup.py egg_info
     local version=$(grep -E "^Version: .*$" Orange.egg-info/PKG-INFO | awk '{ print $2 }')
 
@@ -291,8 +296,8 @@ function prepare_orange {
         build --compiler=msvc \
         bdist_wheel -d "$BUILDBASE/wheelhouse"
 
-	# Ensure all install_requires dependencies are available in the wheelhouse
-	prepare_req --only-binary numpy,scipy -r Orange.egg-info/requires.txt
+    # Ensure all install dependencies are available in the wheelhouse
+    prepare_req --only-binary numpy,scipy,scikit-learn,bottlechest .
 
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
     echo "Orange==$version" >> "$BUILDBASE/requirements.txt"
