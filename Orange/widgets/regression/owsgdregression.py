@@ -202,12 +202,13 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
         self.report_items((("Name", self.learner_name),))
         items=OrderedDict()
 
-        items['loss'] = ["squared_loss", "huber", "epsilon_insensitive", "squared_epsilon_insensitive"][self.loss_function]
-        items['penalty'] = ["l1", "l2", "elasticnet"][self.penalty_type]
-        items['learning_rate'] = ["invscaling", "constant"][self.learning_rate]
+        items['Loss Function'] = ["Squared loss", "Huber", "Epsilon Insensitive", "Squared Epsilon Insensitive"][self.loss_function]
+        items['Penalty'] = ["Absolute norm (L1)", "Euclidean norm (L2)", "Elastic Net (both)"][self.penalty_type]
+        items['Learning Rate'] = ["Inverse scaling", "Constant"][self.learning_rate]
         items['No of iterations']=self.n_iter
         self.report_items("Model paremeter",items)
-        self.report_data("Data", self.data)
+        if self.data:
+            self.report_data("Data", self.data)
         
          
                            
