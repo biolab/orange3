@@ -51,11 +51,7 @@ CLASSIFIERS = (
     'Intended Audience :: Developers',
 )
 
-requirements = ['requirements-core.txt']
-if 'install' in sys.argv or 'develop' in sys.argv:
-    requirements.append('requirements-gui.txt')
-if 'develop' in sys.argv:
-    requirements.append('requirements-dev.txt')
+requirements = ['requirements-core.txt', 'requirements-gui.txt']
 
 INSTALL_REQUIRES = sorted(set(
     line.partition('#')[0].strip()
@@ -63,6 +59,8 @@ INSTALL_REQUIRES = sorted(set(
                  for file in requirements)
     for line in open(file)
 ) - {''})
+
+SETUP_REQUIRES = ["setuptools-git"]
 
 ENTRY_POINTS = {
     "orange.canvas.help": (
@@ -262,6 +260,7 @@ def setup_package():
         packages=find_packages(),
         package_data=find_package_data('Orange', 'Orange'),
         install_requires=INSTALL_REQUIRES,
+        setup_requires=SETUP_REQUIRES,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         include_package_data=True,
