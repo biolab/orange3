@@ -57,8 +57,8 @@ done
 
 PLATTAG=win32
 
-PYTHON_VER=3.4.3
-PYTHON_MD5=cb450d1cc616bfc8f7a2d6bd88780bf6
+PYTHON_VER=3.4.4
+PYTHON_MD5=e96268f7042d2a3d14f7e23b2535738b
 
 PYTHON_VER_SHORT=${PYTHON_VER%.[0-9]*}
 PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
@@ -70,8 +70,8 @@ PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
 NUMPY_VER=1.9.2
 NUMPY_MD5=0c06b7beabdc053ef63699ada0ee5e98
 
-SCIPY_VER=0.15.1
-SCIPY_MD5=e24c435e96dc7fbde8eac62ca8c969c8
+SCIPY_VER=0.16.1
+SCIPY_MD5=30bf5159326d859a42ed7718a8a09704
 
 DISTDIR=${DISTDIR:-dist}
 
@@ -105,49 +105,14 @@ mkdir -p "$DISTDIR"
 
 touch "$BUILDBASE"/requirements.txt
 
+# pinned requirements (numpy and scipy are handled separately)
 echo "
 #:wheel: scikit-learn https://pypi.python.org/packages/cp34/s/scikit-learn/scikit_learn-0.16.1-cp34-none-win32.whl#md5=ca5864cdf9f1938aa1a55d6092bf5c86
 scikit-learn==0.16.1
 
-#:wheel: matplotlib https://pypi.python.org/packages/cp34/m/matplotlib/matplotlib-1.4.2-cp34-none-win32.whl#md5=f18b7568493bece5c7b3eb7bb4203826
-matplotlib==1.4.2
-
-#:wheel: ipython https://pypi.python.org/packages/3.4/i/ipython/ipython-2.4.1-py3-none-any.whl#md5=7e377fe675a88eb49e720c98de4a7ee4
-ipython==2.4.1
-
-#:wheel: pyzmq https://pypi.python.org/packages/3.4/p/pyzmq/pyzmq-14.5.0-cp34-none-win32.whl#md5=333bc2f02d24aa2455ce4208b9d8666e
-pyzmq==14.5.0
-
-#:source: Markupsafe
-Markupsafe==0.23
-
-#:source: certifi
-certifi==14.05.14
-
-#:source: Jinja2
-jinja2==2.7.3
-
-#:source: tornado
-tornado==4.1
-
-#:wheel: pygments https://pypi.python.org/packages/3.3/P/Pygments/Pygments-2.0.2-py3-none-any.whl#md5=b38281817abc47c82cf3533b8c6608f6
-pygments==2.0.2
-
-#:wheel: networkx https://pypi.python.org/packages/2.7/n/networkx/networkx-1.9.1-py2.py3-none-any.whl#md5=15bb60c9b386563a6d4765264f5bf687
-networkx==1.9.1
-
-#:source: decorator
-decorator==3.4.0
-
-#:source: sqlparse
-sqlparse==0.1.13
-
 #:wheel: Bottlecheset https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl#md5=629ba2a148dfa784d0e6817497d42e97
 --find-links https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl
 Bottlechest==0.7.1
-
-#:source: pyqtgraph
-pyqtgraph==0.9.10
 " > "$BUILDBASE"/requirements.txt
 
 function __download_url {
