@@ -10,11 +10,13 @@ cat requirements-core.txt \
             pip install $dep
     done
 
-# Create a source tarball, unpack it, and run its tests
+# Create a source tarball from the git checkout
 python setup.py sdist
-cd dist
-tar xzf Orange-*.tar.gz
-cd Orange-*
-export ORANGE_DIR="$(pwd)"
-python setup.py build_ext -i
+# Create a binary wheel from the packed source
+pip wheel --no-deps -w dist dist/Orange-*.tar.gz
+# Install into a testing folder
+ORANGE_DIR="$(pwd)"/build/travis-test
+mkdir -p "$ORANGE_DIR"
+pip install --no-deps --target "$ORANGE_DIR"  dist/Orange-*.whl
+
 cd $TRAVIS_BUILD_DIR

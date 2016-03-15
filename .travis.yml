@@ -42,9 +42,9 @@ install:
     - pip install codecov
 
 script:
-    - cd $TRAVIS_BUILD_DIR/dist/Orange-*
+    - cd "$ORANGE_DIR"
     - python -c "from Orange.tests import *"
-    - PYTHONUNBUFFERED=x coverage run --source=Orange setup.py test
+    - PYTHONUNBUFFERED=x coverage run --source=Orange --rcfile=$TRAVIS_BUILD_DIR/.coveragerc -m unittest Orange.tests
 
 after_success:
     - codecov
