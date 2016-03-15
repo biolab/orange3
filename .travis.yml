@@ -44,7 +44,8 @@ install:
 script:
     - cd "$ORANGE_DIR"
     - python -c "from Orange.tests import *"
-    - PYTHONUNBUFFERED=x coverage run --source=Orange --rcfile=$TRAVIS_BUILD_DIR/.coveragerc -m unittest Orange.tests
+    - cp "$TRAVIS_BUILD_DIR"/.coveragerc ./  # for covereage and codecov
+    - PYTHONUNBUFFERED=x coverage run --source=Orange -m unittest -v Orange.tests
 
 after_success:
     - codecov
