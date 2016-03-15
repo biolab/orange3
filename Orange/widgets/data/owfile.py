@@ -82,7 +82,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.loaded_file = ""
 
         layout = QtGui.QGridLayout()
-        lay = QtGui.QVBoxLayout()
+        vLayout = QtGui.QVBoxLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
         vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
                                 callback=self.load_data, addToLayout=False)
@@ -98,9 +98,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_combo.activated[str].connect(self.select_sheet)
         self.sheet_combo.setVisible(False)
-        lay.addWidget(self.file_combo)
-        lay.addWidget(self.sheet_combo)
-        layout.addLayout(lay, 0, 1)
+        vLayout.addWidget(self.file_combo)
+        vLayout.addWidget(self.sheet_combo)
+        layout.addLayout(vLayout, 0, 1)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
