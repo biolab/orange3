@@ -82,6 +82,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.loaded_file = ""
 
         layout = QtGui.QGridLayout()
+        lay = QtGui.QVBoxLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
         vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
                                 callback=self.load_data, addToLayout=False)
@@ -95,8 +96,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.file_combo.activated[int].connect(self.select_file)
         self.sheet_combo = QtGui.QComboBox(box)
         self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        box.layout().addWidget(self.file_combo)
-        box.layout().addWidget(self.sheet_combo)
+        self.sheet_combo.activated[str].connect(self.select_sheet)
+        self.sheet_combo.setVisible(False)
+        lay.addWidget(self.file_combo)
+        lay.addWidget(self.sheet_combo)
+        layout.addLayout(lay, 0, 1)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
@@ -105,7 +109,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             box, self, "Reload", callback=self.reload, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         button.setSizePolicy(Policy.Fixed, Policy.Fixed)
-        layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
+        layout.addWidget(box, 0, 2,  QtCore.Qt.AlignVCenter)
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
         layout.addWidget(rb_button, 1, 0, QtCore.Qt.AlignVCenter)
@@ -159,6 +163,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def select_file(self, n):
         if n < len(self.recent_paths):
             super().select_file(n)
+            self.fill_sheet_combo(self.last_path())
         # TODO: This is weird. Has it remained here from "Browse data sets"
         # or from when this combo was editable? A `n` this large can come from
         # `reload`, but ... how?!
@@ -209,6 +214,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             book = open_workbook(path)
             sheets = book.nsheets
             if sheets > 1:
+                self.sheet_combo.setVisible(True)
                 self.sheet_combo.clear()
                 for i in range(0, sheets):
                     sheetname = str(book.sheet_by_index(i).name)
@@ -223,8 +229,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         except XLRDError:
             return False
 
+    def select_sheet(self, sheet_name):
+        self.load_data(sheet_name)
+
     # Open a file, create data from it and send it over the data channel
-    def load_data(self):
+    def load_data(self, sheet=''):
         def load(method, fn):
             with catch_warnings(record=True) as warnings:
                 data = method(fn)
@@ -243,11 +252,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
             if self.is_multisheet_excel(fn):
-                book = open_workbook(fn)
-                self.sheet_combo.setVisible(True)
-                data = ExcelFormat.read(fn)
-                if data:
-                    return data, fn
+                #book = open_workbook(fn)
+                if sheet:
+                    data = ExcelFormat.read_file(fn+':'+sheet)
+                    if data:
+                        return data, fn
 
             try:
                 return load(Table.from_file, fn)
