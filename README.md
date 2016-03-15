@@ -33,12 +33,11 @@ it in a development environment, run:
     pip install -r requirements-core.txt  # For Orange Python library
     pip install -r requirements-gui.txt   # For Orange GUI
 
-    pip install -r requirements-dev.txt   # For development and creating sdists
     pip install -r requirements-sql.txt   # To use SQL support
     pip install -r requirements-opt.txt   # Optional dependencies, may fail
 
-    # Finally install Orange
-    python setup.py develop
+    # Finally install Orange in editable/development mode.
+    pip install -e .
 
 Installation of SciPy and qt-graph-helpers is sometimes challenging because of
 their non-python dependencies that have to be installed manually. More
