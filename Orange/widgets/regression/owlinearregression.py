@@ -171,16 +171,17 @@ class OWLinearRegression(OWProvidesLearner, widget.OWWidget):
         self.send("Coefficients", coef_table)
 
     def send_report(self):
-        self.report_items("Learner Name",[("Learner Name", self.learner_name)])
-
-        regression_type = ["No regularization", "Ridge regression (L2)", "Lasso regression (L1)", "Elastic net regression"]
-
-        parameters =[("Ridge", self.ridge),
-             ("Regression Type", regression_type[self.reg_type]),
-             ("Alpha", self.alpha_index),
-             ("L1 Ratio", self.l1_ratio)]
+        self.report_items("Learner Name",
+                          [("Learner Name", self.learner_name)])
+        regression_type = ["No regularization", 
+                           "Ridge regression (L2)", 
+                           "Lasso regression (L1)", 
+                           "Elastic net regression"]
+        parameters = [("Ridge", self.ridge),
+                      ("Regression Type", regression_type[self.reg_type]),
+                      ("Alpha", self.alpha_index),
+                      ("L1 Ratio", self.l1_ratio)]
         self.report_items("Model Parameters", parameters)
-
         self.report_data("Data", self.data)
 
 if __name__ == "__main__":
