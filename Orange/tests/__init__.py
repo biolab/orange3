@@ -2,14 +2,11 @@ import os
 import unittest
 from contextlib import contextmanager
 
-from Orange.widgets.tests import test_setting_provider, \
-    test_settings_handler, test_context_handler, \
-    test_class_values_context_handler, test_domain_context_handler, \
-    test_owselectcolumns, test_scatterplot_density, test_widgets_outputs
-
 try:
-    from Orange.widgets.tests import test_widget
-
+    from Orange.widgets.tests import test_setting_provider, \
+        test_settings_handler, test_context_handler, \
+        test_class_values_context_handler, test_domain_context_handler, \
+        test_owselectcolumns, test_scatterplot_density, test_widgets_outputs
     run_widget_tests = True
 except ImportError:
     run_widget_tests = False
@@ -35,20 +32,18 @@ def suite():
         unittest.TestLoader().discover(test_dir),
     ]
     load = unittest.TestLoader().loadTestsFromModule
-    all_tests.extend([
-        load(test_setting_provider),
-        load(test_settings_handler),
-        load(test_context_handler),
 
-        load(test_class_values_context_handler),
-        load(test_domain_context_handler),
-        load(test_owselectcolumns),
-        load(test_scatterplot_density),
-        load(test_widgets_outputs),
-    ])
     if run_widget_tests:
         all_tests.extend([
-            #load(test_widget), # does not run on travis
+            load(test_setting_provider),
+            load(test_settings_handler),
+            load(test_context_handler),
+
+            load(test_class_values_context_handler),
+            load(test_domain_context_handler),
+            load(test_owselectcolumns),
+            load(test_scatterplot_density),
+            load(test_widgets_outputs),
         ])
     return unittest.TestSuite(all_tests)
 

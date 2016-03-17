@@ -1,3 +1,6 @@
+import sys
+import os
+
 from doctest import DocTestSuite, ELLIPSIS, NORMALIZE_WHITESPACE
 
 SKIP_DIRS = (
@@ -7,6 +10,10 @@ SKIP_DIRS = (
     # Skip because we don't want Orange.datasets as a module (yet)
     'Orange/datasets/'
 )
+
+if sys.platform == "win32":
+    # convert to platform native path component separators
+    SKIP_DIRS = tuple(os.path.normpath(p) for p in SKIP_DIRS)
 
 
 def find_modules(package):
@@ -43,7 +50,7 @@ class Context(dict):
 
 
 def suite(package):
-    """Assemble test suite for doctests in path (recusrively)"""
+    """Assemble test suite for doctests in path (recursively)"""
     from importlib import import_module
     for module in find_modules(package.__file__):
         try:
