@@ -551,11 +551,11 @@ class ContextHandler(SettingsHandler):
     # TODO similar to settings_to_widget; update_class_defaults does this for
     #      context independent settings
     def settings_from_widget(self, widget):
-        widget.storeSpecificSettings()
-
         context = widget.current_context
         if context is None:
             return
+
+        widget.storeSpecificSettings()
 
         def packer(setting, instance):
             if hasattr(instance, setting.name):
