@@ -129,7 +129,7 @@ indent-string='    '
 indent-after-paren=4
 
 # Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
-expected-line-ending-format=
+expected-line-ending-format=LF
 
 
 [LOGGING]
@@ -244,16 +244,16 @@ function-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
 function-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Regular expression matching correct variable names
-variable-rgx=[a-z_][a-z0-9_]{0,30}$
+variable-rgx=[a-zA-Z_][a-zA-Z0-9_]{1,30}$
 
 # Naming hint for variable names
-variable-name-hint=[a-z_][a-z0-9_]{0,30}$
+variable-name-hint=[a-zA-Z_][a-zA-Z0-9_]{1,30}$
 
 # Regular expression matching correct attribute names
-attr-rgx=[a-z_][a-z0-9_]{2,30}$
+attr-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Naming hint for attribute names
-attr-name-hint=[a-z_][a-z0-9_]{2,30}$
+attr-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Regular expression matching correct inline iteration names
 inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
@@ -262,10 +262,10 @@ inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
 inlinevar-name-hint=[A-Za-z_][A-Za-z0-9_]*$
 
 # Regular expression matching correct argument names
-argument-rgx=[a-z_][a-z0-9_]{2,30}$
+argument-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Naming hint for argument names
-argument-name-hint=[a-z_][a-z0-9_]{2,30}$
+argument-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Regular expression which should only match function or class names that do
 # not require a docstring.
@@ -273,7 +273,7 @@ no-docstring-rgx=^_
 
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
-docstring-min-length=4
+docstring-min-length=1
 
 
 [ELIF]
@@ -298,11 +298,6 @@ ignored-modules=numpy,PyQt4
 # (useful for classes with attributes dynamically set). This supports can work
 # with qualified names.
 ignored-classes=
-
-# List of module names for which member attributes should not be checked
-# (useful for modules/projects where namespaces are manipulated during runtime
-# and thus existing member attributes cannot be deduced by static analysis
-ignored-modules=numpy
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E1101 when accessed. Python regular
@@ -335,7 +330,7 @@ exclude-protected=_asdict,_fields,_replace,_source,_make
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=5
+max-args=10
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
@@ -348,10 +343,10 @@ max-locals=20
 max-returns=5
 
 # Maximum number of branch for function / method body
-max-branches=20
+max-branches=12
 
 # Maximum number of statements in function / method body
-max-statements=60
+max-statements=50
 
 # Maximum number of parents for a class (see R0901).
 max-parents=7
