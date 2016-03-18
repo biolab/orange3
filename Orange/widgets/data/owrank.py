@@ -259,6 +259,8 @@ class OWRank(widget.OWWidget):
             shape = (len(self.measures) + len(self.learners), len(attrs))
             self.measure_scores = table(shape, None)
             self.updateScores()
+        else:
+            self.send("Scores", None)
 
         self.selectMethodChanged()
         self.commit()
@@ -328,10 +330,7 @@ class OWRank(widget.OWWidget):
         self.ranksProxyModel.invalidate()
         self.selectMethodChanged()
 
-        if self.data:
-            self.send("Scores", self.create_scores_table())
-        else:
-            self.send("Scores", None)
+        self.send("Scores", self.create_scores_table())
 
     def updateRankModel(self, measuresMask=None):
         """
