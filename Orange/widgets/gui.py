@@ -1677,7 +1677,7 @@ def valueSlider(widget, master, value, box=None, label=None,
     :rtype: :obj:`PyQt4.QtGui.QSlider`
     """
     if isinstance(labelFormat, str):
-        labelFormat = lambda x, f=labelFormat: f(x)
+        labelFormat = lambda x, f=labelFormat: f % x
 
     sliderBox = widgetBox(widget, box, orientation="horizontal",
                           addToLayout=False)
