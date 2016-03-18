@@ -10,7 +10,8 @@ class _FeatureScorerMixin(LearnerScorer):
     feature_type = Variable
     class_type = ContinuousVariable
 
-    def score(self, model):
+    def score(self, data):
+        model = self(data)
         return model.skl_model.feature_importances_
 
 
