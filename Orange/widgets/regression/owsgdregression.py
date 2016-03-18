@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from PyQt4 import QtGui
 from PyQt4.QtGui import QGridLayout, QLabel
 from PyQt4.QtCore import Qt
@@ -9,7 +7,7 @@ from Orange.regression.linear import SGDRegressionLearner, LinearModel
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
 from Orange.widgets.utils.sql import check_sql_input
-
+from collections import OrderedDict
 
 class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
     name = "Stochastic Gradient Descent"
@@ -42,7 +40,7 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
     learning_rate = settings.Setting(InvScaling)
 
     want_main_area = False
-    resizing_enabled = False
+    resizing_enabled = True
 
     def __init__(self):
         super().__init__()
@@ -120,6 +118,7 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
         box = gui.widgetBox(self.controlArea, "Number of iterations")
         gui.doubleSpin(box, self, "n_iter", 0, 1e+6, step=1)
 
+        
         self._func_params = [epsilon]
         self._penalty_params = [l1_ratio]
         self._lrate_params = [power_t]
@@ -130,6 +129,9 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
         self._on_func_changed()
 
         self.apply()
+        
+
+        
 
     @check_sql_input
     def set_data(self, data):
@@ -196,7 +198,22 @@ class OWSGDRegression(OWProvidesLearner, widget.OWWidget):
         mask = enabled[self.learning_rate]
         for spin, enabled in zip(self._lrate_params, mask):
             spin.setEnabled(enabled)
+    def send_report(self):
+        self.report_items((("Name", self.learner_name),))
+        items=OrderedDict()
 
+        items['Loss Function'] = ["Squared loss", "Huber", "Epsilon Insensitive", "Squared Epsilon Insensitive"][self.loss_function]
+        items['Penalty'] = ["Absolute norm (L1)", "Euclidean norm (L2)", "Elastic Net (both)"][self.penalty_type]
+        items['Learning Rate'] = ["Inverse scaling", "Constant"][self.learning_rate]
+        items['No of iterations']=self.n_iter
+        self.report_items("Model paremeter",items)
+        if self.data:
+            self.report_data("Data", self.data)
+        
+         
+                           
+        
+        
 
 
 if __name__ == "__main__":
@@ -210,4 +227,3 @@ if __name__ == "__main__":
     ow.show()
     a.exec_()
     ow.saveSettings()
-
