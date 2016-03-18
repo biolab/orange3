@@ -401,6 +401,7 @@ class OWRank(widget.OWWidget):
         if self.selectMethod in [OWRank.SelectNone, OWRank.SelectAll,
                                  OWRank.SelectNBest]:
             self.autoSelection()
+        self.ranksView.setFocus()
 
     def nSelectedChanged(self):
         self.selectMethod = OWRank.SelectNBest
@@ -420,8 +421,6 @@ class OWRank(widget.OWWidget):
                 model.index(0, 0),
                 model.index(rowCount - 1, columnCount - 1)
             )
-            selModel.select(selection,
-                            QtGui.QItemSelectionModel.ClearAndSelect)
         elif self.selectMethod == OWRank.SelectNBest:
             nSelected = min(self.nSelected, rowCount)
             selection = QtGui.QItemSelection(
