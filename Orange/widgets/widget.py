@@ -115,6 +115,10 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     #: area to the right of the `controlArea`).
     want_main_area = True
     #: Should the widget construct a `controlArea`.
+    want_standard_buttons_box = "vertical"
+    #: Should the widget construct a `standardButtons` box; valid only if
+    #  `want_control_area` is `True`.
+    # Possible values are "vertical", "horizontal" and None
     want_control_area = True
     #: Widget painted by `Save graph" button
     graph_name = None
@@ -252,22 +256,27 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.layout().addWidget(splitter)
 
         if self.want_control_area:
-            self.controlArea = gui.widgetBox(splitter,
-                                             orientation="vertical",
-                                             margin=0)
+            left_side = gui.vBox(splitter, spacing=0)
             splitter.setSizes([1])  # Results in smallest size allowed by policy
 
-            if self.graph_name is not None or hasattr(self, "send_report"):
-                leftSide = self.controlArea
-                self.controlArea = gui.widgetBox(leftSide, margin=0)
-            if self.graph_name is not None:
-                self.graphButton = gui.button(leftSide, None, "&Save Graph")
-                self.graphButton.clicked.connect(self.save_graph)
-                self.graphButton.setAutoDefault(0)
-            if hasattr(self, "send_report"):
-                self.report_button = gui.button(leftSide, None, "&Report",
-                                                callback=self.show_report)
-                self.report_button.setAutoDefault(0)
+            if self.want_standard_buttons_box:
+                self.controlArea = gui.vBox(
+                    left_side, addSpace=0)
+                self.standardButtons = gui.widgetBox(
+                    left_side, addSpace=0, spacing=9,
+                    orientation=self.want_standard_buttons_box)
+                if self.graph_name is not None:
+                    self.graphButton = gui.button(
+                        self.standardButtons, None, "&Save Graph",
+                        callback=self.save_graph)
+                    self.graphButton.setAutoDefault(0)
+                if hasattr(self, "send_report"):
+                    self.report_button = gui.button(
+                        self.standardButtons, None, "&Report",
+                        callback=self.show_report)
+                    self.report_button.setAutoDefault(0)
+            else:
+                self.controlArea = left_side
 
             if self.want_main_area:
                 self.controlArea.setSizePolicy(QSizePolicy.Fixed,
