@@ -85,7 +85,8 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
         self.report_items((("Name", self.learner_name),))
         self.report_items("Model parameters", (
             ("Number of neighbours", self.n_neighbors),
-            ("Metric", self.metrics[self.metric_index].capitalize())))
+            ("Metric", self.metrics[self.metric_index].capitalize()),
+	    ("Weight", self.weights[self.weight_index].capitalize())))
         if self.data:
             self.report_data("Data", self.data)
 
