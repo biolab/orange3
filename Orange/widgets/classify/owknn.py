@@ -19,6 +19,7 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
     learner_name = Setting("kNN")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
+    weight_index = Setting(0)
 
     def __init__(self):
         super().__init__()
@@ -38,6 +39,13 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
                      items=["Euclidean", "Manhattan", "Maximal", "Mahalanobis"])
         self.metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
 
+        box = gui.widgetBox(box, "Weight")
+        box.setFlat(True)
+
+        gui.comboBox(box, self, "weight_index",
+                     items=["Uniform", "Distance"])
+        self.weights = ["uniform", "distance"]
+
         gui.button(self.controlArea, self, "Apply",
                    callback=self.apply, default=True)
         self.controlArea.layout().addWidget(self.report_button)
@@ -56,6 +64,7 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
         learner = self.LEARNER(
             n_neighbors=self.n_neighbors,
             metric=self.metrics[self.metric_index],
+            weights=self.weights[self.weight_index],
             preprocessors=self.preprocessors
         )
         learner.name = self.learner_name
