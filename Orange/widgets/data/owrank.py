@@ -497,7 +497,8 @@ class OWRank(widget.OWWidget):
             return []
 
     def create_scores_table(self):
-        features = [ContinuousVariable(s[0]) for s in self.measures]
+        measures = self.measures + [v for k, v in self.learners.items()]
+        features = [ContinuousVariable(s[0]) for s in measures]
         metas = [StringVariable("Feature name")]
         domain = Domain(features, metas=metas)
 
