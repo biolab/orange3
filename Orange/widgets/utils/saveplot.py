@@ -22,9 +22,9 @@ def save_plot(data, file_formats, filename=""):
         return
     try:
         writer.write(filename, data)
-    except:
+    except Exception as e:
         QtGui.QMessageBox.critical(
-            None, "Error", "Error occurred while saving file\n" + filename)
+            None, "Error", 'Error occurred while saving file "{}": {}'.format(filename, e))
     else:
         settings.setValue(_LAST_DIR_KEY, os.path.split(filename)[0])
         settings.setValue(_LAST_FILTER_KEY, filter)

@@ -683,7 +683,7 @@ class DotFormat(FileFormat):
     DESCRIPTION = 'Dot graph description'
     SUPPORT_COMPRESSED = True
 
-    @staticmethod
+    @classmethod
     def write_graph(cls, filename, graph):
         from sklearn import tree
         tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))
