@@ -109,7 +109,7 @@ SITE_PACKAGES=$("$PYTHON" -c'import sysconfig as sc; print(sc.get_path("platlib"
 
 echo "Installing/updating setuptools and pip"
 echo "======================================"
-"$PIP" install setuptools==18.* pip==7.*
+"$PIP" install 'setuptools==18.*' 'pip==7.*'
 
 echo "Installing Bottlechest"
 echo "======================"
