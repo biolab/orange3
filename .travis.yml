@@ -3,22 +3,26 @@ language: python
 sudo: false
 dist: trusty
 
-python:
-    - '3.4'
-    - '3.5'
-    - 'nightly'
-
 matrix:
-  allow_failures:
-    - python: nightly
+    include:
+        - env: RUN_PYLINT=true
+          python: '3.4'
+          addons: { apt: { packages: [] } }
+          cache: {}
+        - python: '3.4'
+        - python: '3.5'
+        - python: 'nightly'
+    allow_failures:
+        - python: 'nightly'
+    fast_finish: true
 
 cache:
     apt: true
+    pip: true
+    ccache: true
     directories:
         - $TRAVIS_BUILD_DIR/postgres
         - $TRAVIS_BUILD_DIR/pyqt
-        - $HOME/.cache/pip
-        - $HOME/.ccache
 
 before_cache:
 
@@ -35,21 +39,10 @@ before_install:
     - set -e  # fail on any error
 
 install:
-    - source $TRAVIS_BUILD_DIR/.travis/install.sh
-    - source $TRAVIS_BUILD_DIR/.travis/install_postgres.sh
-    - source $TRAVIS_BUILD_DIR/.travis/install_pyqt.sh
-    - source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
-    - pip install codecov
+    - source $TRAVIS_BUILD_DIR/.travis/stage_install.sh
 
 script:
-    - cd "$ORANGE_DIR"
-    - python -c "from Orange.tests import *"
-    - cp "$TRAVIS_BUILD_DIR"/.coveragerc ./  # for covereage and codecov
-    - PYTHONUNBUFFERED=x coverage run --source=Orange -m unittest -v Orange.tests
+    - source $TRAVIS_BUILD_DIR/.travis/stage_script.sh
 
 after_success:
-    - codecov
-    - cd $TRAVIS_BUILD_DIR
-    - if [ $TRAVIS_REPO_SLUG = biolab/orange3 ] && [ $TRAVIS_PULL_REQUEST = false ]; then
-        source $TRAVIS_BUILD_DIR/.travis/upload_doc.sh;
-      fi
+    - source $TRAVIS_BUILD_DIR/.travis/stage_after_success.sh
