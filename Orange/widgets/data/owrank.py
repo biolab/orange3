@@ -40,6 +40,9 @@ SCORES = [
     score_meta("Information Gain", "Inf. gain", score.InfoGain),
     score_meta("Gain Ratio", "Gain Ratio", score.GainRatio),
     score_meta("Gini Gain", "Gini", score.Gini),
+    score_meta("ANOVA", "ANOVA", score.ANOVA),
+    score_meta("Chi2", "Chi2", score.Chi2),
+    score_meta("Univariate Linear Regression", "Univar. Lin. Reg.", score.UnivariateLinearRegression),
     score_meta("ReliefF", "ReliefF", score.ReliefF),
     score_meta("RReliefF", "RReliefF", score.RReliefF),
     score_meta("FCBF", "FCBF", score.FCBF),
@@ -315,7 +318,15 @@ class OWRank(widget.OWWidget):
                 continue
             if index < len(self.measures):
                 estimator = meas.score()
-                self.measure_scores[index] = estimator(data)
+                try:
+                    self.measure_scores[index] = estimator(data)
+                except ValueError:
+                    self.measure_scores[index] = []
+                    for attr in data.domain.attributes:
+                        try:
+                            self.measure_scores[index].append(estimator(data,attr))
+                        except ValueError:
+                            self.measure_scores[index].append(None)
             else:
                 learner = meas.score
                 if isinstance(learner, Learner) and \

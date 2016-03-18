@@ -7,7 +7,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
-from Orange.preprocess.preprocess import Discretize
+from Orange.preprocess.preprocess import Discretize, Impute
 from Orange.util import abstract
 
 
@@ -79,7 +79,8 @@ class Chi2(SklScorer):
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
     preprocessors = [
-        Discretize(remove_const=False)
+        Discretize(remove_const=False),
+        Impute()
     ]
 
     def score(self, X, y):
@@ -97,6 +98,9 @@ class ANOVA(SklScorer):
     __wraps__ = skl_fss.f_classif
     feature_type = ContinuousVariable
     class_type = DiscreteVariable
+    preprocessors = [
+        Impute()
+    ]
 
     def score(self, X, y):
         f, p = skl_fss.f_classif(X, y)
@@ -113,6 +117,9 @@ class UnivariateLinearRegression(SklScorer):
     __wraps__ = skl_fss.f_regression
     feature_type = ContinuousVariable
     class_type = ContinuousVariable
+    preprocessors = [
+        Impute()
+    ]
 
     def score(self, X, y):
         f, p = skl_fss.f_regression(X, y)
