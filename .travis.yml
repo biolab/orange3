@@ -8,6 +8,10 @@ python:
     - '3.5'
     - 'nightly'
 
+matrix:
+  allow_failures:
+    - python: nightly
+
 cache:
     apt: true
     directories:
@@ -38,9 +42,10 @@ install:
     - pip install codecov
 
 script:
-    - cd $TRAVIS_BUILD_DIR/dist/Orange-*
+    - cd "$ORANGE_DIR"
     - python -c "from Orange.tests import *"
-    - PYTHONUNBUFFERED=x coverage run --source=Orange setup.py test
+    - cp "$TRAVIS_BUILD_DIR"/.coveragerc ./  # for covereage and codecov
+    - PYTHONUNBUFFERED=x coverage run --source=Orange -m unittest -v Orange.tests
 
 after_success:
     - codecov

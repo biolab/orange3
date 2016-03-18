@@ -33,11 +33,10 @@ def deprecated(obj):
 
     Examples
     --------
-    >>> import sys; old_stderr, sys.stderr = sys.stderr, sys.stdout  # So doctest can catch that warning
     >>> @deprecated
     ... def old():
     ...     return 'old behavior'
-    >>> old()
+    >>> old()  # doctest: +SKIP
     /... OrangeDeprecationWarning: Call to deprecated ... old ...
     'old behavior'
 
@@ -47,11 +46,10 @@ def deprecated(obj):
     ...         return 'old behavior'
     ...     def new(self):
     ...         return 'new behavior'
-    >>> C().old()
+    >>> C().old() # doctest: +SKIP
     /... OrangeDeprecationWarning: Call to deprecated ... C.old ...
       Instead, use C.new() ...
     'old behavior'
-    >>> sys.stderr = old_stderr  # !!
     """
     alternative = ('; Instead, use ' + obj) if isinstance(obj, str) else ''
 

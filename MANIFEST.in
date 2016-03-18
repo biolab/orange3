@@ -1,0 +1,20 @@
+
+recursive-include Orange *.pyx *.py *.c *.cpp
+recursive-include Orange/datasets *.tab *.basket *.info
+
+recursive-include Orange/tests *.tab *.basket *.xlsx
+
+recursive-include Orange/canvas *.qss *ico *.png *.svg *.ico *.html
+recursive-include Orange/canvas/application/tutorials *.ows
+
+recursive-include Orange/widgets *.png *.svg
+recursive-include Orange/widgets/utils/plot *.fs *.vs *.gs *.obj
+
+include requirements*.txt
+
+include README.md
+include CONTRIBUTING.md
+include COPYING
+include LICENSE
+include setup.py
+include setup.cfg

@@ -101,6 +101,9 @@ class FeatureScoringTest(unittest.TestCase):
         found = sorted([self.adult.domain[attr].name for attr in weights.argsort()[-2:]])
         reference = ['marital-status', 'relationship']
         self.assertEqual(found, reference)
+        # Ensure it doesn't crash on missing target class values
+        old_monk.Y[0] = np.nan
+        weights = score.ReliefF()(old_monk, None)
 
     def test_rrelieff(self):
         X = np.random.random((100, 5))

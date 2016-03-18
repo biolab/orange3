@@ -365,6 +365,9 @@ cdef tuple prepare(X, y, is_discrete, Contingencies &contingencies):
         X[:, is_continuous] -= row_min[is_continuous]
         X[:, is_continuous] /= row_ptp[is_continuous]
     y = np.array(y, dtype=np.float64)
+    is_defined = np.logical_not(np.isnan(y))
+    X = X[is_defined]
+    y = y[is_defined]
     attr_stats = np.row_stack((np.nanmean(X, 0), np.nanstd(X, 0)))
     is_discrete = np.asarray(is_discrete, dtype=np.int8)
     contingency_tables(X, y, is_discrete, contingencies)

@@ -14,17 +14,15 @@ from Orange.preprocess import discretize
 class ScoringTest(unittest.TestCase):
     def test_Recall(self):
         data = Table('iris')
-        learner = LogisticRegressionLearner()
+        learner = LogisticRegressionLearner(preprocessors=[])
         results = TestOnTrainingData(data, [learner])
-        self.assertGreater(Recall(results)[0], 0.9)
-        self.assertEqual(round(Recall(results)[0], 3), 0.927)
+        self.assertAlmostEqual(Recall(results)[0], 0.960, 3)
 
     def test_Precision(self):
         data = Table('iris')
-        learner = LogisticRegressionLearner()
+        learner = LogisticRegressionLearner(preprocessors=[])
         results = TestOnTrainingData(data, [learner])
-        self.assertGreater(Precision(results)[0], 0.9)
-        self.assertEqual(round(Precision(results)[0], 3), 0.928)
+        self.assertAlmostEqual(Precision(results)[0], 0.962, 3)
 
 
 class Scoring_CA_Test(unittest.TestCase):
