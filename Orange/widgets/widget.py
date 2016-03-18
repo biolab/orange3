@@ -115,7 +115,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     want_main_area = True
     #: Should the widget construct a `controlArea`.
     want_control_area = True
-    #: Attribute saved by `Save graph" button or a tuple (attribute, writers)
+    #: Widget painted by `Save graph" button
     graph_name = None
     graph_writers = FileFormat.img_writers
     want_status_bar = False
