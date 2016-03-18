@@ -507,7 +507,9 @@ class OWRank(widget.OWWidget):
         # Reshape to 2d array as Table does not like 1d arrays
         feature_names = feature_names[:, None]
 
-        return Orange.data.Table(domain, scores, metas=feature_names)
+        table = Orange.data.Table(domain, scores, metas=feature_names)
+        table.name = "Feature Scores"
+        return table
 
 
 class ScoreValueItem(QtGui.QStandardItem):
