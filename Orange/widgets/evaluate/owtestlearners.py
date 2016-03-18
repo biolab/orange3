@@ -599,10 +599,11 @@ class OWTestLearners(widget.OWWidget):
                       format(self.k_folds))]
         elif self.resampling == self.LeaveOneOut:
             items = [("Sampling type", "Leave one out")]
-        elif self.resampling == self.Bootstrap:
-            items = [("Sampling type",
-                      "{} random samples with {} % data ".format(
-                          self.n_repeat, self.sample_p))]
+        ## reporting for this widget doenst work without furter references for Bootstrap
+        #elif self.resampling == self.Bootstrap:
+        #     items = [("Sampling type",
+        #              "{} random samples with {} % data ".format(
+        #                   self.n_repeat, self.sample_p))]
         elif self.resampling == self.TestOnTrain:
             items = [("Sampling type", "No sampling, test on training data")]
         elif self.resampling == self.TestOnTest:
