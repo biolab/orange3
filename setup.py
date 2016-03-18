@@ -14,7 +14,7 @@ except ImportError:
 
 NAME = 'Orange'
 
-VERSION = '3.3'
+VERSION = '3.3.1'
 ISRELEASED = False
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
