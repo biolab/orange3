@@ -541,10 +541,19 @@ class ScoreValueItem(QtGui.QStandardItem):
 
 
 class MySortProxyModel(QtGui.QSortFilterProxyModel):
+
+    @staticmethod
+    def comparable(val):
+        return val is not None and float('-inf') < val < float('inf')
+
     def lessThan(self, left, right):
         role = self.sortRole()
         left_data = left.data(role)
+        if not self.comparable(left_data):
+            left_data = float('-inf')
         right_data = right.data(role)
+        if not self.comparable(right_data):
+            right_data = float('-inf')
         try:
             return left_data < right_data
         except TypeError:
