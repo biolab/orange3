@@ -236,8 +236,8 @@ class OWMosaicDisplay(OWWidget):
             filters = filters[0]
         self.send("Selected Data", filters(self.data))
 
-    def show_report(self):
-        self.report_plot()
+    def send_report(self):
+        self.report_plot(self.canvas)
 
     def update_graph(self):
         spacing = self.SPACING
@@ -482,7 +482,10 @@ class OWMosaicDisplay(OWWidget):
                          for i in range(len(used_vals))))
                 actual = conditionaldict[attr_vals]
                 pearson = (actual - expected) / sqrt(expected)
-                ind = max(0, min(int(log(abs(pearson), 2)), 3))
+                if pearson == 0:
+                    ind = 0
+                else:
+                    ind = max(0, min(int(log(abs(pearson), 2)), 3))
                 color = [self.RED_COLORS, self.BLUE_COLORS][pearson > 0][ind]
                 rect(x0, y0, x1 - x0, y1 - y0, -20, color)
                 outer_rect.setToolTip(
