@@ -138,6 +138,8 @@ class OWBoxPlot(widget.OWWidget):
     _label_font.setPixelSize(11)
     _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
 
+
+    want_standard_buttons_box = "horizontal"
     graph_name = "box_scene"
 
     def __init__(self):

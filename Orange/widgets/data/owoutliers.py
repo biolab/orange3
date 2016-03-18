@@ -23,6 +23,7 @@ class OWOutliers(widget.OWWidget):
     outputs = [("Inliers", Table), ("Outliers", Table)]
 
     want_main_area = False
+    want_standard_buttons_box = "horizontal"
 
     OneClassSVM, Covariance = range(2)
 
@@ -80,7 +81,7 @@ class OWOutliers(widget.OWWidget):
 
         gui.separator(detection, 12)
 
-        gui.button(self.controlArea, self, "Detect Outliers",
+        gui.button(self.standardButtons, self, "Detect Outliers",
                    callback=self.commit)
         self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 

@@ -98,6 +98,7 @@ class OWDistributions(widget.OWWidget):
     smoothing_index = settings.Setting(5)
     show_prob = settings.ContextSetting(0)
 
+    want_standard_buttons_box = "horizontal"
     graph_name = "plot"
 
     ASH_HIST = 50
@@ -183,8 +184,6 @@ class OWDistributions(widget.OWWidget):
         self.update_views()
         self.ploti.vb.sigResized.connect(self.update_views)
         self.plot_prob.setRange(yRange=[0,1])
-
-        self.inline_graph_report()
 
         def disable_mouse(plot):
             plot.setMouseEnabled(False, False)

@@ -763,6 +763,8 @@ class OWPaintData(widget.OWWidget):
     priority = 10
     keywords = ["data", "paint", "create"]
 
+    want_standard_buttons_box = "horizontal"
+
     outputs = [("Data", Orange.data.Table)]
     inputs = [("Data", Orange.data.Table, "set_data")]
 
