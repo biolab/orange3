@@ -82,7 +82,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.loaded_file = ""
 
         layout = QtGui.QGridLayout()
-        vLayout = QtGui.QVBoxLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
         vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
                                 callback=self.load_data, addToLayout=False)
@@ -94,13 +93,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.activated[int].connect(self.select_file)
-        self.sheet_combo = QtGui.QComboBox(box)
-        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        self.sheet_combo.activated[str].connect(self.select_sheet)
-        self.sheet_combo.setVisible(False)
-        vLayout.addWidget(self.file_combo)
-        vLayout.addWidget(self.sheet_combo)
-        layout.addLayout(vLayout, 0, 1)
+        box.layout().addWidget(self.file_combo)
         button = gui.button(
             box, self, '...', callback=self.browse_file, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
@@ -108,11 +101,26 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         button = gui.button(
             box, self, "Reload", callback=self.reload, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        button.setSizePolicy(Policy.Fixed, Policy.Fixed)
-        layout.addWidget(box, 0, 2,  QtCore.Qt.AlignVCenter)
+        button.setSizePolicy(Policy.Fixed, Policy.Fixed) 
+        hB = QtGui.QHBoxLayout()
+        self.sheet_combo = QtGui.QComboBox()
+        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_combo.activated[str].connect(self.select_sheet)
+        self.sheet_combo.setVisible(False)
+        self.sheet_label = QtGui.QLabel()
+        self.sheet_label.setText('Sheet')
+        self.sheet_label.setFixedWidth(45)
+        self.sheet_label.hide()
+        self.sheet_combo.setMaximumWidth(175)
+        
+        layout.addLayout(hB,2,1,QtCore.Qt.AlignVCenter) 
+        hB.addWidget(self.sheet_label,QtCore.Qt.AlignLeft)
+        hB.addWidget(self.sheet_combo,QtCore.Qt.AlignVCenter)
+        layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
-        layout.addWidget(rb_button, 1, 0, QtCore.Qt.AlignVCenter)
+        layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
 
         box = gui.hBox(vbox, addToLayout=False)
         self.url_combo = url_combo = QtGui.QComboBox()
@@ -128,7 +136,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_edit.setTextMargins(l + 5, t, r, b)
         box.layout().addWidget(url_combo)
         url_combo.activated.connect(self._url_set)
-        layout.addWidget(box, 1, 1, QtCore.Qt.AlignVCenter)
+        layout.addWidget(box, 3, 1, QtCore.Qt.AlignVCenter)
 
         box = gui.vBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, 'No data loaded.')
@@ -214,6 +222,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             book = open_workbook(path)
             sheets = book.nsheets
             if sheets > 1:
+                self.sheet_label.setVisible(True)
                 self.sheet_combo.setVisible(True)
                 self.sheet_combo.clear()
                 for i in range(0, sheets):
@@ -221,6 +230,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     self.sheet_combo.addItem(sheetname)
         else:
             self.sheet_combo.hide()
+            self.sheet_label.hide()
 
     @staticmethod
     def is_multisheet_excel(fn):
