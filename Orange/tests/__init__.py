@@ -26,12 +26,16 @@ def named_file(content, encoding=None):
         os.remove(name)
 
 
-def suite():
+def suite(loader=None, pattern='test*.py'):
     test_dir = os.path.dirname(__file__)
+    if loader is None:
+        loader = unittest.TestLoader()
+    if pattern is None:
+        pattern = 'test*.py'
     all_tests = [
-        unittest.TestLoader().discover(test_dir),
+        loader.discover(test_dir, pattern),
     ]
-    load = unittest.TestLoader().loadTestsFromModule
+    load = loader.loadTestsFromModule
 
     if run_widget_tests:
         all_tests.extend([
@@ -49,6 +53,11 @@ def suite():
 
 
 test_suite = suite()
+
+
+def load_tests(loader, tests, pattern):
+    return suite(loader, pattern)
+
 
 if __name__ == '__main__':
     unittest.main(defaultTest='suite')
