@@ -102,7 +102,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             box, self, "Reload", callback=self.reload, autoDefault=False)
         button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
         button.setSizePolicy(Policy.Fixed, Policy.Fixed) 
-        hB = QtGui.QHBoxLayout()
+        hBLayout = QtGui.QHBoxLayout()
         self.sheet_combo = QtGui.QComboBox()
         self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
@@ -114,9 +114,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.sheet_label.hide()
         self.sheet_combo.setMaximumWidth(175)
         
-        layout.addLayout(hB,2,1,QtCore.Qt.AlignVCenter) 
-        hB.addWidget(self.sheet_label,QtCore.Qt.AlignLeft)
-        hB.addWidget(self.sheet_combo,QtCore.Qt.AlignVCenter)
+        layout.addLayout(hBLayout, 2, 1,  QtCore.Qt.AlignVCenter) 
+        hBLayout.addWidget(self.sheet_label,QtCore.Qt.AlignLeft)
+        hBLayout.addWidget(self.sheet_combo,QtCore.Qt.AlignVCenter)
         layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
