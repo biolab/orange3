@@ -11,7 +11,7 @@ from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
     QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle, \
-    QWidget
+    QWidget, QPushButton
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
@@ -19,7 +19,7 @@ from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
-from Orange.widgets.utils import vartype, saveplot, getdeepattr
+from Orange.widgets.utils import saveplot, getdeepattr
 from .utils.overlay import MessageOverlayWidget
 
 
@@ -115,10 +115,13 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     #: area to the right of the `controlArea`).
     want_main_area = True
     #: Should the widget construct a `controlArea`.
-    want_standard_buttons_box = "vertical"
+    want_buttons_area = "auto"
     #: Should the widget construct a `standardButtons` box; valid only if
     #  `want_control_area` is `True`.
-    # Possible values are "vertical", "horizontal" and None
+    # Possible values are "vertical", "horizontal", "auto" and None.
+    # "auto" uses vertical if there are three default buttons or more,
+    # and horizontal otherwise. If "box" is added (e.g. "vertical box"),
+    # the button will be placed in a visible box.
     want_control_area = True
     #: Widget painted by `Save graph" button
     graph_name = None
@@ -191,7 +194,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.__msgchoice = 0
 
         if self.want_basic_layout:
-            self.insertLayout()
+            self.set_basic_layout()
 
         sc = QShortcut(QKeySequence(Qt.ShiftModifier | Qt.Key_F1), self)
         sc.activated.connect(self.__quicktip)
@@ -202,47 +205,33 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         """QDialog __init__ was already called in __new__,
         please do not call it here."""
 
-    def inline_graph_report(self):
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        box.layout().addWidget(self.graphButton)
-        box.layout().addWidget(self.report_button)
-#        self.report_button_background.hide()
-#        self.graphButtonBackground.hide()
-
     @classmethod
     def get_flags(cls):
         return (Qt.Window if cls.resizing_enabled
                 else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
+    # Construction of standard widget layout
     class Splitter(QSplitter):
         def createHandle(self):
-            return self.Handle(self.orientation(), self,
-                                   cursor=Qt.PointingHandCursor)
+            return self.Handle(
+                self.orientation(), self, cursor=Qt.PointingHandCursor)
+
         class Handle(QSplitterHandle):
             def mouseReleaseEvent(self, event):
                 if event.button() == Qt.LeftButton:
                     splitter = self.splitter()
                     splitter.setSizes([int(splitter.sizes()[0] == 0), 1000])
                 super().mouseReleaseEvent(event)
+
             def mouseMoveEvent(self, event):
                 return  # Prevent moving; just show/hide
 
-    # noinspection PyAttributeOutsideInit
-    def insertLayout(self):
-        def createPixmapWidget(self, parent, iconName):
-            w = QLabel(parent)
-            parent.layout().addWidget(w)
-            w.setFixedSize(16, 16)
-            w.hide()
-            if os.path.exists(iconName):
-                w.setPixmap(QPixmap(iconName))
-            return w
+    def _insert_splitter(self):
+        self.splitter = self.Splitter(Qt.Horizontal, self)
+        self.layout().addWidget(self.splitter)
 
-        self.setLayout(QVBoxLayout())
-        self.layout().setContentsMargins(2, 2, 2, 2)
-
-        self.warning_bar = gui.widgetBox(self, orientation="horizontal",
-                                         margin=0, spacing=0)
+    def _insert_warning_bar(self):
+        self.warning_bar = gui.hBox(self, spacing=0)
         self.warning_icon = gui.widgetLabel(self.warning_bar, "")
         self.warning_label = gui.widgetLabel(self.warning_bar, "")
         self.warning_label.setStyleSheet("padding-top: 5px")
@@ -250,74 +239,98 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         gui.rubber(self.warning_bar)
         self.warning_bar.setVisible(False)
 
-        self.want_main_area = self.graph_name is not None or self.want_main_area
-
-        splitter = self.Splitter(Qt.Horizontal, self)
-        self.layout().addWidget(splitter)
-
-        if self.want_control_area:
-            left_side = gui.vBox(splitter, spacing=0)
-            splitter.setSizes([1])  # Results in smallest size allowed by policy
-
-            if self.want_standard_buttons_box:
-                self.controlArea = gui.vBox(
-                    left_side, addSpace=0)
-                self.standardButtons = gui.widgetBox(
-                    left_side, addSpace=0, spacing=9,
-                    orientation=self.want_standard_buttons_box)
-                if self.graph_name is not None:
-                    self.graphButton = gui.button(
-                        self.standardButtons, None, "&Save Graph",
-                        callback=self.save_graph)
-                    self.graphButton.setAutoDefault(0)
-                if hasattr(self, "send_report"):
-                    self.report_button = gui.button(
-                        self.standardButtons, None, "&Report",
-                        callback=self.show_report)
-                    self.report_button.setAutoDefault(0)
-            else:
-                self.controlArea = left_side
-
-            if self.want_main_area:
-                self.controlArea.setSizePolicy(QSizePolicy.Fixed,
-                                               QSizePolicy.MinimumExpanding)
-            self.controlArea.layout().setContentsMargins(4, 4, 0 if self.want_main_area else 4, 4)
+    def _insert_control_area(self):
+        self.left_side = gui.vBox(self.splitter, spacing=0)
+        self.splitter.setSizes([1])  # Smallest size allowed by policy
+        if self.want_buttons_area:
+            self.controlArea = gui.vBox(self.left_side, addSpace=0)
+            self._insert_buttons_area()
+        else:
+            self.controlArea = self.left_side
         if self.want_main_area:
-            self.mainArea = gui.widgetBox(splitter,
-                                          orientation="vertical",
-                                          margin=4,
-                                          sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-                                                                 QSizePolicy.Expanding))
-            splitter.setCollapsible(1, False)
-            self.mainArea.layout().setContentsMargins(0 if self.want_control_area else 4, 4, 4, 4)
+            self.controlArea.setSizePolicy(
+                QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
+            m = 0
+        else:
+            m = 4
+        self.controlArea.layout().setContentsMargins(m, m, m, m)
 
-        if self.want_status_bar:
-            self.widgetStatusArea = QFrame(self)
-            self.statusBarIconArea = QFrame(self)
-            self.widgetStatusBar = QStatusBar(self)
+    def _insert_buttons_area(self):
+        buttons = []
+        if self.graph_name is not None:
+            self.graphButton = QPushButton("&Save Graph", autoDefault=False)
+            self.graphButton.clicked.connect(self.save_graph)
+            buttons.append(self.graphButton)
+        if hasattr(self, "send_report"):
+            self.report_button = QPushButton("&Report", autoDefault=False)
+            self.report_button.clicked.connect(self.show_report)
+            buttons.append(self.report_button)
+        orientation = self.want_buttons_area
+        if orientation == "auto":
+            orientation = "horizontal" if len(buttons) <= 2 else "vertical"
+        self.buttonsArea = gui.widgetBox(
+            self.left_side, addSpace=0, spacing=9, orientation=orientation)
+        for button in buttons:
+            self.buttonsArea.layout().addWidget(button)
 
-            self.layout().addWidget(self.widgetStatusArea)
+    def _insert_main_area(self):
+        self.mainArea = gui.vBox(
+            self.splitter, margin=4,
+            sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        )
+        self.splitter.setCollapsible(1, False)
+        if self.want_control_area:
+            self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
+        else:
+            self.mainArea.layout().setContentsMargins(4, 4, 4, 4)
 
-            self.widgetStatusArea.setLayout(QHBoxLayout(self.widgetStatusArea))
-            self.widgetStatusArea.layout().addWidget(self.statusBarIconArea)
-            self.widgetStatusArea.layout().addWidget(self.widgetStatusBar)
-            self.widgetStatusArea.layout().setContentsMargins(0, 0, 0, 0)
-            self.widgetStatusArea.setFrameShape(QFrame.StyledPanel)
+    def _insert_status_bar(self):
+        self.widgetStatusArea = status_area = QFrame(self)
+        status_area.setLayout(QHBoxLayout(status_area))
+        status_area.layout().setContentsMargins(0, 0, 0, 0)
+        status_area.setFrameShape(QFrame.StyledPanel)
+        self.layout().addWidget(status_area)
 
-            self.statusBarIconArea.setLayout(QHBoxLayout())
-            self.widgetStatusBar.setSizeGripEnabled(0)
+        self.statusBarIconArea = QFrame(self)
+        self.statusBarIconArea.setLayout(QHBoxLayout())
+        self.statusBarIconArea.hide()
+        status_area.layout().addWidget(self.statusBarIconArea)
 
-            self.statusBarIconArea.hide()
+        self.widgetStatusBar = QStatusBar(self)
+        self.widgetStatusBar.setSizeGripEnabled(0)
+        status_area.layout().addWidget(self.widgetStatusBar)
 
-            self._warningWidget = createPixmapWidget(
-                self.statusBarIconArea,
-                gui.resource_filename("icons/triangle-orange.png"))
-            self._errorWidget = createPixmapWidget(
-                self.statusBarIconArea,
-                gui.resource_filename("icons/triangle-red.png"))
+        for attr, name in (("_warningWidget", "icons/triangle-orange.png"),
+                           ("_errorWidget", "icons/triangle-red.png")):
+            w = QLabel(self.statusBarIconArea)
+            self.statusBarIconArea.layout().addWidget(w)
+            w.setFixedSize(16, 16)
+            w.hide()
+            filename = gui.resource_filename(name)
+            if os.path.exists(filename):
+                w.setPixmap(QPixmap(filename))
+            setattr(self, attr, w)
 
+    def set_basic_layout(self):
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(2, 2, 2, 2)
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
+
+        self.want_main_area = self.want_main_area or self.graph_name
+        self._insert_warning_bar()
+        self._insert_splitter()
+        if self.want_control_area:
+            self._insert_control_area()
+        if self.want_main_area:
+            self._insert_main_area()
+        if self.want_status_bar:
+            self._insert_status_bar()
+
+    def inline_graph_report(self):
+        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        box.layout().addWidget(self.graphButton)
+        box.layout().addWidget(self.report_button)
 
     def save_graph(self):
         graph_obj = getdeepattr(self, self.graph_name, None)
