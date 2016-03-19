@@ -158,9 +158,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
+        self.fill_sheet_combo(self.last_path())
         QtCore.QTimer.singleShot(0, self.load_data)
-        QtCore.QTimer.singleShot(
-            0, lambda: self.fill_sheet_combo(self.last_path()))
 
     def reload(self):
         if self.recent_paths:
@@ -223,12 +222,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if os.path.exists(path) and self.is_multisheet_excel(path):
             book = open_workbook(path)
             sheets = book.nsheets
-            if sheets > 1:
-                self.sheet_combo.clear()
-                self.hBLayout.show()
-                for i in range(0, sheets):
-                    sheetname = str(book.sheet_by_index(i).name)
-                    self.sheet_combo.addItem(sheetname)
+            self.sheet_combo.clear()
+            self.hBLayout.show()
+            for i in range(0, sheets):
+                sheetname = str(book.sheet_by_index(i).name)
+                self.sheet_combo.addItem(sheetname)
         else:
             self.hBLayout.hide()
 
