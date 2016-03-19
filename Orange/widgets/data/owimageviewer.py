@@ -335,6 +335,7 @@ class OWImageViewer(widget.OWWidget):
     zoom = settings.Setting(25)
     autoCommit = settings.Setting(False)
 
+    want_buttons_area = "vertical"
     graph_name = "scene"
 
     def __init__(self):
@@ -369,12 +370,10 @@ class OWImageViewer(widget.OWWidget):
             callback=self.updateZoom,
             createLabel=False
         )
-
-        gui.separator(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "autoCommit",
-                        "Commit", "Auto commit")
-
         gui.rubber(self.controlArea)
+
+        gui.auto_commit(self.buttonsArea, self, "autoCommit",
+                        "Commit", "Auto commit", box=False)
 
         self.scene = GraphicsScene()
         self.sceneView = QGraphicsView(self.scene, self)

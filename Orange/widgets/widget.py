@@ -258,7 +258,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     def _insert_buttons_area(self):
         buttons = []
         if self.graph_name is not None:
-            self.graphButton = QPushButton("&Save Graph", autoDefault=False)
+            self.graphButton = QPushButton("&Save Image", autoDefault=False)
             self.graphButton.clicked.connect(self.save_graph)
             buttons.append(self.graphButton)
         if hasattr(self, "send_report"):

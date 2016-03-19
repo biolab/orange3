@@ -416,9 +416,10 @@ class OWSelectAttributes(widget.OWWidget):
 
         autobox = gui.auto_commit(None, self, "auto_commit", "Apply", "Auto apply")
         layout.addWidget(autobox, 3, 0, 1, 3)
-        gui.separator(autobox, 40)
-        reset = gui.button(autobox, self, "Reset", callback=self.reset)
-        autobox.layout().addWidget(self.report_button)
+        reset = gui.button(None, self, "Reset", callback=self.reset)
+        autobox.layout().insertWidget(0, self.report_button)
+        autobox.layout().insertWidget(1, reset)
+        autobox.layout().insertSpacing(2, 40)
         reset.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
         self.report_button.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
 

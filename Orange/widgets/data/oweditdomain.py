@@ -380,7 +380,7 @@ class OWEditDomain(widget.OWWidget):
             self._on_selection_changed)
         box.layout().addWidget(self.domain_view)
 
-        box = gui.vBox(self.controlArea, "Reset")
+        box = gui.hBox(self.controlArea)
         gui.button(box, self, "Reset selected", callback=self.reset_selected)
         gui.button(box, self, "Reset all", callback=self.reset_all)
 

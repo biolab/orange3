@@ -22,6 +22,7 @@ class OWContinuize(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     want_main_area = False
+    want_buttons_area = "vertical"
     resizing_enabled = False
 
     multinomial_treatment = Setting(0)
@@ -84,7 +85,7 @@ class OWContinuize(widget.OWWidget):
             btnLabels=self.value_ranges,
             callback=self.settings_changed)
 
-        gui.auto_commit(self.controlArea, self, "autosend", "Apply")
+        gui.auto_commit(self.buttonsArea, self, "autosend", "Apply", box=False)
 
         self.data = None
 

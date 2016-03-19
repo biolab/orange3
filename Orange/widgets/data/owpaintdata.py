@@ -763,8 +763,6 @@ class OWPaintData(widget.OWWidget):
     priority = 10
     keywords = ["data", "paint", "create"]
 
-    want_standard_buttons_box = "horizontal"
-
     outputs = [("Data", Orange.data.Table)]
     inputs = [("Data", Orange.data.Table, "set_data")]
 
@@ -917,7 +915,7 @@ class OWPaintData(widget.OWWidget):
         form.addRow("Intensity", slider)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "autocommit",
+        gui.auto_commit(self.left_side, self, "autocommit",
                         "Send", "Send on change")
 
         # main area GUI

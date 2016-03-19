@@ -115,15 +115,9 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        gui.separator(self.controlArea, 8)
-
-        box = gui.hBox(self.controlArea, box=True)
-        box.layout().addWidget(self.report_button)
-        gui.separator(box, 20)
-        gui.button(
-            box, self, self.tr("Apply Changes"),
-            callback=self.apply, default=True
-        )
+        gui.separator(self.buttonsArea, 20)
+        gui.button(self.buttonsArea, self, "Apply Changes",
+                   callback=self.apply, default=True)
 
     @check_sql_input
     def set_primary_data(self, data):
