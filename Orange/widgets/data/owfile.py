@@ -93,36 +93,38 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.activated[int].connect(self.select_file)
-        box.layout().addWidget(self.file_combo)
-        button = gui.button(
-            box, self, '...', callback=self.browse_file, autoDefault=False)
-        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(Policy.Maximum, Policy.Fixed)
-        button = gui.button(
-            box, self, "Reload", callback=self.reload, autoDefault=False)
-        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        button.setSizePolicy(Policy.Fixed, Policy.Fixed) 
-        hBLayout = QtGui.QHBoxLayout()
+        layout.addWidget(self.file_combo, 0, 1)
+
+        fileButton = gui.button(
+            None, self, '...', callback=self.browse_file, autoDefault=False)
+        fileButton.setIcon(self.style().standardIcon(
+            QtGui.QStyle.SP_DirOpenIcon))
+        fileButton.setSizePolicy(Policy.Maximum, Policy.Fixed)
+        layout.addWidget(fileButton, 0, 2)
+
+        reloadButton = gui.button(
+            None, self, "Reload", callback=self.reload, autoDefault=False)
+        reloadButton.setIcon(self.style().standardIcon(
+            QtGui.QStyle.SP_BrowserReload))
+        reloadButton.setSizePolicy(Policy.Fixed, Policy.Fixed)
+        layout.addWidget(reloadButton, 0, 3)
+
+        self.hBLayout = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = QtGui.QComboBox()
-        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        self.sheet_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_combo.setSizePolicy(
+            Policy.MinimumExpanding, Policy.MinimumExpanding)
         self.sheet_combo.activated[str].connect(self.select_sheet)
-        self.sheet_combo.setVisible(False)
         self.sheet_label = QtGui.QLabel()
         self.sheet_label.setText('Sheet')
-        self.sheet_label.setFixedWidth(45)
-        self.sheet_label.hide()
-        self.sheet_combo.setMaximumWidth(175)
-        
-        layout.addLayout(hBLayout, 2, 1,  QtCore.Qt.AlignVCenter) 
-        hBLayout.addWidget(self.sheet_label,QtCore.Qt.AlignLeft)
-        hBLayout.addWidget(self.sheet_combo,QtCore.Qt.AlignVCenter)
-        layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
+        self.sheet_label.setSizePolicy(
+            Policy.MinimumExpanding, Policy.MinimumExpanding)
+        self.hBLayout.layout().addWidget(self.sheet_label, QtCore.Qt.AlignLeft)
+        self.hBLayout.layout().addWidget(self.sheet_combo, QtCore.Qt.AlignVCenter)
+        layout.addWidget(self.hBLayout, 2, 1)	
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
         layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
 
-        box = gui.hBox(vbox, addToLayout=False)
         self.url_combo = url_combo = QtGui.QComboBox()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
@@ -134,9 +136,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_edit = url_combo.lineEdit()
         l, t, r, b = url_edit.getTextMargins()
         url_edit.setTextMargins(l + 5, t, r, b)
-        box.layout().addWidget(url_combo)
+        layout.addWidget(url_combo, 3, 1, 3, 3)
         url_combo.activated.connect(self._url_set)
-        layout.addWidget(box, 3, 1, QtCore.Qt.AlignVCenter)
 
         box = gui.vBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, 'No data loaded.')
@@ -158,6 +159,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
         QtCore.QTimer.singleShot(0, self.load_data)
+        QtCore.QTimer.singleShot(
+            0, lambda: self.fill_sheet_combo(self.last_path()))
 
     def reload(self):
         if self.recent_paths:
@@ -216,21 +219,18 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.fill_sheet_combo(filename)
         self.load_data()
 
-
     def fill_sheet_combo(self, path):
         if os.path.exists(path) and self.is_multisheet_excel(path):
             book = open_workbook(path)
             sheets = book.nsheets
             if sheets > 1:
-                self.sheet_label.setVisible(True)
-                self.sheet_combo.setVisible(True)
                 self.sheet_combo.clear()
+                self.hBLayout.show()
                 for i in range(0, sheets):
                     sheetname = str(book.sheet_by_index(i).name)
                     self.sheet_combo.addItem(sheetname)
         else:
-            self.sheet_combo.hide()
-            self.sheet_label.hide()
+            self.hBLayout.hide()
 
     @staticmethod
     def is_multisheet_excel(fn):
@@ -261,10 +261,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     fn = os.path.join(".", basename)
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
+
             if self.is_multisheet_excel(fn):
-                #book = open_workbook(fn)
                 if sheet:
-                    data = ExcelFormat.read_file(fn+':'+sheet)
+                    data = ExcelFormat.read_file(fn + ':' + sheet)
                     if data:
                         return data, fn
 
@@ -289,7 +289,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 data, url = load(Table.from_url, url)
             except:
                 self.warnings.setText(
-                        "URL '{}' does not contain valid data".format(url))
+                    "URL '{}' does not contain valid data".format(url))
                 # Don't remove from recent_urls:
                 # resource may reappear, or the user mistyped it
                 # and would like to retrieve it from history and fix it.
