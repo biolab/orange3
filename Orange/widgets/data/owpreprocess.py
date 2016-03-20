@@ -492,6 +492,8 @@ class FeatureSelectEditor(BaseEditor):
         ("Information Gain", preprocess.score.InfoGain),
         ("Gain ratio", preprocess.score.GainRatio),
         ("Gini index", preprocess.score.Gini),
+        ("ReliefF", preprocess.score.ReliefF),
+        ("Fast Correlation Based Filter", preprocess.score.FCBF)
     ]
 
     def __init__(self, parent=None):
@@ -506,7 +508,9 @@ class FeatureSelectEditor(BaseEditor):
         self.__uni_fs.setItems(
             [{"text": "Information gain", "tooltip": ""},
              {"text": "Gain ratio"},
-             {"text": "Gini index"}
+             {"text": "Gini index"},
+             {"text": "ReliefF"},
+             {"text": "Fast Correlation Based Filter"}
             ]
         )
         self.layout().addWidget(self.__uni_fs)
@@ -1920,3 +1924,4 @@ def test_main(argv=sys.argv):
 
 if __name__ == "__main__":
     sys.exit(test_main())
+
