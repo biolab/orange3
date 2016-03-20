@@ -166,9 +166,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             basename = self.file_combo.currentText()
             path = self.recent_paths[0]
             if basename in [path.relpath, path.basename]:
-                self.fill_sheet_combo(path.abspath)
                 self.source = self.LOCAL_FILE
-                return self.load_data()
+                if self.is_multisheet_excel(path.abspath):
+                    return self.load_data(self.sheet_combo.currentText())
+                else:
+                    return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
 
     def select_file(self, n):
