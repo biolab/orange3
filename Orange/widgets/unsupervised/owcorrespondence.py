@@ -2,11 +2,9 @@ import sys
 
 import numpy
 
-from PyQt4.QtGui import (
-    QListView, QItemSelectionModel, QItemSelection, QBrush, QColor, QPainter,
-    QApplication
-)
-from PyQt4.QtCore import Qt, QEvent
+from AnyQt.QtWidgets import QListView, QApplication
+from AnyQt.QtGui import QBrush, QColor, QPainter
+from AnyQt.QtCore import Qt, QEvent, QItemSelectionModel, QItemSelection
 
 import pyqtgraph as pg
 import Orange.data

@@ -10,9 +10,11 @@ import sys
 import collections
 from xml.sax.saxutils import escape
 
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QToolTip
+from AnyQt.QtWidgets import QSizePolicy, QLabel, QListView,QToolTip
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPicture, QPalette
+from AnyQt.QtCore import Qt, QRectF
+
+
 import numpy
 import pyqtgraph as pg
 
@@ -58,9 +60,9 @@ class DistributionBarItem(pg.GraphicsObject):
         return self.geometry
 
     def __paint(self):
-        picture = QtGui.QPicture()
-        painter = QtGui.QPainter(picture)
-        pen = QtGui.QPen(QtGui.QBrush(Qt.white), 0.5)
+        picture = QPicture()
+        painter = QPainter(picture)
+        pen = QPen(QBrush(Qt.white), 0.5)
         pen.setCosmetic(True)
         painter.setPen(pen)
 
@@ -69,8 +71,8 @@ class DistributionBarItem(pg.GraphicsObject):
         w, h = geom.width(), geom.height()
         wsingle = w / len(self.dist)
         for d, c in zip(self.dist, self.colors):
-            painter.setBrush(QtGui.QBrush(c))
-            painter.drawRect(QtCore.QRectF(x, y, wsingle, d * h))
+            painter.setBrush(QBrush(c))
+            painter.drawRect(QRectF(x, y, wsingle, d * h))
             x += wsingle
         painter.end()
 
@@ -117,10 +119,10 @@ class OWDistributions(widget.OWWidget):
         self.varmodel = itemmodels.VariableListModel()
         self.groupvarmodel = []
 
-        self.varview = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection)
+        self.varview = QListView(
+            selectionMode=QListView.SingleSelection)
         self.varview.setSizePolicy(
-            QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+            QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.varview.setModel(self.varmodel)
         self.varview.setSelectionModel(
             itemmodels.ListSingleSelectionModel(self.varmodel))
@@ -163,10 +165,10 @@ class OWDistributions(widget.OWWidget):
             tooltip="Show probabilities for a chosen group-by value (at each point probabilities for all group-by values sum to 1).")
 
         self.plotview = pg.PlotWidget(background=None)
-        self.plotview.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.plotview.setRenderHint(QPainter.Antialiasing)
         self.mainArea.layout().addWidget(self.plotview)
-        w = QtGui.QLabel()
-        w.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+        w = QLabel()
+        w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.mainArea.layout().addWidget(w, Qt.AlignCenter)
         self.ploti = pg.PlotItem()
         self.plot = self.ploti.vb
@@ -195,7 +197,7 @@ class OWDistributions(widget.OWWidget):
         self.plot.scene().installEventFilter(
             HelpEventDelegate(self.help_event, self))
 
-        pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
+        pen = QPen(self.palette().color(QPalette.Text))
         for axis in ("left", "bottom"):
             self.ploti.getAxis(axis).setPen(pen)
 
@@ -337,19 +339,19 @@ class OWDistributions(widget.OWWidget):
             edges = edges + (edges[1] - edges[0])/2
             edges = edges[:-1]
             item = pg.PlotCurveItem()
-            pen = QtGui.QPen(QtGui.QBrush(Qt.white), 3)
+            pen = QPen(QBrush(Qt.white), 3)
             pen.setCosmetic(True)
             item.setData(edges, curve, antialias=True, stepMode=False,
-                         fillLevel=0, brush=QtGui.QBrush(Qt.gray), pen=pen)
+                         fillLevel=0, brush=QBrush(Qt.gray), pen=pen)
             self.plot.addItem(item)
             item.tooltip = "Density"
             self.tooltip_items.append((self.plot, item))
         else:
             bottomaxis.setTicks([list(enumerate(var.values))])
             for i, w in enumerate(dist):
-                geom = QtCore.QRectF(i - 0.33, 0, 0.66, w)
+                geom = QRectF(i - 0.33, 0, 0.66, w)
                 item = DistributionBarItem(geom, [1.0],
-                                           [QtGui.QColor(128, 128, 128)])
+                                           [QColor(128, 128, 128)])
                 self.plot.addItem(item)
                 item.tooltip = "Frequency for %s: %r" % (var.values[i], w)
                 self.tooltip_items.append((self.plot, item))
@@ -384,7 +386,7 @@ class OWDistributions(widget.OWWidget):
         bottomaxis.resizeEvent()
 
         cvar_values = cvar.values
-        colors = [QtGui.QColor(*col) for col in cvar.colors]
+        colors = [QColor(*col) for col in cvar.colors]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
@@ -416,13 +418,13 @@ class OWDistributions(widget.OWWidget):
             for t in [ "fill", "line" ]:
                 for (X, Y), color, w, cval in reversed(list(zip(curvesline, colors, weights, cvar_values))):
                     item = pg.PlotCurveItem()
-                    pen = QtGui.QPen(QtGui.QBrush(color), 3)
+                    pen = QPen(QBrush(color), 3)
                     pen.setCosmetic(True)
-                    color = QtGui.QColor(color)
+                    color = QColor(color)
                     color.setAlphaF(0.2)
                     item.setData(X, Y/(w if self.relative_freq else 1), antialias=True, stepMode=False,
                          fillLevel=0 if t == "fill" else None,
-                         brush=QtGui.QBrush(color), pen=pen)
+                         brush=QBrush(color), pen=pen)
                     self.plot.addItem(item)
                     if t == "line":
                         item.tooltip = ("Normalized density " if self.relative_freq else "Density ") \
@@ -444,7 +446,7 @@ class OWDistributions(widget.OWWidget):
                     i -= 1
                     if show_all or self.show_prob == i:
                         item = pg.PlotCurveItem()
-                        pen = QtGui.QPen(QtGui.QBrush(color), 3, style=QtCore.Qt.DotLine)
+                        pen = QPen(QBrush(color), 3, style=Qt.DotLine)
                         pen.setCosmetic(True)
                         #prob = (Y+allcorrection/ncval)/(sumprob+allcorrection)
                         prob = Y[legal] / sumprob[legal]
@@ -472,7 +474,7 @@ class OWDistributions(widget.OWWidget):
 
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
-                geom = QtCore.QRectF(i - 0.333, 0, 0.666, maxrh
+                geom = QRectF(i - 0.333, 0, 0.666, maxrh
                                      if self.relative_freq else maxh)
                 if self.show_prob:
                     prob = dist / dsum
@@ -506,16 +508,16 @@ class OWDistributions(widget.OWWidget):
                         item.tooltip += "\n%s: %.3f ± %.3f" % (cvar_values[ic], prob, ci)
                         mark = pg.ScatterPlotItem()
                         bar = pg.ErrorBarItem()
-                        pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0)), 1)
+                        pen = QPen(QBrush(QColor(0)), 1)
                         pen.setCosmetic(True)
                         bar.setData(x=[i+position], y=[prob],
                                     bottom=min(numpy.array([ci]), prob),
                                     top=min(numpy.array([ci]), 1 - prob),
                                      beam=numpy.array([0.05]),
-                                     brush=QtGui.QColor(1), pen=pen)
+                                     brush=QColor(1), pen=pen)
                         mark.setData([i+position], [prob], antialias=True, symbol="o",
                                  fillLevel=None, pxMode=True, size=10,
-                                 brush=QtGui.QColor(colors[ic]), pen=pen)
+                                 brush=QColor(colors[ic]), pen=pen)
                         self.plot_prob.addItem(bar)
                         self.plot_prob.addItem(mark)
 
@@ -732,11 +734,12 @@ def shape_reduce_keep_dims(shape, axis):
 
 
 def main(argv=None):
+    from AnyQt.QtWidgets import QApplication
     import gc
     if argv is None:
         argv = sys.argv
     argv = list(argv)
-    app = QtGui.QApplication(argv)
+    app = QApplication(argv)
     w = OWDistributions()
     w.show()
     if len(argv) > 1:

@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
-from PyQt4.QtCore import QRectF
+from AnyQt.QtCore import QRectF
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin

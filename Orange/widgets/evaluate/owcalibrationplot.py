@@ -5,7 +5,7 @@ Calibration Plot Widget
 """
 from collections import namedtuple
 
-from PyQt4 import QtGui
+from AnyQt.QtWidgets import QListWidget
 
 import pyqtgraph as pg
 
@@ -64,7 +64,7 @@ class OWCalibrationPlot(widget.OWWidget):
 
         self.classifiers_list_box = gui.listBox(
             box, self, "selected_classifiers", "classifier_names",
-            selectionMode=QtGui.QListWidget.MultiSelection,
+            selectionMode=QListWidget.MultiSelection,
             callback=self._replot)
 
         gui.checkBox(box, self, "display_rug", "Show rug",
@@ -212,7 +212,7 @@ def gaussian_smoother(x, y, sigma=1.0):
 
 def main():
     import sip
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     from Orange.classification import (LogisticRegressionLearner, SVMLearner,
                                        NuSVMLearner)
 

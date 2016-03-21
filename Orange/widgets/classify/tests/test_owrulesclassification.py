@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from PyQt4 import QtGui
+from AnyQt.QtWidgets import (
+    QButtonGroup, QRadioButton, QSpinBox, QDoubleSpinBox, QComboBox
+)
 
 from Orange.widgets.classify.owrules import OWRuleLearner
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
@@ -13,11 +15,11 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
                                          stored_settings={"auto_apply": False})
         self.init()
 
-        self.radio_button_groups = self.widget.findChildren(QtGui.QButtonGroup)
-        self.radio_buttons = self.widget.findChildren(QtGui.QRadioButton)
-        self.spin_boxes = self.widget.findChildren(QtGui.QSpinBox)
-        self.double_spin_boxes = self.widget.findChildren(QtGui.QDoubleSpinBox)
-        self.combo_boxes = self.widget.findChildren(QtGui.QComboBox)
+        self.radio_button_groups = self.widget.findChildren(QButtonGroup)
+        self.radio_buttons = self.widget.findChildren(QRadioButton)
+        self.spin_boxes = self.widget.findChildren(QSpinBox)
+        self.double_spin_boxes = self.widget.findChildren(QDoubleSpinBox)
+        self.combo_boxes = self.widget.findChildren(QComboBox)
 
         self.parameters = [
             ParameterMapping("Evaluation measure", self.combo_boxes[0],

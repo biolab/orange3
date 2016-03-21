@@ -1,7 +1,8 @@
 import os.path
 
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QToolButton, QGroupBox, QIcon, QHBoxLayout
+from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QIcon
+from AnyQt.QtWidgets import QToolButton, QGroupBox, QHBoxLayout
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting

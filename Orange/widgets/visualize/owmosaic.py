@@ -4,10 +4,9 @@ from itertools import product, chain
 from math import sqrt, log
 from operator import mul
 
-from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import (
-    QColor, QGraphicsScene, QPainter, QPen,
-    QGraphicsLineItem)
+from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtGui import QColor, QPainter, QPen
+from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -741,7 +740,7 @@ def get_conditional_distribution(data, attrs):
 # test widget appearance
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
     ow = OWMosaicDisplay()
     ow.show()

@@ -6,8 +6,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
-from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
+from AnyQt.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
+from AnyQt.QtGui import QPixmap, QColor, QBrush, QPen, QPainterPath, QPolygonF
+from AnyQt.QtWidgets import QToolTip, QGraphicsPathItem, QGraphicsPolygonItem
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.widgets import gui

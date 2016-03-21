@@ -2,8 +2,9 @@ from importlib import import_module
 import os
 import warnings
 
-from PyQt4.QtGui import QFont, QBrush
-from PyQt4.QtCore import Qt
+from AnyQt.QtGui import QFont, QBrush
+from AnyQt.QtCore import Qt
+
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner

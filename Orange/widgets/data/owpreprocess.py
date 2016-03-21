@@ -6,19 +6,24 @@ from collections import OrderedDict
 import pkg_resources
 
 import numpy
-from PyQt4.QtGui import (
-    QWidget, QButtonGroup, QGroupBox, QRadioButton, QSlider,
-    QDoubleSpinBox, QComboBox, QSpinBox, QListView,
-    QVBoxLayout, QHBoxLayout, QFormLayout, QSpacerItem, QSizePolicy,
-    QCursor, QIcon,  QStandardItemModel, QStandardItem, QStyle,
-    QStylePainter, QStyleOptionFrame, QPixmap,
-    QApplication, QDrag, QLabel
+
+from AnyQt.QtWidgets import (
+    QWidget, QButtonGroup, QGroupBox, QRadioButton, QSlider, QFocusFrame,
+    QDoubleSpinBox, QComboBox, QSpinBox, QListView, QDockWidget, QLabel,
+    QScrollArea, QVBoxLayout, QHBoxLayout, QFormLayout, QSpacerItem,
+    QSizePolicy, QStyle, QStylePainter, QStyleOptionFrame, QAction, QLabel,
+    QApplication
 )
-from PyQt4 import QtGui
-from PyQt4.QtCore import (
+
+from AnyQt.QtGui import (
+    QCursor, QIcon, QPainter, QPixmap, QStandardItemModel, QStandardItem,
+    QDrag, QKeySequence
+)
+
+from AnyQt.QtCore import (
     Qt, QObject, QEvent, QSize, QModelIndex, QMimeData, QTimer
 )
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 import Orange.data
@@ -1086,7 +1091,7 @@ def list_model_move_rows_helper(model, parent, src, count, dst):
     return setdata
 
 
-class StandardItemModel(QtGui.QStandardItemModel):
+class StandardItemModel(QStandardItemModel):
     """
     A QStandardItemModel improving support for internal row moves.
 
@@ -1423,7 +1428,7 @@ class SequenceFlow(QWidget):
     #: Emitted when the user moves/drags a widget to a new location.
     widgetMoved = Signal(int, int)
 
-    class Frame(QtGui.QDockWidget):
+    class Frame(QDockWidget):
         """
         Widget frame with a handle.
         """
@@ -1432,15 +1437,15 @@ class SequenceFlow(QWidget):
         def __init__(self, parent=None, widget=None, title=None, **kwargs):
 
             super().__init__(parent, **kwargs)
-            self.setFeatures(QtGui.QDockWidget.DockWidgetClosable)
+            self.setFeatures(QDockWidget.DockWidgetClosable)
             self.setAllowedAreas(Qt.NoDockWidgetArea)
 
             self.__title = ""
             self.__icon = ""
             self.__focusframe = None
 
-            self.__deleteaction = QtGui.QAction(
-                "Remove", self, shortcut=QtGui.QKeySequence.Delete,
+            self.__deleteaction = QAction(
+                "Remove", self, shortcut=QKeySequence.Delete,
                 enabled=False, triggered=self.closeRequested
             )
             self.addAction(self.__deleteaction)
@@ -1478,7 +1483,7 @@ class SequenceFlow(QWidget):
 
         def focusInEvent(self, event):
             event.accept()
-            self.__focusframe = QtGui.QFocusFrame(self)
+            self.__focusframe = QFocusFrame(self)
             self.__focusframe.setWidget(self)
             self.__deleteaction.setEnabled(True)
 
@@ -1720,7 +1725,7 @@ class SequenceFlow(QWidget):
 
         transparent = QPixmap(pixmap.size())
         transparent.fill(Qt.transparent)
-        painter = QtGui.QPainter(transparent)
+        painter = QPainter(transparent)
         painter.setOpacity(0.35)
         painter.drawPixmap(0, 0, pixmap.width(), pixmap.height(), pixmap)
         painter.end()
@@ -1819,10 +1824,9 @@ class OWPreprocess(widget.OWWidget):
         self.overlay.setWidget(self.flow_view)
         self.overlay.setLayout(QVBoxLayout())
         self.overlay.layout().addWidget(
-            QtGui.QLabel("Drag items from the list on the left",
-                         wordWrap=True))
+            QLabel("Drag items from the list on the left", wordWrap=True))
 
-        self.scroll_area = QtGui.QScrollArea(
+        self.scroll_area = QScrollArea(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn
         )
         self.scroll_area.viewport().setAcceptDrops(True)
@@ -2056,7 +2060,7 @@ class OWPreprocess(widget.OWWidget):
 
 def test_main(argv=sys.argv):
     argv = list(argv)
-    app = QtGui.QApplication(argv)
+    app = QApplication(argv)
 
     if len(argv) > 1:
         filename = argv[1]

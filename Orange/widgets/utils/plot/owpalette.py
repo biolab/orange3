@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QPalette
-from PyQt4.QtCore import Qt
+from AnyQt.QtGui import QPalette
+from AnyQt.QtCore import Qt
 import pyqtgraph as pg
 
 pg.setConfigOption('background', 'w')

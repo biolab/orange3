@@ -1,4 +1,4 @@
-from PyQt4 import QtGui
+from AnyQt.QtWidgets import QRadioButton
 
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans
@@ -14,7 +14,7 @@ class TestOWKMeans(WidgetTest):
     def test_optimization_report_display(self):
         """ Check visibility of optimization report after we select the number of clusters  """
         self.send_signal("Data", self.iris)
-        radio_buttons = self.widget.n_clusters.findChildren(QtGui.QRadioButton)
+        radio_buttons = self.widget.n_clusters.findChildren(QRadioButton)
         radio_buttons[0].click()
         self.assertEqual(self.widget.mainArea.isHidden(), True)
         radio_buttons[1].click()

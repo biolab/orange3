@@ -4,7 +4,7 @@
 from unittest import TestCase
 import numpy as np
 
-from PyQt4.QtCore import QModelIndex, Qt
+from AnyQt.QtCore import QModelIndex, Qt
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
 from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \

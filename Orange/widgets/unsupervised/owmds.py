@@ -9,8 +9,13 @@ import pkg_resources
 import numpy
 import scipy.spatial.distance
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt, QEvent
+from AnyQt.QtWidgets import (
+    QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction, QApplication,
+    QGraphicsLineItem
+)
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
+from AnyQt.QtCore import Qt, QEvent
+
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
 
@@ -72,7 +77,7 @@ def stress(X, D):
 
 
 def make_pen(color, width=1.5, style=Qt.SolidLine, cosmetic=False):
-    pen = QtGui.QPen(color, width, style)
+    pen = QPen(color, width, style)
     pen.setCosmetic(cosmetic)
     return pen
 
@@ -85,10 +90,10 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
     def paint(self, painter, option, widget=None):
         if self.opts["pxMode"]:
-            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
         if self.opts["antialias"]:
-            painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.Antialiasing, True)
 
         super().paint(painter, option, widget)
 
@@ -196,10 +201,10 @@ class OWMDS(OWWidget):
         self.__draw_similar_pairs = False
 
         box = gui.vBox(self.controlArea, "MDS Optimization")
-        form = QtGui.QFormLayout(
+        form = QFormLayout(
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
             verticalSpacing=10
         )
 
@@ -254,10 +259,10 @@ class OWMDS(OWWidget):
             gui.indentedBox(box), self, 'label_only_selected',
             'Label only selected points', callback=self._on_label_index_changed)
 
-        form = QtGui.QFormLayout(
+        form = QFormLayout(
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
             verticalSpacing=10
         )
         form.addRow("Symbol size:",
@@ -286,30 +291,30 @@ class OWMDS(OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = QtGui.QGroupBox("Zoom/Select", )
-        box.setLayout(QtGui.QHBoxLayout())
+        box = QGroupBox("Zoom/Select", )
+        box.setLayout(QHBoxLayout())
         box.layout().setContentsMargins(2, 2, 2, 2)
 
-        group = QtGui.QActionGroup(self, exclusive=True)
+        group = QActionGroup(self, exclusive=True)
 
         def icon(name):
             path = "icons/Dlg_{}.png".format(name)
             path = pkg_resources.resource_filename(widget.__name__, path)
-            return QtGui.QIcon(path)
+            return QIcon(path)
 
-        action_select = QtGui.QAction(
+        action_select = QAction(
             "Select", self, checkable=True, checked=True, icon=icon("arrow"),
-            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_1))
-        action_zoom = QtGui.QAction(
+            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_1))
+        action_zoom = QAction(
             "Zoom", self, checkable=True, checked=False, icon=icon("zoom"),
-            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_2))
-        action_pan = QtGui.QAction(
+            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_2))
+        action_pan = QAction(
             "Pan", self, checkable=True, checked=False, icon=icon("pan_hand"),
-            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_3))
+            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_3))
 
-        action_reset_zoom = QtGui.QAction(
+        action_reset_zoom = QAction(
             "Zoom to fit", self, icon=icon("zoom_reset"),
-            shortcut=QtGui.QKeySequence(Qt.ControlModifier + Qt.Key_0))
+            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_0))
         action_reset_zoom.triggered.connect(
             lambda: self.plot.autoRange(padding=0.1,
                                         items=[self._scatter_item]))
@@ -320,7 +325,7 @@ class OWMDS(OWWidget):
         action_select.setChecked(True)
 
         def button(action):
-            b = QtGui.QToolButton()
+            b = QToolButton()
             b.setToolButtonStyle(Qt.ToolButtonIconOnly)
             b.setDefaultAction(action)
             return b
@@ -351,7 +356,7 @@ class OWMDS(OWWidget):
         self.plot.getPlotItem().hideAxis("bottom")
         self.plot.getPlotItem().hideAxis("left")
         self.plot.getPlotItem().hideButtons()
-        self.plot.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.plot.setRenderHint(QPainter.Antialiasing)
         self.mainArea.layout().addWidget(self.plot)
 
         self.selection_tool = PlotSelectionTool(parent=self)
@@ -374,9 +379,9 @@ class OWMDS(OWWidget):
                 active, cur = self.pan_tool, Qt.OpenHandCursor
             self.current_tool = active
             self.current_tool.setViewBox(self.plot.getViewBox())
-            self.plot.getViewBox().setCursor(QtGui.QCursor(cur))
+            self.plot.getViewBox().setCursor(QCursor(cur))
 
-        group.triggered[QtGui.QAction].connect(activate_tool)
+        group.triggered[QAction].connect(activate_tool)
 
         self._initialize()
 
@@ -642,7 +647,7 @@ class OWMDS(OWWidget):
             self.setStatusMessage("Running")
             self.runbutton.setText("Stop")
             self.__state = OWMDS.Running
-            QtGui.QApplication.postEvent(self, QEvent(QEvent.User))
+            QApplication.postEvent(self, QEvent(QEvent.User))
         else:
             self.setStatusMessage("")
             self.runbutton.setText("Start")
@@ -668,7 +673,7 @@ class OWMDS(OWWidget):
             self._update_plot()
             self.plot.autoRange(padding=0.1, items=[self._scatter_item])
             # schedule next update
-            QtGui.QApplication.postEvent(
+            QApplication.postEvent(
                 self, QEvent(QEvent.User), Qt.LowEventPriority)
 
     def customEvent(self, event):
@@ -685,7 +690,7 @@ class OWMDS(OWWidget):
                     "A rogue `proccessEvents` is on the loose.",
                     RuntimeWarning)
                 # re-schedule the update iteration.
-                QtGui.QApplication.postEvent(self, QEvent(QEvent.User))
+                QApplication.postEvent(self, QEvent(QEvent.User))
         return super().customEvent(event)
 
     def __invalidate_embedding(self):
@@ -840,7 +845,7 @@ class OWMDS(OWWidget):
                 pen_data = mdsplotutils.pen_data(color_data * 0.8, pointflags)
                 brush_data = mdsplotutils.brush_data(color_data)
             else:
-                pen_data = make_pen(QtGui.QColor(Qt.darkGray), cosmetic=True)
+                pen_data = make_pen(QColor(Qt.darkGray), cosmetic=True)
                 if self._selection_mask is not None:
                     pen_data = numpy.array(
                         [pen_data, plotstyle.selected_pen])
@@ -855,7 +860,7 @@ class OWMDS(OWWidget):
             if self._subset_mask is not None and have_data and \
                     self._subset_mask.shape == (size, ):
                 # clear brush fill for non subset data
-                brush_data[~self._subset_mask] = QtGui.QBrush(Qt.NoBrush)
+                brush_data[~self._subset_mask] = QBrush(Qt.NoBrush)
 
             self._pen_data = pen_data
             self._brush_data = brush_data
@@ -945,7 +950,7 @@ class OWMDS(OWWidget):
                 fpairs[::2] = indcs[0][sorted]
                 fpairs[1::2] = indcs[1][sorted]
             for i in range(int(len(emb_x[self._similar_pairs]) / 2)):
-                item = QtGui.QGraphicsLineItem(
+                item = QGraphicsLineItem(
                     emb_x[self._similar_pairs][i * 2],
                     emb_y[self._similar_pairs][i * 2],
                     emb_x[self._similar_pairs][i * 2 + 1],
@@ -956,7 +961,7 @@ class OWMDS(OWWidget):
                     # in Qt when using the raster graphics system
                     # (see gh-issue: 1668).
                     continue
-                pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(204, 204, 204)), 2)
+                pen = QPen(QBrush(QColor(204, 204, 204)), 2)
                 pen.setCosmetic(True)
                 item.setPen(pen)
                 self.plot.addItem(item)
@@ -1078,10 +1083,10 @@ class OWMDS(OWWidget):
              if region.contains(spot.pos())],
             dtype=int)
 
-        if not QtGui.QApplication.keyboardModifiers():
+        if not QApplication.keyboardModifiers():
             self._selection_mask = None
 
-        self.select_indices(indices, QtGui.QApplication.keyboardModifiers())
+        self.select_indices(indices, QApplication.keyboardModifiers())
 
     def select_indices(self, indices, modifiers=Qt.NoModifier):
         if self.data is None:
@@ -1121,8 +1126,8 @@ def colors(data, variable, palette=None):
         elif variable.is_continuous:
             palette = colorpalette.ColorPaletteBW()
             palette = colorpalette.ContinuousPaletteGenerator(
-                QtGui.QColor(220, 220, 220),
-                QtGui.QColor(0, 0, 0),
+                QColor(220, 220, 220),
+                QColor(0, 0, 0),
                 False
             )
         else:
@@ -1179,13 +1184,13 @@ class mdsplotutils(plotutils):
 
     plotstyle = namespace(
         selected_pen=make_pen(Qt.yellow, width=3, cosmetic=True),
-        highligh_pen=QtGui.QPen(Qt.blue, 1),
+        highligh_pen=QPen(Qt.blue, 1),
         selected_brush=None,
-        default_color=QtGui.QColor(Qt.darkGray).rgba(),
+        default_color=QColor(Qt.darkGray).rgba(),
         discrete_palette=colorpalette.ColorPaletteGenerator(),
         continuous_palette=colorpalette.ContinuousPaletteGenerator(
-            QtGui.QColor(220, 220, 220),
-            QtGui.QColor(0, 0, 0),
+            QColor(220, 220, 220),
+            QColor(0, 0, 0),
             False
         ),
         symbols=ScatterPlotItem.Symbols,
@@ -1240,7 +1245,7 @@ class mdsplotutils(plotutils):
             plotstyle = mdsplotutils.plotstyle
 
         pens = numpy.array(
-            [mdsplotutils.make_pen(QtGui.QColor(*rgba), width=1)
+            [mdsplotutils.make_pen(QColor(*rgba), width=1)
              for rgba in basecolors],
             dtype=object)
 
@@ -1263,7 +1268,7 @@ class mdsplotutils(plotutils):
             plotstyle = mdsplotutils.plotstyle
 
         brush = numpy.array(
-            [mdsplotutils.make_brush(QtGui.QColor(*c))
+            [mdsplotutils.make_brush(QColor(*c))
              for c in basecolors],
             dtype=object)
 
@@ -1273,7 +1278,7 @@ class mdsplotutils(plotutils):
         fill_mask = flags & mdsplotutils.Filled
 
         if not numpy.all(fill_mask):
-            brush[~fill_mask] = QtGui.QBrush(Qt.NoBrush)
+            brush[~fill_mask] = QBrush(Qt.NoBrush)
         return brush
 
     @staticmethod
@@ -1358,7 +1363,7 @@ class mdsplotutils(plotutils):
                 colors = [(palette[i], "o", name)
                           for i, name in enumerate(color_var.values)]
             if shape_var is not None:
-                shapes = [(QtGui.QColor(Qt.gray),
+                shapes = [(QColor(Qt.gray),
                            symbols[i % (len(symbols) - 1)], name)
                           for i, name in enumerate(shape_var.values)]
             items = colors + shapes
@@ -1367,19 +1372,19 @@ class mdsplotutils(plotutils):
 
     @staticmethod
     def make_pen(color, width=1, cosmetic=True):
-        pen = QtGui.QPen(color)
+        pen = QPen(color)
         pen.setWidthF(width)
         pen.setCosmetic(cosmetic)
         return pen
 
     @staticmethod
     def make_brush(color, ):
-        return QtGui.QBrush(color, )
+        return QBrush(color, )
 
 
 def main_test(argv=sys.argv):
     import gc
-    app = QtGui.QApplication(list(argv))
+    app = QApplication(list(argv))
     argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]

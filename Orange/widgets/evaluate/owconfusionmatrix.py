@@ -3,12 +3,15 @@
 from math import isnan, isinf
 import unicodedata
 
-from PyQt4.QtGui import (
-    QGridLayout, QTableView, QStandardItemModel, QStandardItem,
-    QItemSelectionModel, QItemSelection, QFont, QHeaderView, QBrush, QColor,
-    QStyledItemDelegate)
-from PyQt4.QtCore import Qt, QSize
-
+from AnyQt.QtWidgets import (
+    QGridLayout, QTableView,QHeaderView, QStyledItemDelegate
+)
+from AnyQt.QtGui import (
+    QFont, QBrush, QColor, QStandardItemModel, QStandardItem
+)
+from AnyQt.QtCore import (
+    Qt, QSize, QItemSelectionModel, QItemSelection, QT_VERSION
+)
 import numpy
 import sklearn.metrics as skl_metrics
 
@@ -206,7 +209,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         hor_header = self.tableview.horizontalHeader()
         if len(' '.join(self.headers)) < 120:
-            hor_header.setResizeMode(QHeaderView.ResizeToContents)
+            hor_header.setSectionResizeMode(QHeaderView.ResizeToContents)
         else:
             hor_header.setDefaultSectionSize(60)
         self.tablemodel.setRowCount(nclasses + 3)
@@ -474,7 +477,7 @@ class OWConfusionMatrix(widget.OWWidget):
                 self.tableview)
 
 if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     APP = QApplication([])
     w = OWConfusionMatrix()

@@ -1,6 +1,8 @@
-from PyQt4 import QtGui, QtCore, QtSvg
-from PyQt4.QtCore import QMimeData
-from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QWidget, QApplication
+from AnyQt import QtGui, QtCore, QtSvg
+from AnyQt.QtCore import QMimeData
+from AnyQt.QtWidgets import (
+    QGraphicsScene, QGraphicsView, QWidget, QApplication
+)
 
 from Orange.data.io import FileFormat
 

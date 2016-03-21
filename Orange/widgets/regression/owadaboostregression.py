@@ -1,4 +1,4 @@
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.regression.base_regression import LearnerRegression
 from Orange.regression import SklTreeRegressionLearner
@@ -47,7 +47,7 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWAdaBoostRegression()

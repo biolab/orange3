@@ -1,9 +1,12 @@
 """Widget for visualization of tree models"""
 import numpy as np
 
-from PyQt4.QtCore import Qt, QRectF, QPointF, QSizeF
-from PyQt4.QtGui import QColor, QBrush, QPen, QFontMetrics, QStyle, \
-    QSizePolicy, QGraphicsRectItem, QGraphicsTextItem, QLabel, QComboBox
+from AnyQt.QtWidgets import (
+    QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
+    QLabel, QComboBox
+)
+from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
+from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
 from Orange.tree import TreeModel
 from Orange.widgets.visualize.owtreeviewer2d import \
@@ -407,7 +410,7 @@ class OWTreeGraph(OWTreeViewer2D):
 def test():
     """Standalone test"""
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 #    from Orange.classification.tree import TreeLearner
     from Orange.regression.tree import TreeLearner
     a = QApplication(sys.argv)

@@ -12,14 +12,16 @@ from functools import reduce
 from xml.sax.saxutils import escape
 
 import numpy
-from PyQt4.QtGui import (
+
+from AnyQt.QtWidgets import (
     QComboBox, QGraphicsScene, QGraphicsView, QGraphicsWidget,
-    QGraphicsPathItem, QGraphicsTextItem, QPainterPath, QPainter,
-    QTransform, QColor, QBrush, QPen, QStyle, QPalette,
-    QApplication
+    QGraphicsPathItem, QGraphicsTextItem, QStyle, QApplication
 )
-from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import (
+    QPainterPath, QPainter, QTransform, QColor, QBrush, QPen, QPalette
+)
+from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
+from AnyQt.QtCore import pyqtSignal as Signal
 
 import Orange.data
 from Orange.widgets import widget, gui, settings

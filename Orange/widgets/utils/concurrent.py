@@ -14,12 +14,12 @@ import logging
 from contextlib import contextmanager
 
 
-from PyQt4.QtCore import (
+from AnyQt.QtCore import (
     Qt, QObject, QMetaObject, QThreadPool, QThread, QRunnable,
     QEventLoop, QCoreApplication, QEvent, Q_ARG
 )
 
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 _log = logging.getLogger(__name__)
 

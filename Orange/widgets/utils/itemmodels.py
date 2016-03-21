@@ -9,13 +9,13 @@ from functools import reduce, partial, lru_cache
 from itertools import chain
 from xml.sax.saxutils import escape
 
-from PyQt4.QtGui import QItemSelectionModel, QColor
-from PyQt4.QtCore import (
-    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex, QByteArray
+from AnyQt.QtCore import (
+    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex,
+    QItemSelectionModel, QByteArray
 )
-from PyQt4.QtCore import pyqtSignal as Signal
-
-from PyQt4.QtGui import (
+from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import QColor
+from AnyQt.QtWidgets import (
     QWidget, QBoxLayout, QToolButton, QAbstractButton, QAction
 )
 

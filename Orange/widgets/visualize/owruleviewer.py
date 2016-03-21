@@ -4,9 +4,13 @@ from Orange.data import Table
 from Orange.widgets import widget, gui, settings
 from Orange.classification.rules import _RuleClassifier
 
-from PyQt4.QtCore import Qt, QLineF, QSize, QAbstractTableModel, QModelIndex
-from PyQt4.QtGui import (QSortFilterProxyModel, QPainter, QPen, QBrush, QColor,
-                         QItemDelegate, QHeaderView, QPushButton, QApplication)
+from AnyQt.QtCore import (
+    Qt, QLineF, QSize, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+)
+from AnyQt.QtGui import QPainter, QPen, QBrush, QColor
+from AnyQt.QtWidgets import (
+    QItemDelegate, QHeaderView, QPushButton, QApplication
+)
 
 
 class OWRuleViewer(widget.OWWidget):
@@ -94,10 +98,10 @@ class OWRuleViewer(widget.OWWidget):
 
         self.model.set_compact_view(self.compact_view)
         if self.compact_view:
-            self.view.horizontalHeader().setResizeMode(
+            self.view.horizontalHeader().setSectionResizeMode(
                 0, QHeaderView.Interactive)  # QHeaderView.Stretch
         else:
-            self.view.horizontalHeader().setResizeMode(
+            self.view.horizontalHeader().setSectionResizeMode(
                 QHeaderView.ResizeToContents)
         self.view.resizeColumnsToContents()
         self.view.resizeRowsToContents()
@@ -360,8 +364,6 @@ class DistributionItemDelegate(QItemDelegate):
         painter.restore()
 
 if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
-
     a = QApplication([])
     ow = OWRuleViewer()
 

@@ -1,6 +1,6 @@
 import os
 
-from PyQt4.QtGui import QListWidget, QIcon, QSizePolicy
+from AnyQt.QtWidgets import QListWidget
 
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting

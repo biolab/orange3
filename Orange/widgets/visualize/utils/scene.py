@@ -1,8 +1,8 @@
 """Common QGraphicsScene components that can be composed when needed."""
-from PyQt4 import QtGui
 
+from AnyQt.QtWidgets import QGraphicsScene
 
-class UpdateItemsOnSelectGraphicsScene(QtGui.QGraphicsScene):
+class UpdateItemsOnSelectGraphicsScene(QGraphicsScene):
     """Calls the selection_changed method on items.
 
     Whenever the scene selection changes, this view will call the

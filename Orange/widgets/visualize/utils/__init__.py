@@ -5,12 +5,12 @@ Utility classes for visualization widgets
 from bisect import bisect_left
 from operator import attrgetter
 
-from PyQt4.QtCore import Qt, pyqtSignal as Signal, QSize
-from PyQt4.QtGui import (
-    QStandardItemModel, QStandardItem, QTableView, QGraphicsTextItem,
-    QGraphicsRectItem, QColor, QBrush, QPen, QGraphicsView, QDialog, QVBoxLayout
+from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
+from AnyQt.QtWidgets import (
+    QTableView, QGraphicsTextItem, QGraphicsRectItem, QGraphicsView, QDialog,
+    QVBoxLayout
 )
-
 from Orange.data import Variable
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate

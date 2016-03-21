@@ -32,7 +32,7 @@ from operator import attrgetter
 from warnings import warn
 from inspect import getattr_static
 
-from PyQt4.QtGui import QApplication, QStyle, QSizePolicy
+from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 
 from Orange.widgets import gui
 

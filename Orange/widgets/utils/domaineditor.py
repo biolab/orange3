@@ -1,5 +1,6 @@
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtGui import QTableView, QSizePolicy
+from AnyQt.QtCore import Qt, QAbstractTableModel
+from AnyQt.QtGui import QColor
+from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable
@@ -23,7 +24,7 @@ class Place:
     skip = 3
 
 
-class VarTableModel(QtCore.QAbstractTableModel):
+class VarTableModel(QAbstractTableModel):
     DISCRETE_VALUE_DISPLAY_LIMIT = 20
 
     places = "feature", "target", "meta", "skip"
@@ -82,21 +83,21 @@ class VarTableModel(QtCore.QAbstractTableModel):
     def data(self, index, role):
         row, col = index.row(), index.column()
         val = self.variables[row][col]
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             if col == Column.tpe:
                 return self.type2name[val]
             if col == Column.place:
                 return self.places[val]
             else:
                 return val
-        if role == QtCore.Qt.DecorationRole:
+        if role == Qt.DecorationRole:
             if col == Column.tpe:
                 return gui.attributeIconDict[self.vartypes.index(val) + 1]
-        if role == QtCore.Qt.ForegroundRole:
+        if role == Qt.ForegroundRole:
             if self.variables[row][Column.place] == Place.skip \
                     and col != Column.place:
-                return QtGui.QColor(160, 160, 160)
-        if role == QtCore.Qt.BackgroundRole:
+                return QColor(160, 160, 160)
+        if role == Qt.BackgroundRole:
             place = self.variables[row][Column.place]
             mapping = [Place.meta, Place.feature, Place.class_var, None]
             return TableModel.ColorForRole.get(mapping[place], None)
@@ -104,7 +105,7 @@ class VarTableModel(QtCore.QAbstractTableModel):
     def setData(self, index, value, role):
         row, col = index.row(), index.column()
         row_data = self.variables[row]
-        if role == QtCore.Qt.EditRole:
+        if role == Qt.EditRole:
             if col == Column.name:
                 row_data[col] = value
             elif col == Column.tpe:
@@ -124,7 +125,7 @@ class VarTableModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         if index.column() == Column.values:
             return super().flags(index)
-        return super().flags(index) | QtCore.Qt.ItemIsEditable
+        return super().flags(index) | Qt.ItemIsEditable
 
 
 class ComboDelegate(HorizontalGridDelegate):
@@ -135,7 +136,7 @@ class ComboDelegate(HorizontalGridDelegate):
 
     def createEditor(self, parent, option, index):
         # This ugly hack closes the combo when the user selects an item
-        class Combo(QtGui.QComboBox):
+        class Combo(QComboBox):
             def __init__(self, *args):
                 super().__init__(*args)
                 self.popup_shown = False
@@ -151,7 +152,7 @@ class ComboDelegate(HorizontalGridDelegate):
             def hidePopup(me):
                 if me.popup_shown:
                     self.view.model().setData(
-                            index, me.highlighted_text, QtCore.Qt.EditRole)
+                            index, me.highlighted_text, Qt.EditRole)
                     self.popup_shown = False
                 super().hidePopup()
                 self.view.closeEditor(me, self.NoHint)

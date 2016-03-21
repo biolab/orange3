@@ -8,7 +8,14 @@ Plot (``owplot``)
 
 '''
 
-from PyQt4 import QtCore, QtGui
+from AnyQt.QtWidgets import \
+    QGraphicsView,  QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem,\
+    QToolTip, QApplication
+from AnyQt.QtGui import QPen, QBrush, QColor, QPainter, QTransform, QPolygonF
+from AnyQt.QtCore import \
+    QPointF, QRectF, QLineF, QPoint, QRect, QPropertyAnimation, Qt, QEvent, \
+    pyqtProperty
+
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 
@@ -27,13 +34,6 @@ from .owplotgui import OWPlotGUI
 from .owtools import *
 
 from ..colorpalette import ColorPaletteGenerator
-
-from PyQt4.QtGui import (
-    QPen, QBrush, QColor,
-    QGraphicsView,  QGraphicsScene, QPainter, QTransform, QPolygonF,
-    QGraphicsRectItem)
-
-from PyQt4.QtCore import QPointF, QPropertyAnimation, pyqtProperty, SIGNAL, Qt, QEvent
 
 ## Color values copied from orngView.SchemaView for consistency
 SelectionPen = QPen(QBrush(QColor(51, 153, 255, 192)),
@@ -1242,7 +1242,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
             orangeqt.Plot.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() and (self._pressed_mouse_pos - event.pos()).manhattanLength() > QtGui.QApplication.instance().startDragDistance():
+        if event.buttons() and (self._pressed_mouse_pos - event.pos()).manhattanLength() > QApplication.instance().startDragDistance():
             self.static_click = False
 
         if self.mouseMoveEventHandler and self.mouseMoveEventHandler(event):
@@ -1254,7 +1254,7 @@ class OWPlot(orangeqt.Plot, OWComponent):
 
         point = self.mapToScene(event.pos())
         if not self._pressed_mouse_button:
-            if self.receivers(SIGNAL('point_hovered(Point*)')) > 0:
+            if self.receivers(self.point_hovered) > 0:
                 self.point_hovered.emit(self.nearest_point(point))
 
         ## We implement a workaround here, because sometimes mouseMoveEvents are not fast enough

@@ -1,7 +1,9 @@
 from collections import OrderedDict
 import threading
 
-from PyQt4 import QtGui, QtCore
+from AnyQt import QtWidgets
+from AnyQt import QtCore
+
 from Orange.widgets import widget, gui
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
@@ -46,7 +48,7 @@ class OWDataInfo(widget.OWWidget):
         # into account the minimum constraints of the children (it would
         # override any minimum/fixed size set on `self`).
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
-        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
+        self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
         self.targets = ""
         self.data_desc = None
@@ -178,7 +180,7 @@ class OWDataInfo(widget.OWWidget):
             self.report_items(self.data_desc)
 
 if __name__ == "__main__":
-    a = QtGui.QApplication([])
+    a = QtWidgets.QApplication([])
     ow = OWDataInfo()
     ow.show()
     ow.data(Table("iris"))

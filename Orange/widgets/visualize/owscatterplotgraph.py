@@ -3,6 +3,12 @@ from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
 import numpy as np
+
+from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
+from AnyQt.QtGui import (
+    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter)
+from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture
+
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -11,10 +17,7 @@ from pyqtgraph.graphicsItems.LegendItem import LegendItem, ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 from pyqtgraph.Point import Point
-from PyQt4.QtCore import Qt, QObject, QEvent, QRectF, QPointF
-from PyQt4 import QtCore
-from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
-from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture, QPainter
+
 
 from Orange.widgets import gui
 from Orange.widgets.utils import classdensity, get_variable_values_sorted
@@ -395,7 +398,7 @@ class InteractiveViewBox(ViewBox):
         super().scaleHistory(d)
 
     def mouseClickEvent(self, ev):
-        if ev.button() == QtCore.Qt.RightButton:  # undo zoom
+        if ev.button() == Qt.RightButton:  # undo zoom
             self.scaleHistory(-1)
         else:
             ev.accept()
@@ -482,7 +485,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                                          background="w")
         self.plot_widget.getPlotItem().buttonsHidden = True
         self.plot_widget.setAntialiasing(True)
-        self.plot_widget.sizeHint = lambda: QtCore.QSize(500, 500)
+        self.plot_widget.sizeHint = lambda: QSize(500, 500)
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)

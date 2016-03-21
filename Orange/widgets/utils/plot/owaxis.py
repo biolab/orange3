@@ -35,9 +35,11 @@
 
 from math import *
 
-from PyQt4.QtGui import QGraphicsItem, QGraphicsLineItem, QGraphicsTextItem, QPainterPath, QGraphicsPathItem, \
-    QTransform, QGraphicsRectItem, QPen, QFontMetrics
-from PyQt4.QtCore import QLineF, QPointF, QRectF, Qt
+from AnyQt.QtWidgets import (
+    QGraphicsItem, QGraphicsLineItem, QGraphicsTextItem, QGraphicsPathItem,
+    QGraphicsRectItem, )
+from AnyQt.QtGui import QPainterPath, QTransform, QPen, QFontMetrics
+from AnyQt.QtCore import QLineF, QPointF, QRectF, Qt
 
 from .owconstants import *
 from .owtools import resize_plot_item_list

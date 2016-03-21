@@ -1,7 +1,11 @@
 import numpy as np
-from PyQt4.QtCore import Qt, QTimer
-from PyQt4 import QtGui
-from PyQt4.QtGui import QApplication
+
+from AnyQt.QtCore import QSize, Qt, QTimer
+from AnyQt.QtGui import (
+    QPen, QFont, QFontInfo, QPalette, QKeySequence,
+)
+from AnyQt.QtWidgets import QApplication, QAction
+
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
@@ -23,8 +27,8 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
-    font = QtGui.QFont(font)
-    fontinfo = QtGui.QFontInfo(font)
+    font = QFont(font)
+    fontinfo = QFontInfo(font)
     size = fontinfo.pointSizeF() * factor
 
     if minsize is not None:
@@ -134,7 +138,7 @@ class OWScatterPlot(OWWidget):
         box.layout().addWidget(self.graph.plot_widget)
         plot = self.graph.plot_widget
 
-        axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
+        axispen = QPen(self.palette().color(QPalette.Text))
         axis = plot.getAxis("bottom")
         axis.setPen(axispen)
 
@@ -254,18 +258,18 @@ class OWScatterPlot(OWWidget):
             viewbox = plot.getViewBox()
             viewbox.autoRange()
 
-        zoom_in = QtGui.QAction(
+        zoom_in = QAction(
             "Zoom in", self, triggered=lambda: zoom(1.25)
         )
-        zoom_in.setShortcuts([QtGui.QKeySequence(QtGui.QKeySequence.ZoomIn),
-                              QtGui.QKeySequence(self.tr("Ctrl+="))])
-        zoom_out = QtGui.QAction(
-            "Zoom out", self, shortcut=QtGui.QKeySequence.ZoomOut,
+        zoom_in.setShortcuts([QKeySequence(QKeySequence.ZoomIn),
+                              QKeySequence(self.tr("Ctrl+="))])
+        zoom_out = QAction(
+            "Zoom out", self, shortcut=QKeySequence.ZoomOut,
             triggered=lambda: zoom(1 / 1.25)
         )
-        zoom_fit = QtGui.QAction(
+        zoom_fit = QAction(
             "Fit in view", self,
-            shortcut=QtGui.QKeySequence(Qt.ControlModifier | Qt.Key_0),
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
             triggered=fit_to_view
         )
         self.addActions([zoom_in, zoom_out, zoom_fit])

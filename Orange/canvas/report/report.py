@@ -2,8 +2,12 @@ import itertools
 import time
 from collections import OrderedDict, Iterable
 from itertools import chain
-from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
-from PyQt4.QtGui import QGraphicsScene, QTableView, QColor, QBrush
+
+from AnyQt.QtCore import (
+    Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
+)
+from AnyQt.QtGui import QColor, QBrush
+from AnyQt.QtWidgets import QGraphicsScene, QTableView
 
 from Orange.util import try_
 from Orange.widgets.io import PngFormat

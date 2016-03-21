@@ -1,9 +1,14 @@
-from PyQt4.QtCore import (
-    Qt, pyqtProperty, pyqtSignal, QSize, QRectF, QPointF, QLineF, QTimer)
-from PyQt4.QtGui import (
-    QBrush, QPen, QColor, QStyle, QSizePolicy, QFormLayout,
-    QGraphicsEllipseItem, QGraphicsTextItem, QGraphicsItem, QGraphicsLineItem,
-    QPainter, QPainterPath, QTransform, QGraphicsView, QGraphicsScene
+from AnyQt.QtGui import (
+    QBrush, QPen, QColor, QPainter, QPainterPath, QTransform
+)
+from AnyQt.QtWidgets import (
+    QGraphicsItem, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem,
+    QGraphicsLineItem, QGraphicsScene, QGraphicsView, QStyle, QSizePolicy,
+    QFormLayout
+)
+from AnyQt.QtCore import (
+    Qt, QRectF, QSize, QPointF, QLineF, QTimer,
+    pyqtSignal, pyqtProperty
 )
 
 from Orange.widgets import gui
@@ -419,7 +424,7 @@ class OWTreeViewer2D(OWWidget):
         self.scene.selectionChanged.connect(self.update_selection)
 
     def send_report(self):
-        from PyQt4.QtSvg import QSvgGenerator
+        from AnyQt.QtSvg import QSvgGenerator
 
         if self.model:
             self.reportSection("Tree")

@@ -18,8 +18,11 @@ Point : namedtuple (x, y)
 from collections import namedtuple, defaultdict, deque
 from math import pi, sqrt, cos, sin, degrees
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import (
+    QSizePolicy, QGraphicsItem, QGraphicsRectItem, QGraphicsWidget, QStyle
+)
+from AnyQt.QtGui import QColor, QBrush, QPen
+from AnyQt.QtCore import Qt, QPointF, QTimer, QRectF, QSizeF
 
 from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 
@@ -30,7 +33,7 @@ Square = namedtuple('Square', ['center', 'length', 'angle'])
 Point = namedtuple('Point', ['x', 'y'])
 
 
-class PythagorasTreeViewer(QtGui.QGraphicsWidget):
+class PythagorasTreeViewer(QGraphicsWidget):
     """Pythagoras tree viewer graphics widget.
 
     Simply pass in a tree adapter instance and a valid scene object, and the
@@ -46,7 +49,7 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
 
     Pass tree later through method.
     >>> tree_adapter = TreeAdapter()
-    >>> scene = QtGui.QGraphicsScene()
+    >>> scene = QGraphicsScene()
     This is where the magic happens
     >>> tree_view = PythagorasTreeViewer(parent=scene)
     >>> tree_view.set_tree(tree_adapter)
@@ -93,8 +96,8 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
         self._tree = None
         self._padding = padding
 
-        self.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                           QtGui.QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Expanding,
+                           QSizePolicy.Expanding)
 
         # Necessary settings that need to be set from the outside
         self._depth_limit = depth_limit
@@ -159,7 +162,7 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
         Parameters
         ----------
         func : Callable
-            func :: label -> QtGui.QColor
+            func :: label -> QColor
 
         Returns
         -------
@@ -173,7 +176,7 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
         """Get the node color with a nice default fallback."""
         if self.__calc_node_color_func is not None:
             return self.__calc_node_color_func(*args)
-        return QtGui.QColor('#297A1F')
+        return QColor('#297A1F')
 
     def set_tooltip_func(self, func):
         """Set the function that will be used the get the node tooltips.
@@ -312,7 +315,7 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
                 self._square_objects[node.label] = square_obj(
                     node,
                     parent=self,
-                    brush=QtGui.QBrush(
+                    brush=QBrush(
                         self._calc_node_color(self.tree_adapter, node)
                     ),
                     tooltip=self._get_tooltip(node),
@@ -345,10 +348,10 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
         return self.boundingRect().size() + \
-               QtCore.QSizeF(self._padding, self._padding)
+               QSizeF(self._padding, self._padding)
 
 
-class SquareGraphicsItem(QtGui.QGraphicsRectItem):
+class SquareGraphicsItem(QGraphicsRectItem):
     """Square Graphics Item.
 
     Square component to draw as components for the non-interactive Pythagoras
@@ -371,15 +374,15 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
 
         center, length, angle = tree_node.square
         self._center_point = center
-        self.center = QtCore.QPointF(*center)
+        self.center = QPointF(*center)
         self.length = length
         self.angle = angle
         super().__init__(self._get_rect_attributes(), parent)
         self.setTransformOriginPoint(self.boundingRect().center())
         self.setRotation(degrees(angle))
 
-        self.setBrush(kwargs.get('brush', QtGui.QColor('#297A1F')))
-        self.setPen(kwargs.get('pen', QtGui.QPen(QtGui.QColor('#000'))))
+        self.setBrush(kwargs.get('brush', QColor('#297A1F')))
+        self.setPen(kwargs.get('pen', QPen(QColor('#000'))))
 
         self.setAcceptHoverEvents(True)
         self.setZValue(kwargs.get('zvalue', 0))
@@ -408,7 +411,7 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
         height = width = self.length
         x = self.center.x() - self.length / 2
         y = self.center.y() - self.length / 2
-        return QtCore.QRectF(x, y, height, width)
+        return QRectF(x, y, height, width)
 
 
 class InteractiveSquareGraphicsItem(SquareGraphicsItem):
@@ -429,7 +432,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
     """
 
-    timer = QtCore.QTimer()
+    timer = QTimer()
 
     MAX_OPACITY = 1.
     SELECTION_OPACITY = .5
@@ -437,14 +440,13 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
     def __init__(self, tree_node, parent=None, **kwargs):
         super().__init__(tree_node, parent, **kwargs)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
 
         self.initial_zvalue = self.zValue()
         # The max z value changes if any item is selected
         self.any_selected = False
 
         self.setToolTip(kwargs.get('tooltip', 'Tooltip'))
-
         self.timer.setSingleShot(True)
 
     def hoverEnterEvent(self, event):
@@ -532,12 +534,12 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
     def paint(self, painter, option, widget=None):
         # Override the default selected appearance
         if self.isSelected():
-            option.state ^= QtGui.QStyle.State_Selected
+            option.state ^= QStyle.State_Selected
             rect = self.rect()
             # this must render before overlay due to order in which it's drawn
             super().paint(painter, option, widget)
             painter.save()
-            pen = QtGui.QPen(QtGui.QColor(Qt.black))
+            pen = QPen(QColor(Qt.black))
             pen.setWidth(4)
             pen.setJoinStyle(Qt.MiterJoin)
             painter.setPen(pen)

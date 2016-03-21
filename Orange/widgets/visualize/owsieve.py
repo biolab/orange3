@@ -3,9 +3,9 @@ from itertools import chain
 import numpy as np
 from scipy.stats.distributions import chi2
 
-from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import (
-    QGraphicsScene, QColor, QPen, QBrush, QSizePolicy, QGraphicsLineItem)
+from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtGui import QColor, QPen, QBrush
+from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -451,7 +451,7 @@ class OWSieveDiagram(OWWidget):
 def main():
     # pylint: disable=missing-docstring
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
     ow = OWSieveDiagram()
     ow.show()

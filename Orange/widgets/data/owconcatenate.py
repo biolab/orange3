@@ -12,8 +12,8 @@ from itertools import chain, repeat
 from operator import itemgetter
 
 import numpy
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtCore import Qt
 
 import Orange.data
 from Orange.widgets import widget, gui, settings
@@ -95,11 +95,11 @@ class OWConcatenate(widget.OWWidget):
 
         ibox = gui.indentedBox(box, sep=gui.checkButtonOffsetHint(cb))
 
-        form = QtGui.QFormLayout(
+        form = QFormLayout(
             spacing=8,
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
         )
 
         form.addRow(
@@ -269,7 +269,7 @@ def append_columns(data, attributes=(), class_vars=(), metas=()):
 
 
 def main():
-    app = QtGui.QApplication([])
+    app = QApplication([])
     w = OWConcatenate()
     data_a = Orange.data.Table("iris")
     data_b = Orange.data.Table("zoo")

@@ -3,9 +3,9 @@ This module holds our customized QWebView, an integration of HTML, CSS & JS
 into Qt.
 """
 
-from PyQt4.QtCore import Qt, QSize, QUrl
-from PyQt4.QtGui import QSizePolicy, QWidget
-from PyQt4.QtWebKit import QWebView
+from AnyQt.QtCore import Qt, QSize, QUrl
+from AnyQt.QtWidgets import  QSizePolicy, QWidget
+from AnyQt.QtWebKitWidgets import QWebView
 
 
 class WebView(QWebView):

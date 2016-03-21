@@ -3,8 +3,11 @@ from itertools import chain, count
 from warnings import catch_warnings
 
 import numpy as np
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import QSizePolicy as Policy
+from AnyQt.QtWidgets import \
+    QStyle, QComboBox, QMessageBox, QFileDialog, QGridLayout, QLabel, \
+    QLineEdit
+from AnyQt.QtWidgets import QSizePolicy as Policy
+from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.data import Domain, DiscreteVariable, StringVariable
@@ -40,7 +43,7 @@ class NamedURLModel(PyListModel):
 
     def data(self, index, role):
         data = super().data(index, role)
-        if role == QtCore.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             return self.mapping.get(data, data)
         return data
 
@@ -65,11 +68,11 @@ class XlsContextHandler(ContextHandler):
         return ContextHandler.NO_MATCH
 
 
-class LineEditSelectOnFocus(QtGui.QLineEdit):
+class LineEditSelectOnFocus(QLineEdit):
     def focusInEvent(self, event):
         super().focusInEvent(event)
         # If selectAll is called directly, placing the cursor unselects the text
-        QtCore.QTimer.singleShot(0, self.selectAll)
+        QTimer.singleShot(0, self.selectAll)
 
 
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
@@ -123,13 +126,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.loaded_file = ""
         self.reader = None
 
-        layout = QtGui.QGridLayout()
+        layout = QGridLayout()
         gui.widgetBox(self.controlArea, margin=0, orientation=layout)
         vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
                                 callback=self.load_data, addToLayout=False)
 
         rb_button = gui.appendRadioButton(vbox, "File:", addToLayout=False)
-        layout.addWidget(rb_button, 0, 0, QtCore.Qt.AlignVCenter)
+        layout.addWidget(rb_button, 0, 0, Qt.AlignVCenter)
 
         box = gui.hBox(None, addToLayout=False, margin=0)
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
@@ -140,15 +143,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         file_button = gui.button(
             None, self, '...', callback=self.browse_file, autoDefault=False)
-        file_button.setIcon(self.style().standardIcon(
-            QtGui.QStyle.SP_DirOpenIcon))
+        file_button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         file_button.setSizePolicy(Policy.Maximum, Policy.Fixed)
         layout.addWidget(file_button, 0, 2)
 
         reload_button = gui.button(
             None, self, "Reload", callback=self.load_data, autoDefault=False)
         reload_button.setIcon(self.style().standardIcon(
-            QtGui.QStyle.SP_BrowserReload))
+            QStyle.SP_BrowserReload))
         reload_button.setSizePolicy(Policy.Fixed, Policy.Fixed)
         layout.addWidget(reload_button, 0, 3)
 
@@ -158,21 +160,21 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                                         sendSelectedValue=True)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
-        self.sheet_label = QtGui.QLabel()
+        self.sheet_label = QLabel()
         self.sheet_label.setText('Sheet')
         self.sheet_label.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_box.layout().addWidget(
-            self.sheet_label, QtCore.Qt.AlignLeft)
+            self.sheet_label, Qt.AlignLeft)
         self.sheet_box.layout().addWidget(
-            self.sheet_combo, QtCore.Qt.AlignVCenter)
+            self.sheet_combo, Qt.AlignVCenter)
         layout.addWidget(self.sheet_box, 2, 1)
         self.sheet_box.hide()
 
         rb_button = gui.appendRadioButton(vbox, "URL:", addToLayout=False)
-        layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
+        layout.addWidget(rb_button, 3, 0, Qt.AlignVCenter)
 
-        self.url_combo = url_combo = QtGui.QComboBox()
+        self.url_combo = url_combo = QComboBox()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
         url_combo.setLineEdit(LineEditSelectOnFocus())
@@ -212,12 +214,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
-        QtCore.QTimer.singleShot(0, self.load_data)
+        QTimer.singleShot(0, self.load_data)
 
         self.setAcceptDrops(True)
 
     def sizeHint(self):
-        return QtCore.QSize(600, 550)
+        return QSize(600, 550)
 
     def select_file(self, n):
         assert n < len(self.recent_paths)
@@ -239,14 +241,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if in_demos:
             start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
-                QtGui.QMessageBox.information(
+                QMessageBox.information(
                     None, "File",
                     "Cannot find the directory with documentation data sets")
                 return
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        filename = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
@@ -478,7 +480,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
 if __name__ == "__main__":
     import sys
-    a = QtGui.QApplication(sys.argv)
+    from AnyQt.QtWidgets import QApplication
+    a = QApplication(sys.argv)
     ow = OWFile()
     ow.show()
     a.exec_()

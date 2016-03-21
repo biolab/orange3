@@ -5,14 +5,16 @@ from operator import iadd
 
 import numpy
 
-from PyQt4.QtGui import (
-    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
-    QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform, QApplication
+from AnyQt.QtWidgets import (
+    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QGraphicsWidget,
+    QApplication
 )
-
-from PyQt4.QtCore import Qt, QRect, QRectF, QSize, QPointF
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import (
+    QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
+    QBrush, QTransform
+)
+from AnyQt.QtCore import Qt, QRect, QRectF, QSize, QPointF
+from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
 

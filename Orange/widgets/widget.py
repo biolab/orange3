@@ -3,10 +3,14 @@ import os
 import types
 from functools import reduce
 
-from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, QSettings, QUrl
-from PyQt4.QtGui import QDialog, QVBoxLayout, QSizePolicy, qApp, QStyle, \
-    QIcon, QShortcut, QKeySequence, QDesktopServices, QSplitter, \
-    QSplitterHandle, QWidget, QPushButton
+from AnyQt.QtWidgets import (
+    QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
+    QShortcut, QSplitter, QSplitterHandle, QPushButton
+)
+from AnyQt.QtCore import (
+    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
+)
+from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
@@ -345,7 +349,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
 
             if restored and not self.windowState() & \
                     (Qt.WindowMaximized | Qt.WindowFullScreen):
-                space = qApp.desktop().availableGeometry(self)
+                space = QApplication.desktop().availableGeometry(self)
                 frame, geometry = self.frameGeometry(), self.geometry()
 
                 #Fix the widget size to fit inside the available space

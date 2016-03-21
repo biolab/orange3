@@ -1,5 +1,6 @@
-from PyQt4.QtGui import QFormLayout, QColor, QApplication, QLineEdit
-from PyQt4.QtCore import Qt, QTimer
+from AnyQt.QtWidgets import QFormLayout, QLineEdit
+from AnyQt.QtGui import QColor
+from AnyQt.QtCore import Qt, QTimer
 
 import numpy
 import pyqtgraph as pg
@@ -391,6 +392,7 @@ class OWPCA(widget.OWWidget):
 
 def main():
     import gc
+    from AnyQt.QtWidgets import QApplication
     app = QApplication([])
     w = OWPCA()
     # data = Table("iris")

@@ -1,7 +1,8 @@
 import os
 
-from PyQt4.QtCore import QFileInfo
-from PyQt4.QtGui import QMessageBox, QFileDialog, QFileIconProvider, QComboBox
+from AnyQt.QtCore import QFileInfo
+from AnyQt.QtWidgets import \
+    QMessageBox, QFileDialog, QFileIconProvider, QComboBox
 
 from Orange.widgets.settings import Setting
 
@@ -65,7 +66,7 @@ def get_file_name(start_dir, start_filter, file_formats):
         start_filter = filters[0]
 
     while True:
-        filename, filter = QFileDialog.getSaveFileNameAndFilter(
+        filename, filter = QFileDialog.getSaveFileName(
             None, 'Save As...', start_dir, ';;'.join(filters), start_filter)
         if not filename:
             return None, None, None
