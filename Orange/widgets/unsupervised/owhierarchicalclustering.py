@@ -579,7 +579,7 @@ class DendrogramWidget(QGraphicsWidget):
 
             item.setPath(Path_toQtPath(geom))
             item.setZValue(-node.value.height)
-            r = item.boundingRect()
+            r = item.path().boundingRect()
             base = self._root.value.height
 
             if self.orientation == Left:
