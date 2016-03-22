@@ -325,30 +325,30 @@ class TestInstance(unittest.TestCase):
         vals = [42, "M", "B", "X", 43, "Foo"]
         inst = Instance(domain, vals)
         inst2 = Instance(domain, vals)
-        self.assertTrue(inst == inst2)
-        self.assertTrue(inst2 == inst)
+        self.assertEqual(inst, inst2)
+        self.assertEqual(inst2, inst)
 
         inst2[0] = 43
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2[0] = Unknown
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[2] = "C"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[-1] = "Y"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[-2] = "33"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[-3] = "Bar"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
     def test_instance_id(self):
         domain = self.create_domain(["x"])

@@ -3,8 +3,8 @@ import pickle
 import pkgutil
 import unittest
 
-import numpy as np
 import traceback
+import numpy as np
 from Orange.base import SklLearner
 
 import Orange.classification
@@ -77,10 +77,10 @@ class ModelTest(unittest.TestCase):
         clf = learn(t)
         clf.ret = Model.Probs
         y2 = clf(x, ret=Model.Value)
-        self.assertTrue(y2.shape == (nrows,))
+        self.assertEqual(y2.shape, (nrows,))
         y2, probs = clf(x, ret=Model.ValueProbs)
-        self.assertTrue(y2.shape == (nrows, ))
-        self.assertTrue(probs.shape == (nrows, 2))
+        self.assertEqual(y2.shape, (nrows,))
+        self.assertEqual(probs.shape, (nrows, 2))
 
         # multitarget
         y = np.random.random_integers(1, 5, (nrows, 2))
@@ -144,7 +144,7 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         attr_vars = [DiscreteVariable(name=a, values=range(2))
                      for a in attributes]
         class_vars = [DiscreteVariable(name=c,
-                                            values=range(class_var_domain))
+                                       values=range(class_var_domain))
                       for c in classes]
         meta_vars = []
         self.domain = Domain(attr_vars, class_vars, meta_vars)
@@ -185,7 +185,8 @@ class SklTest(unittest.TestCase):
         lr = LogisticRegressionLearner()
         assert isinstance(lr, Orange.classification.SklLearner)
         res = CrossValidation(table, [lr], k=2)
-        self.assertTrue(0.7 < Orange.evaluation.AUC(res)[0] < 0.9)
+        self.assertGreater(Orange.evaluation.AUC(res)[0], 0.7)
+        self.assertLess(Orange.evaluation.AUC(res)[0], 0.9)
 
     def test_nan_columns(self):
         data = Orange.data.Table("iris")
@@ -204,17 +205,17 @@ class ClassfierListInputTest(unittest.TestCase):
     def test_discrete(self):
         table = Table("titanic")
         tree = Orange.classification.TreeLearner()(table)
-        strlist = [ [ "crew", "adult", "male" ],
-                    [ "crew", "adult", None ] ]
+        strlist = [["crew", "adult", "male"],
+                   ["crew", "adult", None]]
         for se in strlist: #individual examples
             assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
 
-    def test_continuous(lf):
+    def test_continuous(self):
         table = Table("iris")
         tree = Orange.classification.TreeLearner()(table)
-        strlist = [ [ 2, 3, 4, 5 ],
-                    [ 1, 2, 3, 5 ] ]
+        strlist = [[2, 3, 4, 5],
+                   [1, 2, 3, 5]]
         for se in strlist: #individual examples
             assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))

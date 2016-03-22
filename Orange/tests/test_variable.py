@@ -73,9 +73,9 @@ class BaseVariableTest(unittest.TestCase):
     def test_strange_eq(self):
         a = ContinuousVariable()
         b = ContinuousVariable()
-        self.assertTrue(a == a)
-        self.assertFalse(a == b)
-        self.assertFalse(a == "somestring")
+        self.assertEqual(a, a)
+        self.assertNotEqual(a, b)
+        self.assertNotEqual(a, "somestring")
 
 def variabletest(varcls):
     def decorate(cls):

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from Orange.util import *
+from Orange.util import scale, export_globals, flatten, abstract, deprecated
 
 
 SOMETHING = 0xf00babe
@@ -64,7 +64,7 @@ class UtilTest(unittest.TestCase):
                          ['SOMETHING', 'UtilTest'])
 
     def test_flatten(self):
-        self.assertEqual(list(flatten([[1,2],[3]])), [1,2,3])
+        self.assertEqual(list(flatten([[1, 2], [3]])), [1, 2, 3])
 
     def test_deprecated(self):
         @deprecated
@@ -72,6 +72,6 @@ class UtilTest(unittest.TestCase):
 
         with self.assertWarns(DeprecationWarning) as cm:
             x = identity(10)
-        self.assertTrue(x == 10)
+        self.assertEqual(x, 10)
         self.assertTrue('deprecated' in cm.warning.args[0])
         self.assertTrue('identity' in cm.warning.args[0])
