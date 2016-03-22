@@ -96,6 +96,10 @@ Section ""
 
 	${ExtractTemp} "${BASEDIR}\requirements.txt" ${TEMPDIR}\
 
+	# Update pip to minimum required version (pip>=6)
+	DetailPrint "Updating pip"
+	${PythonExec} '-m pip install --no-index -f "${TEMPDIR}\wheelhouse" -U pip'
+
 	DetailPrint "Installing scipy stack ($SSE)"
 	${Pip} 'install --no-deps --no-index \
 			-f "${TEMPDIR}\wheelhouse\$SSE" numpy scipy'
