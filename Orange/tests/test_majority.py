@@ -7,6 +7,10 @@ from Orange.classification import MajorityLearner
 
 
 class MajorityTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+
     def test_majority(self):
         nrows = 1000
         ncols = 10
@@ -35,10 +39,9 @@ class MajorityTest(unittest.TestCase):
         self.assertTrue((y2 == heavy_class).all())
 
     def test_empty(self):
-        iris = Table('iris')
         learn = MajorityLearner()
-        clf = learn(iris[:0])
-        y = clf(iris[0], clf.Probs)
+        clf = learn(self.iris[:0])
+        y = clf(self.iris[0], clf.Probs)
         self.assertTrue(np.allclose(y, y.sum() / y.size))
 
     def test_missing(self):
@@ -63,7 +66,7 @@ class MajorityTest(unittest.TestCase):
         self.assertRaises(ValueError, learn, autompg)
 
     def test_returns_random_class(self):
-        iris = Table('iris')
+        iris = self.iris
         train = np.ones((150,), dtype='bool')
         train[0] = False
         majority = MajorityLearner()(iris[train])
