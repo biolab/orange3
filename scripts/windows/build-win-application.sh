@@ -126,7 +126,7 @@ function md5sum_check {
     local checksum=${2:?}
     local md5=
 
-    if [[ -x $(which md5 &> /dev/null) ]]; then
+    if which md5 &> /dev/null; then
         md5=$(md5 -q "$filepath")
     else
         md5=$(md5sum "$filepath" | cut -d " " -f 1)
