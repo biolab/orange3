@@ -13,10 +13,6 @@ class test_valuecount(unittest.TestCase):
         b = _valuecount.valuecount(a)
         np.testing.assert_almost_equal(b, [[1, 2], [0.6, 0.4]])
 
-        a = np.array([[0, 1, 1, 1], [0.1, 0.2, 0.3, 0.4]])
-        b = _valuecount.valuecount(a)
-        np.testing.assert_almost_equal(b, [[0, 1], [0.1, 0.9]])
-
         a = np.array([[0, 1, 1, 2], [0.1, 0.2, 0.3, 0.4]])
         b = _valuecount.valuecount(a)
         np.testing.assert_almost_equal(b, [[0, 1, 2], [0.1, 0.5, 0.4]])
