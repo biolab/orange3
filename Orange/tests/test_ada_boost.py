@@ -8,9 +8,11 @@ from Orange.evaluation import CrossValidation, CA, RMSE
 
 
 class SklAdaBoostTest(unittest.TestCase):
-    def setUp(self):
-        self.iris = Table("iris")
-        self.housing = Table("housing")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table("iris")
+        cls.housing = Table("housing")
 
     def test_adaboost(self):
         learn = SklAdaBoostLearner()

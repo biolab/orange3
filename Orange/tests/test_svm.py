@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 
-import Orange
 from Orange.classification import (SVMLearner, LinearSVMLearner,
                                    NuSVMLearner, OneClassSVMLearner)
 from Orange.regression import (SVRLearner, NuSVRLearner)
@@ -11,9 +10,10 @@ from Orange.evaluation import CrossValidation, CA, RMSE
 
 
 class SVMTest(unittest.TestCase):
-    def setUp(self):
-        self.data = Table('ionosphere')
-        self.data.shuffle()
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table('ionosphere')
+        cls.data.shuffle()
 
     def test_SVM(self):
         learn = SVMLearner()
