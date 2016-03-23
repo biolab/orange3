@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 from PyQt4.QtGui import QTableView, QColor, QItemSelectionModel, \
     QItemDelegate, QPen, QBrush, QItemSelection, QHeaderView
-from PyQt4.QtCore import Qt, SIGNAL, QAbstractTableModel, QModelIndex, QSize
+from PyQt4.QtCore import Qt, QAbstractTableModel, QModelIndex, QSize
 
 from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
 from Orange.misc import DistMatrix
@@ -29,7 +29,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.zero_diag = True
 
     def set_data(self, distances):
-        self.emit(SIGNAL("modelAboutToBeReset()"))
+        self.beginResetModel()
         self.distances = distances
         if distances is None:
             return
@@ -37,9 +37,10 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.colors = \
             (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
         self.zero_diag = all(distances.diagonal() < 1e-6)
+        self.endResetModel()
 
     def set_labels(self, labels, variable=None, values=None):
-        self.emit(SIGNAL("modelReset()"))
+        self.beginResetModel()
         self.labels = labels
         self.variable = variable
         self.values = values
@@ -51,7 +52,8 @@ class DistanceMatrixModel(QAbstractTableModel):
                                  for x in (values - off) * fact]
         else:
             self.label_colors = None
-        self.emit(SIGNAL("modelReset()"))
+
+        self.endResetModel()
 
     def dimension(self, parent=None):
         if parent and parent.isValid() or self.distances is None:
