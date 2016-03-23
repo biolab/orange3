@@ -57,7 +57,7 @@ class ImgFormat(FileFormat):
             try:
                 scene.render(painter, target, rect)
             except TypeError:
-                scene.render(painter)  # PyQt4 QWidget.render() takes different params
+                scene.render(painter)  # QWidget.render() takes different params
             cls._save_buffer(buffer, filename)
             painter.end()
 

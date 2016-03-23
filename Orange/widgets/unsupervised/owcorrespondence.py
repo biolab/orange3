@@ -28,7 +28,7 @@ def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
     """
     Select rows in view.
 
-    :param PyQt4.QtGui.QAbstractItemView view:
+    :param QAbstractItemView view:
     :param row_indices: Integer indices of rows to select.
     :param command: QItemSelectionModel.SelectionFlags
     """
