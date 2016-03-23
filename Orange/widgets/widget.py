@@ -47,7 +47,7 @@ class WidgetMetaClass(type(QDialog)):
         from Orange.canvas.registry.description import (
             input_channel_from_args, output_channel_from_args)
 
-        cls = type.__new__(mcs, name, bases, kwargs)
+        cls = super().__new__(mcs, name, bases, kwargs)
         if not cls.name: # not a widget
             return cls
 
