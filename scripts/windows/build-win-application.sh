@@ -7,7 +7,8 @@ function print_usage {
     echo 'build-win-application.sh
 Build an Windows applicaiton installer for Orange Canvas
 
-Note: needs makensis and 7z on PATH
+Note: needs makensis and 7z on PATH, as well as a python environment with
+installed pip (>=7)
 
 Options:
 
@@ -63,6 +64,11 @@ PYTHON_MD5=e96268f7042d2a3d14f7e23b2535738b
 PYTHON_VER_SHORT=${PYTHON_VER%.[0-9]*}
 PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
 PYTHON_MSI=python-$PYTHON_VER.msi
+
+# The minimum pip version required (this is the version which was shipped
+# with Python 3.4.3 (ensurepip)
+PIP_VER=6.0.8
+PIP_MD5=41e73fae2c86ba2270ff51c1d86f7e09
 
 PYQT_VER=4.11.4
 PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
@@ -126,7 +132,7 @@ function md5sum_check {
     local checksum=${2:?}
     local md5=
 
-    if [[ -x $(which md5 &> /dev/null) ]]; then
+    if which md5 &> /dev/null; then
         md5=$(md5 -q "$filepath")
     else
         md5=$(md5sum "$filepath" | cut -d " " -f 1)
@@ -188,6 +194,18 @@ function prepare_msvcr100 {
                  e3c817f7fe44cc870ecdbcbc3ea36132
 
     cp "$DOWNLOADDIR/msvcp100.dll" "$BUILDBASE/core/msvredist/msvcp100.dll"
+}
+
+
+function prepare_pip {
+    local version=${PIP_VER:?}
+    local url=https://pypi.python.org/packages/py2.py3/p/pip/pip-${version}-py2.py3-none-any.whl
+    local md5=${PIP_MD5:?}
+    download_url "${url}" \
+                 "${DOWNLOADDIR}"/pip-${version}-py2.py3-none-any.whl \
+                 ${md5}
+    cp "$DOWNLOADDIR"/pip-${version}-py2.py3-none-any.whl \
+       "$BUILDBASE"/wheelhouse/
 }
 
 
@@ -321,6 +339,7 @@ function prepare_startupscripts {
 function prepare_all {
     prepare_python
     prepare_msvcr100
+    prepare_pip
     prepare_scipy_stack
     prepare_pyqt4
     # Need to specifically restrict the numpy/scipy versions, otherwise
