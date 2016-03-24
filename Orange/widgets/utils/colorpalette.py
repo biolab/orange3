@@ -82,7 +82,7 @@ class ColorPaletteDlg(QDialog):
                 if QMessageBox.information(
                         self, 'Question',
                         'The color schema has changed. Save?',
-                        'Yes', 'Discard', '', 0, 1):
+                        QMessageBox.Yes | QMessageBox.Discard) == QMessageBox.Discard:
                     QDialog.reject(self)
                 else:
                     self.selectedSchemaIndex = self.schemaCombo.count() - 1
