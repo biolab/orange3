@@ -120,7 +120,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             Policy.MinimumExpanding, Policy.MinimumExpanding)
         self.hBLayout.layout().addWidget(self.sheet_label, QtCore.Qt.AlignLeft)
         self.hBLayout.layout().addWidget(self.sheet_combo, QtCore.Qt.AlignVCenter)
-        layout.addWidget(self.hBLayout, 2, 1)	
+        layout.addWidget(self.hBLayout, 2, 1)
+        self.hBLayout.hide()
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
         layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
@@ -158,7 +159,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
-        self.fill_sheet_combo(self.last_path())
+        if self.last_path() is not None:
+            self.fill_sheet_combo(self.last_path())
         QtCore.QTimer.singleShot(0, self.load_data)
 
     def reload(self):
