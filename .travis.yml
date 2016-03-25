@@ -37,6 +37,7 @@ addons:
 
 before_install:
     - set -e  # fail on any error
+    - source $TRAVIS_BUILD_DIR/.travis/util.sh
 
 install:
     - source $TRAVIS_BUILD_DIR/.travis/stage_install.sh

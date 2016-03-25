@@ -7,7 +7,5 @@ for script in \
     install_pyqt.sh      \
     build_doc.sh
 do
-    source $TRAVIS_BUILD_DIR/.travis/$script
+    foldable source $TRAVIS_BUILD_DIR/.travis/$script
 done
-
-pip install codecov;

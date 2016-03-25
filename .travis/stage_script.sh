@@ -1,10 +1,10 @@
 
 if [ "$RUN_PYLINT" ]; then
-    pip install pylint
+    foldable pip install pylint
     cd $TRAVIS_BUILD_DIR
     cp pylintrc ~/.pylintrc
     .travis/check_pylint_diff
-    exit $?  # we source, so we should return
+    exit $?
 fi
 
 cd "$ORANGE_DIR"
