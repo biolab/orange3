@@ -55,9 +55,9 @@ class Setting:
     # Settings are automatically persisted to disk
     packable = True
 
-    # A misleading docstring for providing type hints for Settings to PyCharm
     def __new__(cls, default, *args, **kwargs):
-        """
+        """A misleading docstring for providing type hints for Settings
+
         :type: default: T
         :rtype: T
         """
@@ -91,8 +91,13 @@ class SettingProvider:
 
         Traverse provider_class members and store all instances of
         Setting and SettingProvider.
+
+        Parameters
+        ----------
+        provider_class : class
+            class containing settings definitions
         """
-        self.name = None
+        self.name = ""
         self.provider_class = provider_class
         self.providers = {}
         """:type: dict[str, SettingProvider]"""
@@ -114,9 +119,16 @@ class SettingProvider:
     def initialize(self, instance, data=None):
         """Initialize instance settings to their default values.
 
-        If default value is mutable, create a shallow copy before assigning it to the instance.
+        Mutable values are (shallow) copied before they are assigned to the
+        widget. Immutable are used as-is.
 
-        If data is provided, setting values from data will override defaults.
+        Parameters
+        ----------
+        instance : OWWidget
+            widget instance to initialize
+        data : Optional[dict]
+            optional data used to override the defaults
+            (used when settings are loaded from schema)
         """
         if data is None and self.initialization_data is not None:
             data = self.initialization_data
@@ -131,32 +143,51 @@ class SettingProvider:
 
         for name, provider in self.providers.items():
             if data and name in data:
-                if hasattr(instance, name)\
-                        and not isinstance(getattr(instance, name), SettingProvider):
-                    provider.initialize(getattr(instance, name), data[name])
-                else:
+                member = getattr(instance, name, None)
+                if member is None or isinstance(member, SettingProvider):
                     provider.store_initialization_data(data[name])
+                else:
+                    provider.initialize(member, data[name])
+
 
     def store_initialization_data(self, initialization_data):
         """Store initialization data for later use.
 
-        Used when settings handler is initialized, but member for this provider
-        does not exists yet (because handler.initialize is called in __new__, but
-        member will be created in __init__.
+        Used when settings handler is initialized, but member for this
+        provider does not exists yet (because handler.initialize is called in
+        __new__, but member will be created in __init__.
+
+        Parameters
+        ----------
+        initialization_data : dict
+            data to be used for initialization when the component is created
         """
         self.initialization_data = initialization_data
 
     @staticmethod
     def _default_packer(setting, instance):
+        """A simple packet that yields setting name and value.
+
+        Parameters
+        ----------
+        setting : Setting
+        instance : OWWidget
+        """
         if setting.packable:
             yield setting.name, getattr(instance, setting.name)
 
     def pack(self, instance, packer=None):
-        """Pack instance settings in name: value dict.
+        """Pack instance settings in a name:value dict.
 
-        packer: optional packing function
-                it will be called with setting and instance parameters and should
-                yield (name, value) pairs that will be added to the packed_settings.
+        Parameters
+        ----------
+        instance : OWWidget
+            widget instance
+        packer: callable (Setting, OWWidget) -> Generator[(str, object)]
+            optional packing function
+            it will be called with setting and instance parameters and
+            should yield (name, value) pairs that will be added to the
+            packed_settings.
         """
         if packer is None:
             packer = self._default_packer
@@ -175,8 +206,12 @@ class SettingProvider:
     def unpack(self, instance, data):
         """Restore settings from data to the instance.
 
-        instance: instance to restore settings to
-        data: dictionary containing packed data
+        Parameters
+        ----------
+        instance : OWWidget
+            instance to restore settings to
+        data : dict
+            packed data
         """
         for setting, data, instance in self.traverse_settings(data, instance):
             if setting.name in data and instance is not None:
@@ -187,6 +222,10 @@ class SettingProvider:
 
         If this provider matches, return it, otherwise pass
         the call to child providers.
+
+        Parameters
+        ----------
+        provider_class : class
         """
         if issubclass(provider_class, self.provider_class):
             return self
@@ -200,20 +239,23 @@ class SettingProvider:
         """Generator of tuples (setting, data, instance) for each setting
         in this and child providers..
 
-        :param data: dictionary with setting values
-        :type data: dict
-        :param instance: instance matching setting_provider
+        Parameters
+        ----------
+        data : dict
+            dictionary with setting values
+        instance : OWWidget
+            instance matching setting_provider
         """
         data = data if data is not None else {}
-        select_data = lambda x: data.get(x.name, {})
-        select_instance = lambda x: getattr(instance, x.name, None)
 
         for setting in self.settings.values():
             yield setting, data, instance
 
         for provider in self.providers.values():
+            data_ = data.get(provider.name, {})
+            instance_ = getattr(instance, provider.name, None)
             for setting, component_data, component_instance in \
-                    provider.traverse_settings(select_data(provider), select_instance(provider)):
+                    provider.traverse_settings(data_, instance_):
                 yield setting, component_data, component_instance
 
 
@@ -237,8 +279,15 @@ class SettingsHandler:
         """Create a new settings handler based on the template and bind it to
         widget_class.
 
-        :type template: SettingsHandler
-        :rtype: SettingsHandler
+        Parameters
+        ----------
+        widget_class : class
+        template : SettingsHandler
+            SettingsHandler to copy setup from
+
+        Returns
+        -------
+        SettingsHandler
         """
 
         if template is None:
@@ -249,7 +298,12 @@ class SettingsHandler:
         return setting_handler
 
     def bind(self, widget_class):
-        """Bind settings handler instance to widget_class."""
+        """Bind settings handler instance to widget_class.
+
+        Parameters
+        ----------
+        widget_class : class
+        """
         self.widget_class = widget_class
         self.provider = SettingProvider(widget_class)
         self.known_settings = {}
@@ -258,7 +312,14 @@ class SettingsHandler:
 
     def analyze_settings(self, provider, prefix):
         """Traverse through all settings known to the provider
-        and analyze each of them."""
+        and analyze each of them.
+
+        Parameters
+        ----------
+        provider : SettingProvider
+        prefix : str
+            prefix the provider is registered to handle
+        """
         for setting in provider.settings.values():
             self.analyze_setting(prefix, setting)
 
@@ -267,7 +328,13 @@ class SettingsHandler:
             self.analyze_settings(sub_provider, new_prefix)
 
     def analyze_setting(self, prefix, setting):
-        """Perform any initialization task related to setting."""
+        """Perform any initialization task related to setting.
+
+        Parameters
+        ----------
+        prefix : str
+        setting : Setting
+        """
         self.known_settings[prefix + setting.name] = setting
 
     def read_defaults(self):
@@ -283,13 +350,18 @@ class SettingsHandler:
             # pylint: disable=broad-except
             except Exception as ex:
                 warnings.warn("Could not read defaults for widget {0}\n"
-                              "The following error occurred:\n\n{1}".format(
-                    self.widget_class, ex))
+                              "The following error occurred:\n\n{1}"
+                              .format(self.widget_class, ex))
             finally:
                 settings_file.close()
 
     def read_defaults_file(self, settings_file):
-        """Read (global) defaults for this widget class from a file."""
+        """Read (global) defaults for this widget class from a file.
+
+        Parameters
+        ----------
+        settings_file : file-like object
+        """
         defaults = pickle.load(settings_file)
         self.defaults = {
             key: value
@@ -314,7 +386,12 @@ class SettingsHandler:
             settings_file.close()
 
     def write_defaults_file(self, settings_file):
-        """Write defaults for this widget class to a file"""
+        """Write defaults for this widget class to a file
+
+        Parameters
+        ----------
+        settings_file : file-like object
+        """
         pickle.dump(self.defaults, settings_file, -1)
 
     def _get_settings_filename(self):
@@ -329,9 +406,11 @@ class SettingsHandler:
 
         Replace all instance settings with their default values.
 
-        :param instance: the instance whose settings will be initialized
-        :param data: dict of values that will be used instead of defaults.
-        :type data: `dict` or `bytes` that unpickle into a `dict`
+        Parameters
+        ----------
+        instance : OWWidget
+        data : dict or bytes that unpickle into a dict
+            values used to override the defaults
         """
         provider = self._select_provider(instance)
 
@@ -371,6 +450,10 @@ class SettingsHandler:
 
         Inherited classes add other data, in particular widget-specific
         local contexts.
+
+        Parameters
+        ----------
+        widget : OWWidget
         """
         return self.provider.pack(widget)
 
@@ -378,16 +461,34 @@ class SettingsHandler:
         """
         Writes widget instance's settings to class defaults. Called when the
         widget is deleted.
+
+        Parameters
+        ----------
+        widget : OWWidget
         """
         self.defaults = self.provider.pack(widget)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):
-        """Store the (changed) widget's setting immediately to the context."""
+        """Store the (changed) widget's setting immediately to the context.
+
+        Parameters
+        ----------
+        widget : OWWidget
+        name : str
+        value : object
+
+        """
         if name in self.known_settings:
             self.known_settings[name].default = value
 
     def reset_settings(self, instance):
+        """Reset widget settings to defaults
+
+        Parameters
+        ----------
+        instance : OWWidget
+        """
         for setting, _, instance in self.provider.traverse_settings(instance=instance):
             if setting.packable:
                 setattr(instance, setting.name, setting.default)
@@ -585,6 +686,7 @@ class ContextHandler(SettingsHandler):
     # TODO this method has misleading name (method 'initialize' does what
     #      this method's name would indicate.
     def settings_to_widget(self, widget):
+        """Restore settings from current context to the given widget instance"""
         widget.retrieveSpecificSettings()
 
     # TODO similar to settings_to_widget; update_class_defaults does this for
@@ -776,8 +878,7 @@ class DomainContextHandler(ContextHandler):
     def update_packed_data(data, name, value):
         """Updates setting value stored in data dict"""
 
-        split_name = name.split('.')
-        prefixes, name = split_name[:-1], split_name[-1]
+        *prefixes, name = name.split('.')
         for prefix in prefixes:
             data = data.setdefault(prefix, {})
         data[name] = value
