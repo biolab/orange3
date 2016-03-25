@@ -35,10 +35,10 @@ import os
 import pickle
 import time
 import warnings
-from Orange.util import abstract
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
+from Orange.util import abstract
 from Orange.widgets.utils import vartype
 
 __all__ = ["Setting", "SettingsHandler",
@@ -541,6 +541,9 @@ class ContextHandler(SettingsHandler):
     Classes deriving from it need to implement method `match`.
     """
 
+    NO_MATCH = 0
+    PERFECT_MATCH = 2
+
     MAX_SAVED_CONTEXTS = 50
 
     def __init__(self):
@@ -615,27 +618,29 @@ class ContextHandler(SettingsHandler):
     @abstract
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
-        passed in additional arguments). A match of 0 zero indicates that
-        the context cannot be used and 2 means a perfect match, so no further
-        search is necessary.
+        passed in additional arguments).
+        When match returns 0 (ContextHandler.NO_MATCH), the context will not
+        be used. When it returns ContextHandler.PERFECT_MATCH, the context
+        is a perfect match so no further search is necessary.
 
         If imperfect matching is not desired, match should only
-        return 0 and 2.
+        return ContextHandler.NO_MATCH or ContextHandler.PERFECT_MATCH.
 
-        Derived classes must overload this method."""
+        Derived classes must overload this method.
+        """
         pass
 
     def find_or_create_context(self, widget, *args):
         """Find the best matching context or create a new one if nothing
         useful is found. The returned context is moved to or added to the top
         of the context list."""
-        best_context, best_score = None, 0
+        best_context, best_score = None, self.NO_MATCH
         for i, context in enumerate(widget.context_settings):
             score = self.match(context, *args)
-            if score == 2:
+            if score == self.PERFECT_MATCH:
                 self.move_context_up(widget, i)
                 return context, False
-            if score > best_score:  # 0 is not OK!
+            if score > best_score:  # NO_MATCH is not OK!
                 best_context, best_score = context, score
         if best_context:
             context = self.clone_context(best_context, *args)
@@ -946,7 +951,7 @@ class DomainContextHandler(ContextHandler):
 
     def match(self, context, domain, attrs, metas):
         if (attrs, metas) == (context.attributes, context.metas):
-            return 2
+            return self.PERFECT_MATCH
 
         matches = []
         try:
@@ -963,7 +968,7 @@ class DomainContextHandler(ContextHandler):
                     matches.append(
                         self.match_value(setting, value, attrs, metas))
         except IncompatibleContext:
-            return 0
+            return self.NO_MATCH
 
         matches.append((0, 0))
         matched, available = [sum(m) for m in zip(*matches)]
@@ -1050,9 +1055,11 @@ class ClassValuesContextHandler(ContextHandler):
 
     def match(self, context, classes):
         if isinstance(classes, Variable) and classes.is_continuous:
-            return context.classes is None and 2
+            return (self.PERFECT_MATCH if context.classes is None
+                    else self.NO_MATCH)
         else:
-            return context.classes == classes and 2
+            return (self.PERFECT_MATCH if context.classes == classes
+                    else self.NO_MATCH)
 
 
 ### Requires the same the same attributes in the same order
@@ -1073,7 +1080,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         return context
 
     def encode_domain(self, domain):
-        if self.match_values == 2:
+        if self.match_values == self.MATCH_VALUES_ALL:
             def encode(attrs):
                 return tuple((v.name, v.values if v.is_discrete else vartype(v))
                              for v in attrs)
@@ -1085,8 +1092,10 @@ class PerfectDomainContextHandler(DomainContextHandler):
                 encode(domain.metas))
 
     def match(self, context, domain, attributes, class_vars, metas):
-        return (attributes, class_vars, metas) == (
-            context.attributes, context.class_vars, context.metas) and 2
+        return (self.PERFECT_MATCH
+                if (attributes, class_vars, metas) ==
+                   (context.attributes, context.class_vars, context.metas)
+                else self.NO_MATCH)
 
     def encode_setting(self, context, setting, value):
         if isinstance(value, str):
