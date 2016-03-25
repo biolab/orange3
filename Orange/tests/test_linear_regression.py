@@ -45,7 +45,7 @@ class LinearRegressionTest(unittest.TestCase):
         data = Table('housing')
         learner = LinearRegressionLearner()
         scores = learner.score_data(data)
-        self.assertEqual('NOX',
+        self.assertEqual('LSTAT',
                          data.domain.attributes[np.argmax(scores)].name)
         self.assertEqual(len(scores), len(data.domain.attributes))
 
@@ -57,7 +57,7 @@ class LinearRegressionTest(unittest.TestCase):
                     ElasticNetLearner(alpha=0.01)]
         for learner in learners:
             scores = learner.score_data(data)
-            self.assertEqual('NOX',
+            self.assertEqual('LSTAT',
                              data.domain.attributes[np.argmax(scores)].name)
             self.assertEqual(len(scores), len(data.domain.attributes))
 

@@ -122,12 +122,11 @@ class UnivariateLinearRegression(SklScorer):
 class LearnerScorer(Scorer):
 
     @abstract
-    def score(self, model):
+    def score(self, data):
         pass
 
     def score_data(self, data, feature=None):
-        model = self(data)
-        scores = self.score(model)
+        scores = self.score(data)
 
         if data.domain != self.domain:
             scores_grouped = defaultdict(list)

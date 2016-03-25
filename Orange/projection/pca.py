@@ -24,7 +24,8 @@ class _FeatureScorerMixin(LearnerScorer):
     feature_type = Variable
     component = 0
 
-    def score(self, model):
+    def score(self, data):
+        model = self(data)
         return np.abs(model.components_[self.component])
 
 

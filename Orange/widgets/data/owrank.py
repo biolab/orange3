@@ -259,6 +259,8 @@ class OWRank(widget.OWWidget):
             shape = (len(self.measures) + len(self.learners), len(attrs))
             self.measure_scores = table(shape, None)
             self.updateScores()
+        else:
+            self.send("Scores", None)
 
         self.selectMethodChanged()
         self.commit()
@@ -328,10 +330,7 @@ class OWRank(widget.OWWidget):
         self.ranksProxyModel.invalidate()
         self.selectMethodChanged()
 
-        if self.data:
-            self.send("Scores", self.create_scores_table())
-        else:
-            self.send("Scores", None)
+        self.send("Scores", self.create_scores_table())
 
     def updateRankModel(self, measuresMask=None):
         """
@@ -498,7 +497,8 @@ class OWRank(widget.OWWidget):
             return []
 
     def create_scores_table(self):
-        features = [ContinuousVariable(s[0]) for s in self.measures]
+        measures = self.measures + [v for k, v in self.learners.items()]
+        features = [ContinuousVariable(s[0]) for s in measures]
         metas = [StringVariable("Feature name")]
         domain = Domain(features, metas=metas)
 
@@ -507,7 +507,9 @@ class OWRank(widget.OWWidget):
         # Reshape to 2d array as Table does not like 1d arrays
         feature_names = feature_names[:, None]
 
-        return Orange.data.Table(domain, scores, metas=feature_names)
+        table = Orange.data.Table(domain, scores, metas=feature_names)
+        table.name = "Feature Scores"
+        return table
 
 
 class ScoreValueItem(QtGui.QStandardItem):
