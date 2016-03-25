@@ -33,7 +33,7 @@ load-plugins=
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=arguments-differ,unused-argument,no-self-use,fixme,no-name-in-module,no-member,long-suffix,filter-builtin-not-iterating,basestring-builtin,cmp-method,dict-view-method,metaclass-assignment,nonzero-method,unicode-builtin,unichr-builtin,round-builtin,indexing-exception,setslice-method,hex-method,raw_input-builtin,execfile-builtin,reduce-builtin,unpacking-in-except,suppressed-message,buffer-builtin,cmp-builtin,long-builtin,coerce-method,reload-builtin,using-cmp-argument,intern-builtin,coerce-builtin,map-builtin-not-iterating,standarderror-builtin,zip-builtin-not-iterating,oct-method,getslice-method,parameter-unpacking,useless-suppression,range-builtin-not-iterating,input-builtin,old-division,delslice-method,old-octal-literal,apply-builtin,dict-iter-method,no-absolute-import,print-statement
+#disable=
 
 
 [REPORTS]
@@ -190,7 +190,7 @@ defining-attr-methods=__init__,__new__,setUp
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=10
+max-args=5
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
