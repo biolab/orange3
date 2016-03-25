@@ -697,11 +697,11 @@ class ContextHandler(SettingsHandler):
         """Apply context settings stored in currently opened context
         to the widget.
         """
-        widget.retrieveSpecificSettings()
-
         context = widget.current_context
         if context is None:
             return
+
+        widget.retrieveSpecificSettings()
 
         for setting, data, instance in \
                 self.provider.traverse_settings(data=context.values, instance=widget):
