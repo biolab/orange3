@@ -157,6 +157,9 @@ class OWRank(widget.OWWidget):
         self.discRanksView.horizontalHeader().sectionClicked.connect(
             self.headerClick
         )
+        self.discRanksView.verticalHeader().sectionClicked.connect(
+            self.onSelectItem
+        )
 
         if self.headerState[0] is not None:
             self.discRanksView.horizontalHeader().restoreState(
@@ -177,7 +180,7 @@ class OWRank(widget.OWWidget):
         self.contRanksProxyModel.setSourceModel(self.contRanksModel)
         self.contRanksView.setModel(self.contRanksProxyModel)
 
-        self.discRanksView.setColumnWidth(0, 20)
+        self.contRanksView.setColumnWidth(0, 20)
         self.contRanksView.sortByColumn(1, Qt.DescendingOrder)
         self.contRanksView.selectionModel().selectionChanged.connect(
             self.commit
@@ -186,6 +189,10 @@ class OWRank(widget.OWWidget):
         self.contRanksView.horizontalHeader().sectionClicked.connect(
             self.headerClick
         )
+        self.contRanksView.verticalHeader().sectionClicked.connect(
+            self.onSelectItem
+        )
+
         if self.headerState[1] is not None:
             self.contRanksView.horizontalHeader().restoreState(
             self.headerState[1]
@@ -224,6 +231,7 @@ class OWRank(widget.OWWidget):
 
     @check_sql_input
     def setData(self, data):
+        self.information([0])
         self.error([0, 100])
         self.resetInternals()
 
@@ -298,6 +306,8 @@ class OWRank(widget.OWWidget):
         """
         if not self.data:
             return
+        if self.data.has_missing():
+            self.information(0, "Missing values have been imputed.")
 
         measures = self.measures + [v for k, v in self.learners.items()]
         # Invalidate all warnings
