@@ -60,7 +60,6 @@ class OWScatterPlot(OWWidget):
     attr_y = ContextSetting("")
 
     graph = SettingProvider(OWScatterPlotGraph)
-    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
