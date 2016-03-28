@@ -5,7 +5,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.data.table import Table, get_sample_datasets_dir
@@ -41,7 +41,28 @@ class NamedURLModel(PyListModel):
         self.mapping[url] = name
         self.modelReset.emit()
 
-
+class XlsContextHandler(ContextHandler):
+     def new_context(self, filename, sheet):
+         context = super().new_context()
+         context.filename = filename
+         context.xls_sheet = sheet
+         return context
+ 
+     # noinspection PyMethodOverriding
+     def match(self, context, filename, sheets):
+         if context.filename == filename and context.xls_sheet in sheets:
+             return 2
+         if context.xls_sheet in sheets:
+             return 1
+         return 0
+ 
+     def settings_from_widget(self, widget):
+         if widget.current_context is not None:
+             widget.current_context.xls_sheet = widget.xls_sheet
+ 
+     def settings_to_widget(self, widget):
+         widget.xls_sheet = widget.current_context.xls_sheet
+ 
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
@@ -62,8 +83,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     LOCAL_FILE, URL = range(2)
 
+    settingsHandler = XlsContextHandler()
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
+    xls_sheet = ContextSetting("")
     sheet_names = Setting({})
     url = Setting("")
 
@@ -111,14 +134,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         layout.addWidget(reloadButton, 0, 3)
 
         self.hBLayout = gui.hBox(None, addToLayout=False, margin=0)
-        self.sheet_combo = QtGui.QComboBox()
+        self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
+            sendSelectedValue=True)
         self.sheet_combo.setSizePolicy(
-            Policy.MinimumExpanding, Policy.MinimumExpanding)
+            Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_combo.activated[str].connect(self.select_sheet)
         self.sheet_label = QtGui.QLabel()
         self.sheet_label.setText('Sheet')
         self.sheet_label.setSizePolicy(
-            Policy.MinimumExpanding, Policy.MinimumExpanding)
+            Policy.MinimumExpanding, Policy.Fixed)
         self.hBLayout.layout().addWidget(self.sheet_label, QtCore.Qt.AlignLeft)
         self.hBLayout.layout().addWidget(self.sheet_combo, QtCore.Qt.AlignVCenter)
         layout.addWidget(self.hBLayout, 2, 1)
@@ -231,13 +255,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def fill_sheet_combo(self, path):
         if os.path.exists(path) and self.is_multisheet_excel(path):
+            self.closeContext()
             self.sheet_combo.clear()
             self.hBLayout.show()
             book = open_workbook(path)
             sheets = book.nsheets
-            for i in range(0, sheets):
-                sheetname = str(book.sheet_by_index(i).name)
-                self.sheet_combo.addItem(sheetname)
+            sheet_names = [str(book.sheet_by_index(i).name) for i in range(book.nsheets)]
+            self.sheet_combo.addItems(sheet_names)
+            self.openContext(path, sheet_names)
         else:
             self.hBLayout.hide()
 
