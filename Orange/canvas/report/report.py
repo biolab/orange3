@@ -217,6 +217,8 @@ class Report:
                           for col in range(model.columnCount())]
             except:
                 header = None
+            if header:
+                content = chain([header], content)
             try:
                 header_vertical = [model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                                    for row in range(model.rowCount())]
@@ -226,8 +228,6 @@ class Report:
                 has_vertical_header = True
             except:
                 has_vertical_header = False
-            if header:
-                content = chain([header], content)
             return report_list(content, header_rows + bool(header), header_columns + has_vertical_header)
 
         if num_format:
