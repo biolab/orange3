@@ -599,7 +599,7 @@ class OWTestLearners(widget.OWWidget):
                       format(self.k_folds))]
         elif self.resampling == self.LeaveOneOut:
             items = [("Sampling type", "Leave one out")]
-        elif self.resampling == self.Bootstrap:
+        elif self.resampling == self.ShuffleSplit:
             items = [("Sampling type",
                       "{} random samples with {} % data ".format(
                           self.n_repeat, self.sample_p))]
