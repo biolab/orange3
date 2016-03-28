@@ -231,7 +231,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def fill_sheet_combo(self, path):
         if os.path.exists(path) and self.is_multisheet_excel(path):
-            self.closeContext
             self.sheet_combo.clear()
             self.hBLayout.show()
             book = open_workbook(path)
@@ -239,7 +238,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             for i in range(0, sheets):
                 sheetname = str(book.sheet_by_index(i).name)
                 self.sheet_combo.addItem(sheetname)
-            self.openContext
         else:
             self.hBLayout.hide()
 
