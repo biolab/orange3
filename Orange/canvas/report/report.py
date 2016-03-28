@@ -228,7 +228,7 @@ class Report:
                 has_vertical_header = False
             if header:
                 content = chain([header], content)
-            return report_list(content, header_rows + bool(header))
+            return report_list(content, header_rows + bool(header), header_columns + has_vertical_header)
 
         if num_format:
             def fmtnum(s):
