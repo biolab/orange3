@@ -93,7 +93,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.activated[int].connect(self.select_file)
-        layout.addWidget(self.file_combo, 0, 1)
+        box.layout().addWidget(self.file_combo)
+        layout.addWidget(box, 0, 1)
 
         fileButton = gui.button(
             None, self, '...', callback=self.browse_file, autoDefault=False)
@@ -170,7 +171,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if basename in [path.relpath, path.basename]:
                 self.source = self.LOCAL_FILE
                 if self.is_multisheet_excel(path.abspath):
-                    return self.load_data(self.sheet_combo.currentText())
+                    currentText = self.sheet_combo.currentText()
+                    self.fill_sheet_combo(path.abspath)
+                    index = self.sheet_combo.findText(currentText, QtCore.Qt.MatchFixedString)
+                    if index >= 0:
+                        self.sheet_combo.setCurrentIndex(index)
+                    return self.load_data(currentText)
                 else:
                     return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
@@ -225,13 +231,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def fill_sheet_combo(self, path):
         if os.path.exists(path) and self.is_multisheet_excel(path):
-            book = open_workbook(path)
-            sheets = book.nsheets
+            self.closeContext
             self.sheet_combo.clear()
             self.hBLayout.show()
+            book = open_workbook(path)
+            sheets = book.nsheets
             for i in range(0, sheets):
                 sheetname = str(book.sheet_by_index(i).name)
                 self.sheet_combo.addItem(sheetname)
+            self.openContext
         else:
             self.hBLayout.hide()
 
