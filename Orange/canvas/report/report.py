@@ -217,6 +217,15 @@ class Report:
                           for col in range(model.columnCount())]
             except:
                 header = None
+            try:
+                header_vertical = [model.headerData(row, Qt.Vertical, Qt.DisplayRole)
+                                   for row in range(model.rowCount())]
+                header_vertical = [" "] + header_vertical
+                content = chain(chain([header_vertical[rowi]], row)
+                                for rowi, row in enumerate(content))
+                has_vertical_header = True
+            except:
+                has_vertical_header = False
             if header:
                 content = chain([header], content)
             return report_list(content, header_rows + bool(header))
