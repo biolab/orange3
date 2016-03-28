@@ -259,7 +259,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.sheet_combo.clear()
             self.hBLayout.show()
             book = open_workbook(path)
-            sheets = book.nsheets
             sheet_names = [str(book.sheet_by_index(i).name) for i in range(book.nsheets)]
             self.sheet_combo.addItems(sheet_names)
             self.openContext(path, sheet_names)
