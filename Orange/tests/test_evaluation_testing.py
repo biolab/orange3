@@ -120,26 +120,10 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         res = CrossValidation(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = CrossValidation(t, learners)
-        self.assertIsNone(res.data)
-
-        res = CrossValidation(t, learners, store_data=True)
-        self.assertIs(res.data, t)
-
     def test_store_models(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = CrossValidation(t, learners, k=5)
-        self.assertIsNone(res.models)
-
-        res = CrossValidation(t, learners, k=5, store_models=True)
-        self.assertEqual(len(res.models), 5)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = CrossValidation(t, learners, k=5)
         self.assertIsNone(res.models)
@@ -226,26 +210,10 @@ class LeaveOneOutTestCase(unittest.TestCase, CommonSamplingTests):
         res = LeaveOneOut(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = LeaveOneOut(t, learners)
-        self.assertIsNone(res.data)
-
-        res = LeaveOneOut(t, learners, store_data=True)
-        self.assertIs(res.data, t)
-
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = LeaveOneOut(t, learners)
-        self.assertIsNone(res.models)
-
-        res = LeaveOneOut(t, learners, store_models=True)
-        self.assertEqual(len(res.models), 50)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = LeaveOneOut(t, learners)
         self.assertIsNone(res.models)
@@ -322,26 +290,10 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         res = TestOnTrainingData(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = TestOnTrainingData(t, learners)
-        self.assertIsNone(res.data)
-
-        res = TestOnTrainingData(t, learners, store_data=True)
-        self.assertIs(res.data, t)
-
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = TestOnTrainingData(t, learners)
-        self.assertIsNone(res.models)
-
-        res = TestOnTrainingData(t, learners, store_models=True)
-        self.assertEqual(len(res.models), 1)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.models)
@@ -439,28 +391,12 @@ class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
         res = TestOnTestData(train, test, learners, store_data=True)
         self.assertIs(res.data, test)
 
-        res = TestOnTestData(train, test, learners)
-        self.assertIsNone(res.data)
-
-        res = TestOnTestData(train, test, learners, store_data=True)
-        self.assertIs(res.data, test)
-
     def test_store_models(self):
         nrows, ncols = 50, 10
         data = random_data(nrows, ncols)
         train = data[:80]
         test = data[80:]
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = TestOnTestData(train, test, learners)
-        self.assertIsNone(res.models)
-
-        res = TestOnTestData(train, test, learners, store_models=True)
-        self.assertEqual(len(res.models), 1)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = TestOnTestData(train, test, learners)
         self.assertIsNone(res.models)
