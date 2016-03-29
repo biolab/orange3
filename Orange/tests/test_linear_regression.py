@@ -12,6 +12,10 @@ from sklearn import linear_model
 
 
 class LinearRegressionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.housing = Table("housing")
+
     def test_LinearRegression(self):
         nrows = 1000
         ncols = 3
@@ -29,48 +33,44 @@ class LinearRegressionTest(unittest.TestCase):
         self.assertTrue((abs(z.reshape(-1, 1) - y2) < 2.0).all())
 
     def test_Regression(self):
-        data = Table("housing")
         ridge = RidgeRegressionLearner()
         lasso = LassoRegressionLearner()
         elastic = ElasticNetLearner()
         elasticCV = ElasticNetCVLearner()
         mean = MeanLearner()
         learners = [ridge, lasso, elastic, elasticCV, mean]
-        res = CrossValidation(data, learners, k=2)
+        res = CrossValidation(self.housing, learners, k=2)
         rmse = RMSE(res)
         for i in range(len(learners) - 1):
-            self.assertTrue(rmse[i] < rmse[-1])
+            self.assertLess(rmse[i], rmse[-1])
 
     def test_linear_scorer(self):
-        data = Table('housing')
         learner = LinearRegressionLearner()
-        scores = learner.score_data(data)
+        scores = learner.score_data(self.housing)
         self.assertEqual('LSTAT',
-                         data.domain.attributes[np.argmax(scores)].name)
-        self.assertEqual(len(scores), len(data.domain.attributes))
+                         self.housing.domain.attributes[np.argmax(scores)].name)
+        self.assertEqual(len(scores), len(self.housing.domain.attributes))
 
     def test_scorer(self):
-        data = Table('housing')
         learners = [LinearRegressionLearner(),
                     RidgeRegressionLearner(),
                     LassoRegressionLearner(alpha=0.01),
                     ElasticNetLearner(alpha=0.01)]
         for learner in learners:
-            scores = learner.score_data(data)
+            scores = learner.score_data(self.housing)
             self.assertEqual('LSTAT',
-                             data.domain.attributes[np.argmax(scores)].name)
-            self.assertEqual(len(scores), len(data.domain.attributes))
+                             self.housing.domain.attributes[np.argmax(scores)].name)
+            self.assertEqual(len(scores), len(self.housing.domain.attributes))
 
     def test_scorer_feature(self):
-        data = Table('housing')
         learners = [LinearRegressionLearner(),
                     RidgeRegressionLearner(),
                     LassoRegressionLearner(alpha=0.01),
                     ElasticNetLearner(alpha=0.01)]
         for learner in learners:
-            scores = learner.score_data(data)
-            for i, attr in enumerate(data.domain.attributes):
-                score = learner.score_data(data, attr)
+            scores = learner.score_data(self.housing)
+            for i, attr in enumerate(self.housing.domain.attributes):
+                score = learner.score_data(self.housing, attr)
                 self.assertEqual(score, scores[i])
 
     def test_coefficients(self):
@@ -82,26 +82,24 @@ class LinearRegressionTest(unittest.TestCase):
 
     def test_comparison_with_sklearn(self):
         alphas = [0.001, 0.1, 1, 10, 100]
-        data = Table("housing")
         learners = [(LassoRegressionLearner, linear_model.Lasso),
                     (RidgeRegressionLearner, linear_model.Ridge),
                     (ElasticNetLearner, linear_model.ElasticNet)]
         for o_learner, s_learner in learners:
             for a in alphas:
                 lr = o_learner(alpha=a)
-                o_model = lr(data)
+                o_model = lr(self.housing)
                 s_model = s_learner(alpha=a, fit_intercept=True)
-                s_model.fit(data.X, data.Y)
+                s_model.fit(self.housing.X, self.housing.Y)
                 delta = np.sum(s_model.coef_ - o_model.coefficients)
                 self.assertAlmostEqual(delta, 0.0)
 
     def test_comparison_elastic_net(self):
         alphas = [0.001, 0.1, 1, 10, 100]
-        data = Table("housing")
         for a in alphas:
             lasso = LassoRegressionLearner(alpha=a)
-            lasso_model = lasso(data)
+            lasso_model = lasso(self.housing)
             elastic = ElasticNetLearner(alpha=a, l1_ratio=1)
-            elastic_model = elastic(data)
+            elastic_model = elastic(self.housing)
             d = np.sum(lasso_model.coefficients - elastic_model.coefficients)
             self.assertEqual(d, 0)
