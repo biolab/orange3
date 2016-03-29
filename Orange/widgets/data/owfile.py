@@ -135,7 +135,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.hBLayout = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
-            sendSelectedValue=True)
+                                        sendSelectedValue=True)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_combo.activated[str].connect(self.select_sheet)
@@ -197,7 +197,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 if self.is_multisheet_excel(path.abspath):
                     currentText = self.sheet_combo.currentText()
                     self.fill_sheet_combo(path.abspath)
-                    index = self.sheet_combo.findText(currentText, QtCore.Qt.MatchFixedString)
+                    index = self.sheet_combo.findText(
+                        currentText, QtCore.Qt.MatchFixedString)
                     if index >= 0:
                         self.sheet_combo.setCurrentIndex(index)
                     return self.load_data(currentText)
@@ -259,7 +260,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.sheet_combo.clear()
             self.hBLayout.show()
             book = open_workbook(path)
-            sheet_names = [str(book.sheet_by_index(i).name) for i in range(book.nsheets)]
+            sheet_names = [str(book.sheet_by_index(i).name)
+                           for i in range(book.nsheets)]
             self.sheet_combo.addItems(sheet_names)
             self.openContext(path, sheet_names)
         else:
