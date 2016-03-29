@@ -1,13 +1,13 @@
 import unittest
-import Orange
 import numpy as np
+import Orange
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.classification.majority import ConstantModel
 from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table
-from Orange.evaluation import *
+from Orange.evaluation import CrossValidation, LeaveOneOut, TestOnTrainingData, TestOnTestData, ShuffleSplit
 from Orange.preprocess import discretize, preprocess
 
 
@@ -70,6 +70,10 @@ class CommonSamplingTests:
 
 
 class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+
     def test_results(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
@@ -136,12 +140,11 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
             self.assertIsInstance(models[1], ConstantModel)
 
     def test_10_fold_probs(self):
-        data = Table('iris')[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
 
-        results = CrossValidation(data, learners, k=10)
+        results = CrossValidation(self.iris[30:130], learners, k=10)
 
-        self.assertEqual(results.predicted.shape, (2, len(data)))
+        self.assertEqual(results.predicted.shape, (2, len(self.iris[30:130])))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
@@ -160,10 +163,9 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
     def test_too_many_folds(self):
-        data = Table('iris')
         w = []
-        res = CrossValidation(data, [MajorityLearner()], k=len(data)/2, warnings=w)
-        self.assertTrue(len(w) > 0)
+        res = CrossValidation(self.iris, [MajorityLearner()], k=len(self.iris)/2, warnings=w)
+        self.assertGreater(len(w), 0)
 
     def test_failed(self):
         self.run_test_failed(CrossValidation, 20)
