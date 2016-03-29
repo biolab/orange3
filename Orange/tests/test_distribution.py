@@ -126,7 +126,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         d = data.Table("zoo")
         disc = distribution.Discrete(d, "type")
 
-        disc += [1,    2,     3,   4,    5,    6,   7]
+        disc += [1, 2, 3, 4, 5, 6, 7]
         self.assertEqual(disc, [5.0, 22.0, 16.0, 12.0, 15.0, 47.0, 12.0])
 
         disc2 = distribution.Discrete(d, d.domain.class_var)
@@ -174,35 +174,27 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
     def setUp(self):
         self.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
-                      (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
-                      (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
-                      (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
-                      (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
-                      (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
-                      (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
-                      (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
-                      (6.6, 1), (6.7, 2), (6.9, 1)]).T
+                               (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
+                               (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
+                               (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
+                               (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
+                               (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
+                               (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
+                               (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
+                               (6.6, 1), (6.7, 2), (6.9, 1)]).T
 
 
     def test_from_table(self):
         d = data.Table("iris")
         petal_length = d.columns.petal_length
 
-        disc = distribution.Continuous(d, "petal length")
-        self.assertIsInstance(disc, np.ndarray)
-        self.assertIs(disc.variable, petal_length)
-        self.assertEqual(disc.unknowns, 0)
-        np.testing.assert_almost_equal(disc, self.freqs)
+        for attr in ["petal length", d.domain[2], 2]:
+            disc = distribution.Continuous(d, attr)
+            self.assertIsInstance(disc, np.ndarray)
+            self.assertIs(disc.variable, petal_length)
+            self.assertEqual(disc.unknowns, 0)
+            np.testing.assert_almost_equal(disc, self.freqs)
 
-        disc2 = distribution.Continuous(d, d.domain[2])
-        self.assertIsInstance(disc2, np.ndarray)
-        self.assertIs(disc2.variable, petal_length)
-        self.assertEqual(disc, disc2)
-
-        disc3 = distribution.Continuous(d, 2)
-        self.assertIsInstance(disc3, np.ndarray)
-        self.assertIs(disc3.variable, petal_length)
-        self.assertEqual(disc, disc3)
 
 
 
@@ -275,7 +267,6 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
     def test_modus(self):
         d = data.Table("iris")
-        petal_length = d.columns.petal_length
 
         disc = distribution.Continuous([list(range(5)), [1, 1, 2, 5, 1]])
         self.assertEqual(disc.modus(), 3)
@@ -283,7 +274,6 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
     def test_random(self):
         d = data.Table("iris")
-        petal_length = d.columns.petal_length
 
         disc = distribution.Continuous(d, "petal length")
         ans = set()
@@ -291,7 +281,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
             v = disc.random()
             self.assertTrue(v in self.freqs)
             ans.add(v)
-        self.assertTrue(len(ans) > 10)
+        self.assertGreater(len(ans), 10)
 
 
 class Class_Distribution_Test(unittest.TestCase):
@@ -324,14 +314,14 @@ class Get_Distribution_Test(unittest.TestCase):
 
         petal_length = d.columns.petal_length
         freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
-                      (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
-                      (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
-                      (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
-                      (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
-                      (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
-                      (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
-                      (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
-                      (6.6, 1), (6.7, 2), (6.9, 1)]).T
+                          (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
+                          (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
+                          (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
+                          (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
+                          (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
+                          (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
+                          (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
+                          (6.6, 1), (6.7, 2), (6.9, 1)]).T
         disc = distribution.get_distribution(d, petal_length)
         np.testing.assert_almost_equal(disc, freqs)
 
@@ -350,14 +340,14 @@ class Domain_Distribution_Test(unittest.TestCase):
         self.assertIsInstance(ddist[-1], distribution.Discrete)
 
         freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
-                      (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
-                      (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
-                      (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
-                      (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
-                      (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
-                      (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
-                      (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
-                      (6.6, 1), (6.7, 2), (6.9, 1)]).T
+                          (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
+                          (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
+                          (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),
+                          (4.4, 4), (4.5, 8), (4.6, 3), (4.7, 5), (4.8, 4),
+                          (4.9, 5), (5.0, 4), (5.1, 8), (5.2, 2), (5.3, 2),
+                          (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
+                          (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
+                          (6.6, 1), (6.7, 2), (6.9, 1)]).T
         np.testing.assert_almost_equal(ddist[2], freqs)
         np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
 
@@ -366,7 +356,7 @@ class Domain_Distribution_Test(unittest.TestCase):
     def test_sparse_get_distributions(self):
         domain = data.Domain(
             [data.DiscreteVariable("d%i" % i, values=list("abc"))
-                 for i in range(10)] +
+             for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)])
 
         #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
@@ -378,13 +368,13 @@ class Domain_Distribution_Test(unittest.TestCase):
         #        2        0  1                   1.1
         #
         sdata = np.array([2, 2, 1, 1, 2, 1, 1, 1, 2, 0, 2,
-                 1, 1, 0, 0, 1, 2, 2, 1, 0,
-                 1, 2, 0,
-                 2, 0, 1, 1.1])
+                          1, 1, 0, 0, 1, 2, 2, 1, 0,
+                          1, 2, 0,
+                          2, 0, 1, 1.1])
         indices = [1, 3, 4, 5, 6, 9, 13, 14, 16, 17, 18,
-                  2, 3, 4, 5, 6, 8, 14, 16, 17,
-                  3, 5, 6,
-                  2, 5, 6, 13]
+                   2, 3, 4, 5, 6, 8, 14, 16, 17,
+                   3, 5, 6,
+                   2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
         d = data.Table.from_numpy(domain, X)
