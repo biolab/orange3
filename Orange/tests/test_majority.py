@@ -50,7 +50,6 @@ class MajorityTest(unittest.TestCase):
         y = clf(iris)
         self.assertTrue((y == 2).all())
 
-        iris = Table('iris')
         learn = MajorityLearner()
         for e in iris:
             e.set_class("?")
