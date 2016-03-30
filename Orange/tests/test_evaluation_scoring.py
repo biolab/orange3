@@ -11,16 +11,19 @@ from Orange.preprocess import discretize
 
 
 class ScoringTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table('iris')
+
     def test_Recall(self):
-        data = Table('iris')
         learner = LogisticRegressionLearner(preprocessors=[])
-        results = TestOnTrainingData(data, [learner])
+        results = TestOnTrainingData(self.data, [learner])
         self.assertAlmostEqual(Recall(results)[0], 0.960, 3)
 
     def test_Precision(self):
-        data = Table('iris')
         learner = LogisticRegressionLearner(preprocessors=[])
-        results = TestOnTrainingData(data, [learner])
+        results = TestOnTrainingData(self.data, [learner])
         self.assertAlmostEqual(Precision(results)[0], 0.962, 3)
 
 

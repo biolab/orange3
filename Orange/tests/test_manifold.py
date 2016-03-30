@@ -1,14 +1,17 @@
 import unittest
 import numpy as np
 
-import Orange
-from Orange.projection import MDS, Isomap, LocallyLinearEmbedding
+from Orange.projection import MDS, Isomap
 from Orange.distance import Euclidean
+from Orange.data import  Table
 
 
 class TestManifold(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ionosphere = Table('ionosphere')
     def test_mds(self):
-        data = Orange.data.Table('ionosphere')[:50]
+        data = self.ionosphere[:50]
         self.__mds_test_helper(data, n_com=1)
         self.__mds_test_helper(data, n_com=2)
         self.__mds_test_helper(data, n_com=3)
@@ -31,10 +34,9 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(eshape, mds_sdist.embedding_.shape)
 
     def test_isomap(self):
-        data = Orange.data.Table('ionosphere')
-        self.__isomap_test_helper(data, n_com=1)
-        self.__isomap_test_helper(data, n_com=2)
-        self.__isomap_test_helper(data, n_com=3)
+        self.__isomap_test_helper(self.ionosphere, n_com=1)
+        self.__isomap_test_helper(self.ionosphere, n_com=2)
+        self.__isomap_test_helper(self.ionosphere, n_com=3)
 
     def __isomap_test_helper(self, data, n_com):
         isomap_fit = Isomap(n_neighbors=5, n_components=n_com)
@@ -43,10 +45,9 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(eshape, isomap_fit.embedding_.shape)
 
     def test_lle(self):
-        data = Orange.data.Table('ionosphere')
-        self.__lle_test_helper(data, n_com=1)
-        self.__lle_test_helper(data, n_com=2)
-        self.__lle_test_helper(data, n_com=3)
+        self.__lle_test_helper(self.ionosphere, n_com=1)
+        self.__lle_test_helper(self.ionosphere, n_com=2)
+        self.__lle_test_helper(self.ionosphere, n_com=3)
 
     def __lle_test_helper(self, data, n_com):
         isomap_fit = Isomap(n_neighbors=5, n_components=n_com)
