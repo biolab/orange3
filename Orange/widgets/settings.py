@@ -38,6 +38,7 @@ import warnings
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
+from Orange.util import abstract
 from Orange.widgets.utils import vartype
 
 __all__ = ["Setting", "SettingsHandler",
@@ -535,7 +536,13 @@ class Context:
 
 
 class ContextHandler(SettingsHandler):
-    """Base class for setting handlers that can handle contexts."""
+    """Base class for setting handlers that can handle contexts.
+
+    Classes deriving from it need to implement method `match`.
+    """
+
+    NO_MATCH = 0
+    PERFECT_MATCH = 2
 
     MAX_SAVED_CONTEXTS = 50
 
@@ -608,29 +615,32 @@ class ContextHandler(SettingsHandler):
         else:
             self.settings_to_widget(widget)
 
+    @abstract
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
-        passed in additional arguments). A match of 0 zero indicates that
-        the context cannot be used and 2 means a perfect match, so no further
-        search is necessary.
+        passed in additional arguments).
+        When match returns 0 (ContextHandler.NO_MATCH), the context will not
+        be used. When it returns ContextHandler.PERFECT_MATCH, the context
+        is a perfect match so no further search is necessary.
 
         If imperfect matching is not desired, match should only
-        return 0 and 2.
+        return ContextHandler.NO_MATCH or ContextHandler.PERFECT_MATCH.
 
-        Derived classes must overload this method."""
-        raise TypeError(self.__class__.__name__ + " does not overload match")
+        Derived classes must overload this method.
+        """
+        pass
 
     def find_or_create_context(self, widget, *args):
         """Find the best matching context or create a new one if nothing
         useful is found. The returned context is moved to or added to the top
         of the context list."""
-        best_context, best_score = None, 0
+        best_context, best_score = None, self.NO_MATCH
         for i, context in enumerate(widget.context_settings):
             score = self.match(context, *args)
-            if score == 2:
+            if score == self.PERFECT_MATCH:
                 self.move_context_up(widget, i)
                 return context, False
-            if score > best_score:  # 0 is not OK!
+            if score > best_score:  # NO_MATCH is not OK!
                 best_context, best_score = context, score
         if best_context:
             context = self.clone_context(best_context, *args)
@@ -683,17 +693,30 @@ class ContextHandler(SettingsHandler):
         self.settings_from_widget(widget)
         widget.current_context = None
 
-    # TODO this method has misleading name (method 'initialize' does what
-    #      this method's name would indicate.
     def settings_to_widget(self, widget):
-        """Restore settings from current context to the given widget instance"""
+        """Apply context settings stored in currently opened context
+        to the widget.
+        """
+        context = widget.current_context
+        if context is None:
+            return
+
         widget.retrieveSpecificSettings()
 
-    # TODO similar to settings_to_widget; update_class_defaults does this for
-    #      context independent settings
+        for setting, data, instance in \
+                self.provider.traverse_settings(data=context.values, instance=widget):
+            if not isinstance(setting, ContextSetting) or setting.name not in data:
+                continue
+
+            value = self.decode_setting(setting, data[setting.name])
+            setattr(instance, setting.name, value)
+            if hasattr(setting, "selected") and setting.selected in data:
+                setattr(instance, setting.selected, data[setting.selected])
+
     def settings_from_widget(self, widget):
-        """Store values of context settings from widget
-        to the current context"""
+        """Update the current context with the setting values from the widget.
+        """
+
         context = widget.current_context
         if context is None:
             return
@@ -708,6 +731,30 @@ class ContextHandler(SettingsHandler):
                     yield setting.selected, list(getattr(instance, setting.selected))
 
         context.values = self.provider.pack(widget, packer=packer)
+
+    def fast_save(self, widget, name, value):
+        """Update value of `name` setting in the current context to `value`
+        """
+
+        super().fast_save(widget, name, value)
+
+        context = widget.current_context
+        if context is None:
+            return
+
+        if name in self.known_settings:
+            setting = self.known_settings[name]
+            value = self.encode_setting(context, setting, value)
+            self.update_packed_data(context.values, name, value)
+
+    @staticmethod
+    def update_packed_data(data, name, value):
+        """Updates setting value stored in data dict"""
+
+        *prefixes, name = name.split('.')
+        for prefix in prefixes:
+            data = data.setdefault(prefix, {})
+        data[name] = value
 
     def encode_setting(self, context, setting, value):
         """Encode value to be stored in settings dict"""
@@ -841,9 +888,6 @@ class DomainContextHandler(ContextHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name])
-            setattr(instance, setting.name, value)
-            if hasattr(setting, "selected") and setting.selected in data:
-                setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
                 excluded |= set(value)
@@ -860,6 +904,8 @@ class DomainContextHandler(ContextHandler):
             setattr(widget, self.reservoir, ll)
 
     def fast_save(self, widget, name, value):
+        super().fast_save(widget, name, value)
+
         context = widget.current_context
         if not context:
             return
@@ -873,15 +919,6 @@ class DomainContextHandler(ContextHandler):
                 value = list(value)
 
             self.update_packed_data(context.values, name, value)
-
-    @staticmethod
-    def update_packed_data(data, name, value):
-        """Updates setting value stored in data dict"""
-
-        *prefixes, name = name.split('.')
-        for prefix in prefixes:
-            data = data.setdefault(prefix, {})
-        data[name] = value
 
     def encode_setting(self, context, setting, value):
         value = copy.copy(value)
@@ -914,7 +951,7 @@ class DomainContextHandler(ContextHandler):
 
     def match(self, context, domain, attrs, metas):
         if (attrs, metas) == (context.attributes, context.metas):
-            return 2
+            return self.PERFECT_MATCH
 
         matches = []
         try:
@@ -931,7 +968,7 @@ class DomainContextHandler(ContextHandler):
                     matches.append(
                         self.match_value(setting, value, attrs, metas))
         except IncompatibleContext:
-            return 0
+            return self.NO_MATCH
 
         matches.append((0, 0))
         matched, available = [sum(m) for m in zip(*matches)]
@@ -1018,21 +1055,11 @@ class ClassValuesContextHandler(ContextHandler):
 
     def match(self, context, classes):
         if isinstance(classes, Variable) and classes.is_continuous:
-            return context.classes is None and 2
+            return (self.PERFECT_MATCH if context.classes is None
+                    else self.NO_MATCH)
         else:
-            return context.classes == classes and 2
-
-    def settings_to_widget(self, widget):
-        super().settings_to_widget(widget)
-        context = widget.current_context
-        self.provider.unpack(widget, context.values)
-
-    def fast_save(self, widget, name, value):
-        if widget.current_context is None:
-            return
-
-        if name in self.known_settings:
-            self.update_packed_data(widget.current_context.values, name, copy.copy(value))
+            return (self.PERFECT_MATCH if context.classes == classes
+                    else self.NO_MATCH)
 
 
 ### Requires the same the same attributes in the same order
@@ -1053,7 +1080,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         return context
 
     def encode_domain(self, domain):
-        if self.match_values == 2:
+        if self.match_values == self.MATCH_VALUES_ALL:
             def encode(attrs):
                 return tuple((v.name, v.values if v.is_discrete else vartype(v))
                              for v in attrs)
@@ -1065,8 +1092,10 @@ class PerfectDomainContextHandler(DomainContextHandler):
                 encode(domain.metas))
 
     def match(self, context, domain, attributes, class_vars, metas):
-        return (attributes, class_vars, metas) == (
-            context.attributes, context.class_vars, context.metas) and 2
+        return (self.PERFECT_MATCH
+                if (attributes, class_vars, metas) ==
+                   (context.attributes, context.class_vars, context.metas)
+                else self.NO_MATCH)
 
     def encode_setting(self, context, setting, value):
         if isinstance(value, str):
