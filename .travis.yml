@@ -8,7 +8,7 @@ matrix:
         - &pylint
           env: RUN_PYLINT=true
           python: '3.4'
-          addons: { apt: { packages: [] } }
+          addons: { apt: { packages: [ bc ] } }
           cache: {}
         - python: '3.4'
         - python: '3.5'

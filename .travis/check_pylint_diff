@@ -12,6 +12,8 @@ GIT_REPO="$(pwd)"
 TMP_REPO="$(mktemp -d pylint_diff.XXXXXXX)"
 SCRIPT=$(basename "$0")
 PYLINT="$(command -v pylint 2>/dev/null || true)"
+RADON="$(command -v radon 2>/dev/null || true)"
+RADON_ARGS='cc --min C --no-assert --show-closures --show-complexity --average'
 
 trap 'status=$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit $status' EXIT
 
@@ -120,13 +122,49 @@ echo "$CHANGED_FILES" | xargs "$PYLINT" || true
 echo "Pylint results"
 echo "=============="
 echo "Number of issues on parent commit: $RESULT_PARENT"
-echo "Number of issues on the pull request: $RESULT_CURRENT"
+echo "Number of issues on pull request: $RESULT_CURRENT"
 echo
 
-if [ ! "$RESULT_CURRENT" ] ||
-   [ "$RESULT_PARENT" ] && [ $RESULT_CURRENT -gt $RESULT_PARENT ]; then
+if [ "$RESULT_CURRENT" ] && [ "$RESULT_PARENT" ] &&
+   [ $RESULT_CURRENT -gt $RESULT_PARENT ]; then
     echo "FAIL: pylint score got worse"
     exit 1
-else
+elif [ ! "$RADON" ]; then  # No radon, that's it
     echo 'OK'
+    exit 0
 fi
+
+cyclomatic_complexity ()
+{
+    echo "$CHANGED_FILES" |
+        xargs "$RADON" $RADON_ARGS |
+        awk '/^Average complexity: /{ gsub(/[\(\)]/, ""); print $NF }' ||
+        echo 0
+}
+
+echo "Running radon on current commit ($CURRENT_COMMIT)"
+checkout $CURRENT_COMMIT
+RESULT_CURRENT=$( cyclomatic_complexity )
+echo "Running radon on parent commit ($PREVIOUS_COMMIT)"
+checkout $PREVIOUS_COMMIT
+RESULT_PARENT=$( cyclomatic_complexity )
+
+checkout $CURRENT_COMMIT
+echo
+echo "$CHANGED_FILES" | xargs "$RADON" $RADON_ARGS || true
+
+echo
+echo "Radon results"
+echo "=============="
+echo "Cyclomatic complexity on parent commit: $RESULT_PARENT"
+echo "Cyclomatic complexity on pull request: $RESULT_CURRENT"
+echo
+
+if [ "$RESULT_CURRENT" ] && [ "$RESULT_PARENT" ] &&
+   [ $(echo "$RESULT_CURRENT > $RESULT_PARENT" | bc) -eq 1 ]; then
+    echo "FAIL: cyclomatic complexity got worse"
+    exit 2
+fi
+
+
+echo 'OK'
