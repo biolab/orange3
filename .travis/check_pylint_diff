@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# Copyright (C) 2016 Kernc, Google Inc., authors, and contributors
+# Licensed under http://www.apache.org/licenses/LICENSE-2.0
+# Created By: miha@reciprocitylabs.com
+
+set -o nounset
+set -o errexit
+
+ARG1=${1:-}
+GIT_REPO="$(pwd)"
+TMP_REPO="$(mktemp -d)"
+SCRIPT=$(basename "$0")
+
+trap 'status=$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit $status' EXIT
+
+
+print_help ()
+{
+    echo "
+Usage: $SCRIPT [TEST_COMMIT | -h]
+
+This script will compare pylint error count from two different commits.
+Note: all changes that are not committed will be ignored.
+
+The script will work only if the current commit is a merge commit, or if the
+second test_commit argument is provided.
+
+Given the commit tree:
+
+       D---E---F---G---H
+            \\         /
+             A---B---C
+
+- Running '$SCRIPT' on H will check the diff between G and H.
+- Running '$SCRIPT F' on H will check the diff between F and H.
+- Running '$SCRIPT F' on C will check the diff between E and C. The E commit is
+  set by the merge base of the current head and the specified commit F.
+"
+    exit 0
+}
+
+case $ARG1 in -h|--help) print_help ; esac
+
+# Make a local clone: prevents copying of objects
+# Handle shallow git clones
+[ -f "$GIT_REPO/.git/shallow" ] &&
+    is_shallow=true
+if [ "$is_shallow" ]; then
+    mv "$GIT_REPO/.git/shallow" "$GIT_REPO/.git/shallow-bak"
+fi
+git clone -q --local "$GIT_REPO" "$TMP_REPO"  2>/dev/null
+if [ "$is_shallow" ]; then
+    mv "$GIT_REPO/.git/shallow-bak" "$GIT_REPO/.git/shallow"
+    cp "$GIT_REPO/.git/shallow" "$TMP_REPO/.git/shallow"
+fi
+
+cd "$TMP_REPO"
+git reset --hard -q HEAD
+
+CURRENT_COMMIT=$(git rev-parse HEAD)
+if [ "$ARG1"  ]; then
+    PREVIOUS_COMMIT=$(git merge-base HEAD "$ARG1")
+else
+    PREVIOUS_COMMIT=$(git show --pretty=raw HEAD |
+                      awk '/^parent /{ print $2; exit }')
+fi
+
+echo "Comparing commits $CURRENT_COMMIT and $PREVIOUS_COMMIT ."
+
+CHANGED_FILES=$(git diff --name-only $CURRENT_COMMIT $PREVIOUS_COMMIT |
+                grep "\.py$" || true )
+if [ ! "$CHANGED_FILES" ]; then
+    echo "No python files changed. Skipping lint checks."
+    exit 0
+fi
+
+echo "Comparing files"
+echo "==============="
+echo "$CHANGED_FILES"
+echo
+
+# Run pylint on the old and new code, to compare the quality.
+# If pylint is run multiple times it will store the previous results and show
+# the change in quality with a non-negative number if code was improved or not
+# changed, and a negative number if more code issues have been introduced.
+
+checkout ()
+{
+    { git checkout -q "$1"
+      git clean -xdfq
+      git reset --hard -q HEAD
+    } 2>/dev/null
+}
+
+n_lint_errors ()
+{
+    echo "$CHANGED_FILES" |
+        xargs pylint |
+        awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }'
+}
+
+echo "Running pylint on current commit ($CURRENT_COMMIT)"
+checkout $CURRENT_COMMIT
+RESULT_CURRENT=$( n_lint_errors )
+echo "Running pylint on parent commit ($PREVIOUS_COMMIT)"
+checkout $PREVIOUS_COMMIT
+RESULT_PARENT=$( n_lint_errors )
+
+checkout $CURRENT_COMMIT
+echo "$CHANGED_FILES" | xargs pylint || true
+
+echo "Pylint results"
+echo "=============="
+echo "Number of issues on parent commit: $RESULT_PARENT"
+echo "Number of issues on the pull request: $RESULT_CURRENT"
+echo
+
+if [ ! "$RESULT_CURRENT" ] ||
+   [ "$RESULT_PARENT" ] && [ $RESULT_CURRENT -gt $RESULT_PARENT ]; then
+    echo "FAIL: pylint score got worse"
+    exit 1
+else
+    echo 'OK'
+fi

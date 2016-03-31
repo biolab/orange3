@@ -1,4 +1,4 @@
-pip install -U setuptools pip
+foldable pip install -U setuptools pip codecov
 
 # Install dependencies sequentially
 cat requirements-core.txt \
@@ -7,13 +7,13 @@ cat requirements-core.txt \
     while read dep; do
         dep="${dep%%#*}"  # Strip the comment
         [ "$dep" ] &&
-            pip install $dep
+            foldable pip install $dep
     done
 
 # Create a source tarball from the git checkout
-python setup.py sdist
+foldable python setup.py sdist
 # Create a binary wheel from the packed source
-pip wheel --no-deps -w dist dist/Orange-*.tar.gz
+foldable pip wheel --no-deps -w dist dist/Orange-*.tar.gz
 # Install into a testing folder
 ORANGE_DIR="$(pwd)"/build/travis-test
 mkdir -p "$ORANGE_DIR"
