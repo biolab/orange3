@@ -3,7 +3,7 @@
 import os
 import sys
 import subprocess
-from setuptools import find_packages
+from setuptools import find_packages, Command
 
 if sys.version_info < (3, 4):
     sys.exit('Orange requires Python >= 3.4')
@@ -182,6 +182,24 @@ PACKAGE_DATA = {
 }
 
 
+class LintCommand(Command):
+    """A setup.py lint subcommand developers can run locally."""
+    description = "run code linter(s)"
+    user_options = []
+    initialize_options = finalize_options = lambda self: None
+
+    def run(self):
+        """Lint current branch compared to a reasonable master branch"""
+        sys.exit(subprocess.call('''
+        set -eu
+        upstream=$(git rev-parse -q --verify upstream/master)
+        origin=$(git rev-parse -q --verify origin/master)
+        master=$(git rev-parse -q --verify master)
+        best_ancestor=$(git merge-base HEAD ${upstream:-${origin:-$master}})
+        .travis/check_pylint_diff $best_ancestor
+        ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
+
+
 def setup_package():
     write_version_py()
     setup(
@@ -201,6 +219,9 @@ def setup_package():
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         test_suite='Orange.tests.test_suite',
+        cmdclass={
+            'lint': LintCommand,
+        },
     )
 
 if __name__ == '__main__':

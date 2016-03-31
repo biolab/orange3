@@ -3,13 +3,15 @@
 # Licensed under http://www.apache.org/licenses/LICENSE-2.0
 # Created By: miha@reciprocitylabs.com
 
+set -o pipefail
 set -o nounset
 set -o errexit
 
 ARG1=${1:-}
 GIT_REPO="$(pwd)"
-TMP_REPO="$(mktemp -d)"
+TMP_REPO="$(mktemp -d pylint_diff.XXXXXXX)"
 SCRIPT=$(basename "$0")
+PYLINT="$(command -v pylint 2>/dev/null || true)"
 
 trap 'status=$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit $status' EXIT
 
@@ -41,14 +43,18 @@ Given the commit tree:
 
 case $ARG1 in -h|--help) print_help ; esac
 
+if [ ! "$PYLINT" ]; then
+    echo 'Error: pylint is required'
+    exit 3
+fi
+
 # Make a local clone: prevents copying of objects
 # Handle shallow git clones
-[ -f "$GIT_REPO/.git/shallow" ] &&
-    is_shallow=true
+is_shallow=$([ -f "$GIT_REPO/.git/shallow" ] && echo true || echo)
 if [ "$is_shallow" ]; then
     mv "$GIT_REPO/.git/shallow" "$GIT_REPO/.git/shallow-bak"
 fi
-git clone -q --local "$GIT_REPO" "$TMP_REPO"  2>/dev/null
+git clone -q --local --depth=50 "$GIT_REPO" "$TMP_REPO"  2>/dev/null
 if [ "$is_shallow" ]; then
     mv "$GIT_REPO/.git/shallow-bak" "$GIT_REPO/.git/shallow"
     cp "$GIT_REPO/.git/shallow" "$TMP_REPO/.git/shallow"
@@ -95,8 +101,9 @@ checkout ()
 n_lint_errors ()
 {
     echo "$CHANGED_FILES" |
-        xargs pylint |
-        awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }'
+        xargs "$PYLINT" |
+        awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' ||
+        true
 }
 
 echo "Running pylint on current commit ($CURRENT_COMMIT)"
@@ -107,7 +114,8 @@ checkout $PREVIOUS_COMMIT
 RESULT_PARENT=$( n_lint_errors )
 
 checkout $CURRENT_COMMIT
-echo "$CHANGED_FILES" | xargs pylint || true
+echo
+echo "$CHANGED_FILES" | xargs "$PYLINT" || true
 
 echo "Pylint results"
 echo "=============="
