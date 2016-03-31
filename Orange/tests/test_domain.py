@@ -217,9 +217,11 @@ class TestDomainInit(unittest.TestCase):
 
         self.assertEqual(d[ssn], ssn)
         self.assertEqual(d["SSN"], ssn)
-        self.assertEqual(d[-1], ssn)
+        self.assertEqual(d[-2], ssn)
+        self.assertEqual(d[3], ssn)
 
-        self.assertEqual(d[-2], race)
+        self.assertEqual(d[4], race)
+        self.assertEqual(d[-1], race)
 
     def test_index(self):
         d = Domain((age, gender, income), metas=(ssn, race))
@@ -305,14 +307,8 @@ class TestDomainInit(unittest.TestCase):
             [] in d
 
     def test_iter(self):
-        d = Domain((age, gender, income), metas=(ssn,))
-        self.assertEqual([var for var in d], [age, gender, income])
-
-        d = Domain((age, ), metas=(ssn,))
-        self.assertEqual([var for var in d], [age])
-
-        d = Domain((), metas=(ssn,))
-        self.assertEqual([var for var in d], [])
+        d = Domain((age, gender), (income,), metas=(ssn,))
+        self.assertEqual([var for var in d], [age, gender, income, ssn])
 
     def test_str(self):
         cases = (

@@ -227,7 +227,7 @@ class TestInstance(unittest.TestCase):
         l = inst.list
         self.assertIsInstance(l, list)
         self.assertEqual(l, [42, "M", "B", "X", 43, "Foo"])
-        self.assertGreater(len(l), len(inst))
+        self.assertEqual(len(l), len(inst))
         self.assertEqual(len(l), 6)
 
     def test_set_item(self):
@@ -260,12 +260,12 @@ class TestInstance(unittest.TestCase):
         inst[domain.class_var] = "B"
         self.assertEqual(inst[2], "B")
 
-        inst[-1] = "Y"
-        self.assertEqual(inst[-1], "Y")
+        inst[-3] = "Y"
+        self.assertEqual(inst[-3], "Y")
         inst["Meta 1"] = "Z"
-        self.assertEqual(inst[-1], "Z")
+        self.assertEqual(inst[-3], "Z")
         inst[domain.metas[0]] = "X"
-        self.assertEqual(inst[-1], "X")
+        self.assertEqual(inst[-3], "X")
 
     def test_str(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")])
@@ -339,7 +339,7 @@ class TestInstance(unittest.TestCase):
         self.assertFalse(inst == inst2)
 
         inst2 = Instance(domain, vals)
-        inst2[-1] = "Y"
+        inst2[-3] = "Y"
         self.assertFalse(inst == inst2)
 
         inst2 = Instance(domain, vals)
@@ -347,7 +347,7 @@ class TestInstance(unittest.TestCase):
         self.assertFalse(inst == inst2)
 
         inst2 = Instance(domain, vals)
-        inst2[-3] = "Bar"
+        inst2[-1] = "Bar"
         self.assertFalse(inst == inst2)
 
     def test_instance_id(self):

@@ -79,9 +79,7 @@ class Instance:
         attributes, as a list whose length equals `len(self.domain.attributes)
         + len(self.domain.class_vars) + len(self.domain.metas)`.
         """
-        n_self, n_metas = len(self), len(self._metas)
-        return [self[i].value if i < n_self else self[n_self - i - 1].value
-                for i in range(n_self + n_metas)]
+        return [self[i].value for i in range(len(self))]
 
     @property
     def weight(self):
@@ -99,23 +97,30 @@ class Instance:
         if key >= 0 and not isinstance(value, (int, float)):
             raise TypeError("Expected primitive value, got '%s'" %
                             type(value).__name__)
-
-        if 0 <= key < len(self._domain.attributes):
+        if key < 0:
+            key += len(self._domain)
+        n_attrs = len(self._domain.attributes)
+        n_cls = len(self._domain.class_vars)
+        if 0 <= key < n_attrs:
             self._x[key] = value
-        elif len(self._domain.attributes) <= key:
-            self._y[key - len(self.domain.attributes)] = value
+        elif n_attrs <= key < n_attrs + n_cls:
+            self._y[key - n_attrs] = value
         else:
-            self._metas[-1 - key] = value
+            self._metas[key - n_attrs - n_cls] = value
 
     def __getitem__(self, key):
         if not isinstance(key, Integral):
             key = self._domain.index(key)
-        if 0 <= key < len(self._domain.attributes):
+        if key < 0:
+            key += len(self._domain)
+        n_attrs = len(self._domain.attributes)
+        n_cls = len(self._domain.class_vars)
+        if 0 <= key < n_attrs:
             value = self._x[key]
-        elif key >= len(self._domain.attributes):
-            value = self._y[key - len(self.domain.attributes)]
+        elif n_attrs <= key < n_attrs + n_cls:
+            value = self._y[key - n_attrs]
         else:
-            value = self._metas[-1 - key]
+            value = self._metas[key - n_attrs - n_cls]
         return Value(self._domain[key], value)
 
     #TODO Should we return an instance of `object` if we have a meta attribute
@@ -171,14 +176,14 @@ class Instance:
                        for m1, m2 in zip(self._metas, other._metas))
 
     def __iter__(self):
-        return chain(iter(self._x), iter(self._y))
+        return chain(iter(self._x), iter(self._y), iter(self._metas))
 
     def values(self):
         return (Value(var, val)
                 for var, val in zip(self.domain.variables, self))
 
     def __len__(self):
-        return len(self._x) + len(self._y)
+        return len(self._x) + len(self._y) + len(self._metas)
 
     def attributes(self):
         """Return iterator over the instance's attributes"""

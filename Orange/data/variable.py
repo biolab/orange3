@@ -307,13 +307,13 @@ class Variable(metaclass=VariableMeta):
         for cls in Variable.registry.values():
             cls._clear_cache()
 
-    @classmethod
-    def is_primitive(cls):
+    @property
+    def is_primitive(self):
         """
         `True` if the variable's values are stored as floats.
         Non-primitive variables can appear in the data only as meta attributes.
         """
-        return issubclass(cls, (DiscreteVariable, ContinuousVariable))
+        return isinstance(self, (DiscreteVariable, ContinuousVariable))
 
     @property
     def is_discrete(self):

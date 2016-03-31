@@ -1,3 +1,5 @@
+import re
+import logging
 from math import log
 from collections import Iterable
 from itertools import chain
@@ -6,6 +8,15 @@ from numbers import Integral
 import weakref
 from .variable import *
 import numpy as np
+
+from Orange.util import deprecated
+
+
+LOG = logging.getLogger()
+
+
+def _normcase(str, replace_special=re.compile(r'[^\w]+').sub):
+    return replace_special('_', str).lower()
 
 
 class DomainConversion:
@@ -58,68 +69,100 @@ class DomainConversion:
 
 
 class Domain:
-    def __init__(self, attributes, class_vars=None, metas=None, source=None):
+    def __init__(self, attributes=(), class_vars=(), metas=(), source=None):
         """
-        Initialize a new domain descriptor. Arguments give the features and
-        the class attribute(s). They can be described by descriptors (instances
-        of :class:`Variable`), or by indices or names if the source domain is
-        given.
+        Initialize a new domain descriptor from features and class
+        attribute(s), which are instances of :class:`Variable` or indices or
+        names in the `source` domain if one is provided.
 
-        :param attributes: a list of attributes
-        :type attributes: list of :class:`Variable`
-        :param class_vars: target variable or a list of target variables
-        :type class_vars: :class:`Variable` or list of :class:`Variable`
-        :param metas: a list of meta attributes
-        :type metas: list of :class:`Variable`
-        :param source: the source domain for attributes
-        :type source: Orange.data.Domain
-        :return: a new domain
-        :rtype: :class:`Domain`
+        Parameters
+        ----------
+        attributes : list of Variable
+            A list of feature variables. Any non-primitive variables (i.e.
+            those that can't be coerced to ``float``) are appended to
+            `metas` instead.
+        class_vars : Variable or list of Variable
+            A list of class/target variables. Target variables must be
+            primitive (instances of :class:`DiscreteVariable` or
+            :class:`ContinuousVariable`).
+        metas : list of Variables
+            A list of (meta) variables that describe the data but aren't used
+            for learning (e.g. :class:`StringVariable` holding individual
+            names or example annotations).
+        source : Domain
+            Source domain from which to pull variables if they are specified
+            as ``int`` or ``str`` in `attributes`, `class_vars`, or `metas`.
+
+        Returns
+        -------
+        Domain
+            A new domain.
         """
 
-        if class_vars is None:
-            class_vars = []
-        elif isinstance(class_vars, (Variable, Integral, str)):
+        if isinstance(class_vars, (Variable, int, str)):
             class_vars = [class_vars]
-        elif isinstance(class_vars, Iterable):
+        try:
             class_vars = list(class_vars)
-
-        if not isinstance(attributes, list):
+        except TypeError:
+            raise TypeError('class_vars must be a list of Variable')
+        try:
             attributes = list(attributes)
-        metas = list(metas) if metas else []
+        except TypeError:
+            raise TypeError('attributes must be a list of Variable')
+        try:
+            metas = list(metas)
+        except TypeError:
+            raise TypeError('metas must be a list of Variable')
 
-        # Replace str's and int's with descriptors if 'source' is given;
-        # complain otherwise
-        for lst in (attributes, class_vars, metas):
-            for i, var in enumerate(lst):
-                if not isinstance(var, Variable):
-                    if source and isinstance(var, (str, int)):
-                        lst[i] = source[var]
-                    else:
-                        raise TypeError(
-                            "descriptors must be instances of Variable, "
-                            "not '%s'" % type(var).__name__)
+        # Replace str's and int's with variables if 'source' is given
+        if source is not None:
+            def from_source(iterable):
+                return [var if isinstance(var, Variable) else source[var]
+                        for var in iterable]
+            try:
+                attributes = from_source(attributes)
+                class_vars = from_source(class_vars)
+                metas = from_source(metas)
+            except (ValueError, TypeError):
+                raise ValueError("Can't convert all indices "
+                                 "(attrs={}, class_vars={}, metas={}) "
+                                 "from source domain {}".format(
+                                     attributes, class_vars, metas, source))
 
-        # Store everything
-        self.attributes = tuple(attributes)
-        self.class_vars = tuple(class_vars)
-        self._variables = self.attributes + self.class_vars
-        self._metas = tuple(metas)
-        self.class_var = \
-            self.class_vars[0] if len(self.class_vars) == 1 else None
-        if not all(var.is_primitive() for var in self._variables):
-            raise TypeError("variables must be primitive")
+        if not all(isinstance(var, Variable)
+                   for var in chain(attributes, class_vars, metas)):
+            raise TypeError('Parameters attributes, class_vars, and metas '
+                            'must be lists of Variable objects')
+
+        # Put non-primitive Variables into metas instead
+        append_metas = [var for var in chain(attributes, class_vars)
+                        if not var.is_primitive]
+
+        self.attributes = tuple(var for var in attributes if var.is_primitive)
+        self.class_vars = tuple(var for var in class_vars if var.is_primitive)
+        self.metas = tuple(chain(metas, append_metas))
+        if append_metas:
+            LOG.warning("Non-primitive variables '{}', passed as attributes "
+                        "or class_vars, added to metas instead".format(
+                            "', '".join(v.name for v in append_metas)))
 
         self._indices = dict(chain.from_iterable(
-            ((var, idx), (var.name, idx), (idx, idx))
-            for idx, var in enumerate(self._variables)))
-        self._indices.update(chain.from_iterable(
-            ((var, -1-idx), (var.name, -1-idx), (-1-idx, -1-idx))
-            for idx, var in enumerate(self.metas)))
+            ((var, i), (var.name, i)) for i, var in enumerate(self)))
 
-        self.anonymous = False
+        # Allow attribute-like access to variables in the domain
+        for var in self:
+            name = _normcase(var.name)
+            if not hasattr(self, name):
+                setattr(self, name, var)
+
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
+
+    def copy(self):
+        return self.__copy__()
+
+    def __copy__(self):
+        return self.__class__(self.attributes, self.class_vars, self.metas)
 
     # noinspection PyPep8Naming
     @classmethod
@@ -132,8 +175,6 @@ class Domain:
         "Feature <n>". Target variables are discrete if the only two values
         are 0 and 1; otherwise they are continuous. Discrete
         targets are named "Class <n>" and continuous are named "Target <n>".
-        Domain is marked as :attr:`anonymous`, so data from any other domain of
-        the same shape can be converted into this one and vice-versa.
 
         :param `numpy.ndarray` X: 2-dimensional array with data
         :param Y: 1- of 2- dimensional data for target
@@ -157,7 +198,7 @@ class Domain:
         attr_vars = [ContinuousVariable(name=get_name("Feature", a, places))
                      for a in range(n_attrs)]
         class_vars = []
-        if Y is not None:
+        if Y is not None and Y.size:
             if Y.ndim == 1:
                 Y = Y.reshape(len(Y), 1)
             elif Y.ndim != 2:
@@ -165,14 +206,14 @@ class Domain:
             n_classes = Y.shape[1]
             places = get_places(n_classes)
             for i, values in enumerate(Y.T):
-                if set(values) == {0, 1}:
+                values = is_discrete_values(values)
+                if values:
                     name = get_name('Class', i, places)
-                    values = ['v1', 'v2']
-                    class_vars.append(DiscreteVariable(name, values))
+                    class_vars.append(DiscreteVariable(name, sorted(values)))
                 else:
                     name = get_name('Target', i + 1, places)
                     class_vars.append(ContinuousVariable(name))
-        if metas is not None:
+        if metas is not None and metas.size:
             n_metas = metas.shape[1]
             places = get_places(n_metas)
             meta_vars = [StringVariable(get_name("Meta", m, places))
@@ -181,40 +222,93 @@ class Domain:
             meta_vars = []
 
         domain = cls(attr_vars, class_vars, meta_vars)
-        domain.anonymous = True
         return domain
 
     @property
     def variables(self):
-        return self._variables
+        """Return list of ```attributes` + `class_vars```."""
+        return tuple(chain(self.attributes, self.class_vars))
 
     @property
-    def metas(self):
-        return self._metas
+    def class_var(self):
+        return self.class_vars[0] if self.class_vars else None
 
     def __len__(self):
-        """The number of variables (features and class attributes)."""
-        return len(self._variables)
+        """The number of variables in the domain."""
+        return len(self.attributes) + len(self.class_vars) + len(self.metas)
 
     def __getitem__(self, idx):
         """
-        Return a variable descriptor from the given argument, which can be
-        a descriptor, index or name. If `var` is a descriptor, the function
-        returns this same object.
+        Return the domain variable corresponding to given `idx`, which can
+        be a numerical index or variable's name.
 
-        :param idx: index, name or descriptor
-        :type idx: int, str or :class:`Variable`
-        :return: an instance of :class:`Variable` described by `var`
-        :rtype: :class:`Variable`
+        In case `idx` represents multiple values (iterable, slice, ellipsis),
+        a domain object containing those variables is returned.
+
+        Parameters
+        ----------
+        idx : int or str or Variable or Iterable or slice or Ellipsis
+            Index or name of variable to return. If ``Iterable``, a new
+            domain is returned with matching attributes, class variables, and
+            metas. If ``slice``, a new domain is returned with matching
+            variables set as **attributes**. If ``Iterable``, it can contain
+            integer indexes, names, or variables. If ``slice``, it returns
+            the domain with its attributes matching that slice. If `Ellipsis`,
+            self is returned.
+
+        Returns
+        -------
+        var : Variable or Domain
+            The (Domain of) variable(s) corresponding to index(es) `idx`.
         """
-        if isinstance(idx, slice):
-            return self._variables[idx]
+        try:
+            if isinstance(idx, (int, np.integer)):
+                if idx < 0:
+                    idx += len(self)
+                which = idx
 
-        idx = self._indices[idx]
-        if idx >= 0:
-            return self.variables[idx]
-        else:
-            return self.metas[-1-idx]
+            elif isinstance(idx, str):
+                which = idx = self._indices[idx]
+
+            elif isinstance(idx, Iterable):
+                vars = [self[val] for val in idx]
+                X = tuple(v for v in vars if v in self.attributes)
+                Y = tuple(v for v in vars if v in self.class_vars)
+                M = tuple(v for v in vars if v in self.metas)
+                return self.__class__(X, Y, M)
+
+            elif idx is Ellipsis:
+                return self
+
+            elif isinstance(idx, slice):
+                idx = range(*idx.indices(len(self)))
+                if idx == range(len(self)):
+                    return self.__class__(self)
+                return self.__class__(self[i] for i in idx)
+
+            elif isinstance(idx, Variable):
+                if idx not in self:
+                    raise KeyError
+                return idx
+
+            else:
+                raise TypeError("Can't get variable by index type '{}'. Names "
+                                "and integers are supported.".format(
+                                    idx.__class__))
+        except KeyError:
+            raise ValueError("Variable '{}' is not in domain".format(idx))
+
+        # Find which group this index belongs to; equivalent to
+        # tuple(self)[idx], but much faster for large domains
+        which -= len(self.attributes)
+        if which < 0:
+            return self.attributes[idx]
+        idx, which = which, which - len(self.class_vars)
+        if which < 0:
+            return self.class_vars[idx]
+        idx, which = which, which - len(self.metas)
+        assert which < 0
+        return self.metas[idx]
 
     def __contains__(self, item):
         """
@@ -224,10 +318,8 @@ class Domain:
         return item in self._indices
 
     def __iter__(self):
-        """
-        Return an iterator through variables (features and class attributes).
-        """
-        return iter(self._variables)
+        """Return an iterator through all variables in the domain."""
+        return chain(self.attributes, self.class_vars, self.metas)
 
     def __str__(self):
         """
@@ -238,8 +330,8 @@ class Domain:
         if self.class_vars:
             s += " | " + ", ".join(cls.name for cls in self.class_vars)
         s += "]"
-        if self._metas:
-            s += " {" + ", ".join(meta.name for meta in self._metas) + "}"
+        if self.metas:
+            s += " {" + ", ".join(meta.name for meta in self.metas) + "}"
         return s
 
     __repr__ = __str__
@@ -255,41 +347,50 @@ class Domain:
 
     def index(self, var):
         """
-        Return the index of the given variable or meta attribute, represented
-        with an instance of :class:`Variable`, `int` or `str`.
-        """
+        Return the index of the given variable (represented as
+        `int`, `str`, or instance of :class:`Variable`) in the domain.
 
+        If `var` is an iterable of above values, then return three tuples:
+        indices in attributes, indices in class_vars, and indices in metas.
+        """
+        if isinstance(var, (int, np.integer)):
+            return int(var)
         try:
+            if isinstance(var, Iterable):
+                vars = [self[val] for val in var]
+                Xind = tuple(self.attributes.index(v)
+                             for v in vars if v in self.attributes)
+                Yind = tuple(self.class_vars.index(v)
+                             for v in vars if v in self.class_vars)
+                Mind = tuple(self.metas.index(v)
+                             for v in vars if v in self.metas)
+                return Xind, Yind, Mind
             return self._indices[var]
         except KeyError:
-            raise ValueError("'%s' is not in domain" % var)
+            raise ValueError("Variable '{}' is not in domain".format(var))
 
-    def has_discrete_attributes(self, include_class=False):
-        """
-        Return `True` if domain has any discrete attributes. If `include_class`
-                is set, the check includes the class attribute(s).
-        """
-        if not include_class:
-            return any(var.is_discrete for var in self.attributes)
-        else:
-            return any(var.is_discrete for var in self.variables)
+    @property
+    def has_discrete(self):
+        """Return `True` if domain has any discrete attributes."""
+        return any(var.is_discrete for var in self.attributes)
 
-    def has_continuous_attributes(self, include_class=False):
-        """
-        Return `True` if domain has any continuous attributes. If
-        `include_class` is set, the check includes the class attribute(s).
-        """
-        if not include_class:
-            return any(var.is_continuous for var in self.attributes)
-        else:
-            return any(var.is_continuous for var in self.variables)
+    @property
+    def has_continuous(self):
+        """Return `True` if domain has any continuous attributes."""
+        return any(var.is_continuous for var in self.attributes)
 
     @property
     def has_continuous_class(self):
+        """
+        Returrn `True` if the first class variable of domain is continuous.
+        """
         return bool(self.class_var and self.class_var.is_continuous)
 
     @property
     def has_discrete_class(self):
+        """
+        Returrn `True` if the first class variable of domain is discrete.
+        """
         return bool(self.class_var and self.class_var.is_discrete)
 
     def get_conversion(self, source):
@@ -328,30 +429,31 @@ class Domain:
                 return inst._x, inst._y, inst._metas
             c = self.get_conversion(inst.domain)
             l = len(inst.domain.attributes)
+            lc = len(inst.domain.class_vars)
             values = [(inst._x[i] if 0 <= i < l
-                       else inst._y[i - l] if i >= l
-                       else inst._metas[-i - 1])
+                       else inst._y[i - l] if l <= i < l + lc
+                       else inst._metas[i - l - lc])
                       if isinstance(i, int)
                       else (Unknown if not i else i(inst))
                       for i in c.variables]
             metas = [(inst._x[i] if 0 <= i < l
-                      else inst._y[i - l] if i >= l
-                      else inst._metas[-i - 1])
+                      else inst._y[i - l] if l <= i < l + lc
+                      else inst._metas[i - l - lc])
                      if isinstance(i, int)
                      else (Unknown if not i else i(inst))
                      for i in c.metas]
         else:
-            nvars = len(self._variables)
-            nmetas = len(self._metas)
+            nvars = len(self.variables)
+            nmetas = len(self.metas)
             if len(inst) != nvars and len(inst) != nvars + nmetas:
                 raise ValueError("invalid data length for domain")
             values = [var.to_val(val)
-                      for var, val in zip(self._variables, inst)]
+                      for var, val in zip(self.variables, inst)]
             if len(inst) == nvars + nmetas:
                 metas = [var.to_val(val)
-                         for var, val in zip(self._metas, inst[nvars:])]
+                         for var, val in zip(self.metas, inst[nvars:])]
             else:
-                metas = [var.Unknown for var in self._metas]
+                metas = [var.Unknown for var in self.metas]
         nattrs = len(self.attributes)
         # Let np.array decide dtype for values
         return np.array(values[:nattrs]), np.array(values[nattrs:]),\
@@ -400,14 +502,13 @@ class Domain:
             col_idx = self.index(attr)
         return [attr], np.array([col_idx])
 
+    @deprecated
     def checksum(self):
         return hash(self)
 
     def __eq__(self, other):
-        if not isinstance(other, Domain):
-            return False
-
-        return (self.attributes == other.attributes and
+        return (isinstance(other, Domain) and
+                self.attributes == other.attributes and
                 self.class_vars == other.class_vars and
                 self.metas == other.metas)
 

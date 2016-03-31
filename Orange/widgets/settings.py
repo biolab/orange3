@@ -813,7 +813,7 @@ class DomainContextHandler(ContextHandler):
                 attributes = encode(domain.attributes, False)
                 attributes.update(encode(domain.class_vars, True))
             else:
-                attributes = encode(domain, match == self.MATCH_VALUES_ALL)
+                attributes = encode(domain.variables, match == self.MATCH_VALUES_ALL)
         else:
             attributes = {}
 
@@ -843,7 +843,7 @@ class DomainContextHandler(ContextHandler):
         context.ordered_domain = []
         if self.has_ordinary_attributes:
             context.ordered_domain += [(attr.name, vartype(attr))
-                                       for attr in domain]
+                                       for attr in domain.variables]
         if self.has_meta_attributes:
             context.ordered_domain += [(attr.name, vartype(attr))
                                        for attr in domain.metas]

@@ -479,5 +479,5 @@ class SqlTableTests(PostgresTest):
 
     def assertFirstMetaIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain.metas), 0)
-        attr = table.domain[-1]
+        attr = table.domain.metas[0]
         self.assertIsInstance(attr, variable_type)
