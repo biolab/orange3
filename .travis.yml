@@ -5,7 +5,8 @@ dist: trusty
 
 matrix:
     include:
-        - env: RUN_PYLINT=true
+        - &pylint
+          env: RUN_PYLINT=true
           python: '3.4'
           addons: { apt: { packages: [] } }
           cache: {}
@@ -14,6 +15,7 @@ matrix:
         - python: 'nightly'
     allow_failures:
         - python: 'nightly'
+        - *pylint
     fast_finish: true
 
 cache:
