@@ -175,7 +175,12 @@ class SettingProvider:
         instance : OWWidget
         """
         if setting.packable:
-            yield setting.name, getattr(instance, setting.name)
+            if hasattr(instance, setting.name):
+                yield setting.name, getattr(instance, setting.name)
+            else:
+                warnings.warn("{0} is declared as setting on {1} "
+                              "but not present on instance."
+                              .format(setting.name, instance))
 
     def pack(self, instance, packer=None):
         """Pack instance settings in a name:value dict.
