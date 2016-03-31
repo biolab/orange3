@@ -1,5 +1,4 @@
 import unittest
-#from unittest.mock import patch
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -8,6 +7,10 @@ from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
+from Orange.preprocess.discretize import EqualWidth
+from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
+from Orange.statistics.contingency import Continuous, Discrete, get_contingencies
+from Orange.statistics.distribution import get_distributions
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
 
 
@@ -43,6 +46,12 @@ class SqlTableTests(PostgresTest):
 
         with self.sql_table_from_data(zip(self.float_variable(0))) as table:
             self.assertEqual(len(table), 0)
+
+    def test_bool(self):
+        with self.sql_table_from_data(()) as table:
+            self.assertEqual(bool(table), False)
+        with self.sql_table_from_data(zip(self.float_variable(1))) as table:
+            self.assertEqual(bool(table), True)
 
     def test_len_with_filter(self):
         with self.sql_table_from_data(
@@ -149,6 +158,11 @@ class SqlTableTests(PostgresTest):
         results = list(table._query(rows=slice(10, None)))
         self.assertEqual(len(results), 140)
         self.assertSequenceEqual(results, all_results[10:])
+
+    def test_getitem_single_value(self):
+        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
+        self.assertAlmostEqual(table[0,0], 5.1)
+
 
     def test_type_hints(self):
         table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
@@ -471,6 +485,53 @@ class SqlTableTests(PostgresTest):
         with sql_table._execute_sql_query(working_query) as cur:
             cur.fetchall()
 
+    def test_basic_stats(self):
+        iris = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
+        stats = BasicStats(iris, iris.domain['sepal length'])
+        self.assertAlmostEqual(stats.min, 4.3)
+        self.assertAlmostEqual(stats.max, 7.9)
+        self.assertAlmostEqual(stats.mean, 5.8, 1)
+        self.assertEqual(stats.nans, 0)
+        self.assertEqual(stats.non_nans, 150)
+
+        domain_stats = DomainBasicStats(iris, include_metas=True)
+        self.assertEqual(len(domain_stats.stats),
+                         len(iris.domain) + len(iris.domain.metas))
+        stats = domain_stats['sepal length']
+        self.assertAlmostEqual(stats.min, 4.3)
+        self.assertAlmostEqual(stats.max, 7.9)
+        self.assertAlmostEqual(stats.mean, 5.8, 1)
+        self.assertEqual(stats.nans, 0)
+        self.assertEqual(stats.non_nans, 150)
+
+    @unittest.mock.patch("Orange.data.sql.table.LARGE_TABLE", 100)
+    def test_basic_stats_on_large_data(self):
+        # By setting LARGE_TABLE to 100, iris will be treated as
+        # a large table and sampling will be used. As the table
+        # is actually small, time base sampling should return
+        # all rows, so the same assertions can be used.
+        self.test_basic_stats()
+
+    def test_distributions(self):
+        iris = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
+
+        dists = get_distributions(iris)
+        self.assertEqual(len(dists), 5)
+        dist = dists[0]
+        self.assertAlmostEqual(dist.min(), 4.3)
+        self.assertAlmostEqual(dist.max(), 7.9)
+        self.assertAlmostEqual(dist.mean(), 5.8, 1)
+
+    def test_contingencies(self):
+        iris = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
+        iris.domain = Domain(iris.domain[:2] + (EqualWidth()(iris, iris.domain['sepal width']),),
+                             iris.domain['iris'])
+
+        conts = get_contingencies(iris)
+        self.assertEqual(len(conts), 3)
+        self.assertIsInstance(conts[0], Continuous)
+        self.assertIsInstance(conts[1], Continuous)
+        self.assertIsInstance(conts[2], Discrete)
 
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain), 0)
