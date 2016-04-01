@@ -19,6 +19,7 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
     learner_name = Setting("kNN")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
+    weight_type = Setting(0)
 
     def __init__(self):
         super().__init__()
@@ -38,6 +39,11 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
                      items=["Euclidean", "Manhattan", "Maximal", "Mahalanobis"])
         self.metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
 
+        self.weights = ["uniform", "distance"]
+        gui.comboBox(self.controlArea, self, "weight_type",
+		     box='Neigbours weight',			
+                     items=[i.capitalize() for i in self.weights])
+
         gui.button(self.controlArea, self, "Apply",
                    callback=self.apply, default=True)
         self.controlArea.layout().addWidget(self.report_button)
@@ -56,6 +62,7 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
         learner = self.LEARNER(
             n_neighbors=self.n_neighbors,
             metric=self.metrics[self.metric_index],
+            weights=self.weights[self.weight_type],
             preprocessors=self.preprocessors
         )
         learner.name = self.learner_name
@@ -76,7 +83,8 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
         self.report_items((("Name", self.learner_name),))
         self.report_items("Model parameters", (
             ("Number of neighbours", self.n_neighbors),
-            ("Metric", self.metrics[self.metric_index].capitalize())))
+            ("Metric", self.metrics[self.metric_index].capitalize()),
+	    ("Weight", self.weights[self.weight_type].capitalize())))
         if self.data:
             self.report_data("Data", self.data)
 
