@@ -3,13 +3,18 @@
 # Licensed under http://www.apache.org/licenses/LICENSE-2.0
 # Created By: miha@reciprocitylabs.com
 
+set -o pipefail
 set -o nounset
 set -o errexit
 
 ARG1=${1:-}
 GIT_REPO="$(pwd)"
-TMP_REPO="$(mktemp -d)"
+TMP_REPO="$GIT_REPO/$(mktemp -d pylint_diff.XXXXXXX)"
+UNCOMMITED_PATCH="$TMP_REPO/uncommited.patch"
 SCRIPT=$(basename "$0")
+PYLINT="$(command -v pylint 2>/dev/null || true)"
+RADON="$(command -v radon 2>/dev/null || true)"
+RADON_ARGS='cc --min C --no-assert --show-closures --show-complexity --average'
 
 trap 'status=$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit $status' EXIT
 
@@ -41,20 +46,39 @@ Given the commit tree:
 
 case $ARG1 in -h|--help) print_help ; esac
 
+if [ ! "$PYLINT" ]; then
+    echo 'Error: pylint is required'
+    exit 3
+fi
+
 # Make a local clone: prevents copying of objects
 # Handle shallow git clones
-[ -f "$GIT_REPO/.git/shallow" ] &&
-    is_shallow=true
+is_shallow=$([ -f "$GIT_REPO/.git/shallow" ] && echo true || echo)
 if [ "$is_shallow" ]; then
     mv "$GIT_REPO/.git/shallow" "$GIT_REPO/.git/shallow-bak"
 fi
-git clone -q --local "$GIT_REPO" "$TMP_REPO"  2>/dev/null
+git clone -q --local --depth=50 "$GIT_REPO" "$TMP_REPO"  2>/dev/null
 if [ "$is_shallow" ]; then
     mv "$GIT_REPO/.git/shallow-bak" "$GIT_REPO/.git/shallow"
     cp "$GIT_REPO/.git/shallow" "$TMP_REPO/.git/shallow"
 fi
 
+# Move over any modified but uncommited files ...
+if ! git diff-index --quiet HEAD; then
+    git stash save -q --keep-index
+    git stash show -p stash@\{0\} > "$UNCOMMITED_PATCH"
+    git stash pop -q --index
+fi
+
 cd "$TMP_REPO"
+
+# ... and commit them
+if [ "$(cat "$UNCOMMITED_PATCH" 2>/dev/null || true)" ]; then
+    git apply "$UNCOMMITED_PATCH"
+    git commit -a -m 'Commit changed files'
+    was_dirty='+'
+fi >/dev/null 2>&1
+
 git reset --hard -q HEAD
 
 CURRENT_COMMIT=$(git rev-parse HEAD)
@@ -65,7 +89,8 @@ else
                       awk '/^parent /{ print $2; exit }')
 fi
 
-echo "Comparing commits $CURRENT_COMMIT and $PREVIOUS_COMMIT ."
+echo
+echo "Comparing commits ${CURRENT_COMMIT:0:10}${was_dirty:-} and ${PREVIOUS_COMMIT:0:10}"
 
 CHANGED_FILES=$(git diff --name-only $CURRENT_COMMIT $PREVIOUS_COMMIT |
                 grep "\.py$" || true )
@@ -74,6 +99,7 @@ if [ ! "$CHANGED_FILES" ]; then
     exit 0
 fi
 
+echo
 echo "Comparing files"
 echo "==============="
 echo "$CHANGED_FILES"
@@ -92,33 +118,57 @@ checkout ()
     } 2>/dev/null
 }
 
-n_lint_errors ()
+Number_of_issues ()
 {
+    score_only="${1:-}"
     echo "$CHANGED_FILES" |
-        xargs pylint |
-        awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }'
+        xargs "$PYLINT" |
+        { [ "$score_only" ] &&
+          awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' ||
+          cat; } ||
+        true
 }
 
-echo "Running pylint on current commit ($CURRENT_COMMIT)"
-checkout $CURRENT_COMMIT
-RESULT_CURRENT=$( n_lint_errors )
-echo "Running pylint on parent commit ($PREVIOUS_COMMIT)"
-checkout $PREVIOUS_COMMIT
-RESULT_PARENT=$( n_lint_errors )
+Cyclomatic_complexity ()
+{
+    score_only="${1:-}"
+    echo "$CHANGED_FILES" |
+        xargs "$RADON" $RADON_ARGS |
+        { [ "$score_only" ] &&
+          awk '/^Average complexity: /{ gsub(/[\(\)]/, ""); print $NF }' ||
+          cat; } ||
+        true
+}
 
-checkout $CURRENT_COMMIT
-echo "$CHANGED_FILES" | xargs pylint || true
 
-echo "Pylint results"
-echo "=============="
-echo "Number of issues on parent commit: $RESULT_PARENT"
-echo "Number of issues on the pull request: $RESULT_CURRENT"
-echo
+for check in \
+    "Pylint Number_of_issues" \
+    "radon Cyclomatic_complexity"
+do
+    func=${check#* }
+    check=${check% *}
+    if [ ! "$(eval echo \$$(echo $check | tr '[:lower:]' '[:upper:]') )" ]; then
+        continue
+    fi
 
-if [ ! "$RESULT_CURRENT" ] ||
-   [ "$RESULT_PARENT" ] && [ $RESULT_CURRENT -gt $RESULT_PARENT ]; then
-    echo "FAIL: pylint score got worse"
-    exit 1
-else
-    echo 'OK'
-fi
+    checkout $CURRENT_COMMIT
+    RESULT_CURRENT=$($func score)
+    checkout $PREVIOUS_COMMIT
+    RESULT_PARENT=$($func score)
+    checkout $CURRENT_COMMIT
+    $func
+
+    echo
+    echo "$check results"
+    echo "================================================================="
+    echo "${func//_/ } on parent commit: $RESULT_PARENT"
+    echo "${func//_/ } on the pull request: $RESULT_CURRENT"
+    echo
+
+    if [ $(echo "${RESULT_CURRENT:-0} > ${RESULT_PARENT:-0}" | bc) -eq 1 ]; then
+        echo "FAIL: ${func//_/ } got worse"
+        exit 1
+    fi
+done
+
+echo "OK"

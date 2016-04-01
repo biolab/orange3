@@ -1,7 +1,7 @@
 
 if [ "$RUN_PYLINT" ]; then
-    foldable pip install pylint
     cd $TRAVIS_BUILD_DIR
+    foldable pip install -r requirements-dev.txt
     cp pylintrc ~/.pylintrc
     .travis/check_pylint_diff
     exit $?
