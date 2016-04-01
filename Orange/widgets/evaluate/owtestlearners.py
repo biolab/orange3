@@ -141,16 +141,20 @@ class OWTestLearners(widget.OWWidget):
     settingsHandler = settings.ClassValuesContextHandler()
 
     #: Resampling/testing types
-    KFold, LeaveOneOut, ShuffleSplit, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
+    KFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
 
     #: Selected resampling type
     resampling = settings.Setting(0)
     #: Number of folds for K-fold cross validation
     k_folds = settings.Setting(10)
+    #: Stratified sampling for K-fold
+    cv_stratified = settings.Setting(True)
     #: Number of repeats for ShuffleSplit sampling
     n_repeat = settings.Setting(10)
     #: ShuffleSplit sampling p
     sample_p = settings.Setting(75)
+    #: Stratified sampling for Random Sampling
+    shuffle_stratified = settings.Setting(True)
 
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
@@ -172,11 +176,14 @@ class OWTestLearners(widget.OWWidget):
         rbox = gui.radioButtons(
             sbox, self, "resampling", callback=self._param_changed
         )
+
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "k_folds", 2, 50, label="Number of folds:",
                  callback=self.kfold_changed)
-        gui.appendRadioButton(rbox, "Leave one out")
+        gui.checkBox(ibox, self, "cv_stratified", "Stratified",
+                     callback=self.kfold_changed)
+
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test",
@@ -185,6 +192,10 @@ class OWTestLearners(widget.OWWidget):
         gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=99,
                     ticks=20, vertical=False, labelFormat="%d %%",
                     callback=self.shuffle_split_changed)
+        gui.checkBox(ibox, self, "shuffle_stratified", "Stratified",
+                     callback=self.shuffle_split_changed)
+
+        gui.appendRadioButton(rbox, "Leave one out")
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
@@ -394,6 +405,7 @@ class OWTestLearners(widget.OWWidget):
                     results = Orange.evaluation.ShuffleSplit(
                         self.data, learners, n_resamples=self.n_repeat,
                         train_size=train_size, test_size=None,
+                        stratified=self.shuffle_stratified,
                         random_state=rstate, **common_args)
                 elif self.resampling == OWTestLearners.TestOnTrain:
                     results = Orange.evaluation.TestOnTrainingData(
@@ -595,14 +607,16 @@ class OWTestLearners(widget.OWWidget):
         if not self.data or not self.learners:
             return
         if self.resampling == self.KFold:
-            items = [("Sampling type", "{}-fold Cross validation".
-                      format(self.k_folds))]
+            stratified = 'Stratified ' if self.cv_stratified else ''
+            items = [("Sampling type", "{}{}-fold Cross validation".
+                      format(stratified, self.k_folds))]
         elif self.resampling == self.LeaveOneOut:
             items = [("Sampling type", "Leave one out")]
         elif self.resampling == self.ShuffleSplit:
+            stratified = 'Stratified ' if self.shuffle_stratified else ''
             items = [("Sampling type",
-                      "{} random samples with {} % data ".format(
-                          self.n_repeat, self.sample_p))]
+                      "{}Shuffle split, {} random samples with {}% data "
+                      .format(stratified, self.n_repeat, self.sample_p))]
         elif self.resampling == self.TestOnTrain:
             items = [("Sampling type", "No sampling, test on training data")]
         elif self.resampling == self.TestOnTest:

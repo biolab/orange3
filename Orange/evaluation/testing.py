@@ -284,18 +284,19 @@ class CrossValidation(Results):
     .. attribute:: random_state
 
     """
-    def __init__(self, data, learners, k=10, random_state=0, store_data=False,
+    def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
                  store_models=False, preprocessor=None, callback=None, warnings=None):
         super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback)
         self.k = k
+        self.stratified = stratified
         self.random_state = random_state
-        Y = data.Y.copy().flatten()
+
         indices = None
-        if data.domain.has_discrete_class:
+        if self.stratified and data.domain.has_discrete_class:
             indices = skl_cross_validation.StratifiedKFold(
-                Y, self.k, shuffle=True, random_state=self.random_state
+                data.Y, self.k, shuffle=True, random_state=self.random_state
             )
             if any(len(train) == 0 or len(test) == 0 for train, test in indices):
                 if warnings is not None:
@@ -303,7 +304,7 @@ class CrossValidation(Results):
                 indices = None
         if indices is None:
             indices = skl_cross_validation.KFold(
-                len(Y), self.k, shuffle=True, random_state=self.random_state
+                len(data), self.k, shuffle=True, random_state=self.random_state
             )
 
         self.folds = []
@@ -438,7 +439,7 @@ class TestOnTrainingData(Results):
 
 class ShuffleSplit(Results):
     def __init__(self, data, learners, n_resamples=10, train_size=None,
-                 test_size=0.1, random_state=0, store_data=False,
+                 test_size=0.1, stratified=True, random_state=0, store_data=False,
                  store_models=False, preprocessor=None, callback=None):
         super().__init__(data, len(learners), store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
@@ -447,12 +448,19 @@ class ShuffleSplit(Results):
         self.n_resamples = n_resamples
         self.train_size = train_size
         self.test_size = test_size
+        self.stratified = stratified
         self.random_state = random_state
 
-        indices = skl_cross_validation.ShuffleSplit(
-            len(data), n_iter=self.n_resamples, train_size=self.train_size,
-            test_size=test_size, random_state=self.random_state
-        )
+        if self.stratified and data.domain.has_discrete_class:
+            self.indices = skl_cross_validation.StratifiedShuffleSplit(
+                data.Y, n_iter=self.n_resamples, train_size=self.train_size,
+                test_size=self.test_size, random_state=self.random_state
+            )
+        else:
+            self.indices = skl_cross_validation.ShuffleSplit(
+                len(data), n_iter=self.n_resamples, train_size=self.train_size,
+                test_size=self.test_size, random_state=self.random_state
+            )
 
         self.folds = []
         if self.store_models:
@@ -465,7 +473,7 @@ class ShuffleSplit(Results):
         fold_start = 0
         nmethods = len(learners)
         n_callbacks = self.n_resamples * nmethods
-        for samp_idx, (train, test) in enumerate(indices):
+        for samp_idx, (train, test) in enumerate(self.indices):
             train_data, test_data = data[train], data[test]
             if preprocessor is not None:
                 train_data = self.preprocessor(train_data)
