@@ -17,7 +17,7 @@ Point = namedtuple('Point', ['x', 'y'])
 
 
 class OWPythagorasTree(OWWidget):
-    name = "Generalized Pythagoras Tree"
+    name = "Pythagoras Tree"
     description = "Generalized Pythagoras Tree for visualizing trees."
     priority = 100
 
@@ -70,7 +70,8 @@ class OWPythagorasTree(OWWidget):
     def set_ctree(self, ctree=None):
         self.clear()
         self.raw_tree = ctree
-        self.tree = SklTreeAdapter(ctree.skl_model.tree_)
+        if ctree is not None:
+            self.tree = SklTreeAdapter(ctree.skl_model.tree_)
 
         self._update()
 
