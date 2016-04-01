@@ -11,7 +11,7 @@ from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
                                                       construct_variables)
 
 from Orange.widgets.data.owfeatureconstructor import (
-    freevars, make_lambda,
+    freevars, make_lambda, validate_exp
 )
 
 class FeatureConstructorTest(unittest.TestCase):
@@ -119,3 +119,48 @@ class TestTools(unittest.TestCase):
         self.assertEqual(freevars_("{a, b}"), ["a", "b"])
         self.assertEqual(freevars_("0 if abs(a) < 0.1 else b", ["abs"]),
                          ["a", "b"])
+
+    def test_validate_exp(self):
+
+        stmt = ast.parse("1", mode="single")
+        with self.assertRaises(TypeError):
+            validate_exp(stmt)
+        suite = ast.parse("a; b", mode="exec")
+        with self.assertRaises(TypeError):
+            validate_exp(suite)
+
+        def validate_(source):
+            return validate_exp(ast.parse(source, mode="eval"))
+
+        self.assertTrue(validate_("a"))
+        self.assertTrue(validate_("a + 1"))
+        self.assertTrue(validate_("a < 1"))
+        self.assertTrue(validate_("1 < a"))
+        self.assertTrue(validate_("1 < a < 10"))
+        self.assertTrue(validate_("a and b"))
+        self.assertTrue(validate_("not a"))
+        self.assertTrue(validate_("a if b else c"))
+
+        self.assertTrue(validate_("f(x)"))
+        self.assertTrue(validate_("f(g(x)) + g(x)"))
+
+        self.assertTrue(validate_("f(x, r=b)"))
+        self.assertTrue(validate_("a[b]"))
+
+        self.assertTrue(validate_("a in {'a', 'b'}"))
+        self.assertTrue(validate_("{}"))
+        self.assertTrue(validate_("{'a': 1}"))
+        self.assertTrue(validate_("()"))
+        self.assertTrue(validate_("[]"))
+
+        with self.assertRaises(ValueError):
+            validate_("[a for a in s]")
+
+        with self.assertRaises(ValueError):
+            validate_("(a for a in s)")
+
+        with self.assertRaises(ValueError):
+            validate_("{a for a in s}")
+
+        with self.assertRaises(ValueError):
+            validate_("{a:1 for a in s}")

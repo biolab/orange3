@@ -40,16 +40,7 @@ DiscreteDescriptor = \
 StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
 
-@functools.lru_cache(50)
-def make_variable(descriptor, compute_value=None):
-    if compute_value is None:
-        if descriptor.expression.strip():
-            compute_value = \
-                lambda instance: eval(descriptor.expression,
-                                      {"instance": instance, "_": instance})
-        else:
-            compute_value = lambda _: float("nan")
-
+def make_variable(descriptor, compute_value):
     if isinstance(descriptor, ContinuousDescriptor):
         return Orange.data.ContinuousVariable(
             descriptor.name,
@@ -68,14 +59,6 @@ def make_variable(descriptor, compute_value=None):
             compute_value=compute_value)
     else:
         raise TypeError
-
-
-def is_valid_expression(exp):
-    try:
-        ast.parse(exp, mode="eval")
-        return True
-    except Exception:
-        return False
 
 
 def selected_row(view):
@@ -541,8 +524,14 @@ class OWFeatureConstructor(widget.OWWidget):
 
         desc = list(self.featuremodel)
 
+        def validate(source):
+            try:
+                return validate_exp(ast.parse(source, mode="eval"))
+            except Exception:
+                return False
+
         def remove_invalid_expression(desc):
-            return (desc if is_valid_expression(desc.expression)
+            return (desc if validate(desc.expression)
                     else desc._replace(expression=""))
 
         desc = map(remove_invalid_expression, desc)
@@ -659,6 +648,75 @@ def freevars(exp, env):
         return freevars(exp.value, env)
     elif etype == ast.keyword:
         return freevars(exp.value, env)
+    else:
+        raise ValueError(exp)
+
+
+def validate_exp(exp):
+    """
+    Validate an `ast.AST` expression.
+
+    Only expressions with no list,set,dict,generator comprehensions
+    are accepted.
+
+    Parameters
+    ----------
+    exp : ast.AST
+        A parsed abstract syntax tree
+
+    """
+    if not isinstance(exp, ast.AST):
+        raise TypeError("exp is not a 'ast.AST' instance")
+
+    etype = type(exp)
+    if etype in [ast.Expr, ast.Expression]:
+        return validate_exp(exp.body)
+    elif etype == ast.BoolOp:
+        return all(map(validate_exp, exp.values))
+    elif etype == ast.BinOp:
+        return all(map(validate_exp, [exp.left, exp.right]))
+    elif etype == ast.UnaryOp:
+        return validate_exp(exp.operand)
+    elif etype == ast.IfExp:
+        return all(map(validate_exp, [exp.test, exp.body, exp.orelse]))
+    elif etype == ast.Dict:
+        return all(map(validate_exp, chain(exp.keys, exp.values)))
+    elif etype == ast.Set:
+        return all(map(validate_exp, exp.elts))
+    elif etype == ast.Compare:
+        return all(map(validate_exp, [exp.left] + exp.comparators))
+    elif etype == ast.Call:
+        subexp = chain([exp.func], exp.args or [],
+                       [k.value for k in exp.keywords or []])
+        if sys.version_info < (3, 5):
+            extra = [exp.starargs, exp.kwargs]
+            subexp = chain(subexp, *filter(None, extra))
+        return all(map(validate_exp, subexp))
+    elif sys.version_info >= (3, 5) and etype == ast.Starred:
+        assert isinstance(exp.ctx, ast.Load)
+        return validate_exp(exp.value)
+    elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis]:
+        return True
+    elif sys.version_info >= (3, 4) and etype == ast.NameConstant:
+        return True
+    elif etype == ast.Attribute:
+        return True
+    elif etype == ast.Subscript:
+        return all(map(validate_exp, [exp.value, exp.slice]))
+    elif etype in {ast.List, ast.Tuple}:
+        assert isinstance(exp.ctx, ast.Load)
+        return all(map(validate_exp, exp.elts))
+    elif etype == ast.Name:
+        return True
+    elif etype == ast.Slice:
+        return all(map(validate_exp,
+                       filter(None, [exp.lower, exp.upper, exp.step])))
+    elif etype == ast.ExtSlice:
+        return all(map(validate_exp, exp.dims))
+    elif etype == ast.Index:
+        return validate_exp(exp.value)
+    elif etype == ast.keyword:
+        return validate_exp(exp.value)
     else:
         raise ValueError(exp)
 
