@@ -82,6 +82,7 @@ if [ ! "$CHANGED_FILES" ]; then
     exit 0
 fi
 
+echo
 echo "Comparing files"
 echo "==============="
 echo "$CHANGED_FILES"
@@ -100,71 +101,57 @@ checkout ()
     } 2>/dev/null
 }
 
-n_lint_errors ()
+Number_of_issues ()
 {
+    score_only="${1:-}"
     echo "$CHANGED_FILES" |
         xargs "$PYLINT" |
-        awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' ||
+        { [ "$score_only" ] &&
+          awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' ||
+          cat; } ||
         true
 }
 
-echo "Running pylint on current commit ($CURRENT_COMMIT)"
-checkout $CURRENT_COMMIT
-RESULT_CURRENT=$( n_lint_errors )
-echo "Running pylint on parent commit ($PREVIOUS_COMMIT)"
-checkout $PREVIOUS_COMMIT
-RESULT_PARENT=$( n_lint_errors )
-
-checkout $CURRENT_COMMIT
-echo
-echo "$CHANGED_FILES" | xargs "$PYLINT" || true
-
-echo "Pylint results"
-echo "=============="
-echo "Number of issues on parent commit: $RESULT_PARENT"
-echo "Number of issues on pull request: $RESULT_CURRENT"
-echo
-
-if [ "$RESULT_CURRENT" ] && [ "$RESULT_PARENT" ] &&
-   [ $RESULT_CURRENT -gt $RESULT_PARENT ]; then
-    echo "FAIL: pylint score got worse"
-    exit 1
-elif [ ! "$RADON" ]; then  # No radon, that's it
-    echo 'OK'
-    exit 0
-fi
-
-cyclomatic_complexity ()
+Cyclomatic_complexity ()
 {
+    score_only="${1:-}"
     echo "$CHANGED_FILES" |
         xargs "$RADON" $RADON_ARGS |
-        awk '/^Average complexity: /{ gsub(/[\(\)]/, ""); print $NF }' ||
-        echo 0
+        { [ "$score_only" ] &&
+          awk '/^Average complexity: /{ gsub(/[\(\)]/, ""); print $NF }' ||
+          cat; } ||
+        true
 }
 
-echo "Running radon on current commit ($CURRENT_COMMIT)"
-checkout $CURRENT_COMMIT
-RESULT_CURRENT=$( cyclomatic_complexity )
-echo "Running radon on parent commit ($PREVIOUS_COMMIT)"
-checkout $PREVIOUS_COMMIT
-RESULT_PARENT=$( cyclomatic_complexity )
 
-checkout $CURRENT_COMMIT
-echo
-echo "$CHANGED_FILES" | xargs "$RADON" $RADON_ARGS || true
+for check in \
+    "Pylint Number_of_issues" \
+    "radon Cyclomatic_complexity"
+do
+    func=${check#* }
+    check=${check% *}
+    if [ ! "$(eval echo \$$(echo $check | tr '[:lower:]' '[:upper:]') )" ]; then
+        continue
+    fi
 
-echo
-echo "Radon results"
-echo "=============="
-echo "Cyclomatic complexity on parent commit: $RESULT_PARENT"
-echo "Cyclomatic complexity on pull request: $RESULT_CURRENT"
-echo
+    checkout $CURRENT_COMMIT
+    RESULT_CURRENT=$($func score)
+    checkout $PREVIOUS_COMMIT
+    RESULT_PARENT=$($func score)
+    checkout $CURRENT_COMMIT
+    $func
 
-if [ "$RESULT_CURRENT" ] && [ "$RESULT_PARENT" ] &&
-   [ $(echo "$RESULT_CURRENT > $RESULT_PARENT" | bc) -eq 1 ]; then
-    echo "FAIL: cyclomatic complexity got worse"
-    exit 2
-fi
+    echo
+    echo "$check results"
+    echo "================================================================="
+    echo "${func//_/ } on parent commit: $RESULT_PARENT"
+    echo "${func//_/ } on the pull request: $RESULT_CURRENT"
+    echo
 
+    if [ $(echo "${RESULT_CURRENT:-0} > ${RESULT_PARENT:-0}" | bc) -eq 1 ]; then
+        echo "FAIL: ${func//_/ } got worse"
+        exit 1
+    fi
+done
 
-echo 'OK'
+echo "OK"
