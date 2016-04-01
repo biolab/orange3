@@ -607,7 +607,8 @@ def freevars(exp, env):
         return (freevars(exp.test, env) + freevars(exp.body, env) +
                 freevars(exp.orelse, env))
     elif etype == ast.Dict:
-        return sum((freevars(v, env) for v in exp.values), [])
+        return sum((freevars(v, env)
+                    for v in chain(exp.keys, exp.values)), [])
     elif etype == ast.Set:
         return sum((freevars(v, env) for v in exp.elts), [])
     elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp]:
@@ -616,21 +617,32 @@ def freevars(exp, env):
         raise NotImplementedError
     # Yield, YieldFrom???
     elif etype == ast.Compare:
-        return sum((freevars(v, env) for v in [exp.left] + exp.comparators), [])
-    elif etype == ast.Call:
+        return sum((freevars(v, env)
+                    for v in [exp.left] + exp.comparators), [])
+    elif etype == ast.Call and sys.version_info < (3, 5):
         return sum((freevars(e, env)
                     for e in [exp.func] + (exp.args or []) +
-                    (exp.keywords or []) +
-                    (exp.starargs or []) +
-                    (exp.kwargs or [])),
+                    ([k.value for k in exp.keywords or []]) +
+                    ([exp.starargs] if exp.starargs else []) +
+                    ([exp.kwargs] if exp.kwargs else [])),
                    [])
-    elif etype in [ast.Num, ast.Str, ast.Ellipsis]:
-        #     elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
+    elif etype == ast.Call:
+        return sum(map(lambda e: freevars(e, env),
+                       chain([exp.func],
+                             exp.args or [],
+                             [k.value for k in exp.keywords or []])),
+                   [])
+    elif sys.version_info >= (3, 5) and etype == ast.Starred:
+        # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
+        return freevars(exp.value, env)
+    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
+        return []
+    elif sys.version_info >= (3, 4) and etype == ast.NameConstant:
         return []
     elif etype == ast.Attribute:
         return freevars(exp.value, env)
     elif etype == ast.Subscript:
-        return freevars(exp.value, env) + freevars(exp.slice, env),
+        return freevars(exp.value, env) + freevars(exp.slice, env)
     elif etype == ast.Name:
         return [exp.id] if exp.id not in env else []
     elif etype == ast.List:
@@ -644,6 +656,8 @@ def freevars(exp, env):
     elif etype == ast.ExtSlice:
         return sum((freevars(e, env) for e in exp.dims), [])
     elif etype == ast.Index:
+        return freevars(exp.value, env)
+    elif etype == ast.keyword:
         return freevars(exp.value, env)
     else:
         raise ValueError(exp)

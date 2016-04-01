@@ -1,4 +1,6 @@
 import unittest
+import ast
+import sys
 
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
@@ -8,6 +10,9 @@ from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
                                                       StringDescriptor,
                                                       construct_variables)
 
+from Orange.widgets.data.owfeatureconstructor import (
+    freevars, make_lambda,
+)
 
 class FeatureConstructorTest(unittest.TestCase):
     def test_construct_variables_discrete(self):
@@ -62,3 +67,55 @@ class FeatureConstructorTest(unittest.TestCase):
         for i in range(3):
             self.assertEqual(data[i * 50, name],
                              str(data[i * 50, "iris"]) + "_name")
+
+
+class TestTools(unittest.TestCase):
+    def test_free_vars(self):
+        stmt = ast.parse("foo", "", "single")
+        with self.assertRaises(ValueError):
+            freevars(stmt, [])
+
+        suite = ast.parse("foo; bar();", "exec")
+        with self.assertRaises(ValueError):
+            freevars(suite, [])
+
+        def freevars_(source, env=[]):
+            return freevars(ast.parse(source, "", "eval"), env)
+
+        self.assertEqual(freevars_("1"), [])
+        self.assertEqual(freevars_("..."), [])
+        self.assertEqual(freevars_("a"), ["a"])
+        self.assertEqual(freevars_("a", ["a"]), [])
+        self.assertEqual(freevars_("f(1)"), ["f"])
+        self.assertEqual(freevars_("f(x)"), ["f", "x"])
+        self.assertEqual(freevars_("f(x)", ["f"]), ["x"])
+        self.assertEqual(freevars_("a + 1"), ["a"])
+        self.assertEqual(freevars_("a + b"), ["a", "b"])
+        self.assertEqual(freevars_("a + b", ["a", "b"]), [])
+        self.assertEqual(freevars_("a[b]"), ["a", "b"])
+        self.assertEqual(freevars_("a[b]", ["a", "b"]), [])
+        self.assertEqual(freevars_("f(x, *a)", ["f"]), ["x", "a"])
+        self.assertEqual(freevars_("f(x, *a, y=1)", ["f"]), ["x", "a"])
+        self.assertEqual(freevars_("f(x, *a, y=1, **k)", ["f"]),
+                         ["x", "a", "k"])
+        if sys.version_info >= (3, 5):
+            self.assertEqual(freevars_("f(*a, *b, k=c, **d, **e)", ["f"]),
+                             ["a", "b", "c", "d", "e"])
+
+        self.assertEqual(freevars_("True"), [])
+        self.assertEqual(freevars_("'True'"), [])
+        self.assertEqual(freevars_("None"), [])
+        self.assertEqual(freevars_("b'None'"), [])
+
+        self.assertEqual(freevars_("a < b"), ["a", "b"])
+        self.assertEqual(freevars_("a < b <= c"), ["a", "b", "c"])
+        self.assertEqual(freevars_("1 < a <= 3"), ["a"])
+
+        self.assertEqual(freevars_("{}"), [])
+        self.assertEqual(freevars_("[]"), [])
+        self.assertEqual(freevars_("()"), [])
+        self.assertEqual(freevars_("[a, 1]"), ["a"])
+        self.assertEqual(freevars_("{a: b}"), ["a", "b"])
+        self.assertEqual(freevars_("{a, b}"), ["a", "b"])
+        self.assertEqual(freevars_("0 if abs(a) < 0.1 else b", ["abs"]),
+                         ["a", "b"])
