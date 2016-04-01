@@ -2,6 +2,7 @@ import math
 import os
 import re
 import itertools
+import warnings
 from types import LambdaType
 
 import pkg_resources
@@ -348,25 +349,38 @@ def miscellanea(control, box, parent,
         _addSpace(parent, addSpace)
 
 
-def setLayout(widget, orientation):
+def _is_horizontal(orientation):
+    if isinstance(orientation, str):
+        warnings.warn("string literals for orientation are deprecated",
+                      DeprecationWarning)
+    elif isinstance(orientation, bool):
+        warnings.warn("boolean values for orientation are deprecated",
+                      DeprecationWarning)
+    return (orientation == Qt.Horizontal or
+            orientation == 'horizontal' or
+            not orientation)
+
+
+def setLayout(widget, layout):
     """
-    Set the layout of the widget according to orientation. Argument
-    `orientation` can be an instance of :obj:`~PyQt4.QtGui.QLayout`, in which
-    case is it used as it is. If `orientation` is `'vertical'` or `True`,
-    the layout is set to :obj:`~PyQt4.QtGui.QVBoxLayout`. If it is
-    `'horizontal'` or `False`, it is set to :obj:`~PyQt4.QtGui.QVBoxLayout`.
+    Set the layout of the widget.
+
+    If `layout` is given as `Qt.Vertical` or `Qt.Horizontal`, the function
+    sets the layout to :obj:`~PyQt4.QtGui.QVBoxLayout` or
+    :obj:`~PyQt4.QtGui.QVBoxLayout`.
 
     :param widget: the widget for which the layout is being set
     :type widget: PyQt4.QtGui.QWidget
-    :param orientation: orientation for the layout
-    :type orientation: str or bool or PyQt4.QtGui.QLayout
+    :param layout: layout
+    :type layout: `Qt.Horizontal`, `Qt.Vertical` or
+        instance of `PyQt4.QtGui.QLayout`
     """
-    if isinstance(orientation, QtGui.QLayout):
-        widget.setLayout(orientation)
-    elif orientation == 'horizontal' or not orientation:
-        widget.setLayout(QtGui.QHBoxLayout())
-    else:
-        widget.setLayout(QtGui.QVBoxLayout())
+    if not isinstance(layout, QtGui.QLayout):
+        if _is_horizontal(layout):
+            layout = QtGui.QHBoxLayout()
+        else:
+            layout = QtGui.QVBoxLayout()
+    widget.setLayout(layout)
 
 
 def _enterButton(parent, control, placeholder=True):
@@ -458,7 +472,7 @@ def rubber(widget):
     widget.layout().addStretch(100)
 
 
-def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
+def widgetBox(widget, box=None, orientation=Qt.Vertical, margin=None, spacing=4,
               **misc):
     """
     Construct a box with vertical or horizontal layout, and optionally,
@@ -471,12 +485,9 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
     :type widget: PyQt4.QtGui.QWidget or None
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
-    :param orientation: orientation for the layout. If the argument is an
-        instance of :obj:`~PyQt4.QtGui.QLayout`, it is used as a layout. If
-        "horizontal" or false-ish, the layout is horizontal
-        (:obj:`~PyQt4.QtGui.QHBoxLayout`), otherwise vertical
-        (:obj:`~PyQt4.QtGui.QHBoxLayout`).
-    :type orientation: str, int or :obj:`PyQt4.QtGui.QLayout`
+    :param orientation: orientation of the box
+    :type orientation: `Qt.Horizontal`, `Qt.Vertical` or
+            instance of `PyQt4.QtGui.QLayout`
     :param sizePolicy: The size policy for the widget (default: None)
     :type sizePolicy: :obj:`~PyQt4.QtGui.QSizePolicy`
     :param margin: The margin for the layout. Default is 7 if the widget has
@@ -507,14 +518,14 @@ def widgetBox(widget, box=None, orientation='vertical', margin=None, spacing=4,
 
 
 def hBox(*args, **kwargs):
-    return widgetBox(orientation="horizontal", *args, **kwargs)
+    return widgetBox(orientation=Qt.Horizontal, *args, **kwargs)
 
 
 def vBox(*args, **kwargs):
-    return widgetBox(orientation="vertical", *args, **kwargs)
+    return widgetBox(orientation=Qt.Vertical, *args, **kwargs)
 
 
-def indentedBox(widget, sep=20, orientation="vertical", **misc):
+def indentedBox(widget, sep=20, orientation=Qt.Vertical, **misc):
     """
     Creates an indented box. The function can also be used "on the fly"::
 
@@ -528,13 +539,13 @@ def indentedBox(widget, sep=20, orientation="vertical", **misc):
     :type widget: PyQt4.QtGui.QWidget
     :param sep: Indent size (default: 20)
     :type sep: int
-    :param orientation: layout of the inserted box; see :obj:`widgetBox` for
-        details
-    :type orientation: str, int or PyQt4.QtGui.QLayout
+    :param orientation: orientation of the inserted box
+    :type orientation: `Qt.Vertical` (default), `Qt.Horizontal` or
+            instance of `PyQt4.QtGui.QLayout`
     :return: Constructed box
     :rtype: PyQt4.QtGui.QGroupBox or PyQt4.QtGui.QWidget
     """
-    outer = widgetBox(widget, orientation=False, spacing=0)
+    outer = hBox(widget, spacing=0)
     separator(outer, sep, 0)
     indented = widgetBox(outer, orientation=orientation)
     miscellanea(indented, outer, widget, **misc)
@@ -561,9 +572,8 @@ def widgetLabel(widget, label="", labelWidth=None, **misc):
     return lbl
 
 
-
 def label(widget, master, label, labelWidth=None, box=None,
-          orientation="vertical", **misc):
+          orientation=Qt.Vertical, **misc):
     """
     Construct a label that contains references to the master widget's
     attributes; when their values change, the label is updated.
@@ -583,11 +593,14 @@ def label(widget, master, label, labelWidth=None, box=None,
     :type label: str
     :param labelWidth: The width of the label (default: None)
     :type labelWidth: int
+    :param orientation: layout of the inserted box
+    :type orientation: `Qt.Vertical` (default), `Qt.Horizontal` or
+        instance of `PyQt4.QtGui.QLayout`
     :return: label
     :rtype: PyQt4.QtGui.QLabel
     """
     if box:
-        b = widgetBox(widget, box, orientation=None, addToLayout=False)
+        b = hBox(widget, box, addToLayout=False)
     else:
         b = widget
 
@@ -730,7 +743,7 @@ class DoubleSpinBoxWFocusOut(QtGui.QDoubleSpinBox):
 
 
 def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
-         labelWidth=None, orientation=None, callback=None,
+         labelWidth=None, orientation=Qt.Horizontal, callback=None,
          controlWidth=None, callbackOnReturn=False, checked=None,
          checkCallback=None, posttext=None, disabled=False,
          alignment=Qt.AlignLeft, keyboardTracking=True,
@@ -758,9 +771,9 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :type label: str
     :param labelWidth: optional label width (default: None)
     :type labelWidth: int
-    :param orientation: tells whether to put the label above (`"vertical"` or
-        `True`) or to the left (`"horizontal"` or `False`)
-    :type orientation: int or bool or str
+    :param orientation: tells whether to put the label above or to the left
+    :type orientation: `Qt.Horizontal` (default), `Qt.Vertical` or
+        instance of `PyQt4.QtGui.QLayout`
     :param callback: a function that is called when the value is entered; if
         :obj:`callbackOnReturn` is `True`, the function is called when the
         user commits the value by pressing Enter or clicking the icon
@@ -803,12 +816,12 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     # sbox is the spinbox itself
     if box or label and not checked:
         b = widgetBox(widget, box, orientation, addToLayout=False)
-        hasHBox = orientation == 'horizontal' or not orientation
+        hasHBox = _is_horizontal(orientation)
     else:
         b = widget
         hasHBox = False
     if not hasHBox and (checked or callback and callbackOnReturn or posttext):
-        bi = widgetBox(b, orientation=0, addToLayout=False)
+        bi = hBox(b, addToLayout=False)
     else:
         bi = b
 
@@ -872,7 +885,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
 
 # noinspection PyTypeChecker
 def doubleSpin(widget, master, value, minv, maxv, step=1, box=None, label=None,
-               labelWidth=None, orientation=None, callback=None,
+               labelWidth=None, orientation=Qt.Horizontal, callback=None,
                controlWidth=None, callbackOnReturn=False, checked=None,
                checkCallback=None, posttext=None,
                alignment=Qt.AlignLeft, keyboardTracking=True,
@@ -924,7 +937,7 @@ def checkBox(widget, master, value, label, box=None,
     :rtype: PyQt4.QtGui.QCheckBox
     """
     if box:
-        b = widgetBox(widget, box, orientation=None, addToLayout=False)
+        b = hBox(widget, box, addToLayout=False)
     else:
         b = widget
     cbox = QtGui.QCheckBox(label, b)
@@ -1027,7 +1040,7 @@ class LineEditWFocusOut(QtGui.QLineEdit):
 
 
 def lineEdit(widget, master, value, label=None, labelWidth=None,
-             orientation='vertical', box=None, callback=None,
+             orientation=Qt.Vertical, box=None, callback=None,
              valueType=str, validator=None, controlWidth=None,
              callbackOnType=False, focusInCallback=None,
              enterPlaceholder=False, **misc):
@@ -1044,9 +1057,8 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     :type label: str
     :param labelWidth: the width of the label
     :type labelWidth: int
-    :param orientation: tells whether to put the label above (`"vertical"` or
-        `True`) or to the left (`"horizontal"` or `False`)
-    :type orientation: int or bool or str
+    :param orientation: tells whether to put the label above or to the left
+    :type orientation: `Qt.Vertical` (default) or `Qt.Horizontal`
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :param callback: a function that is called when the check box state is
@@ -1075,7 +1087,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
         b = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
             widgetLabel(b, label, labelWidth)
-        hasHBox = orientation == 'horizontal' or not orientation
+        hasHBox = _is_horizontal(orientation)
     else:
         b = widget
         hasHBox = False
@@ -1310,8 +1322,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     :rtype: OrangeListBox
     """
     if box:
-        bg = widgetBox(widget, box,
-                       orientation="horizontal", addToLayout=False)
+        bg = hBox(widget, box, addToLayout=False)
     else:
         bg = widget
     lb = OrangeListBox(master, enableDragDrop, dragDropCallback,
@@ -1342,8 +1353,8 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
 
 # btnLabels is a list of either char strings or pixmaps
 def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
-                      box=None, label=None, orientation='vertical',
-                      callback=None, **misc):
+                 box=None, label=None, orientation=Qt.Vertical,
+                 callback=None, **misc):
     """
     Construct a button group and add radio buttons, if they are given.
     The value with which the buttons synchronize is the index of selected
@@ -1365,8 +1376,9 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     :type label: str
     :param callback: a function that is called when the selection is changed
     :type callback: function
-    :param orientation: orientation of the layout in the box
-    :type orientation: int or str or QLayout
+    :param orientation: orientation of the box
+    :type orientation: `Qt.Vertical` (default), `Qt.Horizontal` or an
+        instance of `PyQt4.QtGui.QLayout`
     :rtype: PyQt4.QtQui.QButtonGroup
     """
     bg = widgetBox(widget, box, orientation, addToLayout=False)
@@ -1485,8 +1497,7 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
     :type intOnly: bool
     :rtype: :obj:`PyQt4.QtGui.QSlider` or :obj:`FloatSlider`
     """
-    sliderBox = widgetBox(widget, box, orientation="horizontal",
-                          addToLayout=False)
+    sliderBox = hBox(widget, box, addToLayout=False)
     if label:
         widgetLabel(sliderBox, label)
     sliderOrient = Qt.Vertical if vertical else Qt.Horizontal
@@ -1558,8 +1569,7 @@ def labeledSlider(widget, master, value, box=None,
     :type width: int
     :rtype: :obj:`PyQt4.QtGui.QSlider`
     """
-    sliderBox = widgetBox(widget, box, orientation="horizontal",
-                          addToLayout=False)
+    sliderBox = hBox(widget, box, addToLayout=False)
     if label:
         widgetLabel(sliderBox, label)
     sliderOrient = Qt.Vertical if vertical else Qt.Horizontal
@@ -1635,8 +1645,7 @@ def valueSlider(widget, master, value, box=None, label=None,
     if isinstance(labelFormat, str):
         labelFormat = lambda x, f=labelFormat: f % x
 
-    sliderBox = widgetBox(widget, box, orientation="horizontal",
-                          addToLayout=False)
+    sliderBox = hBox(widget, box, addToLayout=False)
     if label:
         widgetLabel(sliderBox, label)
     slider_orient = Qt.Vertical if vertical else Qt.Horizontal
@@ -1735,7 +1744,7 @@ class OrangeComboBox(QtGui.QComboBox):
 # - can valueType be anything else than str?
 # - sendSelectedValue is not a great name
 def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
-             orientation='vertical', items=(), callback=None,
+             orientation=Qt.Vertical, items=(), callback=None,
              sendSelectedValue=False, valueType=str,
              control2attributeDict=None, emptyString=None, editable=False,
              contentsLength=None, maximumContentsLength=25,
@@ -1758,8 +1767,9 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :type value:  str
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
-    :param orientation: orientation of the layout in the box
-    :type orientation: str or int or bool
+    :param orientation: tells whether to put the label above or to the left
+    :type orientation: `Qt.Horizontal` (default), `Qt.Vertical` or
+        instance of `PyQt4.QtGui.QLayout`
     :param label: a label that is inserted into the box
     :type label: str
     :param labelWidth: the width of the label
@@ -1960,7 +1970,7 @@ class OrangeListBox(QtGui.QListWidget):
 # eliminated?
 class SmallWidgetButton(QtGui.QPushButton):
     def __init__(self, widget, text="", pixmap=None, box=None,
-                 orientation='vertical', autoHideWidget=None, **misc):
+                 orientation=Qt.Vertical, autoHideWidget=None, **misc):
         #self.parent = parent
         if pixmap is not None:
             iconDir = os.path.join(os.path.dirname(__file__), "icons")
@@ -1999,7 +2009,7 @@ class SmallWidgetButton(QtGui.QPushButton):
 
 class SmallWidgetLabel(QtGui.QLabel):
     def __init__(self, widget, text="", pixmap=None, box=None,
-                 orientation='vertical', **misc):
+                 orientation=Qt.Vertical, **misc):
         super().__init__(widget)
         if text:
             self.setText("<font color=\"#C10004\">" + text + "</font>")
@@ -2134,7 +2144,7 @@ class Searcher:
 # TODO collapsableWidgetBox is used only in OWMosaicDisplay.py; (re)move
 class collapsableWidgetBox(QtGui.QGroupBox):
     def __init__(self, widget, box="", master=None, value="",
-                 orientation="vertical", callback=None):
+                 orientation=Qt.Vertical, callback=None):
         super().__init__(widget)
         self.setFlat(1)
         setLayout(self, orientation)
@@ -2214,7 +2224,7 @@ class widgetHider(QtGui.QWidget):
 
 
 def auto_commit(widget, master, value, label, auto_label=None, box=True,
-                checkbox_label=None, orientation=None, commit=None,
+                checkbox_label=None, orientation=Qt.Horizontal, commit=None,
                 callback=None, **misc):
     """
     Add a commit button with auto-commit check box.
@@ -2295,14 +2305,14 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
         b = box
     else:
         if orientation is None:
-            orientation = bool(checkbox_label)
+            orientation = Qt.Vertical if checkbox_label else Qt.Horizontal
         b = widgetBox(widget, box=box, orientation=orientation,
                       addToLayout=False)
         b.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
 
     b.checkbox = cb = checkBox(b, master, value, checkbox_label,
                                callback=checkbox_toggled, tooltip=auto_label)
-    if checkbox_label and orientation == 'horizontal' or not orientation:
+    if checkbox_label and _is_horizontal(orientation):
         b.layout().insertSpacing(-1, 10)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
     b.button = btn = button(b, master, label, callback=lambda: do_commit())
@@ -3320,8 +3330,8 @@ class VisibleHeaderSectionContextEventFilter(QtCore.QObject):
 
         model = view.model()
         headers = [(view.isSectionHidden(i),
-                    model.headerData(i, view.orientation(), Qt.DisplayRole)
-                    ) for i in range(view.count())]
+                    model.headerData(i, view.orientation(), Qt.DisplayRole))
+                   for i in range(view.count())]
         menu = QtGui.QMenu("Visible headers", view)
 
         for i, (checked, name) in enumerate(headers):
