@@ -1,3 +1,6 @@
+from PyQt4.QtGui import QHBoxLayout
+from PyQt4.QtCore import Qt
+
 from Orange.data import Table
 from Orange.classification import KNNLearner, SklModel
 from Orange.widgets import widget, gui
@@ -16,6 +19,9 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
+    weights = ["uniform", "distance"]
+    metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
+
     learner_name = Setting("kNN")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
@@ -30,24 +36,21 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
         gui.lineEdit(box, self, "learner_name")
 
         box = gui.widgetBox(self.controlArea, "Neighbors")
-        gui.spin(box, self, "n_neighbors", 1, 100, label="Number of neighbors")
-
-        box = gui.widgetBox(box, "Metric")
-        box.setFlat(True)
-
-        gui.comboBox(box, self, "metric_index",
-                     items=["Euclidean", "Manhattan", "Maximal", "Mahalanobis"])
-        self.metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
-
-        self.weights = ["uniform", "distance"]
-        gui.comboBox(self.controlArea, self, "weight_type",
-		     box='Neigbours weight',			
+        gui.spin(box, self, "n_neighbors", 1, 100, label="Number of neighbors",
+                 alignment=Qt.AlignRight)
+        gui.comboBox(box, self, "metric_index", label="Metric",
+                     orientation="horizontal",
+                     items=[i.capitalize() for i in self.metrics])
+        gui.comboBox(box, self, "weight_type", label='Weight',
+                     orientation="horizontal",
                      items=[i.capitalize() for i in self.weights])
 
-        gui.button(self.controlArea, self, "Apply",
-                   callback=self.apply, default=True)
-        self.controlArea.layout().addWidget(self.report_button)
-
+        g = QHBoxLayout()
+        self.controlArea.layout().addLayout(g)
+        apply = gui.button(None, self, "Apply",
+                           callback=self.apply, default=True)
+        g.layout().addWidget(self.report_button)
+        g.layout().addWidget(apply)
         self.apply()
 
     @check_sql_input
@@ -84,9 +87,10 @@ class OWKNNLearner(OWProvidesLearner, widget.OWWidget):
         self.report_items("Model parameters", (
             ("Number of neighbours", self.n_neighbors),
             ("Metric", self.metrics[self.metric_index].capitalize()),
-	    ("Weight", self.weights[self.weight_type].capitalize())))
+            ("Weight", self.weights[self.weight_type].capitalize())))
         if self.data:
             self.report_data("Data", self.data)
+
 
 if __name__ == "__main__":
     import sys
