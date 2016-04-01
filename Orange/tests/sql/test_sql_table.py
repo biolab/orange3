@@ -1,13 +1,15 @@
 import unittest
-#from unittest.mock import patch
 
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from Orange.data.sql import table as sql_table
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
+from Orange.preprocess.discretize import EqualWidth
+from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
+from Orange.statistics.contingency import Continuous, Discrete, get_contingencies
+from Orange.statistics.distribution import get_distributions
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
 
 
@@ -44,9 +46,15 @@ class SqlTableTests(PostgresTest):
         with self.sql_table_from_data(zip(self.float_variable(0))) as table:
             self.assertEqual(len(table), 0)
 
+    def test_bool(self):
+        with self.sql_table_from_data(()) as table:
+            self.assertEqual(bool(table), False)
+        with self.sql_table_from_data(zip(self.float_variable(1))) as table:
+            self.assertEqual(bool(table), True)
+
     def test_len_with_filter(self):
-        with self.sql_table_from_data(
-                zip(self.discrete_variable(26))) as table:
+        data = zip(self.discrete_variable(26))
+        with self.sql_table_from_data(data) as table:
             self.assertEqual(len(table), 26)
 
             filtered_table = filter.SameValue(table.domain[0], 'm')(table)
@@ -73,10 +81,8 @@ class SqlTableTests(PostgresTest):
         sql_table = SqlTable(conn, table_name,
                              type_hints=Domain([], DiscreteVariable(
                                  name='col2', values=['0', '1', '2'])))
-        with self.assertRaises(ValueError):
-            sql_table.X
-        with self.assertRaises(ValueError):
-            sql_table.Y
+        self.assertRaises(ValueError, lambda: sql_table.X)
+        self.assertRaises(ValueError, lambda: sql_table.Y)
         with self.assertRaises(ValueError):
             sql_table.download_data(DLL + 10)
         # Download partial data
@@ -94,24 +100,23 @@ class SqlTableTests(PostgresTest):
         for member in ('X', 'Y', 'metas', 'W', 'ids'):
             sql_table = SqlTable(conn, table_name,
                                  type_hints=Domain([], DiscreteVariable(
-                                    name='col2', values=['0', '1', '2'])))
+                                     name='col2', values=['0', '1', '2'])))
             self.assertFalse(getattr(sql_table, member) is None)
         # has all necessary class members to create a standard Table
         Table(sql_table.domain, sql_table)
 
     def test_query_all(self):
-        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
+        table = SqlTable(self.conn, self.iris, inspect_values=True)
         results = list(table)
 
         self.assertEqual(len(results), 150)
 
     def test_unavailable_row(self):
-        table = sql_table.SqlTable(self.conn, self.iris)
-        with self.assertRaises(IndexError):
-            table[151]
+        table = SqlTable(self.conn, self.iris)
+        self.assertRaises(IndexError, lambda: table[151])
 
     def test_query_subset_of_attributes(self):
-        table = sql_table.SqlTable(self.conn, self.iris)
+        table = SqlTable(self.conn, self.iris)
         attributes = [
             self._mock_attribute("sepal length"),
             self._mock_attribute("sepal width"),
@@ -131,7 +136,7 @@ class SqlTableTests(PostgresTest):
         )
 
     def test_query_subset_of_rows(self):
-        table = sql_table.SqlTable(self.conn, self.iris)
+        table = SqlTable(self.conn, self.iris)
         all_results = list(table._query())
 
         results = list(table._query(rows=range(10)))
@@ -150,18 +155,23 @@ class SqlTableTests(PostgresTest):
         self.assertEqual(len(results), 140)
         self.assertSequenceEqual(results, all_results[10:])
 
+    def test_getitem_single_value(self):
+        table = SqlTable(self.conn, self.iris, inspect_values=True)
+        self.assertAlmostEqual(table[0, 0], 5.1)
+
+
     def test_type_hints(self):
-        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True)
+        table = SqlTable(self.conn, self.iris, inspect_values=True)
         self.assertEqual(len(table.domain), 5)
         self.assertEqual(len(table.domain.metas), 0)
-        table = sql_table.SqlTable(self.conn, self.iris, inspect_values=True,
-                                   type_hints=Domain([], [], metas=[
-                                       StringVariable("iris")]))
+        table = SqlTable(self.conn, self.iris, inspect_values=True,
+                         type_hints=Domain([], [], metas=[
+                             StringVariable("iris")]))
         self.assertEqual(len(table.domain), 4)
         self.assertEqual(len(table.domain.metas), 1)
 
     def test_joins(self):
-        table = sql_table.SqlTable(
+        table = SqlTable(
             self.conn,
             """SELECT a."sepal length",
                           b. "petal length",
@@ -183,19 +193,19 @@ class SqlTableTests(PostgresTest):
         if formula is None:
             formula = '"%s"' % attr_name
 
-        class attr:
+        class Attr:
             name = attr_name
 
             @staticmethod
             def to_sql():
                 return formula
 
-        return attr
+        return Attr
 
     def test_universal_table(self):
-        uri, table_name = self.construct_universal_table()
+        _, table_name = self.construct_universal_table()
 
-        table = sql_table.SqlTable(self.conn, """
+        SqlTable(self.conn, """
             SELECT
                 v1.col2 as v1,
                 v2.col2 as v2,
@@ -215,44 +225,32 @@ class SqlTableTests(PostgresTest):
 
     def construct_universal_table(self):
         values = []
-        for r in range(1, 6):
-            for c in range(1, 6):
-                values.extend((r, c, r * c))
+        for row in range(1, 6):
+            for col in range(1, 6):
+                values.extend((row, col, row * col))
         table = Table(np.array(values).reshape((-1, 3)))
         return self.create_sql_table(table)
 
+    IRIS_VARIABLE = DiscreteVariable(
+        "iris", values=['Iris-setosa', 'Iris-virginica', 'Iris-versicolor'])
+
     def test_class_var_type_hints(self):
-        iris = sql_table.SqlTable(self.conn, self.iris,
-                                  type_hints=Domain([],
-                                                      DiscreteVariable("iris",
-                                                                       values=[
-                                                                           'Iris-setosa',
-                                                                           'Iris-virginica',
-                                                                           'Iris-versicolor'])))
+        iris = SqlTable(self.conn, self.iris,
+                        type_hints=Domain([], self.IRIS_VARIABLE))
 
         self.assertEqual(len(iris.domain.class_vars), 1)
         self.assertEqual(iris.domain.class_vars[0].name, 'iris')
 
     def test_metas_type_hints(self):
-        iris = sql_table.SqlTable(self.conn, self.iris,
-                                  type_hints=Domain([], [], metas=[
-                                      DiscreteVariable("iris",
-                                                       values=['Iris-setosa',
-                                                               'Iris-virginica',
-                                                               'Iris-versicolor'])]))
+        iris = SqlTable(self.conn, self.iris,
+                        type_hints=Domain([], [], metas=[self.IRIS_VARIABLE]))
 
         self.assertEqual(len(iris.domain.metas), 1)
         self.assertEqual(iris.domain.metas[0].name, 'iris')
 
     def test_select_all(self):
-        iris = sql_table.SqlTable(
-            self.conn,
-            "SELECT * FROM iris",
-            type_hints=Domain(
-                [], DiscreteVariable("iris", values=['Iris-setosa',
-                                                     'Iris-virginica',
-                                                     'Iris-versicolor']))
-        )
+        iris = SqlTable(self.conn, "SELECT * FROM iris",
+                        type_hints=Domain([], self.IRIS_VARIABLE))
 
         self.assertEqual(len(iris.domain), 5)
 
@@ -471,6 +469,53 @@ class SqlTableTests(PostgresTest):
         with sql_table._execute_sql_query(working_query) as cur:
             cur.fetchall()
 
+    def test_basic_stats(self):
+        iris = SqlTable(self.conn, self.iris, inspect_values=True)
+        stats = BasicStats(iris, iris.domain['sepal length'])
+        self.assertAlmostEqual(stats.min, 4.3)
+        self.assertAlmostEqual(stats.max, 7.9)
+        self.assertAlmostEqual(stats.mean, 5.8, 1)
+        self.assertEqual(stats.nans, 0)
+        self.assertEqual(stats.non_nans, 150)
+
+        domain_stats = DomainBasicStats(iris, include_metas=True)
+        self.assertEqual(len(domain_stats.stats),
+                         len(iris.domain) + len(iris.domain.metas))
+        stats = domain_stats['sepal length']
+        self.assertAlmostEqual(stats.min, 4.3)
+        self.assertAlmostEqual(stats.max, 7.9)
+        self.assertAlmostEqual(stats.mean, 5.8, 1)
+        self.assertEqual(stats.nans, 0)
+        self.assertEqual(stats.non_nans, 150)
+
+    @unittest.mock.patch("Orange.data.sql.table.LARGE_TABLE", 100)
+    def test_basic_stats_on_large_data(self):
+        # By setting LARGE_TABLE to 100, iris will be treated as
+        # a large table and sampling will be used. As the table
+        # is actually small, time base sampling should return
+        # all rows, so the same assertions can be used.
+        self.test_basic_stats()
+
+    def test_distributions(self):
+        iris = SqlTable(self.conn, self.iris, inspect_values=True)
+
+        dists = get_distributions(iris)
+        self.assertEqual(len(dists), 5)
+        dist = dists[0]
+        self.assertAlmostEqual(dist.min(), 4.3)
+        self.assertAlmostEqual(dist.max(), 7.9)
+        self.assertAlmostEqual(dist.mean(), 5.8, 1)
+
+    def test_contingencies(self):
+        iris = SqlTable(self.conn, self.iris, inspect_values=True)
+        iris.domain = Domain(iris.domain[:2] + (EqualWidth()(iris, iris.domain['sepal width']),),
+                             iris.domain['iris'])
+
+        conts = get_contingencies(iris)
+        self.assertEqual(len(conts), 3)
+        self.assertIsInstance(conts[0], Continuous)
+        self.assertIsInstance(conts[1], Continuous)
+        self.assertIsInstance(conts[2], Discrete)
 
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain), 0)
