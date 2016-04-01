@@ -190,12 +190,12 @@ class LintCommand(Command):
 
     def run(self):
         """Lint current branch compared to a reasonable master branch"""
-        sys.exit(subprocess.call('''
+        sys.exit(subprocess.call(r'''
         set -eu
-        upstream=$(git rev-parse -q --verify upstream/master)
-        origin=$(git rev-parse -q --verify origin/master)
-        master=$(git rev-parse -q --verify master)
-        best_ancestor=$(git merge-base HEAD ${upstream:-${origin:-$master}})
+        upstream="$(git remote -v |
+                    awk '/[@\/]github.com[:\/]biolab\/orange3 /{ print $1; exit }')"
+        git fetch -q $upstream master
+        best_ancestor=$(git merge-base HEAD refs/remotes/$upstream/master)
         .travis/check_pylint_diff $best_ancestor
         ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
 

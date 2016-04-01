@@ -9,7 +9,8 @@ set -o errexit
 
 ARG1=${1:-}
 GIT_REPO="$(pwd)"
-TMP_REPO="$(mktemp -d pylint_diff.XXXXXXX)"
+TMP_REPO="$GIT_REPO/$(mktemp -d pylint_diff.XXXXXXX)"
+UNCOMMITED_PATCH="$TMP_REPO/uncommited.patch"
 SCRIPT=$(basename "$0")
 PYLINT="$(command -v pylint 2>/dev/null || true)"
 RADON="$(command -v radon 2>/dev/null || true)"
@@ -62,7 +63,22 @@ if [ "$is_shallow" ]; then
     cp "$GIT_REPO/.git/shallow" "$TMP_REPO/.git/shallow"
 fi
 
+# Move over any modified but uncommited files ...
+if ! git diff-index --quiet HEAD; then
+    git stash save -q --keep-index
+    git stash show -p stash@\{0\} > "$UNCOMMITED_PATCH"
+    git stash pop -q --index
+fi
+
 cd "$TMP_REPO"
+
+# ... and commit them
+if [ "$(cat "$UNCOMMITED_PATCH" 2>/dev/null || true)" ]; then
+    git apply "$UNCOMMITED_PATCH"
+    git commit -a -m 'Commit changed files'
+    was_dirty='+'
+fi >/dev/null 2>&1
+
 git reset --hard -q HEAD
 
 CURRENT_COMMIT=$(git rev-parse HEAD)
@@ -73,7 +89,8 @@ else
                       awk '/^parent /{ print $2; exit }')
 fi
 
-echo "Comparing commits $CURRENT_COMMIT and $PREVIOUS_COMMIT ."
+echo
+echo "Comparing commits ${CURRENT_COMMIT:0:10}${was_dirty:-} and ${PREVIOUS_COMMIT:0:10}"
 
 CHANGED_FILES=$(git diff --name-only $CURRENT_COMMIT $PREVIOUS_COMMIT |
                 grep "\.py$" || true )
