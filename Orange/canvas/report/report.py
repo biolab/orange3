@@ -10,6 +10,7 @@ from Orange.widgets.utils import getdeepattr
 
 
 class Report:
+
     """
     A class that adds report-related methods to the widget.
     """
@@ -162,8 +163,7 @@ class Report:
             self.report_html += get_html_img(plot.scene())
 
     # noinspection PyBroadException
-    def report_table(self, name, table=None, header_rows=0, header_columns=0,
-                     num_format=None):
+    def report_table(self, name, table=None, header_rows=0, header_columns=0, confusion_rows=0, num_format=None):
         """
         Add content of a table to the report.
 
@@ -241,10 +241,10 @@ class Report:
                 return s
 
         def report_list(data,
-                        header_rows=header_rows, header_columns=header_columns):
+                        header_rows=header_rows, header_columns=header_columns, confusion_rows=confusion_rows):
             cells = ["<td>{}</td>", "<th>{}</th>"]
             return join("  <tr>\n    {}</tr>\n".format(
-                join(cells[rowi < header_rows or coli < header_columns]
+                join(cells[rowi < header_rows or coli < header_columns or rowi == 3 + confusion_rows]
                      .format(fmtnum(elm)) for coli, elm in enumerate(row))
             ) for rowi, row in enumerate(data))
 
@@ -265,7 +265,8 @@ class Report:
         else:
             body = None
         if body:
-            self.report_html += "<table>\n" + body + "</table>"
+            self.report_html += "<table border = '1px' style = 'border-collapse:collapse'>\n" + \
+                body + "</table>"
 
     # noinspection PyBroadException
     def report_list(self, name, data=None, limit=1000):
@@ -640,9 +641,11 @@ def describe_data_brief(data):
     items.update(describe_domain_brief(data.domain))
     return items
 
+
 def colored_square(r, g, b):
     return '<span class="legend-square" ' \
            'style="background-color: rgb({}, {}, {})"></span>'.format(r, g, b)
+
 
 def list_legend(model, selected=None):
     """
@@ -671,5 +674,5 @@ def list_legend(model, selected=None):
             icon.pixmap(12, 12).toImage().pixel(0, 0)).getRgb()
         text = model.data(index, Qt.DisplayRole)
         legend += colored_square(r, g, b) + \
-                  '<span class="legend-item">{}</span>'.format(text)
+            '<span class="legend-item">{}</span>'.format(text)
     return legend

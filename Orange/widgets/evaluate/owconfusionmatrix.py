@@ -58,13 +58,11 @@ class OWConfusionMatrix(widget.OWWidget):
     quantities = ["Number of instances",
                   "Proportion of predicted",
                   "Proportion of actual"]
-
     selected_learner = settings.Setting([])
     selected_quantity = settings.Setting(0)
     append_predictions = settings.Setting(True)
     append_probabilities = settings.Setting(False)
     autocommit = settings.Setting(True)
-
     UserAdviceMessages = [
         widget.Message(
                 "Clicking on cells or in headers outputs the corresponding "
@@ -78,7 +76,7 @@ class OWConfusionMatrix(widget.OWWidget):
         self.results = None
         self.learners = []
         self.headers = []
-
+        self.val = 2
         box = gui.widgetBox(self.controlArea, "Learners")
 
         self.learners_box = gui.listBox(
@@ -361,6 +359,7 @@ class OWConfusionMatrix(widget.OWWidget):
             rowsum = cmatrix.sum(axis=1)
             total = rowsum.sum()
             n = len(cmatrix)
+            self.val = n
             diag = numpy.diag_indices(n)
 
             colors = cmatrix.astype(numpy.double)
@@ -430,7 +429,7 @@ class OWConfusionMatrix(widget.OWWidget):
                 "Confusion matrix for {} (showing {})".
                 format(self.learners[index],
                        self.quantities[self.selected_quantity].lower()),
-                self.tablemodel)
+                self.tablemodel, 2, 2, self.val)
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
