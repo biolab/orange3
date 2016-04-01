@@ -131,9 +131,9 @@ class OWKMeans(widget.OWWidget):
                      label="Name ", orientation=Qt.Horizontal,
                      callback=self.send_data)
 
-        gui.auto_commit(self.controlArea, self, "auto_run", "Run",
-                        checkbox_label="Run after any change  ",
-                        orientation=Qt.Horizontal)
+        gui.separator(self.buttonsArea, 30)
+        gui.auto_commit(self.buttonsArea, self, "auto_run", "Run",
+                        "Run on change", box=None)
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)

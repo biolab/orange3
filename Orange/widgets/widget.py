@@ -115,14 +115,11 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     #: area to the right of the `controlArea`).
     want_main_area = True
     #: Should the widget construct a `controlArea`.
-    want_buttons_area = "auto"
-    #: Should the widget construct a `standardButtons` box; valid only if
-    #  `want_control_area` is `True`.
-    # Possible values are "vertical", "horizontal", "auto" and None.
-    # "auto" uses vertical if there are three default buttons or more,
-    # and horizontal otherwise. If "box" is added (e.g. "vertical box"),
-    # the button will be placed in a visible box.
     want_control_area = True
+    #: Orientation of the buttonsArea box; valid only if
+    #  `want_control_area` is `True`. Possible values are Qt.Horizontal,
+    #  Qt.Vertical and None for no buttons area
+    buttons_area_orientation = Qt.Horizontal
     #: Widget painted by `Save graph" button
     graph_name = None
     graph_writers = FileFormat.img_writers
@@ -167,6 +164,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.__env = _asmappingproxy(kwargs.get("env", {}))
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
+        self.graphButton = None
+        self.report_button = None
         self.__reportData = None
 
         OWWidget.widget_id += 1
@@ -242,7 +241,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     def _insert_control_area(self):
         self.left_side = gui.vBox(self.splitter, spacing=0)
         self.splitter.setSizes([1])  # Smallest size allowed by policy
-        if self.want_buttons_area:
+        if self.buttons_area_orientation is not None:
             self.controlArea = gui.vBox(self.left_side, addSpace=0)
             self._insert_buttons_area()
         else:
@@ -256,22 +255,13 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.controlArea.layout().setContentsMargins(m, m, m, m)
 
     def _insert_buttons_area(self):
-        buttons = []
-        if self.graph_name is not None:
-            self.graphButton = QPushButton("&Save Image", autoDefault=False)
-            self.graphButton.clicked.connect(self.save_graph)
-            buttons.append(self.graphButton)
-        if hasattr(self, "send_report"):
-            self.report_button = QPushButton("&Report", autoDefault=False)
-            self.report_button.clicked.connect(self.show_report)
-            buttons.append(self.report_button)
-        orientation = self.want_buttons_area
-        if orientation == "auto":
-            orientation = "horizontal" if len(buttons) <= 2 else "vertical"
         self.buttonsArea = gui.widgetBox(
-            self.left_side, addSpace=0, spacing=9, orientation=orientation)
-        for button in buttons:
-            self.buttonsArea.layout().addWidget(button)
+            self.left_side, addSpace=0, spacing=9,
+            orientation=self.buttons_area_orientation)
+        if self.graphButton is not None:
+            self.buttonsArea.layout().addWidget(self.graphButton)
+        if self.report_button is not None:
+            self.buttonsArea.layout().addWidget(self.report_button)
 
     def _insert_main_area(self):
         self.mainArea = gui.vBox(
@@ -311,13 +301,30 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                 w.setPixmap(QPixmap(filename))
             setattr(self, attr, w)
 
+    def _create_default_buttons(self):
+        # These button is inserted in buttons_area, if it exists
+        # Otherwise it is up to the widget to add them to some layout
+        if self.graph_name is not None:
+            self.graphButton = QPushButton("&Save Image", autoDefault=False)
+            self.graphButton.clicked.connect(self.save_graph)
+        if hasattr(self, "send_report"):
+            self.report_button = QPushButton("&Report", autoDefault=False)
+            self.report_button.clicked.connect(self.show_report)
+
     def set_basic_layout(self):
+        """Provide the basic widget layout
+
+        Which parts are created is regulated by class attributes
+        `want_main_area`, `want_control_area` and `buttons_area_orientation`,
+        the presence of method `send_report` and attribute `graph_name`.
+        """
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(2, 2, 2, 2)
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
 
         self.want_main_area = self.want_main_area or self.graph_name
+        self._create_default_buttons()
         self._insert_warning_bar()
         self._insert_splitter()
         if self.want_control_area:
@@ -326,11 +333,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self._insert_main_area()
         if self.want_status_bar:
             self._insert_status_bar()
-
-    def inline_graph_report(self):
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        box.layout().addWidget(self.graphButton)
-        box.layout().addWidget(self.report_button)
 
     def save_graph(self):
         graph_obj = getdeepattr(self, self.graph_name, None)

@@ -23,7 +23,6 @@ class OWOutliers(widget.OWWidget):
     outputs = [("Inliers", Table), ("Outliers", Table)]
 
     want_main_area = False
-    want_buttons_area = "horizontal"
 
     OneClassSVM, Covariance = range(2)
 

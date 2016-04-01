@@ -29,6 +29,7 @@ class OWPurgeDomain(widget.OWWidget):
 
     want_main_area = False
     resizing_enabled = False
+    buttons_area_orientation = Qt.Vertical
 
     feature_options = (('sortValues', 'Sort discrete feature values'),
                        ('removeValues', 'Remove unused feature values'),
@@ -75,7 +76,7 @@ class OWPurgeDomain(widget.OWWidget):
         for label, value in self.stat_labels:
             gui.label(box3, self, "{}: %({})s".format(label, value))
 
-        gui.auto_commit(self.controlArea, self, "autoSend", "Send Data",
+        gui.auto_commit(self.buttonsArea, self, "autoSend", "Send Data",
                         checkbox_label="Send automatically",
                         orientation=Qt.Horizontal)
         gui.rubber(self.controlArea)

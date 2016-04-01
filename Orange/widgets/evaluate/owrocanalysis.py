@@ -394,7 +394,6 @@ class OWROCAnalysis(widget.OWWidget):
 
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
-        self.inline_graph_report()
 
     def set_results(self, results):
         """Set the input evaluation results."""

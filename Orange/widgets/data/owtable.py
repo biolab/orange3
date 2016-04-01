@@ -357,7 +357,7 @@ class OWDataTable(widget.OWWidget):
     icon = "icons/Table.svg"
     priority = 100
 
-    want_buttons_area = "vertical"
+    buttons_area_orientation = Qt.Vertical
 
     inputs = [("Data", Table, "set_dataset", widget.Multiple)]
     outputs = [("Selected Data", Table, widget.Default),

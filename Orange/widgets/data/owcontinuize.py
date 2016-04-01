@@ -1,4 +1,5 @@
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.statistics import distribution
@@ -22,7 +23,7 @@ class OWContinuize(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     want_main_area = False
-    want_buttons_area = "vertical"
+    buttons_area_orientation = Qt.Vertical
     resizing_enabled = False
 
     multinomial_treatment = Setting(0)

@@ -1,4 +1,5 @@
 import numpy
+from PyQt4.QtCore import Qt
 
 import Orange.data
 import Orange.misc
@@ -32,6 +33,7 @@ class OWDistances(widget.OWWidget):
     autocommit = settings.Setting(False)
 
     want_main_area = False
+    buttons_area_orientation = Qt.Vertical
 
     def __init__(self):
         super().__init__()
@@ -45,8 +47,10 @@ class OWDistances(widget.OWWidget):
                      box="Distance Metric", items=list(zip(*_METRICS))[0],
                      callback=self._invalidate
         )
-        gui.auto_commit(self.controlArea, self, "autocommit", "Apply",
-                        checkbox_label="Apply on any change")
+        box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
+                              box=False, checkbox_label="Apply on any change")
+        box.layout().insertWidget(0, self.report_button)
+        box.layout().insertSpacing(1, 8)
 
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 

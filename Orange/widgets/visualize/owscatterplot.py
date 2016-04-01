@@ -2,7 +2,7 @@ from bisect import bisect_left
 import sys
 
 import numpy as np
-from PyQt4.QtCore import QSize, Qt, QTimer
+from PyQt4.QtCore import Qt, QTimer
 from PyQt4 import QtGui
 from PyQt4.QtGui import QApplication, QTableView, QStandardItemModel, \
     QStandardItem
@@ -18,7 +18,6 @@ from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
-from Orange.widgets.utils.toolbar import ZoomSelectToolbar
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
@@ -169,7 +168,6 @@ class OWScatterPlot(OWWidget):
 
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
                         "Send Selection")
-        self.inline_graph_report()
 
         def zoom(s):
             """Zoom in/out by factor `s`."""

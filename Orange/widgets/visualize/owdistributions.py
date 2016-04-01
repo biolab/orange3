@@ -98,7 +98,6 @@ class OWDistributions(widget.OWWidget):
     smoothing_index = settings.Setting(5)
     show_prob = settings.ContextSetting(0)
 
-    want_buttons_area = "horizontal"
     graph_name = "plot"
 
     ASH_HIST = 50

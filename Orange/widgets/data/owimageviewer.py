@@ -335,7 +335,7 @@ class OWImageViewer(widget.OWWidget):
     zoom = settings.Setting(25)
     autoCommit = settings.Setting(False)
 
-    want_buttons_area = "vertical"
+    buttons_area_orientation = Qt.Vertical
     graph_name = "scene"
 
     def __init__(self):

@@ -17,6 +17,7 @@ from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 
 
@@ -54,6 +55,8 @@ class OWConcatenate(widget.OWWidget):
                    "Intersection of attributes in all tables")
 
     id_roles = ("Class attribute", "Attribute", "Meta attribute")
+
+    auto_commit = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -115,9 +118,11 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        gui.separator(self.buttonsArea, 20)
-        gui.button(self.buttonsArea, self, "Apply Changes",
-                   callback=self.apply, default=True)
+        box = gui.auto_commit(
+            self.controlArea, self, "auto_commit", "Apply Changes",
+            "Apply on change", commit=self.apply)
+        box.layout().insertWidget(0, self.report_button)
+        box.layout().insertSpacing(1, 20)
 
     @check_sql_input
     def set_primary_data(self, data):

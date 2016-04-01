@@ -57,7 +57,7 @@ class OWRank(widget.OWWidget):
     icon = "icons/Rank.svg"
     priority = 1102
 
-    want_buttons_area = "vertical"
+    buttons_area_orientation = Qt.Vertical
 
     inputs = [("Data", Orange.data.Table, "setData"),
               ("Scorer", score.Scorer, "set_learner", widget.Multiple)]
@@ -127,7 +127,7 @@ class OWRank(widget.OWWidget):
 
         selMethBox.layout().addLayout(grid)
 
-        gui.auto_commit(self.left_side, self, "auto_apply", "Commit",
+        gui.auto_commit(self.buttonsArea, self, "auto_apply", "Commit",
                         auto_label="Commit on change", box=False)
 
         gui.rubber(self.controlArea)

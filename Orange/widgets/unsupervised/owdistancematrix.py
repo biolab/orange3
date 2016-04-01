@@ -242,9 +242,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.annot_combo.setModel(VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         gui.rubber(settings_box)
-        self.report_button = gui.button(
-            settings_box, None, "&Report", callback=self.show_report)
-        self.report_button.setAutoDefault(0)
+        settings_box.layout().addWidget(self.report_button)
         gui.separator(settings_box, 40)
         gui.auto_commit(
             settings_box, self, "auto_commit",
