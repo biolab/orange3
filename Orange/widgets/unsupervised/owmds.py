@@ -486,7 +486,7 @@ class OWMDS(widget.OWWidget):
         if self.signal_data is None and self.matrix is None:
             return
 
-        if self.signal_data and self.matrix_data and len(self.signal_data) != len(self.matrix_data):
+        if self.signal_data and self.matrix is not None and len(self.signal_data) != len(self.matrix):
             self.error(1, "Data and distances dimensions do not match.")
             self._update_plot()
             return
@@ -500,7 +500,7 @@ class OWMDS(widget.OWWidget):
 
         if self.matrix is not None:
             self._effective_matrix = self.matrix
-            if self.matrix.axis == 0:
+            if self.matrix.axis == 0 and self.data is self.matrix_data:
                 self.data = None
         else:
             preprocessed_data = Orange.projection.MDS().preprocess(self.data)
