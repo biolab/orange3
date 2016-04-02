@@ -528,6 +528,7 @@ class FileFormat(metaclass=FileFormatMeta):
                        data.metas):
             write(['' if isinstance(val, Number) and isnan(val) else
                    var.values[int(val)] if var.is_discrete else
+                   var.repr_val(val) if isinstance(var, TimeVariable) else
                    val
                    for var, val in zip(vars, flatten(row))])
 

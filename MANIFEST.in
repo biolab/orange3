@@ -14,6 +14,7 @@ include requirements*.txt
 
 include README.md
 include CONTRIBUTING.md
+include CHANGELOG.md
 include COPYING
 include LICENSE
 include setup.py

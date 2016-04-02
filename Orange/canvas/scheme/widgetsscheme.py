@@ -18,12 +18,14 @@ companion :class:`WidgetsSignalManager` class.
 """
 import sys
 import logging
+import traceback
 import concurrent.futures
 from collections import namedtuple
 
 import sip
 from PyQt4.QtGui import (
-    QShortcut, QKeySequence, QWhatsThisClickedEvent, QWidget
+    QShortcut, QKeySequence, QWhatsThisClickedEvent, QWidget, QLabel,
+    QSizePolicy
 )
 
 from PyQt4.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
@@ -292,18 +294,39 @@ class WidgetManager(QObject):
         Create a OWWidget instance for the node.
         """
         desc = node.description
-        klass = name_lookup(desc.qualified_name)
+        klass = widget = None
+        initialized = False
+        error = None
+        # First try to actually retrieve the class.
+        try:
+            klass = name_lookup(desc.qualified_name)
+        except (ImportError, AttributeError):
+            sys.excepthook(*sys.exc_info())
+            error = "Could not import {0!r}\n\n{1}".format(
+                node.description.qualified_name, traceback.format_exc()
+            )
+        except Exception:
+            sys.excepthook(*sys.exc_info())
+            error = "An unexpected error during import of {0!r}\n\n{1}".format(
+                node.description.qualified_name, traceback.format_exc()
+            )
 
-        log.info("Creating %r instance.", klass)
-        widget = klass.__new__(
-            klass,
-            None,
-            signal_manager=self.signal_manager(),
-            stored_settings=node.properties,
-            # NOTE: env is a view of the real env and reflects
-            # changes to the environment.
-            env=self.scheme().runtime_env()
-        )
+        if klass is None:
+            widget = mock_error_owwidget(node, error)
+            initialized = True
+
+        if widget is None:
+            log.info("Creating %r instance.", klass)
+            widget = klass.__new__(
+                klass,
+                None,
+                signal_manager=self.signal_manager(),
+                stored_settings=node.properties,
+                # NOTE: env is a view of the real env and reflects
+                # changes to the environment.
+                env=self.scheme().runtime_env()
+            )
+            initialized = False
 
         # Init the node/widget mapping and state before calling __init__
         # Some OWWidgets might already send data in the constructor
@@ -313,7 +336,26 @@ class WidgetManager(QObject):
         self.__node_for_widget[widget] = node
         self.__widget_processing_state[widget] = 0
 
-        widget.__init__()
+        if not initialized:
+            try:
+                widget.__init__()
+            except Exception:
+                sys.excepthook(*sys.exc_info())
+                msg = traceback.format_exc()
+                msg = "Could not create {0!r}\n\n{1}".format(
+                    node.description.name, msg
+                )
+                # remove state tracking for widget ...
+                del self.__widget_for_node[node]
+                del self.__node_for_widget[widget]
+                del self.__widget_processing_state[widget]
+
+                # ... and substitute it with a mock error widget.
+                widget = mock_error_owwidget(node, msg)
+                self.__widget_for_node[node] = widget
+                self.__node_for_widget[widget] = node
+                self.__widget_processing_state[widget] = 0
+
         widget.setCaption(node.title)
         widget.widgetInfo = desc
 
@@ -745,3 +787,64 @@ class ActivateParentEvent(QEvent):
 
     def __init__(self):
         QEvent.__init__(self, self.ActivateParent)
+
+
+def mock_error_owwidget(node, message):
+    """
+    Create a mock OWWidget instance for `node`.
+
+    Parameters
+    ----------
+    node : SchemeNode
+    message : str
+    """
+    from Orange.widgets import widget, settings
+
+    class DummyOWWidget(widget.OWWidget):
+        """
+        Dummy OWWidget used to report import/init errors in the canvas.
+        """
+        name = "Placeholder"
+
+        # Fake settings handler that preserves the settings
+        class DummySettingsHandler(settings.SettingsHandler):
+            def pack_data(self, widget):
+                return getattr(widget, "_settings", {})
+
+            def initialize(self, widget, data=None):
+                widget._settings = data
+                settings.SettingsHandler.initialize(self, widget, None)
+
+        settingsHandler = DummySettingsHandler()
+
+        want_main_area = False
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.errorLabel = QLabel(
+                textInteractionFlags=Qt.TextSelectableByMouse,
+                wordWrap=True,
+            )
+            self.errorLabel.setSizePolicy(
+                QSizePolicy.Expanding,
+                QSizePolicy.Expanding
+            )
+            self.controlArea.layout().addWidget(self.errorLabel)
+
+        def setErrorMessage(self, message):
+            self.errorLabel.setText(message)
+            self.error(0, message)
+
+    widget = DummyOWWidget()
+    widget._settings = node.properties
+    widget.widgetInfo = node.description
+
+    for link in node.description.inputs:
+        handler = link.handler
+        if handler.startswith("self."):
+            _, handler = handler.split(".", 1)
+
+        setattr(widget, handler, lambda *args: None)
+
+    widget.setErrorMessage(message)
+    return widget

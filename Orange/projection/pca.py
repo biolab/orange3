@@ -145,13 +145,7 @@ class Projector:
     def __call__(self, data):
         if data.domain != self.projection.pre_domain:
             data = data.from_table(self.projection.pre_domain, data)
-        self.transformed = self.projection.transform(data.X)
-        return self.transformed[:, self.feature]
-
-    def __getstate__(self):
-        d = dict(self.__dict__)
-        d['transformed'] = None
-        return d
+        return self.projection.transform(data.X)[:, self.feature]
 
 
 class RemotePCA:
