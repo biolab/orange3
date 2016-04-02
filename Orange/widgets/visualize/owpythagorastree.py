@@ -223,7 +223,7 @@ class PythagorasTree:
         ----------
         tree : TreeAdapter
             A tree adapter instance where the original tree is stored.
-        parent_square : TreeNode
+        parent_square : Square
             The parent square of the given child.
         node : int
             The node label of the child.
@@ -388,7 +388,7 @@ class SklTreeAdapter:
         return self._tree.children_right[node]
 
 
-if __name__ == "__main__":
+def main():
     import sys
     from Orange.classification.tree import TreeLearner
 
@@ -411,3 +411,6 @@ if __name__ == "__main__":
     app.exec_()
 
     sys.exit(0)
+
+if __name__ == "__main__":
+    main()
