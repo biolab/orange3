@@ -156,11 +156,11 @@ class TreeNode:
         The square the represents the tree node.
     parent : TreeNode
         The parent of the current node.
-    children : list of TreeNode, optional
+    children : tuple of TreeNode, optional
         All the children that belong to this node.
 
     """
-    def __init__(self, square, parent, children=[]):
+    def __init__(self, square, parent, children=()):
         self.square = square
         self.parent = parent
         self.children = children
@@ -189,7 +189,6 @@ class PythagorasTree:
             The root node which contains the rest of the tree.
 
         """
-        children = []
         if tree.has_children(node):
             left_child = tree.left_child(node)
             right_child = tree.right_child(node)
@@ -212,8 +211,12 @@ class PythagorasTree:
             square_1 = Square(center_1, length_1, angle_1)
             square_2 = Square(center_2, length_2, angle_2)
 
-            children.append(self.pythagoras_tree(tree, left_child, square_1))
-            children.append(self.pythagoras_tree(tree, right_child, square_2))
+            children = (
+                self.pythagoras_tree(tree, left_child, square_1),
+                self.pythagoras_tree(tree, right_child, square_2)
+            )
+        else:
+            children = ()
 
         return TreeNode(square, tree.parent(node), children)
 
