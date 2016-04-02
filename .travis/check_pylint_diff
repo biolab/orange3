@@ -46,8 +46,8 @@ Given the commit tree:
 
 case $ARG1 in -h|--help) print_help ; esac
 
-if [ ! "$PYLINT" ]; then
-    echo 'Error: pylint is required'
+if [ ! "$PYLINT$RADON" ]; then
+    echo 'Error: pylint and/or radon required'
     exit 3
 fi
 
