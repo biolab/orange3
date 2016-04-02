@@ -25,7 +25,6 @@ def add_origin(examples, filename):
         if "type" in var.attributes and "origin" not in var.attributes:
             var.attributes["origin"] = dir_name
 
-
 class NamedURLModel(PyListModel):
     def __init__(self, mapping):
         self.mapping = mapping
@@ -42,27 +41,27 @@ class NamedURLModel(PyListModel):
         self.modelReset.emit()
 
 class XlsContextHandler(ContextHandler):
-     def new_context(self, filename, sheet):
-         context = super().new_context()
-         context.filename = filename
-         context.xls_sheet = sheet
-         return context
- 
-     # noinspection PyMethodOverriding
-     def match(self, context, filename, sheets):
-         if context.filename == filename and context.xls_sheet in sheets:
-             return 2
-         if context.xls_sheet in sheets:
-             return 1
-         return 0
- 
-     def settings_from_widget(self, widget):
-         if widget.current_context is not None:
-             widget.current_context.xls_sheet = widget.xls_sheet
- 
-     def settings_to_widget(self, widget):
-         widget.xls_sheet = widget.current_context.xls_sheet
- 
+    def new_context(self, filename, sheet):
+        context = super().new_context()
+        context.filename = filename
+        context.xls_sheet = sheet
+        return context
+
+    # noinspection PyMethodOverriding
+    def match(self, context, filename, sheets):
+        if context.filename == filename and context.xls_sheet in sheets:
+            return 2
+        if context.xls_sheet in sheets:
+            return 1
+        return 0
+
+    def settings_from_widget(self, widget):
+        if widget.current_context is not None:
+            widget.current_context.xls_sheet = widget.xls_sheet
+
+    def settings_to_widget(self, widget):
+        widget.xls_sheet = widget.current_context.xls_sheet
+
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
@@ -135,10 +134,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.hBLayout = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
-                                        sendSelectedValue=True)
+                                        callback=self.select_sheet, sendSelectedValue=True)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
-        self.sheet_combo.activated[str].connect(self.select_sheet)
         self.sheet_label = QtGui.QLabel()
         self.sheet_label.setText('Sheet')
         self.sheet_label.setSizePolicy(
@@ -274,11 +272,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         except XLRDError:
             return False
 
-    def select_sheet(self, sheet_name):
-        self.load_data(sheet_name)
+    def select_sheet(self):
+        self.load_data()
 
     # Open a file, create data from it and send it over the data channel
-    def load_data(self, sheet=''):
+    def load_data(self):
         def load(method, fn):
             with catch_warnings(record=True) as warnings:
                 data = method(fn)
@@ -298,8 +296,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                                      .format(basename))
 
             if self.is_multisheet_excel(fn):
-                if sheet:
-                    data = ExcelFormat.read_file(fn + ':' + sheet)
+                if self.xls_sheet:
+                    data = ExcelFormat.read_file(fn + ':' + self.xls_sheet)
                     if data:
                         return data, fn
 
@@ -412,7 +410,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                                        ("Format", get_ext_name(self.url))])
 
         self.report_data("Data", self.data)
-
 
 
 if __name__ == "__main__":
