@@ -1,5 +1,5 @@
 import math
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 import Orange
 from Orange.widgets import gui
@@ -10,6 +10,8 @@ from Orange.data.table import Table
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
+
+PI = math.pi
 
 # Please note that all angles are in radians
 Square = namedtuple('Square', ['center', 'length', 'angle'])
@@ -92,7 +94,9 @@ class OWPythagorasTree(OWWidget):
                 for child in tree_node.children:
                     draw_square_rec(child)
 
-            draw_square_rec(tree_builder.pythagoras_tree(self.tree))
+            draw_square_rec(tree_builder.pythagoras_tree(
+                self.tree, 0, Square(Point(0, 0), 200, PI / 2)
+            ))
         else:
             pass
 
@@ -111,11 +115,11 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
     Parameters
     ----------
     center : Point
-        The central point of the square
+        The central point of the square.
     length : float
-        The length of the square sides
+        The length of the square sides.
     angle : float
-        The initial angle at which the square will be rotated (in rads)
+        The initial angle at which the square will be rotated (in rads).
 
     Attributes
     ----------
@@ -137,7 +141,8 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
             self.setRotation(math.degrees(angle))
 
     def _get_rect_attributes(self):
-        """
+        """Get the rectangle attributes requrired to draw item.
+
         Compute the QRectF that a QGraphicsRect needs to be rendered with the
         data passed down in the constructor.
         """
@@ -160,6 +165,7 @@ class TreeNode:
         All the children that belong to this node.
 
     """
+
     def __init__(self, square, parent, children=()):
         self.square = square
         self.parent = parent
@@ -167,8 +173,19 @@ class TreeNode:
 
 
 class PythagorasTree:
-    def pythagoras_tree(self, tree, node=0,
-                        square=Square(Point(0, 0), 200, 0)):
+    """Pythagoras tree.
+
+    Contains all the logic that converts a given tree adapter to a tree
+    consisting of node classes.
+
+    """
+
+    def __init__(self):
+        # store the previous angles of each square children so that slopes can
+        # be computed
+        self._slopes = defaultdict(list)
+
+    def pythagoras_tree(self, tree, node, square):
         """Get the Pythagoras tree representation in a graph like view.
 
         Constructs a graph using TreeNode into a tree structure. Each node in
@@ -178,10 +195,10 @@ class PythagorasTree:
         ----------
         tree : TreeAdapter
             A tree adapter instance where the original tree is stored.
-        node : int, optional
-            The node label, uses 0 for the root node (the default is 0).
-        square : Square, optional
-            The initial square where the drawing will start from.
+        node : int
+            The node label, the root node is denoted with 0.
+        square : Square
+            The initial square which will represent the root of the tree.
 
         Returns
         -------
@@ -189,124 +206,127 @@ class PythagorasTree:
             The root node which contains the rest of the tree.
 
         """
-        if tree.has_children(node):
-            left_child = tree.left_child(node)
-            right_child = tree.right_child(node)
+        # make sure to clear out any old slopes if we are drawing a new tree
+        if node == 0:
+            self._slopes.clear()
 
-            w1, w2 = tree.weight(left_child), tree.weight(right_child)
-            alpha_1 = math.pi * w2 / (w1 + w2)
-            alpha_2 = math.pi * w1 / (w1 + w2)
-
-            length_1 = square.length * math.sin(alpha_1 / 2)
-            length_2 = square.length * math.sin(alpha_2 / 2)
-
-            angle_1 = square.angle + alpha_2 / 2
-            angle_2 = square.angle - alpha_1 / 2
-
-            center_1 = self._compute_center_left(
-                square, length_1, alpha_1, angle_1)
-            center_2 = self._compute_center_right(
-                square, length_2, alpha_2, angle_2)
-
-            square_1 = Square(center_1, length_1, angle_1)
-            square_2 = Square(center_2, length_2, angle_2)
-
-            children = (
-                self.pythagoras_tree(tree, left_child, square_1),
-                self.pythagoras_tree(tree, right_child, square_2)
-            )
-        else:
-            children = ()
-
+        children = tuple(
+            self._compute_child(tree, square, child)
+            for child in tree.children(node)
+        )
         return TreeNode(square, tree.parent(node), children)
 
-    def _compute_center_left(self, initial_square, length, alpha, angle):
-        """Compute the central point of the left child square.
+    def _compute_child(self, tree, parent_square, node):
+        """Compute all the properties for a single child.
+
+        Parameters
+        ----------
+        tree : TreeAdapter
+            A tree adapter instance where the original tree is stored.
+        parent_square : TreeNode
+            The parent square of the given child.
+        node : int
+            The node label of the child.
+
+        Returns
+        -------
+        TreeNode
+            The tree node representation of the given child with the computed
+            subtree.
+
+        """
+        weight = tree.weight(node)
+        # the angle of the child from its parent
+        alpha = weight * PI
+        # the child side length
+        length = parent_square.length * math.sin(alpha / 2)
+        # the sum of the previous anlges
+        prev_angles = sum(self._slopes[parent_square])
+
+        center = self._compute_center(
+            parent_square, length, alpha, prev_angles
+        )
+        # the angle of the square is dependent on the parent, the current
+        # angle and the previous angles. Subtract PI/2 so it starts drawing at
+        # 0rads.
+        angle = parent_square.angle - PI / 2 + prev_angles + alpha / 2
+        square = Square(center, length, angle)
+
+        self._slopes[parent_square].append(alpha)
+
+        return self.pythagoras_tree(tree, node, square)
+
+    def _compute_center(self, initial_square, length, alpha, base_angle=0):
+        """Compute the central point of a child square.
 
         Parameters
         ----------
         initial_square : Square
-            The sqare where we are continuing from.
+            The parent square representation where we will be drawing from.
         length : float
-            The length of the side of the new square.
+            The length of the side of the new square (the one we are computing
+            the center for).
         alpha : float
-            The angle at which the new square is offset from its parent.
-        angle : float
-            The computed angle at which the entire square is offset for
-            drawing.
+            The angle that defines the size of our new square (in radians).
+        base_angle : float, optional
+            If the square we want to find the center for is not the first child
+            i.e. its edges does not touch the base square, then we need the
+            initial angle that will act as the starting point for the new
+            square.
 
         Returns
         -------
         Point
-            The central point of the left square.
+            The central point to the new square.
 
         """
-        base_center, base_length, base_angle = initial_square
-        # get the point on the square side and prepare it for rotation
+        parent_center, parent_length, parent_angle = initial_square
+        # get the point on the square side that will be the rotation origin
         t0 = self._get_point_on_square_edge(
-            base_center, base_length, base_angle)
-        # get the edge point where we will rotate t0 around
-        square_diagonal_length = math.sqrt(2 * base_length ** 2)
+            parent_center, parent_length, parent_angle)
+        # get the edge point that we will rotate around t0
+        square_diagonal_length = math.sqrt(2 * parent_length ** 2)
         edge = self._get_point_on_square_edge(
-            base_center, square_diagonal_length, base_angle + math.pi / 4)
+            parent_center, square_diagonal_length, parent_angle - PI / 4)
+        # if the new square is not the first child, we need to rotate the edge
+        if base_angle != 0:
+            edge = self._rotate_point(edge, t0, base_angle)
 
-        # translate edge to origin, temp point is is copy of edge
-        temp = Point(edge.x - t0.x, edge.y - t0.y)
-        # rotate point around edge point and translate back
-        t1 = Point(
-            temp.x * math.cos(-alpha) - temp.y * math.sin(-alpha),
-            temp.x * math.sin(-alpha) + temp.y * math.cos(-alpha)
-        )
-        # translate rotated point back to its original spot
-        t1 = Point(t1.x + t0.x, t1.y + t0.y)
+        # rotate the edge point to the correct spot
+        t1 = self._rotate_point(edge, t0, alpha)
 
         # calculate the middle point between the rotated point and edge
         t2 = Point((t1.x + edge.x) / 2, (t1.y + edge.y) / 2)
-        return self._get_point_on_square_edge(t2, length, angle)
+        # calculate the slope of the new square
+        slope = parent_angle - PI / 2 + alpha / 2
+        # using this data, we can compute the square center
+        return self._get_point_on_square_edge(t2, length, slope + base_angle)
 
-    def _compute_center_right(self, initial_square, length, alpha, angle):
-        """Compute the central point of the right child square.
+    @staticmethod
+    def _rotate_point(point, around, alpha):
+        """Rotate a point around another point by some angle.
 
         Parameters
         ----------
-        initial_square : Square
-            The sqare where we are continuing from.
-        length : float
-            The length of the side of the new square.
+        point : Point
+            The point to rotate.
+        around : Point
+            The point to perform rotation around.
         alpha : float
-            The angle at which the new square is offset from its parent.
-        angle : float
-            The computed angle at which the entire square is offset for
-            drawing.
+            The angle to rotate by (in radians).
 
         Returns
         -------
-        Point
-            The central point of the right square.
+        Point:
+            The rotated point.
 
         """
-        base_center, base_length, base_angle = initial_square
-        # get the point on the square side and prepare it for rotation
-        t0 = self._get_point_on_square_edge(
-            base_center, base_length, base_angle)
-        # get the edge point where we will rotate t0 around
-        square_diagonal_length = math.sqrt(2 * base_length ** 2)
-        edge = self._get_point_on_square_edge(
-            base_center, square_diagonal_length, base_angle - math.pi / 4)
-
-        # translate edge to origin, temp point is is copy of edge
-        temp = Point(edge.x - t0.x, edge.y - t0.y)
-        # rotate point around edge point and translate back
-        t1 = Point(
+        temp = Point(point.x - around.x, point.y - around.y)
+        temp = Point(
             temp.x * math.cos(alpha) - temp.y * math.sin(alpha),
             temp.x * math.sin(alpha) + temp.y * math.cos(alpha)
         )
-        # translate rotated point back to its original spot
-        t1 = Point(t1.x + t0.x, t1.y + t0.y)
-
-        # calculate the middle point between the rotated point and edge
-        t2 = Point((t1.x + edge.x) / 2, (t1.y + edge.y) / 2)
-        return self._get_point_on_square_edge(t2, length, angle)
+        return Point(temp.x + around.x, temp.y + around.y)
 
     @staticmethod
     def _get_point_on_square_edge(center, length, angle):
@@ -327,11 +347,9 @@ class PythagorasTree:
             A point on the center of the drawing edge of the given square.
 
         """
-        # by default, we draw on top, so we need to offset the angle by 90degs
-        rotate_90 = math.pi / 2
         return Point(
-            center.x + length / 2 * math.cos(angle + rotate_90),
-            center.y + length / 2 * math.sin(angle + rotate_90)
+            center.x + length / 2 * math.cos(angle),
+            center.y + length / 2 * math.sin(angle)
         )
 
 
@@ -357,6 +375,11 @@ class SklTreeAdapter:
     def has_children(self, node):
         return self._tree.children_left[node] != -1 \
                or self._tree.children_right[node] != -1
+
+    def children(self, node):
+        if self.has_children(node):
+            return self.left_child(node), self.right_child(node)
+        return ()
 
     def left_child(self, node):
         return self._tree.children_left[node]
