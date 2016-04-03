@@ -193,7 +193,7 @@ class LintCommand(Command):
         sys.exit(subprocess.call(r'''
         set -eu
         upstream="$(git remote -v |
-                    awk '/[@\/]github.com[:\/]biolab\/orange3 /{ print $1; exit }')"
+                    awk '/[@\/]github.com[:\/]biolab\/orange3[\. ]/{ print $1; exit }')"
         git fetch -q $upstream master
         best_ancestor=$(git merge-base HEAD refs/remotes/$upstream/master)
         .travis/check_pylint_diff $best_ancestor
