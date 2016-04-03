@@ -1,4 +1,5 @@
-import math
+# coding=utf-8
+from math import pi, sqrt, cos, sin, degrees
 from collections import namedtuple, defaultdict
 
 import Orange
@@ -10,8 +11,6 @@ from Orange.data.table import Table
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
-
-PI = math.pi
 
 # Please note that all angles are in radians
 Square = namedtuple('Square', ['center', 'length', 'angle'])
@@ -95,7 +94,7 @@ class OWPythagorasTree(OWWidget):
                     draw_square_rec(child)
 
             draw_square_rec(tree_builder.pythagoras_tree(
-                self.tree, 0, Square(Point(0, 0), 200, PI / 2)
+                self.tree, 0, Square(Point(0, 0), 200, pi / 2)
             ))
         else:
             pass
@@ -138,7 +137,7 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
         # no need to perform extra transformations where they won't be seen
         if angle % 90 != 0:
             self.setTransformOriginPoint(self.boundingRect().center())
-            self.setRotation(math.degrees(angle))
+            self.setRotation(degrees(angle))
 
     def _get_rect_attributes(self):
         """Get the rectangle attributes requrired to draw item.
@@ -237,9 +236,9 @@ class PythagorasTree:
         """
         weight = tree.weight(node)
         # the angle of the child from its parent
-        alpha = weight * PI
+        alpha = weight * pi
         # the child side length
-        length = parent_square.length * math.sin(alpha / 2)
+        length = parent_square.length * sin(alpha / 2)
         # the sum of the previous anlges
         prev_angles = sum(self._slopes[parent_square])
 
@@ -249,7 +248,7 @@ class PythagorasTree:
         # the angle of the square is dependent on the parent, the current
         # angle and the previous angles. Subtract PI/2 so it starts drawing at
         # 0rads.
-        angle = parent_square.angle - PI / 2 + prev_angles + alpha / 2
+        angle = parent_square.angle - pi / 2 + prev_angles + alpha / 2
         square = Square(center, length, angle)
 
         self._slopes[parent_square].append(alpha)
@@ -285,9 +284,9 @@ class PythagorasTree:
         t0 = self._get_point_on_square_edge(
             parent_center, parent_length, parent_angle)
         # get the edge point that we will rotate around t0
-        square_diagonal_length = math.sqrt(2 * parent_length ** 2)
+        square_diagonal_length = sqrt(2 * parent_length ** 2)
         edge = self._get_point_on_square_edge(
-            parent_center, square_diagonal_length, parent_angle - PI / 4)
+            parent_center, square_diagonal_length, parent_angle - pi / 4)
         # if the new square is not the first child, we need to rotate the edge
         if base_angle != 0:
             edge = self._rotate_point(edge, t0, base_angle)
@@ -298,7 +297,7 @@ class PythagorasTree:
         # calculate the middle point between the rotated point and edge
         t2 = Point((t1.x + edge.x) / 2, (t1.y + edge.y) / 2)
         # calculate the slope of the new square
-        slope = parent_angle - PI / 2 + alpha / 2
+        slope = parent_angle - pi / 2 + alpha / 2
         # using this data, we can compute the square center
         return self._get_point_on_square_edge(t2, length, slope + base_angle)
 
@@ -323,8 +322,8 @@ class PythagorasTree:
         """
         temp = Point(point.x - around.x, point.y - around.y)
         temp = Point(
-            temp.x * math.cos(alpha) - temp.y * math.sin(alpha),
-            temp.x * math.sin(alpha) + temp.y * math.cos(alpha)
+            temp.x * cos(alpha) - temp.y * sin(alpha),
+            temp.x * sin(alpha) + temp.y * cos(alpha)
         )
         return Point(temp.x + around.x, temp.y + around.y)
 
@@ -348,8 +347,8 @@ class PythagorasTree:
 
         """
         return Point(
-            center.x + length / 2 * math.cos(angle),
-            center.y + length / 2 * math.sin(angle)
+            center.x + length / 2 * cos(angle),
+            center.y + length / 2 * sin(angle)
         )
 
 
@@ -364,13 +363,12 @@ class SklTreeAdapter:
         return self._tree.n_node_samples[node]
 
     def parent(self, node):
-        for idx, el in enumerate(self._tree.children_left):
-            if el == node:
-                return idx
-        for idx, el in enumerate(self._tree.children_right):
-            if el == node:
-                return idx
-        return -1
+        for children in (self._tree.children_left, self._tree.children_right):
+            try:
+                return (children == node).nonzero()[0][0]
+            except IndexError:
+                continue
+            return -1
 
     def has_children(self, node):
         return self._tree.children_left[node] != -1 \
@@ -401,7 +399,7 @@ def main():
     app = QtGui.QApplication(argv)
     ow = OWPythagorasTree()
     data = Orange.data.Table(filename)
-    clf = TreeLearner(max_depth=10)(data)
+    clf = TreeLearner(max_depth=1000)(data)
     clf.instances = data
     ow.set_ctree(clf)
 
