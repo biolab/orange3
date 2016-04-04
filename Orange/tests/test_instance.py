@@ -12,19 +12,20 @@ from Orange.data import \
 
 
 class TestInstance(unittest.TestCase):
-    attributes = ["Feature %i" % i for i in range(10)]
-    class_vars = ["Class %i" % i for i in range(1)]
-    metas = [DiscreteVariable("Meta 1", values="XYZ"),
-             ContinuousVariable("Meta 2"),
-             StringVariable("Meta 3")]
+    @classmethod
+    def setUpClass(cls):
+        cls.attributes = ["Feature %i" % i for i in range(10)]
+        cls.class_vars = ["Class %i" % i for i in range(1)]
+        cls.metas = [DiscreteVariable("Meta 1", values="XYZ"),
+                     ContinuousVariable("Meta 2"),
+                     StringVariable("Meta 3")]
 
     def mock_domain(self, with_classes=False, with_metas=False):
-        attributes = self.attributes
         class_vars = self.class_vars if with_classes else []
         metas = self.metas if with_metas else []
-        variables = attributes + class_vars
+        variables = self.attributes + class_vars
         return MagicMock(Domain,
-                         attributes=attributes,
+                         attributes=self.attributes,
                          class_vars=class_vars,
                          metas=metas,
                          variables=variables)
@@ -325,30 +326,30 @@ class TestInstance(unittest.TestCase):
         vals = [42, "M", "B", "X", 43, "Foo"]
         inst = Instance(domain, vals)
         inst2 = Instance(domain, vals)
-        self.assertTrue(inst == inst2)
-        self.assertTrue(inst2 == inst)
+        self.assertEqual(inst, inst2)
+        self.assertEqual(inst2, inst)
 
         inst2[0] = 43
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2[0] = Unknown
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[2] = "C"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[-1] = "Y"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[-2] = "33"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
         inst2 = Instance(domain, vals)
         inst2[-3] = "Bar"
-        self.assertFalse(inst == inst2)
+        self.assertNotEqual(inst, inst2)
 
     def test_instance_id(self):
         domain = self.create_domain(["x"])

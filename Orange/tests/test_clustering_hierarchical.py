@@ -12,27 +12,28 @@ def flatten(seq):
 
 
 class TestHierarchical(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         m = [[],
-             [ 3],
-             [ 2, 4],
+             [3],
+             [2, 4],
              [17, 5, 4],
-             [ 2, 8, 3, 8],
-             [ 7, 5, 10, 11, 2],
-             [ 8, 4, 1, 5, 11, 13],
-             [ 4, 7, 12, 8, 10, 1, 5],
+             [2, 8, 3, 8],
+             [7, 5, 10, 11, 2],
+             [8, 4, 1, 5, 11, 13],
+             [4, 7, 12, 8, 10, 1, 5],
              [13, 9, 14, 15, 7, 8, 4, 6],
              [12, 10, 11, 15, 2, 5, 7, 3, 1]]
-        self.items = ["Ann", "Bob", "Curt", "Danny", "Eve", "Fred",
-                      "Greg", "Hue", "Ivy", "Jon"]
+        cls.items = ["Ann", "Bob", "Curt", "Danny", "Eve", "Fred",
+                     "Greg", "Hue", "Ivy", "Jon"]
 
         dist = numpy.array(list(flatten(m)), dtype=float)
         matrix = hierarchical.squareform(dist, mode="lower")
-        self.m = m
-        self.matrix = Orange.misc.DistMatrix(matrix)
-        self.matrix.items = self.items
+        cls.m = m
+        cls.matrix = Orange.misc.DistMatrix(matrix)
+        cls.matrix.items = cls.items
 
-        self.cluster = hierarchical.dist_matrix_clustering(self.matrix)
+        cls.cluster = hierarchical.dist_matrix_clustering(cls.matrix)
 
     def test_mapping(self):
         leaves = list(hierarchical.leaves(self.cluster))

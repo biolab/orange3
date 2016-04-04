@@ -1,31 +1,35 @@
 import unittest
+import numpy as np
 
 from Orange.data import Table, ContinuousVariable, Domain
 from Orange.classification import LogisticRegressionLearner, Model
 from Orange.evaluation import CrossValidation, CA
-import numpy as np
 
 
 class LogisticRegressionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.voting = Table('voting')
+
     def test_LogisticRegression(self):
-        table = Table('iris')
         learn = LogisticRegressionLearner()
-        results = CrossValidation(table, [learn], k=2)
+        results = CrossValidation(self.voting, [learn], k=2)
         ca = CA(results)
-        self.assertTrue(0.8 < ca < 1.0)
+        self.assertGreater(ca, 0.8)
+        self.assertLess(ca, 1.0)
 
     @unittest.skip("Re-enable when Logistic regression supports normalization.")
     def test_LogisticRegressionNormalization(self):
         np.random.seed(42)
-        table = Table('iris')
-        new_attrs = (ContinuousVariable('c0'),) + table.domain.attributes
+        new_attrs = (ContinuousVariable('c0'),) + self.iris.domain.attributes
         new_domain = Domain(new_attrs,
-                            table.domain.class_vars,
-                            table.domain.metas)
+                            self.iris.domain.class_vars,
+                            self.iris.domain.metas)
         new_table = np.hstack((
-            1000000 * np.random.random((table.X.shape[0], 1)),
-            table))
-        table = table.from_numpy(new_domain, new_table)
+            1000000 * np.random.random((self.iris.X.shape[0], 1)),
+            self.iris))
+        table = self.iris.from_numpy(new_domain, new_table)
         lr = LogisticRegressionLearner(normalize=False)
         lr_norm = LogisticRegressionLearner(normalize=True)
 
@@ -46,23 +50,20 @@ class LogisticRegressionTest(unittest.TestCase):
             # Do not skip the above test when this is implemented
 
     def test_probability(self):
-        table = Table('iris')
         learn = LogisticRegressionLearner(penalty='l1')
-        clf = learn(table[:100])
-        p = clf(table[100:], ret=Model.Probs)
+        clf = learn(self.iris[:100])
+        p = clf(self.iris[100:], ret=Model.Probs)
         self.assertTrue(all(abs(p.sum(axis=1) - 1) < 1e-6))
 
     def test_learner_scorer(self):
-        data = Table('voting')
         learner = LogisticRegressionLearner()
-        scores = learner.score_data(data)
+        scores = learner.score_data(self.voting)
         self.assertEqual('physician-fee-freeze',
-                         data.domain.attributes[np.argmax(scores)].name)
-        self.assertEqual(len(scores), len(data.domain.attributes))
+                         self.voting.domain.attributes[np.argmax(scores)].name)
+        self.assertEqual(len(scores), len(self.voting.domain.attributes))
 
     def test_coefficients(self):
-        data = Table("voting")
         learn = LogisticRegressionLearner()
-        model = learn(data)
+        model = learn(self.voting)
         coef = model.coefficients
         self.assertEqual(len(coef[0]), len(model.domain.attributes))

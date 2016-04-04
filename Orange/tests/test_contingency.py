@@ -12,23 +12,26 @@ class Discrete_Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data.table.dataset_dirs.append("Orange/tests")
+        cls.zoo = data.Table("zoo")
 
     def test_discrete(self):
-        d = data.Table("zoo")
-        cont = contingency.Discrete(d, 0)
+        cont = contingency.Discrete(self.zoo, 0)
         np.testing.assert_almost_equal(cont["amphibian"], [4, 0])
         np.testing.assert_almost_equal(cont,
-            [[4, 0], [20, 0], [13, 0], [4, 4], [10, 0], [2, 39], [5, 0]])
+                                       [[4, 0], [20, 0], [13, 0],
+                                        [4, 4], [10, 0], [2, 39], [5, 0]])
 
-        cont = contingency.Discrete(d, "predator")
+        cont = contingency.Discrete(self.zoo, "predator")
         np.testing.assert_almost_equal(cont["fish"], [4, 9])
         np.testing.assert_almost_equal(cont,
-            [[1, 3], [11, 9], [4, 9], [7, 1], [2, 8], [19, 22], [1, 4]])
+                                       [[1, 3], [11, 9], [4, 9],
+                                        [7, 1], [2, 8], [19, 22], [1, 4]])
 
-        cont = contingency.Discrete(d, d.domain["predator"])
+        cont = contingency.Discrete(self.zoo, self.zoo.domain["predator"])
         np.testing.assert_almost_equal(cont["fish"], [4, 9])
         np.testing.assert_almost_equal(cont,
-            [[1, 3], [11, 9], [4, 9], [7, 1], [2, 8], [19, 22], [1, 4]])
+                                       [[1, 3], [11, 9], [4, 9],
+                                        [7, 1], [2, 8], [19, 22], [1, 4]])
         self.assertEqual(cont.unknown_rows, 0)
 
     def test_discrete_missing(self):
@@ -38,9 +41,9 @@ class Discrete_Test(unittest.TestCase):
         cont = contingency.Discrete(d, 0)
         np.testing.assert_almost_equal(cont["amphibian"], [3, 0])
         np.testing.assert_almost_equal(cont,
-            [[3, 0], [20, 0], [13, 0], [4, 4], [10, 0], [2, 38], [5, 0]])
+                                       [[3, 0], [20, 0], [13, 0], [4, 4], [10, 0], [2, 38], [5, 0]])
         np.testing.assert_almost_equal(cont.unknowns,
-            [0, 0, 0, 0, 0, 1, 0])
+                                       [0, 0, 0, 0, 0, 1, 0])
         self.assertEqual(cont.unknown_rows, 1)
 
         d = data.Table("zoo")
@@ -49,7 +52,7 @@ class Discrete_Test(unittest.TestCase):
         cont = contingency.Discrete(d, "predator")
         np.testing.assert_almost_equal(cont["fish"], [4, 8])
         np.testing.assert_almost_equal(cont,
-            [[1, 3], [11, 9], [4, 8], [7, 1], [2, 8], [19, 22], [1, 4]])
+                                       [[1, 3], [11, 9], [4, 8], [7, 1], [2, 8], [19, 22], [1, 4]])
         self.assertEqual(cont.unknown_rows, 1)
         np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0, 0, 0, 0, 0])
 
@@ -108,26 +111,27 @@ class Discrete_Test(unittest.TestCase):
     def test_mixedtype_metas(self):
         import Orange
         zoo = Orange.data.Table("zoo")
-        dom = Orange.data.Domain(zoo.domain.attributes, zoo.domain.class_var, zoo.domain.metas + zoo.domain.attributes[:2])
+        dom = Orange.data.Domain(zoo.domain.attributes, zoo.domain.class_var,
+                                 zoo.domain.metas + zoo.domain.attributes[:2])
         t = Orange.data.Table(dom, zoo)
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
         np.testing.assert_almost_equal(cont["1"], [38, 5])
-        np.testing.assert_almost_equal(cont, [[  4,  54],
-                                              [ 38,   5]])
+        np.testing.assert_almost_equal(cont, [[4, 54],
+                                              [38, 5]])
         zoo[25][t.domain.metas[1]] = float("nan")
         zoo[0][2] = float("nan")
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
         np.testing.assert_almost_equal(cont["1"], [37, 5])
-        np.testing.assert_almost_equal(cont, [[  4,  53],
-                                              [ 37,   5]])
-        np.testing.assert_almost_equal(cont.unknowns, [0,1])
+        np.testing.assert_almost_equal(cont, [[4, 53],
+                                              [37, 5]])
+        np.testing.assert_almost_equal(cont.unknowns, [0, 1])
         self.assertEqual(cont.unknown_rows, 1)
 
     @staticmethod
     def _construct_sparse():
         domain = data.Domain(
             [data.DiscreteVariable("d%i" % i, values=list("abc"))
-                 for i in range(10)] +
+             for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)],
             data.DiscreteVariable("y", values=list("abc")))
 
@@ -140,13 +144,13 @@ class Discrete_Test(unittest.TestCase):
         #        2        0  1                   1.1
         #
         sdata = np.array([2, 2, 1, 1, 2, 1, 1, 1, 2, 0, 2,
-                 1, 1, 0, 0, 1, 2, 2, 1, 0,
-                 1, 2, 0,
-                 2, 0, 1, 1.1])
+                          1, 1, 0, 0, 1, 2, 2, 1, 0,
+                          1, 2, 0,
+                          2, 0, 1, 1.1])
         indices = [1, 3, 4, 5, 6, 9, 13, 14, 16, 17, 18,
-                  2, 3, 4, 5, 6, 8, 14, 16, 17,
-                  3, 5, 6,
-                  2, 5, 6, 13]
+                   2, 3, 4, 5, 6, 8, 14, 16, 17,
+                   3, 5, 6,
+                   2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
         Y = np.array([[1, 2, 1, 0, 0]]).T

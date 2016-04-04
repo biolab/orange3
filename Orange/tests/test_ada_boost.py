@@ -8,9 +8,11 @@ from Orange.evaluation import CrossValidation, CA, RMSE
 
 
 class SklAdaBoostTest(unittest.TestCase):
-    def setUp(self):
-        self.iris = Table("iris")
-        self.housing = Table("housing")
+
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table("iris")
+        cls.housing = Table("housing")
 
     def test_adaboost(self):
         learn = SklAdaBoostLearner()
@@ -27,7 +29,7 @@ class SklAdaBoostTest(unittest.TestCase):
         tree = SklAdaBoostLearner(base_estimator=tree_estimator)
         results = CrossValidation(self.iris, [stump, tree], k=10)
         ca = CA(results)
-        self.assertTrue(ca[0] < ca[1])
+        self.assertLess(ca[0], ca[1])
 
     def test_predict_single_instance(self):
         learn = SklAdaBoostLearner()
@@ -64,28 +66,28 @@ class SklAdaBoostTest(unittest.TestCase):
         tree = SklAdaBoostRegressionLearner(base_estimator=tree_estimator)
         results = CrossValidation(self.housing, [stump, tree], k=10)
         rmse = RMSE(results)
-        self.assertTrue(rmse[0] >= rmse[1])
+        self.assertGreaterEqual(rmse[0], rmse[1])
 
     def test_predict_single_instance_reg(self):
         learn = SklAdaBoostRegressionLearner()
         m = learn(self.housing)
         for ins in self.housing:
             pred = m(ins)
-            self.assertTrue(pred > 0)
+            self.assertGreaterEqual(pred, 0)
 
     def test_predict_table_reg(self):
         learn = SklAdaBoostRegressionLearner()
         m = learn(self.housing)
         pred = m(self.housing)
         self.assertEqual(len(self.housing), len(pred))
-        self.assertTrue(all(pred) > 0)
+        self.assertGreater(all(pred), 0)
 
     def test_predict_numpy_reg(self):
         learn = SklAdaBoostRegressionLearner()
         m = learn(self.housing)
         pred = m(self.housing.X)
         self.assertEqual(len(self.housing), len(pred))
-        self.assertTrue(all(pred) > 0)
+        self.assertGreater(all(pred), 0)
 
     def test_adaboost_adequacy_reg(self):
         learner = SklAdaBoostRegressionLearner()

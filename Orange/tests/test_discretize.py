@@ -100,7 +100,7 @@ class TestEntropyMDL(TestCase):
 
     def test_entropy(self):
         X = np.array([0] * 25 + [1] * 25 + [2] * 25 + [3] * 25
-                     ).reshape((100, 1))
+                    ).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 75)
         table = data.Table(X, Y)
         disc = discretize.EntropyMDL()
@@ -136,7 +136,7 @@ class TestDiscretizer(TestCase):
             self.var, [10.1234])
         self.assertEqual(dvar.values, ["< 10.1", "≥ 10.1"])
 
-        self.var.number_of_decimals=3
+        self.var.number_of_decimals = 3
 
         dvar = discretize.Discretizer.create_discretized_var(
             self.var, [5, 10.1234])
@@ -174,14 +174,15 @@ class TestDiscretizer(TestCase):
 
 # noinspection PyPep8Naming
 class TestDiscretizeTable(TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         s = [0] * 50 + [1] * 50
         X1 = np.array(s).reshape((100, 1))
         X2 = np.arange(100).reshape((100, 1))
         X3 = np.ones((100, 1))
         X = np.hstack([X1, X2, X3])
-        self.table_no_class = data.Table(X)
-        self.table_class = data.Table(X, X1)
+        cls.table_no_class = data.Table(X)
+        cls.table_class = data.Table(X, X1)
 
     def test_discretize_exclude_constant(self):
         dom = discretize.DomainDiscretizer(self.table_no_class)

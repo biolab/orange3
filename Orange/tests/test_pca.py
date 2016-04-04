@@ -1,15 +1,20 @@
 import unittest
-import numpy as np
 import pickle
+import numpy as np
 
-import Orange
 from Orange.preprocess import Continuize, Normalize
 from Orange.projection import PCA, SparsePCA, RandomizedPCA, IncrementalPCA
+from Orange.data import Table
 
 
 class TestPCA(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ionosphere = Table('ionosphere')
+        cls.iris = Table('iris')
+
     def test_pca(self):
-        data = Orange.data.Table('ionosphere')
+        data = self.ionosphere
         self.__pca_test_helper(data, n_com=3, min_xpl_var=0.5)
         self.__pca_test_helper(data, n_com=10, min_xpl_var=0.7)
         self.__pca_test_helper(data, n_com=32, min_xpl_var=1)
@@ -25,7 +30,7 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
     def test_sparse_pca(self):
-        data = Orange.data.Table('ionosphere')[:100]
+        data = self.ionosphere[:100]
         self.__sparse_pca_test_helper(data, n_com=3, max_err=1500)
         self.__sparse_pca_test_helper(data, n_com=10, max_err=1000)
         self.__sparse_pca_test_helper(data, n_com=32, max_err=500)
@@ -38,7 +43,7 @@ class TestPCA(unittest.TestCase):
         self.assertLessEqual(pca_model.error_[-1], max_err)
 
     def test_randomized_pca(self):
-        data = Orange.data.Table('ionosphere')
+        data = self.ionosphere
         self.__rnd_pca_test_helper(data, n_com=3, min_xpl_var=0.5)
         self.__rnd_pca_test_helper(data, n_com=10, min_xpl_var=0.7)
         self.__rnd_pca_test_helper(data, n_com=32, min_xpl_var=0.98)
@@ -54,7 +59,7 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
     def test_incremental_pca(self):
-        data = Orange.data.Table('ionosphere')
+        data = self.ionosphere
         self.__ipca_test_helper(data, n_com=3, min_xpl_var=0.49)
         self.__ipca_test_helper(data, n_com=32, min_xpl_var=1)
 
@@ -76,10 +81,10 @@ class TestPCA(unittest.TestCase):
         self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 4)
 
     def test_compute_value(self):
-        iris = Orange.data.Table('iris')
+        iris = self.iris
         pca = PCA(n_components=2)(iris)
         pca_iris = pca(iris)
-        pca_iris2 = Orange.data.Table(pca_iris.domain, iris)
+        pca_iris2 = Table(pca_iris.domain, iris)
         np.testing.assert_almost_equal(pca_iris.X, pca_iris2.X)
         np.testing.assert_equal(pca_iris.Y, pca_iris2.Y)
 
@@ -88,16 +93,16 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_equal(pca_iris.Y, pca_iris3.Y)
 
     def test_transformed_domain_does_not_pickle_data(self):
-        iris = Orange.data.Table('iris')
+        iris = self.iris
         pca = PCA(n_components=2)(iris)
         pca_iris = pca(iris)
-        pca_iris2 = Orange.data.Table(pca_iris.domain, iris)
+        pca_iris2 = Table(pca_iris.domain, iris)
 
         pca_iris2 = pickle.loads(pickle.dumps(pca_iris))
         self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)
 
     def test_chain(self):
-        zoo = Orange.data.Table('zoo')
+        zoo = Table('zoo')
         zoo_c = Continuize(zoo)
         pca = PCA(n_components=3)(zoo_c)(zoo)
         pca2 = PCA(n_components=3)(zoo_c)(zoo_c)
@@ -106,7 +111,7 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_almost_equal(pca.X, pca3.X)
 
     def test_PCA_scorer(self):
-        data = Orange.data.Table('iris')
+        data = self.iris
         pca = PCA(preprocessors=[Normalize()])
         scores = pca.score_data(data)
         self.assertEqual(len(scores), len(data.domain.attributes))

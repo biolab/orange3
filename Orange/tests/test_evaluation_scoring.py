@@ -1,9 +1,8 @@
 import unittest
-from Orange.data import DiscreteVariable, Domain
-
 import numpy as np
 
 import Orange
+from Orange.data import DiscreteVariable, Domain
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
@@ -12,16 +11,19 @@ from Orange.preprocess import discretize
 
 
 class ScoringTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table('iris')
+
     def test_Recall(self):
-        data = Table('iris')
         learner = LogisticRegressionLearner(preprocessors=[])
-        results = TestOnTrainingData(data, [learner])
+        results = TestOnTrainingData(self.data, [learner])
         self.assertAlmostEqual(Recall(results)[0], 0.960, 3)
 
     def test_Precision(self):
-        data = Table('iris')
         learner = LogisticRegressionLearner(preprocessors=[])
-        results = TestOnTrainingData(data, [learner])
+        results = TestOnTrainingData(self.data, [learner])
         self.assertAlmostEqual(Precision(results)[0], 0.962, 3)
 
 
@@ -71,24 +73,28 @@ class Scoring_CA_Test(unittest.TestCase):
 
 
 class Scoring_AUC_Test(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Orange.data.Table('iris')
+
     def test_tree(self):
-        data = Orange.data.Table('iris')
         tree = Orange.classification.TreeLearner()
-        res = Orange.evaluation.CrossValidation(data, [tree], k=2)
-        self.assertTrue(0.8 < AUC(res)[0] < 1.)
+        res = Orange.evaluation.CrossValidation(self.iris, [tree], k=2)
+        self.assertGreater(AUC(res)[0], 0.8)
+        self.assertLess(AUC(res)[0], 1.)
 
     def test_constant_prob(self):
-        data = Orange.data.Table('iris')
         maj = Orange.classification.MajorityLearner()
-        res = Orange.evaluation.TestOnTrainingData(data, [maj])
+        res = Orange.evaluation.TestOnTrainingData(self.iris, [maj])
         self.assertEqual(AUC(res)[0], 0.5)
 
     def test_multiclass_auc_multi_learners(self):
-        data = Orange.data.Table('iris')
         learners = [Orange.classification.LogisticRegressionLearner(),
                     Orange.classification.MajorityLearner()]
-        res = Orange.evaluation.testing.CrossValidation(data, learners, k=10)
-        self.assertTrue(AUC(res)[0] > 0.6 > AUC(res)[1] > 0.4)
+        res = Orange.evaluation.testing.CrossValidation(self.iris, learners, k=10)
+        self.assertGreater(AUC(res)[0], 0.6)
+        self.assertLess(AUC(res)[1], 0.6)
+        self.assertGreater(AUC(res)[1], 0.4)
 
     def test_auc_on_multiclass_data_returns_1d_array(self):
         titanic = Orange.data.Table('titanic')[:100]
