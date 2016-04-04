@@ -74,9 +74,9 @@ class SVMBaseMixin(OWProvidesLearner):
                 self.controlArea, "Optimization parameters")
 
         gui.doubleSpin(
-                self.optimization_box, self, "tol", 1e-7, 1.0, 5e-7,
+                self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
                 label="Numerical Tolerance",
-                decimals=4, alignment=Qt.AlignRight, controlWidth=80
+                decimals=6, alignment=Qt.AlignRight, controlWidth=100
         )
 
     def _setup_layout(self):
@@ -175,9 +175,9 @@ class OWSVMClassification(SVMBaseMixin, widget.OWWidget):
 
     def _add_optimization_box(self):
         super()._add_optimization_box()
-        gui.spin(self.optimization_box, self, "max_iter", 0, 1e6, 100,
+        gui.spin(self.optimization_box, self, "max_iter", 50, 1e6, 50,
                  label="Iteration Limit", checked="limit_iter",
-                 alignment=Qt.AlignRight, controlWidth=80)
+                 alignment=Qt.AlignRight, controlWidth=100)
 
     @check_sql_input
     def set_data(self, data):
