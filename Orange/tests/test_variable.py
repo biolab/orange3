@@ -299,20 +299,29 @@ class TimeVariableTest(VariableTest):
         # observe have datetime
         self.assertEqual(var.repr_val(ts), '1970-01-01 16:20:00')
 
-    def test_read_timevariable(self):
-        example_csv = StringIO("""\
+    def test_readwrite_timevariable(self):
+        output_csv = StringIO()
+        input_csv = StringIO("""\
 Date,Feature
 time,continuous
 ,
-1920-12-12,1
-1920-12-13,3
+1920-12-12,1.0
+1920-12-13,3.0
 1920-12-14,5.5
 """)
-        table = CSVFormat.read_file(example_csv)
+        for stream in (output_csv, input_csv):
+            stream.close = lambda: None  # HACK: Prevent closing of streams
+
+        table = CSVFormat.read_file(input_csv)
         self.assertIsInstance(table.domain['Date'], TimeVariable)
         self.assertEqual(table[0, 'Date'], '1920-12-12')
         # Dates before 1970 are negative
         self.assertTrue(all(inst['Date'] < 0 for inst in table))
+
+        CSVFormat.write_file(output_csv, table)
+        self.assertEqual(input_csv.getvalue().splitlines(),
+                         output_csv.getvalue().splitlines())
+
 
 
 PickleContinuousVariable = create_pickling_tests(

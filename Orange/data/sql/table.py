@@ -201,7 +201,7 @@ class SqlTable(table.Table):
                 var = self.domain[col_idx]
                 return variable.Value(
                     var,
-                    self._query(self.table_name, var, rows=[row_idx])
+                    next(self._query([var], rows=[row_idx]))[0]
                 )
             except TypeError:
                 pass

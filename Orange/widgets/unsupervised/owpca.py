@@ -238,7 +238,7 @@ class OWPCA(widget.OWWidget):
             bounds=(0, p - 1)
         )
         self._line.setCursor(Qt.SizeHorCursor)
-        self._line.setPen(pg.mkPen(QColor(Qt.darkGray), width=1.5))
+        self._line.setPen(pg.mkPen(QColor(Qt.darkGray), width=5))
         self._line.sigPositionChanged.connect(self._on_cut_changed)
 
         self.plot.addItem(self._line)
@@ -248,6 +248,7 @@ class OWPCA(widget.OWWidget):
     def _on_cut_changed(self, line):
         # cut changed by means of a cut line over the scree plot.
         value = line.value()
+        self._line.setValue(round(value))
         current = self._nselected_components()
         components = int(numpy.floor(value)) + 1
 

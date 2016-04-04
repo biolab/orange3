@@ -55,6 +55,11 @@ In addition, we add the following guidelines:
   reason) should have a `__name__ == '__main__'`-fenced code block that
   shows/tests the gist of that module in a user-friendly way.
 
+Please ensure your commits pass code quality assurance by executing:
+
+    pip install -r requirements-dev.txt
+    python setup.py lint
+
 [PEP-8]: https://www.python.org/dev/peps/pep-0008/
 [Google Python Style Guide]: https://google.github.io/styleguide/pyguide.html
 [Napoleon]: http://www.sphinx-doc.org/en/stable/ext/napoleon.html
