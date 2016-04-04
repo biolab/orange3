@@ -119,14 +119,25 @@ class TestTools(unittest.TestCase):
         self.assertEqual(freevars_("{a, b}"), ["a", "b"])
         self.assertEqual(freevars_("0 if abs(a) < 0.1 else b", ["abs"]),
                          ["a", "b"])
+        self.assertEqual(freevars_("lambda a: b + 1"), ["b"])
+        self.assertEqual(freevars_("lambda a: b + 1", ["b"]), [])
+        self.assertEqual(freevars_("lambda a: a + 1"), [])
+        self.assertEqual(freevars_("(lambda a: a + 1)(a)"), ["a"])
+        self.assertEqual(freevars_("lambda a, *arg: arg + (a,)"), [])
+        self.assertEqual(freevars_("lambda a, *arg, **kwargs: arg + (a,)"), [])
+
+        self.assertEqual(freevars_("[a for a in b]"), ["b"])
+        self.assertEqual(freevars_("[1 + a for c in b if c]"), ["a", "b"])
+        self.assertEqual(freevars_("{a for _ in [] if b}"), ["a", "b"])
+        self.assertEqual(freevars_("{a for _ in [] if b}", ["a", "b"]), [])
 
     def test_validate_exp(self):
 
         stmt = ast.parse("1", mode="single")
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             validate_exp(stmt)
         suite = ast.parse("a; b", mode="exec")
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             validate_exp(suite)
 
         def validate_(source):

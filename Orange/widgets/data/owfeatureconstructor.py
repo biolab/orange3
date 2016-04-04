@@ -583,6 +583,25 @@ import ast
 
 
 def freevars(exp, env):
+    """
+    Return names of all free variables in a parsed (expression) AST.
+
+    Parameters
+    ----------
+    exp : ast.AST
+        An expression ast (ast.parse(..., mode="single"))
+    env : List[str]
+        Environment
+
+    Returns
+    -------
+    freevars : List[str]
+
+    See also
+    --------
+    ast
+
+    """
     etype = type(exp)
     if etype in [ast.Expr, ast.Expression]:
         return freevars(exp.body, env)
@@ -592,6 +611,14 @@ def freevars(exp, env):
         return freevars(exp.left, env) + freevars(exp.right, env)
     elif etype == ast.UnaryOp:
         return freevars(exp.operand, env)
+    elif etype == ast.Lambda:
+        args = exp.args
+        assert isinstance(args, ast.arguments)
+        argnames = [a.arg for a in args.args]
+        argnames += [args.vararg.arg] if args.vararg else []
+        argnames += [a.arg for a in args.kwonlyargs] if args.kwonlyargs else []
+        argnames += [args.kwarg] if args.kwarg else []
+        return freevars(exp.body, env + argnames)
     elif etype == ast.IfExp:
         return (freevars(exp.test, env) + freevars(exp.body, env) +
                 freevars(exp.orelse, env))
@@ -600,10 +627,24 @@ def freevars(exp, env):
                     for v in chain(exp.keys, exp.values)), [])
     elif etype == ast.Set:
         return sum((freevars(v, env) for v in exp.elts), [])
-    elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp]:
-        raise NotImplementedError
-    elif etype == ast.DictComp:
-        raise NotImplementedError
+    elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp, ast.DictComp]:
+        env_ext = []
+        vars_ = []
+        for gen in exp.generators:
+            target_names = freevars(gen.target, [])  # assigned names
+            vars_iter = freevars(gen.iter, env)
+            env_ext += target_names
+            vars_ifs = list(chain(*(freevars(ifexp, env + target_names)
+                                    for ifexp in gen.ifs or [])))
+            vars_ += vars_iter + vars_ifs
+
+        if etype == ast.DictComp:
+            vars_ = (freevars(exp.key, env_ext) +
+                     freevars(exp.value, env_ext) +
+                     vars_)
+        else:
+            vars_ = freevars(exp.elt, env + env_ext) + vars_
+        return vars_
     # Yield, YieldFrom???
     elif etype == ast.Compare:
         return sum((freevars(v, env)
