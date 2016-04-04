@@ -193,15 +193,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if basename in [path.relpath, path.basename]:
                 self.source = self.LOCAL_FILE
                 if self.is_multisheet_excel(path.abspath):
-                    currentText = self.sheet_combo.currentText()
                     self.fill_sheet_combo(path.abspath)
-                    index = self.sheet_combo.findText(
-                        currentText, QtCore.Qt.MatchFixedString)
-                    if index >= 0:
-                        self.sheet_combo.setCurrentIndex(index)
-                    return self.load_data(currentText)
-                else:
-                    return self.load_data()
+                return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
 
     def select_file(self, n):
