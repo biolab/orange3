@@ -5,23 +5,23 @@ import unittest
 
 import os
 
-import Orange
+from Orange.data import Table, Variable
+from Orange import datasets
 
 
 class TestDatasets(unittest.TestCase):
     def test_access(self):
-        d1 = Orange.datasets.anneal
-        fname = Orange.datasets.anneal['location']
-        d2 = Orange.datasets['anneal']
+        d1 = datasets.anneal
+        fname = datasets.anneal['location']
+        d2 = datasets['anneal']
         self.assertNotEqual(len(d1), 0)
         self.assertEqual(len(d1), len(d2))
 
     def test_filter(self):
-        discr = [info for info in Orange.datasets.values()
-                 if info['features']['continuous'] == 0]
-        for info in discr:
-            data = Orange.data.Table(info['location'])
-            self.assertFalse(data.domain.has_continuous_attributes())
+        for info in datasets.values():
+            if info['features']['continuous'] == 0:
+                data = Table(info['location'])
+                self.assertFalse(data.domain.has_continuous_attributes())
 
     def test_have_all(self):
         datasets_folder = os.path.join(os.path.dirname(__file__),
@@ -32,16 +32,16 @@ class TestDatasets(unittest.TestCase):
             name, ext = os.path.splitext(fname)
             if ext != '.tab':
                 continue
-            self.assertIn(name, Orange.datasets)
+            self.assertIn(name, datasets)
 
     def test_datasets_info_features(self):
-        for dataset, info in Orange.datasets.items():
+        for dataset, info in datasets.items():
 
-            Orange.data.Variable._clear_all_caches()
+            Variable._clear_all_caches()
 
             if info['location'].startswith('http'): continue  # Tested elsewhere
 
-            table = Orange.data.Table(dataset)
+            table = Table(dataset)
             domain = table.domain
 
             # Test features
