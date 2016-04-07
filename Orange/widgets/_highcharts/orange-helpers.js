@@ -16,6 +16,15 @@ function fixupOptionsObject(obj) {
         var key = keys[i],
             val = obj[key];
 
+        // Make sure arrays are of type Array and not Qt's RuntimeArray
+        // Can probably be removed once Qt 4's WebKit support is dropped.
+        if (val.constructor === Array &&
+            !(Object.prototype.toString.call(val) == '[object Array]'))
+            // FIXME: This is suboptimal, but what can we do? Simple "casting"
+            // into Array with Array.prototype.slice() didn't seem to work,
+            // and using Array.prototype.map is much slower.
+            obj[key] = val = JSON.parse(JSON.stringify(val));
+
         if (typeof val === 'string' && val.indexOf('/**/') == 0) {
             obj[key] = eval(val)
         } else if (val.constructor === Object ||
