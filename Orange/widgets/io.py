@@ -36,8 +36,12 @@ class ImgFormat(FileFormat):
         from pyqtgraph.graphicsItems.GraphicsWidget import GraphicsWidget
 
         try:
+            scene = scene.scene()
+            backgroundbrush = scene.backgroundBrush()
+            scene.setBackroundBrush(Qt.White)
             exporter = cls._get_exporter()
             cls._export(exporter(scene), filename)
+            scene.setBackgroundBrush(backgroundbrush)
         except:
             source = scene.sceneRect().adjusted(-15, -15, 15, 15)
             buffer = cls._get_buffer(source.size(), filename)
