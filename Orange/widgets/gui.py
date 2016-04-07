@@ -1427,7 +1427,7 @@ def radioButtons(widget, master, value, btnLabels=(), tooltips=None,
     bg.ogValue = value
     bg.ogMaster = master
     for i, lab in enumerate(btnLabels):
-        appendRadioButton(bg, lab, tooltip=tooltips and tooltips[i])
+        appendRadioButton(bg, lab, tooltip=tooltips and tooltips[i], id=i + 1)
     connectControl(master, value, callback, bg.group.buttonClicked[int],
                    CallFrontRadioButtons(bg), CallBackRadioButton(bg, master))
     misc.setdefault('addSpace', bool(box))
@@ -1439,7 +1439,7 @@ radioButtonsInBox = radioButtons
 
 def appendRadioButton(group, label, insertInto=None,
                       disabled=False, tooltip=None, sizePolicy=None,
-                      addToLayout=True, stretch=0, addSpace=False):
+                      addToLayout=True, stretch=0, addSpace=False, id=None):
     """
     Construct a radio button and add it to the group. The group must be
     constructed with :obj:`radioButtonsInBox` since it adds additional
@@ -1467,7 +1467,10 @@ def appendRadioButton(group, label, insertInto=None,
     if not hasattr(group, "buttons"):
         group.buttons = []
     group.buttons.append(w)
-    group.group.addButton(w)
+    if id is None:
+        group.group.addButton(w)
+    else:
+        group.group.addButton(w, id)
     w.setChecked(getdeepattr(group.ogMaster, group.ogValue) == i)
 
     # miscellanea for this case is weird, so we do it here
