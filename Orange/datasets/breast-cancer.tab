@@ -1,5 +1,5 @@
 recurrence	age	menopause	tumor-size	inv-nodes	node-caps	deg-malig	breast	breast-quad	irradiat
-d	d	d	0-4 5-9	0-2 3-5 6-8 9-11 12-14 15-17	d	d	d	d	d
+d	d	d	d	0-2 3-5 6-8 9-11 12-14 15-17	d	d	d	d	d
 class
 no-recurrence-events	30-39	premeno	30-34	0-2	no	3	left	left_low	no
 no-recurrence-events	40-49	premeno	20-24	0-2	no	2	right	right_up	no

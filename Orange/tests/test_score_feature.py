@@ -9,11 +9,12 @@ from Orange import preprocess
 
 class FeatureScoringTest(unittest.TestCase):
 
-    def setUp(self):
-        self.zoo = Table("zoo")  # disc. features, disc. class
-        self.housing = Table("housing")  # cont. features, cont. class
-        self.monk = Table("monks-1")
-        self.adult = Table("adult_sample")
+    @classmethod
+    def setUpClass(cls):
+        cls.zoo = Table("zoo")  # disc. features, disc. class
+        cls.housing = Table("housing")  # cont. features, cont. class
+        cls.monk = Table("monks-1")
+        cls.adult = Table("adult_sample")
 
     def test_info_gain(self):
         scorer = score.InfoGain()
@@ -101,6 +102,9 @@ class FeatureScoringTest(unittest.TestCase):
         found = sorted([self.adult.domain[attr].name for attr in weights.argsort()[-2:]])
         reference = ['marital-status', 'relationship']
         self.assertEqual(found, reference)
+        # Ensure it doesn't crash on missing target class values
+        old_monk.Y[0] = np.nan
+        weights = score.ReliefF()(old_monk, None)
 
     def test_rrelieff(self):
         X = np.random.random((100, 5))

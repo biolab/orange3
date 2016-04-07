@@ -14,7 +14,9 @@ class _FeatureScorerMixin(LearnerScorer):
     feature_type = Variable
     class_type = DiscreteVariable
 
-    def score(self, model):
+    def score(self, data):
+        data = Normalize(data)
+        model = self(data)
         # Take the maximum attribute score across all classes
         return np.max(np.abs(model.coefficients), axis=0)
 
@@ -33,7 +35,7 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LogisticRegression
     __returns__ = LogisticRegressionClassifier
     name = 'logreg'
-    preprocessors = SklLearner.preprocessors + [Normalize()]
+    preprocessors = SklLearner.preprocessors
 
     def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
                  fit_intercept=True, intercept_scaling=1, class_weight=None,

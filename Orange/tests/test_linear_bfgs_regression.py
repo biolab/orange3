@@ -12,4 +12,4 @@ class LinearRegressionTest(unittest.TestCase):
                     LinearRegressionLearner()]
         results = CrossValidation(table, learners, k=3)
         rmse = RMSE(results)
-        self.assertTrue(rmse[0] < rmse[1])
+        self.assertLess(rmse[0], rmse[1])

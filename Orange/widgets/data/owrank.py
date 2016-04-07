@@ -40,6 +40,9 @@ SCORES = [
     score_meta("Information Gain", "Inf. gain", score.InfoGain),
     score_meta("Gain Ratio", "Gain Ratio", score.GainRatio),
     score_meta("Gini Gain", "Gini", score.Gini),
+    score_meta("ANOVA", "ANOVA", score.ANOVA),
+    score_meta("Chi2", "Chi2", score.Chi2),
+    score_meta("Univariate Linear Regression", "Univar. Lin. Reg.", score.UnivariateLinearRegression),
     score_meta("ReliefF", "ReliefF", score.ReliefF),
     score_meta("RReliefF", "RReliefF", score.RReliefF),
     score_meta("FCBF", "FCBF", score.FCBF),
@@ -154,6 +157,9 @@ class OWRank(widget.OWWidget):
         self.discRanksView.horizontalHeader().sectionClicked.connect(
             self.headerClick
         )
+        self.discRanksView.verticalHeader().sectionClicked.connect(
+            self.onSelectItem
+        )
 
         if self.headerState[0] is not None:
             self.discRanksView.horizontalHeader().restoreState(
@@ -174,7 +180,7 @@ class OWRank(widget.OWWidget):
         self.contRanksProxyModel.setSourceModel(self.contRanksModel)
         self.contRanksView.setModel(self.contRanksProxyModel)
 
-        self.discRanksView.setColumnWidth(0, 20)
+        self.contRanksView.setColumnWidth(0, 20)
         self.contRanksView.sortByColumn(1, Qt.DescendingOrder)
         self.contRanksView.selectionModel().selectionChanged.connect(
             self.commit
@@ -183,6 +189,10 @@ class OWRank(widget.OWWidget):
         self.contRanksView.horizontalHeader().sectionClicked.connect(
             self.headerClick
         )
+        self.contRanksView.verticalHeader().sectionClicked.connect(
+            self.onSelectItem
+        )
+
         if self.headerState[1] is not None:
             self.contRanksView.horizontalHeader().restoreState(
             self.headerState[1]
@@ -221,6 +231,7 @@ class OWRank(widget.OWWidget):
 
     @check_sql_input
     def setData(self, data):
+        self.information([0])
         self.error([0, 100])
         self.resetInternals()
 
@@ -259,6 +270,8 @@ class OWRank(widget.OWWidget):
             shape = (len(self.measures) + len(self.learners), len(attrs))
             self.measure_scores = table(shape, None)
             self.updateScores()
+        else:
+            self.send("Scores", None)
 
         self.selectMethodChanged()
         self.commit()
@@ -295,6 +308,8 @@ class OWRank(widget.OWWidget):
         """
         if not self.data:
             return
+        if self.data.has_missing():
+            self.information(0, "Missing values have been imputed.")
 
         measures = self.measures + [v for k, v in self.learners.items()]
         # Invalidate all warnings
@@ -315,7 +330,15 @@ class OWRank(widget.OWWidget):
                 continue
             if index < len(self.measures):
                 estimator = meas.score()
-                self.measure_scores[index] = estimator(data)
+                try:
+                    self.measure_scores[index] = estimator(data)
+                except ValueError:
+                    self.measure_scores[index] = []
+                    for attr in data.domain.attributes:
+                        try:
+                            self.measure_scores[index].append(estimator(data,attr))
+                        except ValueError:
+                            self.measure_scores[index].append(None)
             else:
                 learner = meas.score
                 if isinstance(learner, Learner) and \
@@ -328,10 +351,7 @@ class OWRank(widget.OWWidget):
         self.ranksProxyModel.invalidate()
         self.selectMethodChanged()
 
-        if self.data:
-            self.send("Scores", self.create_scores_table())
-        else:
-            self.send("Scores", None)
+        self.send("Scores", self.create_scores_table())
 
     def updateRankModel(self, measuresMask=None):
         """
@@ -390,6 +410,7 @@ class OWRank(widget.OWWidget):
         if self.selectMethod in [OWRank.SelectNone, OWRank.SelectAll,
                                  OWRank.SelectNBest]:
             self.autoSelection()
+        self.ranksView.setFocus()
 
     def nSelectedChanged(self):
         self.selectMethod = OWRank.SelectNBest
@@ -409,8 +430,6 @@ class OWRank(widget.OWWidget):
                 model.index(0, 0),
                 model.index(rowCount - 1, columnCount - 1)
             )
-            selModel.select(selection,
-                            QtGui.QItemSelectionModel.ClearAndSelect)
         elif self.selectMethod == OWRank.SelectNBest:
             nSelected = min(self.nSelected, rowCount)
             selection = QtGui.QItemSelection(
@@ -498,7 +517,8 @@ class OWRank(widget.OWWidget):
             return []
 
     def create_scores_table(self):
-        features = [ContinuousVariable(s[0]) for s in self.measures]
+        measures = self.measures + [v for k, v in self.learners.items()]
+        features = [ContinuousVariable(s[0]) for s in measures]
         metas = [StringVariable("Feature name")]
         domain = Domain(features, metas=metas)
 
@@ -507,7 +527,9 @@ class OWRank(widget.OWWidget):
         # Reshape to 2d array as Table does not like 1d arrays
         feature_names = feature_names[:, None]
 
-        return Orange.data.Table(domain, scores, metas=feature_names)
+        table = Orange.data.Table(domain, scores, metas=feature_names)
+        table.name = "Feature Scores"
+        return table
 
 
 class ScoreValueItem(QtGui.QStandardItem):
@@ -531,10 +553,19 @@ class ScoreValueItem(QtGui.QStandardItem):
 
 
 class MySortProxyModel(QtGui.QSortFilterProxyModel):
+
+    @staticmethod
+    def comparable(val):
+        return val is not None and float('-inf') < val < float('inf')
+
     def lessThan(self, left, right):
         role = self.sortRole()
         left_data = left.data(role)
+        if not self.comparable(left_data):
+            left_data = float('-inf')
         right_data = right.data(role)
+        if not self.comparable(right_data):
+            right_data = float('-inf')
         try:
             return left_data < right_data
         except TypeError:

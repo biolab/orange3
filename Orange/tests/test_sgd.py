@@ -13,4 +13,4 @@ class SGDRegressionTest(unittest.TestCase):
         data = Orange.data.Table(X, y)
         sgd = Orange.regression.SGDRegressionLearner()
         res = Orange.evaluation.CrossValidation(data, [sgd], k=3)
-        self.assertTrue(Orange.evaluation.RMSE(res)[0] < 0.1)
+        self.assertLess(Orange.evaluation.RMSE(res)[0], 0.1)

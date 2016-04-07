@@ -528,6 +528,7 @@ class FileFormat(metaclass=FileFormatMeta):
                        data.metas):
             write(['' if isinstance(val, Number) and isnan(val) else
                    var.values[int(val)] if var.is_discrete else
+                   var.repr_val(val) if isinstance(var, TimeVariable) else
                    val
                    for var, val in zip(vars, flatten(row))])
 
@@ -683,7 +684,7 @@ class DotFormat(FileFormat):
     DESCRIPTION = 'Dot graph description'
     SUPPORT_COMPRESSED = True
 
-    @staticmethod
+    @classmethod
     def write_graph(cls, filename, graph):
         from sklearn import tree
         tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))

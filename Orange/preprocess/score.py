@@ -7,7 +7,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
-from Orange.preprocess.preprocess import Discretize
+from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
 from Orange.util import abstract
 
 
@@ -25,7 +25,9 @@ __all__ = ["Chi2",
 class Scorer:
     feature_type = None
     class_type = None
-    preprocessors = ()
+    preprocessors = [
+        RemoveNaNClasses()
+    ]
 
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls)
@@ -61,6 +63,10 @@ class Scorer:
 
 
 class SklScorer(Scorer, metaclass=WrapperMeta):
+    preprocessors = Scorer.preprocessors + [
+        Impute()
+    ]
+
     def score_data(self, data, feature):
         score = self.score(data.X, data.Y)
         if feature is not None:
@@ -78,7 +84,7 @@ class Chi2(SklScorer):
     __wraps__ = skl_fss.chi2
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
-    preprocessors = [
+    preprocessors = SklScorer.preprocessors + [
         Discretize(remove_const=False)
     ]
 
@@ -122,12 +128,11 @@ class UnivariateLinearRegression(SklScorer):
 class LearnerScorer(Scorer):
 
     @abstract
-    def score(self, model):
+    def score(self, data):
         pass
 
     def score_data(self, data, feature=None):
-        model = self(data)
-        scores = self.score(model)
+        scores = self.score(data)
 
         if data.domain != self.domain:
             scores_grouped = defaultdict(list)
@@ -165,7 +170,7 @@ class ClassificationScorer(Scorer):
     """
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
-    preprocessors = [
+    preprocessors = Scorer.preprocessors + [
         Discretize(remove_const=False)
     ]
 

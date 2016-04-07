@@ -23,3 +23,6 @@ class OWWidgetName(widget.OWWidget):
 
         # controls
         gui.rubber(self.controlArea)
+
+    def handler(self, obj):
+        pass

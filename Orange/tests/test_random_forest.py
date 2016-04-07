@@ -7,82 +7,77 @@ from Orange.regression import RandomForestRegressionLearner
 
 
 class RandomForestTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.house = Table('housing')
+
     def test_RandomForest(self):
-        table = Table('iris')
         forest = RandomForestLearner()
-        results = CrossValidation(table, [forest], k=10)
+        results = CrossValidation(self.iris, [forest], k=10)
         ca = CA(results)
         self.assertGreater(ca, 0.9)
         self.assertLess(ca, 0.99)
 
     def test_predict_single_instance(self):
-        table = Table('iris')
         forest = RandomForestLearner()
-        c = forest(table)
-        for ins in table:
+        c = forest(self.iris)
+        for ins in self.iris:
             c(ins)
             val, prob = c(ins, c.ValueProbs)
 
     def test_predict_table(self):
-        table = Table('iris')
         forest = RandomForestLearner()
-        c = forest(table)
-        c(table)
-        vals, probs = c(table, c.ValueProbs)
+        c = forest(self.iris)
+        c(self.iris)
+        vals, probs = c(self.iris, c.ValueProbs)
 
     def test_predict_numpy(self):
-        table = Table('iris')
         forest = RandomForestLearner()
-        c = forest(table)
-        c(table.X)
-        vals, probs = c(table.X, c.ValueProbs)
+        c = forest(self.iris)
+        c(self.iris.X)
+        vals, probs = c(self.iris.X, c.ValueProbs)
 
     def test_RandomForestRegression(self):
-        table = Table('housing')
         forest = RandomForestRegressionLearner()
-        results = CrossValidation(table, [forest], k=10)
+        results = CrossValidation(self.house, [forest], k=10)
         _ = RMSE(results)
 
     def test_predict_single_instance_reg(self):
-        table = Table('housing')
         forest = RandomForestRegressionLearner()
-        model = forest(table)
-        for ins in table:
+        model = forest(self.house)
+        for ins in self.house:
             pred = model(ins)
-            self.assertTrue(pred > 0)
+            self.assertGreater(pred, 0)
 
     def test_predict_table_reg(self):
-        table = Table('housing')
         forest = RandomForestRegressionLearner()
-        model = forest(table)
-        pred = model(table)
-        self.assertEqual(len(table), len(pred))
-        self.assertTrue(all(pred) > 0)
+        model = forest(self.house)
+        pred = model(self.house)
+        self.assertEqual(len(self.house), len(pred))
+        self.assertGreater(all(pred), 0)
 
     def test_predict_numpy_reg(self):
-        table = Table('housing')
         forest = RandomForestRegressionLearner()
-        model = forest(table)
-        pred = model(table.X)
-        self.assertEqual(len(table), len(pred))
-        self.assertTrue(all(pred) > 0)
+        model = forest(self.house)
+        pred = model(self.house.X)
+        self.assertEqual(len(self.house), len(pred))
+        self.assertGreater(all(pred), 0)
 
     def test_classification_scorer(self):
-        data = Table('iris')
         learner = RandomForestLearner()
-        scores = learner.score_data(data)
-        self.assertEqual(len(scores), len(data.domain.attributes))
+        scores = learner.score_data(self.iris)
+        self.assertEqual(len(scores), len(self.iris.domain.attributes))
         self.assertNotEqual(sum(scores), 0)
         self.assertEqual(['petal length', 'petal width'],
-                         sorted([data.domain.attributes[i].name
+                         sorted([self.iris.domain.attributes[i].name
                                  for i in np.argsort(scores)[-2:]]))
 
     def test_regression_scorer(self):
-        data = Table('housing')
         learner = RandomForestRegressionLearner()
-        scores = learner.score_data(data)
+        scores = learner.score_data(self.house)
         self.assertEqual(['LSTAT', 'RM'],
-                         sorted([data.domain.attributes[i].name
+                         sorted([self.house.domain.attributes[i].name
                                  for i in np.argsort(scores)[-2:]]))
 
     def test_scorer_feature(self):

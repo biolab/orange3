@@ -3,42 +3,44 @@ import unittest
 import numpy as np
 
 import Orange
-from Orange.data import ContinuousVariable, DiscreteVariable, Table, Variable
+from Orange.data import Table, Variable
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
-    Chi2, GainRatio
+    Chi2
 from Orange.preprocess import SelectBestFeatures, Impute
 
 
 class TestFSS(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.titanic = Table('titanic')
+        cls.wine = Table('wine')
+        cls.iris = Table('iris')
+        cls.auro_mpg = Table('auto-mpg')
     def setUp(self):
         Variable._clear_all_caches()
 
     def test_select_1(self):
-        data = Table('titanic')
         gini = Gini()
         s = SelectBestFeatures(method=gini, k=1)
-        data2 = s(data)
-        best = max((gini(data, f), f) for f in data.domain.attributes)[1]
+        data2 = s(self.titanic)
+        best = max((gini(self.titanic, f), f) for f in self.titanic.domain.attributes)[1]
         self.assertEqual(data2.domain.attributes[0], best)
 
     def test_select_threshold(self):
-        data = Table('wine')
         anova = ANOVA()
         t = 30
-        data2 = SelectBestFeatures(method=anova, threshold=t)(data)
-        self.assertTrue(all(anova(data, f) >= t for f in data2.domain.attributes))
+        data2 = SelectBestFeatures(method=anova, threshold=t)(self.wine)
+        self.assertTrue(all(anova(self.wine, f) >= t for f in data2.domain.attributes))
 
     def test_error_when_using_regression_score_on_classification_data(self):
-        data = Table('wine')
         s = SelectBestFeatures(method=UnivariateLinearRegression(), k=3)
         with self.assertRaises(ValueError):
-            s(data)
+            s(self.wine)
 
     def test_discrete_scores_on_continuous_features(self):
-        data = Table('iris')
-        c = data.columns
+        c = self.iris.columns
         for method in (Gini, Chi2):
-            d1 = SelectBestFeatures(method=method)(data)
+            d1 = SelectBestFeatures(method=method)(self.iris)
             expected = \
                 (c.petal_length, c.petal_width, c.sepal_length, c.sepal_width)
             self.assertSequenceEqual(d1.domain.attributes, expected)
@@ -50,7 +52,7 @@ class TestFSS(unittest.TestCase):
             self.assertIsInstance(score, float)
 
     def test_continuous_scores_on_discrete_features(self):
-        data = Impute(Table('auto-mpg'))
+        data = Impute(self.auro_mpg)
         with self.assertRaises(ValueError):
             UnivariateLinearRegression(data)
 
@@ -59,11 +61,11 @@ class TestFSS(unittest.TestCase):
 
     def test_defaults(self):
         fs = SelectBestFeatures(k=3)
-        data2 = fs(Impute(Table('auto-mpg')))
+        data2 = fs(Impute(self.auro_mpg))
         self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
-        data2 = fs(Table('wine'))
+        data2 = fs(self.wine)
         self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
-        data2 = fs(Table('titanic'))
+        data2 = fs(self.titanic)
         self.assertTrue(all(a.is_discrete for a in data2.domain.attributes))
 
 

@@ -7,7 +7,8 @@ function print_usage {
     echo 'build-win-application.sh
 Build an Windows applicaiton installer for Orange Canvas
 
-Note: needs makensis and 7z on PATH
+Note: needs makensis and 7z on PATH, as well as a python environment with
+installed pip (>=7)
 
 Options:
 
@@ -57,12 +58,17 @@ done
 
 PLATTAG=win32
 
-PYTHON_VER=3.4.3
-PYTHON_MD5=cb450d1cc616bfc8f7a2d6bd88780bf6
+PYTHON_VER=3.4.4
+PYTHON_MD5=e96268f7042d2a3d14f7e23b2535738b
 
 PYTHON_VER_SHORT=${PYTHON_VER%.[0-9]*}
 PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
 PYTHON_MSI=python-$PYTHON_VER.msi
+
+# The minimum pip version required (this is the version which was shipped
+# with Python 3.4.3 (ensurepip)
+PIP_VER=6.0.8
+PIP_MD5=41e73fae2c86ba2270ff51c1d86f7e09
 
 PYQT_VER=4.11.4
 PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
@@ -70,8 +76,8 @@ PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
 NUMPY_VER=1.9.2
 NUMPY_MD5=0c06b7beabdc053ef63699ada0ee5e98
 
-SCIPY_VER=0.15.1
-SCIPY_MD5=e24c435e96dc7fbde8eac62ca8c969c8
+SCIPY_VER=0.16.1
+SCIPY_MD5=30bf5159326d859a42ed7718a8a09704
 
 DISTDIR=${DISTDIR:-dist}
 
@@ -105,49 +111,14 @@ mkdir -p "$DISTDIR"
 
 touch "$BUILDBASE"/requirements.txt
 
+# pinned requirements (numpy and scipy are handled separately)
 echo "
 #:wheel: scikit-learn https://pypi.python.org/packages/cp34/s/scikit-learn/scikit_learn-0.16.1-cp34-none-win32.whl#md5=ca5864cdf9f1938aa1a55d6092bf5c86
 scikit-learn==0.16.1
 
-#:wheel: matplotlib https://pypi.python.org/packages/cp34/m/matplotlib/matplotlib-1.4.2-cp34-none-win32.whl#md5=f18b7568493bece5c7b3eb7bb4203826
-matplotlib==1.4.2
-
-#:wheel: ipython https://pypi.python.org/packages/3.4/i/ipython/ipython-2.4.1-py3-none-any.whl#md5=7e377fe675a88eb49e720c98de4a7ee4
-ipython==2.4.1
-
-#:wheel: pyzmq https://pypi.python.org/packages/3.4/p/pyzmq/pyzmq-14.5.0-cp34-none-win32.whl#md5=333bc2f02d24aa2455ce4208b9d8666e
-pyzmq==14.5.0
-
-#:source: Markupsafe
-Markupsafe==0.23
-
-#:source: certifi
-certifi==14.05.14
-
-#:source: Jinja2
-jinja2==2.7.3
-
-#:source: tornado
-tornado==4.1
-
-#:wheel: pygments https://pypi.python.org/packages/3.3/P/Pygments/Pygments-2.0.2-py3-none-any.whl#md5=b38281817abc47c82cf3533b8c6608f6
-pygments==2.0.2
-
-#:wheel: networkx https://pypi.python.org/packages/2.7/n/networkx/networkx-1.9.1-py2.py3-none-any.whl#md5=15bb60c9b386563a6d4765264f5bf687
-networkx==1.9.1
-
-#:source: decorator
-decorator==3.4.0
-
-#:source: sqlparse
-sqlparse==0.1.13
-
 #:wheel: Bottlecheset https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl#md5=629ba2a148dfa784d0e6817497d42e97
 --find-links https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl
 Bottlechest==0.7.1
-
-#:source: pyqtgraph
-pyqtgraph==0.9.10
 " > "$BUILDBASE"/requirements.txt
 
 function __download_url {
@@ -161,7 +132,7 @@ function md5sum_check {
     local checksum=${2:?}
     local md5=
 
-    if [[ -x $(which md5 &> /dev/null) ]]; then
+    if which md5 &> /dev/null; then
         md5=$(md5 -q "$filepath")
     else
         md5=$(md5sum "$filepath" | cut -d " " -f 1)
@@ -226,6 +197,18 @@ function prepare_msvcr100 {
 }
 
 
+function prepare_pip {
+    local version=${PIP_VER:?}
+    local url=https://pypi.python.org/packages/py2.py3/p/pip/pip-${version}-py2.py3-none-any.whl
+    local md5=${PIP_MD5:?}
+    download_url "${url}" \
+                 "${DOWNLOADDIR}"/pip-${version}-py2.py3-none-any.whl \
+                 ${md5}
+    cp "$DOWNLOADDIR"/pip-${version}-py2.py3-none-any.whl \
+       "$BUILDBASE"/wheelhouse/
+}
+
+
 function prepare_pyqt4 {
     download_url \
         https://dl.dropboxusercontent.com/u/100248799/PyQt4-${PYQT_VER}-cp34-none-win32.whl \
@@ -284,6 +267,11 @@ function prepare_req {
 }
 
 function prepare_orange {
+    # ensure that correct numpy and scipy are installed in the build env
+    pip install --no-index -f "$BUILDBASE/wheelhouse" \
+                --only-binary numpy,scipy \
+                numpy==$NUMPY_VER, scipy==$SCIPY_VER
+
     python setup.py egg_info
     local version=$(grep -E "^Version: .*$" Orange.egg-info/PKG-INFO | awk '{ print $2 }')
 
@@ -291,8 +279,8 @@ function prepare_orange {
         build --compiler=msvc \
         bdist_wheel -d "$BUILDBASE/wheelhouse"
 
-	# Ensure all install_requires dependencies are available in the wheelhouse
-	prepare_req --only-binary numpy,scipy -r Orange.egg-info/requires.txt
+    # Ensure all install dependencies are available in the wheelhouse
+    prepare_req --only-binary numpy,scipy,scikit-learn,bottlechest .
 
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
     echo "Orange==$version" >> "$BUILDBASE/requirements.txt"
@@ -351,6 +339,7 @@ function prepare_startupscripts {
 function prepare_all {
     prepare_python
     prepare_msvcr100
+    prepare_pip
     prepare_scipy_stack
     prepare_pyqt4
     # Need to specifically restrict the numpy/scipy versions, otherwise

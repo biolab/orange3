@@ -1,3 +1,8 @@
+cd "$TRAVIS_BUILD_DIR"
+
+# build Orange inplace (needed for docs to build)
+python setup.py build_ext --inplace
+
 cd $TRAVIS_BUILD_DIR/doc/development
 make html
 cd $TRAVIS_BUILD_DIR/doc/data-mining-library

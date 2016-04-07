@@ -5,7 +5,7 @@ import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
 
 from Orange.data import Variable, ContinuousVariable
-from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
+from Orange.preprocess import Continuize, Normalize, RemoveNaNColumns, SklImpute
 from Orange.preprocess.score import LearnerScorer
 from Orange.regression import Learner, Model, SklLearner, SklModel
 
@@ -20,7 +20,9 @@ class _FeatureScorerMixin(LearnerScorer):
     feature_type = Variable
     class_type = ContinuousVariable
 
-    def score(self, model):
+    def score(self, data):
+        data = Normalize(data)
+        model = self(data)
         return np.abs(model.coefficients)
 
 

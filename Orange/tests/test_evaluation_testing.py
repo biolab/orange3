@@ -1,13 +1,13 @@
 import unittest
-import Orange
 import numpy as np
+import Orange
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.classification.majority import ConstantModel
 from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table
-from Orange.evaluation import *
+from Orange.evaluation import CrossValidation, LeaveOneOut, TestOnTrainingData, TestOnTestData, ShuffleSplit
 from Orange.preprocess import discretize, preprocess
 
 
@@ -70,6 +70,10 @@ class CommonSamplingTests:
 
 
 class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+
     def test_results(self):
         nrows, ncols = 1000, 10
         t = random_data(nrows, ncols)
@@ -120,12 +124,6 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         res = CrossValidation(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = CrossValidation(t, learners)
-        self.assertIsNone(res.data)
-
-        res = CrossValidation(t, learners, store_data=True)
-        self.assertIs(res.data, t)
-
     def test_store_models(self):
         nrows, ncols = 100, 10
         t = random_data(nrows, ncols)
@@ -141,23 +139,12 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
             self.assertIsInstance(models[0], NaiveBayesModel)
             self.assertIsInstance(models[1], ConstantModel)
 
-        res = CrossValidation(t, learners, k=5)
-        self.assertIsNone(res.models)
-
-        res = CrossValidation(t, learners, k=5, store_models=True)
-        self.assertEqual(len(res.models), 5)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
-
     def test_10_fold_probs(self):
-        data = Table('iris')[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
 
-        results = CrossValidation(data, learners, k=10)
+        results = CrossValidation(self.iris[30:130], learners, k=10)
 
-        self.assertEqual(results.predicted.shape, (2, len(data)))
+        self.assertEqual(results.predicted.shape, (2, len(self.iris[30:130])))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
@@ -176,10 +163,9 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
     def test_too_many_folds(self):
-        data = Table('iris')
         w = []
-        res = CrossValidation(data, [MajorityLearner()], k=len(data)/2, warnings=w)
-        self.assertTrue(len(w) > 0)
+        res = CrossValidation(self.iris, [MajorityLearner()], k=len(self.iris)/2, warnings=w)
+        self.assertGreater(len(w), 0)
 
     def test_failed(self):
         self.run_test_failed(CrossValidation, 20)
@@ -226,26 +212,10 @@ class LeaveOneOutTestCase(unittest.TestCase, CommonSamplingTests):
         res = LeaveOneOut(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = LeaveOneOut(t, learners)
-        self.assertIsNone(res.data)
-
-        res = LeaveOneOut(t, learners, store_data=True)
-        self.assertIs(res.data, t)
-
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = LeaveOneOut(t, learners)
-        self.assertIsNone(res.models)
-
-        res = LeaveOneOut(t, learners, store_models=True)
-        self.assertEqual(len(res.models), 50)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = LeaveOneOut(t, learners)
         self.assertIsNone(res.models)
@@ -322,26 +292,10 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         res = TestOnTrainingData(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
-        res = TestOnTrainingData(t, learners)
-        self.assertIsNone(res.data)
-
-        res = TestOnTrainingData(t, learners, store_data=True)
-        self.assertIs(res.data, t)
-
     def test_store_models(self):
         nrows, ncols = 50, 10
         t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = TestOnTrainingData(t, learners)
-        self.assertIsNone(res.models)
-
-        res = TestOnTrainingData(t, learners, store_models=True)
-        self.assertEqual(len(res.models), 1)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.models)
@@ -439,28 +393,12 @@ class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
         res = TestOnTestData(train, test, learners, store_data=True)
         self.assertIs(res.data, test)
 
-        res = TestOnTestData(train, test, learners)
-        self.assertIsNone(res.data)
-
-        res = TestOnTestData(train, test, learners, store_data=True)
-        self.assertIs(res.data, test)
-
     def test_store_models(self):
         nrows, ncols = 50, 10
         data = random_data(nrows, ncols)
         train = data[:80]
         test = data[80:]
         learners = [NaiveBayesLearner(), MajorityLearner()]
-
-        res = TestOnTestData(train, test, learners)
-        self.assertIsNone(res.models)
-
-        res = TestOnTestData(train, test, learners, store_models=True)
-        self.assertEqual(len(res.models), 1)
-        for models in res.models:
-            self.assertEqual(len(models), 2)
-            self.assertIsInstance(models[0], NaiveBayesModel)
-            self.assertIsInstance(models[1], ConstantModel)
 
         res = TestOnTestData(train, test, learners)
         self.assertIsNone(res.models)
@@ -568,6 +506,36 @@ class TestShuffleSplit(unittest.TestCase):
                            test_size=1 - train_size, n_resamples=n_resamples)
         self.assertEqual(len(res.predicted[0]),
                          n_resamples * nrows * (1 - train_size))
+
+    def test_stratified(self):
+        # strata size
+        n = 50
+        data = Table('iris')
+
+        res = ShuffleSplit(data, [NaiveBayesLearner()], train_size=.5, test_size=.5,
+                           n_resamples=3, stratified=True, random_state=0)
+
+        strata_samples = []
+        for train, test in res.indices:
+            strata_samples.append(np.count_nonzero(train < n) == n/2)
+            strata_samples.append(np.count_nonzero(train < 2 * n) == n)
+
+        self.assertTrue(all(strata_samples))
+
+    def test_not_stratified(self):
+        # strata size
+        n = 50
+        data = Table('iris')
+
+        res = ShuffleSplit(data, [NaiveBayesLearner()], train_size=.5, test_size=.5,
+                           n_resamples=3, stratified=False, random_state=0)
+
+        strata_samples = []
+        for train, test in res.indices:
+            strata_samples.append(np.count_nonzero(train < n) == n/2)
+            strata_samples.append(np.count_nonzero(train < 2 * n) == n)
+
+        self.assertTrue(not all(strata_samples))
 
 
 class TestAugmentedData(unittest.TestCase):

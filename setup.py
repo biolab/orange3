@@ -1,25 +1,29 @@
 #! /usr/bin/env python3
 
-import imp
 import os
 import sys
 import subprocess
+from setuptools import find_packages, Command
 
-import setuptools
+if sys.version_info < (3, 4):
+    sys.exit('Orange requires Python >= 3.4')
+try:
+    from numpy.distutils.core import setup
+except ImportError:
+    sys.exit('setup requires numpy; install numpy first')
 
 NAME = 'Orange'
 
-VERSION = '3.3'
+VERSION = '3.3.2'
 ISRELEASED = False
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
 LONG_DESCRIPTION = open(README_FILE).read()
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
-AUTHOR_EMAIL = 'contact@orange.biolab.si'
+AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
-DOWNLOAD_URL = 'https://bitbucket.org/biolab/orange/downloads'
-LICENSE = 'GPLv3'
+LICENSE = 'GPLv3+'
 
 KEYWORDS = (
     'data mining',
@@ -46,25 +50,22 @@ CLASSIFIERS = (
     'Intended Audience :: Developers',
 )
 
+requirements = ['requirements-core.txt', 'requirements-gui.txt']
 
-INSTALL_REQUIRES = (
-    'setuptools',
-    'numpy>=1.9.0',
-    'scipy',
-    'bottlechest',
-    'scikit-learn>=0.16',
-    'chardet>=2.3.0',   # encoding detection
-    'xlrd>=0.9.2',      # reading Excel files
-    'docutils',         # parsing docs for addon installation
-)
-
-if sys.version_info < (3, 4):
-    INSTALL_REQUIRES = INSTALL_REQUIRES + ("singledispatch",)
-
+INSTALL_REQUIRES = sorted(set(
+    line.partition('#')[0].strip()
+    for file in (os.path.join(os.path.dirname(__file__), file)
+                 for file in requirements)
+    for line in open(file)
+) - {''})
 
 ENTRY_POINTS = {
     "orange.canvas.help": (
-        "html-index = Orange.widgets:WIDGET_HELP_PATH",)
+        "html-index = Orange.widgets:WIDGET_HELP_PATH",
+    ),
+    "gui_scripts": (
+        "orange-canvas = Orange.canvas.__main__:main",
+    ),
 }
 
 
@@ -115,6 +116,7 @@ if not release:
         GIT_REVISION = git_version()
     elif os.path.exists('Orange/version.py'):
         # must be a source distribution, use existing version file
+        import imp
         version = imp.load_source("Orange.version", "Orange/version.py")
         GIT_REVISION = version.git_revision
     else:
@@ -132,7 +134,6 @@ if not release:
     finally:
         a.close()
 
-from numpy.distutils.core import setup
 
 def configuration(parent_package='', top_path=None):
     if os.path.exists('MANIFEST'):
@@ -155,46 +156,10 @@ def configuration(parent_package='', top_path=None):
     return config
 
 
-PACKAGES = [
-    "Orange",
-    "Orange.canvas",
-    "Orange.canvas.application",
-    "Orange.canvas.application.tutorials",
-    "Orange.canvas.canvas",
-    "Orange.canvas.canvas.items",
-    "Orange.canvas.document",
-    "Orange.canvas.gui",
-    "Orange.canvas.help",
-    "Orange.canvas.preview",
-    "Orange.canvas.registry",
-    "Orange.canvas.scheme",
-    "Orange.canvas.styles",
-    "Orange.canvas.utils",
-    "Orange.canvas.report",
-    "Orange.classification",
-    "Orange.clustering",
-    "Orange.data",
-    "Orange.data.sql",
-    "Orange.distance",
-    "Orange.evaluation",
-    "Orange.misc",
-    "Orange.preprocess",
-    "Orange.projection",
-    "Orange.regression",
-    "Orange.statistics",
-    "Orange.testing",
-    "Orange.widgets",
-    "Orange.widgets.data",
-    "Orange.widgets.visualize",
-    "Orange.widgets.classify",
-    "Orange.widgets.regression",
-    "Orange.widgets.evaluate",
-    "Orange.widgets.unsupervised",
-    "Orange.widgets.utils",
-    "Orange.widgets.utils.plot",
-    "Orange.widgets.utils.plot.primitives"
-]
+PACKAGES = find_packages()
 
+# Extra non .py, .{so,pyd} files that are installed within the package dir
+# hierarchy
 PACKAGE_DATA = {
     "Orange": ["datasets/*.{}".format(ext)
                for ext in ["tab", "csv", "basket", "info"]],
@@ -203,15 +168,36 @@ PACKAGE_DATA = {
     "Orange.canvas.application.tutorials": ["*.ows"],
     "Orange.canvas.report": ["icons/*.svg", "*.html"],
     "Orange.widgets": ["icons/*.png", "icons/*.svg"],
-    "Orange.widgets.data": ["icons/*.svg", "icons/paintdata/*.png", "icons/paintdata/*.svg"],
-    "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.classify": ["icons/*.svg"],
-    "Orange.widgets.regression": ["icons/*.svg"],
+    "Orange.widgets.data": ["icons/*.svg",
+                            "icons/paintdata/*.png",
+                            "icons/paintdata/*.svg"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
+    "Orange.widgets.visualize": ["icons/*.svg"],
+    "Orange.widgets.regression": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
-    "Orange.widgets.plot": ["*.fs", "*.gs", "*.vs"],
-    "Orange.widgets.plot.primitives": ["*.obj"],
+    "Orange.widgets.utils.plot": ["*.fs", "*.gs", "*.vs"],
+    "Orange.widgets.utils.plot.primitives": ["*.obj"],
+    "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]
 }
+
+
+class LintCommand(Command):
+    """A setup.py lint subcommand developers can run locally."""
+    description = "run code linter(s)"
+    user_options = []
+    initialize_options = finalize_options = lambda self: None
+
+    def run(self):
+        """Lint current branch compared to a reasonable master branch"""
+        sys.exit(subprocess.call(r'''
+        set -eu
+        upstream="$(git remote -v |
+                    awk '/[@\/]github.com[:\/]biolab\/orange3[\. ]/{ print $1; exit }')"
+        git fetch -q $upstream master
+        best_ancestor=$(git merge-base HEAD refs/remotes/$upstream/master)
+        .travis/check_pylint_diff $best_ancestor
+        ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
 
 
 def setup_package():
@@ -224,7 +210,6 @@ def setup_package():
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         url=URL,
-        download_url=DOWNLOAD_URL,
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
@@ -233,9 +218,10 @@ def setup_package():
         install_requires=INSTALL_REQUIRES,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
-        include_package_data=True,
         test_suite='Orange.tests.test_suite',
-
+        cmdclass={
+            'lint': LintCommand,
+        },
     )
 
 if __name__ == '__main__':
