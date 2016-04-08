@@ -1,3 +1,7 @@
+"""
+Wrappers for controls used in widgets
+"""
+
 import math
 import os
 import re
@@ -6,7 +10,6 @@ import warnings
 from types import LambdaType
 
 import pkg_resources
-import numpy
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
@@ -20,7 +23,8 @@ from Orange.widgets.utils import getdeepattr
 from Orange.data import \
     ContinuousVariable, StringVariable, TimeVariable, DiscreteVariable, Variable
 from Orange.widgets.utils import vartype
-from Orange.widgets.utils.constants import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
+from Orange.widgets.utils.constants import \
+    CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 from Orange.util import namegen
 
 YesNo = NoYes = ("No", "Yes")
@@ -40,196 +44,29 @@ def resource_filename(path):
     return pkg_resources.resource_filename(__name__, path)
 
 
-class TableWidget(QtGui.QTableWidget):
-    """ An easy to use, row-oriented table widget """
-
-    ROW_DATA_ROLE = QtCore.Qt.UserRole + 1
-    ITEM_DATA_ROLE = ROW_DATA_ROLE + 1
-
-    class TableWidgetNumericItem(QtGui.QTableWidgetItem):
-        """TableWidgetItem that sorts numbers correctly!"""
-        def __lt__(self, other):
-            return (self.data(TableWidget.ITEM_DATA_ROLE) <
-                    other.data(TableWidget.ITEM_DATA_ROLE))
-
-    def selectionChanged(self, selected:[QtGui.QItemSelectionRange], deselected:[QtGui.QItemSelectionRange]):
-        """Override or monkey-patch this method to catch selection changes"""
-        super().selectionChanged(selected, deselected)
-
-    def __setattr__(self, attr, value):
-        """
-        The following selectionChanged magic ensures selectionChanged
-        slot, when monkey-patched, always calls the super's selectionChanged
-        first (--> avoids Qt quirks), and the user needs not care about that.
-        """
-        if attr == 'selectionChanged':
-            func = value
-            @QtCore.pyqtSlot(QtGui.QItemSelection, QtGui.QItemSelection)
-            def _f(selected, deselected):
-                super(self.__class__, self).selectionChanged(selected, deselected)
-                func(selected, deselected)
-            value = _f
-        self.__dict__[attr] = value
-
-    def _update_headers(func):
-        """Decorator to update certain table features after method calls"""
-        def _f(self, *args, **kwargs):
-            func(self, *args, **kwargs)
-            if self.col_labels is not None:
-                self.setHorizontalHeaderLabels(self.col_labels)
-            if self.row_labels is not None:
-                self.setVerticalHeaderLabels(self.row_labels)
-            if self.stretch_last_section:
-                self.horizontalHeader().setStretchLastSection(True)
-        return _f
-
-    @_update_headers
-    def __init__(self,
-                 parent=None,
-                 col_labels=None,
-                 row_labels=None,
-                 stretch_last_section=True,
-                 multi_selection=False,
-                 select_rows=False):
-        """
-        Parameters
-        ----------
-        parent: QObject
-            Parent QObject. If parent has layout(), this widget is added to it.
-        col_labels: list of str
-            Labels or [] (sequential numbers) or None (no horizontal header)
-        row_label: list_of_str
-            Labels or [] (sequential numbers) or None (no vertical header)
-        stretch_last_section: bool
-        multi_selection: bool
-            Single selection if False
-        select_rows: bool
-            If True, select whole rows instead of individual cells.
-        """
-        super().__init__(parent)
-        self._column_filter = {}
-        self.col_labels = col_labels
-        self.row_labels = row_labels
-        self.stretch_last_section = stretch_last_section
-        try: parent.layout().addWidget(self)
-        except (AttributeError, TypeError): pass
-        if col_labels is None:
-            self.horizontalHeader().setVisible(False)
-        if row_labels is None:
-            self.verticalHeader().setVisible(False)
-        if multi_selection:
-            self.setSelectionMode(self.MultiSelection)
-        if select_rows:
-            self.setSelectionBehavior(self.SelectRows)
-        self.setHorizontalScrollMode(self.ScrollPerPixel)
-        self.setVerticalScrollMode(self.ScrollPerPixel)
-        self.setEditTriggers(self.NoEditTriggers)
-        self.setAlternatingRowColors(True)
-        self.setShowGrid(False)
-        self.setSortingEnabled(True)
-
-    @_update_headers
-    def addRow(self, items:tuple, data=None):
-        """
-        Appends iterable of `items` as the next row, optionally setting row
-        data to `data`. Each item of `items` can be a string or tuple
-        (item_name, item_data) if individual, cell-data is required.
-        """
-        row_data = data
-        row = self.rowCount()
-        self.insertRow(row)
-        col_count = max(len(items), self.columnCount())
-        if col_count != self.columnCount():
-            self.setColumnCount(col_count)
-        for col, item_data in enumerate(items):
-            if isinstance(item_data, str):
-                name = item_data
-            elif hasattr(item_data, '__iter__') and len(item_data) == 2:
-                name, item_data = item_data
-            elif isinstance(item_data, float):
-                name = '{:.4f}'.format(item_data)
-            else:
-                name = str(item_data)
-            if isinstance(item_data, (float, int, numpy.number)):
-                item = self.TableWidgetNumericItem(name)
-            else:
-                item = QtGui.QTableWidgetItem(name)
-            item.setData(self.ITEM_DATA_ROLE, item_data)
-            if col in self._column_filter:
-                item = self._column_filter[col](item) or item
-            self.setItem(row, col, item)
-        self.resizeColumnsToContents()
-        self.resizeRowsToContents()
-        if row_data is not None:
-            self.setRowData(row, row_data)
-
-    def rowData(self, row:int):
-        return self.item(row, 0).data(self.ROW_DATA_ROLE)
-
-    def setRowData(self, row:int, data):
-        self.item(row, 0).setData(self.ROW_DATA_ROLE, data)
-
-    def setColumnFilter(self, item_filter_func, columns:int or list):
-        """
-        Pass item(s) at column(s) through `item_filter_func` before
-        insertion. Useful for setting specific columns to bold or similar.
-        """
-        try: iter(columns)
-        except TypeError: columns = [columns]
-        for i in columns:
-            self._column_filter[i] = item_filter_func
-
-    def clear(self):
-        super().clear()
-        self.setRowCount(0)
-        self.setColumnCount(0)
-
-    def selectFirstRow(self):
-        if self.rowCount() > 0:
-            self.selectRow(0)
-
-    def selectRowsWhere(self, col, value, n_hits=-1,
-                        flags=QtCore.Qt.MatchExactly, _select=True):
-        """
-        Select (also return) at most `n_hits` rows where column `col`
-        has value (``data()``) `value`.
-        """
-        model = self.model()
-        matches = model.match(model.index(0, col),
-                              self.ITEM_DATA_ROLE,
-                              value,
-                              n_hits,
-                              flags)
-        model = self.selectionModel()
-        selection_flag = model.Select if _select else model.Deselect
-        for index in matches:
-            if _select ^ model.isSelected(index):
-                model.select(index, selection_flag | model.Rows)
-        return matches
-
-    def deselectRowsWhere(self, col, value, n_hits=-1,
-                          flags=QtCore.Qt.MatchExactly):
-        """
-        Deselect (also return) at most `n_hits` rows where column `col`
-        has value (``data()``) `value`.
-        """
-        return self.selectRowsWhere(col, value, n_hits, flags, False)
-
-
 class ControlledAttributesDict(dict):
+    """
+    Dictionary with names of attributes for which the `master` needs to be
+    notified of their changes
+    """
     def __init__(self, master):
         super().__init__()
         self.master = master
 
     def __setitem__(self, key, value):
         if key not in self:
-            dict.__setitem__(self, key, [value])
+            super().__setitem__(key, [value])
         else:
-            dict.__getitem__(self, key).append(value)
+            super().__getitem__(key).append(value)
         set_controllers(self.master, key, self.master, "")
 
-callbacks = lambda obj: getattr(obj, CONTROLLED_ATTRIBUTES, {})
-subcontrollers = lambda obj: getattr(obj, ATTRIBUTE_CONTROLLERS, {})
+
+def callbacks(obj):
+    return getattr(obj, CONTROLLED_ATTRIBUTES, {})
+
+
+def subcontrollers(obj):
+    return getattr(obj, ATTRIBUTE_CONTROLLERS, {})
 
 
 def notify_changed(obj, name, value):
@@ -274,6 +111,10 @@ def set_controllers(obj, controlled_name, controller, prefix):
 
 
 class OWComponent:
+    """
+    Mixin for classes that are not derived from :obj:`Orange.widgets.OWWidget`
+    but still contain controlled attributes.
+    """
     def __init__(self, widget):
         setattr(self, CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
 
@@ -1541,8 +1382,8 @@ def hSlider(widget, master, value, box=None, minValue=0, maxValue=10, step=1,
 
 
 def labeledSlider(widget, master, value, box=None,
-                 label=None, labels=(), labelFormat=" %d", ticks=False,
-                 callback=None, vertical=False, width=None, **misc):
+                  label=None, labels=(), labelFormat=" %d", ticks=False,
+                  callback=None, vertical=False, width=None, **misc):
     """
     Construct a slider with labels instead of numbers.
 
@@ -1924,29 +1765,31 @@ class OrangeListBox(QtGui.QListWidget):
     def sizeHint(self):
         return self.size_hint
 
-    def dragEnterEvent(self, ev):
-        super().dragEnterEvent(ev)
+    def dragEnterEvent(self, event):
+        super().dragEnterEvent(event)
         if self.valid_data_callback:
-            self.valid_data_callback(ev)
-        elif isinstance(ev.source(), OrangeListBox):
-            ev.setDropAction(Qt.MoveAction)
-            ev.accept()
+            self.valid_data_callback(event)
+        elif isinstance(event.source(), OrangeListBox):
+            event.setDropAction(Qt.MoveAction)
+            event.accept()
         else:
-            ev.ignore()
+            event.ignore()
 
-    def dropEvent(self, ev):
-        ev.setDropAction(Qt.MoveAction)
-        super().dropEvent(ev)
+    def dropEvent(self, event):
+        event.setDropAction(Qt.MoveAction)
+        super().dropEvent(event)
 
         items = self.update_master()
-        if ev.source() is not self:
-            ev.source().update_master(exclude=items)
+        if event.source() is not self:
+            event.source().update_master(exclude=items)
 
         if self.drop_callback:
             self.drop_callback()
 
     def update_master(self, exclude=()):
-        control_list = [self.item(i).data(Qt.UserRole) for i in range(self.count()) if self.item(i).data(Qt.UserRole) not in exclude]
+        control_list = [self.item(i).data(Qt.UserRole)
+                        for i in range(self.count())
+                        if self.item(i).data(Qt.UserRole) not in exclude]
         if self.ogLabels:
             master_list = getattr(self.master, self.ogLabels)
 
@@ -1997,8 +1840,8 @@ class SmallWidgetButton(QtGui.QPushButton):
         self.autohideWidget.hide()
         miscellanea(self, self.widget, widget, **misc)
 
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
         if self.autohideWidget.isVisible():
             self.autohideWidget.hide()
         else:
@@ -2032,8 +1875,8 @@ class SmallWidgetLabel(QtGui.QLabel):
         self.autohideWidget.hide()
         miscellanea(self, self.widget, widget, **misc)
 
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
         if self.autohideWidget.isVisible():
             self.autohideWidget.hide()
         else:
@@ -2086,6 +1929,9 @@ class Searcher:
     def __init__(self, control, master):
         self.control = control
         self.master = master
+        self.allItems = []
+        self.lb = None
+        self.window = None
 
     def __call__(self):
         _s = QtGui.QStyle
@@ -2110,11 +1956,10 @@ class Searcher:
         le.returnPressed.connect(self.returnPressed)
         self.lb.itemClicked.connect(self.mouseClicked)
 
-    def textChanged(self, s):
-        s = str(s)
+    def textChanged(self, text):
         self.lb.clear()
         for i in self.allItems:
-            if s.lower() in i.lower():
+            if text.lower() in i.lower():
                 self.lb.insertItem(i)
 
     def returnPressed(self):
@@ -2202,7 +2047,7 @@ class widgetHider(QtGui.QWidget):
         if widgets:
             self.setWidgets(widgets)
 
-    def mousePressEvent(self, ev):
+    def mousePressEvent(self, event):
         self.master.__setattr__(self.value,
                                 not getdeepattr(self.master, self.value))
         self.makeConsistent()
@@ -2211,8 +2056,8 @@ class widgetHider(QtGui.QWidget):
         self.disables = list(widgets)
         self.makeConsistent()
 
-    def paintEvent(self, ev):
-        super().paintEvent(ev)
+    def paintEvent(self, event):
+        super().paintEvent(event)
         if self.pixmaps:
             pix = self.pixmaps[getdeepattr(self.master, self.value)]
             painter = QtGui.QPainter(self)
@@ -2346,7 +2191,7 @@ class ControlledList(list):
     # TODO ControllgedList.item2name is probably never used
     def item2name(self, item):
         item = self.listBox.labels[item]
-        if type(item) is tuple:
+        if isinstance(item, tuple):
             return item[1]
         else:
             return item
@@ -2405,7 +2250,7 @@ def connectControl(master, value, f, signal,
     if cfunc:
         if signal:
             signal.connect(cfunc)
-        cfront.opposite = tuple(filter(None, (cback, cfunc)))
+        cfront.opposite = tuple(x for x in (cback, cfunc) if x)
     return cfront, cback, cfunc
 
 
@@ -2413,7 +2258,7 @@ class ControlledCallback:
     def __init__(self, widget, attribute, f=None):
         self.widget = widget
         self.attribute = attribute
-        self.f = f
+        self.func = f
         self.disabled = 0
         if isinstance(widget, dict):
             return  # we can't assign attributes to dict
@@ -2424,17 +2269,17 @@ class ControlledCallback:
     def acyclic_setattr(self, value):
         if self.disabled:
             return
-        if self.f:
-            if self.f in (int, float) and (
+        if self.func:
+            if self.func in (int, float) and (
                     not value or isinstance(value, str) and value in "+-"):
-                value = self.f(0)
+                value = self.func(0)
             else:
-                value = self.f(value)
+                value = self.func(value)
         opposite = getattr(self, "opposite", None)
         if opposite:
             try:
                 opposite.disabled += 1
-                if type(self.widget) is dict:
+                if isinstance(self.widget, dict):
                     self.widget[self.attribute] = value
                 else:
                     setattr(self.widget, self.attribute, value)
@@ -2452,13 +2297,7 @@ class ValueCallback(ControlledCallback):
     def __call__(self, value):
         if value is None:
             return
-        try:
-            self.acyclic_setattr(value)
-        except:
-            print("gui.ValueCallback: %s" % value)
-            import traceback
-            import sys
-            traceback.print_exception(*sys.exc_info())
+        self.acyclic_setattr(value)
 
 
 class ValueCallbackCombo(ValueCallback):
@@ -2480,15 +2319,9 @@ class ValueCallbackLineEdit(ControlledCallback):
     def __call__(self, value):
         if value is None:
             return
-        try:
-            pos = self.control.cursorPosition()
-            self.acyclic_setattr(value)
-            self.control.setCursorPosition(pos)
-        except:
-            print("invalid value ", value, type(value))
-            import traceback
-            import sys
-            traceback.print_exception(*sys.exc_info())
+        pos = self.control.cursorPosition()
+        self.acyclic_setattr(value)
+        self.control.setCursorPosition(pos)
 
 
 class SetLabelCallback:
@@ -2512,7 +2345,7 @@ class FunctionCallback:
     def __init__(self, master, f, widget=None, id=None, getwidget=False):
         self.master = master
         self.widget = widget
-        self.f = f
+        self.func = f
         self.id = id
         self.getwidget = getwidget
         if hasattr(master, "callbackDeposit"):
@@ -2526,11 +2359,11 @@ class FunctionCallback:
                 kwds['id'] = self.id
             if self.getwidget:
                 kwds['widget'] = self.widget
-            if isinstance(self.f, list):
-                for f in self.f:
-                    f(**kwds)
+            if isinstance(self.func, list):
+                for func in self.func:
+                    func(**kwds)
             else:
-                self.f(**kwds)
+                self.func(**kwds)
 
 
 class CallBackListBox:
@@ -2771,9 +2604,9 @@ class Disabler:
             else:
                 disabled = not getdeepattr(self.master, self.valueName)
         else:
-            disabled = 1
+            disabled = True
         for w in self.widget.disables:
-            if type(w) is tuple:
+            if isinstance(w, tuple):
                 if isinstance(w[0], int):
                     i = 1
                     if w[0] == -1:
@@ -3293,18 +3126,18 @@ def tabWidget(widget):
     return w
 
 
-def createTabPage(tabWidget, name, widgetToAdd=None, canScroll=False):
+def createTabPage(tab_widget, name, widgetToAdd=None, canScroll=False):
     if widgetToAdd is None:
-        widgetToAdd = widgetBox(tabWidget, addToLayout=0, margin=4)
+        widgetToAdd = widgetBox(tab_widget, addToLayout=0, margin=4)
     if canScroll:
         scrollArea = QtGui.QScrollArea()
-        tabWidget.addTab(scrollArea, name)
+        tab_widget.addTab(scrollArea, name)
         scrollArea.setWidget(widgetToAdd)
         scrollArea.setWidgetResizable(1)
         scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
     else:
-        tabWidget.addTab(widgetToAdd, name)
+        tab_widget.addTab(widgetToAdd, name)
     return widgetToAdd
 
 
@@ -3340,9 +3173,9 @@ class VisibleHeaderSectionContextEventFilter(QtCore.QObject):
             action.setChecked(not checked)
             menu.addAction(action)
 
-            def toogleHidden(b, section=i):
-                view.setSectionHidden(section, not b)
-                if not b:
+            def toogleHidden(visible, section=i):
+                view.setSectionHidden(section, not visible)
+                if not visible:
                     return
                 if self.itemView:
                     self.itemView.resizeColumnToContents(section)
@@ -3388,14 +3221,20 @@ def toolButtonSizeHint(button=None, style=None):
 
 
 class FloatSlider(QtGui.QSlider):
+    """
+    Slider for continuous values.
+
+    The slider is derived from `QtGui.QSlider`, but maps from its discrete
+    numbers to the desired continuous interval.
+    """
     valueChangedFloat = Signal(float)
 
     def __init__(self, orientation, min_value, max_value, step, parent=None):
         super().__init__(orientation, parent)
         self.setScale(min_value, max_value, step)
-        self.valueChanged[int].connect(self.sendValue)
+        self.valueChanged[int].connect(self._send_value)
 
-    def update(self):
+    def _update(self):
         self.setSingleStep(1)
         if self.min_value != self.max_value:
             self.setEnabled(True)
@@ -3404,15 +3243,29 @@ class FloatSlider(QtGui.QSlider):
         else:
             self.setEnabled(False)
 
-    def sendValue(self, slider_value):
+    def _send_value(self, slider_value):
         value = min(max(slider_value * self.step, self.min_value),
                     self.max_value)
         self.valueChangedFloat.emit(value)
 
     def setValue(self, value):
+        """
+        Set current value. The value is divided by `step`
+
+        Args:
+            value: new value
+        """
         super().setValue(value // self.step)
 
     def setScale(self, minValue, maxValue, step=0):
+        """
+        Set slider's ranges (compatibility with qwtSlider).
+
+        Args:
+            minValue (float): minimal value
+            maxValue (float): maximal value
+            step (float): step
+        """
         if minValue >= maxValue:
             ## It would be more logical to disable the slider in this case
             ## (self.setEnabled(False))
@@ -3427,9 +3280,17 @@ class FloatSlider(QtGui.QSlider):
         self.min_value = float(minValue)
         self.max_value = float(maxValue)
         self.step = step
-        self.update()
+        self._update()
 
     def setRange(self, minValue, maxValue, step=1.0):
+        """
+        Set slider's ranges (compatibility with qwtSlider).
+
+        Args:
+            minValue (float): minimal value
+            maxValue (float): maximal value
+            step (float): step
+        """
         # For compatibility with qwtSlider
         # TODO If it's related to Qwt, remove it
         self.setScale(minValue, maxValue, step)
