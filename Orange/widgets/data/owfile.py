@@ -16,6 +16,7 @@ from Orange.data.io import FileFormat, ExcelFormat
 # module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
 
+
 def add_origin(examples, filename):
     """Adds attribute with file location to each variable"""
     vars = examples.domain.variables + examples.domain.metas
@@ -24,6 +25,7 @@ def add_origin(examples, filename):
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
             var.attributes["origin"] = dir_name
+
 
 class NamedURLModel(PyListModel):
     def __init__(self, mapping):
@@ -40,27 +42,22 @@ class NamedURLModel(PyListModel):
         self.mapping[url] = name
         self.modelReset.emit()
 
+
 class XlsContextHandler(ContextHandler):
     def new_context(self, filename, sheet):
         context = super().new_context()
         context.filename = filename
-        context.xls_sheet = sheet
         return context
 
     # noinspection PyMethodOverriding
     def match(self, context, filename, sheets):
-        if context.filename == filename and context.xls_sheet in sheets:
-            return 2
-        if context.xls_sheet in sheets:
+        context_sheet = context.values.get("xls_sheet")
+        if context.filename == filename and context_sheet in sheets:
+            return ContextHandler.PERFECT_MATCH
+        if context_sheet in sheets:
             return 1
-        return 0
+        return ContextHandler.NO_MATCH
 
-    def settings_from_widget(self, widget):
-        if widget.current_context is not None:
-            widget.current_context.xls_sheet = widget.xls_sheet
-
-    def settings_to_widget(self, widget):
-        widget.xls_sheet = widget.current_context.xls_sheet
 
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
@@ -118,33 +115,36 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.layout().addWidget(self.file_combo)
         layout.addWidget(box, 0, 1)
 
-        fileButton = gui.button(
+        file_button = gui.button(
             None, self, '...', callback=self.browse_file, autoDefault=False)
-        fileButton.setIcon(self.style().standardIcon(
+        file_button.setIcon(self.style().standardIcon(
             QtGui.QStyle.SP_DirOpenIcon))
-        fileButton.setSizePolicy(Policy.Maximum, Policy.Fixed)
-        layout.addWidget(fileButton, 0, 2)
+        file_button.setSizePolicy(Policy.Maximum, Policy.Fixed)
+        layout.addWidget(file_button, 0, 2)
 
-        reloadButton = gui.button(
+        reload_button = gui.button(
             None, self, "Reload", callback=self.reload, autoDefault=False)
-        reloadButton.setIcon(self.style().standardIcon(
+        reload_button.setIcon(self.style().standardIcon(
             QtGui.QStyle.SP_BrowserReload))
-        reloadButton.setSizePolicy(Policy.Fixed, Policy.Fixed)
-        layout.addWidget(reloadButton, 0, 3)
+        reload_button.setSizePolicy(Policy.Fixed, Policy.Fixed)
+        layout.addWidget(reload_button, 0, 3)
 
-        self.hBLayout = gui.hBox(None, addToLayout=False, margin=0)
+        self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
-                                        callback=self.select_sheet, sendSelectedValue=True)
+                                        callback=self.load_data,
+                                        sendSelectedValue=True)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_label = QtGui.QLabel()
         self.sheet_label.setText('Sheet')
         self.sheet_label.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
-        self.hBLayout.layout().addWidget(self.sheet_label, QtCore.Qt.AlignLeft)
-        self.hBLayout.layout().addWidget(self.sheet_combo, QtCore.Qt.AlignVCenter)
-        layout.addWidget(self.hBLayout, 2, 1)
-        self.hBLayout.hide()
+        self.sheet_box.layout().addWidget(
+            self.sheet_label, QtCore.Qt.AlignLeft)
+        self.sheet_box.layout().addWidget(
+            self.sheet_combo, QtCore.Qt.AlignVCenter)
+        layout.addWidget(self.sheet_box, 2, 1)
+        self.sheet_box.hide()
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
         layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
@@ -180,10 +180,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.warnings.setSizePolicy(Policy.Ignored, Policy.MinimumExpanding)
 
         self.set_file_list()
-        # Must not call open_file from within __init__. open_file
-        # explicitly re-enters the event loop (by a progress bar)
         if self.last_path() is not None:
             self.fill_sheet_combo(self.last_path())
+        # Must not call open_file from within __init__. open_file
+        # explicitly re-enters the event loop (by a progress bar)
         QtCore.QTimer.singleShot(0, self.load_data)
 
     def reload(self):
@@ -249,14 +249,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if os.path.exists(path) and self.is_multisheet_excel(path):
             self.closeContext()
             self.sheet_combo.clear()
-            self.hBLayout.show()
+            self.sheet_box.show()
             book = open_workbook(path)
             sheet_names = [str(book.sheet_by_index(i).name)
                            for i in range(book.nsheets)]
             self.sheet_combo.addItems(sheet_names)
             self.openContext(path, sheet_names)
         else:
-            self.hBLayout.hide()
+            self.sheet_box.hide()
 
     @staticmethod
     def is_multisheet_excel(fn):
@@ -264,9 +264,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return open_workbook(fn).nsheets > 1
         except XLRDError:
             return False
-
-    def select_sheet(self):
-        self.load_data()
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
@@ -287,12 +284,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     fn = os.path.join(".", basename)
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
-
             if self.is_multisheet_excel(fn):
-                if self.xls_sheet:
-                    data = ExcelFormat.read_file(fn + ':' + self.xls_sheet)
-                    if data:
-                        return data, fn
+                data = ExcelFormat.read_file(fn + ':' + self.xls_sheet)
+                if data:
+                    return data, fn
 
             try:
                 return load(Table.from_file, fn)
@@ -396,6 +391,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                        self.loaded_file[len(home):].lstrip("/").lstrip("\\")
             else:
                 name = self.loaded_file
+            if self.sheet_combo.isVisible():
+                name += " ({})".format(self.sheet_combo.currentText())
             self.report_items("File", [("File name", name),
                                        ("Format", get_ext_name(name))])
         else:
