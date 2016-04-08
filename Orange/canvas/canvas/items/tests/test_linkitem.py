@@ -15,7 +15,7 @@ class TestLinkItem(TestItems):
 
         data_desc = reg.category("Data")
 
-        file_desc = reg.widget("Orange.OrangeWidgets.Data.OWFile.OWFile")
+        file_desc = reg.widget("Orange.widgets.data.owfile.OWFile")
 
         file_item = NodeItem()
         file_item.setWidgetDescription(file_desc)
@@ -23,7 +23,7 @@ class TestLinkItem(TestItems):
         file_item.setPos(0, 100)
 
         discretize_desc = reg.widget(
-            "Orange.OrangeWidgets.Data.OWDiscretize.OWDiscretize"
+            "Orange.widgets.data.owdiscretize.OWDiscretize"
         )
 
         discretize_item = NodeItem()
@@ -33,7 +33,7 @@ class TestLinkItem(TestItems):
         classify_desc = reg.category("Classify")
 
         bayes_desc = reg.widget(
-            "Orange.OrangeWidgets.Classify.OWNaiveBayes.OWNaiveBayes"
+            "Orange.widgets.classify.ownaivebayes.OWNaiveBayes"
         )
 
         nb_item = NodeItem()

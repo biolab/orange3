@@ -1322,7 +1322,7 @@ class SequenceFlow(QWidget):
         def paintEvent(self, event):
             painter = QStylePainter(self)
             opt = QStyleOptionFrame()
-            opt.init(self)
+            opt.initFrom(self)
             painter.drawPrimitive(QStyle.PE_FrameDockWidget, opt)
             painter.end()
 
@@ -1336,8 +1336,9 @@ class SequenceFlow(QWidget):
 
         def focusOutEvent(self, event):
             event.accept()
-            self.__focusframe.deleteLater()
-            self.__focusframe = None
+            if self.__focusframe is not None:
+                self.__focusframe.deleteLater()
+                self.__focusframe = None
             self.__deleteaction.setEnabled(False)
 
         def closeEvent(self, event):
@@ -1580,7 +1581,7 @@ class SequenceFlow(QWidget):
         if hotSpot is not None:
             drag.setHotSpot(hotSpot)
         mime = QMimeData()
-        mime.setData("application/x-internal-move", "")
+        mime.setData("application/x-internal-move", b"")
         drag.setMimeData(mime)
         return drag.exec_(Qt.MoveAction)
 
@@ -1638,7 +1639,7 @@ class OWPreprocess(widget.OWWidget):
             index = indexlist[0]
             qname = index.data(DescriptionRole).qualname
             m = QMimeData()
-            m.setData("application/x-qwidget-ref", qname)
+            m.setData("application/x-qwidget-ref", qname.encode("utf-8"))
             return m
         # TODO: Fix this (subclass even if just to pass a function
         # for mimeData delegate)

@@ -35,9 +35,9 @@ class TestSchemeEdit(QAppTestCase):
 
         w.show()
 
-        base = "Orange.OrangeWidgets."
-        file_desc = reg.widget(base + "Data.OWFile.OWFile")
-        disc_desc = reg.widget(base + "Data.OWDiscretize.OWDiscretize")
+        base = "Orange.widgets."
+        file_desc = reg.widget(base + "data.owfile.OWFile")
+        disc_desc = reg.widget(base + "data.owdiscretize.OWDiscretize")
 
         node_list = []
         link_list = []

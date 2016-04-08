@@ -126,7 +126,7 @@ class AnimatedStackedWidget(QFrame):
         self.__fadeWidget = CrossFadePixmapWidget(self)
 
         self.transitionAnimation = \
-            QPropertyAnimation(self.__fadeWidget, "blendingFactor_", self)
+            QPropertyAnimation(self.__fadeWidget, b"blendingFactor_", self)
         self.transitionAnimation.setStartValue(0.0)
         self.transitionAnimation.setEndValue(1.0)
         self.transitionAnimation.setDuration(100 if animationEnabled else 0)

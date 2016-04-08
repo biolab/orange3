@@ -50,7 +50,7 @@ class ColorPaletteDlg(QDialog):
     def __init__(self, parent, windowTitle="Color Palette"):
         super().__init__(parent, windowTitle=windowTitle)
         self.setLayout(QVBoxLayout())
-        self.layout().setMargin(4)
+        self.layout().setContentsMargins(4, 4, 4, 4)
 
         self.contPaletteNames = []
         self.exContPaletteNames = []
@@ -82,7 +82,7 @@ class ColorPaletteDlg(QDialog):
                 if QMessageBox.information(
                         self, 'Question',
                         'The color schema has changed. Save?',
-                        'Yes', 'Discard', '', 0, 1):
+                        QMessageBox.Yes | QMessageBox.Discard) == QMessageBox.Discard:
                     QDialog.reject(self)
                 else:
                     self.selectedSchemaIndex = self.schemaCombo.count() - 1
@@ -360,7 +360,7 @@ class ColorPalleteListing(QDialog):
                  **kwargs):
         super().__init__(parent, windowTitle=windowTitle, **kwargs)
         self.setLayout(QVBoxLayout())
-        self.layout().setMargin(0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
         sa = QScrollArea(
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn
@@ -447,7 +447,7 @@ class PaletteEditor(QDialog):
                  **kwargs):
         super().__init__(parent, **kwargs)
         self.setLayout(QVBoxLayout())
-        self.layout().setMargin(4)
+        self.layout().setContentsMargins(4, 4, 4, 4)
 
         hbox = gui.widgetBox(self, "Information", orientation='horizontal')
         gui.widgetLabel(
@@ -841,7 +841,7 @@ class ColorButton(QWidget):
             self.parent.layout().addWidget(self)
 
         self.setLayout(QHBoxLayout())
-        self.layout().setMargin(0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
         self.icon = QFrame(self)
         self.icon.setFixedSize(ColorButtonSize, ColorButtonSize)
         self.icon.setAutoFillBackground(1)

@@ -36,7 +36,7 @@ class OWMergeData(widget.OWWidget):
         w = QtGui.QWidget(self)
         self.controlArea.layout().addWidget(w)
         grid = QtGui.QGridLayout()
-        grid.setMargin(0)
+        grid.setContentsMargins(0, 0, 0, 0)
         w.setLayout(grid)
 
         # attribute A selection

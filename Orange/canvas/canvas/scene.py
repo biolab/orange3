@@ -13,24 +13,21 @@ from operator import attrgetter
 from xml.sax.saxutils import escape
 
 from PyQt4.QtGui import QGraphicsScene, QPainter, QBrush, QColor, QFont, \
-                        QGraphicsItem
+                        QGraphicsItem, QGraphicsObject
 
-from PyQt4.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, QEvent
+from PyQt4.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, \
+                         QEvent, QObject, QSignalMapper
 
 from PyQt4.QtCore import pyqtSignal as Signal
-from PyQt4.QtCore import PYQT_VERSION_STR
-
+from PyQt4.QtCore import PYQT_VERSION
 
 from .. import scheme
 
 from . import items
 from .layout import AnchorLayout
-from .items.utils import toGraphicsObjectIfPossible, typed_signal_mapper
+from .items.utils import toGraphicsObjectIfPossible
 
 log = logging.getLogger(__name__)
-
-
-NodeItemSignalMapper = typed_signal_mapper(items.NodeItem)
 
 
 class CanvasScene(QGraphicsScene):
@@ -39,39 +36,39 @@ class CanvasScene(QGraphicsScene):
     """
 
     #: Signal emitted when a :class:`NodeItem` has been added to the scene.
-    node_item_added = Signal(items.NodeItem)
+    node_item_added = Signal(object)
 
     #: Signal emitted when a :class:`NodeItem` has been removed from the
     #: scene.
-    node_item_removed = Signal(items.LinkItem)
+    node_item_removed = Signal(object)
 
     #: Signal emitted when a new :class:`LinkItem` has been added to the
     #: scene.
-    link_item_added = Signal(items.LinkItem)
+    link_item_added = Signal(object)
 
     #: Signal emitted when a :class:`LinkItem` has been removed.
-    link_item_removed = Signal(items.LinkItem)
+    link_item_removed = Signal(object)
 
     #: Signal emitted when a :class:`Annotation` item has been added.
-    annotation_added = Signal(items.annotationitem.Annotation)
+    annotation_added = Signal(object)
 
     #: Signal emitted when a :class:`Annotation` item has been removed.
-    annotation_removed = Signal(items.annotationitem.Annotation)
+    annotation_removed = Signal(object)
 
     #: Signal emitted when the position of a :class:`NodeItem` has changed.
-    node_item_position_changed = Signal(items.NodeItem, QPointF)
+    node_item_position_changed = Signal(object, QPointF)
 
     #: Signal emitted when an :class:`NodeItem` has been double clicked.
-    node_item_double_clicked = Signal(items.NodeItem)
+    node_item_double_clicked = Signal(object)
 
     #: An node item has been activated (clicked)
-    node_item_activated = Signal(items.NodeItem)
+    node_item_activated = Signal(object)
 
     #: An node item has been hovered
-    node_item_hovered = Signal(items.NodeItem)
+    node_item_hovered = Signal(object)
 
     #: Link item has been hovered
-    link_item_hovered = Signal(items.LinkItem)
+    link_item_hovered = Signal(object)
 
     def __init__(self, *args, **kwargs):
         QGraphicsScene.__init__(self, *args, **kwargs)
@@ -105,21 +102,18 @@ class CanvasScene(QGraphicsScene):
 
         self.user_interaction_handler = None
 
-        self.activated_mapper = NodeItemSignalMapper(self)
-        self.activated_mapper.pyMapped.connect(
-            self.node_item_activated
+        self.activated_mapper = QSignalMapper(self)
+        self.activated_mapper.mapped[QObject].connect(
+            lambda node: self.node_item_activated.emit(node)
         )
-
-        self.hovered_mapper = NodeItemSignalMapper(self)
-        self.hovered_mapper.pyMapped.connect(
-            self.node_item_hovered
+        self.hovered_mapper = QSignalMapper(self)
+        self.hovered_mapper.mapped[QObject].connect(
+            lambda node: self.node_item_hovered.emit(node)
         )
-
-        self.position_change_mapper = NodeItemSignalMapper(self)
-        self.position_change_mapper.pyMapped.connect(
+        self.position_change_mapper = QSignalMapper(self)
+        self.position_change_mapper.mapped[QObject].connect(
             self._on_position_change
         )
-
         log.info("'%s' intitialized." % self)
 
     def clear_scene(self):
@@ -287,14 +281,14 @@ class CanvasScene(QGraphicsScene):
         item.setFont(self.font())
 
         # Set signal mappings
-        self.activated_mapper.setPyMapping(item, item)
-        item.activated.connect(self.activated_mapper.pyMap)
+        self.activated_mapper.setMapping(item, item)
+        item.activated.connect(self.activated_mapper.map)
 
-        self.hovered_mapper.setPyMapping(item, item)
-        item.hovered.connect(self.hovered_mapper.pyMap)
+        self.hovered_mapper.setMapping(item, item)
+        item.hovered.connect(self.hovered_mapper.map)
 
-        self.position_change_mapper.setPyMapping(item, item)
-        item.positionChanged.connect(self.position_change_mapper.pyMap)
+        self.position_change_mapper.setMapping(item, item)
+        item.positionChanged.connect(self.position_change_mapper.map)
 
         self.addItem(item)
 
@@ -370,8 +364,9 @@ class CanvasScene(QGraphicsScene):
         """
         Remove `item` (:class:`.NodeItem`) from the scene.
         """
-        self.activated_mapper.removePyMappings(item)
-        self.hovered_mapper.removePyMappings(item)
+        self.activated_mapper.removeMappings(item)
+        self.hovered_mapper.removeMappings(item)
+        self.position_change_mapper.removeMappings(item)
 
         item.hide()
         self.removeItem(item)
@@ -778,7 +773,7 @@ class CanvasScene(QGraphicsScene):
 
         return items[0] if items else None
 
-    if list(map(int, PYQT_VERSION_STR.split('.'))) < [4, 9]:
+    if PYQT_VERSION < 0x40900:
         # For QGraphicsObject subclasses items, itemAt ... return a
         # QGraphicsItem wrapper instance and not the actual class instance.
         def itemAt(self, *args, **kwargs):

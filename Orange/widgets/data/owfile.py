@@ -1,20 +1,21 @@
 import os
 from warnings import catch_warnings
-
+from xlrd import open_workbook, XLRDError
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat
+from Orange.data.io import FileFormat, ExcelFormat
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
 # module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
+
 
 def add_origin(examples, filename):
     """Adds attribute with file location to each variable"""
@@ -42,6 +43,22 @@ class NamedURLModel(PyListModel):
         self.modelReset.emit()
 
 
+class XlsContextHandler(ContextHandler):
+    def new_context(self, filename, sheet):
+        context = super().new_context()
+        context.filename = filename
+        return context
+
+    # noinspection PyMethodOverriding
+    def match(self, context, filename, sheets):
+        context_sheet = context.values.get("xls_sheet")
+        if context.filename == filename and context_sheet in sheets:
+            return ContextHandler.PERFECT_MATCH
+        if context_sheet in sheets:
+            return 1
+        return ContextHandler.NO_MATCH
+
+
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
@@ -58,12 +75,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     want_main_area = False
     resizing_enabled = False
 
-    SEARCH_PATH = [("sample-datasets", get_sample_datasets_dir())]
+    SEARCH_PATHS = [("sample-datasets", get_sample_datasets_dir())]
 
     LOCAL_FILE, URL = range(2)
 
+    settingsHandler = XlsContextHandler()
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
+    xls_sheet = ContextSetting("")
     sheet_names = Setting({})
     url = Setting("")
 
@@ -94,20 +113,42 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         self.file_combo.activated[int].connect(self.select_file)
         box.layout().addWidget(self.file_combo)
-        button = gui.button(
-            box, self, '...', callback=self.browse_file, autoDefault=False)
-        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
-        button.setSizePolicy(Policy.Maximum, Policy.Fixed)
-        button = gui.button(
-            box, self, "Reload", callback=self.reload, autoDefault=False)
-        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        button.setSizePolicy(Policy.Fixed, Policy.Fixed)
-        layout.addWidget(box, 0, 1,  QtCore.Qt.AlignVCenter)
+        layout.addWidget(box, 0, 1)
+
+        file_button = gui.button(
+            None, self, '...', callback=self.browse_file, autoDefault=False)
+        file_button.setIcon(self.style().standardIcon(
+            QtGui.QStyle.SP_DirOpenIcon))
+        file_button.setSizePolicy(Policy.Maximum, Policy.Fixed)
+        layout.addWidget(file_button, 0, 2)
+
+        reload_button = gui.button(
+            None, self, "Reload", callback=self.reload, autoDefault=False)
+        reload_button.setIcon(self.style().standardIcon(
+            QtGui.QStyle.SP_BrowserReload))
+        reload_button.setSizePolicy(Policy.Fixed, Policy.Fixed)
+        layout.addWidget(reload_button, 0, 3)
+
+        self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
+        self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
+                                        callback=self.load_data,
+                                        sendSelectedValue=True)
+        self.sheet_combo.setSizePolicy(
+            Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_label = QtGui.QLabel()
+        self.sheet_label.setText('Sheet')
+        self.sheet_label.setSizePolicy(
+            Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_box.layout().addWidget(
+            self.sheet_label, QtCore.Qt.AlignLeft)
+        self.sheet_box.layout().addWidget(
+            self.sheet_combo, QtCore.Qt.AlignVCenter)
+        layout.addWidget(self.sheet_box, 2, 1)
+        self.sheet_box.hide()
 
         rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
-        layout.addWidget(rb_button, 1, 0, QtCore.Qt.AlignVCenter)
+        layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
 
-        box = gui.hBox(vbox, addToLayout=False)
         self.url_combo = url_combo = QtGui.QComboBox()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
@@ -119,9 +160,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_edit = url_combo.lineEdit()
         l, t, r, b = url_edit.getTextMargins()
         url_edit.setTextMargins(l + 5, t, r, b)
-        box.layout().addWidget(url_combo)
+        layout.addWidget(url_combo, 3, 1, 3, 3)
         url_combo.activated.connect(self._url_set)
-        layout.addWidget(box, 1, 1, QtCore.Qt.AlignVCenter)
 
         box = gui.vBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, 'No data loaded.')
@@ -140,6 +180,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.warnings.setSizePolicy(Policy.Ignored, Policy.MinimumExpanding)
 
         self.set_file_list()
+        if self.last_path() is not None:
+            self.fill_sheet_combo(self.last_path())
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
         QtCore.QTimer.singleShot(0, self.load_data)
@@ -150,12 +192,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             path = self.recent_paths[0]
             if basename in [path.relpath, path.basename]:
                 self.source = self.LOCAL_FILE
+                if self.is_multisheet_excel(path.abspath):
+                    self.fill_sheet_combo(path.abspath)
                 return self.load_data()
         self.select_file(len(self.recent_paths) + 1)
 
     def select_file(self, n):
         if n < len(self.recent_paths):
             super().select_file(n)
+            self.fill_sheet_combo(self.last_path())
         # TODO: This is weird. Has it remained here from "Browse data sets"
         # or from when this combo was editable? A `n` this large can come from
         # `reload`, but ... how?!
@@ -197,8 +242,28 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.add_path(filename)
         self.source = self.LOCAL_FILE
+        self.fill_sheet_combo(filename)
         self.load_data()
 
+    def fill_sheet_combo(self, path):
+        if os.path.exists(path) and self.is_multisheet_excel(path):
+            self.closeContext()
+            self.sheet_combo.clear()
+            self.sheet_box.show()
+            book = open_workbook(path)
+            sheet_names = [str(book.sheet_by_index(i).name)
+                           for i in range(book.nsheets)]
+            self.sheet_combo.addItems(sheet_names)
+            self.openContext(path, sheet_names)
+        else:
+            self.sheet_box.hide()
+
+    @staticmethod
+    def is_multisheet_excel(fn):
+        try:
+            return open_workbook(fn).nsheets > 1
+        except XLRDError:
+            return False
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
@@ -219,6 +284,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     fn = os.path.join(".", basename)
                     self.information("Loading '{}' from the current directory."
                                      .format(basename))
+            if self.is_multisheet_excel(fn):
+                data = ExcelFormat.read_file(fn + ':' + self.xls_sheet)
+                if data:
+                    return data, fn
+
             try:
                 return load(Table.from_file, fn)
             except Exception as exc:
@@ -240,7 +310,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 data, url = load(Table.from_url, url)
             except:
                 self.warnings.setText(
-                        "URL '{}' does not contain valid data".format(url))
+                    "URL '{}' does not contain valid data".format(url))
                 # Don't remove from recent_urls:
                 # resource may reappear, or the user mistyped it
                 # and would like to retrieve it from history and fix it.
@@ -321,6 +391,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                        self.loaded_file[len(home):].lstrip("/").lstrip("\\")
             else:
                 name = self.loaded_file
+            if self.sheet_combo.isVisible():
+                name += " ({})".format(self.sheet_combo.currentText())
             self.report_items("File", [("File name", name),
                                        ("Format", get_ext_name(name))])
         else:
@@ -328,7 +400,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                                        ("Format", get_ext_name(self.url))])
 
         self.report_data("Data", self.data)
-
 
 
 if __name__ == "__main__":

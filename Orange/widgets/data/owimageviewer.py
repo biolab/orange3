@@ -674,7 +674,7 @@ class ImageLoader(QObject):
         future = Future()
         url = url = QUrl(url)
         request = QNetworkRequest(url)
-        request.setRawHeader("User-Agent", "OWImageViewer/1.0")
+        request.setRawHeader(b"User-Agent", b"OWImageViewer/1.0")
         request.setAttribute(
             QNetworkRequest.CacheLoadControlAttribute,
             QNetworkRequest.PreferCache

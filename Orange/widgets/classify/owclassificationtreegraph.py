@@ -1,5 +1,5 @@
 import sys
-
+from collections import OrderedDict
 import numpy
 
 from sklearn.tree._tree import TREE_LEAF
@@ -92,6 +92,7 @@ class OWTreeGraph(OWTreeViewer2D):
                 self.scene.colors = [QColor(*col) for col in class_var.colors]
             self.openContext(self.domain.class_var)
             self.root_node = self.walkcreate(self.tree, 0, None)
+            self.scene.addItem(self.root_node)
             self.info.setText(
                 '{} nodes, {} leaves'.
                 format(self.tree.node_count,
@@ -106,11 +107,12 @@ class OWTreeGraph(OWTreeViewer2D):
         self.send("Data", None)
 
     def walkcreate(self, tree, node_id, parent=None):
-        node = self.NODE(tree, self.domain, parent, None,
-                         self.scene, i=node_id)
+        node = self.NODE(tree, self.domain, parent, i=node_id)
+        self.scene.addItem(node)
         if parent:
-            parent.graph_add_edge(
-                GraphicsEdge(None, self.scene, node1=parent, node2=node))
+            edge = GraphicsEdge(node1=parent, node2=node)
+            self.scene.addItem(edge)
+            parent.graph_add_edge(edge)
         left_child_index = tree.children_left[node_id]
         right_child_index = tree.children_right[node_id]
 
@@ -123,7 +125,7 @@ class OWTreeGraph(OWTreeViewer2D):
     def node_tooltip(self, node):
         if node.i > 0:
             text = " AND\n".join(
-                "%s %s %s" % (n, s, v) for n, s, v in node.rule())
+                "%s %s %s" % (n, s, v) for (n, s), v in node.rule().items())
         else:
             text = "Root"
         return text
@@ -169,8 +171,8 @@ class OWTreeGraph(OWTreeViewer2D):
 
 
 class PieChart(QGraphicsRectItem):
-    def __init__(self, dist, r, parent, scene):
-        super().__init__(parent, scene)
+    def __init__(self, dist, r, parent):
+        super().__init__(parent)
         self.dist = dist
         self.r = r
 
@@ -248,8 +250,8 @@ def _assign_samples(tree, X):
 
 class TreeNode(GraphicsNode):
     def __init__(self, tree, domain, parent=None, parent_item=None,
-                 scene=None, i=0, distr=None):
-        super().__init__(tree, parent, parent_item, scene)
+                 i=0, distr=None):
+        super().__init__(tree, parent, parent_item)
         self.distribution = distr
         self.tree = tree
         self.domain = domain
@@ -286,7 +288,7 @@ class TreeNode(GraphicsNode):
                     else "≠ " * is_left_child + values[parent_attr_cv.value]
             else:
                 thresh = self.tree.threshold[self.parent.i]
-                return "%s %s" % ([">", "<="][is_left_child],
+                return "%s %s" % ([">", "≤"][is_left_child],
                                   attribute.str_val(thresh))
         else:
             return ""
@@ -321,12 +323,21 @@ class TreeNode(GraphicsNode):
                                    is_left_child * (len(values) == 2))]
             else:
                 attr_name = parent_attr.name
-                sign = [">", "<="][is_left_child]
+                sign = [">", "≤"][is_left_child]
                 value = "%.3f" % self.tree.threshold[self.parent.i]
-            pr.append((attr_name, sign, value))
+            if (attr_name, sign) in pr:
+                old_val = pr[(attr_name, sign)]
+                if sign == ">":
+                    pr[(attr_name, sign)] = max(float(value), float(old_val))
+                elif sign == "≠":
+                    pr[(attr_name, sign)] = "{}, {}".format(old_val, value)
+                elif sign == "≤":
+                    pr[(attr_name, sign)] = min(float(value), float(old_val))
+            else:
+                pr[(attr_name, sign)] = value
             return pr
         else:
-            return []
+            return OrderedDict()
 
     def is_leaf(self):
         """
@@ -402,10 +413,10 @@ class TreeNode(GraphicsNode):
 
 class ClassificationTreeNode(TreeNode):
     def __init__(self, tree, domain, parent=None, parent_item=None,
-                 scene=None, i=0, distr=None):
+                 i=0, distr=None):
         super().__init__(tree, domain, parent, parent_item,
-                         scene, i, distr)
-        self.pie = PieChart(self.get_distribution(), 8, self, scene)
+                         i, distr)
+        self.pie = PieChart(self.get_distribution(), 8, self)
 
     def get_distribution(self):
         """
@@ -494,11 +505,11 @@ class OWClassificationTreeGraph(OWTreeGraph):
             total = numpy.sum(distr)
             if self.target_class_index:
                 p = distr[self.target_class_index - 1] / total
-                color = colors[self.target_class_index - 1].light(200 - 100 * p)
+                color = colors[self.target_class_index - 1].lighter(200 - 100 * p)
             else:
                 modus = node.majority()
                 p = distr[modus] / (total or 1)
-                color = colors[int(modus)].light(400 - 300 * p)
+                color = colors[int(modus)].lighter(400 - 300 * p)
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 

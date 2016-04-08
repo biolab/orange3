@@ -12,11 +12,8 @@ from PyQt4.QtGui import QGraphicsObject, QApplication
 from PyQt4.QtCore import QRectF, QLineF, QEvent
 
 from .items import NodeItem, LinkItem, SourceAnchorItem, SinkAnchorItem
-from .items.utils import typed_signal_mapper, invert_permutation_indices, \
-                         linspace
+from .items.utils import invert_permutation_indices, linspace
 from functools import reduce
-
-LinkItemSignalMapper = typed_signal_mapper(LinkItem)
 
 
 def composition(f, g):

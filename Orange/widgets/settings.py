@@ -587,6 +587,7 @@ class ContextHandler(SettingsHandler):
     def pack_data(self, widget):
         """Call the inherited method, then add local contexts to the pickle."""
         data = super().pack_data(widget)
+        self.settings_from_widget(widget)
         data["context_settings"] = widget.context_settings
         return data
 

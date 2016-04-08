@@ -579,8 +579,7 @@ class DendrogramWidget(QGraphicsWidget):
 
             item.setPath(Path_toQtPath(geom))
             item.setZValue(-node.value.height)
-            item.setPen(QPen(Qt.blue))
-            r = item.boundingRect()
+            r = item.path().boundingRect()
             base = self._root.value.height
 
             if self.orientation == Left:
@@ -1449,7 +1448,7 @@ class WrapperLayoutItem(QGraphicsLayoutItem):
         self.orientation = orientation
         self.item = item
         if orientation == Qt.Vertical:
-            self.item.rotate(-90)
+            self.item.setRotation(-90)
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         else:
             self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)

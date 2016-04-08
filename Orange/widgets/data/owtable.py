@@ -584,7 +584,7 @@ class OWDataTable(widget.OWWidget):
                             # paint by hand (borrowed from QTableCornerButton)
                             btn = o
                             opt = QtGui.QStyleOptionHeader()
-                            opt.init(btn)
+                            opt.initFrom(btn)
                             state = QtGui.QStyle.State_None
                             if btn.isEnabled():
                                 state |= QtGui.QStyle.State_Enabled
