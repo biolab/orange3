@@ -58,7 +58,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     want_main_area = False
     resizing_enabled = False
 
-    SEARCH_PATH = [("sample-datasets", get_sample_datasets_dir())]
+    SEARCH_PATHS = [("sample-datasets", get_sample_datasets_dir())]
 
     LOCAL_FILE, URL = range(2)
 
