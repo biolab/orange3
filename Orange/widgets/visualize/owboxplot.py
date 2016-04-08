@@ -161,7 +161,7 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_list_box.setSizePolicy(QSizePolicy.Fixed,
                                          QSizePolicy.MinimumExpanding)
 
-        box = gui.widgetBox(self.controlArea, "Grouping")
+        box = gui.vBox(self.controlArea, "Grouping")
         self.group_list_box = gui.listBox(
             box, self, 'grouping_select', "grouping",
             callback=self.attr_changed,
@@ -170,7 +170,7 @@ class OWBoxPlot(widget.OWWidget):
                                           QSizePolicy.MinimumExpanding)
 
         # TODO: move Compare median/mean to grouping box
-        self.display_box = gui.widgetBox(self.controlArea, "Display")
+        self.display_box = gui.vBox(self.controlArea, "Display")
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.display_changed)
@@ -183,7 +183,7 @@ class OWBoxPlot(widget.OWWidget):
             self.controlArea, self, 'stretched', "Stretch bars", box='Display',
             callback=self.display_changed).box
 
-        gui.widgetBox(self.mainArea, addSpace=True)
+        gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QtGui.QGraphicsScene()
         self.box_view = QtGui.QGraphicsView(self.box_scene)
         self.box_view.setRenderHints(QtGui.QPainter.Antialiasing |
@@ -193,7 +193,7 @@ class OWBoxPlot(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.box_view)
 
-        e = gui.widgetBox(self.mainArea, addSpace=False, orientation=0)
+        e = gui.hBox(self.mainArea, addSpace=False)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
         self.mainArea.setMinimumWidth(650)
 

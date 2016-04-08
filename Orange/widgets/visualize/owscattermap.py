@@ -495,7 +495,7 @@ class OWScatterMap(widget.OWWidget):
 
         self.colors = colorpalette.ColorPaletteGenerator(10)
 
-        box = gui.widgetBox(self.controlArea, "Axes")
+        box = gui.vBox(self.controlArea, "Axes")
         self.x_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesX = gui.comboBox(
             box, self, value='x_var_index', callback=self.replot,
@@ -508,7 +508,7 @@ class OWScatterMap(widget.OWWidget):
             contentsLength=12)
         self.comboBoxAttributesY.setModel(self.y_var_model)
 
-        box = gui.widgetBox(self.controlArea, "Color")
+        box = gui.vBox(self.controlArea, "Color")
         self.z_var_model = itemmodels.VariableListModel()
         self.comboBoxClassvars = gui.comboBox(
             box, self, value='z_var_index',
@@ -523,11 +523,11 @@ class OWScatterMap(widget.OWWidget):
             addSpace=False
         )
         gui.comboBox(box, self, "color_scale", label="Scale: ",
-                     orientation="horizontal",
+                     orientation=Qt.Horizontal,
                      items=["Linear", "Square root", "Logarithmic"],
                      callback=self._on_color_scale_changed)
 
-        self.sampling_box = gui.widgetBox(self.controlArea, "Sampling")
+        self.sampling_box = gui.vBox(self.controlArea, "Sampling")
         sampling_options = (self.sample_times_captions +
                             self.sample_percentages_captions)
         self.sample_combo = gui.comboBox(

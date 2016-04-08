@@ -79,18 +79,18 @@ class OWConfusionMatrix(widget.OWWidget):
         self.learners = []
         self.headers = []
 
-        box = gui.widgetBox(self.controlArea, "Learners")
+        box = gui.vBox(self.controlArea, "Learners")
 
         self.learners_box = gui.listBox(
             box, self, "selected_learner", "learners",
             callback=self._learner_changed
         )
-        box = gui.widgetBox(self.controlArea, "Show")
+        box = gui.vBox(self.controlArea, "Show")
 
         gui.comboBox(box, self, "selected_quantity", items=self.quantities,
                      callback=self._update)
 
-        box = gui.widgetBox(self.controlArea, "Select")
+        box = gui.vBox(self.controlArea, "Select")
 
         gui.button(box, self, "Correct",
                    callback=self.select_correct, autoDefault=False)
@@ -99,7 +99,7 @@ class OWConfusionMatrix(widget.OWWidget):
         gui.button(box, self, "None",
                    callback=self.select_none, autoDefault=False)
 
-        self.outputbox = box = gui.widgetBox(self.controlArea, "Output")
+        self.outputbox = box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "append_predictions",
                      "Predictions", callback=self._invalidate)
         gui.checkBox(box, self, "append_probabilities",

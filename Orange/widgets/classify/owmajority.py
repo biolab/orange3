@@ -1,6 +1,5 @@
 from Orange.data import Table
 from Orange.classification.majority import MajorityLearner
-from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 

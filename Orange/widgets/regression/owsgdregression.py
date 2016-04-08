@@ -2,6 +2,7 @@
 from collections import OrderedDict
 
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.regression.linear import SGDRegressionLearner
@@ -53,7 +54,7 @@ class OWSGDRegression(OWBaseLearner):
         box = gui.radioButtons(
             self.controlArea, self, "loss_function", box="Loss function",
             btnLabels=self.LOSS_FUNCTIONS, callback=self._on_func_changed,
-            orientation="horizontal")
+            orientation=Qt.Vertical)
         form = add_form(box)
         epsilon = gui.doubleSpin(
             box, self, "epsilon", 0.0, 10.0, 0.01, controlWidth=70)
@@ -64,7 +65,7 @@ class OWSGDRegression(OWBaseLearner):
         box = gui.radioButtons(
             self.controlArea, self, "penalty_type", box="Penalty",
             btnLabels=self.PENALTIES, callback=self._on_penalty_changed,
-            orientation="horizontal")
+            orientation=Qt.Vertical)
         form = add_form(box)
         alpha = gui.doubleSpin(
             box, self, "alpha", 0.0, 10.0, 0.0001, controlWidth=80)
@@ -78,7 +79,7 @@ class OWSGDRegression(OWBaseLearner):
         box = gui.radioButtons(
             self.controlArea, self, "learning_rate", box="Learning rate",
             btnLabels=self.LEARNING_RATES, callback=self._on_lrate_changed,
-            orientation="horizontal")
+            orientation=Qt.Vertical)
         form = add_form(box)
         spin = gui.doubleSpin(
             box, self, "eta0", 0.0, 10, 0.01, controlWidth=70)

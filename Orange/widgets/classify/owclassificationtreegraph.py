@@ -4,6 +4,9 @@ import numpy
 
 from sklearn.tree._tree import TREE_LEAF
 
+# This is not needed yet because it is imported from owtreeviewer2d :(
+from PyQt4.QtCore import Qt
+
 from Orange.widgets.classify.owtreeviewer2d import *
 
 from Orange.data import Table
@@ -463,8 +466,9 @@ class OWClassificationTreeGraph(OWTreeGraph):
     def __init__(self):
         super().__init__()
         self.target_combo = gui.comboBox(
-            None, self, "target_class_index", orientation=0, items=[],
-            callback=self.toggle_color, contentsLength=8, addToLayout=False,
+            None, self, "target_class_index", orientation=Qt.Horizontal,
+            items=[], callback=self.toggle_color, contentsLength=8,
+            addToLayout=False,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
                                    QSizePolicy.Fixed))
         self.display_box.layout().addRow("Target class ", self.target_combo)

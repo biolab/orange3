@@ -341,7 +341,7 @@ class OWImageViewer(widget.OWWidget):
         super().__init__()
 
         self.info = gui.widgetLabel(
-            gui.widgetBox(self.controlArea, "Info"),
+            gui.vBox(self.controlArea, "Info"),
             "Waiting for input\n"
         )
 

@@ -369,7 +369,7 @@ class OWEditDomain(widget.OWWidget):
         self.input_vars = ()
         self._invalidated = False
 
-        box = gui.widgetBox(self.controlArea, "Domain Features")
+        box = gui.vBox(self.controlArea, "Domain Features")
 
         self.domain_model = itemmodels.VariableListModel()
         self.domain_view = QListView(
@@ -380,14 +380,14 @@ class OWEditDomain(widget.OWWidget):
             self._on_selection_changed)
         box.layout().addWidget(self.domain_view)
 
-        box = gui.widgetBox(self.controlArea, "Reset")
+        box = gui.vBox(self.controlArea, "Reset")
         gui.button(box, self, "Reset selected", callback=self.reset_selected)
         gui.button(box, self, "Reset all", callback=self.reset_all)
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Commit",
                         "Commit on change is on")
 
-        box = gui.widgetBox(self.mainArea, "Edit")
+        box = gui.vBox(self.mainArea, "Edit")
         self.editor_stack = QtGui.QStackedWidget()
 
         self.editor_stack.addWidget(DiscreteVariableEditor())

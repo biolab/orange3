@@ -79,15 +79,15 @@ class OWLiftCurve(widget.OWWidget):
         self.colors = []
         self._curve_data = {}
 
-        box = gui.widgetBox(self.controlArea, "Plot")
-        tbox = gui.widgetBox(box, "Target Class")
+        box = gui.vBox(self.controlArea, "Plot")
+        tbox = gui.vBox(box, "Target Class")
         tbox.setFlat(True)
 
         self.target_cb = gui.comboBox(
             tbox, self, "target_index", callback=self._on_target_changed,
             contentsLength=8)
 
-        cbox = gui.widgetBox(box, "Classifiers")
+        cbox = gui.vBox(box, "Classifiers")
         cbox.setFlat(True)
         self.classifiers_list_box = gui.listBox(
             cbox, self, "selected_classifiers", "classifier_names",

@@ -158,8 +158,7 @@ class OWDiscretize(widget.OWWidget):
         self.method = 0
         self.k = 5
 
-        box = gui.widgetBox(
-            self.controlArea, self.tr("Default Discretization"))
+        box = gui.vBox(self.controlArea, self.tr("Default Discretization"))
         self.default_bbox = rbox = gui.radioButtons(
             box, self, "default_method", callback=self._default_disc_changed)
 
@@ -223,7 +222,7 @@ class OWDiscretize(widget.OWWidget):
 
         box = gui.auto_commit(
             self.controlArea, self, "autosend", "Apply",
-            orientation="horizontal",
+            orientation=Qt.Horizontal,
             checkbox_label="Send data after every change")
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)

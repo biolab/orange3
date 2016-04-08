@@ -1,7 +1,6 @@
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from PyQt4.QtGui import QIntValidator
-from Orange.widgets.widget import OutputSignal
 
 
 class OWWidgetNumber(widget.OWWidget):
@@ -24,7 +23,7 @@ class OWWidgetNumber(widget.OWWidget):
         super().__init__()
 
         gui.lineEdit(self.controlArea, self, "number", "Enter a number",
-                     orientation="horizontal", box="Number",
+                     box="Number",
                      callback=self.number_changed,
                      valueType=int, validator=QIntValidator())
         self.number_changed()

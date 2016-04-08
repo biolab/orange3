@@ -61,7 +61,7 @@ class OWConcatenate(widget.OWWidget):
         self.primary_data = None
         self.more_data = OrderedDict()
 
-        mergebox = gui.widgetBox(self.controlArea, "Domains merging")
+        mergebox = gui.vBox(self.controlArea, "Domains merging")
         box = gui.radioButtons(
             mergebox, self, "merge_type",
             callback=self._merge_type_changed)
@@ -82,7 +82,7 @@ class OWConcatenate(widget.OWWidget):
         label.setWordWrap(True)
 
         ###
-        box = gui.widgetBox(
+        box = gui.vBox(
             self.controlArea, self.tr("Source identification"),
             addSpace=False)
 
@@ -117,7 +117,7 @@ class OWConcatenate(widget.OWWidget):
 
         gui.separator(self.controlArea, 8)
 
-        box = gui.widgetBox(self.controlArea, True, orientation="horizontal",)
+        box = gui.hBox(self.controlArea, box=True)
         box.layout().addWidget(self.report_button)
         gui.separator(box, 20)
         gui.button(

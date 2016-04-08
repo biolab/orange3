@@ -1,6 +1,7 @@
 import sys
 
 from PyQt4.QtGui import QApplication
+from PyQt4.QtCore import Qt
 
 from Orange.canvas.registry.description import Default
 import Orange.data
@@ -81,28 +82,29 @@ class OWParallelCoordinates(OWVisWidget):
         self.zoom_select_toolbar.buttonSendSelections.clicked.connect(self.sendSelections)
 
     def add_visual_settings(self, parent):
-        box = gui.widgetBox(parent, "Visual Settings")
+        box = gui.vBox(parent, "Visual Settings")
         gui.checkBox(box, self, 'graph.show_attr_values', 'Show attribute values', callback=self.update_graph)
         gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.update_graph,
                      tooltip="Show lines using splines")
         self.graph.gui.show_legend_check_box(box)
 
     def add_annotation_settings(self, parent):
-        box = gui.widgetBox(parent, "Statistical Information")
-        gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ", orientation="horizontal", labelWidth=90,
+        box = gui.vBox(parent, "Statistical Information")
+        gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ",
+                     orientation=Qt.Horizontal, labelWidth=90,
                      items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.update_graph,
                      sendSelectedValue=False, valueType=int)
         gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.update_graph,
                      tooltip="Show bars with distribution of class values (only for discrete attributes)")
 
     def add_group_settings(self, parent):
-        box = gui.widgetBox(parent, "Groups", orientation="vertical")
-        box2 = gui.widgetBox(box, orientation="horizontal")
+        box = gui.vBox(parent, "Groups")
+        box2 = gui.hBox(box)
         gui.checkBox(box2, self, "graph.group_lines", "Group lines into", tooltip="Show clusters instead of lines",
                      callback=self.update_graph)
         gui.spin(box2, self, "graph.number_of_groups", 0, 30, callback=self.update_graph)
         gui.label(box2, self, "groups")
-        box2 = gui.widgetBox(box, orientation="horizontal")
+        box2 = gui.hBox(box)
         gui.spin(box2, self, "graph.number_of_steps", 0, 100, label="In no more than", callback=self.update_graph)
         gui.label(box2, self, "steps")
 

@@ -1,4 +1,6 @@
 from PyQt4.QtGui import QBrush
+from PyQt4.QtCore import Qt
+
 from Orange.regression.tree import TreeRegressor
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ClassValuesContextHandler
@@ -37,9 +39,9 @@ class OWRegressionTreeGraph(OWTreeGraph):
 
     def __init__(self):
         super().__init__()
-        box = gui.widgetBox(self.controlArea, "Nodes", addSpace=True)
+        box = gui.vBox(self.controlArea, "Nodes", addSpace=True)
         self.color_combo = gui.comboBox(
-            box, self, "color_index", orientation=0, items=[],
+            box, self, "color_index", orientation=Qt.Horizontal, items=[],
             label="Colors", callback=self.toggle_color,
             contentsLength=8)
         gui.separator(box)

@@ -380,7 +380,7 @@ class OWDataTable(widget.OWWidget):
 
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
 
-        info_box = gui.widgetBox(self.controlArea, "Info")
+        info_box = gui.vBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
         self.info_ex.setWordWrap(True)
         self.info_attr = gui.widgetLabel(info_box, ' ')
@@ -398,7 +398,7 @@ class OWDataTable(widget.OWWidget):
         info_box.setMinimumWidth(200)
         gui.separator(self.controlArea)
 
-        box = gui.widgetBox(self.controlArea, "Variables")
+        box = gui.vBox(self.controlArea, "Variables")
         self.c_show_attribute_labels = gui.checkBox(
             box, self, "show_attribute_labels",
             "Show variable labels (if present)",
@@ -410,7 +410,7 @@ class OWDataTable(widget.OWWidget):
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self._on_distribution_color_changed)
 
-        box = gui.widgetBox(self.controlArea, "Selection")
+        box = gui.vBox(self.controlArea, "Selection")
 
         gui.checkBox(box, self, "select_rows", "Select full rows",
                      callback=self._on_select_rows_changed)

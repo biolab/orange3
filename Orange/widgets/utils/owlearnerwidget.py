@@ -223,7 +223,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                      tooltip='The name will identify this model in other widgets')
 
     def add_bottom_buttons(self):
-        box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
+        box = gui.hBox(self.controlArea, True)
         box.layout().addWidget(self.report_button)
         gui.separator(box, 15)
         self.apply_button = gui.button(box, self, "&Apply", callback=self.apply,

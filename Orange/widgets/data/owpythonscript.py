@@ -389,7 +389,7 @@ class OWPythonScript(widget.OWWidget):
 
         self._cachedDocuments = {}
 
-        self.infoBox = gui.widgetBox(self.controlArea, 'Info')
+        self.infoBox = gui.vBox(self.controlArea, 'Info')
         gui.label(
             self.infoBox, self,
             "<p>Execute python script.</p><p>Input variables:<ul><li> " + \
@@ -405,7 +405,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.libraryList.wrap(self.libraryListSource)
 
-        self.controlBox = gui.widgetBox(self.controlArea, 'Library')
+        self.controlBox = gui.vBox(self.controlArea, 'Library')
         self.controlBox.layout().setSpacing(1)
 
         self.libraryView = QListView(
@@ -468,7 +468,7 @@ class OWPythonScript(widget.OWWidget):
         self.defaultFont = defaultFont = \
             "Monaco" if sys.platform == "darwin" else "Courier"
 
-        self.textBox = gui.widgetBox(self, 'Python script')
+        self.textBox = gui.vBox(self, 'Python script')
         self.splitCanvas.addWidget(self.textBox)
         self.text = PythonScriptEditor(self)
         self.textBox.layout().addWidget(self.text)
@@ -484,7 +484,7 @@ class OWPythonScript(widget.OWWidget):
         action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         action.triggered.connect(self.saveScript)
 
-        self.consoleBox = gui.widgetBox(self, 'Console')
+        self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
         self.console = PythonConsole(self.__dict__, self)
         self.consoleBox.layout().addWidget(self.console)

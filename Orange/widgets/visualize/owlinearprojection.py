@@ -261,9 +261,9 @@ class OWLinearProjection(widget.OWWidget):
         self.__selection_item = None
         self.__replot_requested = False
 
-        box = gui.widgetBox(self.controlArea, "Axes")
+        box = gui.vBox(self.controlArea, "Axes")
 
-        box1 = gui.widgetBox(box, "Displayed", margin=0)
+        box1 = gui.vBox(box, "Displayed", margin=0)
         box1.setFlat(True)
         self.active_view = view = QListView(
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Ignored),
@@ -295,7 +295,7 @@ class OWLinearProjection(widget.OWWidget):
 
         box1.layout().addWidget(view)
 
-        box1 = gui.widgetBox(box, "Other", margin=0)
+        box1 = gui.vBox(box, "Other", margin=0)
         box1.setFlat(True)
         self.other_view = view = QListView(
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Ignored),
@@ -320,7 +320,7 @@ class OWLinearProjection(widget.OWWidget):
 
         box1.layout().addWidget(view)
 
-        box = gui.widgetBox(self.controlArea, "Plot Properties")
+        box = gui.vBox(self.controlArea, "Plot Properties")
         box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
@@ -378,7 +378,7 @@ class OWLinearProjection(widget.OWWidget):
                                              callback=self._update_density)
         form.addRow("Class density", self.cb_class_density)
 
-        toolbox = gui.widgetBox(self.controlArea, "Zoom/Select")
+        toolbox = gui.vBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()
         toolbox.layout().addLayout(toollayout)
 

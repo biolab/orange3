@@ -806,17 +806,18 @@ class OWPaintData(widget.OWWidget):
         self._init_ui()
 
     def _init_ui(self):
-        namesBox = gui.widgetBox(self.controlArea, "Names")
+        namesBox = gui.vBox(self.controlArea, "Names")
 
-        hbox = gui.widgetBox(namesBox, orientation='horizontal', margin=0, spacing=0)
+        hbox = gui.hBox(namesBox, margin=0, spacing=0)
         gui.lineEdit(hbox, self, "attr1", "Variable X ",
-                     controlWidth=80, orientation="horizontal",
+                     controlWidth=80, orientation=Qt.Horizontal,
                      enterPlaceholder=True, callback=self._attr_name_changed)
         gui.separator(hbox, 18)
-        hbox = gui.widgetBox(namesBox, orientation='horizontal', margin=0, spacing=0)
+        hbox = gui.hBox(namesBox, margin=0, spacing=0)
         attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y ",
-                             controlWidth=80, orientation="horizontal",
-                             enterPlaceholder=True, callback=self._attr_name_changed)
+                             controlWidth=80, orientation=Qt.Horizontal,
+                             enterPlaceholder=True,
+                             callback=self._attr_name_changed)
         gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
                      labelWidth=0,
                      callback=self.set_dimensions)
@@ -851,8 +852,8 @@ class OWPaintData(widget.OWWidget):
         actionsWidget.layout().setSpacing(1)
         namesBox.layout().addWidget(actionsWidget)
 
-        tBox = gui.widgetBox(self.controlArea, "Tools", addSpace=True)
-        buttonBox = gui.widgetBox(tBox, orientation="horizontal")
+        tBox = gui.vBox(self.controlArea, "Tools", addSpace=True)
+        buttonBox = gui.hBox(tBox)
         toolsBox = gui.widgetBox(buttonBox, orientation=QtGui.QGridLayout())
 
         self.toolActions = QtGui.QActionGroup(self)

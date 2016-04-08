@@ -1,14 +1,14 @@
 import os
-from PyQt4 import QtWebKit
 
 import pkg_resources
 import pickle
 from enum import IntEnum
-from PyQt4.QtCore import Qt, pyqtSlot, QUrl, QSize
+from PyQt4.QtCore import Qt, pyqtSlot
 from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QCursor,
-                         QPrintDialog, QFileDialog, QTableView, QSizePolicy,
+                         QPrintDialog, QFileDialog, QTableView,
                          QStandardItemModel, QStandardItem, QHeaderView)
 from Orange.widgets import gui
+from Orange.widgets.webview import WebView
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.canvas.application.canvasmain import CanvasMainWindow
@@ -103,59 +103,6 @@ class ReportTable(QTableView):
             model.item(i, Column.scheme).setIcon(QIcon())
 
 
-class WebviewWidget(QtWebKit.QWebView):
-    """WebKit window in a window"""
-    def __init__(self, parent=None, bridge=None, html=None, debug=None):
-        """
-        Parameters
-        ----------
-        parent: QObject
-            Parent QObject. If parent has layout(), this widget is added to it.
-        bridge: QObject
-            The "bridge" object exposed as ``window.pybridge`` in JavaScript.
-            Any bridge methods desired to be accessible from JS need to be
-            decorated ``@QtCore.pyqtSlot(<*args>, result=<type>)``.
-        html: str
-            HTML content to set in the webview.
-        debug: bool
-            If True, enable context menu and webkit inspector.
-        """
-        super().__init__(parent)
-        self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding,
-                                       QSizePolicy.Expanding))
-        self._bridge = bridge
-        try:
-            parent.layout().addWidget(self)
-        except (AttributeError, TypeError):
-            pass
-        settings = self.settings()
-        settings.setAttribute(settings.LocalContentCanAccessFileUrls, True)
-        if debug is None:
-            import logging
-            debug = logging.getLogger().level <= logging.DEBUG
-        if debug:
-            settings.setAttribute(settings.DeveloperExtrasEnabled, True)
-        else:
-            self.setContextMenuPolicy(Qt.NoContextMenu)
-        if html:
-            self.setHtml(html)
-
-    def setContent(self, data, mimetype, url=''):
-        super().setContent(data, mimetype, QUrl(url))
-        if self._bridge:
-            self.page().mainFrame().addToJavaScriptWindowObject(
-                    'pybridge', self._bridge)
-
-    def setHtml(self, html, url=''):
-        self.setContent(html.encode('utf-8'), 'text/html', url)
-
-    def sizeHint(self):
-        return QSize(600, 500)
-
-    def evalJS(self, javascript):
-        self.page().mainFrame().evaluateJavaScript(javascript)
-
-
 class OWReport(OWWidget):
     name = "Report"
     save_dir = Setting("")
@@ -194,7 +141,7 @@ class OWReport(OWWidget):
             self.controlArea, self, "Back to Last Scheme",
             callback=self._show_last_scheme
         )
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        box = gui.hBox(self.controlArea)
         box.setContentsMargins(-6, 0, -6, 0)
         self.save_button = gui.button(
             box, self, "Save", callback=self._save_report
@@ -202,7 +149,7 @@ class OWReport(OWWidget):
         self.print_button = gui.button(
             box, self, "Print", callback=self._print_report
         )
-        self.report_view = WebviewWidget(self.mainArea, bridge=self)
+        self.report_view = WebView(self.mainArea, bridge=self)
 
     def __getstate__(self):
         rep_dict = self.__dict__.copy()

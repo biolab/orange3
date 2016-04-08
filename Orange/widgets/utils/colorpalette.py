@@ -59,13 +59,13 @@ class ColorPaletteDlg(QDialog):
         self.colorSchemas = []
         self.selectedSchemaIndex = 0
 
-        self.mainArea = gui.widgetBox(self, spacing=4)
+        self.mainArea = gui.vBox(self, spacing=4)
         self.layout().addWidget(self.mainArea)
         self.schemaCombo = gui.comboBox(
             self.mainArea, self, "selectedSchemaIndex", box="Saved Profiles",
             callback=self.paletteSelected)
 
-        self.hbox = gui.widgetBox(self, orientation="horizontal")
+        self.hbox = gui.hBox(self)
         self.okButton = gui.button(self.hbox, self, "OK", self.acceptChanges)
         self.cancelButton = gui.button(self.hbox, self, "Cancel", self.reject)
         self.setMinimumWidth(230)
@@ -96,7 +96,7 @@ class ColorPaletteDlg(QDialog):
                 QDialog.accept(self)
 
     def createBox(self, boxName, boxCaption=None):
-        box = gui.widgetBox(self.mainArea, boxCaption)
+        box = gui.vBox(self.mainArea, boxCaption)
         box.setAlignment(Qt.AlignLeft)
         return box
 
@@ -109,8 +109,8 @@ class ColorPaletteDlg(QDialog):
     def createContinuousPalette(self, paletteName, boxCaption,
                                 passThroughBlack=0,
                                 initialColor1=Qt.blue, initialColor2=Qt.yellow):
-        buttBox = gui.widgetBox(self.mainArea, boxCaption)
-        box = gui.widgetBox(buttBox, orientation="horizontal")
+        buttBox = gui.vBox(self.mainArea, boxCaption)
+        box = gui.hBox(buttBox)
 
         self.__dict__["cont" + paletteName + "Left"] = ColorButton(self, box, color=QColor(initialColor1))
         self.__dict__["cont" + paletteName + "View"] = PaletteView(box)
@@ -129,8 +129,8 @@ class ColorPaletteDlg(QDialog):
                                         extendedPassThroughColors=((Qt.red, 1),
                                                                    (Qt.black, 1),
                                                                    (Qt.green, 1))):
-        buttBox = gui.widgetBox(self.mainArea, boxCaption)
-        box = gui.widgetBox(buttBox, orientation="horizontal")
+        buttBox = gui.vBox(self.mainArea, boxCaption)
+        box = gui.hBox(buttBox)
 
         self.__dict__["exCont" + paletteName + "Left"] = ColorButton(self, box, color=QColor(initialColor1))
         self.__dict__["exCont" + paletteName + "View"] = PaletteView(box)
@@ -142,7 +142,7 @@ class ColorPaletteDlg(QDialog):
                                                                                            "Use pass-through colors",
                                                                                            callback=self.colorSchemaChange)
 
-        box = gui.widgetBox(buttBox, "Pass-through colors", orientation="horizontal")
+        box = gui.hBox(buttBox, "Pass-through colors")
         for i, (color, check) in enumerate(extendedPassThroughColors):
             self.__dict__["exCont" + paletteName + "passThroughColor" + str(i)] = check
             self.__dict__["exCont" + paletteName + "passThroughColor" + str(i) + "Checkbox"] = cb = gui.checkBox(box,
@@ -163,11 +163,11 @@ class ColorPaletteDlg(QDialog):
     # DISCRETE COLOR PALETTE
     # #####################################################
     def createDiscretePalette(self, paletteName, boxCaption, rgbColors=DefaultRGBColors):
-        vbox = gui.widgetBox(self.mainArea, boxCaption, orientation='vertical')
+        vbox = gui.vBox(self.mainArea, boxCaption)
         self.__dict__["disc" + paletteName + "View"] = PaletteView(vbox)
         self.__dict__["disc" + paletteName + "View"].rgbColors = rgbColors
 
-        hbox = gui.widgetBox(vbox, orientation='horizontal')
+        hbox = gui.hBox(vbox)
         self.__dict__["disc" + paletteName + "EditButt"] = gui.button(hbox, self, "Edit palette", self.editPalette,
                                                                       tooltip="Edit the order and colors of the palette",
                                                                       toggleButton=1)
@@ -377,7 +377,7 @@ class ColorPalleteListing(QDialog):
         self.buttons = []
         self.setMinimumWidth(400)
 
-        box = gui.widgetBox(space, "Information", addSpace=True)
+        box = gui.vBox(space, "Information", addSpace=True)
         gui.widgetLabel(
             box,
             '<p align="center">This dialog shows a list of predefined '
@@ -385,7 +385,7 @@ class ColorPalleteListing(QDialog):
             'in Orange.<br/>You can select a palette by clicking on it.</p>'
         )
 
-        box = gui.widgetBox(space, "Default Palette", addSpace=True)
+        box = gui.vBox(space, "Default Palette", addSpace=True)
 
         butt = _ColorButton(
             DefaultRGBColors, flat=True, toolTip="Default color palette",
@@ -398,7 +398,7 @@ class ColorPalleteListing(QDialog):
         for type in ["Qualitative", "Spectral", "Diverging", "Sequential", "Pastels"]:
             colorGroup = colorbrewer.colorSchemes.get(type.lower(), {})
             if colorGroup:
-                box = gui.widgetBox(space, type + " Palettes", addSpace=True)
+                box = gui.vBox(space, type + " Palettes", addSpace=True)
                 items = sorted(colorGroup.items())
                 for key, colors in items:
                     butt = _ColorButton(colors, self, toolTip=key, flat=True,
@@ -449,7 +449,7 @@ class PaletteEditor(QDialog):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(4, 4, 4, 4)
 
-        hbox = gui.widgetBox(self, "Information", orientation='horizontal')
+        hbox = gui.hBox(self, "Information")
         gui.widgetLabel(
             hbox,
             '<p align="center">You can reorder colors in the list using the'
@@ -457,10 +457,10 @@ class PaletteEditor(QDialog):
             '<br/>To change a specific color double click the item in the '
             'list.</p>')
 
-        hbox = gui.widgetBox(self, box=True, orientation="horizontal")
+        hbox = gui.hBox(self, box=True)
         self.discListbox = gui.listBox(hbox, self, enableDragDrop=1)
 
-        vbox = gui.widgetBox(hbox, orientation='vertical')
+        vbox = gui.vBox(hbox)
         buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP, tooltip="Move selected colors up")
         buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN, tooltip="Move selected colors down")
         buttonUPAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_up3.png")))

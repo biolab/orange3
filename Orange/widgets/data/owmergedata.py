@@ -40,8 +40,7 @@ class OWMergeData(widget.OWWidget):
         w.setLayout(grid)
 
         # attribute A selection
-        boxAttrA = gui.widgetBox(
-            self, self.tr("Attribute A"), addToLayout=False)
+        boxAttrA = gui.vBox(self, self.tr("Attribute A"), addToLayout=False)
         grid.addWidget(boxAttrA, 0, 0)
         self.attrViewA = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection
@@ -55,8 +54,7 @@ class OWMergeData(widget.OWWidget):
         boxAttrA.layout().addWidget(self.attrViewA)
 
         # attribute  B selection
-        boxAttrB = gui.widgetBox(
-            self, self.tr("Attribute B"), addToLayout=False)
+        boxAttrB = gui.vBox(self, self.tr("Attribute B"), addToLayout=False)
         grid.addWidget(boxAttrB, 0, 1)
         self.attrViewB = QtGui.QListView(
             selectionMode=QtGui.QListView.SingleSelection
@@ -70,14 +68,12 @@ class OWMergeData(widget.OWWidget):
         boxAttrB.layout().addWidget(self.attrViewB)
 
         # info A
-        boxDataA = gui.widgetBox(
-            self, self.tr("Data A Input"), addToLayout=False)
+        boxDataA = gui.vBox(self, self.tr("Data A Input"), addToLayout=False)
         grid.addWidget(boxDataA, 1, 0)
         self.infoBoxDataA = gui.widgetLabel(boxDataA, self.dataInfoText(None))
 
         # info B
-        boxDataB = gui.widgetBox(
-            self, self.tr("Data B Input"), addToLayout=False)
+        boxDataB = gui.vBox(self, self.tr("Data B Input"), addToLayout=False)
         grid.addWidget(boxDataB, 1, 1)
         self.infoBoxDataB = gui.widgetLabel(boxDataB, self.dataInfoText(None))
 

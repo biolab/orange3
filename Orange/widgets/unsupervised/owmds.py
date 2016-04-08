@@ -177,7 +177,7 @@ class OWMDS(widget.OWWidget):
         self.__in_next_step = False
         self.__draw_similar_pairs = False
 
-        box = gui.widgetBox(self.controlArea, "MDS Optimization")
+        box = gui.vBox(self.controlArea, "MDS Optimization")
         form = QtGui.QFormLayout(
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
@@ -203,12 +203,12 @@ class OWMDS(widget.OWWidget):
         self.runbutton = gui.button(
             box, self, "Run", callback=self._toggle_run)
 
-        box = gui.widgetBox(self.controlArea, "Graph")
+        box = gui.vBox(self.controlArea, "Graph")
         self.colorvar_model = itemmodels.VariableListModel()
 
-        common_options = {"sendSelectedValue": True, "valueType": str,
-                          "orientation": "horizontal", "labelWidth": 50,
-                          "contentsLength": 12}
+        common_options = dict(
+            sendSelectedValue=True, valueType=str, orientation=Qt.Horizontal,
+            labelWidth=50, contentsLength=12)
 
         self.cb_color_value = gui.comboBox(
             box, self, "color_value", label="Color",
@@ -251,8 +251,7 @@ class OWMDS(widget.OWWidget):
                                 createLabel=False))
         form.addRow("Show similar pairs",
                     gui.hSlider(
-                        gui.widgetBox(self.controlArea,
-                                      orientation="horizontal"),
+                        gui.hBox(self.controlArea),
                         self, "connected_pairs", minValue=0, maxValue=20,
                         createLabel=False,
                         callback=self._on_connected_changed))
@@ -314,7 +313,7 @@ class OWMDS(widget.OWWidget):
 
         self.controlArea.layout().addWidget(box)
 
-        box = gui.widgetBox(self.controlArea, "Output")
+        box = gui.vBox(self.controlArea, "Output")
         self.output_combo = gui.comboBox(
             box, self, "output_embedding_role",
             items=["Original features only",

@@ -40,16 +40,16 @@ class OWLogisticRegression(OWBaseLearner):
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, box=True)
         gui.comboBox(box, self, "penalty_type", label="Regularization type: ",
-                     items=self.penalty_types, orientation="horizontal",
+                     items=self.penalty_types, orientation=Qt.Horizontal,
                      addSpace=4, callback=self.settings_changed)
         gui.widgetLabel(box, "Strength:")
-        box2 = gui.widgetBox(gui.indentedBox(box), orientation="horizontal")
+        box2 = gui.hBox(gui.indentedBox(box))
         gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
         gui.hSlider(box2, self, "C_index",
                     minValue=0, maxValue=len(self.C_s) - 1,
                     callback=self.set_c, createLabel=False)
         gui.widgetLabel(box2, "Strong").setStyleSheet("margin-top:6px")
-        box2 = gui.widgetBox(box, orientation="horizontal")
+        box2 = gui.hBox(box)
         box2.layout().setAlignment(Qt.AlignCenter)
         self.c_label = gui.widgetLabel(box2)
         self.set_c()

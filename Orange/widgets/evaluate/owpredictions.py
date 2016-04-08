@@ -71,7 +71,7 @@ class OWPredictions(widget.OWWidget):
         #: List of (discrete) class variable's values
         self.class_values = []  # type: List[str]
 
-        box = gui.widgetBox(self.controlArea, "Info")
+        box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(
             box, "No data on input\nPredictors: 0\nTask: N/A")
         self.infolabel.setMinimumWidth(150)
@@ -79,7 +79,7 @@ class OWPredictions(widget.OWWidget):
                    callback=self._reset_order,
                    tooltip="Show rows in the original order")
 
-        self.classification_options = box = gui.widgetBox(
+        self.classification_options = box = gui.vBox(
             self.controlArea, "Options (classification)", spacing=-1,
             addSpace=False)
 
@@ -97,11 +97,11 @@ class OWPredictions(widget.OWWidget):
         gui.checkBox(box, self, "draw_dist", "Draw distribution bars",
                      callback=self._update_prediction_delegate)
 
-        box = gui.widgetBox(self.controlArea, "Data view")
+        box = gui.vBox(self.controlArea, "Data view")
         gui.checkBox(box, self, "show_attrs", "Show full data set",
                      callback=self._update_column_visibility)
 
-        box = gui.widgetBox(self.controlArea, "Output", spacing=-1)
+        box = gui.vBox(self.controlArea, "Output", spacing=-1)
         self.checkbox_class = gui.checkBox(
             box, self, "output_attrs", "Original data",
             callback=self.commit)

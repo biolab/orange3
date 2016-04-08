@@ -172,7 +172,7 @@ class OWTestLearners(widget.OWWidget):
         #: results.
         self.learners = OrderedDict()
 
-        sbox = gui.widgetBox(self.controlArea, "Sampling")
+        sbox = gui.vBox(self.controlArea, "Sampling")
         rbox = gui.radioButtons(
             sbox, self, "resampling", callback=self._param_changed
         )
@@ -204,7 +204,7 @@ class OWTestLearners(widget.OWWidget):
         self.apply_button = gui.button(
             rbox, self, "Apply", callback=self.apply, default=True)
 
-        self.cbox = gui.widgetBox(self.controlArea, "Target class")
+        self.cbox = gui.vBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
             self.cbox, self, "class_selection", items=[],
             sendSelectedValue=True, valueType=str,
@@ -229,7 +229,7 @@ class OWTestLearners(widget.OWWidget):
         self.view.setModel(self.result_model)
         self.view.setItemDelegate(ItemDelegate())
 
-        box = gui.widgetBox(self.mainArea, "Evaluation Results")
+        box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.view)
 
     def sizeHint(self):

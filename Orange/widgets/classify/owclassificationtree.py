@@ -26,13 +26,12 @@ class OWClassificationTree(OWBaseLearner):
     scores = (("Entropy", "entropy"), ("Gini Index", "gini"))
 
     def add_main_layout(self):
-
         gui.comboBox(self.controlArea, self, "attribute_score",
                      box='Feature selection',
                      items=[name for name, _ in self.scores],
                      callback=self.settings_changed)
 
-        box = gui.widgetBox(self.controlArea, 'Pruning')
+        box = gui.vBox(self.controlArea, 'Pruning')
         gui.spin(box, self, "min_leaf", 1, 1000,
                  label="Min. instances in leaves ", checked="limit_min_leaf",
                  callback=self.settings_changed)

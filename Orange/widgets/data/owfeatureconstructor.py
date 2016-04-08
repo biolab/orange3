@@ -312,7 +312,7 @@ class OWFeatureConstructor(widget.OWWidget):
         self.data = None
         self.editors = {}
 
-        box = gui.widgetBox(self.controlArea, "Variable Definitions")
+        box = gui.vBox(self.controlArea, "Variable Definitions")
 
         toplayout = QtGui.QHBoxLayout()
         toplayout.setContentsMargins(0, 0, 0, 0)
@@ -412,7 +412,7 @@ class OWFeatureConstructor(widget.OWWidget):
 
         box.layout().addLayout(layout, 1)
 
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        box = gui.hBox(self.controlArea)
         box.layout().addWidget(self.report_button)
         self.report_button.setMinimumWidth(180)
         gui.rubber(box)

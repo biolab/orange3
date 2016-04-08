@@ -941,7 +941,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
             b.layout().addWidget(ledit)
     elif focusInCallback or callback and not callbackOnType:
         if not hasHBox:
-            outer = widgetBox(b, "", 0, addToLayout=(b is not widget))
+            outer = hBox(b, addToLayout=(b is not widget))
         else:
             outer = b
         ledit = LineEditWFocusOut(outer, callback, focusInCallback,
@@ -2069,7 +2069,7 @@ class widgetHider(QtGui.QWidget):
 
 
 def auto_commit(widget, master, value, label, auto_label=None, box=True,
-                checkbox_label=None, orientation=Qt.Horizontal, commit=None,
+                checkbox_label=None, orientation=None, commit=None,
                 callback=None, **misc):
     """
     Add a commit button with auto-commit check box.
@@ -2157,8 +2157,8 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
 
     b.checkbox = cb = checkBox(b, master, value, checkbox_label,
                                callback=checkbox_toggled, tooltip=auto_label)
-    if checkbox_label and _is_horizontal(orientation):
-        b.layout().insertSpacing(-1, 10)
+    if _is_horizontal(orientation):
+        b.layout().addSpacing(10)
     cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
     b.button = btn = button(b, master, label, callback=lambda: do_commit())
     if not checkbox_label:
@@ -3128,7 +3128,7 @@ def tabWidget(widget):
 
 def createTabPage(tab_widget, name, widgetToAdd=None, canScroll=False):
     if widgetToAdd is None:
-        widgetToAdd = widgetBox(tab_widget, addToLayout=0, margin=4)
+        widgetToAdd = vBox(tab_widget, addToLayout=0, margin=4)
     if canScroll:
         scrollArea = QtGui.QScrollArea()
         tab_widget.addTab(scrollArea, name)

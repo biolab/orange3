@@ -369,7 +369,7 @@ class OWTreeViewer2D(OWWidget):
         self.root_node = None
         self.tree = None
 
-        box = gui.widgetBox(
+        box = gui.vBox(
             self.controlArea, 'Tree', addSpace=20,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
         self.info = gui.widgetLabel(box, 'No tree.')

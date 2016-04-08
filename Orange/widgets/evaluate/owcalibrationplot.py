@@ -50,15 +50,15 @@ class OWCalibrationPlot(widget.OWWidget):
         self.colors = []
         self._curve_data = {}
 
-        box = gui.widgetBox(self.controlArea, "Plot")
-        tbox = gui.widgetBox(box, "Target Class")
+        box = gui.vBox(self.controlArea, "Plot")
+        tbox = gui.vBox(box, "Target Class")
         tbox.setFlat(True)
 
         self.target_cb = gui.comboBox(
             tbox, self, "target_index", callback=self._replot,
             contentsLength=8)
 
-        cbox = gui.widgetBox(box, "Classifier")
+        cbox = gui.vBox(box, "Classifier")
         cbox.setFlat(True)
 
         self.classifiers_list_box = gui.listBox(

@@ -240,16 +240,14 @@ class OWColor(widget.OWWidget):
         self.disc_colors = []
         self.cont_colors = []
 
-        box = gui.widgetBox(self.controlArea, "Discrete variables",
-                            orientation="horizontal")
+        box = gui.hBox(self.controlArea, "Discrete variables")
         self.disc_model = DiscColorTableModel()
         disc_view = self.disc_view = DiscreteTable(self.disc_model)
         disc_view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.disc_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(disc_view)
 
-        box = gui.widgetBox(self.controlArea, "Numeric variables",
-                            orientation="horizontal")
+        box = gui.hBox(self.controlArea, "Numeric variables")
         self.cont_model = ContColorTableModel()
         cont_view = self.cont_view = ContinuousTable(self, self.cont_model)
         cont_view.setColumnWidth(1, 256)
@@ -257,7 +255,7 @@ class OWColor(widget.OWWidget):
         box.layout().addWidget(cont_view)
 
         box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send data",
-                              orientation="horizontal",
+                              orientation=Qt.Horizontal,
                               checkbox_label="Resend data on every change")
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)

@@ -33,8 +33,7 @@ class OWBaseSVM(OWBaseLearner):
         # Initialize with the widest label to measure max width
         self.kernel_eq = self.kernels[-1][1]
 
-        self.kernel_box = box = gui.widgetBox(
-            self.controlArea, "Kernel", orientation="horizontal")
+        self.kernel_box = box = gui.hBox(self.controlArea, "Kernel")
 
         buttonbox = gui.radioButtonsInBox(
             box, self, "kernel_type", btnLabels=[k[0] for k in self.kernels],
@@ -42,13 +41,13 @@ class OWBaseSVM(OWBaseLearner):
         buttonbox.layout().setSpacing(10)
         gui.rubber(buttonbox)
 
-        parambox = gui.widgetBox(box)
+        parambox = gui.vBox(box)
         gui.label(parambox, self, "Kernel: %(kernel_eq)s")
-        common = dict(orientation="horizontal", callback=self.settings_changed,
+        common = dict(orientation=Qt.Horizontal, callback=self.settings_changed,
                       alignment=Qt.AlignRight, controlWidth=80)
-        spbox = gui.widgetBox(parambox, orientation="horizontal")
+        spbox = gui.hBox(parambox)
         gui.rubber(spbox)
-        inbox = gui.widgetBox(spbox)
+        inbox = gui.vBox(spbox)
         gamma = gui.doubleSpin(
             inbox, self, "gamma", 0.0, 10.0, 0.01, label=" g: ", **common)
         coef0 = gui.doubleSpin(
@@ -65,8 +64,8 @@ class OWBaseSVM(OWBaseLearner):
         box.setMinimumWidth(box.sizeHint().width())
 
     def _add_optimization_box(self):
-        self.optimization_box = gui.widgetBox(self.controlArea,
-                                              "Optimization parameters")
+        self.optimization_box = gui.vBox(
+            self.controlArea, "Optimization parameters")
         gui.doubleSpin(
             self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
             label="Numerical Tolerance",

@@ -55,7 +55,7 @@ class OWPCA(widget.OWWidget):
         self._pca_preprocessors = PCA.preprocessors
 
         # Components Selection
-        box = gui.widgetBox(self.controlArea, "Components Selection")
+        box = gui.vBox(self.controlArea, "Components Selection")
         form = QFormLayout()
         box.layout().addLayout(form)
 
@@ -77,9 +77,7 @@ class OWPCA(widget.OWWidget):
         form.addRow("Variance covered", self.variance_spin)
 
         # Incremental learning
-        self.sampling_box = gui.widgetBox(self.controlArea,
-                                          "Incremental learning")
-
+        self.sampling_box = gui.vBox(self.controlArea, "Incremental learning")
         self.addresstext = QLineEdit(box)
         self.addresstext.setPlaceholderText('Remote server')
         if self.address:
@@ -107,7 +105,7 @@ class OWPCA(widget.OWWidget):
         self.sampling_box.setVisible(remotely)
 
         # Options
-        self.options_box = gui.widgetBox(self.controlArea, "Options")
+        self.options_box = gui.vBox(self.controlArea, "Options")
         gui.checkBox(self.options_box, self, "normalize", "Normalize data",
                      callback=self._update_normalize)
         self.maxp_spin = gui.spin(

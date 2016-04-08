@@ -92,8 +92,8 @@ class OWRank(widget.OWWidget):
         self.contMeasures = [m for m in self.all_measures
                              if issubclass(ContinuousVariable, m.score.class_type)]
 
-        selMethBox = gui.widgetBox(
-            self.controlArea, "Select attributes", addSpace=True)
+        selMethBox = gui.vBox(
+                self.controlArea, "Select attributes", addSpace=True)
 
         grid = QtGui.QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
