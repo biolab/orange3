@@ -15,10 +15,10 @@ from .. import (
 class TestScheme(test.QCoreAppTestCase):
     def test_scheme(self):
         reg = small_testing_registry()
-        base = "Orange.OrangeWidgets"
-        file_desc = reg.widget(base + ".Data.OWFile.OWFile")
-        discretize_desc = reg.widget(base + ".Data.OWDiscretize.OWDiscretize")
-        bayes_desc = reg.widget(base + ".Classify.OWNaiveBayes.OWNaiveBayes")
+        base = "Orange.widgets"
+        file_desc = reg.widget(base + ".data.owfile.OWFile")
+        discretize_desc = reg.widget(base + ".data.owdiscretize.OWDiscretize")
+        bayes_desc = reg.widget(base + ".classify.ownaivebayes.OWNaiveBayes")
         # Create the scheme
         scheme = Scheme()
 

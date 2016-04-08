@@ -103,12 +103,12 @@ class NodeBodyItem(GraphicsPathObject):
         self.setGraphicsEffect(self.shadow)
         self.shadow.setEnabled(True)
 
-        self.__blurAnimation = QPropertyAnimation(self.shadow, "blurRadius",
+        self.__blurAnimation = QPropertyAnimation(self.shadow, b"blurRadius",
                                                   self)
         self.__blurAnimation.setDuration(100)
         self.__blurAnimation.finished.connect(self.__on_finished)
 
-        self.__pingAnimation = QPropertyAnimation(self, "scale", self)
+        self.__pingAnimation = QPropertyAnimation(self, b"scale", self)
         self.__pingAnimation.setDuration(250)
         self.__pingAnimation.setKeyValues([(0.0, 1.0), (0.5, 1.1), (1.0, 1.0)])
 
@@ -310,7 +310,6 @@ class AnchorPoint(QGraphicsObject):
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self.scenePositionChanged.emit(value)
-
         return QGraphicsObject.itemChange(self, change, value)
 
     def boundingRect(self,):
@@ -323,7 +322,6 @@ class NodeAnchorItem(GraphicsPathObject):
     """
 
     def __init__(self, parent, *args):
-        self.__boundingRect = None
         GraphicsPathObject.__init__(self, parent, *args)
         self.setAcceptHoverEvents(True)
         self.setPen(QPen(Qt.NoPen))
@@ -355,9 +353,6 @@ class NodeAnchorItem(GraphicsPathObject):
         self.__fullStroke = None
         self.__dottedStroke = None
         self.__shape = None
-
-        self.prepareGeometryChange()
-        self.__boundingRect = None
 
     def parentNodeItem(self):
         """
@@ -541,28 +536,17 @@ class NodeAnchorItem(GraphicsPathObject):
         else:
             return GraphicsPathObject.shape(self)
 
-    def boundingRect(self):
-        if self.__boundingRect is None:
-            self.__boundingRect = super().boundingRect().adjusted(-5, -5, 5, 5)
-        return self.__boundingRect
-
     def hoverEnterEvent(self, event):
-        self.prepareGeometryChange()
-        self.__boundingRect = None
         self.shadow.setEnabled(True)
         return GraphicsPathObject.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
-        self.prepareGeometryChange()
-        self.__boundingRect = None
         self.shadow.setEnabled(False)
         return GraphicsPathObject.hoverLeaveEvent(self, event)
 
     def __updatePositions(self):
         """Update anchor points positions.
         """
-        self.prepareGeometryChange()
-        self.__boundingRect = None
         for point, t in zip(self.__points, self.__pointPositions):
             pos = self.__anchorPath.pointAtPercent(t)
             point.setPos(pos)

@@ -8,11 +8,13 @@ from PyQt4.QtGui import (
 )
 
 from PyQt4.QtCore import (
-    Qt, QPointF, QSizeF, QRectF, QLineF, QEvent, qVersion
+    Qt, QPointF, QSizeF, QRectF, QLineF, QEvent, QT_VERSION
 )
 
-from PyQt4.QtCore import pyqtSignal as Signal
-from PyQt4.QtCore import pyqtProperty as Property
+from PyQt4.QtCore import (
+    pyqtSignal as Signal,
+    pyqtProperty as Property
+)
 
 log = logging.getLogger(__name__)
 
@@ -25,12 +27,14 @@ class Annotation(QGraphicsWidget):
     def __init__(self, parent=None, **kwargs):
         QGraphicsWidget.__init__(self, parent, **kwargs)
 
-    if qVersion() < "4.7":
+    if QT_VERSION < 0x40700:
         geometryChanged = Signal()
-
         def setGeometry(self, rect):
             QGraphicsWidget.setGeometry(self, rect)
             self.geometryChanged.emit()
+    else:
+        def setGeometry(self, rect):
+            QGraphicsWidget.setGeometry(self, rect)
 
 
 class GraphicsTextEdit(QGraphicsTextItem):

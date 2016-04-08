@@ -268,7 +268,7 @@ class OWMDS(widget.OWWidget):
 
         box = QtGui.QGroupBox("Zoom/Select", )
         box.setLayout(QtGui.QHBoxLayout())
-        box.layout().setMargin(2)
+        box.layout().setContentsMargins(2, 2, 2, 2)
 
         group = QtGui.QActionGroup(self, exclusive=True)
 

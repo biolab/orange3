@@ -355,13 +355,15 @@ class OWSieveDiagram(OWWidget):
         temp = dist
         canvas = self.canvas
         while temp < w:
-            r = QGraphicsLineItem(temp + x, y, temp + x, y + h, None, canvas)
+            r = QGraphicsLineItem(temp + x, y, temp + x, y + h, None)
+            canvas.addItem(r)
             r.setPen(pen)
             temp += dist
 
         temp = dist
         while temp < h:
-            r = QGraphicsLineItem(x, y + temp, x + w, y + temp, None, canvas)
+            r = QGraphicsLineItem(x, y + temp, x + w, y + temp, None)
+            canvas.addItem(r)
             r.setPen(pen)
             temp += dist
 

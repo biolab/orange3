@@ -62,44 +62,6 @@ def toGraphicsObjectIfPossible(item):
     return item if obj is None else obj
 
 
-def typed_signal_mapper(pyType):
-    """Create a TypedSignalMapper class supporting signal
-    mapping for `pyType` (the default QSigalMapper only supports
-    int, string, QObject and QWidget (but not for instance QGraphicsItem).
-
-    """
-
-    def unwrap(obj):
-        return sip.unwrapinstance(sip.cast(obj, QObject))
-
-    class TypedSignalMapper(QSignalMapper):
-        pyMapped = Signal(pyType)
-
-        def __init__(self, parent=None):
-            QSignalMapper.__init__(self, parent)
-            self.__mapping = {}
-
-        def setPyMapping(self, sender, mapped):
-            sender_id = unwrap(sender)
-            self.__mapping[sender_id] = mapped
-            sender.destroyed.connect(self.removePyMappings)
-
-        def removePyMappings(self, sender):
-            sender_id = unwrap(sender)
-            del self.__mapping[sender_id]
-            sender.destroyed.disconnect(self.removePyMappings)
-
-        def pyMap(self, sender=None):
-            if sender is None:
-                sender = self.sender()
-
-            sender_id = unwrap(sender)
-            mapped = self.__mapping[sender_id]
-            self.pyMapped.emit(mapped)
-
-    return TypedSignalMapper
-
-
 def linspace(count):
     """Return `count` evenly spaced points from 0..1 interval excluding
     both end points, e.g. `linspace(3) == [0.25, 0.5, 0.75]`.

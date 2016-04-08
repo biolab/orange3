@@ -40,7 +40,7 @@ class SplitterResizer(QObject):
         self.__animationEnabled = True
         self.__size = -1
         self.__expanded = False
-        self.__animation = QPropertyAnimation(self, "size_", self)
+        self.__animation = QPropertyAnimation(self, b"size_", self)
 
         self.__action = QAction("toogle-expanded", self, checkable=True)
         self.__action.triggered[bool].connect(self.setExpanded)
@@ -431,7 +431,7 @@ class CategoryPopupMenu(FramelessWindow):
         drag_data = QMimeData()
         drag_data.setData(
             "application/vnv.orange-canvas.registry.qualified-name",
-            desc.qualified_name
+            desc.qualified_name.encode('utf-8')
         )
         drag = QDrag(self)
         drag.setPixmap(icon.pixmap(38))

@@ -24,7 +24,7 @@ class WidgetRegistry(object):
 
     >>> reg = WidgetRegistry()
     >>> file_desc = WidgetDescription.from_module(
-    ...     "Orange.OrangeWidgets.Data.OWFile"
+    ...     "Orange.widgets.data.owfile"
     ... )
     ...
     >>> reg.register_widget(file_desc)  # register the description

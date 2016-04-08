@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from itertools import chain
 
-from PyQt4 import QtGui, Qt, QtCore
+from PyQt4 import QtGui, QtCore
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table)
@@ -212,7 +212,7 @@ class OWSelectRows(widget.OWWidget):
             le = gui.lineEdit(box, self, None)
             if contents:
                 le.setText(contents)
-            le.setAlignment(Qt.Qt.AlignRight)
+            le.setAlignment(QtCore.Qt.AlignRight)
             le.editingFinished.connect(self.conditions_changed)
             return le
 

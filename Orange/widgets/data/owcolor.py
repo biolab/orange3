@@ -1,4 +1,4 @@
-from PyQt4.QtCore import Qt, QAbstractTableModel, SIGNAL
+from PyQt4.QtCore import Qt, QAbstractTableModel
 from PyQt4.QtGui import QStyledItemDelegate, QColor, QHeaderView, QFont, \
     QColorDialog, QTableView, qRgb, QImage
 import numpy as np
@@ -34,9 +34,9 @@ class ColorTableModel(QAbstractTableModel):
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def set_data(self, variables):
-        self.emit(SIGNAL("modelAboutToBeReset()"))
+        self.modelAboutToBeReset.emit()
         self.variables = variables
-        self.emit(SIGNAL("modelReset()"))
+        self.modelReset.emit()
 
     def rowCount(self, parent):
         return 0 if parent.isValid() else self.n_rows()
@@ -65,7 +65,7 @@ class ColorTableModel(QAbstractTableModel):
             self.variables[index.row()].name = value
         else:
             return False
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        self.dataChanged.emit(index, index)
         return True
 
 
@@ -105,7 +105,7 @@ class DiscColorTableModel(ColorTableModel):
             self.variables[row].values[col - 1] = value
         else:
             return False
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        self.dataChanged.emit(index, index)
         return True
 
 
@@ -147,7 +147,7 @@ class ContColorTableModel(ColorTableModel):
             self.variables[row].colors = value
         else:
             return False
-        self.emit(SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        self.dataChanged.emit(index, index)
         return True
 
 

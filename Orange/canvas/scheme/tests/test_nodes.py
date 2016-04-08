@@ -13,7 +13,7 @@ class TestScheme(test.QAppTestCase):
         """Test SchemeNode.
         """
         reg = small_testing_registry()
-        file_desc = reg.widget("Orange.OrangeWidgets.Data.OWFile.OWFile")
+        file_desc = reg.widget("Orange.widgets.data.owfile.OWFile")
 
         node = SchemeNode(file_desc)
 

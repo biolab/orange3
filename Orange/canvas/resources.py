@@ -221,7 +221,7 @@ class TestIconLoader(unittest.TestCase):
         )
 
         desc = WidgetDescription.from_module(
-            "Orange.OrangeWidgets.Data.OWFile"
+            "Orange.widgets.data.owfile"
         )
 
         loader = icon_loader.from_description(desc)
@@ -230,7 +230,7 @@ class TestIconLoader(unittest.TestCase):
         icon = loader.get(desc.icon)
         self.assertTrue(not icon.isNull())
 
-        desc = CategoryDescription.from_package("Orange.OrangeWidgets.Data")
+        desc = CategoryDescription.from_package("Orange.widgets.data")
         loader = icon_loader.from_description(desc)
         path = loader.find("icons/file.svg")
         self.assertTrue(os.path.isfile(path))
@@ -238,23 +238,23 @@ class TestIconLoader(unittest.TestCase):
         self.assertTrue(not icon.isNull())
 
     def test_package_reflection(self):
-        from Orange.OrangeWidgets.Data import OWFile
-        from Orange.OrangeWidgets import Data
-        package_name = Data.__name__
-        p1 = package("Orange.OrangeWidgets.Data.OWFile.OWFile")
+        from Orange.widgets.data import owfile
+        from Orange.widgets import data
+        package_name = data.__name__
+        p1 = package("Orange.widgets.data.owfile.OWFile")
         self.assertEqual(p1, package_name)
 
-        p2 = package("Orange.OrangeWidgets.Data.OWFile")
+        p2 = package("Orange.widgets.data.owfile")
         self.assertEqual(p2, package_name)
 
-        p3 = package("Orange.OrangeWidgets.Data")
+        p3 = package("Orange.widgets.data")
         self.assertEqual(p3, package_name)
 
-        p4 = package(OWFile.__name__)
+        p4 = package(owfile.__name__)
         self.assertEqual(p4, package_name)
 
         dirname = package_dirname(package_name)
-        self.assertEqual(dirname, os.path.dirname(Data.__file__))
+        self.assertEqual(dirname, os.path.dirname(data.__file__))
 
 
 if __name__ == "__main__":

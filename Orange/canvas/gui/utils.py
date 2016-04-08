@@ -63,7 +63,7 @@ def StyledWidget_paintEvent(self, event):
     """A default styled QWidget subclass  paintEvent function.
     """
     opt = QStyleOption()
-    opt.init(self)
+    opt.initFrom(self)
     painter = QPainter(self)
     self.style().drawPrimitive(QStyle.PE_Widget, opt, painter, self)
 

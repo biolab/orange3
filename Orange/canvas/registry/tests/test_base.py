@@ -19,7 +19,7 @@ class TestRegistry(unittest.TestCase):
         reg = WidgetRegistry()
 
         data_desc = description.CategoryDescription.from_package(
-            "Orange.OrangeWidgets.Data"
+            "Orange.widgets.data"
         )
 
         reg.register_category(data_desc)
@@ -29,9 +29,9 @@ class TestRegistry(unittest.TestCase):
         self.assertIs(reg.category(data_desc.name), data_desc)
 
         file_desc = description.WidgetDescription.from_module(
-            "Orange.OrangeWidgets.Data.OWFile"
+            "Orange.widgets.data.owfile"
         )
-
+        file_desc.category = "Data"
         reg.register_widget(file_desc)
 
         self.assertTrue(reg.has_widget(file_desc.qualified_name))
@@ -48,8 +48,9 @@ class TestRegistry(unittest.TestCase):
             reg.register_widget(desc)
 
         discretize_desc = description.WidgetDescription.from_module(
-            "Orange.OrangeWidgets.Data.OWDiscretize"
+            "Orange.widgets.data.owdiscretize"
         )
+        discretize_desc.category = "Data"
         reg.register_widget(discretize_desc)
 
         self.assertTrue(reg.has_widget(discretize_desc.qualified_name))
@@ -60,8 +61,9 @@ class TestRegistry(unittest.TestCase):
                             set([file_desc, discretize_desc]))
 
         classify_desc = description.CategoryDescription.from_package(
-            "Orange.OrangeWidgets.Classify"
+            "Orange.widgets.classify"
         )
+        classify_desc.category = "Classify"
         reg.register_category(classify_desc)
 
         self.assertTrue(reg.has_category(classify_desc.name))
@@ -70,19 +72,14 @@ class TestRegistry(unittest.TestCase):
                             set([data_desc, classify_desc]))
 
         bayes_desc = description.WidgetDescription.from_module(
-            "Orange.OrangeWidgets.Classify.OWNaiveBayes"
+            "Orange.widgets.classify.ownaivebayes"
         )
+        bayes_desc.category = "Classify"
         reg.register_widget(bayes_desc)
 
         self.assertTrue(reg.has_widget(bayes_desc.qualified_name))
         self.assertIs(reg.widget(bayes_desc.qualified_name), bayes_desc)
         self.assertSequenceEqual(reg.widgets("Classify"), [bayes_desc])
-
-        info_desc = description.WidgetDescription.from_file(
-            __import__("Orange.OrangeWidgets.Data.OWDataInfo",
-                       fromlist=[""]).__file__
-        )
-        reg.register_widget(info_desc)
 
         # Test copy constructor
         reg1 = WidgetRegistry(reg)
@@ -92,17 +89,15 @@ class TestRegistry(unittest.TestCase):
 
         # Test 'widgets()'
         self.assertSetEqual(set(reg1.widgets()),
-                            set([file_desc, info_desc, discretize_desc,
-                                 bayes_desc]))
+                            set([file_desc, discretize_desc, bayes_desc]))
 
         # Test ordering by priority
         self.assertSequenceEqual(
              reg.widgets("Data"),
-             sorted([file_desc, discretize_desc, info_desc],
-                    key=attrgetter("priority"))
+             sorted([file_desc, discretize_desc], key=attrgetter("priority"))
         )
 
         self.assertTrue(all(isinstance(desc.priority, int)
-                            for desc in [file_desc, info_desc, discretize_desc,
+                            for desc in [file_desc, discretize_desc,
                                          bayes_desc])
                         )

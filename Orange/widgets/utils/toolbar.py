@@ -106,7 +106,7 @@ class ZoomSelectToolbar(QGroupBox):
 
     def setup_toolbar(self, parent):
         self.setLayout(QHBoxLayout())
-        self.layout().setMargin(6)
+        self.layout().setContentsMargins(6, 6, 6, 6)
         self.layout().setSpacing(4)
         if parent.layout() is not None:
             parent.layout().addWidget(self)

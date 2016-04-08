@@ -91,9 +91,10 @@ class PyListModel(QAbstractListModel):
         """ Wrap the list with this model. All changes to the model
         are done in place on the passed list
         """
+        self.beginResetModel()
         self._list = lst
         self._other_data = [_store() for _ in lst]
-        self.reset()
+        self.endResetModel()
 
 
     # noinspection PyMethodOverriding

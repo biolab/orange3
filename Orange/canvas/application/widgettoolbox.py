@@ -193,7 +193,7 @@ class WidgetToolGrid(ToolGrid):
         drag_data = QMimeData()
         drag_data.setData(
             "application/vnv.orange-canvas.registry.qualified-name",
-            desc.qualified_name
+            desc.qualified_name.encode("utf-8")
         )
         drag = QDrag(button)
         drag.setPixmap(icon.pixmap(self.iconSize()))

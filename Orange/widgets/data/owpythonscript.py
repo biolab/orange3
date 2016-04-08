@@ -65,7 +65,7 @@ class PythonSyntaxHighlighter(QtGui.QSyntaxHighlighter):
             index = exp.indexIn(text)
             while index >= 0:
                 length = exp.matchedLength()
-                if exp.numCaptures() > 0:
+                if exp.captureCount() > 0:
                     self.setFormat(exp.pos(1), len(str(exp.cap(1))), format)
                 else:
                     self.setFormat(exp.pos(0), len(str(exp.cap(0))), format)

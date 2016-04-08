@@ -456,7 +456,8 @@ class OWMosaicDisplay(OWWidget):
                         onclick=select_area, **args)
 
             def line(x1, y1, x2, y2):
-                r = QGraphicsLineItem(x1, y1, x2, y2, None, self.canvas)
+                r = QGraphicsLineItem(x1, y1, x2, y2, None)
+                self.canvas.addItem(r)
                 r.setPen(QPen(Qt.white, 2))
                 r.setZValue(30)
 
@@ -725,7 +726,7 @@ class CanvasText(QGraphicsTextItem):
     def __init__(self, canvas, text="", x=0, y=0,
                  alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
                  html_text=None, tooltip=None, show=1, vertical=False):
-        QGraphicsTextItem.__init__(self, text, None, canvas)
+        QGraphicsTextItem.__init__(self, text, None)
 
         if font:
             self.setFont(font)
@@ -751,6 +752,9 @@ class CanvasText(QGraphicsTextItem):
         else:
             self.hide()
 
+        if canvas is not None:
+            canvas.addItem(self)
+
     def setPos(self, x, y):
         self.x, self.y = x, y
         rect = QGraphicsTextItem.boundingRect(self)
@@ -774,7 +778,7 @@ class CanvasRectangle(QGraphicsRectItem):
                  pen_color=QColor(128, 128, 128), brush_color=None, pen_width=1,
                  z=0, pen_style=Qt.SolidLine, pen=None, tooltip=None, show=1,
                  onclick=None):
-        super().__init__(x, y, width, height, None, canvas)
+        super().__init__(x, y, width, height, None)
         self.onclick = onclick
         if brush_color:
             self.setBrush(QBrush(brush_color))
@@ -789,6 +793,9 @@ class CanvasRectangle(QGraphicsRectItem):
             self.show()
         else:
             self.hide()
+
+        if canvas is not None:
+            canvas.addItem(self)
 
     def mousePressEvent(self, ev):
         if self.onclick:
