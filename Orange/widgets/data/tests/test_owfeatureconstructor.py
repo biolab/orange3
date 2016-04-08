@@ -1,4 +1,6 @@
 import unittest
+import ast
+import sys
 
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
@@ -8,6 +10,9 @@ from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
                                                       StringDescriptor,
                                                       construct_variables)
 
+from Orange.widgets.data.owfeatureconstructor import (
+    freevars, make_lambda, validate_exp
+)
 
 class FeatureConstructorTest(unittest.TestCase):
     def test_construct_variables_discrete(self):
@@ -62,3 +67,111 @@ class FeatureConstructorTest(unittest.TestCase):
         for i in range(3):
             self.assertEqual(data[i * 50, name],
                              str(data[i * 50, "iris"]) + "_name")
+
+
+class TestTools(unittest.TestCase):
+    def test_free_vars(self):
+        stmt = ast.parse("foo", "", "single")
+        with self.assertRaises(ValueError):
+            freevars(stmt, [])
+
+        suite = ast.parse("foo; bar();", "exec")
+        with self.assertRaises(ValueError):
+            freevars(suite, [])
+
+        def freevars_(source, env=[]):
+            return freevars(ast.parse(source, "", "eval"), env)
+
+        self.assertEqual(freevars_("1"), [])
+        self.assertEqual(freevars_("..."), [])
+        self.assertEqual(freevars_("a"), ["a"])
+        self.assertEqual(freevars_("a", ["a"]), [])
+        self.assertEqual(freevars_("f(1)"), ["f"])
+        self.assertEqual(freevars_("f(x)"), ["f", "x"])
+        self.assertEqual(freevars_("f(x)", ["f"]), ["x"])
+        self.assertEqual(freevars_("a + 1"), ["a"])
+        self.assertEqual(freevars_("a + b"), ["a", "b"])
+        self.assertEqual(freevars_("a + b", ["a", "b"]), [])
+        self.assertEqual(freevars_("a[b]"), ["a", "b"])
+        self.assertEqual(freevars_("a[b]", ["a", "b"]), [])
+        self.assertEqual(freevars_("f(x, *a)", ["f"]), ["x", "a"])
+        self.assertEqual(freevars_("f(x, *a, y=1)", ["f"]), ["x", "a"])
+        self.assertEqual(freevars_("f(x, *a, y=1, **k)", ["f"]),
+                         ["x", "a", "k"])
+        if sys.version_info >= (3, 5):
+            self.assertEqual(freevars_("f(*a, *b, k=c, **d, **e)", ["f"]),
+                             ["a", "b", "c", "d", "e"])
+
+        self.assertEqual(freevars_("True"), [])
+        self.assertEqual(freevars_("'True'"), [])
+        self.assertEqual(freevars_("None"), [])
+        self.assertEqual(freevars_("b'None'"), [])
+
+        self.assertEqual(freevars_("a < b"), ["a", "b"])
+        self.assertEqual(freevars_("a < b <= c"), ["a", "b", "c"])
+        self.assertEqual(freevars_("1 < a <= 3"), ["a"])
+
+        self.assertEqual(freevars_("{}"), [])
+        self.assertEqual(freevars_("[]"), [])
+        self.assertEqual(freevars_("()"), [])
+        self.assertEqual(freevars_("[a, 1]"), ["a"])
+        self.assertEqual(freevars_("{a: b}"), ["a", "b"])
+        self.assertEqual(freevars_("{a, b}"), ["a", "b"])
+        self.assertEqual(freevars_("0 if abs(a) < 0.1 else b", ["abs"]),
+                         ["a", "b"])
+        self.assertEqual(freevars_("lambda a: b + 1"), ["b"])
+        self.assertEqual(freevars_("lambda a: b + 1", ["b"]), [])
+        self.assertEqual(freevars_("lambda a: a + 1"), [])
+        self.assertEqual(freevars_("(lambda a: a + 1)(a)"), ["a"])
+        self.assertEqual(freevars_("lambda a, *arg: arg + (a,)"), [])
+        self.assertEqual(freevars_("lambda a, *arg, **kwargs: arg + (a,)"), [])
+
+        self.assertEqual(freevars_("[a for a in b]"), ["b"])
+        self.assertEqual(freevars_("[1 + a for c in b if c]"), ["a", "b"])
+        self.assertEqual(freevars_("{a for _ in [] if b}"), ["a", "b"])
+        self.assertEqual(freevars_("{a for _ in [] if b}", ["a", "b"]), [])
+
+    def test_validate_exp(self):
+
+        stmt = ast.parse("1", mode="single")
+        with self.assertRaises(ValueError):
+            validate_exp(stmt)
+        suite = ast.parse("a; b", mode="exec")
+        with self.assertRaises(ValueError):
+            validate_exp(suite)
+
+        def validate_(source):
+            return validate_exp(ast.parse(source, mode="eval"))
+
+        self.assertTrue(validate_("a"))
+        self.assertTrue(validate_("a + 1"))
+        self.assertTrue(validate_("a < 1"))
+        self.assertTrue(validate_("1 < a"))
+        self.assertTrue(validate_("1 < a < 10"))
+        self.assertTrue(validate_("a and b"))
+        self.assertTrue(validate_("not a"))
+        self.assertTrue(validate_("a if b else c"))
+
+        self.assertTrue(validate_("f(x)"))
+        self.assertTrue(validate_("f(g(x)) + g(x)"))
+
+        self.assertTrue(validate_("f(x, r=b)"))
+        self.assertTrue(validate_("a[b]"))
+
+        self.assertTrue(validate_("a in {'a', 'b'}"))
+        self.assertTrue(validate_("{}"))
+        self.assertTrue(validate_("{'a': 1}"))
+        self.assertTrue(validate_("()"))
+        self.assertTrue(validate_("[]"))
+
+        with self.assertRaises(ValueError):
+            validate_("[a for a in s]")
+
+        with self.assertRaises(ValueError):
+            validate_("(a for a in s)")
+
+        with self.assertRaises(ValueError):
+            validate_("{a for a in s}")
+
+        with self.assertRaises(ValueError):
+            validate_("{a:1 for a in s}")

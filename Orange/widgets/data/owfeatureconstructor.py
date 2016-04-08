@@ -40,16 +40,7 @@ DiscreteDescriptor = \
 StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
 
-@functools.lru_cache(50)
-def make_variable(descriptor, compute_value=None):
-    if compute_value is None:
-        if descriptor.expression.strip():
-            compute_value = \
-                lambda instance: eval(descriptor.expression,
-                                      {"instance": instance, "_": instance})
-        else:
-            compute_value = lambda _: float("nan")
-
+def make_variable(descriptor, compute_value):
     if isinstance(descriptor, ContinuousDescriptor):
         return Orange.data.ContinuousVariable(
             descriptor.name,
@@ -68,14 +59,6 @@ def make_variable(descriptor, compute_value=None):
             compute_value=compute_value)
     else:
         raise TypeError
-
-
-def is_valid_expression(exp):
-    try:
-        ast.parse(exp, mode="eval")
-        return True
-    except Exception:
-        return False
 
 
 def selected_row(view):
@@ -541,8 +524,14 @@ class OWFeatureConstructor(widget.OWWidget):
 
         desc = list(self.featuremodel)
 
+        def validate(source):
+            try:
+                return validate_exp(ast.parse(source, mode="eval"))
+            except Exception:
+                return False
+
         def remove_invalid_expression(desc):
-            return (desc if is_valid_expression(desc.expression)
+            return (desc if validate(desc.expression)
                     else desc._replace(expression=""))
 
         desc = map(remove_invalid_expression, desc)
@@ -594,6 +583,25 @@ import ast
 
 
 def freevars(exp, env):
+    """
+    Return names of all free variables in a parsed (expression) AST.
+
+    Parameters
+    ----------
+    exp : ast.AST
+        An expression ast (ast.parse(..., mode="single"))
+    env : List[str]
+        Environment
+
+    Returns
+    -------
+    freevars : List[str]
+
+    See also
+    --------
+    ast
+
+    """
     etype = type(exp)
     if etype in [ast.Expr, ast.Expression]:
         return freevars(exp.body, env)
@@ -603,34 +611,68 @@ def freevars(exp, env):
         return freevars(exp.left, env) + freevars(exp.right, env)
     elif etype == ast.UnaryOp:
         return freevars(exp.operand, env)
+    elif etype == ast.Lambda:
+        args = exp.args
+        assert isinstance(args, ast.arguments)
+        argnames = [a.arg for a in args.args]
+        argnames += [args.vararg.arg] if args.vararg else []
+        argnames += [a.arg for a in args.kwonlyargs] if args.kwonlyargs else []
+        argnames += [args.kwarg] if args.kwarg else []
+        return freevars(exp.body, env + argnames)
     elif etype == ast.IfExp:
         return (freevars(exp.test, env) + freevars(exp.body, env) +
                 freevars(exp.orelse, env))
     elif etype == ast.Dict:
-        return sum((freevars(v, env) for v in exp.values), [])
+        return sum((freevars(v, env)
+                    for v in chain(exp.keys, exp.values)), [])
     elif etype == ast.Set:
         return sum((freevars(v, env) for v in exp.elts), [])
-    elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp]:
-        raise NotImplementedError
-    elif etype == ast.DictComp:
-        raise NotImplementedError
+    elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp, ast.DictComp]:
+        env_ext = []
+        vars_ = []
+        for gen in exp.generators:
+            target_names = freevars(gen.target, [])  # assigned names
+            vars_iter = freevars(gen.iter, env)
+            env_ext += target_names
+            vars_ifs = list(chain(*(freevars(ifexp, env + target_names)
+                                    for ifexp in gen.ifs or [])))
+            vars_ += vars_iter + vars_ifs
+
+        if etype == ast.DictComp:
+            vars_ = (freevars(exp.key, env_ext) +
+                     freevars(exp.value, env_ext) +
+                     vars_)
+        else:
+            vars_ = freevars(exp.elt, env + env_ext) + vars_
+        return vars_
     # Yield, YieldFrom???
     elif etype == ast.Compare:
-        return sum((freevars(v, env) for v in [exp.left] + exp.comparators), [])
-    elif etype == ast.Call:
+        return sum((freevars(v, env)
+                    for v in [exp.left] + exp.comparators), [])
+    elif etype == ast.Call and sys.version_info < (3, 5):
         return sum((freevars(e, env)
                     for e in [exp.func] + (exp.args or []) +
-                    (exp.keywords or []) +
-                    (exp.starargs or []) +
-                    (exp.kwargs or [])),
+                    ([k.value for k in exp.keywords or []]) +
+                    ([exp.starargs] if exp.starargs else []) +
+                    ([exp.kwargs] if exp.kwargs else [])),
                    [])
-    elif etype in [ast.Num, ast.Str, ast.Ellipsis]:
-        #     elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
+    elif etype == ast.Call:
+        return sum(map(lambda e: freevars(e, env),
+                       chain([exp.func],
+                             exp.args or [],
+                             [k.value for k in exp.keywords or []])),
+                   [])
+    elif sys.version_info >= (3, 5) and etype == ast.Starred:
+        # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
+        return freevars(exp.value, env)
+    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
+        return []
+    elif sys.version_info >= (3, 4) and etype == ast.NameConstant:
         return []
     elif etype == ast.Attribute:
         return freevars(exp.value, env)
     elif etype == ast.Subscript:
-        return freevars(exp.value, env) + freevars(exp.slice, env),
+        return freevars(exp.value, env) + freevars(exp.slice, env)
     elif etype == ast.Name:
         return [exp.id] if exp.id not in env else []
     elif etype == ast.List:
@@ -645,6 +687,77 @@ def freevars(exp, env):
         return sum((freevars(e, env) for e in exp.dims), [])
     elif etype == ast.Index:
         return freevars(exp.value, env)
+    elif etype == ast.keyword:
+        return freevars(exp.value, env)
+    else:
+        raise ValueError(exp)
+
+
+def validate_exp(exp):
+    """
+    Validate an `ast.AST` expression.
+
+    Only expressions with no list,set,dict,generator comprehensions
+    are accepted.
+
+    Parameters
+    ----------
+    exp : ast.AST
+        A parsed abstract syntax tree
+
+    """
+    if not isinstance(exp, ast.AST):
+        raise TypeError("exp is not a 'ast.AST' instance")
+
+    etype = type(exp)
+    if etype in [ast.Expr, ast.Expression]:
+        return validate_exp(exp.body)
+    elif etype == ast.BoolOp:
+        return all(map(validate_exp, exp.values))
+    elif etype == ast.BinOp:
+        return all(map(validate_exp, [exp.left, exp.right]))
+    elif etype == ast.UnaryOp:
+        return validate_exp(exp.operand)
+    elif etype == ast.IfExp:
+        return all(map(validate_exp, [exp.test, exp.body, exp.orelse]))
+    elif etype == ast.Dict:
+        return all(map(validate_exp, chain(exp.keys, exp.values)))
+    elif etype == ast.Set:
+        return all(map(validate_exp, exp.elts))
+    elif etype == ast.Compare:
+        return all(map(validate_exp, [exp.left] + exp.comparators))
+    elif etype == ast.Call:
+        subexp = chain([exp.func], exp.args or [],
+                       [k.value for k in exp.keywords or []])
+        if sys.version_info < (3, 5):
+            extra = [exp.starargs, exp.kwargs]
+            subexp = chain(subexp, *filter(None, extra))
+        return all(map(validate_exp, subexp))
+    elif sys.version_info >= (3, 5) and etype == ast.Starred:
+        assert isinstance(exp.ctx, ast.Load)
+        return validate_exp(exp.value)
+    elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis]:
+        return True
+    elif sys.version_info >= (3, 4) and etype == ast.NameConstant:
+        return True
+    elif etype == ast.Attribute:
+        return True
+    elif etype == ast.Subscript:
+        return all(map(validate_exp, [exp.value, exp.slice]))
+    elif etype in {ast.List, ast.Tuple}:
+        assert isinstance(exp.ctx, ast.Load)
+        return all(map(validate_exp, exp.elts))
+    elif etype == ast.Name:
+        return True
+    elif etype == ast.Slice:
+        return all(map(validate_exp,
+                       filter(None, [exp.lower, exp.upper, exp.step])))
+    elif etype == ast.ExtSlice:
+        return all(map(validate_exp, exp.dims))
+    elif etype == ast.Index:
+        return validate_exp(exp.value)
+    elif etype == ast.keyword:
+        return validate_exp(exp.value)
     else:
         raise ValueError(exp)
 
