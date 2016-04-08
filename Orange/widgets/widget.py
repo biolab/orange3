@@ -38,11 +38,11 @@ class WidgetMetaClass(type(QDialog)):
        the value of the attribute is replaced with the default."""
 
     #noinspection PyMethodParameters
-    def __new__(mcs, name, bases, dict):
+    def __new__(mcs, name, bases, kwargs):
         from Orange.canvas.registry.description import (
             input_channel_from_args, output_channel_from_args)
 
-        cls = type.__new__(mcs, name, bases, dict)
+        cls = type.__new__(mcs, name, bases, kwargs)
         if not cls.name: # not a widget
             return cls
 
@@ -66,6 +66,8 @@ class WidgetMetaClass(type(QDialog)):
 
 
 class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
+    """Base widget class"""
+
     # Global widget count
     widget_id = 0
 
@@ -192,6 +194,12 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.__msgwidget = None
         self.__msgchoice = 0
 
+        self.left_side = None
+        self.controlArea = self.mainArea = self.buttonsArea = None
+        self.statusBarIconArea = None
+        self.widgetStatusArea = self.widgetStatusBar = self.warning_bar = None
+        self.splitter = None
+        self.warning_label = self.warning_icon = None
         if self.want_basic_layout:
             self.set_basic_layout()
 
@@ -269,10 +277,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         )
         self.splitter.setCollapsible(1, False)
-        if self.want_control_area:
-            self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
-        else:
-            self.mainArea.layout().setContentsMargins(4, 4, 4, 4)
+        self.mainArea.layout().setContentsMargins(
+            0 if self.want_control_area else 4, 4, 4, 4)
 
     def _insert_status_bar(self):
         self.widgetStatusArea = status_area = QFrame(self)
@@ -398,11 +404,11 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             # Update the saved geometry only between explicit show/hide
             # events (i.e. changes initiated by the user not by Qt's default
             # window management).
-            self.savedWidgetGeometry = bytes(self.saveGeometry())
+            self.savedWidgetGeometry = self.saveGeometry()
 
     # when widget is resized, save the new width and height
-    def resizeEvent(self, ev):
-        QDialog.resizeEvent(self, ev)
+    def resizeEvent(self, event):
+        QDialog.resizeEvent(self, event)
         # Don't store geometry if the widget is not visible
         # (the widget receives a resizeEvent (with the default sizeHint)
         # before first showEvent and we must not overwrite the the
@@ -410,24 +416,24 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
 
-    def moveEvent(self, ev):
-        QDialog.moveEvent(self, ev)
+    def moveEvent(self, event):
+        QDialog.moveEvent(self, event)
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
 
     # set widget state to hidden
-    def hideEvent(self, ev):
+    def hideEvent(self, event):
         if self.save_position:
             self.__updateSavedGeometry()
-        QDialog.hideEvent(self, ev)
+        QDialog.hideEvent(self, event)
 
-    def closeEvent(self, ev):
+    def closeEvent(self, event):
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
-        QDialog.closeEvent(self, ev)
+        QDialog.closeEvent(self, event)
 
-    def showEvent(self, ev):
-        QDialog.showEvent(self, ev)
+    def showEvent(self, event):
+        QDialog.showEvent(self, event)
         if self.save_position and not self.__was_restored:
             # Restore saved geometry on show
             self.__restoreWidgetGeometry()
@@ -574,17 +580,18 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                 self.processingStateChanged.emit(1)
 
             usedTime = max(1, time.time() - self.startTime)
-            totalTime = (100.0 * usedTime) / float(value)
-            remainingTime = max(0, totalTime - usedTime)
-            h = int(remainingTime / 3600)
-            min = int((remainingTime - h * 3600) / 60)
-            sec = int(remainingTime - h * 3600 - min * 60)
-            if h > 0:
-                text = "%(h)d:%(min)02d:%(sec)02d" % vars()
+            totalTime = 100.0 * usedTime / value
+            remainingTime = max(0, int(totalTime - usedTime))
+            hrs = remainingTime // 3600
+            mins = (remainingTime % 3600) // 60
+            secs = remainingTime % 60
+            if hrs > 0:
+                text = "{}:{:02}:{:02}".format(hrs, mins, secs)
             else:
-                text = "%(min)d:%(sec)02d" % vars()
-            self.setWindowTitle(self.captionTitle +
-                                " (%(value).2f%% complete, remaining time: %(text)s)" % vars())
+                text = "{}:{}:{:02}".format(hrs, mins, secs)
+            self.setWindowTitle(
+                self.captionTitle +
+                " ({}% complete, remaining time: {})".format(value, text))
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")
 
@@ -716,13 +723,13 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
     def setState(self, state_type, id, text):
         changed = 0
-        if type(id) == list:
+        if isinstance(id, list):
             for val in id:
                 if val in self.widgetState[state_type]:
                     self.widgetState[state_type].pop(val)
                     changed = 1
         else:
-            if type(id) == str:
+            if isinstance(id, str):
                 text = id
                 id = 0
             if not text:
@@ -734,7 +741,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                 changed = 1
 
         if changed:
-            if type(id) == list:
+            if isinstance(id, list):
                 for i in id:
                     self.widgetStateChanged.emit(state_type, i, "")
             else:
@@ -906,8 +913,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             parent=self, text=message.text, icon=icon, wordWrap=True,
             standardButtons=buttons)
 
-        b = self.__msgwidget.button(MessageOverlayWidget.Ok)
-        b.setText("Ok, got it")
+        btn = self.__msgwidget.button(MessageOverlayWidget.Ok)
+        btn.setText("Ok, got it")
 
         self.__msgwidget.setStyleSheet("""
             MessageOverlayWidget {
@@ -917,8 +924,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             }
             MessageOverlayWidget QLabel#text-label {
                 color: white;
-            }"""
-        )
+            }""")
 
         if message.moreurl is not None:
             helpbutton = self.__msgwidget.button(MessageOverlayWidget.Help)
@@ -938,7 +944,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
     def __quicktipOnce(self):
         filename = os.path.join(settings.widget_settings_dir(),
-                               "user-session-state.ini")
+                                "user-session-state.ini")
         namespace = ("user-message-history/{0.__module__}.{0.__qualname__}"
                      .format(type(self)))
         session_hist = QSettings(filename, QSettings.IniFormat)
