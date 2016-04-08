@@ -295,8 +295,6 @@ class OWSelectAttributes(widget.OWWidget):
                   "data features, classes or meta variables."
     icon = "icons/SelectColumns.svg"
     priority = 100
-    author = "Ales Erjavec"
-    author_email = "ales.erjavec(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
     outputs = [("Data", Table), ("Features", widget.AttributeList)]
 

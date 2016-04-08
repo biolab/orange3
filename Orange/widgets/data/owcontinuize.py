@@ -15,7 +15,6 @@ class OWContinuize(widget.OWWidget):
     description = ("Transform discrete attributes into continuous and, " +
                    "optionally, normalize the continuous values.")
     icon = "icons/Continuize.svg"
-    author = "Martin Frlin"
     category = "Data"
     keywords = ["data", "continuize"]
 

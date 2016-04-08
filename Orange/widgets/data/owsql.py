@@ -25,8 +25,6 @@ class OWSql(widget.OWWidget):
     long_description = """
     Sql widget connects to server and opens data from there. """
     icon = "icons/SQLTable.svg"
-    author = "Anze Staric"
-    maintainer_email = "anze.staric@fri.uni-lj.si"
     priority = 10
     category = "Data"
     keywords = ["data", "file", "load", "read"]

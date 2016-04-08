@@ -22,8 +22,6 @@ class OWSelectRows(widget.OWWidget):
     icon = "icons/SelectRows.svg"
     priority = 100
     category = "Data"
-    author = "Peter Juvan, Janez Demšar"
-    author_email = "janez.demsar(@at@)fri.uni-lj.si"
     inputs = [("Data", Table, "set_data")]
     outputs = [("Matching Data", Table, widget.Default), ("Unmatched Data", Table)]
 

@@ -94,7 +94,6 @@ class OWBoxPlot(widget.OWWidget):
     description = "Visualize distribution of feature values in a box plots."
     icon = "icons/BoxPlot.svg"
     priority = 100
-    author = "Amela Rakanović, Janez Demšar"
     inputs = [("Data", Orange.data.Table, "set_data")]
 
     #: Comparison types for continuous variables

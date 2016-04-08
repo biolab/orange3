@@ -23,7 +23,6 @@ class OWParallelCoordinates(OWVisWidget):
     description = "Parallel coordinates display of multi-dimensional data."
     icon = "icons/ParallelCoordinates.svg"
     priority = 100
-    author = "Gregor Leban, Anze Staric"
     inputs = [("Data", Orange.data.Table, 'set_data', Default),
               ("Data Subset", Orange.data.Table, 'set_subset_data'),
               ("Features", AttributeList, 'set_shown_attributes')]

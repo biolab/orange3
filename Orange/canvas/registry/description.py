@@ -216,14 +216,6 @@ class WidgetDescription(object):
     help_ref : str, optional
         A text reference id that can be used to identify the help
         page, for instance an intersphinx reference.
-    author : str, optional
-        Author name.
-    author_email : str, optional
-        Author email address.
-    maintainer : str, optional
-        Maintainer name
-    maintainer_email : str, optional
-        Maintainer email address.
     keywords : list-of-str, optional
         A list of keyword phrases.
     priority : int, optional
@@ -240,8 +232,6 @@ class WidgetDescription(object):
                  description=None, long_description=None,
                  qualified_name=None, package=None, project_name=None,
                  inputs=[], outputs=[],
-                 author=None, author_email=None,
-                 maintainer=None, maintainer_email=None,
                  help=None, help_ref=None, url=None, keywords=None,
                  priority=sys.maxsize,
                  icon=None, background=None,
@@ -265,10 +255,6 @@ class WidgetDescription(object):
         self.outputs = outputs
         self.help = help
         self.help_ref = help_ref
-        self.author = author
-        self.author_email = author_email
-        self.maintainer = maintainer
-        self.maintainer_email = maintainer_email
         self.url = url
         self.keywords = keywords
         self.priority = priority
@@ -342,10 +328,6 @@ class WidgetDescription(object):
             package=module.__package__,
             inputs=inputs,
             outputs=outputs,
-            author=widget_class.author,
-            author_email=widget_class.author_email,
-            maintainer=widget_class.maintainer,
-            maintainer_email=widget_class.maintainer_email,
             help=widget_class.help,
             help_ref=widget_class.help_ref,
             url=widget_class.url,
@@ -387,8 +369,7 @@ class CategoryDescription(object):
     def __init__(self, name=None, version=None,
                  description=None, long_description=None,
                  qualified_name=None, package=None,
-                 project_name=None, author=None, author_email=None,
-                 maintainer=None, maintainer_email=None,
+                 project_name=None,
                  url=None, help=None, keywords=None,
                  widgets=None, priority=sys.maxsize,
                  icon=None, background=None
@@ -401,10 +382,6 @@ class CategoryDescription(object):
         self.qualified_name = qualified_name
         self.package = package
         self.project_name = project_name
-        self.author = author
-        self.author_email = author_email
-        self.maintainer = maintainer
-        self.maintainer_email = maintainer_email
         self.url = url
         self.help = help
         self.keywords = keywords
@@ -439,10 +416,6 @@ class CategoryDescription(object):
         name = getattr(package, "NAME", default_name)
         description = getattr(package, "DESCRIPTION", None)
         long_description = getattr(package, "LONG_DESCRIPTION", None)
-        author = getattr(package, "AUTHOR", None)
-        author_email = getattr(package, "AUTHOR_EMAIL", None)
-        maintainer = getattr(package, "MAINTAINER", None)
-        maintainer_email = getattr(package, "MAINTAINER_MAIL", None)
         url = getattr(package, "URL", None)
         help = getattr(package, "HELP", None)
         keywords = getattr(package, "KEYWORDS", None)
@@ -460,10 +433,6 @@ class CategoryDescription(object):
             description=description,
             long_description=long_description,
             help=help,
-            author=author,
-            author_email=author_email,
-            maintainer=maintainer,
-            maintainer_email=maintainer_email,
             url=url,
             keywords=keywords,
             widgets=widgets,

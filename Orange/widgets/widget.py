@@ -8,8 +8,8 @@ from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
     QEventLoop, QSettings, QUrl
-from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
-    qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
+from PyQt4.QtGui import QDialog, QPixmap, QVBoxLayout, QSizePolicy, \
+    qApp, QStyle, QIcon, QApplication, \
     QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle, \
     QWidget, QPushButton
 
@@ -90,10 +90,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     #: (default ``sys.maxsize``).
     priority = sys.maxsize
 
-    author = None
-    author_email = None
-    maintainer = None
-    maintainer_email = None
     help = None
     help_ref = None
     url = None
@@ -125,7 +121,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     #: Widget painted by `Save graph" button
     graph_name = None
     graph_writers = FileFormat.img_writers
-    want_status_bar = False
 
     save_position = True
 
@@ -168,7 +163,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self.graphButton = None
         self.report_button = None
-        self.__reportData = None
 
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
@@ -196,10 +190,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
-        self.statusBarIconArea = None
-        self.widgetStatusArea = self.widgetStatusBar = self.warning_bar = None
         self.splitter = None
-        self.warning_label = self.warning_icon = None
+        self.warning_bar = self.warning_label = self.warning_icon = None
         if self.want_basic_layout:
             self.set_basic_layout()
 
@@ -217,24 +209,26 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         return (Qt.Window if cls.resizing_enabled
                 else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
-    # Construction of standard widget layout
-    class Splitter(QSplitter):
+    class _Splitter(QSplitter):
         def createHandle(self):
-            return self.Handle(
+            """Create splitter handle"""
+            return self._Handle(
                 self.orientation(), self, cursor=Qt.PointingHandCursor)
 
-        class Handle(QSplitterHandle):
+        class _Handle(QSplitterHandle):
             def mouseReleaseEvent(self, event):
+                """Resize on left button"""
                 if event.button() == Qt.LeftButton:
                     splitter = self.splitter()
                     splitter.setSizes([int(splitter.sizes()[0] == 0), 1000])
                 super().mouseReleaseEvent(event)
 
             def mouseMoveEvent(self, event):
-                return  # Prevent moving; just show/hide
+                """Prevent moving; just show/hide"""
+                return
 
     def _insert_splitter(self):
-        self.splitter = self.Splitter(Qt.Horizontal, self)
+        self.splitter = self._Splitter(Qt.Horizontal, self)
         self.layout().addWidget(self.splitter)
 
     def _insert_warning_bar(self):
@@ -280,35 +274,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.mainArea.layout().setContentsMargins(
             0 if self.want_control_area else 4, 4, 4, 4)
 
-    def _insert_status_bar(self):
-        self.widgetStatusArea = status_area = QFrame(self)
-        status_area.setLayout(QHBoxLayout(status_area))
-        status_area.layout().setContentsMargins(0, 0, 0, 0)
-        status_area.setFrameShape(QFrame.StyledPanel)
-        self.layout().addWidget(status_area)
-
-        self.statusBarIconArea = QFrame(self)
-        self.statusBarIconArea.setLayout(QHBoxLayout())
-        self.statusBarIconArea.hide()
-        status_area.layout().addWidget(self.statusBarIconArea)
-
-        self.widgetStatusBar = QStatusBar(self)
-        self.widgetStatusBar.setSizeGripEnabled(0)
-        status_area.layout().addWidget(self.widgetStatusBar)
-
-        for attr, name in (("_warningWidget", "icons/triangle-orange.png"),
-                           ("_errorWidget", "icons/triangle-red.png")):
-            w = QLabel(self.statusBarIconArea)
-            self.statusBarIconArea.layout().addWidget(w)
-            w.setFixedSize(16, 16)
-            w.hide()
-            filename = gui.resource_filename(name)
-            if os.path.exists(filename):
-                w.setPixmap(QPixmap(filename))
-            setattr(self, attr, w)
-
     def _create_default_buttons(self):
-        # These button is inserted in buttons_area, if it exists
+        # These buttons are inserted in buttons_area, if it exists
         # Otherwise it is up to the widget to add them to some layout
         if self.graph_name is not None:
             self.graphButton = QPushButton("&Save Image", autoDefault=False)
@@ -337,26 +304,17 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self._insert_control_area()
         if self.want_main_area:
             self._insert_main_area()
-        if self.want_status_bar:
-            self._insert_status_bar()
 
     def save_graph(self):
+        """Save the graph with the name given in class attribute `graph_name`.
+
+        The method is called by the *Save graph* button, which is created
+        automatically if the `graph_name` is defined.
+        """
         graph_obj = getdeepattr(self, self.graph_name, None)
         if graph_obj is None:
             return
         saveplot.save_plot(graph_obj, self.graph_writers)
-
-    def updateStatusBarState(self):
-        if not hasattr(self, "widgetStatusArea"):
-            return
-        if self.widgetState["Warning"] or self.widgetState["Error"]:
-            self.widgetStatusArea.show()
-        else:
-            self.widgetStatusArea.hide()
-
-    def setStatusBarText(self, text, timeout=5000):
-        if hasattr(self, "widgetStatusBar"):
-            self.widgetStatusBar.showMessage(" " + text, timeout)
 
     def __restoreWidgetGeometry(self):
 
@@ -408,6 +366,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
     # when widget is resized, save the new width and height
     def resizeEvent(self, event):
+        """Overloaded to save the geometry (width and height) when the widget
+        is resized.
+        """
         QDialog.resizeEvent(self, event)
         # Don't store geometry if the widget is not visible
         # (the widget receives a resizeEvent (with the default sizeHint)
@@ -417,22 +378,29 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self.__updateSavedGeometry()
 
     def moveEvent(self, event):
+        """Overloaded to save the geometry when the widget is moved
+        """
         QDialog.moveEvent(self, event)
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
 
-    # set widget state to hidden
     def hideEvent(self, event):
+        """Overloaded to save the geometry when the widget is hidden
+        """
         if self.save_position:
             self.__updateSavedGeometry()
         QDialog.hideEvent(self, event)
 
     def closeEvent(self, event):
+        """Overloaded to save the geometry when the widget is closed
+        """
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
         QDialog.closeEvent(self, event)
 
     def showEvent(self, event):
+        """Overloaded to restore the geometry when the widget is shown
+        """
         QDialog.showEvent(self, event)
         if self.save_position and not self.__was_restored:
             # Restore saved geometry on show
@@ -441,9 +409,11 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.__quicktipOnce()
 
     def wheelEvent(self, event):
-        # Silently accept the wheel event. This is to ensure combo boxes
-        # and other controls that have focus don't receive this event unless
-        # the cursor is over them.
+        """Silently accept the wheel event.
+
+        This is to ensure combo boxes and other controls that have focus
+        don't receive this event unless the cursor is over them.
+        """
         event.accept()
 
     def setCaption(self, caption):
@@ -451,8 +421,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.captionTitle = str(caption)
         self.setWindowTitle(caption)
 
-    # put this widget on top of all windows
     def reshow(self):
+        """Put the widget on top of all windows
+        """
         self.show()
         self.raise_()
         self.activateWindow()
@@ -477,9 +448,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         name: name of the member, dot is used for nesting ("graph.point.size").
         value: value to set to the member.
-
         """
-
         names = name.rsplit(".")
         field_name = names.pop()
         obj = reduce(lambda o, n: getattr(o, n, None), names, self)
@@ -497,18 +466,63 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self.settingsHandler.fast_save(self, name, value)
 
     def openContext(self, *a):
+        """Open a new context corresponding to the given data.
+
+        The settings handler first checks the stored context for a
+        suitable match. If one is found, it becomes the current contexts and
+        the widgets settings are initialized accordingly. If no suitable
+        context exists, a new context is created and data is copied from
+        the widget's settings into the new context.
+
+        Widgets that have context settings must call this method after
+        reinitializing the user interface (e.g. combo boxes) with the new
+        data.
+
+        The arguments given to this method are passed to the context handler.
+        Their type depends upon the handler. For instance,
+        `DomainContextHandler` expects `Orange.data.Table` or
+        `Orange.data.Domain`.
+        """
         self.settingsHandler.open_context(self, *a)
 
     def closeContext(self):
+        """Save the current settings and close the current context.
+
+        Widgets that have context settings must call this method before
+        reinitializing the user interface (e.g. combo boxes) with the new
+        data.
+        """
         self.settingsHandler.close_context(self)
 
     def retrieveSpecificSettings(self):
+        """
+        Retrieve data that is not registered as setting.
+
+        This method is called by
+        `Orange.widgets.settings.ContextHandler.settings_to_widget`.
+        Widgets may define it to retrieve any data that is not stored in widget
+        attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
+        example.
+        """
         pass
 
     def storeSpecificSettings(self):
+        """
+        Store data that is not registered as setting.
+
+        This method is called by
+        `Orange.widgets.settings.ContextHandler.settings_from_widget`.
+        Widgets may define it to store any data that is not stored in widget
+        attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
+        example.
+        """
         pass
 
     def saveSettings(self):
+        """
+        Writes widget instance's settings to class defaults. Usually called
+        when the widget is deleted.
+        """
         self.settingsHandler.update_defaults(self)
 
     def onDeleteWidget(self):
@@ -602,6 +616,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             qApp.processEvents(processEvents)
 
     def progressBarValue(self):
+        """Return the state of the progress bar
+        """
         return self.__progressBarValue
 
     progressBarValue = pyqtProperty(float, fset=progressBarSet,
@@ -610,6 +626,19 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     processingState = pyqtProperty(int, fget=lambda self: self.__progressState)
 
     def progressBarAdvance(self, value, processEvents=QEventLoop.AllEvents):
+        """
+        Advance the progress bar.
+
+        .. note::
+            This method will by default call `QApplication.processEvents`
+            with `processEvents`. To suppress this behavior pass
+            ``processEvents=None``.
+
+        Args:
+            value (int): progress value
+            processEvents (`QEventLoop.ProcessEventsFlags` or `None`):
+                process events flag
+        """
         self.progressBarSet(self.progressBarValue + value, processEvents)
 
     def progressBarFinished(self, processEvents=QEventLoop.AllEvents):
@@ -686,6 +715,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         return self.__statusMessage
 
     def keyPressEvent(self, e):
+        """Handle default key actions or pass the event to the inherited method
+        """
         if (int(e.modifiers()), e.key()) in OWWidget.defaultKeyActions:
             OWWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
         else:
@@ -699,7 +730,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             id (int or list): The id of the message
             text (str): Text of the message.
         """
-        self.setState("Info", id, text)
+        self._set_state("Info", id, text)
 
     def warning(self, id=0, text=""):
         """
@@ -709,7 +740,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             id (int or list): The id of the message
             text (str): Text of the message.
         """
-        self.setState("Warning", id, text)
+        self._set_state("Warning", id, text)
 
     def error(self, id=0, text=""):
         """
@@ -719,9 +750,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             id (int or list): The id of the message
             text (str): Text of the message.
         """
-        self.setState("Error", id, text)
+        self._set_state("Error", id, text)
 
-    def setState(self, state_type, id, text):
+    def _set_state(self, state_type, id, text):
         changed = 0
         if isinstance(id, list):
             for val in id:
@@ -761,24 +792,24 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                 highest_type = a_type
 
         if highest_type is None:
-            self.set_warning_bar(None)
+            self._set_warning_bar(None)
         elif len(tooltip_lines) == 1:
             msg = tooltip_lines[0]
             if "\n" in msg:
-                self.set_warning_bar(
+                self._set_warning_bar(
                     highest_type, msg[:msg.index("\n")] + " (...)", msg)
             else:
-                self.set_warning_bar(
+                self._set_warning_bar(
                     highest_type, tooltip_lines[0], tooltip_lines[0])
         else:
-            self.set_warning_bar(
+            self._set_warning_bar(
                 highest_type,
                 "{} problems during execution".format(len(tooltip_lines)),
                 "\n".join(tooltip_lines))
 
         return changed
 
-    def set_warning_bar(self, state_type, text=None, tooltip=None):
+    def _set_warning_bar(self, state_type, text=None, tooltip=None):
         colors = {"Error": ("#ffc6c6", "black", QStyle.SP_MessageBoxCritical),
                   "Warning": ("#ffffc9", "black", QStyle.SP_MessageBoxWarning),
                   "Info": ("#ceceff", "black", QStyle.SP_MessageBoxInformation)}
@@ -805,6 +836,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self.resize(self.width(), new_height)
 
     def widgetStateToHtml(self, info=True, warning=True, error=True):
+        """Create HTML code with images and status messages describing
+        the current widget state.
+        """
         iconpaths = {
             "Info": gui.resource_filename("icons/information.png"),
             "Warning": gui.resource_filename("icons/warning.png"),
@@ -822,6 +856,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
     @classmethod
     def getWidgetStateIcons(cls):
+        """Return a (potentially cached) dictionary with icons for
+        info (key `Info`), warning (`Warning`) and error (`Error`)
+        """
         if not hasattr(cls, "_cached__widget_state_icons"):
             info = QPixmap(gui.resource_filename("icons/information.png"))
             warning = QPixmap(gui.resource_filename("icons/warning.png"))
@@ -862,12 +899,11 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self.blockingStateChanged.emit(state)
 
     def isBlocking(self):
-        """
-        Is this widget blocking signal processing.
-        """
+        """Is this widget blocking signal processing."""
         return self.__blocking
 
     def resetSettings(self):
+        """Reset the widget settings to default"""
         self.settingsHandler.reset_settings(self)
 
     def workflowEnv(self):
@@ -951,11 +987,11 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         session_hist.beginGroup(namespace)
         messages = self.UserAdviceMessages
 
-        def ispending(msg):
+        def _ispending(msg):
             return not session_hist.value(
                 "{}/confirmed".format(msg.persistent_id),
                 defaultValue=False, type=bool)
-        messages = list(filter(ispending, messages))
+        messages = [msg for msg in messages if _ispending(msg)]
 
         if not messages:
             return
@@ -965,14 +1001,14 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         self.__showMessage(message)
 
-        def userconfirmed():
+        def _userconfirmed():
             session_hist = QSettings(filename, QSettings.IniFormat)
             session_hist.beginGroup(namespace)
             session_hist.setValue(
                 "{}/confirmed".format(message.persistent_id), True)
             session_hist.sync()
 
-        self.__msgwidget.accepted.connect(userconfirmed)
+        self.__msgwidget.accepted.connect(_userconfirmed)
 
 
 class Message(object):
@@ -1033,8 +1069,6 @@ OutputSignal = widget_description.OutputSignal
 
 
 class AttributeList(list):
-    pass
-
-
-class ExampleList(list):
+    """Signal type for lists of attributes (variables)
+    """
     pass

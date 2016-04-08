@@ -8,8 +8,6 @@ class OWWidgetNumber(widget.OWWidget):
     id = "orange.widgets.data.number"
     description = "Lets the user input a number"
     icon = "icons/Unknown.svg"
-    author = ""
-    maintainer_email = ""
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]
