@@ -17,6 +17,8 @@ from Orange.widgets.settings import (
 from Orange.widgets.utils import getHtmlCompatibleString
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.widget import OWWidget, Default
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 
 
 class OWMosaicDisplay(OWWidget):
@@ -57,6 +59,7 @@ class OWMosaicDisplay(OWWidget):
         super().__init__()
 
         self.data = None
+        self.discrete_data = None
         self.unprocessed_subset_data = None
         self.subset_data = None
 
@@ -106,7 +109,7 @@ class OWMosaicDisplay(OWWidget):
 
         icons = gui.attributeIconDict
         for attr in chain(data.domain, data.domain.metas):
-            if attr.is_discrete:
+            if attr.is_discrete or attr.is_continuous:
                 for combo in self.attr_combos:
                     combo.addItem(icons[attr], attr.name)
 
@@ -140,23 +143,26 @@ class OWMosaicDisplay(OWWidget):
         self.init_combos(self.data)
         self.information([0, 1, 2])
         if not self.data:
+            self.discrete_data = None
             return
-        if any(attr.is_continuous for attr in self.data.domain):
-            self.information(0, "Data contains continuous variables. "
-                                "Discretize the data to use them.")
         """ TODO: check
         if data.has_missing_class():
             self.information(1, "Examples with missing classes were removed.")
         """
+        if any(attr.is_continuous for attr in data.domain):
+            self.discrete_data = Discretize(method=EqualFreq(n=4))(data)
+        else:
+            self.discrete_data = self.data
 
         if self.data.domain.class_var is None:
             self.rb_colors.setDisabled(True)
+            disc_class = False
         else:
             self.rb_colors.setDisabled(False)
             disc_class = self.data.domain.has_discrete_class
             self.rb_colors.group.button(2).setDisabled(not disc_class)
             self.bar_button.setDisabled(not disc_class)
-            self.interior_coloring = bool(disc_class)
+        self.interior_coloring = bool(disc_class)
         self.openContext(self.data)
 
         # if we first received subset we now call setSubsetData to process it
@@ -165,7 +171,7 @@ class OWMosaicDisplay(OWWidget):
             self.unprocessed_subset_data = None
 
     def set_subset_data(self, data):
-        if not self.data:
+        if self.data is None:
             self.unprocessed_subset_data = data
             self.warning(10)
             return
@@ -215,6 +221,12 @@ class OWMosaicDisplay(OWWidget):
             self.send("Selected Data", None)
             return
         filters = []
+        self.warning(6)
+        if self.discrete_data is not self.data:
+            if isinstance(self.data, SqlTable):
+                self.warning(
+                    6,
+                    "Selection of continuous variables on SQL is not supported")
         for i in self.selection:
             cols, vals, area = self.areas[i]
             filters.append(
@@ -225,7 +237,13 @@ class OWMosaicDisplay(OWWidget):
             filters = filter.Values(filters, conjunction=False)
         else:
             filters = filters[0]
-        self.send("Selected Data", filters(self.data))
+        selection = filters(self.discrete_data)
+        if self.discrete_data is not self.data:
+            idset = set(selection.ids)
+            sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
+            selection = self.discrete_data[sel_idx]
+        self.send("Selected Data", selection)
+
 
     def send_report(self):
         self.report_plot(self.canvas)
@@ -250,7 +268,7 @@ class OWMosaicDisplay(OWWidget):
             attr = attr_list[0]
             # how much smaller rectangles do we draw
             edge = len(attr_list) * spacing
-            values = get_variable_values_sorted(self.data.domain[attr])
+            values = get_variable_values_sorted(data.domain[attr])
             if side % 2:
                 values = values[::-1]  # reverse names if necessary
 
@@ -280,7 +298,7 @@ class OWMosaicDisplay(OWWidget):
             valrange = list(range(len(values)))
             if len(attr_list + used_attrs) == 4 and len(used_attrs) == 2:
                 attr1values = get_variable_values_sorted(
-                        self.data.domain[used_attrs[0]])
+                        data.domain[used_attrs[0]])
                 if used_vals[0] == attr1values[-1]:
                     valrange = valrange[::-1]
 
@@ -330,7 +348,7 @@ class OWMosaicDisplay(OWWidget):
             # visualization of the last value of the first attribute
             if side == 3:
                 attr1values = \
-                    get_variable_values_sorted(self.data.domain[used_attrs[0]])
+                    get_variable_values_sorted(data.domain[used_attrs[0]])
                 if used_vals[0] != attr1values[-1]:
                     return
 
@@ -345,7 +363,7 @@ class OWMosaicDisplay(OWWidget):
 
             drawn_sides.add(side)
 
-            values = get_variable_values_sorted(self.data.domain[attr])
+            values = get_variable_values_sorted(data.domain[attr])
             if side % 2:
                 values = values[::-1]
 
@@ -436,7 +454,7 @@ class OWMosaicDisplay(OWWidget):
             if x1 - x0 + y1 - y0 == 2:
                 y1 += 1
 
-            if class_var.is_discrete:
+            if class_var and class_var.is_discrete:
                 colors = [QColor(*col) for col in class_var.colors]
             else:
                 colors = None
@@ -488,7 +506,7 @@ class OWMosaicDisplay(OWWidget):
                         (expected, conditionaldict[attr_vals], pearson))
             else:
                 cls_values = get_variable_values_sorted(class_var)
-                prior = get_distribution(self.data, class_var.name)
+                prior = get_distribution(data, class_var.name)
                 total = 0
                 for i, value in enumerate(cls_values):
                     val = conditionaldict[attr_vals + "-" + value]
@@ -602,7 +620,7 @@ class OWMosaicDisplay(OWWidget):
         self.canvas.clear()
         self.areas = []
 
-        data = self.data
+        data = self.discrete_data
         if data is None:
             return
         subset = self.subset_data
@@ -632,7 +650,7 @@ class OWMosaicDisplay(OWWidget):
             apriori_dists = []
 
         def get_max_label_width(attr):
-            values = get_variable_values_sorted(self.data.domain[attr])
+            values = get_variable_values_sorted(data.domain[attr])
             maxw = 0
             for val in values:
                 t = CanvasText(self.canvas, val, 0, 0, bold=0, show=False)
