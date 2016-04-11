@@ -3,14 +3,13 @@
 
 import unittest
 import numpy as np
-import Orange
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.classification.majority import ConstantModel
 from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table
-from Orange.evaluation import CrossValidation, LeaveOneOut, TestOnTrainingData, TestOnTestData, ShuffleSplit
+from Orange.evaluation import CrossValidation, LeaveOneOut, TestOnTrainingData, TestOnTestData, ShuffleSplit, sample
 from Orange.preprocess import discretize, preprocess
 
 
@@ -128,8 +127,7 @@ class CrossValidationTestCase(unittest.TestCase, CommonSamplingTests):
         self.assertIs(res.data, t)
 
     def test_store_models(self):
-        nrows, ncols = 100, 10
-        t = random_data(nrows, ncols)
+        t = random_data(100, 10)
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
         res = CrossValidation(t, learners, k=5)
@@ -255,7 +253,6 @@ class LeaveOneOutTestCase(unittest.TestCase, CommonSamplingTests):
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
-        y = x[:, -1]
         data = Table(x, y)
         res = LeaveOneOut(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0],
@@ -285,19 +282,15 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         np.testing.assert_equal(res.row_indices, np.arange(nrows))
 
     def test_store_data(self):
-        nrows, ncols = 50, 10
-        t = random_data(nrows, ncols)
         learners = [NaiveBayesLearner()]
-
+        t = random_data(50, 10)
         res = TestOnTrainingData(t, learners)
         self.assertIsNone(res.data)
-
         res = TestOnTrainingData(t, learners, store_data=True)
         self.assertIs(res.data, t)
 
     def test_store_models(self):
-        nrows, ncols = 50, 10
-        t = random_data(nrows, ncols)
+        t = random_data(50, 10)
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
         res = TestOnTrainingData(t, learners)
@@ -335,7 +328,6 @@ class TestOnTrainingTestCase(unittest.TestCase, CommonSamplingTests):
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
-        y = x[:, -1]
         data = Table(x, y)
         res = TestOnTrainingData(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
@@ -384,8 +376,7 @@ class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
         self.assertTrue((probs[:, :, 0] == 0).all())
 
     def test_store_data(self):
-        nrows, ncols = 50, 10
-        data = random_data(nrows, ncols)
+        data = random_data(50, 10)
         train = data[:80]
         test = data[80:]
         learners = [MajorityLearner()]
@@ -479,23 +470,23 @@ class TestOnTestingTestCase(unittest.TestCase, CommonSamplingTests):
 
 class TestTrainTestSplit(unittest.TestCase):
     def test_fixed_training_size(self):
-        data = Orange.data.Table("iris")
-        train, test = Orange.evaluation.sample(data, 100)
+        data = Table("iris")
+        train, test = sample(data, 100)
         self.assertEqual(len(train), 100)
         self.assertEqual(len(train) + len(test), len(data))
 
-        train, test = Orange.evaluation.sample(data, 0.1)
+        train, test = sample(data, 0.1)
         self.assertEqual(len(train), 15)
         self.assertEqual(len(train) + len(test), len(data))
 
-        train, test = Orange.evaluation.sample(data, 0.1, stratified=True)
+        train, test = sample(data, 0.1, stratified=True)
         self.assertEqual(len(train), 15)
         self.assertEqual(len(train) + len(test), len(data))
 
-        train, test = Orange.evaluation.sample(data, 0.2, replace=True)
+        train, test = sample(data, 0.2, replace=True)
         self.assertEqual(len(train), 30)
 
-        train, test = Orange.evaluation.sample(data, 0.9, replace=True)
+        train, test = sample(data, 0.9, replace=True)
         self.assertEqual(len(train), 135)
         self.assertGreater(len(train) + len(test), len(data))
 
