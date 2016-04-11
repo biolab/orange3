@@ -135,7 +135,7 @@ Cyclomatic_complexity ()
     echo "$CHANGED_FILES" |
         xargs "$RADON" $RADON_ARGS |
         { [ "$score_only" ] &&
-          awk '/^Average complexity: /{ gsub(/[\(\)]/, ""); print $NF }' ||
+          awk -F'[()]' '/ .+\([0-9]+\)$/ { tot += $2 } END { print tot }'  ||
           cat; } ||
         true
 }
@@ -165,7 +165,7 @@ do
     echo "${func//_/ } on the pull request: $RESULT_CURRENT"
     echo
 
-    if [ $(echo "${RESULT_CURRENT:-0} > ${RESULT_PARENT:-0}" | bc) -eq 1 ]; then
+    if awk "BEGIN { exit ${RESULT_CURRENT:-0} > ${RESULT_PARENT:-0} ? 0 : 1 }"; then
         echo "FAIL: ${func//_/ } got worse"
         exit 1
     fi
