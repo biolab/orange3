@@ -5,11 +5,10 @@ import unittest
 
 import numpy as np
 
-import Orange
 from Orange.data import Table, Variable
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
     Chi2
-from Orange.preprocess import SelectBestFeatures, Impute
+from Orange.preprocess import SelectBestFeatures, Impute, RemoveNaNColumns, SelectRandomFeatures
 
 
 class TestFSS(unittest.TestCase):
@@ -19,6 +18,7 @@ class TestFSS(unittest.TestCase):
         cls.wine = Table('wine')
         cls.iris = Table('iris')
         cls.auro_mpg = Table('auto-mpg')
+
     def setUp(self):
         Variable._clear_all_caches()
 
@@ -74,27 +74,24 @@ class TestFSS(unittest.TestCase):
 
 class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering(self):
-        data = Orange.data.Table("iris")
+        data = Table("iris")
         data.X[:, (1, 3)] = np.NaN
 
-        new_data = Orange.preprocess.RemoveNaNColumns(data)
+        new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes) - 2)
 
-        data = Orange.data.Table("iris")
+        data = Table("iris")
         data.X[0, 0] = np.NaN
-        new_data = Orange.preprocess.RemoveNaNColumns(data)
+        new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
 
 
 class TestSelectRandomFeatures(unittest.TestCase):
     def test_select_random_features(self):
-        data = Orange.data.Table("voting")
-        srf = Orange.preprocess.SelectRandomFeatures(k=3)
-        new_data = srf(data)
-        self.assertEqual(len(new_data.domain.attributes), 3)
-
-        srf = Orange.preprocess.SelectRandomFeatures(k=0.25)
-        new_data = srf(data)
-        self.assertEqual(len(new_data.domain.attributes), 4)
+        data = Table("voting")
+        for k_features, n_attributes in ((3, 3), (0.25, 4)):
+            srf = SelectRandomFeatures(k=k_features)
+            new_data = srf(data)
+            self.assertEqual(len(new_data.domain.attributes), n_attributes)
