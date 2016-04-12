@@ -18,7 +18,7 @@ from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
-from Orange.widgets.utils import vartype, saveplot, getdeepattr
+from Orange.widgets.utils import vartype, saveplot, getdeepattr, geom_state
 from .utils.overlay import MessageOverlayWidget
 
 
@@ -329,11 +329,27 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
     def __restoreWidgetGeometry(self):
         restored = False
-        if self.save_position:
+        # Do not attempt to restore/set geometry when the widget is already in
+        # full screen/maximized state (also minimized?). More often than not
+        # this results in a borked window state.
+        if self.save_position and \
+                not self.windowState() & (Qt.WindowFullScreen | Qt.WindowMaximized):
             geometry = self.savedWidgetGeometry
             if geometry is not None:
+                # strip full screen state from the stored geometry if present
+                try:
+                    state = geom_state.from_bytes(geometry)
+                except ValueError:
+                    pass
+                else:
+                    if state.full_screen:
+                        # remove the full screen state replacing it with
+                        # maximized state instead
+                        state = state._replace(
+                            full_screen=0, maximized=Qt.WindowMaximized
+                        )
+                        geometry = state.to_bytes()
                 restored = self.restoreGeometry(QByteArray(geometry))
-
             if restored and not self.windowState() & \
                     (Qt.WindowMaximized | Qt.WindowFullScreen):
                 space = qApp.desktop().availableGeometry(self)
