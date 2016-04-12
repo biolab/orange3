@@ -8,8 +8,7 @@ from PyQt4.QtCore import Qt
 import Orange
 from Orange.classification.tree import TreeClassifier
 from Orange.data.table import Table
-from Orange.widgets import gui
-from Orange.widgets.settings import Setting
+from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils.colorpalette import DefaultRGBColors
 
@@ -17,17 +16,29 @@ from Orange.widgets.utils.colorpalette import DefaultRGBColors
 Square = namedtuple('Square', ['center', 'length', 'angle'])
 Point = namedtuple('Point', ['x', 'y'])
 
+SIZE_CALCULATION = [
+    ('Normal', 'normal'),
+    ('Logarithmic', 'logarithmic'),
+]
+
 
 class OWPythagorasTree(OWWidget):
     name = 'Pythagoras Tree'
     description = 'Generalized Pythagoras Tree for visualizing trees.'
     priority = 100
 
+    graph_name = True
+
     inputs = [('Classification Tree', TreeClassifier, 'set_ctree')]
     outputs = [('Selected Data', Table)]
 
     # Settings
-    zoom = Setting(5)
+    zoom = settings.ContextSetting(5)
+    depth = settings.ContextSetting(10)
+    target_class_index = settings.ContextSetting(0)
+    size_calculation = settings.Setting('Normal')
+    size_log_scale = settings.Setting(1)
+    auto_commit = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -38,22 +49,40 @@ class OWPythagorasTree(OWWidget):
 
         self.color_palette = [QtGui.QColor(*c) for c in DefaultRGBColors]
 
-        # GUI - CONTROL AREA
-        layout = QtGui.QFormLayout()
-        layout.setVerticalSpacing(20)
-        # layout.setFieldGrowthPolicy(layout.ExpandingFieldsGrow)
+        # CONTROL AREA
+        # Tree info area
+        box_info = gui.widgetBox(self.controlArea, 'Tree')
+        self.info = gui.widgetLabel(box_info, label='No tree.')
 
-        box = self.display_box = \
-            gui.widgetBox(self.controlArea, 'Display', addSpace=True,
-                          orientation=layout)
-        layout.addRow(
-            'Zoom ',
-            gui.hSlider(box, self, 'zoom',
-                        minValue=1, maxValue=10, step=1, ticks=False,
-                        callback=None,
-                        createLabel=False, addToLayout=False, addSpace=False))
+        # Display controls area
+        box_display = gui.widgetBox(self.controlArea, 'Display')
+        gui.hSlider(
+            box_display, self, 'zoom', label='Zoom',
+            minValue=1, maxValue=10, step=1, ticks=False,
+            callback=None)
+        gui.hSlider(
+            box_display, self, 'depth', label='Depth',
+            minValue=1, maxValue=10, step=1, ticks=False, callback=None)
+        gui.comboBox(
+            box_display, self, 'target_class_index', label='Target class',
+            orientation='horizontal',
+            items=[], contentsLength=8, callback=None)
+        gui.comboBox(
+            box_display, self, 'size_calculation', label='Size',
+            orientation='horizontal',
+            items=list(zip(*SIZE_CALCULATION))[0], contentsLength=8,
+            callback=None)
+        gui.hSlider(
+            box_display, self, 'size_log_scale', label='Log scale',
+            minValue=1, maxValue=10, step=1, ticks=False, callback=None)
+
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
+
+        # Bottom options
+        gui.auto_commit(
+            self.controlArea, self, value='auto_commit',
+            label='Send selected instances', auto_label='Auto send is on')
 
         # GUI - MAIN AREA
         self.scene = QtGui.QGraphicsScene(self)
@@ -70,6 +99,9 @@ class OWPythagorasTree(OWWidget):
         self.view.setRenderHint(QtGui.QPainter.Antialiasing)
 
         self.mainArea.layout().addWidget(self.view)
+
+    def commit(self):
+        pass
 
     def set_ctree(self, ctree=None):
         self.clear()
@@ -107,6 +139,9 @@ class OWPythagorasTree(OWWidget):
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
+
+    def send_report(self):
+        pass
 
 
 class SquareGraphicsItem(QtGui.QGraphicsRectItem):
