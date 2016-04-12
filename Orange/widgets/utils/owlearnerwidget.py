@@ -178,8 +178,8 @@ class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
         box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
         box.layout().addWidget(self.report_button)
         gui.separator(box, 15)
-        gui.button(box, self, "&Apply", callback=self.apply, disabled=0,
-                   default=True)
+        self.apply_button = gui.button(box, self, "&Apply", callback=self.apply,
+                                       disabled=0, default=True)
 
     def setup_layout(self):
         self.add_learner_name_widget()
