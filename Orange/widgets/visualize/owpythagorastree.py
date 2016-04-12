@@ -1,6 +1,7 @@
 # coding=utf-8
 from collections import namedtuple, defaultdict
-from math import pi, sqrt, cos, sin, degrees
+from math import pi, sqrt, cos, sin, degrees, log
+from functools import lru_cache
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
@@ -16,17 +17,13 @@ from Orange.widgets.utils.colorpalette import DefaultRGBColors
 Square = namedtuple('Square', ['center', 'length', 'angle'])
 Point = namedtuple('Point', ['x', 'y'])
 
-SIZE_CALCULATION = [
-    ('Normal', 'normal'),
-    ('Logarithmic', 'logarithmic'),
-]
-
 
 class OWPythagorasTree(OWWidget):
     name = 'Pythagoras Tree'
     description = 'Generalized Pythagoras Tree for visualizing trees.'
     priority = 100
 
+    # Enable the save as feature
     graph_name = True
 
     inputs = [('Classification Tree', TreeClassifier, 'set_ctree')]
@@ -36,12 +33,19 @@ class OWPythagorasTree(OWWidget):
     zoom = settings.ContextSetting(5)
     depth = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
-    size_calculation = settings.Setting('Normal')
-    size_log_scale = settings.Setting(1)
+    size_calc_idx = settings.Setting(0)
+    size_log_scale = settings.Setting(2)
     auto_commit = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
+
+        # Different methods to calculate the size of squares
+        self.SIZE_CALCULATION = [
+            ('Normal', lambda x: x),
+            ('Sqrt', lambda x: sqrt(x)),
+            ('Logarithmic', lambda x: log(x * self.size_log_scale)),
+        ]
 
         # Instance variables
         self.raw_tree = None
@@ -68,13 +72,14 @@ class OWPythagorasTree(OWWidget):
             orientation='horizontal',
             items=[], contentsLength=8, callback=None)
         gui.comboBox(
-            box_display, self, 'size_calculation', label='Size',
+            box_display, self, 'size_calc_idx', label='Size',
             orientation='horizontal',
-            items=list(zip(*SIZE_CALCULATION))[0], contentsLength=8,
-            callback=None)
+            items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
+            callback=self._invalidate)
         gui.hSlider(
             box_display, self, 'size_log_scale', label='Log scale',
-            minValue=1, maxValue=10, step=1, ticks=False, callback=None)
+            minValue=1, maxValue=100, step=1, ticks=False,
+            callback=self._invalidate)
 
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
@@ -107,16 +112,24 @@ class OWPythagorasTree(OWWidget):
         self.clear()
         self.raw_tree = ctree
         if ctree is not None:
-            self.tree = SklTreeAdapter(ctree.skl_model.tree_)
-
+            self._get_tree(ctree)
         self._update()
+
+    def _invalidate(self):
+        self.scene.clear()
+        if self.raw_tree is not None:
+            self._get_tree(self.raw_tree)
+        self._update()
+
+    def _get_tree(self, ctree):
+        self.tree = SklTreeAdapter(
+            ctree.skl_model.tree_,
+            adjust_weight=self.SIZE_CALCULATION[self.size_calc_idx][1],
+        )
 
     def clear(self):
         self.raw_tree = None
         self.tree = None
-        self._clear_scene()
-
-    def _clear_scene(self):
         self.scene.clear()
 
     def _update(self):
@@ -392,15 +405,78 @@ class PythagorasTree:
 
 
 class SklTreeAdapter:
-    def __init__(self, tree):
-        self._tree = tree
+    """SklTreeAdapter Class.
 
+    An abstraction on top of the scikit learn classification tree.
+
+    Parameters
+    ----------
+    tree : sklearn.tree._tree.Tree
+        The raw sklearn classification tree.
+    adjust_weight : function, optional
+        If you want finer control over the weights of individual nodes you can
+        pass in a function that takes the existsing weight and modifies it.
+        The given function must have signture :: Number -> Number
+
+    """
+
+    def __init__(self, tree, adjust_weight=lambda x: x):
+        self._tree = tree
+        self._adjust_weight = adjust_weight
+
+        # clear memoized functions
+        self.weight.cache_clear()
+        self._adjusted_child_weight.cache_clear()
+        self.parent.cache_clear()
+
+    @lru_cache()
     def weight(self, node):
-        return self.num_samples(node) / self.num_samples(self.parent(node))
+        """Get the weight of the given node.
+
+        The weights of the children always sum up to 1.
+
+        Parameters
+        ----------
+        node : int
+            The label of the node.
+
+        Returns
+        -------
+        float
+            The weight of the node relative to its siblings.
+
+        """
+        return self._adjust_weight(self.num_samples(node)) / \
+            self._adjusted_child_weight(self.parent(node))
+
+    @lru_cache()
+    def _adjusted_child_weight(self, node):
+        """Helps when dealing with adjusted weights.
+
+        It is needed when dealing with non linear weights e.g. when calculating
+        the log weight, the sum of logs of all the children will not be equal
+        to the log of all the data instances.
+        A simple example: log(2) + log(2) != log(4)
+
+        Parameters
+        ----------
+        node : int
+            The label of the node.
+
+        Returns
+        -------
+        float
+            The sum of all of the weights of the children of a given node.
+
+        """
+        return sum(self._adjust_weight(self.num_samples(c))
+                   for c in self.children(node)) \
+            if self.has_children(node) else 0
 
     def num_samples(self, node):
         return self._tree.n_node_samples[node]
 
+    @lru_cache()
     def parent(self, node):
         for children in (self._tree.children_left, self._tree.children_right):
             try:
