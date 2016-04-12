@@ -1,16 +1,17 @@
 # coding=utf-8
-from math import pi, sqrt, cos, sin, degrees
 from collections import namedtuple, defaultdict
-
-import Orange
-from Orange.widgets import gui
-from Orange.widgets.widget import OWWidget
-from Orange.widgets.settings import Setting
-from Orange.classification.tree import TreeClassifier
-from Orange.data.table import Table
+from math import pi, sqrt, cos, sin, degrees
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
+
+import Orange
+from Orange.classification.tree import TreeClassifier
+from Orange.data.table import Table
+from Orange.widgets import gui
+from Orange.widgets.settings import Setting
+from Orange.widgets.widget import OWWidget
+from Orange.widgets.utils.colorpalette import DefaultRGBColors
 
 # Please note that all angles are in radians
 Square = namedtuple('Square', ['center', 'length', 'angle'])
@@ -18,12 +19,12 @@ Point = namedtuple('Point', ['x', 'y'])
 
 
 class OWPythagorasTree(OWWidget):
-    name = "Pythagoras Tree"
-    description = "Generalized Pythagoras Tree for visualizing trees."
+    name = 'Pythagoras Tree'
+    description = 'Generalized Pythagoras Tree for visualizing trees.'
     priority = 100
 
-    inputs = [("Classification Tree", TreeClassifier, "set_ctree")]
-    outputs = [("Selected Data", Table)]
+    inputs = [('Classification Tree', TreeClassifier, 'set_ctree')]
+    outputs = [('Selected Data', Table)]
 
     # Settings
     zoom = Setting(5)
@@ -35,16 +36,18 @@ class OWPythagorasTree(OWWidget):
         self.raw_tree = None
         self.tree = None
 
+        self.color_palette = [QtGui.QColor(*c) for c in DefaultRGBColors]
+
         # GUI - CONTROL AREA
         layout = QtGui.QFormLayout()
         layout.setVerticalSpacing(20)
         # layout.setFieldGrowthPolicy(layout.ExpandingFieldsGrow)
 
         box = self.display_box = \
-            gui.widgetBox(self.controlArea, "Display", addSpace=True,
+            gui.widgetBox(self.controlArea, 'Display', addSpace=True,
                           orientation=layout)
         layout.addRow(
-            "Zoom ",
+            'Zoom ',
             gui.hSlider(box, self, 'zoom',
                         minValue=1, maxValue=10, step=1, ticks=False,
                         callback=None,
@@ -89,7 +92,9 @@ class OWPythagorasTree(OWWidget):
             tree_builder = PythagorasTree()
 
             def draw_square_rec(tree_node):
-                self.scene.addItem(SquareGraphicsItem(*tree_node.square))
+                self.scene.addItem(SquareGraphicsItem(
+                    *tree_node.square, brush=self.color_palette[0]
+                ))
                 for child in tree_node.children:
                     draw_square_rec(child)
 
@@ -119,25 +124,24 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
         The length of the square sides.
     angle : float
         The initial angle at which the square will be rotated (in rads).
-
-    Attributes
-    ----------
-    center
-    length
-    angle
+    brush : QColor, optional
+        The brush to be used as the backgound brush.
+    pen : QPen, optional
+        The pen to be used for the border.
 
     """
 
-    def __init__(self, center, length, angle, parent=None):
+    def __init__(self, center, length, angle, parent=None, **kwargs):
         self._center_point = center
         self.center = QtCore.QPointF(*center)
         self.length = length
         self.angle = angle
         super().__init__(self._get_rect_attributes(), parent)
-        # no need to perform extra transformations where they won't be seen
-        if angle % 90 != 0:
-            self.setTransformOriginPoint(self.boundingRect().center())
-            self.setRotation(degrees(angle))
+        self.setTransformOriginPoint(self.boundingRect().center())
+        self.setRotation(degrees(angle))
+
+        self.setBrush(kwargs.get('brush', QtGui.QColor('#297A1F')))
+        self.setPen(kwargs.get('pen', QtGui.QPen(QtGui.QColor('#000'))))
 
     def _get_rect_attributes(self):
         """Get the rectangle attributes requrired to draw item.
@@ -368,7 +372,7 @@ class SklTreeAdapter:
                 return (children == node).nonzero()[0][0]
             except IndexError:
                 continue
-            return -1
+        return -1
 
     def has_children(self, node):
         return self._tree.children_left[node] != -1 \
@@ -410,5 +414,6 @@ def main():
 
     sys.exit(0)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
