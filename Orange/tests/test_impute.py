@@ -8,7 +8,7 @@ import numpy as np
 from Orange import preprocess
 from Orange.preprocess import impute
 from Orange import data
-from Orange.data import Unknown
+from Orange.data import Unknown, Table
 
 
 class TestReplaceUnknowns(unittest.TestCase):
@@ -33,13 +33,11 @@ class TestAverage(unittest.TestCase):
         domain = data.Domain([data.ContinuousVariable("a"),
                               data.DiscreteVariable("b", values="ABC")],
                              data.ContinuousVariable("c"),)
-        table = data.Table(domain, x, c1)
-        var1 = preprocess.Average()(table, 0)
-        self.assertIsInstance(var1.compute_value, preprocess.ReplaceUnknowns)
-        self.assertEqual(var1.compute_value.value, 0.5)
-        var2 = preprocess.Average()(table, 1)
-        self.assertIsInstance(var2.compute_value, preprocess.ReplaceUnknowns)
-        self.assertEqual(var2.compute_value.value, 2)
+        table = Table(domain, x, c1)
+        for col, computed_value in ((0, 0.5), (1, 2)):
+            var1 = preprocess.Average()(table, col)
+            self.assertIsInstance(var1.compute_value, preprocess.ReplaceUnknowns)
+            self.assertEqual(var1.compute_value.value, computed_value)
 
 
 class TestDefault(unittest.TestCase):
@@ -51,7 +49,7 @@ class TestDefault(unittest.TestCase):
             [nan, nan, nan]
         ]
 
-        table = data.Table.from_numpy(None, np.array(X))
+        table = Table.from_numpy(None, np.array(X))
         var1 = impute.Default(0.0)(table, 0)
         self.assertTrue(np.all(np.isfinite(var1.compute_value(table))))
         self.assertTrue(all(var1.compute_value(table) == [1.0, 2.0, 0.0]))
@@ -117,8 +115,8 @@ class TestAsValue(unittest.TestCase):
                          ["undef", "def", "undef"])
 
         vars = reduce(lambda acc, v:
-                          acc + (list(v) if isinstance(v, (tuple, list))
-                                 else [v]),
+                      acc + (list(v) if isinstance(v, (tuple, list))
+                             else [v]),
                       [impute.AsValue()(table, var) for var in table.domain],
                       [])
         domain = data.Domain(vars)
@@ -154,8 +152,8 @@ class TestModel(unittest.TestCase):
 
         v = impute.Model(MajorityLearner())(table, domain[0])
         self.assertTrue(np.all(np.isfinite(v.compute_value(table))))
-        self.assertTrue(np.all(v.compute_value(table) == [1., 2., 1.])
-                        or np.all(v.compute_value(table) == [1., 2., 2.]))
+        self.assertTrue(np.all(v.compute_value(table) == [1., 2., 1.]) or
+                        np.all(v.compute_value(table) == [1., 2., 2.]))
         v = impute.Model(MeanLearner())(table, domain[1])
         self.assertTrue(np.all(np.isfinite(v.compute_value(table))))
         self.assertTrue(np.all(v.compute_value(table) == [1., 1., 1.]))
@@ -196,13 +194,9 @@ class TestRandom(unittest.TestCase):
         )
         table = data.Table.from_numpy(domain, np.array(X))
 
-        v1 = impute.Random()(table, domain[0])
-        v2 = impute.Random()(table, domain[1])
-        v3 = impute.Random()(table, domain[2])
-
-        self.assertTrue(np.all(np.isfinite(v1.compute_value(table))))
-        self.assertTrue(np.all(np.isfinite(v2.compute_value(table))))
-        self.assertTrue(np.all(np.isfinite(v3.compute_value(table))))
+        for i in range(0, 3):
+            v = impute.Random()(table, domain[i])
+            self.assertTrue(np.all(np.isfinite(v.compute_value(table))))
 
         imputer = preprocess.Impute(method=impute.Random())
         itable = imputer(table)
