@@ -14,12 +14,7 @@ class OWClassificationTree(OWBaseLearner):
     priority = 30
 
     LEARNER = TreeLearner
-    OUTPUT_MODEL_NAME = "Tree"
 
-    want_main_area = False
-    resizing_enabled = False
-
-    learner_name = Setting("Classification Tree")
     attribute_score = Setting(0)
     limit_min_leaf = Setting(True)
     min_leaf = Setting(2)
@@ -59,7 +54,7 @@ class OWClassificationTree(OWBaseLearner):
             preprocessors=self.preprocessors
         )
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         from Orange.canvas.report import plural_w
         items = OrderedDict()
         items["Split selection"] = self.scores[self.attribute_score][0]

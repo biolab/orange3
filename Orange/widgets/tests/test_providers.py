@@ -19,8 +19,6 @@ class TestProviderMetaClass(unittest.TestCase):
 
         class OWTestProvider(OWBaseLearner):
             LEARNER = KNNLearner
-            OUTPUT_MODEL_NAME = "Test learner"
-
             name = "test widget"
 
         self.assertChannelsEqual(OWTestProvider.inputs, inputs)
@@ -28,26 +26,19 @@ class TestProviderMetaClass(unittest.TestCase):
     def test_outputs(self):
         expected_outputs = [
             ("Learner", KNNLearner),
-            ("TestModel", KNNLearner.__returns__),
+            ("Classifier", KNNLearner.__returns__),
             ("Test", Table)
         ]
 
         class OWTestProvider(OWBaseLearner):
             LEARNER = KNNLearner
-            OUTPUT_MODEL_NAME = "TestModel"
             name = "test widget"
 
             outputs = [("Test", Table)]
 
         self.assertChannelsEqual(OWTestProvider.outputs, expected_outputs)
 
-    def test_class_without_attributes(self):
+    def test_class_without_learner(self):
         with self.assertRaises(AttributeError):
             class OWTestProvider(OWBaseLearner):
-                OUTPUT_MODEL_NAME = "Test learner"
-                name = 'test'
-
-        with self.assertRaises(AttributeError):
-            class OWTestProvider(OWBaseLearner):
-                LEARNER = KNNLearner
                 name = 'test'

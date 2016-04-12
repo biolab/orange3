@@ -7,21 +7,18 @@ from PyQt4.QtCore import Qt
 from Orange.data import Table
 from Orange.regression import SVRLearner, NuSVRLearner
 from Orange.widgets import settings, gui
-from Orange.widgets.classify.owsvmclassification import SVMBaseMixin
+from Orange.widgets.classify.owsvmclassification import OWBaseSVM
 
 
-class OWSVMRegression(SVMBaseMixin):
+class OWSVMRegression(OWBaseSVM):
     name = "SVM Regression"
     description = "Support vector machine regression algorithm."
     icon = "icons/SVMRegression.svg"
     priority = 50
 
     LEARNER = SVRLearner
-    OUTPUT_MODEL_NAME = "Predictor"
 
     outputs = [("Support vectors", Table)]
-
-    learner_name = settings.Setting("SVM Regression")
 
     #: SVR types
     Epsilon_SVR, Nu_SVR = 0, 1
@@ -85,7 +82,7 @@ class OWSVMRegression(SVMBaseMixin):
         else:
             return NuSVRLearner(C=self.nu_C, nu=self.nu, **common_args)
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         items = OrderedDict()
         if self.svrtype == 0:
             items["SVM type"] = \

@@ -4,7 +4,7 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
-from Orange.classification import logistic_regression as lr
+from Orange.classification.logistic_regression import LogisticRegressionLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -16,15 +16,9 @@ class OWLogisticRegression(OWBaseLearner):
     icon = "icons/LogisticRegression.svg"
     priority = 60
 
-    LEARNER = lr.LogisticRegressionLearner
-    OUTPUT_MODEL_NAME = "Classifier"
+    LEARNER = LogisticRegressionLearner
 
     outputs = [("Coefficients", Table)]
-
-    want_main_area = False
-    resizing_enabled = False
-
-    learner_name = settings.Setting("Logistic Regression")
 
     penalty_type = settings.Setting(1)
     C_index = settings.Setting(61)
@@ -46,8 +40,8 @@ class OWLogisticRegression(OWBaseLearner):
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, box=True)
         gui.comboBox(box, self, "penalty_type", label="Regularization type: ",
-                     items=self.penalty_types,
-                     orientation="horizontal", addSpace=4)
+                     items=self.penalty_types, orientation="horizontal",
+                     addSpace=4, callback=self.settings_changed)
         gui.widgetLabel(box, "Strength:")
         box2 = gui.widgetBox(gui.indentedBox(box), orientation="horizontal")
         gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
@@ -61,6 +55,7 @@ class OWLogisticRegression(OWBaseLearner):
         self.set_c()
 
     def set_c(self):
+        self.settings_changed()
         self.C = self.C_s[self.C_index]
         if self.C >= 1:
             frmt = "C={}"
@@ -83,11 +78,11 @@ class OWLogisticRegression(OWBaseLearner):
     def update_model(self):
         super().update_model()
         coef_table = None
-        if self.good_data:
+        if self.valid_data:
             coef_table = create_coef_table(self.model)
         self.send("Coefficients", coef_table)
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         return (("Regularization", "{}, C={}".format(
                 self.penalty_types[self.penalty_type], self.C_s[self.C_index])),)
 

@@ -1,7 +1,9 @@
 import numpy as np
 
+from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
 from Orange.preprocess.preprocess import Preprocess
+from Orange.util import abstract
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -32,7 +34,7 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
                 attrib.get('inputs', [])
             )
 
-            mcls.add_extra_attributes(attrib)
+            mcls.add_extra_attributes(name, attrib)
 
         return super().__new__(mcls, name, bases, attrib)
 
@@ -55,16 +57,16 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
         return channel
 
     @classmethod
-    def add_extra_attributes(cls, attrib):
+    def add_extra_attributes(cls, name, attrib):
         return attrib
 
 
-class DefaultLearnerWidgetChannelsMetaClass(DefaultWidgetChannelsMetaClass):
+class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
     """Metaclass that adds default inputs (table, preprocess) and
     outputs (learner, model) for learner widgets.
     """
 
-    REQUIRED_ATTRIBUTES = ['LEARNER', 'OUTPUT_MODEL_NAME']
+    REQUIRED_ATTRIBUTES = ['LEARNER']
 
     @classmethod
     def default_inputs(cls, attrib):
@@ -72,19 +74,36 @@ class DefaultLearnerWidgetChannelsMetaClass(DefaultWidgetChannelsMetaClass):
 
     @classmethod
     def default_outputs(cls, attrib):
-        return [("Learner", attrib['LEARNER']),
-                (attrib['OUTPUT_MODEL_NAME'], attrib['LEARNER'].__returns__)]
+        learner_class = attrib['LEARNER']
+        if issubclass(learner_class, LearnerClassification):
+            model_name = 'Classifier'
+        else:
+            model_name = 'Predictor'
+
+        attrib['OUTPUT_MODEL_NAME'] = model_name
+        return [("Learner", learner_class),
+                (model_name, attrib['LEARNER'].__returns__)]
 
     @classmethod
-    def add_extra_attributes(cls, attrib):
-        if attrib.get('model_name', None) is None:
-            attrib['model_name'] = Setting(attrib['LEARNER'].__returns__)
+    def add_extra_attributes(cls, name, attrib):
+        if 'learner_name' not in attrib:
+            attrib['learner_name'] = Setting(attrib['name'])
         return attrib
 
 
-class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
+@abstract
+class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
+    """Abstract widget for classification/regression learners.
+
+    Notes:
+        All learner widgets should define learner class LEARNER.
+        LEARNER should have __returns__ attribute.
+
+        Overwrite `create_learner`, `add_main_layout` and
+        `get_learner_parameters` in case LEARNER has extra parameters.
+
+    """
     LEARNER = None
-    OUTPUT_MODEL_NAME = None
 
     want_main_area = False
     resizing_enabled = False
@@ -95,12 +114,30 @@ class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
     def __init__(self):
         super().__init__()
         self.data = None
+        self.valid_data = False
         self.learner = None
         self.model = None
         self.preprocessors = None
         self.outdated_settings = False
         self.setup_layout()
         self.apply()
+
+    def create_learner(self):
+        """Creates a learner with current configuration.
+
+        Returns:
+            Leaner: an instance of Orange.base.learner subclass.
+        """
+        return self.LEARNER(preprocessors=self.preprocessors)
+
+    def get_learner_parameters(self):
+        """Creates an `OrderedDict` or a sequence of pairs with current model
+        configuration.
+
+        Returns:
+            OrderedDict or List: (option, value) pairs or dict
+        """
+        return []
 
     def set_preprocessor(self, preprocessor):
         """Add user-set preprocessors before the default, mandatory ones"""
@@ -119,11 +156,9 @@ class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
         self.update_model()
 
     def apply(self):
+        """Applies leaner and sends new model."""
         self.update_learner()
         self.update_model()
-
-    def create_learner(self):
-        raise NotImplementedError()
 
     def update_learner(self):
         self.learner = self.create_learner()
@@ -132,34 +167,37 @@ class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
         self.warning(self.OUTDATED_LEARNER_WARNING_ID)
 
     def update_model(self):
-        self.model = None
-        self.good_data = False
+        if self.check_data():
+            self.model = self.learner(self.data)
+            self.model.name = self.learner_name
+            self.model.instances = self.data
+            self.valid_data = True
+
+        self.send(self.OUTPUT_MODEL_NAME, self.model)
+
+    def check_data(self):
+        self.valid_data = False
         if self.data is not None:
             self.error(self.DATA_ERROR_ID)
             if not self.learner.check_learner_adequacy(self.data.domain):
                 self.error(self.DATA_ERROR_ID, self.learner.learner_adequacy_err_msg)
             elif len(np.unique(self.data.Y)) < 2:
-                self.error(self.DATA_ERROR_ID, "Data contains only one target value.")
+                self.error(self.DATA_ERROR_ID,
+                           "Data contains single target value. "
+                           "There is nothing to learn.")
             else:
-                self.model = self.learner(self.data)
-                self.model.name = self.learner_name
-                self.model.instances = self.data
-                self.good_data = True
-
-        self.send(self.OUTPUT_MODEL_NAME, self.model)
+                self.valid_data = True
+        return self.valid_data
 
     def settings_changed(self, *args, **kwargs):
         self.outdated_settings = True
         self.warning(self.OUTDATED_LEARNER_WARNING_ID,
                      "Press Apply to submit changes.")
 
-    def get_model_parameters(self):
-        return None
-
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
 
-        model_parameters = self.get_model_parameters()
+        model_parameters = self.get_learner_parameters()
         if model_parameters:
             self.report_items("Model parameters", model_parameters)
 
@@ -167,12 +205,22 @@ class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
             self.report_data("Data", self.data)
 
     # GUI
+    def setup_layout(self):
+        self.add_learner_name_widget()
+        self.add_main_layout()
+        self.add_bottom_buttons()
+
+    def add_main_layout(self):
+        """Creates layout with the learner configuration widgets.
+
+        Override this method for laying out any learner-specific parameter controls.
+        See setup_layout() method for execution order.
+        """
+        pass
+
     def add_learner_name_widget(self):
         gui.lineEdit(self.controlArea, self, 'learner_name', box='Name',
                      tooltip='The name will identify this model in other widgets')
-
-    def add_main_layout(self):
-        pass
 
     def add_bottom_buttons(self):
         box = gui.widgetBox(self.controlArea, True, orientation="horizontal")
@@ -180,8 +228,3 @@ class OWBaseLearner(OWWidget, metaclass=DefaultLearnerWidgetChannelsMetaClass):
         gui.separator(box, 15)
         self.apply_button = gui.button(box, self, "&Apply", callback=self.apply,
                                        disabled=0, default=True)
-
-    def setup_layout(self):
-        self.add_learner_name_widget()
-        self.add_main_layout()
-        self.add_bottom_buttons()

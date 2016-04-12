@@ -10,9 +10,6 @@ class OWRandomForestRegression(owrandomforest.OWRandomForest):
     priority = 40
 
     LEARNER = RandomForestRegressionLearner
-    OUTPUT_MODEL_NAME = "Model"
-
-    learner_name = settings.Setting("RF Regression Learner")
 
 
 if __name__ == "__main__":

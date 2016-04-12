@@ -10,9 +10,6 @@ class OWRegressionTree(owclassificationtree.OWClassificationTree):
     priority = 30
 
     LEARNER = TreeRegressionLearner
-    OUTPUT_MODEL_NAME = "Tree"
-
-    learner_name = Setting("Regression Tree")
 
     scores = (("Mean Squared Error", "mse"),)
 

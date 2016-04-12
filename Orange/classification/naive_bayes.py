@@ -8,6 +8,34 @@ from Orange.preprocess import Discretize
 __all__ = ["NaiveBayesLearner"]
 
 
+class NaiveBayesLearner(Learner):
+    """
+    Naive Bayes classifier. Works only with discrete attributes. By default,
+    continuous attributes are discretized.
+
+    Parameters
+    ----------
+    preprocessors : list, optional (default="[Orange.preprocess.Discretize]")
+        An ordered list of preprocessors applied to data before training
+        or testing.
+    """
+    name = 'naive bayes'
+
+    preprocessors = [Discretize()]
+
+    def fit_storage(self, table):
+        if not isinstance(table, Storage):
+            raise TypeError("Data is not a subclass of Orange.data.Storage.")
+        if not all(var.is_discrete
+                   for var in table.domain.variables):
+            raise NotImplementedError("Only discrete variables are supported.")
+
+        cont = contingency.get_contingencies(table)
+        class_freq = np.array(np.diag(
+            contingency.get_contingency(table, table.domain.class_var)))
+        return NaiveBayesModel(cont, class_freq, table.domain)
+
+
 class NaiveBayesModel(Model):
     def __init__(self, cont, class_freq, domain):
         super().__init__(domain)
@@ -34,31 +62,4 @@ class NaiveBayesModel(Model):
         values = probs.argmax(axis=1)
         return values, probs
 
-
-class NaiveBayesLearner(Learner):
-    """
-    Naive Bayes classifier. Works only with discrete attributes. By default,
-    continuous attributes are discretized.
-
-    Parameters
-    ----------
-    preprocessors : list, optional (default="[Orange.preprocess.Discretize]")
-        An ordered list of preprocessors applied to data before training
-        or testing.
-    """
-    __returns__ = NaiveBayesModel
-    name = 'naive bayes'
-
-    preprocessors = [Discretize()]
-
-    def fit_storage(self, table):
-        if not isinstance(table, Storage):
-            raise TypeError("Data is not a subclass of Orange.data.Storage.")
-        if not all(var.is_discrete
-                   for var in table.domain.variables):
-            raise NotImplementedError("Only discrete variables are supported.")
-
-        cont = contingency.get_contingencies(table)
-        class_freq = np.array(np.diag(
-            contingency.get_contingency(table, table.domain.class_var)))
-        return NaiveBayesModel(cont, class_freq, table.domain)
+NaiveBayesLearner.__returns__ = NaiveBayesModel

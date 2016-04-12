@@ -15,7 +15,6 @@ class OWSGDRegression(OWBaseLearner):
     icon = "icons/SGDRegression.svg"
     priority = 90
     LEARNER = SGDRegressionLearner
-    OUTPUT_MODEL_NAME = "Predictor"
 
     learner_name = settings.Setting("SGD Regression")
 
@@ -31,9 +30,6 @@ class OWSGDRegression(OWBaseLearner):
     penalty_type = settings.Setting(L2)
     Constant, InvScaling = 0, 1
     learning_rate = settings.Setting(InvScaling)
-
-    want_main_area = False
-    resizing_enabled = False
 
     LOSS_FUNCTIONS = ["Squared loss",
                       "Huber",
@@ -124,6 +120,7 @@ class OWSGDRegression(OWBaseLearner):
         mask = enabled[self.loss_function]
         for spin, enabled in zip(self._func_params, mask):
             spin.setEnabled(enabled)
+        self.settings_changed()
 
     def _on_penalty_changed(self):
         enabled = [[False],  # l1
@@ -133,6 +130,7 @@ class OWSGDRegression(OWBaseLearner):
         mask = enabled[self.penalty_type]
         for spin, enabled in zip(self._penalty_params, mask):
             spin.setEnabled(enabled)
+        self.settings_changed()
 
     def _on_lrate_changed(self):
         enabled = [[True],   # invscaling
@@ -141,8 +139,9 @@ class OWSGDRegression(OWBaseLearner):
         mask = enabled[self.learning_rate]
         for spin, enabled in zip(self._lrate_params, mask):
             spin.setEnabled(enabled)
+        self.settings_changed()
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         items = OrderedDict()
         items['Loss function'] = self.LOSS_FUNCTIONS[self.loss_function]
         if self.loss_function != self.SqLoss:

@@ -1,6 +1,5 @@
 from Orange.regression.knn import KNNRegressionLearner
 from Orange.widgets.classify import owknn
-from Orange.widgets.settings import Setting
 
 
 class OWKNNRegression(owknn.OWKNNLearner):
@@ -10,9 +9,6 @@ class OWKNNRegression(owknn.OWKNNLearner):
     priority = 20
 
     LEARNER = KNNRegressionLearner
-    OUTPUT_MODEL_NAME = "Predictor"
-
-    learner_name = Setting("kNN Regression")
 
 
 if __name__ == "__main__":

@@ -10,12 +10,6 @@ class OWMean(OWBaseLearner):
     priority = 10
 
     LEARNER = MeanLearner
-    OUTPUT_MODEL_NAME = "Predictor"
-
-    learner_name = settings.Setting("Mean Learner")
-
-    def create_learner(self):
-        return self.LEARNER(preprocessors=self.preprocessors)
 
 
 if __name__ == "__main__":

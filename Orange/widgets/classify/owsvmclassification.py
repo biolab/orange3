@@ -9,7 +9,7 @@ from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class SVMBaseMixin(OWBaseLearner):
+class OWBaseSVM(OWBaseLearner):
     #: Kernel types
     Linear, Poly, RBF, Sigmoid = 0, 1, 2, 3
     #: Selected kernel type
@@ -23,9 +23,6 @@ class SVMBaseMixin(OWBaseLearner):
 
     #: numerical tolerance
     tol = settings.Setting(0.001)
-
-    want_main_area = False
-    resizing_enabled = False
 
     kernels = (("Linear", "x⋅y"),
                ("Polynomial", "(g x⋅y + c)<sup>d</sup>"),
@@ -47,7 +44,7 @@ class SVMBaseMixin(OWBaseLearner):
 
         parambox = gui.widgetBox(box)
         gui.label(parambox, self, "Kernel: %(kernel_eq)s")
-        common = dict(orientation="horizontal",
+        common = dict(orientation="horizontal", callback=self.settings_changed,
                       alignment=Qt.AlignRight, controlWidth=80)
         spbox = gui.widgetBox(parambox, orientation="horizontal")
         gui.rubber(spbox)
@@ -68,13 +65,13 @@ class SVMBaseMixin(OWBaseLearner):
         box.setMinimumWidth(box.sizeHint().width())
 
     def _add_optimization_box(self):
-        self.optimization_box = gui.widgetBox(
-                self.controlArea, "Optimization parameters")
-
+        self.optimization_box = gui.widgetBox(self.controlArea,
+                                              "Optimization parameters")
         gui.doubleSpin(
-                self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
-                label="Numerical Tolerance",
-                decimals=6, alignment=Qt.AlignRight, controlWidth=100
+            self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
+            label="Numerical Tolerance",
+            decimals=6, alignment=Qt.AlignRight, controlWidth=100,
+            callback=self.settings_changed
         )
 
     def add_main_layout(self):
@@ -93,6 +90,8 @@ class SVMBaseMixin(OWBaseLearner):
         for spin, enabled in zip(self._kernel_params, mask):
             [spin.box.hide, spin.box.show][enabled]()
 
+        self.settings_changed()
+
     def _report_kernel_parameters(self, items):
         if self.kernel_type == 0:
             items["Kernel"] = "Linear"
@@ -110,12 +109,12 @@ class SVMBaseMixin(OWBaseLearner):
         super().update_model()
 
         sv = None
-        if self.good_data:
+        if self.valid_data:
             sv = self.data[self.model.skl_model.support_]
         self.send("Support vectors", sv)
 
 
-class OWSVMClassification(SVMBaseMixin):
+class OWSVMClassification(OWBaseSVM):
     name = "SVM"
     description = "Support vector machines classifier with standard " \
                   "selection of kernels."
@@ -123,11 +122,8 @@ class OWSVMClassification(SVMBaseMixin):
     priority = 50
 
     LEARNER = SVMLearner
-    OUTPUT_MODEL_NAME = "Classifier"
 
     outputs = [("Support vectors", Table)]
-
-    learner_name = settings.Setting("SVM Learner")
 
     # 0: c_svc, 1: nu_svc
     svmtype = settings.Setting(0)
@@ -142,7 +138,7 @@ class OWSVMClassification(SVMBaseMixin):
         form = QtGui.QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
                 self.controlArea, self, "svmtype", [], box="SVM Type",
-                orientation=form)
+                orientation=form, callback=self.settings_changed)
 
         form.addWidget(gui.appendRadioButton(box, "C-SVM", addToLayout=False),
                        0, 0, Qt.AlignLeft)
@@ -150,7 +146,8 @@ class OWSVMClassification(SVMBaseMixin):
                        0, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "C", 1e-3, 1000.0, 0.1,
                                       decimals=3, alignment=Qt.AlignRight,
-                                      controlWidth=80, addToLayout=False),
+                                      controlWidth=80, addToLayout=False,
+                                      callback=self.settings_changed),
                        0, 2)
 
         form.addWidget(gui.appendRadioButton(box, "ν-SVM", addToLayout=False),
@@ -159,14 +156,16 @@ class OWSVMClassification(SVMBaseMixin):
                        1, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
                                       decimals=2, alignment=Qt.AlignRight,
-                                      controlWidth=80, addToLayout=False),
+                                      controlWidth=80, addToLayout=False,
+                                      callback=self.settings_changed),
                        1, 2)
 
     def _add_optimization_box(self):
         super()._add_optimization_box()
         gui.spin(self.optimization_box, self, "max_iter", 50, 1e6, 50,
                  label="Iteration Limit", checked="limit_iter",
-                 alignment=Qt.AlignRight, controlWidth=100)
+                 alignment=Qt.AlignRight, controlWidth=100,
+                 callback=self.settings_changed)
 
     def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
@@ -185,7 +184,7 @@ class OWSVMClassification(SVMBaseMixin):
         else:
             return NuSVMLearner(nu=self.nu, **common_args)
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         items = OrderedDict()
         if self.svmtype == 0:
             items["SVM type"] = "C-SVM, C={}".format(self.C)

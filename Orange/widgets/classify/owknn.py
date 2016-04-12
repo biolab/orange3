@@ -14,10 +14,6 @@ class OWKNNLearner(OWBaseLearner):
     priority = 20
 
     LEARNER = KNNLearner
-    OUTPUT_MODEL_NAME = "Classifier"
-
-    want_main_area = False
-    resizing_enabled = False
 
     weights = ["uniform", "distance"]
     metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
@@ -48,7 +44,7 @@ class OWKNNLearner(OWBaseLearner):
             preprocessors=self.preprocessors
         )
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         return (("Number of neighbours", self.n_neighbors),
                 ("Metric", self.metrics[self.metric_index].capitalize()),
                 ("Weight", self.weights[self.weight_type].capitalize()))

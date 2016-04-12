@@ -22,7 +22,6 @@ class OWUnivariateRegression(OWBaseLearner):
     icon = "icons/UnivariateRegression.svg"
 
     LEARNER = LinearRegressionLearner
-    OUTPUT_MODEL_NAME = "Predictor"
 
     inputs = [("Learner", Learner, "set_learner")]
 

@@ -12,17 +12,6 @@ class OWMajority(OWBaseLearner):
     priority = 10
 
     LEARNER = MajorityLearner
-    OUTPUT_MODEL_NAME = "Classifier"
-
-    learner_name = Setting("Majority")
-
-    want_main_area = False
-    resizing_enabled = False
-
-    def create_learner(self):
-        return self.LEARNER(
-            preprocessors=self.preprocessors
-        )
 
 
 if __name__ == "__main__":

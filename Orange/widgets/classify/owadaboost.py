@@ -16,31 +16,30 @@ class OWAdaBoostClassification(OWBaseLearner):
     priority = 80
 
     LEARNER = SklAdaBoostLearner
-    OUTPUT_MODEL_NAME = "Classifier"
 
-    inputs = [("Classifier", LearnerClassification, "set_base_model")]
-    want_main_area = False
-    resizing_enabled = False
+    inputs = [("Learner", LearnerClassification, "set_base_learner")]
 
     losses = ["SAMME", "SAMME.R"]
 
-    learner_name = Setting("AdaBoost")
     n_estimators = Setting(50)
     learning_rate = Setting(1.)
     algorithm = Setting(0)
 
     def add_main_layout(self):
-        self.base_estimator = TreeLearner()
         box = gui.widgetBox(self.controlArea, "Parameters")
+        self.base_estimator = TreeLearner()
         self.base_label = gui.label(box, self, "Base estimator: " + self.base_estimator.name)
+
         gui.spin(box, self, "n_estimators", 1, 100, label="Number of estimators",
                  alignment=Qt.AlignRight, callback=self.settings_changed)
         gui.doubleSpin(box, self, "learning_rate", 1e-5, 1.0, 1e-5,
                        label="Learning rate", decimals=5, alignment=Qt.AlignRight,
                        controlWidth=90, callback=self.settings_changed)
+        self.add_specific_parameters(box)
+
+    def add_specific_parameters(self, box):
         gui.comboBox(box, self, "algorithm", label="Algorithm",
-                     orientation="horizontal",
-                     items=self.losses,
+                     orientation="horizontal", items=self.losses,
                      callback=self.settings_changed)
 
     def create_learner(self):
@@ -50,7 +49,7 @@ class OWAdaBoostClassification(OWBaseLearner):
             preprocessors=self.preprocessors
         )
 
-    def set_base_model(self, model):
+    def set_base_learner(self, model):
         self.base_estimator = model
         if self.base_estimator:
             self.base_label.setText("Base estimator: " + self.base_estimator.name)
@@ -59,7 +58,7 @@ class OWAdaBoostClassification(OWBaseLearner):
             self.base_label.setText("No base estimator")
             self.apply_button.setDisabled(True)
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
                 ("Number of estimators", self.n_estimators),
                 ("Algorithm", self.losses[self.algorithm].capitalize()))

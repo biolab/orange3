@@ -16,12 +16,7 @@ class OWRandomForest(OWBaseLearner):
     priority = 40
 
     LEARNER = RandomForestLearner
-    OUTPUT_MODEL_NAME = "Model"
 
-    want_main_area = False
-    resizing_enabled = False
-
-    learner_name = settings.Setting("RF Classification Learner")
     n_estimators = settings.Setting(10)
     max_features = settings.Setting(5)
     use_max_features = settings.Setting(False)
@@ -34,7 +29,6 @@ class OWRandomForest(OWBaseLearner):
     index_output = settings.Setting(0)
 
     def add_main_layout(self):
-        # Basic properties
         form = QGridLayout()
         basic_box = gui.widgetBox(
             self.controlArea, "Basic properties", orientation=form)
@@ -42,28 +36,28 @@ class OWRandomForest(OWBaseLearner):
         form.addWidget(QLabel(self.tr("Number of trees in the forest: ")),
                        0, 0, Qt.AlignLeft)
         spin = gui.spin(basic_box, self, "n_estimators", minv=1, maxv=1e4,
-                        callback=self.settingsChanged, addToLayout=False,
+                        callback=self.settings_changed, addToLayout=False,
                         controlWidth=50)
         form.addWidget(spin, 0, 1, Qt.AlignRight)
 
         max_features_cb = gui.checkBox(
             basic_box, self, "use_max_features",
-            callback=self.settingsChanged, addToLayout=False,
+            callback=self.settings_changed, addToLayout=False,
             label="Consider a number of best attributes at each split")
 
         max_features_spin = gui.spin(
             basic_box, self, "max_features", 2, 50, addToLayout=False,
-            callback=self.settingsChanged, controlWidth=50)
+            callback=self.settings_changed, controlWidth=50)
 
         form.addWidget(max_features_cb, 1, 0, Qt.AlignLeft)
         form.addWidget(max_features_spin, 1, 1, Qt.AlignRight)
 
         random_state_cb = gui.checkBox(
-            basic_box, self, "use_random_state", callback=self.settingsChanged,
+            basic_box, self, "use_random_state", callback=self.settings_changed,
             addToLayout=False, label="Use seed for random generator:")
         random_state_spin = gui.spin(
             basic_box, self, "random_state", 0, 2 ** 31 - 1, addToLayout=False,
-            callback=self.settingsChanged, controlWidth=50)
+            callback=self.settings_changed, controlWidth=50)
 
         form.addWidget(random_state_cb, 2, 0, Qt.AlignLeft)
         form.addWidget(random_state_spin, 2, 1, Qt.AlignRight)
@@ -78,12 +72,12 @@ class OWRandomForest(OWBaseLearner):
         max_depth_cb = gui.checkBox(
             growth_box, self, "use_max_depth",
             label="Set maximal depth of individual trees",
-            callback=self.settingsChanged,
+            callback=self.settings_changed,
             addToLayout=False)
 
         max_depth_spin = gui.spin(
             growth_box, self, "max_depth", 2, 50, addToLayout=False,
-            callback=self.settingsChanged)
+            callback=self.settings_changed)
 
         form.addWidget(max_depth_cb, 3, 0, Qt.AlignLeft)
         form.addWidget(max_depth_spin, 3, 1, Qt.AlignRight)
@@ -91,11 +85,11 @@ class OWRandomForest(OWBaseLearner):
         max_leaf_nodes_cb = gui.checkBox(
             growth_box, self, "use_max_leaf_nodes",
             label="Stop splitting nodes with maximum instances: ",
-            callback=self.settingsChanged, addToLayout=False)
+            callback=self.settings_changed, addToLayout=False)
 
         max_leaf_nodes_spin = gui.spin(
             growth_box, self, "max_leaf_nodes", 0, 100, addToLayout=False,
-            callback=self.settingsChanged)
+            callback=self.settings_changed)
 
         form.addWidget(max_leaf_nodes_cb, 4, 0, Qt.AlignLeft)
         form.addWidget(max_leaf_nodes_spin, 4, 1, Qt.AlignRight)
@@ -103,10 +97,8 @@ class OWRandomForest(OWBaseLearner):
         self._max_leaf_nodes_spin = max_leaf_nodes_spin
 
         # Index on the output
-#         gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1,
-#                        label="Index of tree on the output")
-
-        self.settingsChanged()
+        # gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1,
+        #                label="Index of tree on the output")
 
     def create_learner(self):
         common_args = {"n_estimators": self.n_estimators}
@@ -121,13 +113,14 @@ class OWRandomForest(OWBaseLearner):
 
         return self.LEARNER(preprocessors=self.preprocessors, **common_args)
 
-    def settingsChanged(self):
+    def settings_changed(self):
+        super().settings_changed()
         self._max_features_spin.setEnabled(self.use_max_features)
         self._random_state_spin.setEnabled(self.use_random_state)
         self._max_depth_spin.setEnabled(self.use_max_depth)
         self._max_leaf_nodes_spin.setEnabled(self.use_max_leaf_nodes)
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         return (("Number of trees", self.n_estimators),
                 ("Maximal number of considered features",
                  self.max_features if self.use_max_features else "unlimited"),

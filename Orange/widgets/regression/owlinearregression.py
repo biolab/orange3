@@ -18,14 +18,14 @@ class OWLinearRegression(OWBaseLearner):
     priority = 60
 
     LEARNER = LinearRegressionLearner
-    OUTPUT_MODEL_NAME = "Model"
 
     outputs = [("Coefficients", Table)]
 
     #: Types
+    REGULARIZATION_TYPES = ["No regularization", "Ridge regression (L2)",
+                            "Lasso regression (L1)", "Elastic net regression"]
     OLS, Ridge, Lasso, Elastic = 0, 1, 2, 3
 
-    learner_name = settings.Setting("Linear Regression")
     ridge = settings.Setting(False)
     reg_type = settings.Setting(OLS)
     alpha_index = settings.Setting(0)
@@ -45,19 +45,17 @@ class OWLinearRegression(OWBaseLearner):
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Regularization",
                             orientation="horizontal")
-        gui.radioButtons(
-                box, self, "reg_type",
-                btnLabels=["No regularization", "Ridge regression (L2)",
-                           "Lasso regression (L1)", "Elastic net regression"],
-                callback=self._reg_type_changed)
+        gui.radioButtons(box, self, "reg_type",
+            btnLabels=self.REGULARIZATION_TYPES,
+            callback=self._reg_type_changed)
 
         gui.separator(box, 20, 20)
         self.alpha_box = box2 = gui.widgetBox(box, margin=0)
         gui.widgetLabel(box2, "Regularization strength")
         self.alpha_slider = gui.hSlider(
-                box2, self, "alpha_index",
-                minValue=0, maxValue=len(self.alphas) - 1,
-                callback=self._alpha_changed, createLabel=False)
+            box2, self, "alpha_index",
+            minValue=0, maxValue=len(self.alphas) - 1,
+            callback=self._alpha_changed, createLabel=False)
         box3 = gui.widgetBox(box2, orientation="horizontal")
         box3.layout().setAlignment(Qt.AlignCenter)
         self.alpha_label = gui.widgetLabel(box3, "")
@@ -69,9 +67,9 @@ class OWLinearRegression(OWBaseLearner):
         box5 = gui.widgetBox(box4, orientation="horizontal")
         gui.widgetLabel(box5, "L1")
         self.l1_ratio_slider = gui.hSlider(
-                box5, self, "l1_ratio", minValue=0.01, maxValue=1,
-                intOnly=False, ticks=0.1, createLabel=False,
-                step=0.01, callback=self._l1_ratio_changed)
+            box5, self, "l1_ratio", minValue=0.01, maxValue=1,
+            intOnly=False, ticks=0.1, createLabel=False,
+            step=0.01, callback=self._l1_ratio_changed)
         gui.widgetLabel(box5, "L2")
 
     def add_bottom_buttons(self):
@@ -80,9 +78,8 @@ class OWLinearRegression(OWBaseLearner):
         self.l1_ratio_label = gui.widgetLabel(box5, "")
         self._set_l1_ratio_label()
 
-        auto_commit = gui.auto_commit(
-                self.controlArea, self, "autosend",
-                "Apply", auto_label="Apply on change")
+        auto_commit = gui.auto_commit(self.controlArea, self, "autosend",
+                                      "Apply", auto_label="Apply on change")
         gui.separator(box5, 20)
         auto_commit.layout().addWidget(self.report_button)
         self.report_button.setMinimumWidth(150)
@@ -101,8 +98,7 @@ class OWLinearRegression(OWBaseLearner):
         self.commit()
 
     def _set_alpha_label(self):
-        self.alpha_label.setText(
-                "Alpha: {}".format(self.alphas[self.alpha_index]))
+        self.alpha_label.setText("Alpha: {}".format(self.alphas[self.alpha_index]))
 
     def _alpha_changed(self):
         self._set_alpha_label()
@@ -110,7 +106,7 @@ class OWLinearRegression(OWBaseLearner):
 
     def _set_l1_ratio_label(self):
         self.l1_ratio_label.setText(
-                "{:.{}f} : {:.{}f}".format(self.l1_ratio, 2, 1 - self.l1_ratio, 2))
+            "{:.{}f} : {:.{}f}".format(self.l1_ratio, 2, 1 - self.l1_ratio, 2))
 
     def _l1_ratio_changed(self):
         self._set_l1_ratio_label()
@@ -137,7 +133,7 @@ class OWLinearRegression(OWBaseLearner):
     def update_model(self):
         super().update_model()
         coef_table = None
-        if self.good_data:
+        if self.valid_data:
             domain = Domain(
                     [ContinuousVariable("coef", number_of_decimals=7)],
                     metas=[StringVariable("name")])
@@ -148,7 +144,7 @@ class OWLinearRegression(OWBaseLearner):
             coef_table.name = "coefficients"
         self.send("Coefficients", coef_table)
 
-    def get_model_parameters(self):
+    def get_learner_parameters(self):
         regularization = "No Regularization"
         if self.reg_type == OWLinearRegression.Ridge:
             regularization = ("Ridge Regression (L2) with α={}"
