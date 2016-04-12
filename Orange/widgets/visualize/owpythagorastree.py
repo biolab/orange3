@@ -1,8 +1,9 @@
 # coding=utf-8
 from collections import namedtuple, defaultdict
-from math import pi, sqrt, cos, sin, degrees, log
 from functools import lru_cache
+from math import pi, sqrt, cos, sin, degrees, log
 
+import numpy as np
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 
@@ -10,8 +11,8 @@ import Orange
 from Orange.classification.tree import TreeClassifier
 from Orange.data.table import Table
 from Orange.widgets import gui, settings
-from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils.colorpalette import DefaultRGBColors
+from Orange.widgets.widget import OWWidget
 
 # Please note that all angles are in radians
 Square = namedtuple('Square', ['center', 'length', 'angle'])
@@ -26,7 +27,7 @@ class OWPythagorasTree(OWWidget):
     # Enable the save as feature
     graph_name = True
 
-    inputs = [('Classification Tree', TreeClassifier, 'set_ctree')]
+    inputs = [('Classification Tree', TreeClassifier, '_set_tree')]
     outputs = [('Selected Data', Table)]
 
     # Settings
@@ -48,8 +49,11 @@ class OWPythagorasTree(OWWidget):
         ]
 
         # Instance variables
-        self.raw_tree = None
+        self.domain = None
+        self.model = None
+        self.tree_adapter = None
         self.tree = None
+        self.canvas_squares = []
 
         self.color_palette = [QtGui.QColor(*c) for c in DefaultRGBColors]
 
@@ -67,19 +71,19 @@ class OWPythagorasTree(OWWidget):
         gui.hSlider(
             box_display, self, 'depth', label='Depth',
             minValue=1, maxValue=10, step=1, ticks=False, callback=None)
-        gui.comboBox(
+        self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
-            orientation='horizontal',
-            items=[], contentsLength=8, callback=None)
+            orientation='horizontal', items=[], contentsLength=8,
+            callback=self._update_colors)
         gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
             orientation='horizontal',
             items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
-            callback=self._invalidate)
+            callback=self._invalidate_tree)
         gui.hSlider(
             box_display, self, 'size_log_scale', label='Log scale',
             minValue=1, maxValue=100, step=1, ticks=False,
-            callback=self._invalidate)
+            callback=self._invalidate_tree)
 
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
@@ -105,53 +109,96 @@ class OWPythagorasTree(OWWidget):
 
         self.mainArea.layout().addWidget(self.view)
 
-    def commit(self):
-        pass
+    def _set_tree(self, model=None):
+        # This function should only be called when the tree input changes
+        self._clear()
+        self.model = model
+        if model is not None:
+            self.domain = model.domain
+            self._update_target_class_combo()
+            self._invalidate_tree()
 
-    def set_ctree(self, ctree=None):
-        self.clear()
-        self.raw_tree = ctree
-        if ctree is not None:
-            self._get_tree(ctree)
-        self._update()
+    def _invalidate_tree(self):
+        # This function should be called when the tree needs to be recalculated
+        self._clear_scene()
+        self._get_tree_adapter(self.model)
+        self._draw_tree(self._calculate_tree())
 
-    def _invalidate(self):
-        self.scene.clear()
-        if self.raw_tree is not None:
-            self._get_tree(self.raw_tree)
-        self._update()
-
-    def _get_tree(self, ctree):
-        self.tree = SklTreeAdapter(
-            ctree.skl_model.tree_,
+    def _get_tree_adapter(self, model):
+        self.tree_adapter = SklTreeAdapter(
+            model.skl_model.tree_,
             adjust_weight=self.SIZE_CALCULATION[self.size_calc_idx][1],
         )
 
-    def clear(self):
-        self.raw_tree = None
+    def _update_target_class_combo(self):
+        self.target_class_combo.clear()
+        self.target_class_combo.addItem('None')
+        values = self.domain.class_vars[0].values
+        self.target_class_combo.addItems(values)
+        # make sure we don't attempt to assign an index gt than the number of
+        # classes
+        if self.target_class_index >= len(values):
+            self.target_class_index = 0
+        self.target_class_combo.setCurrentIndex(self.target_class_index)
+
+    def _calculate_tree(self):
+        # Actually calculate the tree squares
+        tree_builder = PythagorasTree()
+        self.tree = tree_builder.pythagoras_tree(
+            self.tree_adapter, 0, Square(Point(0, 0), 200, pi / 2)
+        )
+        return self.tree
+
+    def _draw_tree(self, root):
+        # Draw the actual tree and save square objects to canvas_squares
+        self.scene.addItem(SquareGraphicsItem(
+            root,
+            brush=QtGui.QBrush(self._get_node_color(root))
+        ))
+        for child in root.children:
+            self._draw_tree(child)
+
+    def _get_node_color(self, tree_node):
+        # this is taken almost directly from the existing classification tree
+        # viewer
+        colors = self.color_palette
+        distribution = self.tree_adapter.get_distribution(tree_node.label)[0]
+        total = self.tree_adapter.num_samples(tree_node.label)
+
+        if self.target_class_index:
+            p = distribution[self.target_class_index - 1] / total
+            color = colors[self.target_class_index - 1].light(200 - 100 * p)
+        else:
+            modus = np.argmax(distribution)
+            p = distribution[modus] / (total or 1)
+            color = colors[int(modus)].light(400 - 300 * p)
+        return color
+
+    def _update_colors(self):
+        # Update the colors of the nodes
+        for square in self._get_scene_squares():
+            square.setBrush(self._get_node_color(square.tree_node))
+
+    def _get_scene_squares(self):
+        return filter(lambda i: isinstance(i, SquareGraphicsItem),
+                           self.scene.items())
+
+    def _clear(self):
+        self.domain = None
+        self.model = None
+        self.tree_adapter = None
         self.tree = None
+        self._clear_scene()
+
+    def _clear_scene(self):
         self.scene.clear()
 
-    def _update(self):
-        if self.tree is not None:
-            tree_builder = PythagorasTree()
-
-            def draw_square_rec(tree_node):
-                self.scene.addItem(SquareGraphicsItem(
-                    *tree_node.square, brush=self.color_palette[0]
-                ))
-                for child in tree_node.children:
-                    draw_square_rec(child)
-
-            draw_square_rec(tree_builder.pythagoras_tree(
-                self.tree, 0, Square(Point(0, 0), 200, pi / 2)
-            ))
-        else:
-            pass
-
     def onDeleteWidget(self):
-        self.clear()
+        self._clear()
         super().onDeleteWidget()
+
+    def commit(self):
+        pass
 
     def send_report(self):
         pass
@@ -160,18 +207,12 @@ class OWPythagorasTree(OWWidget):
 class SquareGraphicsItem(QtGui.QGraphicsRectItem):
     """Square Graphics Item.
 
-    Square component to draw as components for the Pythagoras tree. It is
-    initialized with a given center QPointF, the main side length, and the
-    initial angle the sqaure is to be rendered with.
+    Square component to draw as components for the Pythagoras tree.
 
     Parameters
     ----------
-    center : Point
-        The central point of the square.
-    length : float
-        The length of the square sides.
-    angle : float
-        The initial angle at which the square will be rotated (in rads).
+    tree_node : TreeNode
+        The tree node the square represents.
     brush : QColor, optional
         The brush to be used as the backgound brush.
     pen : QPen, optional
@@ -179,7 +220,10 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
 
     """
 
-    def __init__(self, center, length, angle, parent=None, **kwargs):
+    def __init__(self, tree_node, parent=None, **kwargs):
+        self.tree_node = tree_node
+
+        center, length, angle = tree_node.square
         self._center_point = center
         self.center = QtCore.QPointF(*center)
         self.length = length
@@ -208,6 +252,8 @@ class TreeNode:
 
     Parameters
     ----------
+    label : int
+        The label of the tree node, can be looked up in the original tree.
     square : Square
         The square the represents the tree node.
     parent : TreeNode
@@ -217,7 +263,8 @@ class TreeNode:
 
     """
 
-    def __init__(self, square, parent, children=()):
+    def __init__(self, label, square, parent, children=()):
+        self.label = label
         self.square = square
         self.parent = parent
         self.children = children
@@ -265,7 +312,7 @@ class PythagorasTree:
             self._compute_child(tree, square, child)
             for child in tree.children(node)
         )
-        return TreeNode(square, tree.parent(node), children)
+        return TreeNode(node, square, tree.parent(node), children)
 
     def _compute_child(self, tree, parent_square, node):
         """Compute all the properties for a single child.
@@ -447,7 +494,7 @@ class SklTreeAdapter:
 
         """
         return self._adjust_weight(self.num_samples(node)) / \
-            self._adjusted_child_weight(self.parent(node))
+               self._adjusted_child_weight(self.parent(node))
 
     @lru_cache()
     def _adjusted_child_weight(self, node):
@@ -491,14 +538,20 @@ class SklTreeAdapter:
 
     def children(self, node):
         if self.has_children(node):
-            return self.left_child(node), self.right_child(node)
+            return self._left_child(node), self._right_child(node)
         return ()
 
-    def left_child(self, node):
+    def _left_child(self, node):
         return self._tree.children_left[node]
 
-    def right_child(self, node):
+    def _right_child(self, node):
         return self._tree.children_right[node]
+
+    def get_distribution(self, node):
+        return self._tree.value[node]
+
+    def get_impurity(self, node):
+        return self._tree.impurity[node]
 
 
 def main():
@@ -516,7 +569,7 @@ def main():
     data = Orange.data.Table(filename)
     clf = TreeLearner(max_depth=1000)(data)
     clf.instances = data
-    ow.set_ctree(clf)
+    ow._set_tree(clf)
 
     ow.show()
     ow.raise_()
