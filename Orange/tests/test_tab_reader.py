@@ -145,3 +145,9 @@ class TestTabReader(unittest.TestCase):
         reader.read()
 
         self.assertEqual(wrapper.call_count, 1)
+
+    def test_sheets(self):
+        file1 = io.StringIO("\n".join("xd dbac"))
+        reader = TabFormat(file1)
+
+        self.assertEqual(reader.sheets, ())

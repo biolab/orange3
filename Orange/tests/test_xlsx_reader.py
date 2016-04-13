@@ -34,11 +34,16 @@ class TestExcelHeader0(unittest.TestCase):
 
 
 class TextExcelSheets(unittest.TestCase):
-    def test_named_sheet(self):
+    def setUp(self):
+        self.reader = io.ExcelFormat(get_dataset("header_0_sheet.xlsx"))
 
-        reader = io.ExcelFormat(get_dataset("header_0_sheet.xlsx"))
-        reader.set_sheet("my_sheet")
-        table = reader.read()
+    def test_sheets(self):
+        self.assertSequenceEqual(self.reader.sheets,
+                                 ["Sheet1", "my_sheet", "Sheet3"])
+
+    def test_named_sheet(self):
+        self.reader.select_sheet("my_sheet")
+        table = self.reader.read()
         self.assertEqual(len(table.domain.attributes), 4)
 
 

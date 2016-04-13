@@ -233,7 +233,29 @@ class FileFormat(metaclass=FileFormatMeta):
             desired output class
         """
         self.filename = filename
+        self.sheet = None
         self.wrapper = _IDENTITY
+
+    @property
+    def sheets(self):
+        """FileFormats with a notion of sheets should override this property
+        to return a list of sheet names in the file.
+
+        Returns
+        -------
+        a list of sheet names
+        """
+        return ()
+
+    def select_sheet(self, sheet):
+        """Select sheet to be read
+
+        Parameters
+        ----------
+        sheet : str
+            sheet name
+        """
+        self.sheet = sheet
 
     def set_wrapper(self, wrapper):
         """Set wrapper that will be used to wrap the read Table instance.
@@ -713,16 +735,16 @@ class ExcelFormat(FileFormat):
     EXTENSIONS = ('.xls', '.xlsx')
     DESCRIPTION = 'Mircosoft Excel spreadsheet'
 
-    sheet = ''
+    def __init__(self, filename):
+        super().__init__(filename)
 
-    def set_sheet(self, sheet_name):
-        """Set the sheet to be read.
+        from xlrd import open_workbook
+        self.workbook = open_workbook(self.filename)
 
-        Parameters
-        ----------
-        sheet_name : str
-        """
-        self.sheet = sheet_name
+    @property
+    @lru_cache(1)
+    def sheets(self):
+        return self.workbook.sheet_names()
 
     def read(self):
         import xlrd
