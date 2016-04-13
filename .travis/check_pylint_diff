@@ -10,13 +10,16 @@ set -o errexit
 ARG1=${1:-}
 GIT_REPO="$(pwd)"
 TMP_REPO="$GIT_REPO/$(mktemp -d pylint_diff.XXXXXXX)"
+CACHE_DIR="$GIT_REPO/.pylint_cache"
 UNCOMMITED_PATCH="$TMP_REPO/uncommited.patch"
 SCRIPT=$(basename "$0")
 PYLINT="$(command -v pylint 2>/dev/null || true)"
 RADON="$(command -v radon 2>/dev/null || true)"
+PYLINT_ARGS="--output-format=parseable"
 RADON_ARGS='cc --min C --no-assert --show-closures --show-complexity --average'
 
-trap 'status=$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit $status' EXIT
+trap "status=\$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit \$status" EXIT
+mkdir -p "$CACHE_DIR"
 
 
 print_help ()
@@ -94,6 +97,8 @@ echo "Comparing commits ${CURRENT_COMMIT:0:10}${was_dirty:-} and ${PREVIOUS_COMM
 
 CHANGED_FILES=$(git diff --name-only $CURRENT_COMMIT $PREVIOUS_COMMIT |
                 grep "\.py$" || true )
+[ ! "$(command -v md5sum 2>/dev/null)" ] && alias md5sum=md5  # for OS X
+CHANGED_FILES_HASH=$(echo "$CHANGED_FILES" | md5sum | cut -d' ' -f1)
 if [ ! "$CHANGED_FILES" ]; then
     echo "No python files changed. Skipping lint checks."
     exit 0
@@ -113,56 +118,80 @@ echo
 checkout ()
 {
     { git checkout -q "$1"
-      git clean -xdfq
       git reset --hard -q HEAD
     } 2>/dev/null
 }
 
 Number_of_issues ()
 {
-    score_only="${1:-}"
-    echo "$CHANGED_FILES" |
-        xargs "$PYLINT" |
-        { [ "$score_only" ] &&
-          awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' ||
-          cat; } ||
-        true
+    cached="$1"
+    {   cat "$cached" 2>/dev/null ||
+        echo "$CHANGED_FILES" |
+            xargs "$PYLINT" $PYLINT_ARGS |
+            tee "$cached"
+    } | awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' || true
 }
 
 Cyclomatic_complexity ()
 {
-    score_only="${1:-}"
-    echo "$CHANGED_FILES" |
-        xargs "$RADON" $RADON_ARGS |
-        { [ "$score_only" ] &&
-          awk -F'[()]' '/ .+\([0-9]+\)$/ { tot += $2 } END { print tot }'  ||
-          cat; } ||
-        true
+    cached="$1"
+    {   cat "$cached" 2>/dev/null ||
+        echo "$CHANGED_FILES" |
+            xargs "$RADON" $RADON_ARGS |
+            tee "$cached"
+    } | awk -F'[()]' '/ .+\([0-9]+\)$/ { tot += $2 } END { print tot }' || true
 }
 
+Get_diffable ()
+{
+    sed -E "/$diff_block_end/,\$d" |
+        sort |
+        sed -E "s/$match_line_num/$replace_line_num/"
+}
 
 for check in \
-    "Pylint Number_of_issues" \
-    "radon Cyclomatic_complexity"
+    'Pylint,Number_of_issues,^Report$,^([^:]+:)[0-9]+:,\\1' \
+    'radon,Cyclomatic_complexity,^[0-9]+ blocks,^( +[MCF] )[0-9:]+,\\1:'
 do
-    func=${check#* }
-    check=${check% *}
+    IFS=',' read check func         \
+                 diff_block_end     \
+                 match_line_num     \
+                 replace_line_num   < <(echo "$check")
+    # If command not available, skip it
     if [ ! "$(eval echo \$$(echo $check | tr '[:lower:]' '[:upper:]') )" ]; then
         continue
     fi
 
-    checkout $CURRENT_COMMIT
-    RESULT_CURRENT=$($func score)
-    checkout $PREVIOUS_COMMIT
-    RESULT_PARENT=$($func score)
-    checkout $CURRENT_COMMIT
-    $func
+    cached_previous="$CACHE_DIR/previous.$check.$PREVIOUS_COMMIT.$CHANGED_FILES_HASH"
+    cached_current="$CACHE_DIR/current.$check.$CURRENT_COMMIT.$CHANGED_FILES_HASH"
+    [ -f "$cached_previous" ] || rm -r "$CACHE_DIR/previous."* 2>/dev/null || true
+    [ -f "$cached_current" ] || rm -r "$CACHE_DIR/current."* 2>/dev/null || true
+
+    [ -f "$cached_previous" ] || checkout $PREVIOUS_COMMIT
+    RESULT_PARENT=$($func "$cached_previous")
+    [ -f "$cached_current" ] || checkout $CURRENT_COMMIT
+    RESULT_CURRENT=$($func "$cached_current")
+
+    echo
+    echo "$check result"
+    echo "================================================================="
+    cat "$cached_current"
+    echo
+
+    echo
+    echo "$check diff"
+    echo "================================================================="
+    diff -u0 --minimal                           \
+            <(Get_diffable < "$cached_previous") \
+            <(Get_diffable < "$cached_current")  |
+        grep -E '^\+' | tail -n +3 || true
+    echo
 
     echo
     echo "$check results"
     echo "================================================================="
     echo "${func//_/ } on parent commit: $RESULT_PARENT"
-    echo "${func//_/ } on the pull request: $RESULT_CURRENT"
+    echo "${func//_/ } on the pull request: $RESULT_CURRENT ($(printf "%+d" $((RESULT_CURRENT - RESULT_PARENT))))"
     echo
 
     if awk "BEGIN { exit ${RESULT_CURRENT:-0} > ${RESULT_PARENT:-0} ? 0 : 1 }"; then
