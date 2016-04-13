@@ -69,11 +69,9 @@ class OWPythagorasTree(OWWidget):
         box_display = gui.widgetBox(self.controlArea, 'Display')
         gui.hSlider(
             box_display, self, 'zoom', label='Zoom',
-            minValue=1, maxValue=10, step=1, ticks=False,
-            callback=None)
+            minValue=1, ticks=False, callback=None)
         self.depth_slider = gui.hSlider(
-            box_display, self, 'depth_limit', label='Depth',
-            maxValue=0, ticks=False,
+            box_display, self, 'depth_limit', label='Depth', ticks=False,
             callback=self.update_depth)
         self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
@@ -86,7 +84,7 @@ class OWPythagorasTree(OWWidget):
             callback=self.invalidate_tree)
         gui.hSlider(
             box_display, self, 'size_log_scale', label='Log scale',
-            minValue=1, maxValue=100, step=1, ticks=False,
+            minValue=1, maxValue=100, ticks=False,
             callback=self.invalidate_tree)
 
         # Stretch to fit the rest of the unsused area
@@ -120,6 +118,7 @@ class OWPythagorasTree(OWWidget):
         if model is not None:
             self.domain = model.domain
             self.invalidate_tree()
+            self._update_info_box()
             self._update_target_class_combo()
             self._update_depth_slider()
 
@@ -145,6 +144,14 @@ class OWPythagorasTree(OWWidget):
         self.tree_adapter = None
         self.tree = None
         self._clear_scene()
+
+    def _update_info_box(self):
+        self.info.setText(
+            '{} nodes, {} depth'.format(
+                self.tree_adapter.num_nodes,
+                self.tree_adapter.max_depth
+            )
+        )
 
     def _update_depth_slider(self):
         # TODO figure out a way to change slider label width with larger nums
