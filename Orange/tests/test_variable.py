@@ -315,7 +315,7 @@ time,continuous
         for stream in (output_csv, input_csv):
             stream.close = lambda: None  # HACK: Prevent closing of streams
 
-        table = CSVFormat.read_file(input_csv)
+        table = CSVFormat(input_csv).read()
         self.assertIsInstance(table.domain['Date'], TimeVariable)
         self.assertEqual(table[0, 'Date'], '1920-12-12')
         # Dates before 1970 are negative
