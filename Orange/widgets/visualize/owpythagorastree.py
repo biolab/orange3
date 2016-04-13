@@ -154,7 +154,6 @@ class OWPythagorasTree(OWWidget):
         )
 
     def _update_depth_slider(self):
-        # TODO figure out a way to change slider label width with larger nums
         self.depth_slider.setMaximum(self.tree_adapter.max_depth)
 
     def _get_tree_adapter(self, model):

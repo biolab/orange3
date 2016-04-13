@@ -17,15 +17,7 @@ class TestPythagorasTree(unittest.TestCase):
         self.assertAlmostEqual(point.x, expected_point.x, places=1)
         self.assertAlmostEqual(point.y, expected_point.y, places=1)
 
-    def test_get_point_on_square_edge_with_angle_1(self):
-        point = self.builder._get_point_on_square_edge(
-            center=Point(3.06, 2.79), length=2.39, angle=math.radians(30)
-        )
-        expected_point = Point(4.08, 3.41)
-        self.assertAlmostEqual(point.x, expected_point.x, places=1)
-        self.assertAlmostEqual(point.y, expected_point.y, places=1)
-
-    def test_get_point_on_square_edge_with_angle_2(self):
+    def test_get_point_on_square_edge_with_non_zero_angle(self):
         point = self.builder._get_point_on_square_edge(
             center=Point(2.7, 2.77), length=1.65, angle=math.radians(20.97)
         )
