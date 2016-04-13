@@ -487,7 +487,7 @@ class Table(MutableSequence, Storage):
                     format(desc.lower()))
             else:
                 raise IOError("Unknown file name extension.")
-        writer().write_file(filename, self)
+        writer.write_file(filename, self)
 
     @classmethod
     def from_file(cls, filename, wrapper=None):
@@ -517,7 +517,10 @@ class Table(MutableSequence, Storage):
 
         if not os.path.exists(absolute_filename):
             raise IOError('File "{}" was not found.'.format(filename))
-        data = FileFormat.read(absolute_filename, wrapper or cls)
+        reader = FileFormat.get_reader(absolute_filename)
+        if wrapper or cls != Table:
+            reader.set_wrapper(wrapper or cls)
+        data = reader.read()
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids

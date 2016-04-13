@@ -1,6 +1,11 @@
+import csv
+import locale
+import pickle
 import re
-import warnings
 import subprocess
+import sys
+import warnings
+
 from os import path
 from ast import literal_eval
 from math import isnan
@@ -9,20 +14,23 @@ from itertools import chain, repeat
 from functools import lru_cache
 from collections import OrderedDict
 
+
 import bottlechest as bn
 import numpy as np
-
 from chardet.universaldetector import UniversalDetector
 
-from Orange.data import Table, Domain
-from Orange.data.variable import *
-from Orange.util import abstract, Registry, flatten, namegen
+from Orange.data import (
+    _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
+    DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
+)
+from Orange.util import Registry, flatten, namegen
 
 
 _IDENTITY = lambda i: i
 
 
 class Compression:
+    """Supported compression extensions"""
     GZIP = '.gz'
     BZIP2 = '.bz2'
     XZ = '.xz'
@@ -178,7 +186,7 @@ class FileFormatMeta(Registry):
 
     @property
     def readers(self):
-        return self._ext_to_attr_if_attr2('', 'read_file')
+        return self._ext_to_attr_if_attr2('', 'read')
 
     @property
     def img_writers(self):
@@ -189,7 +197,6 @@ class FileFormatMeta(Registry):
         return self._ext_to_attr_if_attr2('', 'write_graph')
 
 
-@abstract
 class FileFormat(metaclass=FileFormatMeta):
     """
     Subclasses set the following attributes and override the following methods:
@@ -216,6 +223,50 @@ class FileFormat(metaclass=FileFormatMeta):
 
     PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
 
+    def __init__(self, filename):
+        """
+        Parameters
+        ----------
+        filename : str
+            name of the file to open
+        wrapper : class
+            desired output class
+        """
+        self.filename = filename
+        self.wrapper = _IDENTITY
+
+    def set_wrapper(self, wrapper):
+        """Set wrapper that will be used to wrap the read Table instance.
+
+        Parameters
+        ----------
+        wrapper : callable (Table -> *)
+            callable that will be called with Table containing read data.
+        """
+        self.wrapper = wrapper
+
+    @classmethod
+    def get_reader(cls, filename):
+        """Return reader instance that can be used to read the file
+
+        Parameters
+        ----------
+        filename : str
+
+        Returns
+        -------
+        FileFormat
+        """
+        for ext, reader in cls.readers.items():
+            if filename.endswith(ext):
+                return reader(filename)
+
+        raise IOError('No readers for file "{}"'.format(filename))
+
+    @classmethod
+    def write(cls, filename, data):
+        return cls.write_file(filename, data)
+
     @staticmethod
     def open(filename, *args, **kwargs):
         """
@@ -224,20 +275,6 @@ class FileFormat(metaclass=FileFormatMeta):
         `filename` extension). Set ``SUPPORT_COMPRESSED=True`` if you use this.
         """
         return open_compressed(filename, *args, **kwargs)
-
-    @classmethod
-    def read(cls, filename, wrapper=None):
-        for ext, reader in cls.readers.items():
-            if filename.endswith(ext):
-                return reader.read_file(filename, wrapper)
-        else: raise IOError('No readers for file "{}"'.format(filename))
-
-    @classmethod
-    def write(cls, filename, data):
-        for ext, writer in cls.writers.items():
-            if filename.endswith(ext):
-                return writer.write_file(filename, data)
-        else: raise IOError('No writers for file "{}"'.format(filename))
 
     @staticmethod
     def parse_headers(data):
@@ -466,7 +503,6 @@ class FileFormat(metaclass=FileFormatMeta):
             try: data[:, col] = values
             except IndexError: pass
 
-        from Orange.data import Table, Domain
         domain = Domain(attrs, clses, metas)
 
         if not data.size:
@@ -532,10 +568,6 @@ class FileFormat(metaclass=FileFormatMeta):
                    val
                    for var, val in zip(vars, flatten(row))])
 
-    @classmethod
-    def write(cls, filename, data):
-        return cls.write_file(filename, data)
-
 
 class CSVFormat(FileFormat):
     EXTENSIONS = ('.csv',)
@@ -544,12 +576,9 @@ class CSVFormat(FileFormat):
     SUPPORT_COMPRESSED = True
     PRIORITY = 20
 
-    @classmethod
-    def read_file(cls, filename, wrapper=None):
-        wrapper = wrapper if wrapper and wrapper != Table else _IDENTITY
-        import csv, sys, locale
+    def read(self):
         for encoding in (lambda: ('us-ascii', None),                 # fast
-                         lambda: (detect_encoding(filename), None),  # precise
+                         lambda: (detect_encoding(self.filename), None),  # precise
                          lambda: (locale.getpreferredencoding(False), None),
                          lambda: (sys.getdefaultencoding(), None),   # desperate
                          lambda: ('utf-8', None),                    # ...
@@ -559,38 +588,38 @@ class CSVFormat(FileFormat):
             # the error of second-to-last check is stored and shown as warning in owfile
             if errors != 'ignore':
                 error = ''
-            with cls.open(filename, mode='rt', newline='', encoding=encoding, errors=errors) as file:
+            with self.open(self.filename, mode='rt', newline='',
+                           encoding=encoding, errors=errors) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
-                    dialect = csv.Sniffer().sniff(file.read(1024), cls.DELIMITERS)
+                    dialect = csv.Sniffer().sniff(file.read(1024), self.DELIMITERS)
                 except UnicodeDecodeError as e:
                     error = e
                     continue
                 except csv.Error:
                     dialect = csv.excel()
-                    dialect.delimiter = cls.DELIMITERS[0]
+                    dialect.delimiter = self.DELIMITERS[0]
 
                 file.seek(0)
                 dialect.skipinitialspace = True
 
                 try:
                     reader = csv.reader(file, dialect=dialect)
-                    data = cls.data_table(reader)
+                    data = self.data_table(reader)
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
                                    '{}{}').format(pos,
                                                   ('-' + str(endpos)) if (endpos - pos) > 1 else '')
                         warnings.warn(warning)
-                    return wrapper(data)
+                    return self.wrapper(data)
                 except Exception as e:
                     error = e
                     continue
-        raise ValueError('Cannot parse dataset {}: {}'.format(filename, error))
+        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error))
 
     @classmethod
     def write_file(cls, filename, data):
-        import csv
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data)
@@ -608,16 +637,12 @@ class PickleFormat(FileFormat):
     EXTENSIONS = ('.pickle', '.pkl')
     DESCRIPTION = 'Pickled Python object file'
 
-    @staticmethod
-    def read_file(filename, wrapper=None):
-        wrapper = wrapper if wrapper and wrapper != Table else _IDENTITY
-        import pickle
-        with open(filename, 'rb') as f:
-            return wrapper(pickle.load(f))
+    def read(self):
+        with open(self.filename, 'rb') as f:
+            return self.wrapper(pickle.load(f))
 
     @staticmethod
     def write_file(filename, data):
-        import pickle
         with open(filename, 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
@@ -626,12 +651,9 @@ class BasketFormat(FileFormat):
     EXTENSIONS = ('.basket', '.bsk')
     DESCRIPTION = 'Basket file'
 
-    @classmethod
-    def read_file(cls, filename, storage_class=None):
-        from Orange.data import _io, Table, Domain
-        import sys
-        if storage_class is None:
-            storage_class = Table
+    def read(self):
+        if self.wrapper is None or self.wrapper is _IDENTITY:
+            self.wrapper = Table
 
         def constr_vars(inds):
             if inds:
@@ -639,13 +661,13 @@ class BasketFormat(FileFormat):
                         sorted((ind, name) for name, ind in inds.items())]
 
         X, Y, metas, attr_indices, class_indices, meta_indices = \
-            _io.sparse_read_float(filename.encode(sys.getdefaultencoding()))
+            _io.sparse_read_float(self.filename.encode(sys.getdefaultencoding()))
 
         attrs = constr_vars(attr_indices)
         classes = constr_vars(class_indices)
         meta_attrs = constr_vars(meta_indices)
         domain = Domain(attrs, classes, meta_attrs)
-        return storage_class.from_numpy(
+        return self.wrapper.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
@@ -653,16 +675,22 @@ class ExcelFormat(FileFormat):
     EXTENSIONS = ('.xls', '.xlsx')
     DESCRIPTION = 'Mircosoft Excel spreadsheet'
 
-    @classmethod
-    def read_file(cls, filename, wrapper=None):
-        wrapper = wrapper if wrapper and wrapper != Table else _IDENTITY
-        file_name, _, sheet_name = filename.rpartition(':')
-        if not path.isfile(file_name):
-            file_name, sheet_name = filename, ''
+    sheet = ''
+
+    def set_sheet(self, sheet_name):
+        """Set the sheet to be read.
+
+        Parameters
+        ----------
+        sheet_name : str
+        """
+        self.sheet = sheet_name
+
+    def read(self):
         import xlrd
-        wb = xlrd.open_workbook(file_name, on_demand=True)
-        if sheet_name:
-            ss = wb.sheet_by_name(sheet_name)
+        wb = xlrd.open_workbook(self.filename, on_demand=True)
+        if self.sheet:
+            ss = wb.sheet_by_name(self.sheet)
         else:
             ss = wb.sheet_by_index(0)
         try:
@@ -673,10 +701,10 @@ class ExcelFormat(FileFormat):
                            [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
                              for col in range(first_col, row_len)]
                             for row in range(first_row, ss.nrows)])
-            table = cls.data_table(cells)
+            table = self.data_table(cells)
         except Exception:
-            raise IOError("Couldn't load spreadsheet from " + file_name)
-        return wrapper(table)
+            raise IOError("Couldn't load spreadsheet from " + self.filename)
+        return self.wrapper(table)
 
 
 class DotFormat(FileFormat):
