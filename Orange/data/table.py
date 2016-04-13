@@ -500,23 +500,8 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
         from Orange.data.io import FileFormat
-        for dir in dataset_dirs:
-            absolute_filename = os.path.join(dir, filename)
-            if os.path.exists(absolute_filename):
-                break
-            for ext in FileFormat.readers:
-                if filename.endswith(ext):
-                    break
-                if os.path.exists(absolute_filename + ext):
-                    absolute_filename += ext
-                    break
-            if os.path.exists(absolute_filename):
-                break
-        else:
-            absolute_filename = ext = ""
 
-        if not os.path.exists(absolute_filename):
-            raise IOError('File "{}" was not found.'.format(filename))
+        absolute_filename = FileFormat.locate(filename, dataset_dirs)
         reader = FileFormat.get_reader(absolute_filename)
         if wrapper or cls != Table:
             reader.set_wrapper(wrapper or cls)

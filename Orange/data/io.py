@@ -267,6 +267,44 @@ class FileFormat(metaclass=FileFormatMeta):
     def write(cls, filename, data):
         return cls.write_file(filename, data)
 
+    @classmethod
+    def locate(cls, filename, search_dirs=('.',)):
+        """Locate a file with given filename that can be opened by one
+        of the available readers.
+
+        Parameters
+        ----------
+        filename : str
+        search_dirs : Iterable[str]
+
+        Returns
+        -------
+        str
+            Absolute path to the file
+        """
+        if path.exists(filename):
+            return filename
+
+        for directory in search_dirs:
+            absolute_filename = path.join(directory, filename)
+            if path.exists(absolute_filename):
+                break
+            for ext in cls.readers:
+                if filename.endswith(ext):
+                    break
+                if path.exists(absolute_filename + ext):
+                    absolute_filename += ext
+                    break
+            if path.exists(absolute_filename):
+                break
+        else:
+            absolute_filename = ""
+
+        if not path.exists(absolute_filename):
+            raise IOError('File "{}" was not found.'.format(filename))
+
+        return absolute_filename
+
     @staticmethod
     def open(filename, *args, **kwargs):
         """
