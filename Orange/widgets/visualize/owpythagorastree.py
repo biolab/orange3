@@ -1,5 +1,5 @@
 # coding=utf-8
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, deque
 from functools import lru_cache
 from math import pi, sqrt, cos, sin, degrees, log
 
@@ -27,12 +27,12 @@ class OWPythagorasTree(OWWidget):
     # Enable the save as feature
     graph_name = True
 
-    inputs = [('Classification Tree', TreeClassifier, '_set_tree')]
+    inputs = [('Classification Tree', TreeClassifier, 'set_tree')]
     outputs = [('Selected Data', Table)]
 
     # Settings
     zoom = settings.ContextSetting(5)
-    depth = settings.ContextSetting(10)
+    depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
     size_calc_idx = settings.Setting(0)
     size_log_scale = settings.Setting(2)
@@ -53,7 +53,10 @@ class OWPythagorasTree(OWWidget):
         self.model = None
         self.tree_adapter = None
         self.tree = None
-        self.canvas_squares = []
+
+        self.square_objects = {}
+        self.drawn_nodes = deque()
+        self.frontier = deque()
 
         self.color_palette = [QtGui.QColor(*c) for c in DefaultRGBColors]
 
@@ -68,22 +71,23 @@ class OWPythagorasTree(OWWidget):
             box_display, self, 'zoom', label='Zoom',
             minValue=1, maxValue=10, step=1, ticks=False,
             callback=None)
-        gui.hSlider(
-            box_display, self, 'depth', label='Depth',
-            minValue=1, maxValue=10, step=1, ticks=False, callback=None)
+        self.depth_slider = gui.hSlider(
+            box_display, self, 'depth_limit', label='Depth',
+            maxValue=0, ticks=False,
+            callback=self.update_depth)
         self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
             orientation='horizontal', items=[], contentsLength=8,
-            callback=self._update_colors)
+            callback=self.update_colors)
         gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
             orientation='horizontal',
             items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
-            callback=self._invalidate_tree)
+            callback=self.invalidate_tree)
         gui.hSlider(
             box_display, self, 'size_log_scale', label='Log scale',
             minValue=1, maxValue=100, step=1, ticks=False,
-            callback=self._invalidate_tree)
+            callback=self.invalidate_tree)
 
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
@@ -109,20 +113,42 @@ class OWPythagorasTree(OWWidget):
 
         self.mainArea.layout().addWidget(self.view)
 
-    def _set_tree(self, model=None):
-        # This function should only be called when the tree input changes
-        self._clear()
+    def set_tree(self, model=None):
+        """When a different tree is given."""
+        self.clear()
         self.model = model
         if model is not None:
             self.domain = model.domain
+            self.invalidate_tree()
             self._update_target_class_combo()
-            self._invalidate_tree()
+            self._update_depth_slider()
 
-    def _invalidate_tree(self):
-        # This function should be called when the tree needs to be recalculated
+    def invalidate_tree(self):
+        """When the tree needs to be recalculated."""
         self._clear_scene()
         self._get_tree_adapter(self.model)
         self._draw_tree(self._calculate_tree())
+
+    def update_depth(self):
+        """This method should be called when the depth changes"""
+        self._draw_tree(self.tree)
+
+    def update_colors(self):
+        """When the colors of the nodes need to be updated."""
+        for square in self._get_scene_squares():
+            square.setBrush(self._get_node_color(square.tree_node))
+
+    def clear(self):
+        """Clear all relevant data from the widget."""
+        self.domain = None
+        self.model = None
+        self.tree_adapter = None
+        self.tree = None
+        self._clear_scene()
+
+    def _update_depth_slider(self):
+        # TODO figure out a way to change slider label width with larger nums
+        self.depth_slider.setMaximum(self.tree_adapter.max_depth)
 
     def _get_tree_adapter(self, model):
         self.tree_adapter = SklTreeAdapter(
@@ -133,7 +159,7 @@ class OWPythagorasTree(OWWidget):
     def _update_target_class_combo(self):
         self.target_class_combo.clear()
         self.target_class_combo.addItem('None')
-        values = self.domain.class_vars[0].values
+        values = [c.title() for c in self.domain.class_vars[0].values]
         self.target_class_combo.addItems(values)
         # make sure we don't attempt to assign an index gt than the number of
         # classes
@@ -149,14 +175,81 @@ class OWPythagorasTree(OWWidget):
         )
         return self.tree
 
+    def _depth_was_decreased(self):
+        if not self.drawn_nodes:
+            return False
+        # checks if the max depth was increased from the last change
+        depth, node = self.drawn_nodes.pop()
+        self.drawn_nodes.append((depth, node))
+        # if the right most node in drawn nodes has appropriate depth, it must
+        # have been increased
+        return depth > self.depth_limit
+
     def _draw_tree(self, root):
-        # Draw the actual tree and save square objects to canvas_squares
-        self.scene.addItem(SquareGraphicsItem(
-            root,
-            brush=QtGui.QBrush(self._get_node_color(root))
-        ))
-        for child in root.children:
-            self._draw_tree(child)
+        """Efficiently draw the tree with regards to the depth.
+
+        If using a recursive approach, the tree had to be redrawn every time
+        the depth was changed, which was very impractical for larger trees,
+        since everything got very slow, very fast.
+
+        In this approach, we use two queues to represent the tree frontier and
+        the nodes that have already been drawn. We also store the depth. This
+        way, when the max depth is increased, we do not redraw the whole tree
+        but only iterate throught the frontier and draw those nodes, and update
+        the frontier accordingly.
+        When decreasing the max depth, we reverse the process, we clear the
+        frontier, and remove nodes from the drawn nodes, and append those with
+        depth max_depth + 1 to the frontier, so the frontier doesn't get
+        cluttered.
+
+        Parameters
+        ----------
+        root : TreeNode
+            The root tree node.
+
+        Returns
+        -------
+
+        """
+        # if this is the first time drawing the tree begin with root
+        if not self.drawn_nodes:
+            self.frontier.appendleft((0, root))
+        # if the depth was decreased, we can clear the frontier, otherwise
+        # frontier gets cluttered with non-frontier nodes
+        was_decreased = self._depth_was_decreased()
+        if was_decreased:
+            self.frontier.clear()
+        # remove nodes from drawn and add to frontier if limit is decreased
+        while self.drawn_nodes:
+            depth, node = self.drawn_nodes.pop()
+            # check if the node is in the allowed limit
+            if depth <= self.depth_limit:
+                self.drawn_nodes.append((depth, node))
+                break
+            if depth == self.depth_limit + 1:
+                self.frontier.appendleft((depth, node))
+
+            if node.label in self.square_objects:
+                self.square_objects[node.label].hide()
+
+        # add nodes to drawn and remove from frontier if limit is increased
+        while self.frontier:
+            depth, node = self.frontier.popleft()
+            # check if the depth of the node is outside the allowed limit
+            if depth > self.depth_limit:
+                self.frontier.appendleft((depth, node))
+                break
+            self.drawn_nodes.append((depth, node))
+            self.frontier.extend((depth + 1, c) for c in node.children)
+
+            if node.label in self.square_objects:
+                self.square_objects[node.label].show()
+            else:
+                self.square_objects[node.label] = SquareGraphicsItem(
+                    node,
+                    brush=QtGui.QBrush(self._get_node_color(node))
+                )
+                self.scene.addItem(self.square_objects[node.label])
 
     def _get_node_color(self, tree_node):
         # this is taken almost directly from the existing classification tree
@@ -174,30 +267,23 @@ class OWPythagorasTree(OWWidget):
             color = colors[int(modus)].light(400 - 300 * p)
         return color
 
-    def _update_colors(self):
-        # Update the colors of the nodes
-        for square in self._get_scene_squares():
-            square.setBrush(self._get_node_color(square.tree_node))
-
     def _get_scene_squares(self):
         return filter(lambda i: isinstance(i, SquareGraphicsItem),
-                           self.scene.items())
-
-    def _clear(self):
-        self.domain = None
-        self.model = None
-        self.tree_adapter = None
-        self.tree = None
-        self._clear_scene()
+                      self.scene.items())
 
     def _clear_scene(self):
         self.scene.clear()
+        self.frontier.clear()
+        self.drawn_nodes.clear()
+        self.square_objects.clear()
 
     def onDeleteWidget(self):
-        self._clear()
+        """When deleting the widget."""
+        self.clear()
         super().onDeleteWidget()
 
     def commit(self):
+        """Commit the selected data to output."""
         pass
 
     def send_report(self):
@@ -553,6 +639,14 @@ class SklTreeAdapter:
     def get_impurity(self, node):
         return self._tree.impurity[node]
 
+    @property
+    def max_depth(self):
+        return self._tree.max_depth
+
+    @property
+    def num_nodes(self):
+        return self._tree.node_count
+
 
 def main():
     import sys
@@ -569,7 +663,7 @@ def main():
     data = Orange.data.Table(filename)
     clf = TreeLearner(max_depth=1000)(data)
     clf.instances = data
-    ow._set_tree(clf)
+    ow.set_tree(clf)
 
     ow.show()
     ow.raise_()
