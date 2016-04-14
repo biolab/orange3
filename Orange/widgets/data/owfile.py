@@ -9,7 +9,7 @@ from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, ExcelFormat
+from Orange.data.io import FileFormat, ExcelReader
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -290,7 +290,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                                  .format(filename))
 
             reader = FileFormat.get_reader(filename)
-            if isinstance(reader, ExcelFormat):
+            if isinstance(reader, ExcelReader):
                 reader.select_sheet(self.xls_sheet)
             try:
                 return load(lambda x: reader.read(), filename)

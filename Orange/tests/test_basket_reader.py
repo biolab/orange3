@@ -8,7 +8,7 @@ import unittest
 
 import numpy as np
 
-from Orange.data.io import BasketFormat
+from Orange.data.io import BasketReader
 
 
 def with_file(s):
@@ -28,7 +28,7 @@ def with_file(s):
 
 
 def read_basket(filename):
-    return BasketFormat(filename).read()
+    return BasketReader(filename).read()
 
 
 class TestBasketReader(unittest.TestCase):

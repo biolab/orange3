@@ -14,7 +14,7 @@ def get_dataset(name):
 
 
 def read_file(name):
-    return io.ExcelFormat(get_dataset(name)).read()
+    return io.ExcelReader(get_dataset(name)).read()
 
 
 class TestExcelHeader0(unittest.TestCase):
@@ -35,7 +35,7 @@ class TestExcelHeader0(unittest.TestCase):
 
 class TextExcelSheets(unittest.TestCase):
     def setUp(self):
-        self.reader = io.ExcelFormat(get_dataset("header_0_sheet.xlsx"))
+        self.reader = io.ExcelReader(get_dataset("header_0_sheet.xlsx"))
 
     def test_sheets(self):
         self.assertSequenceEqual(self.reader.sheets,

@@ -205,8 +205,7 @@ class FileFormat(metaclass=FileFormatMeta):
         DESCRIPTION = 'human-readable file format description'
         SUPPORT_COMPRESSED = False
 
-        @classmethod
-        def read_file(cls, filename, wrapper=_IDENTITY):
+        def read(self):
             ...  # load headers, data, ...
             return wrapper(self.data_table(data, headers))
 
@@ -629,7 +628,9 @@ class FileFormat(metaclass=FileFormatMeta):
                    for var, val in zip(vars, flatten(row))])
 
 
-class CSVFormat(FileFormat):
+class CSVReader(FileFormat):
+    """Reader for comma separated files"""
+
     EXTENSIONS = ('.csv',)
     DESCRIPTION = 'Comma-separated values'
     DELIMITERS = ',;:\t$ '
@@ -686,14 +687,16 @@ class CSVFormat(FileFormat):
             cls.write_data(writer.writerow, data)
 
 
-class TabFormat(CSVFormat):
+class TabReader(CSVReader):
+    """Reader for tab separated files"""
     EXTENSIONS = ('.tab', '.tsv')
     DESCRIPTION = 'Tab-separated values'
     DELIMITERS = '\t'
     PRIORITY = 10
 
 
-class PickleFormat(FileFormat):
+class PickleReader(FileFormat):
+    """Reader for pickled Table objects"""
     EXTENSIONS = ('.pickle', '.pkl')
     DESCRIPTION = 'Pickled Python object file'
 
@@ -707,7 +710,8 @@ class PickleFormat(FileFormat):
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
 
-class BasketFormat(FileFormat):
+class BasketReader(FileFormat):
+    """Reader for basket (sparse) files"""
     EXTENSIONS = ('.basket', '.bsk')
     DESCRIPTION = 'Basket file'
 
@@ -731,7 +735,8 @@ class BasketFormat(FileFormat):
             domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
-class ExcelFormat(FileFormat):
+class ExcelReader(FileFormat):
+    """Reader for excel files"""
     EXTENSIONS = ('.xls', '.xlsx')
     DESCRIPTION = 'Mircosoft Excel spreadsheet'
 
@@ -767,7 +772,8 @@ class ExcelFormat(FileFormat):
         return self.wrapper(table)
 
 
-class DotFormat(FileFormat):
+class DotReader(FileFormat):
+    """Writer for dot (graph) files"""
     EXTENSIONS = ('.dot', '.gv')
     DESCRIPTION = 'Dot graph description'
     SUPPORT_COMPRESSED = True

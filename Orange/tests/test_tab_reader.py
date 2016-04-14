@@ -9,11 +9,11 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable
-from Orange.data.io import TabFormat
+from Orange.data.io import TabReader
 
 
 def read_tab_file(filename):
-    return TabFormat(filename).read()
+    return TabReader(filename).read()
 
 
 class TestTabReader(unittest.TestCase):
@@ -67,7 +67,7 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
         outf = io.StringIO()
         outf.close = lambda: None
-        TabFormat.write_file(outf, table)
+        TabReader.write_file(outf, table)
         saved = outf.getvalue()
 
         file = io.StringIO(saved)
@@ -140,7 +140,7 @@ class TestTabReader(unittest.TestCase):
     def test_wrapper(self):
         wrapper = Mock()
         file1 = io.StringIO("\n".join("xd dbac"))
-        reader = TabFormat(file1)
+        reader = TabReader(file1)
         reader.set_wrapper(wrapper)
         reader.read()
 
@@ -148,6 +148,6 @@ class TestTabReader(unittest.TestCase):
 
     def test_sheets(self):
         file1 = io.StringIO("\n".join("xd dbac"))
-        reader = TabFormat(file1)
+        reader = TabReader(file1)
 
         self.assertEqual(reader.sheets, ())

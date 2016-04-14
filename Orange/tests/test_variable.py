@@ -11,7 +11,7 @@ import numpy as np
 from Orange.testing import create_pickling_tests
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
-from Orange.data.io import CSVFormat
+from Orange.data.io import CSVReader
 
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
@@ -315,13 +315,13 @@ time,continuous
         for stream in (output_csv, input_csv):
             stream.close = lambda: None  # HACK: Prevent closing of streams
 
-        table = CSVFormat(input_csv).read()
+        table = CSVReader(input_csv).read()
         self.assertIsInstance(table.domain['Date'], TimeVariable)
         self.assertEqual(table[0, 'Date'], '1920-12-12')
         # Dates before 1970 are negative
         self.assertTrue(all(inst['Date'] < 0 for inst in table))
 
-        CSVFormat.write_file(output_csv, table)
+        CSVReader.write_file(output_csv, table)
         self.assertEqual(input_csv.getvalue().splitlines(),
                          output_csv.getvalue().splitlines())
 
