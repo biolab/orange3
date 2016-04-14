@@ -208,7 +208,8 @@ name-group=
 include-naming-hint=no
 
 # Regular expression matching correct method names
-method-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
+# TODO: find a better way to allow long method names in test classes.
+method-rgx=[a-z_][a-zA-Z0-9_]{2,80}$
 
 # Naming hint for method names
 method-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
