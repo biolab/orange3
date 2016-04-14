@@ -35,8 +35,16 @@ class ImgFormat(FileFormat):
     @classmethod
     def write_image(cls, filename, scene):
         try:
+            scene = scene.scene()
+            scenerect = scene.sceneRect()   #preserve scene bounding rectangle
+            viewrect = scene.views()[0].sceneRect()
+            scene.setSceneRect(viewrect)
+            backgroundbrush = scene.backgroundBrush()  #preserve scene background brush
+            scene.setBackgroundBrush(QtCore.Qt.white)
             exporter = cls._get_exporter()
             cls._export(exporter(scene), filename)
+            scene.setBackgroundBrush(backgroundbrush)  # reset scene background brush
+            scene.setSceneRect(scenerect)   # reset scene bounding rectangle
         except Exception:
             if isinstance(scene, (QGraphicsScene, QGraphicsView)):
                 rect = scene.sceneRect()
