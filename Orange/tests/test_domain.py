@@ -1,3 +1,6 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+
 from time import time
 from numbers import Real
 from itertools import starmap

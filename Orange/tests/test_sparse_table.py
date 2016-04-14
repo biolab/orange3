@@ -1,3 +1,6 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+
 from scipy.sparse import csr_matrix
 
 from Orange import data

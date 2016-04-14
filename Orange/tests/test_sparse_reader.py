@@ -1,3 +1,6 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+
 import os
 import tempfile
 import unittest
