@@ -199,6 +199,24 @@ class LintCommand(Command):
         .travis/check_pylint_diff $best_ancestor
         ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
 
+class CoverageCommand(Command):
+    """A setup.py coverage subcommand developers can run locally."""
+    description = "run code coverage"
+    user_options = []
+    initialize_options = finalize_options = lambda self: None
+
+    def run(self):
+        """Check coverage on current workdir"""
+        sys.exit(subprocess.call(r'''
+        coverage run --source=Orange -m unittest -v Orange.tests
+        echo; echo
+        coverage report
+        coverage html &&
+            { echo; echo "See also: file://$(pwd)/htmlcov/index.html"; echo; }
+        ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
+
+
+
 
 def setup_package():
     write_version_py()
@@ -221,6 +239,7 @@ def setup_package():
         test_suite='Orange.tests.test_suite',
         cmdclass={
             'lint': LintCommand,
+            'coverage': CoverageCommand,
         },
     )
 
