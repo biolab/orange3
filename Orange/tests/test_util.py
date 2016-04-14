@@ -15,10 +15,6 @@ class UtilTest(unittest.TestCase):
         self.assertTrue(not np.all(np.isnan(scale([.5, np.nan]))))
 
     def test_abstract(self):
-        @abstract
-        class AbstractClass:
-            pass
-
         class Class:
             @abstract
             def method(self): pass
@@ -40,10 +36,6 @@ class UtilTest(unittest.TestCase):
                 @abstract      # This way reads nicer,
                 @staticmethod  # but it doesn't work
                 def non_method_descriptor(arg): pass
-
-        with self.assertRaises(NotImplementedError) as cm:
-            AbstractClass()
-        self.assertRegex(cm.exception.args[0], 'AbstractClass')
 
         for attr in ('method',
                      'staticmethod_',

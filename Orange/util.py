@@ -8,11 +8,15 @@ import warnings
 import numpy as np
 
 
-class OrangeDeprecationWarning(DeprecationWarning):
+class OrangeWarning(UserWarning):
     pass
 
 
-warnings.simplefilter('default', OrangeDeprecationWarning)
+class OrangeDeprecationWarning(OrangeWarning, DeprecationWarning):
+    pass
+
+
+warnings.simplefilter('default', OrangeWarning)
 
 
 def deprecated(obj):
@@ -81,23 +85,20 @@ def scale(values, min=0, max=1):
 def abstract(obj):
     """Designate decorated class or method abstract."""
     if isinstance(obj, type):
-        old__new__ = obj.__new__
-
-        def _refuse__new__(cls, *args, **kwargs):
-            if cls == obj:
-                raise NotImplementedError("Can't instantiate abstract class " + obj.__name__)
-            return old__new__(cls, *args, **kwargs)
-
-        obj.__new__ = _refuse__new__
+        warnings.warn('Marking types @abstract not supported ({})'.format(obj.__name__),
+                      OrangeWarning, stacklevel=2)
         return obj
     else:
         if not hasattr(obj, '__qualname__'):
             raise TypeError('Put @abstract decorator below (evaluated before) '
                             'any of @staticmethod, @classmethod, or @property.')
         cls_name = obj.__qualname__.rsplit('.', 1)[0]
+
+        @wraps(obj)
         def _refuse__call__(*args, **kwargs):
             raise NotImplementedError("Can't call abstract method {} of class {}"
                                       .format(obj.__name__, cls_name))
+
         return _refuse__call__
 
 
