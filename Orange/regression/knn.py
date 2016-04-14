@@ -3,6 +3,8 @@ from Orange.regression import SklLearner
 
 __all__ = ["KNNRegressionLearner"]
 
+# How knn working
+# http://www.saedsayad.com/k_nearest_neighbors.htm
 
 class KNNRegressionLearner(SklLearner):
     __wraps__ = skl_neighbors.KNeighborsRegressor
