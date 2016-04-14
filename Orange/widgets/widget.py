@@ -212,7 +212,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     class Splitter(QSplitter):
         def createHandle(self):
             return self.Handle(self.orientation(), self,
-                                   cursor=Qt.PointingHandCursor)
+                               cursor=Qt.PointingHandCursor)
         class Handle(QSplitterHandle):
             def mouseReleaseEvent(self, event):
                 if event.button() == Qt.LeftButton:
