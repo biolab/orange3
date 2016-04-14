@@ -150,13 +150,14 @@ Get_diffable ()
 }
 
 for check in \
-    'Pylint,Number_of_issues,^Report$,^([^:]+:)[0-9]+:,\\1' \
-    'radon,Cyclomatic_complexity,^[0-9]+ blocks,^( +[MCF] )[0-9:]+,\\1:'
+    'Pylint,Number_of_issues,^Report$,^([^:]+:)[0-9]+:,\\1,^\\+' \
+    'radon,Cyclomatic_complexity,^[0-9]+ blocks,^( +[MCF])[0-9:]+,\\1:,^[+-]'
 do
     IFS=',' read check func         \
                  diff_block_end     \
                  match_line_num     \
-                 replace_line_num   < <(echo "$check")
+                 replace_line_num   \
+                 show_diff_lines    < <(echo "$check")
     # If command not available, skip it
     if [ ! "$(eval echo \$$(echo $check | tr '[:lower:]' '[:upper:]') )" ]; then
         continue
@@ -184,7 +185,7 @@ do
     diff -u0 --minimal                           \
             <(Get_diffable < "$cached_previous") \
             <(Get_diffable < "$cached_current")  |
-        grep -E '^\+' | tail -n +3 || true
+        grep -E "$show_diff_lines" | tail -n +3 || true
     echo
 
     echo
