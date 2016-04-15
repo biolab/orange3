@@ -104,21 +104,7 @@ class SGDRegressionLearner(LinearRegressionLearner):
         return LinearModel(clf)
 
 
-class PolynomialModel(Model):
-    def __init__(self, model, polyfeatures):
-        self.model = model
-        self.polyfeatures = polyfeatures
-
-    def predict(self, X):
-        X = self.polyfeatures.fit_transform(X)
-        return self.model.predict(X)
-
-    def __str__(self):
-        return 'PolynomialModel {}'.format(self.model)
-
-
 class PolynomialLearner(Learner):
-    __returns__ = PolynomialModel
     name = 'poly learner'
     preprocessors = [Continuize(),
                      RemoveNaNColumns(),
@@ -163,3 +149,17 @@ class LinearModel(SklModel):
         return 'LinearModel {}'.format(self.skl_model)
 
 
+class PolynomialModel(Model):
+    def __init__(self, model, polyfeatures):
+        self.model = model
+        self.polyfeatures = polyfeatures
+
+    def predict(self, X):
+        X = self.polyfeatures.fit_transform(X)
+        return self.model.predict(X)
+
+    def __str__(self):
+        return 'PolynomialModel {}'.format(self.model)
+
+
+PolynomialLearner.__returns__ = PolynomialModel
