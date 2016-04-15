@@ -40,17 +40,16 @@ class OWDistanceTransformation(widget.OWWidget):
 
         self.data = None
 
-        box = gui.widgetBox(self.controlArea, "Normalization")
-        gui.radioButtons(box, self, "normalization_method",
+        gui.radioButtons(self.controlArea, self, "normalization_method",
+                         box="Normalization",
                          btnLabels=[x[0] for x in self.normalization_options],
                          callback=self._invalidate)
 
-        box = gui.widgetBox(self.controlArea, "Inversion")
-        gui.radioButtons(box, self, "inversion_method",
+        gui.radioButtons(self.controlArea, self, "inversion_method",
+                         box="Inversion",
                          btnLabels=[x[0] for x in self.inversion_options],
                          callback=self._invalidate)
 
-        box = gui.widgetBox(self.controlArea, True, orientation="vertical")
         box = gui.auto_commit(self.controlArea, self, "autocommit", "Apply",
                               checkbox_label="Apply on any change")
         gui.separator(box, 20)

@@ -314,8 +314,8 @@ class OWSelectAttributes(widget.OWWidget):
         layout = QtGui.QGridLayout()
         self.controlArea.setLayout(layout)
         layout.setContentsMargins(4, 4, 4, 4)
-        box = gui.widgetBox(self.controlArea, "Available Variables",
-                            addToLayout=False)
+        box = gui.vBox(self.controlArea, "Available Variables",
+                       addToLayout=False)
         self.filter_edit = QtGui.QLineEdit()
         self.filter_edit.setToolTip("Filter the list of available variables.")
         box.layout().addWidget(self.filter_edit)
@@ -355,7 +355,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.available_attrs_view)
         layout.addWidget(box, 0, 0, 3, 1)
 
-        box = gui.widgetBox(self.controlArea, "Features", addToLayout=False)
+        box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
         self.used_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
@@ -367,8 +367,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
-        box = gui.widgetBox(self.controlArea, "Target Variable",
-                            addToLayout=False)
+        box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
         self.class_attrs = ClassVarListItemModel()
         self.class_attrs_view = ClassVariableItemView(
             acceptedType=(Orange.data.DiscreteVariable,
@@ -380,8 +379,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
-        box = gui.widgetBox(self.controlArea, "Meta Attributes",
-                            addToLayout=False)
+        box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
@@ -391,7 +389,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
 
-        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 0, 1, 1, 1)
 
         self.up_attr_button = gui.button(bbox, self, "Up",
@@ -401,13 +399,13 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_attr_button = gui.button(bbox, self, "Down",
             callback=partial(self.move_down, self.used_attrs_view))
 
-        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 1, 1, 1, 1)
         self.move_class_button = gui.button(bbox, self, ">",
             callback=partial(self.move_selected,
                              self.class_attrs_view, exclusive=True))
 
-        bbox = gui.widgetBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 2, 1, 1, 1)
         self.up_meta_button = gui.button(bbox, self, "Up",
             callback=partial(self.move_up, self.meta_attrs_view))

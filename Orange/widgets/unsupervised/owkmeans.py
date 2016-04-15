@@ -59,7 +59,7 @@ class OWKMeans(widget.OWWidget):
         self.km = None
         self.optimization_runs = []
 
-        box = gui.widgetBox(self.controlArea, "Number of Clusters")
+        box = gui.vBox(self.controlArea, "Number of Clusters")
         layout = QGridLayout()
         bg = gui.radioButtonsInBox(
             box, self, "optimize_k", [], orientation=layout,
@@ -67,7 +67,7 @@ class OWKMeans(widget.OWWidget):
         layout.addWidget(
             gui.appendRadioButton(bg, "Fixed", addToLayout=False),
             1, 1)
-        sb = gui.widgetBox(None, margin=0, orientation="horizontal")
+        sb = gui.hBox(None, margin=0)
         self.fixedSpinBox = gui.spin(
             sb, self, "k", minv=2, maxv=30,
             controlWidth=60, alignment=Qt.AlignRight, callback=self.update_k)
@@ -76,7 +76,7 @@ class OWKMeans(widget.OWWidget):
 
         layout.addWidget(
             gui.appendRadioButton(bg, "Optimized", addToLayout=False), 2, 1)
-        ftobox = gui.widgetBox(None, orientation="horizontal")
+        ftobox = gui.hBox(None)
         ftobox.layout().setContentsMargins(0, 0, 0, 0)
         layout.addWidget(ftobox)
         gui.spin(
@@ -98,7 +98,7 @@ class OWKMeans(widget.OWWidget):
                 items=list(zip(*self.SCORING_METHODS))[0],
                 callback=self.update), 5, 2)
 
-        box = gui.widgetBox(self.controlArea, "Initialization")
+        box = gui.vBox(self.controlArea, "Initialization")
         gui.comboBox(
             box, self, "smart_init", items=self.INIT_METHODS,
             callback=self.update)
@@ -108,7 +108,7 @@ class OWKMeans(widget.OWWidget):
         box2.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         layout.addWidget(gui.widgetLabel(None, "Re-runs: "),
                          0, 0, Qt.AlignLeft)
-        sb = gui.widgetBox(None, margin=0, orientation="horizontal")
+        sb = gui.hBox(None, margin=0)
         layout.addWidget(sb, 0, 1)
         gui.lineEdit(
             sb, self, "n_init", controlWidth=60,
@@ -116,31 +116,31 @@ class OWKMeans(widget.OWWidget):
             callback=self.update)
         layout.addWidget(gui.widgetLabel(None, "Maximal iterations: "),
                          1, 0, Qt.AlignLeft)
-        sb = gui.widgetBox(None, margin=0, orientation="horizontal")
+        sb = gui.hBox(None, margin=0)
         layout.addWidget(sb, 1, 1)
         gui.lineEdit(sb, self, "max_iterations",
                      controlWidth=60, valueType=int,
                      validator=QIntValidator(),
                      callback=self.update)
 
-        box = gui.widgetBox(self.controlArea, "Output")
+        box = gui.vBox(self.controlArea, "Output")
         gui.comboBox(box, self, "place_cluster_ids",
-                     label="Append cluster id as ", orientation="horizontal",
+                     label="Append cluster id as ", orientation=Qt.Horizontal,
                      callback=self.send_data, items=self.OUTPUT_METHODS)
         gui.lineEdit(box, self, "output_name",
-                     label="Name ", orientation="horizontal",
+                     label="Name ", orientation=Qt.Horizontal,
                      callback=self.send_data)
 
         gui.auto_commit(self.controlArea, self, "auto_run", "Run",
                         checkbox_label="Run after any change  ",
-                        orientation="horizontal")
+                        orientation=Qt.Horizontal)
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)
         self.table_model.setHorizontalHeaderLabels(["k", "Score"])
         self.table_model.setColumnCount(2)
 
-        self.table_box = gui.widgetBox(
+        self.table_box = gui.vBox(
             self.mainArea, "Optimization Report", addSpace=0)
         table = self.table_view = QTableView(self.table_box)
         table.setHorizontalScrollMode(QTableView.ScrollPerPixel)

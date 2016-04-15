@@ -34,8 +34,7 @@ class OWSaveClassifier(widget.OWWidget):
         #: input model/classifier
         self.model = None
 
-        box = gui.widgetBox(self.controlArea, self.tr("File"),
-                            orientation=QtGui.QHBoxLayout())
+        box = gui.hBox(self.controlArea, self.tr("File"))
         self.filesCB = gui.comboBox(box, self, "selectedIndex",
                                     callback=self._on_recent)
         self.filesCB.setMinimumContentsLength(20)

@@ -279,17 +279,14 @@ class OWDistanceMap(widget.OWWidget):
         self._sort_indices = None
         self._selection = None
 
-        box = gui.widgetBox(self.controlArea, "Element sorting", margin=0)
         self.sorting_cb = gui.comboBox(
-            box, self, "sorting",
+            self.controlArea, self, "sorting", box="Element sorting",
             items=["None", "Clustering", "Clustering with ordered leaves"],
             callback=self._invalidate_ordering)
 
-        box = gui.widgetBox(self.controlArea, "Colors")
-
+        box = gui.vBox(self.controlArea, "Colors")
         self.colormap_cb = gui.comboBox(
-            box, self, "colormap", callback=self._update_color
-        )
+            box, self, "colormap", callback=self._update_color)
         self.colormap_cb.setIconSize(QSize(64, 16))
         self.palettes = list(_color_palettes)
 
@@ -321,10 +318,9 @@ class OWDistanceMap(widget.OWWidget):
         )
         box.layout().addLayout(form)
 
-        box = gui.widgetBox(self.controlArea, "Annotations")
-        self.annot_combo = gui.comboBox(box, self, "annotation_idx",
-                                        callback=self._invalidate_annotations,
-                                        contentsLength=12)
+        self.annot_combo = gui.comboBox(
+            self.controlArea, self, "annotation_idx", box="Annotations",
+            callback=self._invalidate_annotations, contentsLength=12)
         self.annot_combo.setModel(itemmodels.VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         self.controlArea.layout().addStretch()

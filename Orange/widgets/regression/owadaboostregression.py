@@ -1,3 +1,5 @@
+from PyQt4.QtCore import Qt
+
 from Orange.regression.base_regression import LearnerRegression
 from Orange.data import Table
 from Orange.ensembles import SklAdaBoostRegressionLearner
@@ -21,7 +23,7 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
 
     def add_specific_parameters(self, box):
         gui.comboBox(box, self, "loss", label="Loss",
-                     orientation="horizontal", items=self.losses,
+                     orientation=Qt.Horizontal, items=self.losses,
                      callback=self.settings_changed)
 
     def create_learner(self):

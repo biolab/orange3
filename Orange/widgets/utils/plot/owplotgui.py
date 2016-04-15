@@ -433,7 +433,7 @@ class OWPlotGUI:
             The ``ids`` argument is a list of widget ID's that will be added to this box
         '''
         if box is None:
-            box = gui.widgetBox(widget, name)
+            box = gui.vBox(widget, name)
         self.add_widgets(ids, box)
         return box
 

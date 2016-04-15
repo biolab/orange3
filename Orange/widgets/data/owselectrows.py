@@ -60,7 +60,7 @@ class OWSelectRows(widget.OWWidget):
         self.data = None
         self.data_desc = self.match_desc = self.nonmatch_desc = None
 
-        box = gui.widgetBox(self.controlArea, 'Conditions', stretch=100)
+        box = gui.vBox(self.controlArea, 'Conditions', stretch=100)
         self.cond_list = QtGui.QTableWidget(box)
         box.layout().addWidget(self.cond_list)
         self.cond_list.setShowGrid(False)
@@ -74,7 +74,7 @@ class OWSelectRows(widget.OWWidget):
             QtGui.QHeaderView.Stretch)
         self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
 
-        box2 = gui.widgetBox(box, orientation="horizontal")
+        box2 = gui.hBox(box)
         self.add_button = gui.button(box2, self, "Add condition",
                                      callback=self.add_row)
         self.add_all_button = gui.button(box2, self, "Add all variables",
@@ -83,19 +83,19 @@ class OWSelectRows(widget.OWWidget):
                                             callback=self.remove_all)
         gui.rubber(box2)
 
-        info = gui.widgetBox(self.controlArea, '', orientation="horizontal")
-        box_data_in = gui.widgetBox(info, 'Data In')
+        info = gui.hBox(self.controlArea)
+        box_data_in = gui.vBox(info, 'Data In')
 #        self.data_in_rows = gui.widgetLabel(box_data_in, " ")
         self.data_in_variables = gui.widgetLabel(box_data_in, " ")
         gui.rubber(box_data_in)
 
-        box_data_out = gui.widgetBox(info, 'Data Out')
+        box_data_out = gui.vBox(info, 'Data Out')
         self.data_out_rows = gui.widgetLabel(box_data_out, " ")
 #        self.dataOutAttributesLabel = gui.widgetLabel(box_data_out, " ")
         gui.rubber(box_data_out)
 
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
-        box_setting = gui.widgetBox(box, 'Purging')
+        box = gui.hBox(self.controlArea)
+        box_setting = gui.vBox(box, 'Purging')
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -252,8 +252,7 @@ class OWSelectRows(widget.OWWidget):
                 self.cond_list.setCellWidget(oper_combo.row, 2, combo)
                 combo.currentIndexChanged.connect(self.conditions_changed)
         else:
-            box = gui.widgetBox(self, orientation="horizontal",
-                                addToLayout=False)
+            box = gui.hBox(self, addToLayout=False)
             box.var_type = vartype(var)
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
             if var.is_continuous:

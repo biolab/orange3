@@ -483,7 +483,7 @@ class OWHeatMap(widget.OWWidget):
         self.__columns_cache = {}
 
         # GUI definition
-        colorbox = gui.widgetBox(self.controlArea, "Color")
+        colorbox = gui.vBox(self.controlArea, "Color")
         self.color_cb = gui.comboBox(colorbox, self, "palette_index")
         self.color_cb.setIconSize(QSize(64, 16))
         palettes = _color_palettes + self.user_palettes
@@ -524,7 +524,7 @@ class OWHeatMap(widget.OWWidget):
 
         colorbox.layout().addLayout(form)
 
-        mergebox = gui.widgetBox(self.controlArea, "Merge",)
+        mergebox = gui.vBox(self.controlArea, "Merge",)
         gui.checkBox(mergebox, self, "merge_kmeans", "Merge by k-means",
                      callback=self.update_sorting_examples)
         ibox = gui.indentedBox(mergebox)
@@ -532,7 +532,7 @@ class OWHeatMap(widget.OWWidget):
                  label="Clusters:", keyboardTracking=False,
                  callbackOnReturn=True, callback=self.update_merge)
 
-        sortbox = gui.widgetBox(self.controlArea, "Sorting")
+        sortbox = gui.vBox(self.controlArea, "Sorting")
         # For columns
         self.colsortcb = gui.comboBox(
             sortbox, self, "sort_columns_idx",
@@ -545,7 +545,7 @@ class OWHeatMap(widget.OWWidget):
             items=[name for _, name in self.RowOrdering],
             label='Rows', callback=self.update_sorting_examples)
 
-        box = gui.widgetBox(self.controlArea, 'Annotation && Legends')
+        box = gui.vBox(self.controlArea, 'Annotation && Legends')
 
         gui.checkBox(box, self, 'legend', 'Show legend',
                      callback=self.update_legend)
@@ -553,14 +553,13 @@ class OWHeatMap(widget.OWWidget):
         gui.checkBox(box, self, 'averages', 'Stripes with averages',
                      callback=self.update_averages_stripe)
 
-        annotbox = gui.widgetBox(box, "Row Annotations", addSpace=False)
+        annotbox = gui.vBox(box, "Row Annotations", addSpace=False)
         annotbox.setFlat(True)
         self.annotations_cb = gui.comboBox(annotbox, self, "annotation_index",
                                            items=self.annotation_vars,
                                            callback=self.update_annotations)
 
-        posbox = gui.widgetBox(box, "Column Labels Position",
-                               addSpace=False)
+        posbox = gui.vBox(box, "Column Labels Position", addSpace=False)
         posbox.setFlat(True)
 
         gui.comboBox(

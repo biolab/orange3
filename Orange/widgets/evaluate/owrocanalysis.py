@@ -311,36 +311,36 @@ class OWROCAnalysis(widget.OWWidget):
         self._rocch = None
         self._perf_line = None
 
-        box = gui.widgetBox(self.controlArea, "Plot")
-        tbox = gui.widgetBox(box, "Target Class")
+        box = gui.vBox(self.controlArea, "Plot")
+        tbox = gui.vBox(box, "Target Class")
         tbox.setFlat(True)
 
         self.target_cb = gui.comboBox(
             tbox, self, "target_index", callback=self._on_target_changed,
             contentsLength=8)
 
-        cbox = gui.widgetBox(box, "Classifiers")
+        cbox = gui.vBox(box, "Classifiers")
         cbox.setFlat(True)
         self.classifiers_list_box = gui.listBox(
             cbox, self, "selected_classifiers", "classifier_names",
             selectionMode=QtGui.QListView.MultiSelection,
             callback=self._on_classifiers_changed)
 
-        abox = gui.widgetBox(box, "Combine ROC Curves From Folds")
+        abox = gui.vBox(box, "Combine ROC Curves From Folds")
         abox.setFlat(True)
         gui.comboBox(abox, self, "roc_averaging",
                      items=["Merge predictions from folds", "Mean TP rate",
                             "Mean TP and FP at threshold", "Show individual curves"],
                      callback=self._replot)
 
-        hbox = gui.widgetBox(box, "ROC Convex Hull")
+        hbox = gui.vBox(box, "ROC Convex Hull")
         hbox.setFlat(True)
         gui.checkBox(hbox, self, "display_convex_curve",
                      "Show convex ROC curves", callback=self._replot)
         gui.checkBox(hbox, self, "display_convex_hull",
                      "Show ROC convex hull", callback=self._replot)
 
-        box = gui.widgetBox(self.controlArea, "Analysis")
+        box = gui.vBox(self.controlArea, "Analysis")
 
         gui.checkBox(box, self, "display_def_threshold",
                      "Default threshold (0.5) point",

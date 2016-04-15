@@ -1,4 +1,5 @@
 import os
+
 import pkg_resources
 import pickle
 from enum import IntEnum
@@ -7,6 +8,7 @@ from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QCursor,
                          QPrintDialog, QFileDialog, QTableView,
                          QStandardItemModel, QStandardItem, QHeaderView)
 from Orange.widgets import gui
+from Orange.widgets.webview import WebView
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 from Orange.canvas.application.canvasmain import CanvasMainWindow
@@ -139,7 +141,7 @@ class OWReport(OWWidget):
             self.controlArea, self, "Back to Last Scheme",
             callback=self._show_last_scheme
         )
-        box = gui.widgetBox(self.controlArea, orientation="horizontal")
+        box = gui.hBox(self.controlArea)
         box.setContentsMargins(-6, 0, -6, 0)
         self.save_button = gui.button(
             box, self, "Save", callback=self._save_report
@@ -147,7 +149,7 @@ class OWReport(OWWidget):
         self.print_button = gui.button(
             box, self, "Print", callback=self._print_report
         )
-        self.report_view = gui.WebviewWidget(self.mainArea, bridge=self)
+        self.report_view = WebView(self.mainArea, bridge=self)
 
     def __getstate__(self):
         rep_dict = self.__dict__.copy()

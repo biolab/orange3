@@ -112,7 +112,7 @@ class OWDistributions(widget.OWWidget):
         self.distributions = None
         self.contingencies = None
         self.var = self.cvar = None
-        varbox = gui.widgetBox(self.controlArea, "Variable")
+        varbox = gui.vBox(self.controlArea, "Variable")
 
         self.varmodel = itemmodels.VariableListModel()
         self.groupvarmodel = []
@@ -128,11 +128,11 @@ class OWDistributions(widget.OWWidget):
             self._on_variable_idx_changed)
         varbox.layout().addWidget(self.varview)
 
-        box = gui.widgetBox(self.controlArea, "Precision")
+        box = gui.vBox(self.controlArea, "Precision")
 
         gui.separator(self.controlArea, 4, 4)
 
-        box2 = gui.widgetBox(box, orientation="horizontal")
+        box2 = gui.hBox(box)
         self.l_smoothing_l = gui.widgetLabel(box2, "Smooth")
         gui.hSlider(box2, self, "smoothing_index",
                     minValue=0, maxValue=len(self.smoothing_facs) - 1,
@@ -145,7 +145,7 @@ class OWDistributions(widget.OWWidget):
             callback=self._on_groupvar_idx_changed,
             tooltip="Show continuous variables as discrete.")
 
-        box = gui.widgetBox(self.controlArea, "Group by")
+        box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
         self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
              callback=self._on_groupvar_idx_changed, valueType=str,
@@ -158,7 +158,7 @@ class OWDistributions(widget.OWWidget):
         gui.separator(box2)
         self.cb_prob = gui.comboBox(
             box2, self, "show_prob", label="Show probabilities",
-            orientation="horizontal",
+            orientation=Qt.Horizontal,
             callback=self._on_relative_freq_changed,
             tooltip="Show probabilities for a chosen group-by value (at each point probabilities for all group-by values sum to 1).")
 

@@ -68,7 +68,7 @@ class OWScatterPlot(OWWidget):
     def __init__(self):
         super().__init__()
 
-        box = gui.widgetBox(self.mainArea, True, margin=0)
+        box = gui.vBox(self.mainArea, True, margin=0)
         self.graph = OWScatterPlotGraph(self, box, "ScatterPlot")
         box.layout().addWidget(self.graph.plot_widget)
         plot = self.graph.plot_widget
@@ -88,9 +88,10 @@ class OWScatterPlot(OWWidget):
         self.__timer = QTimer(self, interval=1200)
         self.__timer.timeout.connect(self.add_data)
 
-        common_options = {"labelWidth": 50, "orientation": "horizontal",
-                          "sendSelectedValue": True, "valueType": str}
-        box = gui.widgetBox(self.controlArea, "Axis Data")
+        common_options = dict(
+            labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
+            valueType=str)
+        box = gui.vBox(self.controlArea, "Axis Data")
         self.cb_attr_x = gui.comboBox(box, self, "attr_x", label="Axis x:",
                                       callback=self.update_attr,
                                       **common_options)
@@ -99,7 +100,7 @@ class OWScatterPlot(OWWidget):
                                       **common_options)
 
         self.vizrank = self.VizRank(self)
-        vizrank_box = gui.widgetBox(box, None, orientation='horizontal')
+        vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
         self.vizrank_button = gui.button(
             vizrank_box, self, "Rank projections", callback=self.vizrank.reshow,
@@ -121,7 +122,7 @@ class OWScatterPlot(OWWidget):
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
-        box = gui.widgetBox(self.controlArea, "Points")
+        box = gui.vBox(self.controlArea, "Points")
         self.cb_attr_color = gui.comboBox(
             box, self, "graph.attr_color", label="Color:",
             emptyString="(Same color)", callback=self.update_colors,
@@ -142,7 +143,7 @@ class OWScatterPlot(OWWidget):
         g = self.graph.gui
         box2 = g.point_properties_box(self.controlArea, box)
 
-        box = gui.widgetBox(self.controlArea, "Plot Properties")
+        box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(box, self, value='graph.tooltip_shows_all',
                      label='Show all data on mouse hover')
@@ -151,7 +152,7 @@ class OWScatterPlot(OWWidget):
             callback=self.update_density)
 
         self.zoom_select_toolbar = g.zoom_select_toolbar(
-            gui.widgetBox(self.controlArea, "Zoom/Select"), nomargin=True,
+            gui.vBox(self.controlArea, "Zoom/Select"), nomargin=True,
             buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
                      g.StateButtonsEnd, g.ZoomReset]
         )

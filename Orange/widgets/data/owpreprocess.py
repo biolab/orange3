@@ -1649,7 +1649,7 @@ class OWPreprocess(widget.OWWidget):
         # for mimeData delegate)
         self.preprocessors.mimeData = mimeData
 
-        box = gui.widgetBox(self.controlArea, "Preprocessors")
+        box = gui.vBox(self.controlArea, "Preprocessors")
 
         self.preprocessorsView = view = QListView(
             selectionMode=QListView.SingleSelection,
@@ -1687,7 +1687,7 @@ class OWPreprocess(widget.OWWidget):
         self.mainArea.layout().addWidget(self.scroll_area)
         self.flow_view.installEventFilter(self)
 
-        box = gui.widgetBox(self.controlArea, "Output")
+        box = gui.vBox(self.controlArea, "Output")
         gui.auto_commit(box, self, "autocommit", "Commit", box=False)
 
         self._initialize()

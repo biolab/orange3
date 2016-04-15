@@ -1,4 +1,5 @@
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.preprocess.remove import Remove
@@ -56,27 +57,27 @@ class OWPurgeDomain(widget.OWWidget):
         self.reducedClasses = "-"
         self.resortedClasses = "-"
 
-        boxAt = gui.widgetBox(self.controlArea, "Features")
+        boxAt = gui.vBox(self.controlArea, "Features")
         for not_first, (value, label) in enumerate(self.feature_options):
             if not_first:
                 gui.separator(boxAt, 2)
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
 
-        boxAt = gui.widgetBox(self.controlArea, "Classes", addSpace=True)
+        boxAt = gui.vBox(self.controlArea, "Classes", addSpace=True)
         for not_first, (value, label) in enumerate(self.class_options):
             if not_first:
                 gui.separator(boxAt, 2)
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
 
-        box3 = gui.widgetBox(self.controlArea, 'Statistics', addSpace=True)
+        box3 = gui.vBox(self.controlArea, 'Statistics', addSpace=True)
         for label, value in self.stat_labels:
             gui.label(box3, self, "{}: %({})s".format(label, value))
 
         gui.auto_commit(self.controlArea, self, "autoSend", "Send Data",
                         checkbox_label="Send automatically",
-                        orientation="horizontal")
+                        orientation=Qt.Horizontal)
         gui.rubber(self.controlArea)
 
     @check_sql_input

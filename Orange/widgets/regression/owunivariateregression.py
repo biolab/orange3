@@ -1,13 +1,12 @@
-from PyQt4 import QtGui
-from PyQt4.QtGui import QColor
-from PyQt4.QtCore import QRectF
+from PyQt4.QtGui import QColor, QSizePolicy, QPalette, QPen, QFont
+from PyQt4.QtCore import Qt, QRectF
 
 import pyqtgraph as pg
 import numpy as np
 
 from Orange.data import Table, Domain
-from Orange.regression.linear import (RidgeRegressionLearner, PolynomialLearner,
-                                      LinearRegressionLearner)
+from Orange.regression.linear import (
+    RidgeRegressionLearner,  LinearRegressionLearner, PolynomialLearner)
 from Orange.regression import Learner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils import itemmodels
@@ -41,16 +40,14 @@ class OWUnivariateRegression(OWBaseLearner):
         self.x_label = 'x'
         self.y_label = 'y'
 
-        box = gui.widgetBox(self.controlArea, "Variables")
+        box = gui.vBox(self.controlArea, "Variables")
 
         self.x_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesX = gui.comboBox(
-            box, self, value='x_var_index',
-            label="Input ", orientation="horizontal",
-            callback=self.apply,
-            contentsLength=12)
+            box, self, value='x_var_index', label="Input ",
+            orientation=Qt.Horizontal, callback=self.apply, contentsLength=12)
         self.comboBoxAttributesX.setSizePolicy(
-            QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         self.comboBoxAttributesX.setModel(self.x_var_model)
         gui.doubleSpin(
             gui.indentedBox(box),
@@ -60,12 +57,10 @@ class OWUnivariateRegression(OWBaseLearner):
         gui.separator(box, height=8)
         self.y_var_model = itemmodels.VariableListModel()
         self.comboBoxAttributesY = gui.comboBox(
-            box, self, value='y_var_index',
-            label='Target', orientation="horizontal",
-            callback=self.apply,
-            contentsLength=12)
+            box, self, value='y_var_index', label='Target',
+            orientation=Qt.Horizontal, callback=self.apply, contentsLength=12)
         self.comboBoxAttributesY.setSizePolicy(
-            QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Fixed)
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         self.comboBoxAttributesY.setModel(self.y_var_model)
 
         gui.rubber(self.controlArea)
@@ -74,10 +69,10 @@ class OWUnivariateRegression(OWBaseLearner):
         self.plotview = pg.PlotWidget(background="w")
         self.plot = self.plotview.getPlotItem()
 
-        axis_color = self.palette().color(QtGui.QPalette.Text)
-        axis_pen = QtGui.QPen(axis_color)
+        axis_color = self.palette().color(QPalette.Text)
+        axis_pen = QPen(axis_color)
 
-        tickfont = QtGui.QFont(self.font())
+        tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")

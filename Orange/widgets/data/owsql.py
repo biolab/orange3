@@ -58,8 +58,8 @@ class OWSql(widget.OWWidget):
         self.data_desc_table = None
         self.database_desc = None
 
-        vbox = gui.widgetBox(self.controlArea, "Server", addSpace=True)
-        box = gui.widgetBox(vbox)
+        vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
+        box = gui.vBox(vbox)
         self.servertext = QtGui.QLineEdit(box)
         self.servertext.setPlaceholderText('Server')
         self.servertext.setToolTip('Server')
@@ -89,7 +89,7 @@ class OWSql(widget.OWWidget):
             self.passwordtext.setText(self.password)
         box.layout().addWidget(self.passwordtext)
 
-        tables = gui.widgetBox(box, orientation='horizontal')
+        tables = gui.hBox(box)
         self.tablecombo = QtGui.QComboBox(
             tables,
             minimumContentsLength=35,
@@ -104,13 +104,13 @@ class OWSql(widget.OWWidget):
             QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         tables.layout().addWidget(self.connectbutton)
 
-        self.custom_sql = gui.widgetBox(box, orientation='vertical')
+        self.custom_sql = gui.vBox(box)
         self.custom_sql.setVisible(False)
         self.sqltext = QtGui.QTextEdit(self.custom_sql)
         self.sqltext.setPlainText(self.sql)
         self.custom_sql.layout().addWidget(self.sqltext)
 
-        mt = gui.widgetBox(self.custom_sql, orientation='horizontal')
+        mt = gui.hBox(self.custom_sql)
         cb = gui.checkBox(mt, self, 'materialize', 'Materialize to table ')
         cb.setToolTip('Save results of the query in a table')
         le = gui.lineEdit(mt, self, 'materialize_table_name')

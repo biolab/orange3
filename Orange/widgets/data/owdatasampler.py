@@ -50,11 +50,11 @@ class OWDataSampler(widget.OWWidget):
         self.indices = None
         self.sampled_instances = self.remaining_instances = None
 
-        box = gui.widgetBox(self.controlArea, "Information")
+        box = gui.vBox(self.controlArea, "Information")
         self.dataInfoLabel = gui.widgetLabel(box, 'No data on input.')
         self.outputInfoLabel = gui.widgetLabel(box, ' ')
 
-        self.sampling_box = gui.widgetBox(self.controlArea, "Sampling Type")
+        self.sampling_box = gui.vBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sampling_box, self, "sampling_type",
                                     callback=self.sampling_type_changed)
 
@@ -101,7 +101,7 @@ class OWDataSampler(widget.OWWidget):
 
         gui.appendRadioButton(sampling, "Boostrap")
 
-        self.sql_box = gui.widgetBox(self.controlArea, "Sampling Type")
+        self.sql_box = gui.vBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sql_box, self, "sampling_type",
                                     callback=self.sampling_type_changed)
         gui.appendRadioButton(sampling, "Time:")
@@ -118,7 +118,7 @@ class OWDataSampler(widget.OWWidget):
         self.sql_box.setVisible(False)
 
 
-        self.options_box = gui.widgetBox(self.controlArea, "Options")
+        self.options_box = gui.vBox(self.controlArea, "Options")
         self.cb_seed = gui.checkBox(
             self.options_box, self, "use_seed",
             "Replicable (deterministic) sampling",

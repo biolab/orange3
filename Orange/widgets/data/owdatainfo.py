@@ -36,8 +36,8 @@ class OWDataInfo(widget.OWWidget):
         for box in ("Data Set Size", "Features", "Targets", "Meta Attributes",
                     "Location"):
             name = box.lower().replace(" ", "_")
-            bo = gui.widgetBox(self.controlArea, box,
-                               addSpace=False and box != "Meta Attributes")
+            bo = gui.vBox(self.controlArea, box,
+                          addSpace=False and box != "Meta Attributes")
             gui.label(bo, self, "%%(%s)s" % name)
 
         # ensure the widget has some decent minimum width.

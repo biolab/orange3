@@ -752,22 +752,19 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._displayed_root = None
         self.cutoff_height = 0.0
 
-        gui.comboBox(gui.widgetBox(self.controlArea, "Linkage"),
-                     self, "linkage", items=LINKAGE,
-                     callback=self._invalidate_clustering)
+        gui.comboBox(
+            self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
+            callback=self._invalidate_clustering)
 
-        box = gui.widgetBox(self.controlArea, "Annotation")
         self.label_cb = gui.comboBox(
-            box, self, "annotation_idx", callback=self._update_labels,
-            contentsLength=12)
-
+            self.controlArea, self, "annotation_idx", box="Annotation",
+            callback=self._update_labels, contentsLength=12)
         self.label_cb.setModel(itemmodels.VariableListModel())
         self.label_cb.model()[:] = ["None", "Enumeration"]
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
-            callback=self._invalidate_pruning
-        )
+            callback=self._invalidate_pruning)
         grid = QGridLayout()
         box.layout().addLayout(grid)
         grid.addWidget(
@@ -817,10 +814,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         grid.addWidget(self.top_n_spin, 2, 1)
         box.layout().addLayout(grid)
 
-        zoom_box = gui.widgetBox(self.controlArea, "Zoom")
         self.zoom_slider = gui.hSlider(
-            zoom_box, self, "zoom_factor", minValue=-6, maxValue=3, step=1,
-            ticks=True, createLabel=False,
+            self.controlArea, self, "zoom_factor", box="Zoom",
+            minValue=-6, maxValue=3, step=1, ticks=True, createLabel=False,
             callback=self.__zoom_factor_changed)
 
         zoom_in = QAction(
@@ -840,7 +836,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        box = gui.widgetBox(self.controlArea, "Output")
+        box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "append_clusters", "Append cluster IDs",
                      callback=self._invalidate_output)
 

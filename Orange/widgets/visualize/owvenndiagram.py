@@ -71,7 +71,7 @@ class OWVennDiagram(widget.OWWidget):
         self.itemsets = OrderedDict()
 
         # GUI
-        box = gui.widgetBox(self.controlArea, "Info")
+        box = gui.vBox(self.controlArea, "Info")
         self.info = gui.widgetLabel(box, "No data on input\n")
 
         self.identifiersBox = gui.radioButtonsInBox(
@@ -91,8 +91,8 @@ class OWVennDiagram(widget.OWWidget):
         self.inputsBox.setEnabled(bool(self.useidentifiers))
 
         for i in range(5):
-            box = gui.widgetBox(self.inputsBox, "Data set #%i" % (i + 1),
-                                addSpace=False)
+            box = gui.vBox(self.inputsBox, "Data set #%i" % (i + 1),
+                           addSpace=False)
             box.setFlat(True)
             model = itemmodels.VariableListModel(parent=self)
             cb = QComboBox(
@@ -107,7 +107,7 @@ class OWVennDiagram(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = gui.widgetBox(self.controlArea, "Output")
+        box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "output_duplicates", "Output duplicates",
                      callback=lambda: self.commit())
         gui.auto_commit(box, self, "autocommit", "Commit", box=False)

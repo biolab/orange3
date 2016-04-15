@@ -233,11 +233,11 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setSelectionBehavior(QTableView.SelectItems)
         self.mainArea.layout().addWidget(view)
 
-        settings_box = gui.widgetBox(self.mainArea, orientation="horizontal")
+        settings_box = gui.hBox(self.mainArea)
 
         self.annot_combo = gui.comboBox(
             settings_box, self, "annotation_idx", label="Labels: ",
-            orientation="horizontal",
+            orientation=Qt.Horizontal,
             callback=self._invalidate_annotations, contentsLength=12)
         self.annot_combo.setModel(VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]

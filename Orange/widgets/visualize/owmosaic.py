@@ -77,7 +77,7 @@ class OWMosaicDisplay(OWWidget):
         self.attr_combos = [
             gui.comboBox(
                     box, self, value="variable{}".format(i),
-                    orientation="horizontal", contentsLength=12,
+                    orientation=Qt.Horizontal, contentsLength=12,
                     callback=self.reset_graph,
                     sendSelectedValue=True, valueType=str)
             for i in range(1, 5)]

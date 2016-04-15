@@ -41,12 +41,12 @@ class OWOutliers(widget.OWWidget):
         self.data = None
         self.n_inliers = self.n_outliers = None
 
-        box = gui.widgetBox(self.controlArea, "Information")
+        box = gui.vBox(self.controlArea, "Information")
         self.data_info_label = gui.widgetLabel(box, self.data_info_default)
         self.in_out_info_label = gui.widgetLabel(box,
                                                  self.in_out_info_default)
 
-        box = gui.widgetBox(self.controlArea, "Outlier detection method")
+        box = gui.vBox(self.controlArea, "Outlier detection method")
         detection = gui.radioButtons(box, self, "outlier_method")
 
         gui.appendRadioButton(detection,
@@ -70,7 +70,7 @@ class OWOutliers(widget.OWWidget):
             ibox, self, "cont", minValue=0, maxValue=100, ticks=10,
             labelFormat="%d %%", callback=self.cont_changed)
 
-        ebox = gui.widgetBox(ibox, box=None, orientation='horizontal')
+        ebox = gui.hBox(ibox)
         self.cb_emp_cov = gui.checkBox(
             ebox, self, "empirical_covariance",
             "Support fraction:", callback=self.empirical_changed)

@@ -66,7 +66,7 @@ class OWVisWidget(OWWidget):
 
     #noinspection PyAttributeOutsideInit
     def add_shown_attributes(self, parent):
-        self.shown_attributes_area = gui.widgetBox(parent, " Shown attributes ")
+        self.shown_attributes_area = gui.vBox(parent, " Shown attributes ")
         self.shown_attributes_listbox = gui.listBox(
             self.shown_attributes_area, self, "selected_shown", "_shown_attributes",
             dragDropCallback=self.trigger_attributes_changed,
@@ -74,11 +74,12 @@ class OWVisWidget(OWWidget):
 
     #noinspection PyAttributeOutsideInit
     def add_hidden_attributes(self, parent):
-        self.hidden_attributes_area = gui.widgetBox(parent, " Hidden attributes ")
-        self.hidden_attributes_listbox = gui.listBox(self.hidden_attributes_area, self, "selected_hidden",
-                                                     "_hidden_attributes",
-                                                     dragDropCallback=self.trigger_attributes_changed,
-                                                     enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
+        self.hidden_attributes_area = gui.vBox(parent, " Hidden attributes ")
+        self.hidden_attributes_listbox = gui.listBox(
+            self.hidden_attributes_area, self, "selected_hidden",
+            "_hidden_attributes",
+            dragDropCallback=self.trigger_attributes_changed,
+            enableDragDrop=True, selectionMode=QListWidget.ExtendedSelection)
 
     def get_data_domain(self):
         if hasattr(self, "data") and self.data:

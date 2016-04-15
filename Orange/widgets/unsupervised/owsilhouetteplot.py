@@ -65,7 +65,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._labels = None
         self._silplot = None
 
-        box = gui.widgetBox(self.controlArea, "Settings",)
+        box = gui.vBox(self.controlArea, "Settings",)
         gui.comboBox(box, self, "distance_idx", label="Distance",
                      items=[name for name, _ in OWSilhouettePlot.Distances],
                      callback=self._invalidate_distances)
@@ -90,7 +90,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = gui.widgetBox(self.controlArea, "Output")
+        box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "add_scores", "Add silhouette scores",)
         gui.auto_commit(box, self, "auto_commit", "Commit", box=False)
 

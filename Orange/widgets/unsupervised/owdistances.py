@@ -38,18 +38,13 @@ class OWDistances(widget.OWWidget):
 
         self.data = None
 
-        box = gui.widgetBox(self.controlArea, self.tr("Distances Between"))
-        gui.radioButtons(
-            box, self, "axis",
-            [self.tr("rows"), self.tr("columns")],
-            callback=self._invalidate
+        gui.radioButtons(self.controlArea, self, "axis", ["rows", "columns"],
+                         box="Distances between", callback=self._invalidate
         )
-
-        box = gui.widgetBox(self.controlArea, self.tr("Distance Metric"))
-        gui.comboBox(box, self, "metric_idx",
-                     items=list(zip(*_METRICS))[0],
-                     callback=self._invalidate)
-
+        gui.comboBox(self.controlArea, self, "metric_idx",
+                     box="Distance Metric", items=list(zip(*_METRICS))[0],
+                     callback=self._invalidate
+        )
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply",
                         checkbox_label="Apply on any change")
 

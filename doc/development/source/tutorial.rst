@@ -52,7 +52,6 @@ We will start with a very simple example. A widget that will output
 a single integer specified by the user.
 
 .. code-block:: python
-
     from Orange.widgets import widget, gui
 
     class IntNumber(widget.OWWidget):
@@ -108,11 +107,11 @@ widget functionality:
 
 .. code-block:: python
 
-       def __init__(self) 
+       def __init__(self)
            super().__init__()
 
            gui.lineEdit(self.controlArea, self, "number", "Enter a number",
-                        orientation="horizontal", box="Number",
+                        box="Number",
                         callback=self.number_changed,
                         valueType=int, validator=QIntValidator())
            self.number_changed()
