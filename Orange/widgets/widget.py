@@ -10,7 +10,8 @@ from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
     QEventLoop, QSettings, QUrl
 from PyQt4.QtGui import QDialog, QPixmap, QLabel, QVBoxLayout, QSizePolicy, \
     qApp, QFrame, QStatusBar, QHBoxLayout, QStyle, QIcon, QApplication, \
-    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle
+    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle, \
+    QWidget
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
@@ -328,11 +329,24 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             self.widgetStatusBar.showMessage(" " + text, timeout)
 
     def __restoreWidgetGeometry(self):
+
+        def _fullscreen_to_maximized(geometry):
+            """Don't restore windows into full screen mode because it loses
+            decorations and can't be de-fullscreened at least on some platforms.
+            Use Maximized state insted."""
+            w = QWidget(visible=False)
+            w.restoreGeometry(QByteArray(geometry))
+            if w.isFullScreen():
+                w.setWindowState(
+                    w.windowState() & ~Qt.WindowFullScreen | Qt.WindowMaximized)
+            return w.saveGeometry()
+
         restored = False
         if self.save_position:
             geometry = self.savedWidgetGeometry
             if geometry is not None:
-                restored = self.restoreGeometry(QByteArray(geometry))
+                geometry = _fullscreen_to_maximized(geometry)
+                restored = self.restoreGeometry(geometry)
 
             if restored and not self.windowState() & \
                     (Qt.WindowMaximized | Qt.WindowFullScreen):
