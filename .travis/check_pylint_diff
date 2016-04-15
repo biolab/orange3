@@ -97,8 +97,8 @@ echo "Comparing commits ${CURRENT_COMMIT:0:10}${was_dirty:-} and ${PREVIOUS_COMM
 
 CHANGED_FILES=$(git diff --name-only $CURRENT_COMMIT $PREVIOUS_COMMIT |
                 grep "\.py$" || true )
-[ ! "$(command -v md5sum 2>/dev/null)" ] && alias md5sum=md5  # for OS X
-CHANGED_FILES_HASH=$(echo "$CHANGED_FILES" | md5sum | cut -d' ' -f1)
+[ ! "$(command -v md5sum 2>/dev/null)" ] && md5sum() { md5; }  # for OS X
+CHANGED_FILES_HASH=$(echo "$CHANGED_FILES" | md5sum | cut -d ' ' -f 1)
 if [ ! "$CHANGED_FILES" ]; then
     echo "No python files changed. Skipping lint checks."
     exit 0
@@ -182,7 +182,7 @@ do
     echo
     echo "$check diff"
     echo "================================================================="
-    diff -u0 --minimal                           \
+    diff --unified=0 --minimal                   \
             <(Get_diffable < "$cached_previous") \
             <(Get_diffable < "$cached_current")  |
         grep -E "$show_diff_lines" | tail -n +3 || true
