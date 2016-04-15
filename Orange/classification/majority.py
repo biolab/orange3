@@ -82,3 +82,5 @@ class ConstantModel(Model):
 
     def __str__(self):
         return 'ConstantModel {}'.format(self.dist)
+
+MajorityLearner.__returns__ = ConstantModel

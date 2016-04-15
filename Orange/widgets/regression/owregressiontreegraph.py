@@ -25,6 +25,7 @@ class OWRegressionTreeGraph(OWTreeGraph):
     name = "Regression Tree Viewer"
     description = "Graphical visualization of a regression tree."
     icon = "icons/RegressionTreeGraph.svg"
+    priority = 35
 
     settingsHandler = ClassValuesContextHandler()
     color_index = Setting(0)

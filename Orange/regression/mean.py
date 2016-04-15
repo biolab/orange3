@@ -77,3 +77,5 @@ class MeanModel(Model):
 
     def __str__(self):
         return 'MeanModel({})'.format(self.mean)
+
+MeanLearner.__returns__ = MeanModel

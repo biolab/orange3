@@ -5,26 +5,20 @@ from PyQt4.QtGui import QLabel
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.regression import SVRLearner, NuSVRLearner, SklModel
-from Orange.widgets import widget, settings, gui
-from Orange.widgets.utils.owlearnerwidget import OWProvidesLearner
-from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.classify.owsvmclassification import SVMBaseMixin
+from Orange.regression import SVRLearner, NuSVRLearner
+from Orange.widgets import settings, gui
+from Orange.widgets.classify.owsvmclassification import OWBaseSVM
 
 
-class OWSVMRegression(SVMBaseMixin, widget.OWWidget):
+class OWSVMRegression(OWBaseSVM):
     name = "SVM Regression"
     description = "Support vector machine regression algorithm."
     icon = "icons/SVMRegression.svg"
+    priority = 50
 
     LEARNER = SVRLearner
 
-    inputs = [("Data", Table, "set_data")] + OWProvidesLearner.inputs
-    outputs = [("Learner", LEARNER, widget.Default),
-               ("Predictor", SklModel),
-               ("Support vectors", Table)]
-
-    learner_name = settings.Setting("SVM Regression")
+    outputs = [("Support vectors", Table)]
 
     #: SVR types
     Epsilon_SVR, Nu_SVR = 0, 1
@@ -38,15 +32,6 @@ class OWSVMRegression(SVMBaseMixin, widget.OWWidget):
     nu_C = settings.Setting(1.0)
     #: Nu pareter for Nu SVR
     nu = settings.Setting(0.5)
-
-    def __init__(self):
-        super().__init__()
-        self.data = None
-        self.preprocessors = None
-
-        self._setup_layout()
-        self._on_kernel_changed()
-        self.apply()
 
     def _add_type_box(self):
         form = QtGui.QGridLayout()
@@ -80,14 +65,7 @@ class OWSVMRegression(SVMBaseMixin, widget.OWWidget):
                                       decimals=2, addToLayout=False),
                        3, 2)
 
-    @check_sql_input
-    def set_data(self, data):
-        """Set the input train data set."""
-        self.data = data
-        if data is not None:
-            self.apply()
-
-    def apply(self):
+    def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
         common_args = dict(
             kernel=kernel,
@@ -98,31 +76,13 @@ class OWSVMRegression(SVMBaseMixin, widget.OWWidget):
             preprocessors=self.preprocessors
         )
         if self.svrtype == OWSVMRegression.Epsilon_SVR:
-            learner = SVRLearner(
+            return SVRLearner(
                 C=self.epsilon_C, epsilon=self.epsilon, **common_args
             )
         else:
-            learner = NuSVRLearner(C=self.nu_C, nu=self.nu, **common_args)
-        learner.name = self.learner_name
-        predictor = None
+            return NuSVRLearner(C=self.nu_C, nu=self.nu, **common_args)
 
-        sv = None
-        if self.data is not None:
-            self.error(0)
-            if not learner.check_learner_adequacy(self.data.domain):
-                self.error(0, learner.learner_adequacy_err_msg)
-            else:
-                predictor = learner(self.data)
-                predictor.name = self.learner_name
-                sv = self.data[predictor.skl_model.support_]
-
-        self.send("Learner", learner)
-        self.send("Predictor", predictor)
-        self.send("Support vectors", sv)
-
-    def send_report(self):
-        self.report_items((("Name", self.learner_name),))
-
+    def get_learner_parameters(self):
         items = OrderedDict()
         if self.svrtype == 0:
             items["SVM type"] = \
@@ -131,10 +91,7 @@ class OWSVMRegression(SVMBaseMixin, widget.OWWidget):
             items["SVM type"] = "ν-SVR, C={}, ν={}".format(self.nu_C, self.nu)
         self._report_kernel_parameters(items)
         items["Numerical tolerance"] = "{:.6}".format(self.tol)
-        self.report_items("Model parameters", items)
-
-        if self.data:
-            self.report_data("Data", self.data)
+        return items
 
 
 if __name__ == "__main__":

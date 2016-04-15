@@ -1,7 +1,7 @@
 import numpy as np
 
 from Orange.classification import Learner, Model
-from Orange.data import Instance, Storage, Table, DiscreteVariable
+from Orange.data import Instance, Storage
 from Orange.statistics import contingency
 from Orange.preprocess import Discretize
 
@@ -19,7 +19,6 @@ class NaiveBayesLearner(Learner):
         An ordered list of preprocessors applied to data before training
         or testing.
     """
-
     name = 'naive bayes'
 
     preprocessors = [Discretize()]
@@ -62,3 +61,5 @@ class NaiveBayesModel(Model):
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs
+
+NaiveBayesLearner.__returns__ = NaiveBayesModel
