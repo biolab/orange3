@@ -18,19 +18,15 @@ from Orange.canvas import report
 
 
 class OWUnivariateRegression(OWBaseLearner):
-    name        = "Univariate Polynomial Regression"
+    name = "Univariate Polynomial Regression"
     description = "Univariate regression with polynomial expansion."
-    icon        = "icons/UnivariateRegression.svg"
+    icon = "icons/UnivariateRegression.svg"
 
-    inputs = [("Learner", Learner, "set_learner"),
-              ("Preprocessor", Preprocess, "set_preprocessor"),
-              ("Learner", Learner, "set_learner")]
+    inputs = [("Learner", Learner, "set_learner")]
 
-    outputs = [("Learner", Learner),
-               ("Predictor", LinearModel),
-               ("Coefficients", Table)]
+    outputs = [("Coefficients", Table)]
 
-    LEARNER = LinearRegressionLearner
+    LEARNER = PolynomialLearner
 
     learner_name = settings.Setting("Univariate Regression")
 
@@ -113,6 +109,8 @@ class OWUnivariateRegression(OWBaseLearner):
         if caption:
             self.report_caption(caption)
 
+
+
     def clear(self):
         self.data = None
         self.clear_plot()
@@ -148,12 +146,6 @@ class OWUnivariateRegression(OWBaseLearner):
                 self.y_var_index = min(max(0, nvars-nclass), nvars - 1)
             else:
                 self.y_var_index = min(max(0, nvars-1), nvars - 1)
-
-    def set_preprocessor(self, preproc):
-        if preproc is None:
-            self.preprocessors = None
-        else:
-            self.preprocessors = (preproc,)
 
     def set_learner(self, learner):
         self.learner = learner
@@ -197,17 +189,17 @@ class OWUnivariateRegression(OWBaseLearner):
         predictor = None
 
         if self.data is not None:
-            if self.learner is None:
-                learner = self.LEARNER(preprocessors=self.preprocessors)
+
+            degree = int(self.polynomialexpansion)
+            learner = self.LEARNER(preprocessors=self.preprocessors,
+                                   degree=degree,
+                                   learner=LinearRegressionLearner() if self.learner is None
+                                    else learner)
 
             attributes = self.x_var_model[self.x_var_index]
             class_var = self.y_var_model[self.y_var_index]
             data_table = Table(Domain([attributes], class_vars=[class_var]), self.data)
 
-            degree = int(self.polynomialexpansion)
-            learner = PolynomialLearner(learner=learner,
-                                             preprocessors=self.preprocessors,
-                                             degree=degree)
             learner.name = self.learner_name
             predictor = learner(data_table)
 
