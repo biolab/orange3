@@ -80,6 +80,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     LOCAL_FILE, URL = range(2)
 
     settingsHandler = XlsContextHandler()
+
+    # Overload RecentPathsWidgetMixin.recent_paths to set defaults
+    recent_paths = Setting([
+        RecentPath("", "sample-datasets", "iris.tab"),
+        RecentPath("", "sample-datasets", "titanic.tab"),
+        RecentPath("", "sample-datasets", "housing.tab"),
+    ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
     xls_sheet = ContextSetting("")
