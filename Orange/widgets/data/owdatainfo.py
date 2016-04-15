@@ -18,8 +18,6 @@ class OWDataInfo(widget.OWWidget):
     description = """Display the basic information about the data set, like
     number and type of variables in columns and number of rows."""
     icon = "icons/DataInfo.svg"
-    author = "Aleš Erjavec, Janez Demsar"
-    maintainer_email = "ales.erjavec(@at@)fri.uni-lj.si"
     priority = 80
     category = "Data"
     keywords = ["data", "info"]

@@ -1,4 +1,5 @@
 import numpy as np
+from PyQt4.QtCore import Qt
 
 from Orange.util import scale
 from Orange.misc import DistMatrix
@@ -15,6 +16,7 @@ class OWDistanceTransformation(widget.OWWidget):
 
     want_main_area = False
     resizing_enabled = False
+    buttons_area_orientation = Qt.Vertical
 
     normalization_method = settings.Setting(0)
     inversion_method = settings.Setting(0)
@@ -50,10 +52,10 @@ class OWDistanceTransformation(widget.OWWidget):
                          btnLabels=[x[0] for x in self.inversion_options],
                          callback=self._invalidate)
 
-        box = gui.auto_commit(self.controlArea, self, "autocommit", "Apply",
-                              checkbox_label="Apply on any change")
-        gui.separator(box, 20)
-        box.layout().addWidget(self.report_button)
+        box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
+                              checkbox_label="Apply on change", box=None)
+        box.layout().insertWidget(0, self.report_button)
+        box.layout().insertSpacing(1, 8)
 
     def set_data(self, data):
         self.data = data

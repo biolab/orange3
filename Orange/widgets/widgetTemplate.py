@@ -6,8 +6,6 @@ class OWWidgetName(widget.OWWidget):
     id = "orange.widgets.widget_category.widget_name"
     description = ""
     icon = "icons/Unknown.svg"
-    author = ""
-    maintainer_email = ""
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]

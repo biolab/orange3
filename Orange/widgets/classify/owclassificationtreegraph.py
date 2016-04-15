@@ -34,7 +34,6 @@ class OWTreeGraph(OWTreeViewer2D):
         self.mainArea.layout().addWidget(self.scene_view)
         self.toggle_zoom_slider()
         self.scene.selectionChanged.connect(self.update_selection)
-        self.inline_graph_report()
 
     def set_node_info(self):
         for node in self.scene.nodes():

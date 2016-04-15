@@ -184,8 +184,6 @@ class OWDistributions(widget.OWWidget):
         self.ploti.vb.sigResized.connect(self.update_views)
         self.plot_prob.setRange(yRange=[0,1])
 
-        self.inline_graph_report()
-
         def disable_mouse(plot):
             plot.setMouseEnabled(False, False)
             plot.setMenuEnabled(False)

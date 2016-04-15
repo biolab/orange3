@@ -6,8 +6,6 @@ class OWProduct(widget.OWWidget):
     id = "orange.widgets.data.multiplier"
     description = ""
     icon = "icons/Unknown.svg"
-    author = ""
-    maintainer_email = ""
     priority = 10
     category = ""
     keywords = ["list", "of", "keywords"]

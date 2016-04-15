@@ -25,8 +25,6 @@ class OWSql(widget.OWWidget):
     long_description = """
     Sql widget connects to server and opens data from there. """
     icon = "icons/SQLTable.svg"
-    author = "Anze Staric"
-    maintainer_email = "anze.staric@fri.uni-lj.si"
     priority = 10
     category = "Data"
     keywords = ["data", "file", "load", "read"]
@@ -129,6 +127,7 @@ class OWSql(widget.OWWidget):
                      "Download data to local memory",
                      callback=self.open_table)
 
+        gui.rubber(self.buttonsArea)
         QTimer.singleShot(0, self.connect)
 
     def error(self, id=0, text=""):

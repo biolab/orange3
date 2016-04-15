@@ -77,10 +77,11 @@ class OWLinearRegression(OWBaseLearner):
         self.l1_ratio_label = gui.widgetLabel(box5, "")
         self._set_l1_ratio_label()
 
-        auto_commit = gui.auto_commit(self.controlArea, self, "autosend",
-                                      "Apply", auto_label="Apply on change")
-        gui.separator(box5, 20)
-        auto_commit.layout().addWidget(self.report_button)
+        auto_commit = gui.auto_commit(
+                self.controlArea, self, "autosend",
+                "Apply", auto_label="Apply on change")
+        auto_commit.layout().insertWidget(0, self.report_button)
+        auto_commit.layout().insertSpacing(1, 20)
         self.report_button.setMinimumWidth(150)
 
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
@@ -158,6 +159,7 @@ class OWLinearRegression(OWBaseLearner):
                                       self.l1_ratio,
                                       1 - self.l1_ratio))
         return ("Regularization", regularization),
+
 
 if __name__ == "__main__":
     import sys

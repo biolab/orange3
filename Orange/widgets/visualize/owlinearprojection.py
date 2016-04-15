@@ -383,7 +383,6 @@ class OWLinearProjection(widget.OWWidget):
         toolbox.layout().addLayout(toollayout)
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
-        self.inline_graph_report()
 
         self.controlArea.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Expanding)

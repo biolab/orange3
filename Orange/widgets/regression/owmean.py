@@ -1,4 +1,3 @@
-from Orange.widgets import settings
 from Orange.regression.mean import MeanLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 

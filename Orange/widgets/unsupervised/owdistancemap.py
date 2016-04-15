@@ -327,7 +327,6 @@ class OWDistanceMap(widget.OWWidget):
 
         gui.auto_commit(self.controlArea, self, "autocommit",
                         "Send data", "Auto send is on")
-        self.inline_graph_report()
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)

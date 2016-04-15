@@ -573,7 +573,6 @@ class OWHeatMap(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
-        self.inline_graph_report()
 
         # Scene with heatmap
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)

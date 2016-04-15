@@ -131,9 +131,8 @@ class OWDataSampler(widget.OWWidget):
             callback=self.settings_changed)
         self.cb_sql_dl.setVisible(False)
 
-        gui.button(self.controlArea, self, "Sample Data",
-                   callback=self.commit, addSpace=8)
-        self.controlArea.layout().addWidget(self.report_button)
+        gui.button(self.buttonsArea, self, "Sample Data",
+                   callback=self.commit)
 
     def sampling_type_changed(self):
         self.settings_changed()

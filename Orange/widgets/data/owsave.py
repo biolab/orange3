@@ -14,7 +14,6 @@ class OWSave(widget.OWWidget):
     name = "Save Data"
     description = "Save data to an output file."
     icon = "icons/Save.svg"
-    author = "Martin Frlin"
     category = "Data"
     keywords = ["data", "save"]
 

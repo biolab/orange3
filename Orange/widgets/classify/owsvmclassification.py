@@ -151,7 +151,7 @@ class OWSVMClassification(OWBaseSVM):
 
         form.addWidget(gui.appendRadioButton(box, "ν-SVM", addToLayout=False),
                        1, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel(self.tr("Complexity (ν)".encode("utf-8"))),
+        form.addWidget(QtGui.QLabel("Complexity (ν)"),
                        1, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
                                       decimals=2, alignment=Qt.AlignRight,

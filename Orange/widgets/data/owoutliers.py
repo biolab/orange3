@@ -80,7 +80,7 @@ class OWOutliers(widget.OWWidget):
 
         gui.separator(detection, 12)
 
-        gui.button(self.controlArea, self, "Detect Outliers",
+        gui.button(self.buttonsArea, self, "Detect Outliers",
                    callback=self.commit)
         self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
 

@@ -1,5 +1,5 @@
-from Orange.regression.knn import KNNRegressionLearner
 from Orange.widgets.classify import owknn
+from Orange.regression.knn import KNNRegressionLearner
 
 
 class OWKNNRegression(owknn.OWKNNLearner):

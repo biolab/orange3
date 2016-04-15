@@ -77,6 +77,7 @@ class OWMergeData(widget.OWWidget):
         grid.addWidget(boxDataB, 1, 1)
         self.infoBoxDataB = gui.widgetLabel(boxDataB, self.dataInfoText(None))
 
+        gui.rubber(self.buttonsArea)
         # resize
         self.resize(400, 500)
 

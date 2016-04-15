@@ -1,4 +1,5 @@
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.statistics import distribution
@@ -14,7 +15,6 @@ class OWContinuize(widget.OWWidget):
     description = ("Transform discrete attributes into continuous and, " +
                    "optionally, normalize the continuous values.")
     icon = "icons/Continuize.svg"
-    author = "Martin Frlin"
     category = "Data"
     keywords = ["data", "continuize"]
 
@@ -22,6 +22,7 @@ class OWContinuize(widget.OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     want_main_area = False
+    buttons_area_orientation = Qt.Vertical
     resizing_enabled = False
 
     multinomial_treatment = Setting(0)
@@ -84,7 +85,7 @@ class OWContinuize(widget.OWWidget):
             btnLabels=self.value_ranges,
             callback=self.settings_changed)
 
-        gui.auto_commit(self.controlArea, self, "autosend", "Apply")
+        gui.auto_commit(self.buttonsArea, self, "autosend", "Apply", box=False)
 
         self.data = None
 

@@ -915,7 +915,7 @@ class OWPaintData(widget.OWWidget):
         form.addRow("Intensity", slider)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "autocommit",
+        gui.auto_commit(self.left_side, self, "autocommit",
                         "Send", "Send on change")
 
         # main area GUI

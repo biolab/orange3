@@ -357,6 +357,8 @@ class OWDataTable(widget.OWWidget):
     icon = "icons/Table.svg"
     priority = 100
 
+    buttons_area_orientation = Qt.Vertical
+
     inputs = [("Data", Table, "set_dataset", widget.Multiple)]
     outputs = [("Selected Data", Table, widget.Default),
                ("Other Data", Table)]
@@ -389,12 +391,6 @@ class OWDataTable(widget.OWWidget):
         self.info_class.setWordWrap(True)
         self.info_meta = gui.widgetLabel(info_box, ' ')
         self.info_meta.setWordWrap(True)
-
-        gui.separator(info_box)
-        gui.button(info_box, self, "Restore Original Order",
-                   callback=self.restore_order,
-                   tooltip="Show rows in the original order",
-                   autoDefault=False)
         info_box.setMinimumWidth(200)
         gui.separator(self.controlArea)
 
@@ -417,7 +413,11 @@ class OWDataTable(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        gui.auto_commit(self.controlArea, self, "auto_commit",
+        reset = gui.button(
+            None, self, "Restore Original Order", callback=self.restore_order,
+            tooltip="Show rows in the original order", autoDefault=False)
+        self.buttonsArea.layout().insertWidget(0, reset)
+        gui.auto_commit(self.buttonsArea, self, "auto_commit",
                         "Send Selected Rows", "Auto send is on")
 
         # GUI with tabs
