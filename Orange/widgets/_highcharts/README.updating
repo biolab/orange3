@@ -1,0 +1,6 @@
+Examine the changelog and grep for any option incompatibilities. Check
+new option defaults.
+
+Additionally, the mouse wheel zoom was patched to increase/decrease in smaller
+steps (110% and 90% vs. 200% and 50%). See:
+https://github.com/highcharts/highcharts/pull/5068

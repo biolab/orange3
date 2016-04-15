@@ -7,9 +7,12 @@ from types import LambdaType
 import pkg_resources
 import numpy
 
-from PyQt4 import QtGui, QtCore, QtWebKit
+from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from PyQt4.QtGui import QCursor, QApplication
+
+# Some Orange widgets might expect this here
+from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
 
 import Orange.data
 from Orange.widgets.utils import getdeepattr
@@ -210,56 +213,6 @@ class TableWidget(QtGui.QTableWidget):
         has value (``data()``) `value`.
         """
         return self.selectRowsWhere(col, value, n_hits, flags, False)
-
-
-class WebviewWidget(QtWebKit.QWebView):
-    """WebKit window in a window"""
-    def __init__(self, parent=None, bridge=None, html=None, debug=None):
-        """
-        Parameters
-        ----------
-        parent: QObject
-            Parent QObject. If parent has layout(), this widget is added to it.
-        bridge: QObject
-            The "bridge" object exposed as ``window.pybridge`` in JavaScript.
-            Any bridge methods desired to be accessible from JS need to be
-            decorated ``@QtCore.pyqtSlot(<*args>, result=<type>)``.
-        html: str
-            HTML content to set in the webview.
-        debug: bool
-            If True, enable context menu and webkit inspector.
-        """
-        super().__init__(parent)
-        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-                                             QtGui.QSizePolicy.Expanding))
-        self._bridge = bridge
-        try: parent.layout().addWidget(self)
-        except (AttributeError, TypeError): pass
-        settings = self.settings()
-        settings.setAttribute(settings.LocalContentCanAccessFileUrls, True)
-        if debug is None:
-            import logging
-            debug = logging.getLogger().level <= logging.DEBUG
-        if debug:
-            settings.setAttribute(settings.DeveloperExtrasEnabled, True)
-        else:
-            self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
-        if html:
-            self.setHtml(html)
-
-    def setContent(self, data, mimetype, url=''):
-        super().setContent(data, mimetype, QtCore.QUrl(url))
-        if self._bridge:
-            self.page().mainFrame().addToJavaScriptWindowObject('pybridge', self._bridge)
-
-    def setHtml(self, html, url=''):
-        self.setContent(html.encode('utf-8'), 'text/html', url)
-
-    def sizeHint(self):
-        return QtCore.QSize(600, 500)
-
-    def evalJS(self, javascript):
-        self.page().mainFrame().evaluateJavaScript(javascript)
 
 
 class ControlledAttributesDict(dict):
