@@ -300,6 +300,7 @@ class SettingsHandler:
             template = SettingsHandler()
 
         setting_handler = copy.copy(template)
+        setting_handler.defaults = {}
         setting_handler.bind(widget_class)
         return setting_handler
 
