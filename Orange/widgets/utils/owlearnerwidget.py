@@ -1,4 +1,5 @@
 import numpy as np
+from PyQt4.QtCore import QTimer
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
@@ -120,7 +121,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.preprocessors = None
         self.outdated_settings = False
         self.setup_layout()
-        self.apply()
+        QTimer.singleShot(0, self.apply)
 
     def create_learner(self):
         """Creates a learner with current configuration.
