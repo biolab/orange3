@@ -274,18 +274,17 @@ class OWImpute(OWWidget):
 
     def _on_var_selection_changed(self):
         indexes = self.selection.selectedIndexes()
-        methods = [self.get_method_for_column(i.row()) for i in indexes]
+        methods = set(self.get_method_for_column(i.row()).name for i in indexes)
 
         selected_vars = [self.varmodel[index.row()] for index in indexes]
         has_continuous = any(var.is_continuous for var in selected_vars)
         has_discrete = any(var.is_discrete for var in selected_vars)
 
-        methods = set(methods)
-
         if len(methods) == 1:
             method = methods.pop()
-            mindex = self.METHODS.index(method)
-            self.variable_button_group.button(mindex).setChecked(True)
+            for i, m in enumerate(self.METHODS):
+                if method == m.name:
+                    self.variable_button_group.button(i).setChecked(True)
         elif self.variable_button_group.checkedButton() is not None:
             self.variable_button_group.setExclusive(False)
             self.variable_button_group.checkedButton().setChecked(False)

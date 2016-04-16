@@ -47,6 +47,9 @@ class BaseImputeMethod:
     def copy(self):
         return self
 
+    def __eq__(self, other):
+        return type(self) == type(other)
+
 
 class DropInstances(BaseImputeMethod):
     name = "Remove instances with unknown values"
@@ -156,15 +159,16 @@ class Model(BaseImputeMethod):
     def __call__(self, data, variable, copy=False):
         variable = data.domain[variable]
         domain = domain_with_class_var(data.domain, variable)
-        data = data.from_table(domain, data)
 
         if self.learner.check_learner_adequacy(domain):
+            data = data.from_table(domain, data)
             model = self.learner(data)
             assert model.domain.class_var == variable
             return variable.copy(
                 compute_value=ReplaceUnknownsModel(variable, model))
         else:
-            return variable.copy()
+            raise ValueError("`{}` doesn't support domain type"
+                             .format(self.learner))
 
     def str(self, var):
         return super().str(var) + " ({})".format(self.learner)
