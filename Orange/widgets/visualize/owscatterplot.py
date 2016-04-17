@@ -546,6 +546,9 @@ class OWScatterPlot(OWWidget):
                     X = graph.scaled_data[[ind1, ind2], :]
                     valid = graph.get_valid_list([ind1, ind2])
                     X = X[:, valid].T
+                    if X.shape[0] < self.k:
+                        self.progress.advance()
+                        continue
                     y = y_full[valid]
                     n_neighbors = min(self.k, len(X) - 1)
                     knn = NearestNeighbors(n_neighbors=n_neighbors).fit(X)
