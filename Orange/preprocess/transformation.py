@@ -38,7 +38,7 @@ class Transformation:
         else:
             data = data.get_column_view(self.attr_index)[0]
         transformed = self.transform(data)
-        if inst and isinstance(transformed, np.ndarray):
+        if inst and isinstance(transformed, np.ndarray) and transformed.shape:
             transformed = transformed[0]
         return transformed
 

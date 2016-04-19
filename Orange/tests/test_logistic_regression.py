@@ -14,6 +14,7 @@ class LogisticRegressionTest(unittest.TestCase):
     def setUpClass(cls):
         cls.iris = Table('iris')
         cls.voting = Table('voting')
+        cls.zoo = Table('zoo')
 
     def test_LogisticRegression(self):
         learn = LogisticRegressionLearner()
@@ -70,3 +71,10 @@ class LogisticRegressionTest(unittest.TestCase):
         model = learn(self.voting)
         coef = model.coefficients
         self.assertEqual(len(coef[0]), len(model.domain.attributes))
+
+    def test_predict_on_instance(self):
+        lr = LogisticRegressionLearner()
+        m = lr(self.zoo)
+        probs = m(self.zoo[50], m.Probs)
+        probs2 = m(self.zoo[50, :], m.Probs)
+        np.testing.assert_almost_equal(probs, probs2)
