@@ -57,7 +57,7 @@ class LogisticRegressionTest(unittest.TestCase):
         learn = LogisticRegressionLearner(penalty='l1')
         clf = learn(self.iris[:100])
         p = clf(self.iris[100:], ret=Model.Probs)
-        self.assertTrue(all(abs(p.sum(axis=1) - 1) < 1e-6))
+        self.assertLess(abs(p.sum(axis=1) - 1).all(), 1e-6)
 
     def test_learner_scorer(self):
         learner = LogisticRegressionLearner()
