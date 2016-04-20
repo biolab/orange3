@@ -742,17 +742,16 @@ class ContextHandler(SettingsHandler):
     def fast_save(self, widget, name, value):
         """Update value of `name` setting in the current context to `value`
         """
+        setting = self.known_settings.get(name)
+        if isinstance(setting, ContextSetting):
+            context = widget.current_context
+            if context is None:
+                return
 
-        super().fast_save(widget, name, value)
-
-        context = widget.current_context
-        if context is None:
-            return
-
-        if name in self.known_settings:
-            setting = self.known_settings[name]
             value = self.encode_setting(context, setting, value)
             self.update_packed_data(context.values, name, value)
+        else:
+            super().fast_save(widget, name, value)
 
     @staticmethod
     def update_packed_data(data, name, value):
@@ -909,23 +908,6 @@ class DomainContextHandler(ContextHandler):
                 self.attributes_in_res and get_attribute(a[0]) == a[1] or
                 self.metas_in_res and get_meta(a[0]) == a[1])]
             setattr(widget, self.reservoir, ll)
-
-    def fast_save(self, widget, name, value):
-        super().fast_save(widget, name, value)
-
-        context = widget.current_context
-        if not context:
-            return
-
-        if name in self.known_settings:
-            setting = self.known_settings[name]
-
-            if name == setting.name or name.endswith(".{0}".format(setting.name)):
-                value = self.encode_setting(context, setting, value)
-            else:
-                value = list(value)
-
-            self.update_packed_data(context.values, name, value)
 
     def encode_setting(self, context, setting, value):
         value = copy.copy(value)
