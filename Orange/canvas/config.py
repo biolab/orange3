@@ -43,6 +43,9 @@ def init():
     QCoreApplication.setApplicationName("Orange Canvas")
     QCoreApplication.setApplicationVersion(version)
     QSettings.setDefaultFormat(QSettings.IniFormat)
+    
+    # Hack to make sure the correct plugin search path is added. (Github issue #1143)
+    QCoreApplication.addLibraryPath('./Lib/site-packages/PyQt4/plugins')
 
     # Make it a null op.
     global init
