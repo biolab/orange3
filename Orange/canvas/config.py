@@ -5,6 +5,7 @@ Orange Canvas Configuration
 
 import os
 import sys
+import site
 import logging
 import pickle as pickle
 import itertools
@@ -45,7 +46,9 @@ def init():
     QSettings.setDefaultFormat(QSettings.IniFormat)
     
     # Hack to make sure the correct plugin search path is added. (Github issue #1143)
-    QCoreApplication.addLibraryPath('./Lib/site-packages/PyQt4/plugins')
+    for path in site.getsitepackages():
+        if path.endswith("site-packages"):
+            QCoreApplication.addLibraryPath(path + "\\PyQt4\\plugins")
 
     # Make it a null op.
     global init
