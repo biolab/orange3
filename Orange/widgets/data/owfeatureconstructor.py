@@ -463,6 +463,8 @@ class OWFeatureConstructor(widget.OWWidget):
         if self.data is not None:
             descriptors = list(self.descriptors)
             currindex = self.currentIndex
+            self.descriptors = []
+            self.currentIndex = -1
             self.openContext(data)
 
             if descriptors != self.descriptors or \
