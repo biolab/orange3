@@ -167,8 +167,7 @@ class OWTestLearners(widget.OWWidget):
         self.train_data_missing_vals = False
         self.test_data_missing_vals = False
 
-        #: An Ordered dictionary with current inputs and their testing
-        #: results.
+        #: An Ordered dictionary with current inputs and their testing results.
         self.learners = OrderedDict()
 
         sbox = gui.vBox(self.controlArea, "Sampling")
@@ -303,6 +302,7 @@ class OWTestLearners(widget.OWWidget):
         self.warning(4)
         self.test_data_missing_vals = data is not None and \
                                       np.isnan(data.Y).any()
+
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.warning(4, self._get_missing_data_warning(
                 self.train_data_missing_vals, self.test_data_missing_vals
@@ -413,7 +413,7 @@ class OWTestLearners(widget.OWWidget):
                         self.data, self.test_data, learners, **common_args)
                 else:
                     assert False
-            except (RuntimeError, Results.DataError, ValueError) as e:
+            except (RuntimeError, ValueError) as e:
                 self.error(2, str(e))
                 self.setStatusMessage("")
                 return
@@ -649,10 +649,10 @@ def split_by_model(results):
         if getattr(results, "probabilities", None) is not None:
             res.probabilities = results.probabilities[(i,), :, :]
 
-        if results.models:
+        if results.models is not None:
             res.models = [mf[i] for mf in results.models]
 
-        if results.folds:
+        if results.folds is not None:
             res.folds = results.folds
 
         res.failed = [results.failed[i]]
