@@ -1,12 +1,17 @@
 import os
+from itertools import chain
+from itertools import count
 from warnings import catch_warnings
 from xlrd import open_workbook
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
+from Orange.data import Domain
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
+from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
+    PerfectDomainContextHandler
+from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.data.table import Table, get_sample_datasets_dir
@@ -74,13 +79,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
-    resizing_enabled = False
 
     SEARCH_PATHS = [("sample-datasets", get_sample_datasets_dir())]
 
     LOCAL_FILE, URL = range(2)
 
-    settingsHandler = XlsContextHandler()
+    settingsHandler = PerfectDomainContextHandler()
 
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
     recent_paths = Setting([
@@ -93,6 +97,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     xls_sheet = ContextSetting("")
     sheet_names = Setting({})
     url = Setting("")
+
+    variables = ContextSetting([])
 
     dlg_formats = (
         "All readable files ({});;".format(
@@ -176,6 +182,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.info = gui.widgetLabel(box, 'No data loaded.')
         self.warnings = gui.widgetLabel(box, '')
 
+        box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
+        domain_editor = DomainEditor(self.variables)
+        self.editor_model = domain_editor.model()
+        box.layout().addWidget(domain_editor)
+
         box = gui.hBox(self.controlArea)
         gui.button(
             box, self, "Browse documentation data sets",
@@ -184,9 +195,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.layout().addWidget(self.report_button)
         self.report_button.setFixedWidth(170)
 
-        # Set word wrap, so long warnings won't expand the widget
-        self.warnings.setWordWrap(True)
-        self.warnings.setSizePolicy(Policy.Ignored, Policy.MinimumExpanding)
+        self.apply_button = gui.button(
+            box, self, "Apply", callback=self.apply_domain_edit)
+        self.apply_button.hide()
+        self.apply_button.setFixedWidth(170)
+        self.editor_model.dataChanged.connect(self.apply_button.show)
 
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
@@ -194,6 +207,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         QtCore.QTimer.singleShot(0, self.load_data)
 
         self.setAcceptDrops(True)
+    def sizeHint(self):
+        return QtCore.QSize(600, 550)
 
     def select_file(self, n):
         assert n < len(self.recent_paths)
@@ -313,6 +328,35 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             text += '\n\nFirst entry: {}\nLast entry: {}'.format(
                 table[0, 'Timestamp'], table[-1, 'Timestamp'])
         return text
+
+    def storeSpecificSettings(self):
+        self.current_context.modified_variables = self.variables[:]
+
+    def retrieveSpecificSettings(self):
+        if hasattr(self.current_context, "modified_variables"):
+            self.variables[:] = self.current_context.modified_variables
+
+    def apply_domain_edit(self):
+        attributes = []
+        class_vars = []
+        metas = []
+        weight = []
+        places = [attributes, class_vars, metas, weight]
+        cols = [[], [], [], []]  # Xcols, Ycols, Mcols, Wcols
+        for column, (name, tpe, place, vals), orig_var in \
+            zip(count(), self.editor_model.variables,
+                chain(self.data.domain.variables, self.data.domain.metas)):
+            if place == 3:
+                continue
+            if name == orig_var.name and tpe == type(orig_var):
+                var = orig_var
+            else:
+                var = tpe(name)
+            places[place].append(var)
+            cols[place].append(column)  # This assumes that no columns were skipped in the original file!
+        domain = Domain(attributes, class_vars, metas)
+        # data = Table.from_file(self.loaded_file, domain=domain, columns=cols)
+        self.apply_button.hide()
 
     def get_widget_name_extension(self):
         _, name = os.path.split(self.loaded_file)
