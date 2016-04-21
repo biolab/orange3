@@ -151,9 +151,10 @@ Get_diffable ()
 
 for check in \
     'Pylint,Number_of_issues,^Report$,^([^:]+:)[0-9]+:,\\1,^\\+' \
-    'radon,Cyclomatic_complexity,^[0-9]+ blocks,^( +[MCF])[0-9:]+,\\1:,^[+-]'
+    'radon,Cyclomatic_complexity,^[0-9]+ blocks,^( +[MCF]) [0-9:]+,\\1:,^[+-]'
 do
-    IFS=',' read check func         \
+    IFS=',' read check              \
+                 func               \
                  diff_block_end     \
                  match_line_num     \
                  replace_line_num   \
