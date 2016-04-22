@@ -24,3 +24,7 @@ __pycache__
 
 # Windows temp files
 Thumbs.db
+
+# PyLint, Coverage reports
+.pylint_cache/*
+htmlcov/*
