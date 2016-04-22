@@ -4,13 +4,13 @@
 import unittest
 import numpy as np
 
-import Orange
 from Orange.data import DiscreteVariable, Domain
 from Orange.data import Table
-from Orange.classification import LogisticRegressionLearner
+from Orange.classification import LogisticRegressionLearner, TreeLearner, NaiveBayesLearner,\
+                                  MajorityLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
-    Precision, TestOnTrainingData
-from Orange.preprocess import discretize
+    Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
+from Orange.preprocess import discretize, Discretize
 
 
 class ScoringTest(unittest.TestCase):
@@ -62,15 +62,15 @@ class Scoring_CA_Test(unittest.TestCase):
         x = np.random.random_integers(0, 1, (100, 5))
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
-        t = Orange.data.Table(x, y)
-        t = Orange.preprocess.Discretize(
+        t = Table(x, y)
+        t = Discretize(
             method=discretize.EqualWidth(n=3))(t)
-        nb = Orange.classification.NaiveBayesLearner()
-        res = Orange.evaluation.TestOnTrainingData(t, [nb])
+        nb = NaiveBayesLearner()
+        res = TestOnTrainingData(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
 
         t.Y[-20:] = 1 - t.Y[-20:]
-        res = Orange.evaluation.TestOnTrainingData(t, [nb])
+        res = TestOnTrainingData(t, [nb])
         self.assertGreaterEqual(CA(res)[0], 0.75)
         self.assertLess(CA(res)[0], 1)
 
@@ -78,88 +78,75 @@ class Scoring_CA_Test(unittest.TestCase):
 class Scoring_AUC_Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.iris = Orange.data.Table('iris')
+        cls.iris = Table('iris')
 
     def test_tree(self):
-        tree = Orange.classification.TreeLearner()
-        res = Orange.evaluation.CrossValidation(self.iris, [tree], k=2)
+        tree = TreeLearner()
+        res = CrossValidation(self.iris, [tree], k=2)
         self.assertGreater(AUC(res)[0], 0.8)
         self.assertLess(AUC(res)[0], 1.)
 
     def test_constant_prob(self):
-        maj = Orange.classification.MajorityLearner()
-        res = Orange.evaluation.TestOnTrainingData(self.iris, [maj])
+        maj = MajorityLearner()
+        res = TestOnTrainingData(self.iris, [maj])
         self.assertEqual(AUC(res)[0], 0.5)
 
     def test_multiclass_auc_multi_learners(self):
-        learners = [Orange.classification.LogisticRegressionLearner(),
-                    Orange.classification.MajorityLearner()]
-        res = Orange.evaluation.testing.CrossValidation(self.iris, learners, k=10)
+        learners = [LogisticRegressionLearner(),
+                    MajorityLearner()]
+        res = CrossValidation(self.iris, learners, k=10)
         self.assertGreater(AUC(res)[0], 0.6)
         self.assertLess(AUC(res)[1], 0.6)
         self.assertGreater(AUC(res)[1], 0.4)
 
     def test_auc_on_multiclass_data_returns_1d_array(self):
-        titanic = Orange.data.Table('titanic')[:100]
-        lenses = Orange.data.Table('lenses')[:100]
-        majority = Orange.classification.MajorityLearner()
+        titanic = Table('titanic')[:100]
+        lenses = Table('lenses')[:100]
+        majority = MajorityLearner()
 
-        results = Orange.evaluation.TestOnTrainingData(lenses, [majority])
-        auc = Orange.evaluation.AUC(results)
+        results = TestOnTrainingData(lenses, [majority])
+        auc = AUC(results)
         self.assertEqual(auc.ndim, 1)
 
-        results = Orange.evaluation.TestOnTrainingData(titanic, [majority])
-        auc = Orange.evaluation.AUC(results)
+        results = TestOnTrainingData(titanic, [majority])
+        auc = AUC(results)
         self.assertEqual(auc.ndim, 1)
 
     def test_auc_scores(self):
         actual = np.array([0., 0., 0., 1., 1., 1.])
 
-        # All wrong
-        self.assertAlmostEqual(
-            self.compute_auc(actual, [1., 1., 1., 0., 0., 0.]), 0.)
-        # All with same probability
-        self.assertAlmostEqual(
-            self.compute_auc(actual, [0., 0., 0., 0., 0., 0.]), 0.5)
-        # All correct
-        self.assertAlmostEqual(
-            self.compute_auc(actual, [0., 0., 0., 1., 1., 1.]), 1.)
-
-        # One wrong
-        self.assertAlmostEqual(
-            self.compute_auc(actual, [0., 0., 0., 1., 1., 0.]), 5 / 6)
-        # Two wrong
-        self.assertAlmostEqual(
-            self.compute_auc(actual, [1., 1., 0., 1., 1., 1.]), 4 / 6)
-        # Three wrong
-        self.assertAlmostEqual(
-            self.compute_auc(actual, [1., 1., 0., 1., 1., 0.]), 3 / 6)
+        for predicted, auc in (([1., 1., 1., 0., 0., 0.], 0.),      # All wrong
+                               ([0., 0., 0., 0., 0., 0.], 0.5),     # All with same probability
+                               ([0., 0., 0., 1., 1., 1.], 1.),      # All correct
+                               ([0., 0., 0., 1., 1., 0.], 5 / 6),   # One wrong
+                               ([1., 1., 0., 1., 1., 1.], 4 / 6),   # Two wrong
+                               ([1., 1., 0., 1., 1., 0.], 3 / 6)):  # Three wrong
+            self.assertAlmostEqual(self.compute_auc(actual, predicted), auc)
 
     def compute_auc(self, actual, predicted):
         predicted = np.array(predicted).reshape(1, -1)
-        results = Orange.evaluation.Results(
+        results = Results(
             nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
             actual=actual, predicted=predicted)
         return AUC(results)[0]
 
 
-class Scoring_CD_Test(unittest.TestCase):
+class ScoringCDTest(unittest.TestCase):
     def test_cd_score(self):
         avranks = [1.9, 3.2, 2.8, 3.3]
-        cd = Orange.evaluation.scoring.compute_CD(avranks, 30)
+        cd = scoring.compute_CD(avranks, 30)
         np.testing.assert_almost_equal(cd, 0.856344)
 
-        cd = Orange.evaluation.scoring.compute_CD(avranks, 30,
-                                                  test="bonferroni-dunn")
+        cd = scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
 
 
-class Scoring_LogLoss_Test(unittest.TestCase):
+class ScoringLogLossTest(unittest.TestCase):
     def test_log_loss(self):
-        data = Orange.data.Table('iris')
-        majority = Orange.classification.MajorityLearner()
-        results = Orange.evaluation.TestOnTrainingData(data, [majority])
-        ll = Orange.evaluation.LogLoss(results)
+        data = Table('iris')
+        majority = MajorityLearner()
+        results = TestOnTrainingData(data, [majority])
+        ll = LogLoss(results)
         self.assertAlmostEqual(ll[0], - np.log(1 / 3))
 
     def _log_loss(self, act, prob):
@@ -168,9 +155,9 @@ class Scoring_LogLoss_Test(unittest.TestCase):
         return - ll / len(act)
 
     def test_log_loss_calc(self):
-        data = Orange.data.Table('titanic')
-        learner = Orange.classification.LogisticRegressionLearner()
-        results = Orange.evaluation.TestOnTrainingData(data, [learner])
+        data = Table('titanic')
+        learner = LogisticRegressionLearner()
+        results = TestOnTrainingData(data, [learner])
 
         actual = np.copy(results.actual)
         actual = actual.reshape(actual.shape[0], 1)
@@ -178,55 +165,49 @@ class Scoring_LogLoss_Test(unittest.TestCase):
         probab = results.probabilities[0]
 
         ll_calc = self._log_loss(actual, probab)
-        ll_orange = Orange.evaluation.LogLoss(results)
+        ll_orange = LogLoss(results)
         self.assertEqual(ll_calc, ll_orange[0])
 
 
-class Scoring_F1_Test(unittest.TestCase):
+class ScoringF1Test(unittest.TestCase):
     def test_F1_multiclass(self):
-        results = Orange.evaluation.Results(
+        results = Results(
             domain=Domain([], DiscreteVariable(name="y", values="01234")),
             actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
         results.predicted = np.array([[0, 1, 4, 1, 1, 0, 0, 2, 3, 1],
                                       [0, 4, 4, 1, 2, 0, 1, 2, 3, 2]])
-        res = Orange.evaluation.F1(results)
+        res = F1(results)
         self.assertAlmostEqual(res[0], 0.61)
         self.assertEqual(res[1], 1.)
 
     def test_F1_target(self):
-        results = Orange.evaluation.Results(
+        results = Results(
             domain=Domain([], DiscreteVariable(name="y", values="01234")),
             actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
         results.predicted = np.array([[0, 1, 4, 1, 1, 0, 0, 2, 3, 1],
                                       [0, 4, 4, 1, 2, 0, 1, 2, 3, 2]])
-        res = Orange.evaluation.F1(results, target=0)
-        self.assertAlmostEqual(res[0], 4 / 5)
-        self.assertEqual(res[1], 1.)
-        res = Orange.evaluation.F1(results, target=1)
-        self.assertEqual(res[0], 2 / 6)
-        self.assertEqual(res[1], 1.)
-        res = Orange.evaluation.F1(results, target=2)
-        self.assertEqual(res[0], 2 / 4)
-        self.assertEqual(res[1], 1.)
-        res = Orange.evaluation.F1(results, target=3)
-        self.assertEqual(res[0], 1.)
-        self.assertEqual(res[1], 1.)
-        res = Orange.evaluation.F1(results, target=4)
-        self.assertEqual(res[0], 2 / 3)
-        self.assertEqual(res[1], 1.)
+
+        for target, prob in ((0, 4 / 5),
+                             (1, 1 / 3),
+                             (2, 1 / 2),
+                             (3, 1.),
+                             (4, 2 / 3)):
+            res = F1(results, target=target)
+            self.assertEqual(res[0], prob)
+            self.assertEqual(res[1], 1.)
 
     def test_F1_binary(self):
-        results = Orange.evaluation.Results(
+        results = Results(
             domain=Domain([], DiscreteVariable(name="y", values="01")),
             actual=[0, 1, 1, 1, 0, 0, 1, 0, 0, 1])
         results.predicted = np.array([[0, 1, 1, 1, 0, 0, 1, 0, 0, 1],
                                       [0, 1, 1, 1, 0, 0, 1, 1, 1, 1]])
-        res = Orange.evaluation.F1(results)
+        res = F1(results)
         self.assertEqual(res[0], 1.)
-        self.assertAlmostEqual(res[1], 10 / 12)
-        res_target = Orange.evaluation.F1(results, target=1)
+        self.assertAlmostEqual(res[1], 5 / 6)
+        res_target = F1(results, target=1)
         self.assertEqual(res[0], res_target[0])
         self.assertEqual(res[1], res_target[1])
-        res_target = Orange.evaluation.F1(results, target=0)
+        res_target = F1(results, target=0)
         self.assertEqual(res_target[0], 1.)
         self.assertAlmostEqual(res_target[1], 3 / 4)
