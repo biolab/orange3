@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from Orange.data import Table
-from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
+from Orange.data.filter import FilterContinuous, FilterDiscrete, Values, HasClass
 
 
 NIMOCK = MagicMock(side_effect=NotImplementedError())
@@ -32,3 +32,38 @@ class FilterTestCase(unittest.TestCase):
         self.assertEqual(len(d123),
                          (~((self.iris.X[:, 0] < 5) | (self.iris.X[:, 1] > 3)) &
                           (self.iris.Y == 2)).sum())
+
+
+class TestHasClassFilter(unittest.TestCase):
+    def setUp(self):
+        self.table = Table('imports-85')
+        self.n_missing = 4
+        self.assertTrue(self.table.has_missing_class())
+
+    def test_has_class_filter_table(self):
+        filter_ = HasClass()
+        with_class = filter_(self.table)
+        self.assertEqual(len(with_class),
+                         len(self.table) - self.n_missing)
+        self.assertFalse(with_class.has_missing_class())
+
+        filter_ = HasClass(negate=True)
+        without_class = filter_(self.table)
+        self.assertEqual(len(without_class), self.n_missing)
+        self.assertTrue(without_class.has_missing_class())
+
+    def test_has_class_filter_instance(self):
+        class_missing = self.table[9]
+        class_present = self.table[0]
+
+        filter_ = HasClass()
+        self.assertFalse(filter_(class_missing))
+        self.assertTrue(filter_(class_present))
+
+        filter_ = HasClass(negate=True)
+        self.assertTrue(filter_(class_missing))
+        self.assertFalse(filter_(class_present))
+
+    @patch('Orange.data.Table._filter_has_class', NIMOCK)
+    def test_has_class_filter_not_implemented(self):
+        self.test_has_class_filter_table()
