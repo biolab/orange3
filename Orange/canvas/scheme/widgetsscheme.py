@@ -815,6 +815,13 @@ def mock_error_owwidget(node, message):
                 widget._settings = data
                 settings.SettingsHandler.initialize(self, widget, None)
 
+            # specifically disable persistent global defaults
+            def write_defaults(self):
+                pass
+
+            def read_defaults(self):
+                pass
+
         settingsHandler = DummySettingsHandler()
 
         want_main_area = False
