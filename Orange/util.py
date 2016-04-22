@@ -85,8 +85,14 @@ def scale(values, min=0, max=1):
 def abstract(obj):
     """Designate decorated class or method abstract."""
     if isinstance(obj, type):
-        warnings.warn('Marking types @abstract not supported ({})'.format(obj.__name__),
-                      OrangeWarning, stacklevel=2)
+        old__init__ = obj.__init__
+
+        def _refuse__init__(self, *args, **kwargs):
+            if self.__class__ == obj:
+                raise NotImplementedError("Can't instantiate abstract class " + obj.__name__)
+            return old__init__(self, *args, **kwargs)
+
+        obj.__init__ = _refuse__init__
         return obj
     else:
         if not hasattr(obj, '__qualname__'):

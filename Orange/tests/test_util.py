@@ -15,6 +15,25 @@ class UtilTest(unittest.TestCase):
         self.assertTrue(not np.all(np.isnan(scale([.5, np.nan]))))
 
     def test_abstract(self):
+        @abstract
+        class AbstractClass:
+            pass
+
+        @abstract
+        class AbstractWithParams:
+            def __init__(self, x):
+                self.x = x
+
+        @abstract
+        class AbstractWithNew:
+            def __new__(cls, *args, **kwargs):
+                return super().__new__(cls)
+
+        class DerivedClass(AbstractWithParams):
+            def __init__(self, x, y):
+                super().__init__(x)
+                self.y = y
+
         class Class:
             @abstract
             def method(self): pass
@@ -36,6 +55,13 @@ class UtilTest(unittest.TestCase):
                 @abstract      # This way reads nicer,
                 @staticmethod  # but it doesn't work
                 def non_method_descriptor(arg): pass
+
+        for AbsClass in (AbstractClass, AbstractWithNew, AbstractWithParams):
+            with self.assertRaises(NotImplementedError) as cm:
+                AbsClass()
+            self.assertRegex(cm.exception.args[0], AbsClass.__name__)
+
+        self.assertIsInstance(DerivedClass(1, 2), DerivedClass)
 
         for attr in ('method',
                      'staticmethod_',
