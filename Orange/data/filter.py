@@ -409,7 +409,7 @@ class FilterString(ValueFilter):
 
     .. attribute:: oper
 
-        The operator; should be `FilterContinuous.Equal`, `NotEqual`, `Less`,
+        The operator; should be `FilterString.Equal`, `NotEqual`, `Less`,
         `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside`,
         `Contains`, `StartsWith`, `EndsWith` or `IsDefined`.
 
@@ -445,12 +445,13 @@ class FilterString(ValueFilter):
             self.cache_position(inst.domain)
         value = inst[self.pos_cache]
         if self.oper == self.IsDefined:
-            return bool(value)
+            return not np.isnan(value)
         if self.case_sensitive:
-            refval = self.ref
+            value = str(value)
+            refval = str(self.ref)
         else:
-            value = value.lower()
-            refval = self.ref.lower()
+            value = str(value).lower()
+            refval = str(self.ref).lower()
         if self.oper == self.Equal:
             return value == refval
         if self.oper == self.NotEqual:
@@ -464,7 +465,7 @@ class FilterString(ValueFilter):
         if self.oper == self.GreaterEqual:
             return value >= refval
         if self.oper == self.Contains:
-            return value in refval
+            return refval in value
         if self.oper == self.StartsWith:
             return value.startswith(refval)
         if self.oper == self.EndsWith:

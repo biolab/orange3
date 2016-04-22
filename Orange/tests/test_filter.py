@@ -8,12 +8,12 @@ import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.filter import \
-    FilterContinuous, FilterDiscrete, Values, HasClass
+    FilterContinuous, FilterDiscrete, FilterString, Values, HasClass
 
 NIMOCK = MagicMock(side_effect=NotImplementedError())
 
 
-class FilterTestCase(unittest.TestCase):
+class TestFilterValues(unittest.TestCase):
     def setUp(self):
         self.iris = Table('iris')
 
@@ -208,3 +208,86 @@ class TestFilterContinuous(unittest.TestCase):
 
         flt.oper = -1
         self.assertEqual(str(flt), "invalid operator")
+
+
+class TestFilterString(unittest.TestCase):
+
+    def setUp(self):
+        self.data = Table("zoo")
+        self.inst = self.data[0]  # aardvark
+
+    def test_case_sensitive(self):
+        flt = FilterString("name", FilterString.Equal, "Aardvark", case_sensitive=True)
+        self.assertFalse(flt(self.inst))
+        flt = FilterString("name", FilterString.Equal, "Aardvark", case_sensitive=False)
+        self.assertTrue(flt(self.inst))
+
+    def test_operators(self):
+        flt = FilterString("name", FilterString.Equal, "aardvark")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.Equal, "bass")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.NotEqual, "bass")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.NotEqual, "aardvark")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.Less, "bass")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.Less, "aa")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.LessEqual, "bass")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.LessEqual, "aardvark")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.LessEqual, "aa")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.Greater, "aa")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.Greater, "aardvark")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.GreaterEqual, "aa")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.GreaterEqual, "aardvark")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.GreaterEqual, "bass")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.Between, "aa", "aardvark")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.Between, "a", "aa")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.Outside, "aaz", "bass")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.Outside, "aardvark", "bass")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.Contains, "ard")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.Contains, "ra")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.StartsWith, "aar")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.StartsWith, "ard")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.EndsWith, "aardvark")
+        self.assertTrue(flt(self.inst))
+        flt = FilterString("name", FilterString.EndsWith, "aard")
+        self.assertFalse(flt(self.inst))
+
+        flt = FilterString("name", FilterString.IsDefined)
+        self.assertTrue(flt(self.inst))
+        for s in ["?", "nan"]:
+            self.inst["name"] = s
+            flt = FilterString("name", FilterString.IsDefined)
+            self.assertTrue(flt(self.inst))
+        self.inst["name"] = ""
+        flt = FilterString("name", FilterString.IsDefined)
+        self.assertFalse(flt(self.inst))
