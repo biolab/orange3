@@ -159,11 +159,11 @@ class SameValue(Filter):
         if column >= 0:
             if self.negate:
                 retain = np.fromiter(
-                    (inst._values[column] != value for inst in data),
+                    (inst[column] != value for inst in data),
                      bool, len(data))
             else:
                 retain = np.fromiter(
-                    (inst._values[column] == value for inst in data),
+                    (inst[column] == value for inst in data),
                      bool, len(data))
         else:
             column = -1 - column
