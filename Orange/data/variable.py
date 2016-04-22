@@ -169,6 +169,30 @@ class Value(float):
             return self.value == other.value
         return super().__eq__(other)
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if self.variable.is_primitive():
+            if isinstance(other, str):
+                return super().__lt__(self.variable.to_val(other))
+            else:
+                return super().__lt__(other)
+        else:
+            if isinstance(other, str):
+                return self.value < other
+            else:
+                return self.value < other.value
+
+    def __le__(self, other):
+        return self.__lt__(other) or self.__eq__(other)
+
+    def __gt__(self, other):
+        return not self.__le__(other)
+
+    def __ge__(self, other):
+        return not self.__lt__(other)
+
     def __contains__(self, other):
         if (self._value is not None
                 and isinstance(self._value, str)
