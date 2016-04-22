@@ -9,10 +9,18 @@ import Orange.data.filter as data_filter
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import \
-    PerfectDomainContextHandler, Setting, ContextSetting
+from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils import vartype
 from Orange.canvas import report
+
+
+class SelectRowsContextHandler(DomainContextHandler):
+    """Context handler that filters conditions"""
+
+    def is_valid_item(self, setting, condition, attrs, metas):
+        """Return True if condition applies to a variable in given domain."""
+        varname, *_ = condition
+        return varname in attrs or varname in metas
 
 
 class OWSelectRows(widget.OWWidget):
@@ -27,7 +35,7 @@ class OWSelectRows(widget.OWWidget):
 
     want_main_area = False
 
-    settingsHandler = PerfectDomainContextHandler()
+    settingsHandler = SelectRowsContextHandler()
     conditions = ContextSetting([])
     update_on_change = Setting(True)
     purge_attributes = Setting(True)
