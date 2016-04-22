@@ -6,6 +6,7 @@ try:
     from Orange.widgets.tests import test_setting_provider, \
         test_settings_handler, test_context_handler, \
         test_class_values_context_handler, test_domain_context_handler, \
+        test_perfect_domain_context_handler, \
         test_owselectcolumns, test_scatterplot_density, test_widgets_outputs
     run_widget_tests = True
 except ImportError:
@@ -42,9 +43,10 @@ def suite(loader=None, pattern='test*.py'):
             load(test_setting_provider),
             load(test_settings_handler),
             load(test_context_handler),
-
             load(test_class_values_context_handler),
             load(test_domain_context_handler),
+            load(test_perfect_domain_context_handler),
+
             load(test_owselectcolumns),
             load(test_scatterplot_density),
             load(test_widgets_outputs),

@@ -1069,11 +1069,6 @@ class ClassValuesContextHandler(ContextHandler):
                     else self.NO_MATCH)
 
 
-### Requires the same the same attributes in the same order
-### The class overloads domain encoding and matching.
-### Due to different encoding, it also needs to overload encode_setting and
-### clone_context (which is the same as the ContextHandler's)
-### We could simplify some other methods, but prefer not to replicate the code
 class PerfectDomainContextHandler(DomainContextHandler):
     """Context handler that matches a context only when
     the same domain is available.
@@ -1082,44 +1077,53 @@ class PerfectDomainContextHandler(DomainContextHandler):
     """
 
     def new_context(self, domain, attributes, class_vars, metas):
+        """Same as DomainContextHandler, but also store class_vars"""
         context = super().new_context(domain, attributes, metas)
         context.class_vars = class_vars
         return context
 
     def encode_domain(self, domain):
+        """Encode domain into tuples (name, type)
+        A tuple is returned for each of attributes, class_vars and metas.
+        """
+
         if self.match_values == self.MATCH_VALUES_ALL:
-            def encode(attrs):
+            def _encode(attrs):
                 return tuple((v.name, v.values if v.is_discrete else vartype(v))
                              for v in attrs)
         else:
-            def encode(attrs):
+            def _encode(attrs):
                 return tuple((v.name, vartype(v)) for v in attrs)
-        return (encode(domain.attributes),
-                encode(domain.class_vars),
-                encode(domain.metas))
+        return (_encode(domain.attributes),
+                _encode(domain.class_vars),
+                _encode(domain.metas))
 
     def match(self, context, domain, attributes, class_vars, metas):
+        """Context only matches when domains are the same"""
+
         return (self.PERFECT_MATCH
-                if (attributes, class_vars, metas) ==
-                   (context.attributes, context.class_vars, context.metas)
+                if (context.attributes == attributes and
+                    context.class_vars == class_vars and
+                    context.metas == metas)
                 else self.NO_MATCH)
 
     def encode_setting(self, context, setting, value):
-        if isinstance(value, str):
-            atype = -1
-            if not setting.exclude_attributes:
-                for aname, atype in itertools.chain(context.attributes,
-                                                    context.class_vars):
-                    if aname == value:
-                        break
-            if atype == -1 and not setting.exclude_metas:
-                for aname, _ in itertools.chain(context.attributes,
-                                                context.class_vars):
-                    if aname == value:
-                        break
-            return value, copy.copy(atype)
+        """Same as is domain context handler, but handles separately stored
+        class_vars."""
+
+        if isinstance(setting, ContextSetting) and isinstance(value, str):
+
+            def _candidate_variables():
+                if not setting.exclude_attributes:
+                    yield from itertools.chain(context.attributes,
+                                               context.class_vars)
+                if not setting.exclude_metas:
+                    yield from context.metas
+
+            for aname, atype in _candidate_variables():
+                if aname == value:
+                    return value, atype
+
+            return value, -1
         else:
             return super().encode_setting(context, setting, value)
-
-    def clone_context(self, context, *_):
-        return copy.deepcopy(context)
