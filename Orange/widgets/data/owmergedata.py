@@ -12,6 +12,8 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 
 
+INSTANCEID = "Same source"
+
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge data sets based on values of selected data feature."
@@ -165,7 +167,7 @@ def selected_row(view):
 
 
 def allvars(data):
-    return data.domain.attributes + data.domain.class_vars + data.domain.metas
+    return (INSTANCEID,) + data.domain.attributes + data.domain.class_vars + data.domain.metas
 
 
 def merge(A, varA, B, varB):
@@ -202,7 +204,7 @@ def group_table_indices(table, key_vars, exclude_unknown=False):
     """
     groups = defaultdict(list)
     for i, inst in enumerate(table):
-        key = [inst[a] for a in key_vars]
+        key = [inst[a] if a != INSTANCEID else inst.id for a in key_vars]
         if exclude_unknown and any(math.isnan(k) for k in key):
             continue
         key = tuple([str(k) for k in key])
@@ -215,7 +217,7 @@ def left_join_indices(table1, table2, vars1, vars2):
     key_map2 = group_table_indices(table2, vars2)
     indices = []
     for i, inst in enumerate(table1):
-        key = tuple([str(inst[v]) for v in vars1])
+        key = tuple([str(inst[v] if v != INSTANCEID else inst.id) for v in vars1])
         if key in key_map1 and key in key_map2:
             for j in key_map2[key]:
                 indices.append((i, j))
