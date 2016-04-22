@@ -859,24 +859,24 @@ class DomainContextHandler(ContextHandler):
 
         super().open_context(widget, domain, *self.encode_domain(domain))
 
-    def filter_value(self, setting, data, domain, attributes, metas):
+    def filter_value(self, setting, data, domain, attrs, metas):
         value = data.get(setting.name, None)
         if isinstance(value, list):
             sel_name = getattr(setting, "selected", None)
             selected = set(data.pop(sel_name, []))
             new_selected, new_value = [], []
-            for i, val in enumerate(value):
-                if self._var_exists(setting, val, attributes, metas):
+            for i, item in enumerate(value):
+                if self.is_valid_item(setting, item, attrs, metas):
                     if i in selected:
                         new_selected.append(len(new_value))
-                    new_value.append(val)
+                    new_value.append(item)
 
             data[setting.name] = new_value
             if hasattr(setting, 'selected'):
                 data[setting.selected] = new_selected
         elif value is not None:
             if (value[1] >= 0 and
-                    not self._var_exists(setting, value, attributes, metas)):
+                    not self._var_exists(setting, value, attrs, metas)):
                 del data[setting.name]
 
     def settings_to_widget(self, widget):
@@ -975,7 +975,7 @@ class DomainContextHandler(ContextHandler):
             selected = set()
 
         for i, item in enumerate(value):
-            if self._var_exists(setting, item, attrs, metas):
+            if self.is_valid_item(setting, item, attrs, metas):
                 matched += 1
             else:
                 if setting.required == ContextSetting.REQUIRED:
@@ -994,6 +994,14 @@ class DomainContextHandler(ContextHandler):
             return 1, 1
         else:
             raise IncompatibleContext()
+
+    def is_valid_item(self, setting, item, attrs, metas):
+        """Return True if given item can be used with attrs and metas
+
+        Subclasses can override this method to checks data in alternative
+        representations.
+        """
+        return self._var_exists(setting, item, attrs, metas)
 
     def mergeBack(self, widget):
         """Merge contexts loaded from schema with localy available list of
