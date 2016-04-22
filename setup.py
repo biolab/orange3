@@ -15,7 +15,7 @@ except ImportError:
 NAME = 'Orange'
 
 VERSION = '3.3.2'
-ISRELEASED = False
+ISRELEASED = True
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')

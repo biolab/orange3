@@ -5,6 +5,36 @@ Change Log
 ------------
 * ...
 
+[3.3.2] - 2016-04-22
+--------------------
+##### Enhancements
+* New preprocessors ReliefF and FCBF (#1133)
+* New feature scorers ANOVA, Chi2 and Univariate Linear Regression (#1125)
+* Mosaic plot can display numeric attributes (#1165)
+* Sheet selection for excel files in File widget (#1164)
+* Check code quality with pylint on Travis (#1121)
+* Improve PyQt5 forward compatibility (#1029)
+* Include default datasets in File widget (#1174)
+* Install desktop launcher on linux (#1205)
+
+##### Bugfixes
+* Fix a bug in nested transformation of instance (#1192)
+* Fix vizrank's crash when pair had no valid data (#1189)
+* Save Graph doesn't save axes (#1134)
+* Open included tutorials with correct dataset (#1169)
+* Disable bsp index on the main canvas scene (#1168, #1173)
+* Fix FeatureConstructor crash with Python 3.5 (#1157)
+* Include feature names in Rank Widget report (#1022)
+* Decrease memory consumption in PCA (#1150)
+* Fix dragging of treshold in PCA widget (#1051)
+* Save TimeVariable in ISO 8601 format (#1145)
+* Allow use of feature metadata in MDS (#1130)
+* OWSelectColumns: fix drag and drop for features with Unicode names (#1144)
+* Warn when setting values are not present on instance (#1139)
+* Fix printing of Table with a TimeVariable (#1141)
+* Fix Test & Score widget report (#1138)
+
+
 [3.3.1] - 2016-03-24
 --------------------
 ##### Enhancements
@@ -54,7 +84,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.2...HEAD
+[3.3.2]: https://github.com/biolab/orange3/compate/3.3.1...3.3.2
 [3.3.1]: https://github.com/biolab/orange3/compare/3.3...3.3.1
 [3.3]: https://github.com/biolab/orange3/compare/3.2...3.3
 [3.2]: https://github.com/biolab/orange3/compare/3.1...3.2
