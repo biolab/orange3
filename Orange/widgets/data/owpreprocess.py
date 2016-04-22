@@ -12,7 +12,7 @@ from PyQt4.QtGui import (
     QVBoxLayout, QHBoxLayout, QFormLayout, QSpacerItem, QSizePolicy,
     QCursor, QIcon,  QStandardItemModel, QStandardItem, QStyle,
     QStylePainter, QStyleOptionFrame, QPixmap,
-    QApplication, QDrag
+    QApplication, QDrag, QLabel
 )
 from PyQt4 import QtGui
 from PyQt4.QtCore import (
@@ -135,14 +135,17 @@ class DiscretizeEditor(BaseEditor):
         group.buttonClicked.connect(self.__on_buttonClicked)
 
         self.__slbox = slbox = QGroupBox(
-            title="Number of intervals (for equal width/frequency",
+            title="Number of intervals (for equal width/frequency)",
             flat=True
         )
         slbox.setLayout(QVBoxLayout())
+        self.__slabel = slabel = QLabel()
+        slbox.layout().addWidget(slabel)
         self.__slider = slider = QSlider(
             orientation=Qt.Horizontal,
             minimum=2, maximum=10, value=self.__nintervals,
             enabled=self.__method in [self.EqualFreq, self.EqualWidth],
+            pageStep=1, tickPosition=QSlider.TicksBelow
         )
         slider.valueChanged.connect(self.__on_valueChanged)
         slbox.layout().addWidget(slider)
@@ -179,6 +182,7 @@ class DiscretizeEditor(BaseEditor):
             # changed programmatically (this)
             with blocked(self.__slider):
                 self.__slider.setValue(n)
+                self.__slabel.setText(str(self.__slider.value()))
             self.changed.emit()
 
     def setParameters(self, params):
@@ -206,6 +210,7 @@ class DiscretizeEditor(BaseEditor):
         self.__nintervals = self.__slider.value()
         self.changed.emit()
         self.edited.emit()
+        self.__slabel.setText(str(self.__slider.value()))
 
     @staticmethod
     def createinstance(params):
