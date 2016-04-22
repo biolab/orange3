@@ -853,21 +853,6 @@ class TableTestCase(unittest.TestCase):
         else:
             self.fail("Filter returns too uneven distributions")
 
-    def test_filter_same_value(self):
-        d = data.Table("zoo")
-        mind = d.domain["type"].to_val("mammal")
-        lind = d.domain["legs"].to_val("4")
-        gind = d.domain["name"].to_val("girl")
-        for pos, val, r in (("type", "mammal", mind),
-                            (len(d.domain.attributes), mind, mind),
-                            ("legs", lind, lind),
-                            ("name", "girl", gind)):
-            e = filter.SameValue(pos, val)(d)
-            f = filter.SameValue(pos, val, negate=True)(d)
-            self.assertEqual(len(e) + len(f), len(d))
-            self.assertTrue(all(ex[pos] == r for ex in e))
-            self.assertTrue(all(ex[pos] != r for ex in f))
-
     def test_filter_values_nested(self):
         d = data.Table("iris")
         f1 = filter.FilterContinuous(d.columns.sepal_length,
