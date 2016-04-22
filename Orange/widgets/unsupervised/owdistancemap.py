@@ -8,7 +8,7 @@ import numpy
 from PyQt4.QtGui import (
     QFormLayout, QGraphicsRectItem, QGraphicsGridLayout,
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform, QGraphicsWidget, QApplication
+    QBrush, QTransform, QApplication
 )
 
 from PyQt4.QtCore import Qt, QRect, QRectF, QSize, QPointF
@@ -23,8 +23,6 @@ from Orange.clustering import hierarchical
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
 from .owhierarchicalclustering import DendrogramWidget, GraphicsSimpleTextList
-from Orange.widgets.io import FileFormat
-
 
 def _remove_item(item):
     item.setParentItem(None)
@@ -525,6 +523,7 @@ class OWDistanceMap(widget.OWWidget):
         if self.matrix is not None:
             self._update_ordering()
             self._setup_scene()
+            self._update_labels()
 
     def _update_ordering(self):
         if self.sorting == OWDistanceMap.NoOrdering:
@@ -548,9 +547,9 @@ class OWDistanceMap(widget.OWWidget):
             self._update_labels()
 
     def _update_labels(self, ):
-        if self.annotation_idx == 0:
+        if self.annotation_idx == 0:  # None
             labels = None
-        elif self.annotation_idx == 1:
+        elif self.annotation_idx == 1:  # Enumeration
             labels = [str(i + 1) for i in range(self.matrix.shape[0])]
         elif self.annot_combo.model()[self.annotation_idx] == "Attribute names":
                 attr = self.matrix.row_items.domain.attributes
@@ -561,7 +560,7 @@ class OWDistanceMap(widget.OWWidget):
         elif isinstance(self.items, Orange.data.Table):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
-            labels = [var.repr_val(value) for value in column]
+            labels = [var.str_val(value) for value in column]
 
         self._set_labels(labels)
 
@@ -750,5 +749,6 @@ def test(argv=sys.argv):
     del w
     return rval
 
+# run widget by python -m Orange.widgets.unsupervised.owdistancemap
 if __name__ == "__main__":
     sys.exit(test())
