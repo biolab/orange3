@@ -75,14 +75,14 @@ class HasClass(Filter):
 
     def __call__(self, data):
         if isinstance(data, Instance):
-            return self.negate != bn.anynan(data._y)
+            return self.negate == bn.anynan(data._y)
         if isinstance(data, Storage):
             try:
                 return data._filter_has_class(self.negate)
             except NotImplementedError:
                 pass
 
-        r = np.fromiter((bn.anynan(inst._y) for inst in data), bool, len(data))
+        r = np.fromiter((not bn.anynan(inst._y) for inst in data), bool, len(data))
         if self.negate:
             r = np.logical_not(r)
         return data[r]
