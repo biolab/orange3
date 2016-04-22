@@ -4,9 +4,11 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from Orange.data import Table
-from Orange.data.filter import FilterContinuous, FilterDiscrete, Values, HasClass
+import numpy as np
 
+from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data.filter import \
+    FilterContinuous, FilterDiscrete, Values, HasClass
 
 NIMOCK = MagicMock(side_effect=NotImplementedError())
 
@@ -67,3 +69,142 @@ class TestHasClassFilter(unittest.TestCase):
     @patch('Orange.data.Table._filter_has_class', NIMOCK)
     def test_has_class_filter_not_implemented(self):
         self.test_has_class_filter_table()
+
+
+class TestFilterContinuous(unittest.TestCase):
+    def setUp(self):
+        self.domain = Domain([ContinuousVariable(x) for x in "abcd"])
+        self.inst = Table(self.domain, np.array([[0.1, 0.2, 0.3, np.nan]]))[0]
+
+    def test_min(self):
+        flt = FilterContinuous(1, FilterContinuous.Between, 1, 2)
+        self.assertEqual(flt.min, 1)
+        self.assertEqual(flt.max, 2)
+        self.assertEqual(flt.ref, 1)
+
+        flt.ref = 0
+        self.assertEqual(flt.min, 0)
+
+        flt.min = -1
+        self.assertEqual(flt.ref, -1)
+
+        self.assertRaises(
+            TypeError,
+            FilterContinuous, 1, FilterContinuous.Equal, 0, c=12)
+        self.assertRaises(
+            TypeError,
+            FilterContinuous, 1, FilterContinuous.Equal, 0, min=5, c=12)
+
+        flt = FilterContinuous(1, FilterContinuous.Between, min=1, max=2)
+        self.assertEqual(flt.ref, 1)
+
+    def test_operator(self):
+        inst = self.inst
+        flt = FilterContinuous
+        self.assertTrue(flt(1, flt.Equal, 0.2)(inst))
+        self.assertFalse(flt(1, flt.Equal, 0.3)(inst))
+
+        self.assertTrue(flt(1, flt.NotEqual, 0.3)(inst))
+        self.assertFalse(flt(1, flt.NotEqual, 0.2)(inst))
+
+        self.assertTrue(flt(1, flt.Less, 0.3)(inst))
+        self.assertFalse(flt(1, flt.Less, 0.2)(inst))
+
+        self.assertTrue(flt(1, flt.LessEqual, 0.3)(inst))
+        self.assertTrue(flt(1, flt.LessEqual, 0.2)(inst))
+        self.assertFalse(flt(1, flt.LessEqual, 0.1)(inst))
+
+        self.assertTrue(flt(1, flt.Greater, 0.1)(inst))
+        self.assertFalse(flt(1, flt.Greater, 0.2)(inst))
+
+        self.assertTrue(flt(1, flt.GreaterEqual, 0.1)(inst))
+        self.assertTrue(flt(1, flt.GreaterEqual, 0.2)(inst))
+        self.assertFalse(flt(1, flt.GreaterEqual, 0.3)(inst))
+
+        self.assertTrue(flt(1, flt.Between, 0.05, 0.4)(inst))
+        self.assertTrue(flt(1, flt.Between, 0.2, 0.4)(inst))
+        self.assertTrue(flt(1, flt.Between, 0.05, 0.2)(inst))
+        self.assertFalse(flt(1, flt.Between, 0.3, 0.4)(inst))
+
+        self.assertFalse(flt(1, flt.Outside, 0.05, 0.4)(inst))
+        self.assertFalse(flt(1, flt.Outside, 0.2, 0.4)(inst))
+        self.assertFalse(flt(1, flt.Outside, 0.05, 0.2)(inst))
+        self.assertTrue(flt(1, flt.Outside, 0.3, 0.4)(inst))
+
+        self.assertTrue(flt(1, flt.IsDefined)(inst))
+        self.assertFalse(flt(3, flt.IsDefined)(inst))
+
+        self.assertRaises(ValueError, flt(1, -1, 1), inst)
+
+    def test_position(self):
+        inst = self.inst
+        flt = FilterContinuous
+        self.assertFalse(flt(0, flt.Equal, 0.2)(inst))
+        self.assertTrue(flt(1, flt.Equal, 0.2)(inst))
+        self.assertFalse(flt(2, flt.Equal, 0.2)(inst))
+        self.assertFalse(flt(3, flt.Equal, 0.2)(inst))
+
+        self.assertFalse(flt("a", flt.Equal, 0.2)(inst))
+        self.assertTrue(flt("b", flt.Equal, 0.2)(inst))
+        self.assertFalse(flt("c", flt.Equal, 0.2)(inst))
+        self.assertFalse(flt("d", flt.Equal, 0.2)(inst))
+
+        a, b, c, d = self.domain.attributes
+        self.assertFalse(flt(a, flt.Equal, 0.2)(inst))
+        self.assertTrue(flt(b, flt.Equal, 0.2)(inst))
+        self.assertFalse(flt(c, flt.Equal, 0.2)(inst))
+        self.assertFalse(flt(d, flt.Equal, 0.2)(inst))
+
+    def test_nan(self):
+        inst = self.inst
+        flt = FilterContinuous
+
+        self.assertFalse(flt(3, flt.Equal, 0.3)(inst))
+        self.assertFalse(flt(3, flt.NotEqual, 0.3)(inst))
+        self.assertFalse(flt(3, flt.Less, 0.2)(inst))
+        self.assertFalse(flt(3, flt.LessEqual, 0.1)(inst))
+        self.assertFalse(flt(3, flt.Greater, 0.2)(inst))
+        self.assertFalse(flt(3, flt.GreaterEqual, 0.1)(inst))
+        self.assertFalse(flt(3, flt.Between, 0.05, 0.4)(inst))
+        self.assertFalse(flt(3, flt.Outside, 0.05, 0.4)(inst))
+
+        self.assertTrue(flt(3, flt.Equal, np.nan)(inst))
+        self.assertFalse(flt(3, flt.NotEqual, np.nan)(inst))
+
+    def test_str(self):
+        flt = FilterContinuous(1, FilterContinuous.Equal, 1)
+
+        self.assertEqual(str(flt), "feature(1) = 1")
+
+        flt = FilterContinuous("foo", FilterContinuous.Equal, 1)
+        self.assertEqual(str(flt), "foo = 1")
+
+        flt = FilterContinuous(self.domain[0], FilterContinuous.Equal, 1, 2)
+        self.assertEqual(str(flt), "a = 1")
+
+        flt.oper = flt.NotEqual
+        self.assertEqual(str(flt), "a ≠ 1")
+
+        flt.oper = flt.Less
+        self.assertEqual(str(flt), "a < 1")
+
+        flt.oper = flt.LessEqual
+        self.assertEqual(str(flt), "a ≤ 1")
+
+        flt.oper = flt.Greater
+        self.assertEqual(str(flt), "a > 1")
+
+        flt.oper = flt.GreaterEqual
+        self.assertEqual(str(flt), "a ≥ 1")
+
+        flt.oper = flt.Between
+        self.assertEqual(str(flt), "1 ≤ a ≤ 2")
+
+        flt.oper = flt.Outside
+        self.assertEqual(str(flt), "not 1 ≤ a ≤ 2")
+
+        flt.oper = flt.IsDefined
+        self.assertEqual(str(flt), "a is defined")
+
+        flt.oper = -1
+        self.assertEqual(str(flt), "invalid operator")

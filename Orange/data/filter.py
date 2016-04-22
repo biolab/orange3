@@ -6,7 +6,7 @@ from math import isnan
 from ..misc.enum import Enum
 import numpy as np
 import bottlechest as bn
-from Orange.data import Instance, Storage
+from Orange.data import Instance, Storage, Variable
 
 
 class Filter:
@@ -334,6 +334,8 @@ class FilterContinuous(ValueFilter):
         if inst.domain is not self.last_domain:
             self.cache_position(inst.domain)
         value = inst[self.pos_cache]
+        if isnan(value):
+            return self.oper == self.Equal and isnan(self.ref)
         if self.oper == self.Equal:
             return value == self.ref
         if self.oper == self.NotEqual:
@@ -351,28 +353,29 @@ class FilterContinuous(ValueFilter):
         if self.oper == self.Outside:
             return not self.ref <= value <= self.max
         if self.oper == self.IsDefined:
-            return not isnan(value)
+            return True
         raise ValueError("invalid operator")
 
     def __str__(self):
-        if self.oper == self.Equal:
-            return "feature_%s == %s" % (self.column, self.ref)
-        if self.oper == self.NotEqual:
-            return "feature_%s != %s" % (self.column, self.ref)
-        if self.oper == self.Less:
-            return "feature_%s < %s" % (self.column, self.ref)
-        if self.oper == self.LessEqual:
-            return "feature_%s <= %s" % (self.column, self.ref)
-        if self.oper == self.Greater:
-            return "feature_%s > %s" % (self.column, self.ref)
-        if self.oper == self.GreaterEqual:
-            return "feature_%s >= %s" % (self.column, self.ref)
+        if isinstance(self.column, str):
+            column = self.column
+        elif isinstance(self.column, Variable):
+            column = self.column.name
+        else:
+            column = "feature({})".format(self.column)
+
+        names = {self.Equal: "=", self.NotEqual: "≠",
+                 self.Less: "<", self.LessEqual: "≤",
+                 self.Greater: ">", self.GreaterEqual: "≥"}
+        if self.oper in names:
+            return "{} {} {}".format(column, names[self.oper], self.ref)
         if self.oper == self.Between:
-            return "feature_%s <= %s <= %s" % (self.column, self.ref, self.max)
+            return "{} ≤ {} ≤ {}".format(self.min, column, self.max)
         if self.oper == self.Outside:
-            return "NOT %s <= feature_%s <= %s" % (self.column, self.ref, self.max)
+            return "not {} ≤ {} ≤ {}".format(self.min, column, self.max)
         if self.oper == self.IsDefined:
-            return "feature_%s IS DEFINED" % self.column
+            return "{} is defined".format(column)
+        return "invalid operator"
 
     __repr__ = __str__
 
