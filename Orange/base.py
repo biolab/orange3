@@ -263,3 +263,9 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def __repr__(self):
         return '{} {}'.format(self.name, self.params)
+
+    @property
+    def supports_weights(self):
+        """Indicates whether this learner supports weighted instances.
+        """
+        return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames

@@ -18,7 +18,6 @@ class SVRLearner(SklLearner):
                  cache_size=200, max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_weights = True
 
 
 class NuSVRLearner(SklLearner):
@@ -31,7 +30,6 @@ class NuSVRLearner(SklLearner):
                  cache_size=200, max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_weights = True
 
 
 if __name__ == '__main__':

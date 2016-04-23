@@ -33,7 +33,6 @@ class SVMLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_weights = True
 
 
 class LinearSVMLearner(SklLearner):
@@ -70,7 +69,6 @@ class NuSVMLearner(SklLearner):
                  max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_weights = True
 
 
 class OneClassSVMLearner(SklLearnerBase):
@@ -83,7 +81,6 @@ class OneClassSVMLearner(SklLearnerBase):
                  max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_weights = True
 
     def fit(self, X, Y=None, W=None):
         clf = self.__wraps__(**self.params)
