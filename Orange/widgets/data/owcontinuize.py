@@ -59,33 +59,34 @@ class OWContinuize(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        my = self.my  # type: OWContinuize
 
         box = gui.vBox(self.controlArea, "Multinomial attributes")
         gui.radioButtonsInBox(
-            box, self, "multinomial_treatment",
+            box, self, my.multinomial_treatment,
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.settings_changed)
 
         box = gui.vBox(self.controlArea, "Continuous attributes")
         gui.radioButtonsInBox(
-            box, self, "continuous_treatment",
+            box, self, my.continuous_treatment,
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
 
         box = gui.vBox(self.controlArea, "Discrete class attribute")
         gui.radioButtonsInBox(
-            box, self, "class_treatment",
+            box, self, my.class_treatment,
             btnLabels=[t[0] for t in self.class_treats],
             callback=self.settings_changed)
 
         zbbox = gui.vBox(self.controlArea, "Value range")
 
         gui.radioButtonsInBox(
-            zbbox, self, "zero_based",
+            zbbox, self, my.zero_based,
             btnLabels=self.value_ranges,
             callback=self.settings_changed)
 
-        gui.auto_commit(self.buttonsArea, self, "autosend", "Apply", box=False)
+        gui.auto_commit(self.buttonsArea, self, my.autosend, "Apply", box=False)
 
         self.data = None
 
