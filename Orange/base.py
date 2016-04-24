@@ -103,14 +103,13 @@ class Model:
             return self.predict(data.X)
         elif isinstance(data, Instance):
             return self.predict(np.atleast_2d(data.x))
-        raise TypeError("Unrecognized argument (instance of '{}')".format(
-                        type(data).__name__))
+        raise TypeError("Unrecognized argument (instance of '{}')"
+                        .format(type(data).__name__))
 
     def __call__(self, data, ret=Value):
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
-        if (ret > 0
-            and any(v.is_continuous for v in self.domain.class_vars)):
+        if ret > 0 and any(v.is_continuous for v in self.domain.class_vars):
             raise ValueError("cannot predict continuous distributions")
 
         # Call the predictor
@@ -129,13 +128,13 @@ class Model:
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
             if not isinstance(data[0], (list, tuple)):
-                data = [ data ]
+                data = [data]
             data = Table(self.original_domain, data)
             data = Table(self.domain, data)
             prediction = self.predict_storage(data)
         else:
-            raise TypeError("Unrecognized argument (instance of '{}')".format(
-                            type(data).__name__))
+            raise TypeError("Unrecognized argument (instance of '{}')"
+                            .format(type(data).__name__))
 
         # Parse the result into value and probs
         multitarget = len(self.domain.class_vars) > 1
@@ -254,7 +253,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         m.params = self.params
         return m
 
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
         Y = Y.reshape(-1)
         if W is None or not self.supports_weights:
