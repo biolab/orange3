@@ -34,7 +34,7 @@ This meta data is discovered at Orange Canvas application startup
 leveraging setuptools/distribute and its `entry points`_ protocol.
 Orange Canvas looks for widgets using an ``orange.widgets`` entry point.
 
-.. _`entry points`: http://pythonhosted.org/distribute/setuptools.html#dynamic-discovery-of-services-and-plugins
+.. _`entry points`: https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins
 
 
 Defining a widget
