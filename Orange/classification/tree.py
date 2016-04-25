@@ -26,4 +26,3 @@ class TreeLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        self.supports_weights = True
