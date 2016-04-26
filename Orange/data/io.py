@@ -1,3 +1,4 @@
+import contextlib
 import csv
 import locale
 import pickle
@@ -5,15 +6,17 @@ import re
 import subprocess
 import sys
 import warnings
+from tempfile import NamedTemporaryFile
 
-from os import path
+from os import path, unlink
 from ast import literal_eval
 from math import isnan
 from numbers import Number
 from itertools import chain, repeat
 from functools import lru_cache
 from collections import OrderedDict
-
+from urllib.parse import urlparse, unquote as urlunquote
+from urllib.request import urlopen
 
 import bottlechest as bn
 import numpy as np
@@ -788,3 +791,65 @@ class DotReader(FileFormat):
         if type(tree) == dict:
             tree = tree['tree']
         cls.write_graph(filename, tree)
+
+
+class UrlReader(FileFormat):
+    def read(self):
+        self.filename = self._trim(self._resolve_redirects(self.filename))
+
+        with contextlib.closing(urlopen(self.filename, timeout=10)) as response:
+            name = self._suggest_filename(response.headers['content-disposition'])
+            with NamedTemporaryFile(suffix=name, delete=False) as f:
+                f.write(response.read())
+                # delete=False is a workaround for https://bugs.python.org/issue14243
+
+            reader = self.get_reader(f.name)
+            data = reader.read()
+            unlink(f.name)
+        # Override name set in from_file() to avoid holding the temp prefix
+        data.name = path.splitext(name)[0]
+        data.origin = self.filename
+        return data
+
+    def _resolve_redirects(self, url):
+        # Resolve (potential) redirects to a final URL
+        with contextlib.closing(urlopen(url, timeout=10)) as response:
+            return response.url
+
+    def _trim(self, url):
+        URL_TRIMMERS = (
+            self._trim_googlesheet_url,
+        )
+        for trim in URL_TRIMMERS:
+            try:
+                url = trim(url)
+            except ValueError:
+                continue
+            else:
+                break
+        return url
+
+    def _trim_googlesheet_url(self, url):
+        match = re.match(r'(?:https?://)?(?:www\.)?'
+                         'docs\.google\.com/spreadsheets/d/'
+                         '(?P<workbook_id>[-\w_]+)'
+                         '(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
+                         url, re.IGNORECASE)
+        try:
+            workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
+            if not workbook:
+                raise ValueError
+        except (AttributeError, ValueError):
+            raise ValueError
+        url = 'https://docs.google.com/spreadsheets/d/{}/export?format=tsv'.format(workbook)
+        if sheet:
+            url += '&gid=' + sheet
+        return url
+
+    def _suggest_filename(self, content_disposition):
+        default_name = re.sub(r'[\\:/]', '_', urlparse(self.filename).path)
+
+        # See https://tools.ietf.org/html/rfc6266#section-4.1
+        matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
+                             content_disposition or '')
+        return urlunquote(matches[-1]) if matches else default_name

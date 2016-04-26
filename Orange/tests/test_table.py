@@ -1317,7 +1317,7 @@ a\tb\tc
 
     urlopen = _MockUrlOpen()
 
-    @patch('Orange.data.table.urlopen', urlopen)
+    @patch('Orange.data.io.urlopen', urlopen)
     def test_google_sheets(self):
         d = data.Table(self.urlopen.url)
         self.urlopen.assert_called_with('https://docs.google.com/spreadsheets/d/ABCD/export?format=tsv',

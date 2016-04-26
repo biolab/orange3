@@ -515,55 +515,9 @@ class Table(MutableSequence, Storage):
 
     @classmethod
     def from_url(cls, url):
-        # Resolve (potential) redirects to a final URL
-        response = urlopen(url, timeout=10)
-        url = response.url
-        response.close()
-
-        def url_googlesheets(url):
-            match = re.match(r'(?:https?://)?(?:www\.)?'
-                             'docs\.google\.com/spreadsheets/d/'
-                             '(?P<workbook_id>[-\w_]+)'
-                             '(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
-                             url, re.IGNORECASE)
-            try:
-                workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
-                if not workbook:
-                    raise ValueError
-            except (AttributeError, ValueError):
-                raise ValueError
-            url = 'https://docs.google.com/spreadsheets/d/{}/export?format=tsv'.format(workbook)
-            if sheet:
-                url += '&gid=' + sheet
-            return url
-
-        URL_TRIMMERS = (
-            url_googlesheets,
-        )
-        for trim in URL_TRIMMERS:
-            try: url = trim(url)
-            except ValueError: continue
-            else: break
-
-        name = re.sub(r'[\\:/]', '_', urlparse(url).path)
-
-        def suggested_filename(content_disposition):
-            # See https://tools.ietf.org/html/rfc6266#section-4.1
-            matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
-                                 content_disposition or '')
-            return urlunquote(matches[-1]) if matches else ''
-
-        with urlopen(url, timeout=10) as response:
-            name = suggested_filename(response.headers['content-disposition']) or name
-            with NamedTemporaryFile(suffix=name, delete=False) as f:
-                f.write(response.read())
-                # delete=False is a workaround for https://bugs.python.org/issue14243
-            data = cls.from_file(f.name)
-            os.unlink(f.name)
-        # Override name set in from_file() to avoid holding the temp prefix
-        data.name = os.path.splitext(name)[0]
-        data.origin = url
-        return data
+        from Orange.data.io import UrlReader
+        reader = UrlReader(url)
+        return reader.read()
 
     # Helper function for __setitem__ and insert:
     # Set the row of table data matrices
