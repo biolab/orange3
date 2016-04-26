@@ -13,7 +13,8 @@ import pkg_resources
 
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
-from PyQt4.QtGui import QCursor, QApplication
+from PyQt4.QtGui import QCursor, QApplication, QTableView, QHeaderView, \
+    QStyledItemDelegate
 
 # Some Orange widgets might expect this here
 from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
@@ -35,6 +36,63 @@ __re_label = re.compile(r"(^|[^%])%\((?P<value>[a-zA-Z]\w*)\)")
 OrangeUserRole = itertools.count(Qt.UserRole)
 
 LAMBDA_NAME = namegen('_lambda_')
+
+
+class TableView(QTableView):
+    """An auxilliary table view for use with PyTableModel in control areas"""
+    def __init__(self, parent=None, **kwargs):
+        kwargs = dict(
+            dict(showGrid=False,
+                 sortingEnabled=True,
+                 cornerButtonEnabled=False,
+                 alternatingRowColors=True,
+                 selectionBehavior=self.SelectRows,
+                 selectionMode=self.ExtendedSelection,
+                 horizontalScrollMode=self.ScrollPerPixel,
+                 verticalScrollMode=self.ScrollPerPixel,
+                 editTriggers=self.DoubleClicked | self.EditKeyPressed),
+            **kwargs)
+        super().__init__(parent, **kwargs)
+        h = self.horizontalHeader()
+        h.setCascadingSectionResizes(True)
+        h.setMinimumSectionSize(-1)
+        h.setStretchLastSection(True)
+        h.setResizeMode(QHeaderView.ResizeToContents)
+        v = self.verticalHeader()
+        v.setVisible(False)
+        v.setResizeMode(QHeaderView.ResizeToContents)
+
+    class BoldFontDelegate(QStyledItemDelegate):
+        """Paints the text of associated cells in bold font.
+
+        Can be used e.g. with QTableView.setItemDelegateForColumn() to make
+        certain table columns bold, or if callback is provided, the item's
+        model index is passed to it, and the item is made bold only if the
+        callback returns true.
+
+        Parameters
+        ----------
+        parent: QObject
+            The parent QObject.
+        callback: callable
+            Accepts model index and returns True if the item is to be
+            rendered in bold font.
+        """
+        def __init__(self, parent=None, callback=None):
+            super().__init__(parent)
+            self._callback = callback
+
+        def paint(self, painter, option, index):
+            """Paint item text in bold font"""
+            if not callable(self._callback) or self._callback(index):
+                option.font.setWeight(option.font.Bold)
+            super().paint(painter, option, index)
+
+        def sizeHint(self, option, index):
+            """Ensure item size accounts for bold font width"""
+            if not callable(self._callback) or self._callback(index):
+                option.font.setWeight(option.font.Bold)
+            return super().sizeHint(option, index)
 
 
 def resource_filename(path):
