@@ -59,7 +59,10 @@ class OWConfusionMatrix(widget.OWWidget):
                   "Proportion of predicted",
                   "Proportion of actual"]
 
+    settingsHandler = settings.ClassValuesContextHandler()
+
     selected_learner = settings.Setting([])
+    selection = settings.ContextSetting(set())
     selected_quantity = settings.Setting(0)
     append_predictions = settings.Setting(True)
     append_probabilities = settings.Setting(False)
@@ -92,11 +95,11 @@ class OWConfusionMatrix(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Select")
 
-        gui.button(box, self, "Correct",
+        gui.button(box, self, "Select Correct",
                    callback=self.select_correct, autoDefault=False)
-        gui.button(box, self, "Misclassified",
+        gui.button(box, self, "Select Misclassified",
                    callback=self.select_wrong, autoDefault=False)
-        gui.button(box, self, "None",
+        gui.button(box, self, "Clear selection",
                    callback=self.select_none, autoDefault=False)
 
         self.outputbox = box = gui.vBox(self.controlArea, "Output")
@@ -137,8 +140,10 @@ class OWConfusionMatrix(widget.OWWidget):
     def set_results(self, results):
         """Set the input results."""
 
+        prev_sel_learner = self.selected_learner[:]
         self.clear()
         self.warning([0, 1])
+        self.closeContext()
 
         data = None
         if results is not None:
@@ -168,7 +173,8 @@ class OWConfusionMatrix(widget.OWWidget):
             self.headers = class_values + \
                            [unicodedata.lookup("N-ARY SUMMATION")]
 
-            # NOTE: The 'learner_names' is set in 'Test Learners' widget.
+            # NOTE: The 'learner_names' is set in
+            #  'Test Learners' widget.
             if hasattr(results, "learner_names"):
                 self.learners = results.learner_names
             else:
@@ -220,8 +226,12 @@ class OWConfusionMatrix(widget.OWWidget):
                 hor_header.setDefaultSectionSize(60)
             self.tablemodel.setRowCount(len(class_values) + 3)
             self.tablemodel.setColumnCount(len(class_values) + 3)
-            self.selected_learner = [0]
-            self._update()
+            self.openContext(data.domain.class_var)
+            if not prev_sel_learner or \
+                    prev_sel_learner[0] >= len(self.learners):
+                self.selected_learner[:] = [0]
+            else:
+                self.selected_learner[:] = prev_sel_learner
 
     def clear(self):
         self.results = None
@@ -335,18 +345,22 @@ class OWConfusionMatrix(widget.OWWidget):
         self.send("Selected Data", data)
 
     def _invalidate(self):
+        indices = self.tableview.selectedIndexes()
+        self.selection = {(ind.row() - 2, ind.column() - 2) for ind in indices}
         self.commit()
 
-    def _learner_changed(self):
-        # The selected learner has changed
-        indices = self.tableview.selectedIndexes()
-        self._update()
+    def _set_selection(self):
         selection = QItemSelection()
-        for sel in indices:
+        index = self.tableview.model().index
+        for row, col in self.selection:
+            sel = index(row + 2, col + 2)
             selection.select(sel, sel)
         self.tableview.selectionModel().select(
-            selection, QItemSelectionModel.ClearAndSelect
-        )
+            selection, QItemSelectionModel.ClearAndSelect)
+
+    def _learner_changed(self):
+        self._update()
+        self._set_selection()
         self.commit()
 
     def _update(self):
