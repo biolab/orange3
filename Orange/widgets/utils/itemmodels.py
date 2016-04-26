@@ -29,14 +29,12 @@ class _store(dict):
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
     if key is not None:
-        items = sorted(enumerate(seq), key=lambda pair: key(pair[1]))
+        return sorted(enumerate(seq), key=lambda pair: key(pair[1]), reverse=reverse)
     elif cmp is not None:
-        items = sorted(enumerate(seq), cmp=lambda a, b: cmp(a[1], b[1]))
+        from functools import cmp_to_key
+        return sorted(enumerate(seq), key=cmp_to_key(lambda a, b: cmp(a[1], b[1])), reverse=reverse)
     else:
-        items = sorted(enumerate(seq), key=operator.itemgetter(1))
-    if reverse:
-        items = reversed(items)
-    return items
+        return sorted(enumerate(seq), key=operator.itemgetter(1), reverse=reverse)
 
 
 @contextmanager
@@ -49,10 +47,11 @@ def signal_blocking(obj):
         obj.blockSignals(blocked)
 
 
-def _as_contiguous_range(start, stop, step):
+def _as_contiguous_range(the_slice, length):
+    start, stop, step = the_slice.indices(length)
     if step == -1:
         # Equivalent range with positive step
-        start, stop = stop + 1, start + 1
+        start, stop, step = stop + 1, start + 1, 1
     elif not (step == 1 or step is None):
         raise IndexError("Non-contiguous range.")
     return start, stop, step
@@ -216,6 +215,9 @@ class PyListModel(QAbstractListModel):
         self.__delitem__(i)
         return item
 
+    def clear(self):
+        del self[:]
+
     def __len__(self):
         return len(self._list)
 
@@ -241,8 +243,7 @@ class PyListModel(QAbstractListModel):
 
     def __delitem__(self, s):
         if isinstance(s, slice):
-            start, stop, step = s.indices(len(self))
-            start, stop, step = _as_contiguous_range(start, stop, step)
+            start, stop, step = _as_contiguous_range(s, len(self))
             self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
             s = len(self) + s if s < 0 else s
@@ -253,8 +254,7 @@ class PyListModel(QAbstractListModel):
 
     def __setitem__(self, s, value):
         if isinstance(s, slice):
-            start, stop, step = s.indices(len(self))
-            start, stop, step = _as_contiguous_range(start, stop, step)
+            start, stop, step = _as_contiguous_range(s, len(self))
             self.__delitem__(slice(start, stop, step))
 
             if not isinstance(value, list):
