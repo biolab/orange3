@@ -1,3 +1,6 @@
+"""Confusion matrix widget"""
+
+from math import isnan, isinf
 import unicodedata
 
 from PyQt4.QtGui import (
@@ -8,13 +11,21 @@ from PyQt4.QtCore import Qt, QSize
 
 import numpy
 import sklearn.metrics as skl_metrics
-from math import isnan, isinf
 
 import Orange
 from Orange.widgets import widget, settings, gui
 
 
 def confusion_matrix(res, index):
+    """
+    Compute confusion matrix
+
+    Args:
+        res (Orange.evaluation.Results): evaluation results
+        index (int): model index
+
+    Returns: Confusion matrix
+    """
     return skl_metrics.confusion_matrix(
         res.actual, res.predicted[index])
 
@@ -24,28 +35,42 @@ BorderColorRole = next(gui.OrangeUserRole)
 
 
 class BorderedItemDelegate(QStyledItemDelegate):
+    """Item delegate that paints border at the specified sides
+
+    Data for `BorderRole` is a string containing letters t, r, b and/or l,
+    which defines the sides at which the border is drawn.
+
+    Role `BorderColorRole` sets the color for the cell. If not color is given,
+    `self.color` is used as default.
+
+    Args:
+        color (QColor): default color (default default is black)
+    """
     def __init__(self, color=Qt.black):
         super().__init__()
         self.color = color
 
     def paint(self, painter, option, index):
+        """Overloads `paint` to draw borders"""
         QStyledItemDelegate.paint(self, painter, option, index)
         borders = index.data(BorderRole)
         if borders:
             color = index.data(BorderColorRole) or self.color
             painter.save()
             painter.setPen(color)
-            r = option.rect
-            for side, p1, p2 in (("t", r.topLeft(), r.topRight()),
-                                 ("r", r.topRight(), r.bottomRight()),
-                                 ("b", r.bottomLeft(), r.bottomRight()),
-                                 ("l", r.topLeft(), r.bottomLeft())):
+            rect = option.rect
+            for side, p1, p2 in (("t", rect.topLeft(), rect.topRight()),
+                                 ("r", rect.topRight(), rect.bottomRight()),
+                                 ("b", rect.bottomLeft(), rect.bottomRight()),
+                                 ("l", rect.topLeft(), rect.bottomLeft())):
                 if side in borders:
                     painter.drawLine(p1, p2)
             painter.restore()
 
 
 class OWConfusionMatrix(widget.OWWidget):
+    """Confusion matrix widget"""
+
     name = "Confusion Matrix"
     description = "Display confusion matrix constructed from results " \
                   "of evaluation of classifiers."
@@ -70,9 +95,9 @@ class OWConfusionMatrix(widget.OWWidget):
 
     UserAdviceMessages = [
         widget.Message(
-                "Clicking on cells or in headers outputs the corresponding "
-                "data instances",
-                "click_cell")]
+            "Clicking on cells or in headers outputs the corresponding "
+            "data instances",
+            "click_cell")]
 
     def __init__(self):
         super().__init__()
@@ -129,6 +154,7 @@ class OWConfusionMatrix(widget.OWWidget):
         self.mainArea.layout().addLayout(grid)
 
     def sizeHint(self):
+        """Initial size"""
         return QSize(750, 490)
 
     def _item(self, i, j):
@@ -136,6 +162,52 @@ class OWConfusionMatrix(widget.OWWidget):
 
     def _set_item(self, i, j, item):
         self.tablemodel.setItem(i, j, item)
+
+    def _init_table(self, nclasses):
+        item = self._item(0, 2)
+        item.setData("Predicted", Qt.DisplayRole)
+        item.setTextAlignment(Qt.AlignCenter)
+        item.setFlags(Qt.NoItemFlags)
+
+        self._set_item(0, 2, item)
+        item = self._item(2, 0)
+        item.setData("Actual", Qt.DisplayRole)
+        item.setTextAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        item.setFlags(Qt.NoItemFlags)
+        self.tableview.setItemDelegateForColumn(0, gui.VerticalItemDelegate())
+        self._set_item(2, 0, item)
+        self.tableview.setSpan(0, 2, 1, nclasses)
+        self.tableview.setSpan(2, 0, nclasses, 1)
+
+        font = self.tablemodel.invisibleRootItem().font()
+        bold_font = QFont(font)
+        bold_font.setBold(True)
+
+        for i in (0, 1):
+            for j in (0, 1):
+                item = self._item(i, j)
+                item.setFlags(Qt.NoItemFlags)
+                self._set_item(i, j, item)
+
+        for p, label in enumerate(self.headers):
+            for i, j in ((1, p + 2), (p + 2, 1)):
+                item = self._item(i, j)
+                item.setData(label, Qt.DisplayRole)
+                item.setFont(bold_font)
+                item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                item.setFlags(Qt.ItemIsEnabled)
+                if p < len(self.headers) - 1:
+                    item.setData("br"[j == 1], BorderRole)
+                    item.setData(QColor(192, 192, 192), BorderColorRole)
+                self._set_item(i, j, item)
+
+        hor_header = self.tableview.horizontalHeader()
+        if len(' '.join(self.headers)) < 120:
+            hor_header.setResizeMode(QHeaderView.ResizeToContents)
+        else:
+            hor_header.setDefaultSectionSize(60)
+        self.tablemodel.setRowCount(nclasses + 3)
+        self.tablemodel.setColumnCount(nclasses + 3)
 
     def set_results(self, results):
         """Set the input results."""
@@ -146,13 +218,10 @@ class OWConfusionMatrix(widget.OWWidget):
         self.closeContext()
 
         data = None
-        if results is not None:
-            if results.data is not None:
-                data = results.data
+        if results is not None and results.data is not None:
+            data = results.data
 
         if data is not None and not data.domain.has_discrete_class:
-            data = None
-            results = None
             self.warning(
                 0, "Confusion Matrix cannot be used for regression results.")
 
@@ -169,63 +238,18 @@ class OWConfusionMatrix(widget.OWWidget):
         else:
             self.report_button.setDisabled(False)
 
-            nmodels, ntests = results.predicted.shape
+            nmodels = results.predicted.shape[0]
             self.headers = class_values + \
                            [unicodedata.lookup("N-ARY SUMMATION")]
 
-            # NOTE: The 'learner_names' is set in
-            #  'Test Learners' widget.
+            # NOTE: The 'learner_names' is set in 'Test Learners' widget.
             if hasattr(results, "learner_names"):
                 self.learners = results.learner_names
             else:
-                self.learners = ["Learner #%i" % (i + 1)
+                self.learners = ["Learner #{}".format(i + 1)
                                  for i in range(nmodels)]
 
-            item = self._item(0, 2)
-            item.setData("Predicted", Qt.DisplayRole)
-            item.setTextAlignment(Qt.AlignCenter)
-            item.setFlags(Qt.NoItemFlags)
-
-            self._set_item(0, 2, item)
-            item = self._item(2, 0)
-            item.setData("Actual", Qt.DisplayRole)
-            item.setTextAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-            item.setFlags(Qt.NoItemFlags)
-            self.tableview.setItemDelegateForColumn(
-                0, gui.VerticalItemDelegate())
-            self._set_item(2, 0, item)
-            self.tableview.setSpan(0, 2, 1, len(class_values))
-            self.tableview.setSpan(2, 0, len(class_values), 1)
-
-            font = self.tablemodel.invisibleRootItem().font()
-            bold_font = QFont(font)
-            bold_font.setBold(True)
-
-            for i in (0, 1):
-                for j in (0, 1):
-                    item = self._item(i, j)
-                    item.setFlags(Qt.NoItemFlags)
-                    self._set_item(i, j, item)
-
-            for p, label in enumerate(self.headers):
-                for i, j in ((1, p + 2), (p + 2, 1)):
-                    item = self._item(i, j)
-                    item.setData(label, Qt.DisplayRole)
-                    item.setFont(bold_font)
-                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                    item.setFlags(Qt.ItemIsEnabled)
-                    if p < len(self.headers) - 1:
-                        item.setData("br"[j == 1], BorderRole)
-                        item.setData(QColor(192, 192, 192), BorderColorRole)
-                    self._set_item(i, j, item)
-
-            hor_header = self.tableview.horizontalHeader()
-            if len(' '.join(self.headers)) < 120:
-                hor_header.setResizeMode(QHeaderView.ResizeToContents)
-            else:
-                hor_header.setDefaultSectionSize(60)
-            self.tablemodel.setRowCount(len(class_values) + 3)
-            self.tablemodel.setColumnCount(len(class_values) + 3)
+            self._init_table(len(class_values))
             self.openContext(data.domain.class_var)
             if not prev_sel_learner or \
                     prev_sel_learner[0] >= len(self.learners):
@@ -234,44 +258,43 @@ class OWConfusionMatrix(widget.OWWidget):
                 self.selected_learner[:] = prev_sel_learner
 
     def clear(self):
+        """Reset the widget, clear controls"""
         self.results = None
         self.data = None
         self.tablemodel.clear()
         self.headers = []
         # Clear learners last. This action will invoke `_learner_changed`
-        # method
         self.learners = []
 
     def select_correct(self):
+        """Select the diagonal elements of the matrix"""
         selection = QItemSelection()
         n = self.tablemodel.rowCount()
         for i in range(2, n):
             index = self.tablemodel.index(i, i)
             selection.select(index, index)
-
         self.tableview.selectionModel().select(
-            selection, QItemSelectionModel.ClearAndSelect
-        )
+            selection, QItemSelectionModel.ClearAndSelect)
 
     def select_wrong(self):
+        """Select the off-diagonal elements of the matrix"""
         selection = QItemSelection()
         n = self.tablemodel.rowCount()
-
         for i in range(2, n):
             for j in range(i + 1, n):
                 index = self.tablemodel.index(i, j)
                 selection.select(index, index)
                 index = self.tablemodel.index(j, i)
                 selection.select(index, index)
-
         self.tableview.selectionModel().select(
-            selection, QItemSelectionModel.ClearAndSelect
-        )
+            selection, QItemSelectionModel.ClearAndSelect)
 
     def select_none(self):
+        """Reset selection"""
         self.tableview.selectionModel().clear()
 
     def cell_clicked(self, model_index):
+        """Handle cell click event"""
         i, j = model_index.row(), model_index.column()
         if not i or not j:
             return
@@ -287,10 +310,10 @@ class OWConfusionMatrix(widget.OWWidget):
 
         if selection is not None:
             self.tableview.selectionModel().select(
-                selection, QItemSelectionModel.ClearAndSelect
-            )
+                selection, QItemSelectionModel.ClearAndSelect)
 
     def commit(self):
+        """Output data instances corresponding to selected cells"""
         if self.results is not None and self.data is not None \
                 and self.selected_learner:
             indices = self.tableview.selectedIndexes()
@@ -364,7 +387,7 @@ class OWConfusionMatrix(widget.OWWidget):
         self.commit()
 
     def _update(self):
-        def isinvalid(x):
+        def _isinvalid(x):
             return isnan(x) or isinf(x)
 
         # Update the displayed confusion matrix
@@ -373,7 +396,6 @@ class OWConfusionMatrix(widget.OWWidget):
             cmatrix = confusion_matrix(self.results, index)
             colsum = cmatrix.sum(axis=0)
             rowsum = cmatrix.sum(axis=1)
-            total = rowsum.sum()
             n = len(cmatrix)
             diag = numpy.diag_indices(n)
 
@@ -395,32 +417,29 @@ class OWConfusionMatrix(widget.OWWidget):
             colors /= div
             colors[diag] = normalized[diag] / normalized[diag].max()
 
-            hue = [0, 240]
             for i in range(n):
                 for j in range(n):
                     val = normalized[i, j]
                     col_val = colors[i, j]
                     item = self._item(i + 2, j + 2)
                     item.setData(
-                        "NA" if isinvalid(val) else formatstr.format(val),
+                        "NA" if _isinvalid(val) else formatstr.format(val),
                         Qt.DisplayRole)
                     bkcolor = QColor.fromHsl(
-                        hue[i == j], 160,
-                        255 if isinvalid(col_val) else int(255 - 30 * col_val))
+                        [0, 240][i == j], 160,
+                        255 if _isinvalid(col_val) else int(255 - 30 * col_val))
                     item.setData(QBrush(bkcolor), Qt.BackgroundRole)
                     item.setData("trbl", BorderRole)
                     item.setToolTip("actual: {}\npredicted: {}".format(
-                            self.headers[i], self.headers[j]))
+                        self.headers[i], self.headers[j]))
                     item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                     self._set_item(i + 2, j + 2, item)
 
-            model = self.tablemodel
-            font = model.invisibleRootItem().font()
-            bold_font = QFont(font)
+            bold_font = self.tablemodel.invisibleRootItem().font()
             bold_font.setBold(True)
 
-            def sum_item(value, border=""):
+            def _sum_item(value, border=""):
                 item = QStandardItem()
                 item.setData(value, Qt.DisplayRole)
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -430,14 +449,13 @@ class OWConfusionMatrix(widget.OWWidget):
                 item.setData(QColor(192, 192, 192), BorderColorRole)
                 return item
 
-            N = len(colsum)
-            for i in range(N):
-                model.setItem(N + 2, i + 2, sum_item(int(colsum[i]), "t"))
-                model.setItem(i + 2, N + 2, sum_item(int(rowsum[i]), "l"))
-
-            model.setItem(N + 2, N + 2, sum_item(int(total)))
+            for i in range(n):
+                self._set_item(n + 2, i + 2, _sum_item(int(colsum[i]), "t"))
+                self._set_item(i + 2, n + 2, _sum_item(int(rowsum[i]), "l"))
+            self._set_item(n + 2, n + 2, _sum_item(int(rowsum.sum())))
 
     def send_report(self):
+        """Send report"""
         if self.results is not None and self.selected_learner:
             index = self.selected_learner[0]
             self.report_table(
@@ -449,13 +467,13 @@ class OWConfusionMatrix(widget.OWWidget):
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
 
-    app = QApplication([])
+    APP = QApplication([])
     w = OWConfusionMatrix()
     w.show()
-    data = Orange.data.Table("iris")
-    res = Orange.evaluation.CrossValidation(
-        data, [Orange.classification.TreeLearner(),
+    IRIS = Orange.data.Table("iris")
+    RES_CV = Orange.evaluation.CrossValidation(
+        IRIS, [Orange.classification.TreeLearner(),
                Orange.classification.MajorityLearner()],
         store_data=True)
-    w.set_results(res)
-    app.exec_()
+    w.set_results(RES_CV)
+    APP.exec_()
