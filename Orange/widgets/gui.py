@@ -1,7 +1,7 @@
 """
 Wrappers for controls used in widgets
 """
-
+import contextlib
 import math
 import os
 import re
@@ -1173,19 +1173,18 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
     lb.ogLabels = labels
     lb.ogMaster = master
 
-    if value is not None:
-        clist = getdeepattr(master, value)
-        if not isinstance(clist, ControlledList):
-            clist = ControlledList(clist, lb)
-            master.__setattr__(value, clist)
     if labels is not None:
         setattr(master, labels, getdeepattr(master, labels))
         if hasattr(master, CONTROLLED_ATTRIBUTES):
             getattr(master, CONTROLLED_ATTRIBUTES)[labels] = CallFrontListBoxLabels(lb)
     if value is not None:
-        setattr(master, value, getdeepattr(master, value))
-    connectControl(master, value, callback, lb.itemSelectionChanged,
-                   CallFrontListBox(lb), CallBackListBox(lb, master))
+        clist = getdeepattr(master, value)
+        if not isinstance(clist, (int, ControlledList)):
+            clist = ControlledList(clist, lb)
+            master.__setattr__(value, clist)
+        setattr(master, value, clist)
+        connectControl(master, value, callback, lb.itemSelectionChanged,
+                       CallFrontListBox(lb), CallBackListBox(lb, master))
 
     misc.setdefault('addSpace', True)
     miscellanea(lb, bg, widget, **misc)
@@ -2254,6 +2253,18 @@ def connectControl(master, value, f, signal,
     return cfront, cback, cfunc
 
 
+@contextlib.contextmanager
+def disable_opposite(obj):
+    opposite = getattr(obj, "opposite", None)
+    if opposite:
+        opposite.disabled += 1
+        try:
+            yield
+        finally:
+            if opposite:
+                opposite.disabled -= 1
+
+
 class ControlledCallback:
     def __init__(self, widget, attribute, f=None):
         self.widget = widget
@@ -2275,17 +2286,7 @@ class ControlledCallback:
                 value = self.func(0)
             else:
                 value = self.func(value)
-        opposite = getattr(self, "opposite", None)
-        if opposite:
-            try:
-                opposite.disabled += 1
-                if isinstance(self.widget, dict):
-                    self.widget[self.attribute] = value
-                else:
-                    setattr(self.widget, self.attribute, value)
-            finally:
-                opposite.disabled -= 1
-        else:
+        with disable_opposite(self):
             if isinstance(self.widget, dict):
                 self.widget[self.attribute] = value
             else:
@@ -2375,13 +2376,15 @@ class CallBackListBox:
     def __call__(self, *_):  # triggered by selectionChange()
         if not self.disabled and self.control.ogValue is not None:
             clist = getdeepattr(self.widget, self.control.ogValue)
-             # skip the overloaded method to avoid a cycle
-            list.__delitem__(clist, slice(0, len(clist)))
             control = self.control
-            for i in range(control.count()):
-                if control.item(i).isSelected():
-                    list.append(clist, i)
-            self.widget.__setattr__(self.control.ogValue, clist)
+            selection = [i for i in range(control.count())
+                         if control.item(i).isSelected()]
+            if isinstance(clist, int):
+                self.widget.__setattr__(
+                    self.control.ogValue, selection[0] if selection else None)
+            else:
+                list.__setitem__(clist, slice(0, len(clist)), selection)
+                self.widget.__setattr__(self.control.ogValue, clist)
 
 
 class CallBackRadioButton:
@@ -2531,13 +2534,17 @@ class CallFrontRadioButtons(ControlledCallFront):
 class CallFrontListBox(ControlledCallFront):
     def action(self, value):
         if value is not None:
-            if not isinstance(value, ControlledList):
-                setattr(self.control.ogMaster, self.control.ogValue,
-                        ControlledList(value, self.control))
-            for i in range(self.control.count()):
-                shouldBe = i in value
-                if shouldBe != self.control.item(i).isSelected():
-                    self.control.item(i).setSelected(shouldBe)
+            if isinstance(value, int):
+                for i in range(self.control.count()):
+                    self.control.item(i).setSelected(i == value)
+            else:
+                if not isinstance(value, ControlledList):
+                    setattr(self.control.ogMaster, self.control.ogValue,
+                            ControlledList(value, self.control))
+                for i in range(self.control.count()):
+                    shouldBe = i in value
+                    if shouldBe != self.control.item(i).isSelected():
+                        self.control.item(i).setSelected(shouldBe)
 
 
 class CallFrontListBoxLabels(ControlledCallFront):
