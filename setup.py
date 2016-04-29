@@ -216,38 +216,6 @@ class CoverageCommand(Command):
         ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
 
 
-# Install desktop file and icon on GNU/Linux/BSD
-DATA_FILES = []
-if any(sys.platform.startswith(platform)
-       for platform in ('linux', 'freebsd')):
-    # Patch desktop file executable to work with virtualenv
-    try:
-        sys.real_prefix
-    except AttributeError:
-        pass  # Not in virtualenv
-    else:
-        with open(os.path.join(os.path.dirname(__file__),
-                               'distribute',
-                               'orange-canvas.desktop'), 'r+') as desktop:
-            spec = []
-            for line in desktop:
-                if line.startswith('Exec='):
-                    line = 'Exec="{}" -m Orange.canvas\n'.format(sys.executable)
-                spec.append(line)
-            desktop.seek(0)
-            desktop.truncate(0)
-            desktop.writelines(spec)
-
-    usr_share = os.path.join(sys.prefix, "share")
-    if not usr_share.startswith('/usr/') or not os.access(usr_share, os.W_OK):
-        usr_share = os.environ.get('XDG_DATA_HOME',
-                                   os.path.expanduser('~/.local/share'))
-    DATA_FILES += [
-        (os.path.join(usr_share, 'applications'),
-         ['distribute/orange-canvas.desktop']),
-        (os.path.join(usr_share, 'icons', 'hicolor', 'scalable', 'apps'),
-         ['distribute/orange-canvas.svg'])
-    ]
 
 
 def setup_package():
@@ -267,7 +235,6 @@ def setup_package():
         package_data=PACKAGE_DATA,
         install_requires=INSTALL_REQUIRES,
         entry_points=ENTRY_POINTS,
-        data_files=DATA_FILES,
         zip_safe=False,
         test_suite='Orange.tests.test_suite',
         cmdclass={
