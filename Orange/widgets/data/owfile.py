@@ -1,6 +1,6 @@
 import os
 from warnings import catch_warnings
-from xlrd import open_workbook, XLRDError
+from xlrd import open_workbook
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
