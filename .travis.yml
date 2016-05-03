@@ -36,6 +36,7 @@ addons:
             - postgresql-server-dev-9.1
             - libqt4-dev
             - gfortran
+            - xvfb
 
 before_install:
     - set -e  # fail on any error

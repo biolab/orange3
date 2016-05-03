@@ -13,5 +13,10 @@ from Orange.widgets.tests.test_perfect_domain_context_handler import *
 from Orange.widgets.tests.test_owselectcolumns import *
 from Orange.widgets.tests.test_scatterplot_density import *
 
+from Orange.widgets.tests.test_widget import *
+
+from Orange.widgets.classify.tests.test_owlogisticregression import *
+
+
 class Test(unittest.TestCase):
     pass

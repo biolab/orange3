@@ -1,8 +1,11 @@
 import unittest
+
 import bottlechest as bn
+
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
-from Orange.widgets.classify.owlogisticregression import create_coef_table
+from Orange.widgets.classify.owlogisticregression import create_coef_table, OWLogisticRegression
+from Orange.widgets.tests.base import GuiTest
 
 
 class LogisticRegressionTest(unittest.TestCase):
@@ -24,3 +27,9 @@ class LogisticRegressionTest(unittest.TestCase):
         self.assertEqual(len(coef_table), len(classifier.domain.attributes) + 1)
         self.assertEqual(len(coef_table[0]),
                          len(classifier.domain.class_var.values))
+
+
+class WidgetTests(GuiTest):
+    def test_data_before_apply(self):
+        widget = OWLogisticRegression()
+        widget.set_data(Table("iris"))
