@@ -210,7 +210,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
         def read(self):
             ...  # load headers, data, ...
-            return wrapper(self.data_table(data, headers))
+            return self.data_table(data, headers)
 
         @classmethod
         def write_file(cls, filename, data):
@@ -219,8 +219,7 @@ class FileFormat(metaclass=FileFormatMeta):
             writer.writerows(data)
 
     Wrapper FileFormat.data_table() returns Orange.data.Table from `data`
-    iterable (list (rows) of lists of values (cols)). `wrapper` is the
-    desired output class (if other than Table).
+    iterable (list (rows) of lists of values (cols)).
     """
 
     PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
@@ -231,12 +230,9 @@ class FileFormat(metaclass=FileFormatMeta):
         ----------
         filename : str
             name of the file to open
-        wrapper : class
-            desired output class
         """
         self.filename = filename
         self.sheet = None
-        self.wrapper = _IDENTITY
 
     @property
     def sheets(self):
@@ -258,16 +254,6 @@ class FileFormat(metaclass=FileFormatMeta):
             sheet name
         """
         self.sheet = sheet
-
-    def set_wrapper(self, wrapper):
-        """Set wrapper that will be used to wrap the read Table instance.
-
-        Parameters
-        ----------
-        wrapper : callable (Table -> *)
-            callable that will be called with Table containing read data.
-        """
-        self.wrapper = wrapper
 
     @classmethod
     def get_reader(cls, filename):
@@ -676,7 +662,7 @@ class CSVReader(FileFormat):
                                    '{}{}').format(pos,
                                                   ('-' + str(endpos)) if (endpos - pos) > 1 else '')
                         warnings.warn(warning)
-                    return self.wrapper(data)
+                    return data
                 except Exception as e:
                     error = e
                     continue
@@ -705,7 +691,7 @@ class PickleReader(FileFormat):
 
     def read(self):
         with open(self.filename, 'rb') as f:
-            return self.wrapper(pickle.load(f))
+            return pickle.load(f)
 
     @staticmethod
     def write_file(filename, data):
@@ -719,9 +705,6 @@ class BasketReader(FileFormat):
     DESCRIPTION = 'Basket file'
 
     def read(self):
-        if self.wrapper is None or self.wrapper is _IDENTITY:
-            self.wrapper = Table
-
         def constr_vars(inds):
             if inds:
                 return [ContinuousVariable(x.decode("utf-8")) for _, x in
@@ -734,7 +717,7 @@ class BasketReader(FileFormat):
         classes = constr_vars(class_indices)
         meta_attrs = constr_vars(meta_indices)
         domain = Domain(attrs, classes, meta_attrs)
-        return self.wrapper.from_numpy(
+        return Table.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
 
 
@@ -772,7 +755,7 @@ class ExcelReader(FileFormat):
             table = self.data_table(cells)
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
-        return self.wrapper(table)
+        return table
 
 
 class DotReader(FileFormat):

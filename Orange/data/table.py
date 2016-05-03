@@ -503,9 +503,9 @@ class Table(MutableSequence, Storage):
 
         absolute_filename = FileFormat.locate(filename, dataset_dirs)
         reader = FileFormat.get_reader(absolute_filename)
-        if wrapper or cls != Table:
-            reader.set_wrapper(wrapper or cls)
         data = reader.read()
+        if wrapper:
+            data = wrapper(data)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids

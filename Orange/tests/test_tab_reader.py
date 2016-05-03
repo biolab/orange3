@@ -137,15 +137,6 @@ class TestTabReader(unittest.TestCase):
         )
         self.assertEqual(data.domain[0].attributes, ATTRIBUTES)
 
-    def test_wrapper(self):
-        wrapper = Mock()
-        file1 = io.StringIO("\n".join("xd dbac"))
-        reader = TabReader(file1)
-        reader.set_wrapper(wrapper)
-        reader.read()
-
-        self.assertEqual(wrapper.call_count, 1)
-
     def test_sheets(self):
         file1 = io.StringIO("\n".join("xd dbac"))
         reader = TabReader(file1)
