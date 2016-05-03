@@ -9,7 +9,7 @@ from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, ExcelFormat
+from Orange.data.io import FileFormat, ExcelReader
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -267,10 +267,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     @staticmethod
     def is_multisheet_excel(fn):
-        try:
-            return open_workbook(fn).nsheets > 1
-        except XLRDError:
-            return False
+        return len(FileFormat.get_reader(fn).sheets) > 0
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
@@ -282,22 +279,21 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return data, fn
 
         def load_from_file():
-            fn = self.last_path()
-            if not fn:
+            filename = self.last_path()
+            if not filename:
                 return None, ""
-            if not os.path.exists(fn):
-                dir_name, basename = os.path.split(fn)
-                if os.path.exists(os.path.join(".", basename)):
-                    fn = os.path.join(".", basename)
-                    self.information("Loading '{}' from the current directory."
-                                     .format(basename))
-            if self.is_multisheet_excel(fn):
-                data = ExcelFormat.read_file(fn + ':' + self.xls_sheet)
-                if data:
-                    return data, fn
 
+            if not os.path.exists(filename):
+                filename = os.path.basename(filename)
+                filename = FileFormat.locate(filename, "")
+                self.information("Loading '{}' from the current directory."
+                                 .format(filename))
+
+            reader = FileFormat.get_reader(filename)
+            if isinstance(reader, ExcelReader):
+                reader.select_sheet(self.xls_sheet)
             try:
-                return load(Table.from_file, fn)
+                return load(lambda x: reader.read(), filename)
             except Exception as exc:
                 self.warnings.setText(str(exc))
                 # Let us not remove from recent files: user may fix them

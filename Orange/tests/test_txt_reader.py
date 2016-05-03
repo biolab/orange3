@@ -10,7 +10,7 @@ from io import StringIO
 import numpy as np
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable
-from Orange.data.io import CSVFormat
+from Orange.data.io import CSVReader
 
 tab_file = """\
 Feature 1\tFeature 2\tFeature 3
@@ -50,7 +50,7 @@ class TestTabReader(unittest.TestCase):
         try:
             file.write(s)
             file.close()
-            table = CSVFormat().read_file(filename)
+            table = CSVReader(filename).read()
 
             f1, f2, f3 = table.domain
             self.assertIsInstance(f1, DiscreteVariable)
@@ -85,5 +85,5 @@ class TestTabReader(unittest.TestCase):
         file.write(noncont_marked_cont)
         file.close()
         with self.assertRaises(ValueError) as cm:
-            table = CSVFormat().read_file(file.name)
+            table = CSVReader(file.name).read()
         self.assertIn('line 5, column 2', cm.exception.args[0])

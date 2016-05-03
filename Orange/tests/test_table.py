@@ -32,7 +32,8 @@ def assert_array_nanequal(*args, **kwargs):
 class TableTestCase(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
-        data.table.dataset_dirs.append("Orange/tests")
+        test_dir = os.path.dirname(__file__)
+        data.table.dataset_dirs.append(test_dir)
 
     def test_indexing_class(self):
         d = data.Table("test1")
@@ -1256,27 +1257,17 @@ class CreateTableWithFilename(TableTests):
     filename = "data.tab"
 
     @patch("os.path.exists", Mock(return_value=True))
-    @patch("Orange.data.io.TabFormat")
-    def test_read_data_calls_reader(self, reader_mock):
-        table_mock = Mock(data.Table)
-        reader_instance = reader_mock.return_value = \
-            Mock(read_file=Mock(return_value=table_mock))
-
-        table = data.Table.from_file(self.filename)
-
-        reader_instance.read_file.assert_called_with(self.filename, data.Table)
-        self.assertEqual(table, table_mock)
-
-    @patch("os.path.exists", Mock(return_value=True))
     def test_read_data_calls_reader(self):
         table_mock = Mock(data.Table)
-        reader_instance = Mock(read_file=Mock(return_value=table_mock))
+        reader_instance = Mock(read=Mock(return_value=table_mock))
+        reader_mock = Mock(return_value=reader_instance)
 
         with patch.dict(data.io.FileFormat.readers,
-                        {'.xlsx': reader_instance}):
+                        {'.xlsx': reader_mock}):
             table = data.Table.from_file("test.xlsx")
 
-        reader_instance.read_file.assert_called_with("test.xlsx", data.Table)
+        reader_mock.assert_called_with("test.xlsx")
+        reader_instance.read.assert_called_with()
         self.assertEqual(table, table_mock)
 
     @patch("os.path.exists", Mock(return_value=False))
@@ -1326,7 +1317,7 @@ a\tb\tc
 
     urlopen = _MockUrlOpen()
 
-    @patch('Orange.data.table.urlopen', urlopen)
+    @patch('Orange.data.io.urlopen', urlopen)
     def test_google_sheets(self):
         d = data.Table(self.urlopen.url)
         self.urlopen.assert_called_with('https://docs.google.com/spreadsheets/d/ABCD/export?format=tsv',

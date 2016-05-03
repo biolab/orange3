@@ -487,7 +487,7 @@ class Table(MutableSequence, Storage):
                     format(desc.lower()))
             else:
                 raise IOError("Unknown file name extension.")
-        writer().write_file(filename, self)
+        writer.write_file(filename, self)
 
     @classmethod
     def from_file(cls, filename, wrapper=None):
@@ -500,24 +500,12 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
         from Orange.data.io import FileFormat
-        for dir in dataset_dirs:
-            absolute_filename = os.path.join(dir, filename)
-            if os.path.exists(absolute_filename):
-                break
-            for ext in FileFormat.readers:
-                if filename.endswith(ext):
-                    break
-                if os.path.exists(absolute_filename + ext):
-                    absolute_filename += ext
-                    break
-            if os.path.exists(absolute_filename):
-                break
-        else:
-            absolute_filename = ext = ""
 
-        if not os.path.exists(absolute_filename):
-            raise IOError('File "{}" was not found.'.format(filename))
-        data = FileFormat.read(absolute_filename, wrapper or cls)
+        absolute_filename = FileFormat.locate(filename, dataset_dirs)
+        reader = FileFormat.get_reader(absolute_filename)
+        data = reader.read()
+        if wrapper:
+            data = wrapper(data)
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
@@ -527,55 +515,9 @@ class Table(MutableSequence, Storage):
 
     @classmethod
     def from_url(cls, url):
-        # Resolve (potential) redirects to a final URL
-        response = urlopen(url, timeout=10)
-        url = response.url
-        response.close()
-
-        def url_googlesheets(url):
-            match = re.match(r'(?:https?://)?(?:www\.)?'
-                             'docs\.google\.com/spreadsheets/d/'
-                             '(?P<workbook_id>[-\w_]+)'
-                             '(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
-                             url, re.IGNORECASE)
-            try:
-                workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
-                if not workbook:
-                    raise ValueError
-            except (AttributeError, ValueError):
-                raise ValueError
-            url = 'https://docs.google.com/spreadsheets/d/{}/export?format=tsv'.format(workbook)
-            if sheet:
-                url += '&gid=' + sheet
-            return url
-
-        URL_TRIMMERS = (
-            url_googlesheets,
-        )
-        for trim in URL_TRIMMERS:
-            try: url = trim(url)
-            except ValueError: continue
-            else: break
-
-        name = re.sub(r'[\\:/]', '_', urlparse(url).path)
-
-        def suggested_filename(content_disposition):
-            # See https://tools.ietf.org/html/rfc6266#section-4.1
-            matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
-                                 content_disposition or '')
-            return urlunquote(matches[-1]) if matches else ''
-
-        with urlopen(url, timeout=10) as response:
-            name = suggested_filename(response.headers['content-disposition']) or name
-            with NamedTemporaryFile(suffix=name, delete=False) as f:
-                f.write(response.read())
-                # delete=False is a workaround for https://bugs.python.org/issue14243
-            data = cls.from_file(f.name)
-            os.unlink(f.name)
-        # Override name set in from_file() to avoid holding the temp prefix
-        data.name = os.path.splitext(name)[0]
-        data.origin = url
-        return data
+        from Orange.data.io import UrlReader
+        reader = UrlReader(url)
+        return reader.read()
 
     # Helper function for __setitem__ and insert:
     # Set the row of table data matrices

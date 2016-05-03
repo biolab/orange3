@@ -1,7 +1,7 @@
 import unittest
 import os
 from Orange.data import Table
-from Orange.data.io import CSVFormat
+from Orange.data.io import CSVReader
 
 
 class IOFileFormatTest(unittest.TestCase):
@@ -11,7 +11,7 @@ class IOFileFormatTest(unittest.TestCase):
         os.remove(self.CSV_FILE)
 
     def test_csv_format_missing_values(self):
-        f = CSVFormat()
+        f = CSVReader()
         data = Table("../../tests/test9.tab")
         self.assertTrue(any([x is "" for instance in
                              data.metas for x in instance]))

@@ -9,9 +9,12 @@ import numpy as np
 from Orange.data import io, ContinuousVariable, DiscreteVariable, StringVariable
 
 
+def get_dataset(name):
+    return os.path.join(os.path.dirname(__file__), "xlsx_files", name)
+
+
 def read_file(name):
-    return io.ExcelFormat().read_file(
-        os.path.join(os.path.dirname(__file__), "xlsx_files", name))
+    return io.ExcelReader(get_dataset(name)).read()
 
 
 class TestExcelHeader0(unittest.TestCase):
@@ -31,8 +34,16 @@ class TestExcelHeader0(unittest.TestCase):
 
 
 class TextExcelSheets(unittest.TestCase):
+    def setUp(self):
+        self.reader = io.ExcelReader(get_dataset("header_0_sheet.xlsx"))
+
+    def test_sheets(self):
+        self.assertSequenceEqual(self.reader.sheets,
+                                 ["Sheet1", "my_sheet", "Sheet3"])
+
     def test_named_sheet(self):
-        table = read_file("header_0_sheet.xlsx:my_sheet")
+        self.reader.select_sheet("my_sheet")
+        table = self.reader.read()
         self.assertEqual(len(table.domain.attributes), 4)
 
 
