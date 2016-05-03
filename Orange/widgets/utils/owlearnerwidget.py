@@ -178,7 +178,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def check_data(self):
         self.valid_data = False
-        if self.data is not None:
+        if self.data is not None and self.learner is not None:
             self.error(self.DATA_ERROR_ID)
             if not self.learner.check_learner_adequacy(self.data.domain):
                 self.error(self.DATA_ERROR_ID, self.learner.learner_adequacy_err_msg)
