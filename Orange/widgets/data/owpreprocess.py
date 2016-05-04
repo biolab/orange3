@@ -138,9 +138,7 @@ class DiscretizeEditor(BaseEditor):
             title="Number of intervals (for equal width/frequency)",
             flat=True
         )
-        slbox.setLayout(QVBoxLayout())
-        self.__slabel = slabel = QLabel()
-        slbox.layout().addWidget(slabel)
+        slbox.setLayout(QHBoxLayout())
         self.__slider = slider = QSlider(
             orientation=Qt.Horizontal,
             minimum=2, maximum=10, value=self.__nintervals,
@@ -149,6 +147,8 @@ class DiscretizeEditor(BaseEditor):
         )
         slider.valueChanged.connect(self.__on_valueChanged)
         slbox.layout().addWidget(slider)
+        self.__slabel = slabel = QLabel()
+        slbox.layout().addWidget(slabel)
 
         container = QHBoxLayout()
         container.setContentsMargins(13, 0, 0, 0)
