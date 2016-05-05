@@ -2,9 +2,10 @@ from collections import OrderedDict
 from functools import partial
 
 from Orange import options
-from Orange.misc import wrapper_meta
 
 from PyQt4 import QtGui, QtCore
+
+from Orange.misc import wrapper_meta
 
 
 class WrapperMeta(wrapper_meta.WrapperMeta):
@@ -150,3 +151,78 @@ class BaseWrapper(metaclass=WrapperMeta):
     @property
     def state(self):
         return {name: v.value for name, v in self.values.items()}
+
+
+class WrappersMix:
+    """Mix multiple wrappers and provides selected one."""
+
+    def __init__(self, wrappers):
+        self.wrappers = wrappers
+        for i, wrapper in enumerate(self.wrappers):
+            for wr in self.wrappers[i+1:]:
+                wrapper.share_values(wr)
+        self.selected_index = 0
+        self._callback = None
+
+        self.button_group = None
+        self.wrapper_layout = None
+
+    def options_layout(self, parent=None, orientation=QtCore.Qt.Vertical):
+        if orientation == QtCore.Qt.Vertical:
+            layout = QtGui.QVBoxLayout(parent)
+        else:
+            layout = QtGui.QHBoxLayout(parent)
+
+        button_layout = QtGui.QVBoxLayout()
+        button_layout.setContentsMargins(10, 0, 0, 0)
+        self.button_group = QtGui.QButtonGroup()
+        self.button_group.buttonClicked[int].connect(self.index_changed)
+        for i, wrapper in enumerate(self.wrappers):
+            button = QtGui.QRadioButton(text=wrapper.verbose_name)
+            button.setChecked(i == self.selected_index)
+            self.button_group.addButton(button, i)
+            button_layout.addWidget(button)
+        layout.addLayout(button_layout)
+
+        self.wrapper_layout = QtGui.QStackedLayout()
+        self.wrapper_layout.setMargin(0)
+        for wrapper in self.wrappers:
+            box = QtGui.QGroupBox()
+            box.setContentsMargins(0, 0, 0, 0)
+            wrapper.callback = self.callback
+            box.setLayout(wrapper.options_layout())
+            self.wrapper_layout.addWidget(box)
+        self.wrapper_layout.setCurrentIndex(self.selected_index)
+        layout.addLayout(self.wrapper_layout)
+
+        self.selected_index = -1
+        self.index_changed(self.button_group.checkedId())
+        return layout
+
+    @property
+    def checked(self):
+        return self.wrappers[self.selected_index]
+
+    def index_changed(self, index):
+        if self.selected_index != index:
+            self.call_callback()
+            self.selected_index = index
+            box = QtGui.QGroupBox()
+            box.setLayout(self.checked.options_layout())
+            self.wrapper_layout.removeWidget(self.wrapper_layout.widget(index))
+            self.wrapper_layout.insertWidget(index, box)
+            self.wrapper_layout.setCurrentIndex(self.selected_index)
+
+    def call_callback(self):
+        if self.callback:
+            self.callback()
+
+    @property
+    def callback(self):
+        return self._callback
+
+    @callback.setter
+    def callback(self, callback):
+        self._callback = callback
+        for wrapper in self.wrappers:
+            wrapper.callback = callback

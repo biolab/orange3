@@ -376,3 +376,65 @@ class DisableableOption(BaseOption):
         self.disable_value = disable_value
         self.disable_label = disable_label or textify(disable_value)
         self.help_text = option.help_text
+
+
+class OptionGroup:
+    def __init__(self, name, options):
+        self.name = name
+        self.options = options
+
+    def add_to_layout(self, layout, values, parent=None):
+        title = self.name + ':' if self.name else ''
+        box = QtGui.QGroupBox(title=title)
+        sub_layout = QtGui.QGridLayout()
+        for option in self.options:
+            values[option].add_to_layout(sub_layout, parent=parent)
+        box.setLayout(sub_layout)
+        layout.addWidget(box, layout.rowCount(), 0, 1, 12)
+
+
+class ChoiceGroup(OptionGroup):
+    def add_to_layout(self, layout, values, parent=None):
+        choice_value = values[self.name]
+
+        box = QtGui.QGroupBox(title=choice_value.option.verbose_name)
+        sub_layout = QtGui.QGridLayout()
+        box.setLayout(sub_layout)
+        layout.addWidget(box, layout.rowCount(), 0, 1, 12)
+
+        button_group, buttons_layout = choice_value.as_buttons()
+        button_group.buttonClicked[int].connect(
+            lambda i: self.set_value(i, choice_value)
+        )
+        choice_value.checked_id = button_group.checkedId()
+        sub_layout.addLayout(buttons_layout, 0, 0,
+                             len(choice_value.option.choices), 6)
+
+        info_label_layout = QtGui.QStackedLayout()
+        sub_layout.addLayout(info_label_layout, 0, 6, 1, 6)
+        for choice in choice_value.option.choices:
+            info_label_layout.addWidget(QtGui.QLabel(text=choice.label))
+        info_label_layout.setCurrentIndex(choice_value.checked_id)
+
+        choice_value.info_label_layout = info_label_layout
+        choice_value.button_group = button_group
+
+        choice_value.option_widgets = []
+        for i, option in enumerate(self.options):
+            value = values[option]
+            sub_layout.addWidget(value.option.label(), i + 1, 6, 1, 3)
+            widget = value.as_widget(parent=parent)
+            sub_layout.addWidget(widget, i + 1, 9, 1, 3)
+            choice_value.option_widgets.append(widget)
+
+        choice_value.checked_id = -1
+        self.set_value(button_group.checkedId(), choice_value)
+
+    def set_value(self, index, value):
+        if value.checked_id != index:
+            value.checked_id = value.button_group.checkedId()
+            value.info_label_layout.setCurrentIndex(value.checked_id)
+
+            checked = value.option.choices[value.checked_id]
+            for i, opt in enumerate(self.options):
+                value.option_widgets[i].setEnabled(opt in checked.related_options)
