@@ -1,7 +1,5 @@
 """Naive Bayes Learner
 """
-
-from Orange.data import Table
 from Orange.classification.naive_bayes import NaiveBayesLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -18,6 +16,7 @@ class OWNaiveBayes(OWBaseLearner):
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+    from Orange.data import Table
 
     a = QApplication(sys.argv)
     ow = OWNaiveBayes()
