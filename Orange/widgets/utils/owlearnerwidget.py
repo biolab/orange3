@@ -1,8 +1,11 @@
+from PyQt4 import QtGui
+
 import numpy as np
-from PyQt4.QtCore import QTimer
+from PyQt4.QtCore import QTimer, Qt
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
+from Orange.wrappers import BaseWrapper, WrappersMix
 from Orange.preprocess.preprocess import Preprocess
 from Orange.util import abstract
 from Orange.widgets import gui
@@ -89,12 +92,19 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
     def add_extra_attributes(cls, name, attrib):
         if 'learner_name' not in attrib:
             attrib['learner_name'] = Setting(attrib['name'])
+        attrib['learner_settings'] = Setting({})
         return attrib
 
 
 @abstract
 class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     """Abstract widget for classification/regression learners.
+
+    Attributes:
+        LEARNER: Learner class
+        learner (LEARNER): an instance of LEARNER
+        learner_name (str): name of learner
+
 
     Notes:
         All learner widgets should define learner class LEARNER.
@@ -116,7 +126,13 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         super().__init__()
         self.data = None
         self.valid_data = False
-        self.learner = None
+
+        if self.is_wrapper() and not hasattr(self, 'learner'):
+            self.learner = self.LEARNER(**self.learner_settings)
+            self.learner.callback = self.settings_changed
+        else:
+            self.learner = None
+
         self.model = None
         self.preprocessors = None
         self.outdated_settings = False
@@ -129,6 +145,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Returns:
             Leaner: an instance of Orange.base.learner subclass.
         """
+        if self.is_wrapper():
+            return self.learner
         return self.LEARNER(preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
@@ -138,6 +156,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Returns:
             OrderedDict or List: (option, value) pairs or dict
         """
+        if self.is_wrapper():
+            return ((v.option.verbose_name, v.value)
+                    for v in self.learner._values.values())
         return []
 
     def set_preprocessor(self, preprocessor):
@@ -157,12 +178,16 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.update_model()
 
     def apply(self):
-        """Applies leaner and sends new model."""
+        """Applies changes and sends a new model."""
         self.update_learner()
         self.update_model()
 
     def update_learner(self):
-        self.learner = self.create_learner()
+        if self.is_wrapper():
+            self.create_learner()
+        else:
+            self.learner = self.create_learner()
+        self.learner.name = self.learner_name
         self.send("Learner", self.learner)
         self.outdated_settings = False
         self.warning(self.OUTDATED_LEARNER_WARNING_ID)
@@ -192,11 +217,17 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def settings_changed(self, *args, **kwargs):
         self.outdated_settings = True
+        if self.is_wrapper():
+            self.learner_settings = self.learner.state
+
         self.warning(self.OUTDATED_LEARNER_WARNING_ID,
                      "Press Apply to submit changes.")
 
     def send_report(self):
-        self.report_items((("Name", self.learner_name),))
+        self.report_items((('Learner', self.learner.name),))
+
+        if self.learner.name != self.learner_name:
+            self.report_items((("Model name", self.learner_name),))
 
         model_parameters = self.get_learner_parameters()
         if model_parameters:
@@ -217,7 +248,11 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Override this method for laying out any learner-specific parameter controls.
         See setup_layout() method for execution order.
         """
-        pass
+        if self.is_wrapper():
+            self.learner.callback = self.settings_changed
+            self.main_layout = self.learner.options_layout()
+            self.main_layout.setMargin(8)
+            self.controlArea.layout().addLayout(self.main_layout)
 
     def add_learner_name_widget(self):
         gui.lineEdit(self.controlArea, self, 'learner_name', box='Name',
@@ -229,3 +264,28 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         gui.separator(box, 15)
         self.apply_button = gui.button(box, self, "&Apply", callback=self.apply,
                                        disabled=0, default=True)
+
+    def is_wrapper(self):
+        return issubclass(self.LEARNER, BaseWrapper)
+
+
+class OWBaseMultipleLearner(OWBaseLearner):
+    ORIENTATION = Qt.Vertical
+
+    @property
+    def learner(self):
+        return self.learners.checked
+
+    @learner.setter
+    def learner(self, learner):
+        pass
+
+    def __init__(self):
+        self.learners = WrappersMix(self.Learners)
+        self.learners.callback = self.settings_changed
+        super().__init__()
+
+    def add_main_layout(self):
+        box = QtGui.QWidget()
+        self.learners.options_layout(parent=box, orientation=self.ORIENTATION)
+        self.controlArea.layout().addWidget(box)
