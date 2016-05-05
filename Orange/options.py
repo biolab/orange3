@@ -1,5 +1,6 @@
 """This module defines various types of options and their values.
 """
+import numpy as np
 from PyQt4 import QtGui, QtCore
 
 
@@ -133,3 +134,101 @@ class BaseOption:
         label.setWordWrap(True)
         label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         return label
+
+
+class ObjectOption(BaseOption):
+    """Option that either has complex type or its value should'n be changed
+    within main widget."""
+
+
+class BoolValue(Value):
+    """Boolean value. Creates CheckBox."""
+    checkbox = None
+
+    def as_widget(self, parent=None):
+        self.checkbox = QtGui.QCheckBox(parent)
+        self.checkbox.stateChanged.connect(self.update_value)
+        self.update_gui()
+        return self.checkbox
+
+    def update_value(self):
+        self.value = self.checkbox.isChecked()
+
+    def update_gui(self):
+        if self.checkbox and self.checkbox.isChecked() != self.value:
+            self.checkbox.setChecked(self.value)
+
+
+class BoolOption(BaseOption):
+    ValueClass = BoolValue
+
+    def __init__(self, name=None, *, default=False, **kwargs):
+        super().__init__(name=name, default=default, **kwargs)
+
+
+class StringValue(Value):
+    def as_widget(self, parent=None):
+        self.widget = QtGui.QLineEdit(parent)
+        self.widget.setText(self.value)
+        self.widget.textChanged.connect(self.set_value)
+        return self.widget
+
+    def update_gui(self):
+        if self.widget and self.widget.text() != self.value:
+            self.widget.setText(self.value)
+
+
+class StringOption(BaseOption):
+    ValueClass = StringValue
+
+    def __init__(self, name=None, *, default='', **kwargs):
+        super().__init__(name, default=default, **kwargs)
+
+
+class IntegerValue(Value):
+    def as_widget(self, parent=None):
+        self.widget = QtGui.QSpinBox(parent)
+        self.widget.setRange(*self.option.range)
+        self.widget.setSingleStep(self.option.step)
+        self.widget.setValue(self.value)
+        self.widget.valueChanged.connect(self.set_value)
+        return self.widget
+
+    def update_gui(self):
+        if self.widget and self.widget.value() != self.value:
+            self.widget.setValue(self.value)
+
+
+class IntegerOption(BaseOption):
+    ValueClass = IntegerValue
+
+    def __init__(self, name=None, *, default=0, range=(0, 100), step=1, **kwargs):
+        super().__init__(name, default=default, **kwargs)
+        self.step = step
+        self.range = range
+
+
+class FloatValue(Value):
+    def as_widget(self, parent=None):
+        self.widget = QtGui.QDoubleSpinBox(parent)
+        self.widget.setDecimals(self.option.decimals)
+        self.widget.setRange(*self.option.range)
+        self.widget.setSingleStep(self.option.step)
+        self.widget.setValue(self.value)
+        self.widget.valueChanged.connect(self.set_value)
+        return self.widget
+
+    def update_gui(self):
+        if self.widget and self.widget.value() != self.value:
+            self.widget.setValue(self.value)
+
+
+class FloatOption(BaseOption):
+    ValueClass = FloatValue
+
+    def __init__(self, name=None, *, default=0., range=(0, 1), step=.01,
+                 decimals=None, **kwargs):
+        super().__init__(name, default=default, **kwargs)
+        self.step = step
+        self.range = range
+        self.decimals = decimals or np.ceil(abs(np.log10(self.step)))
