@@ -234,6 +234,49 @@ class FloatOption(BaseOption):
         self.decimals = decimals or np.ceil(abs(np.log10(self.step)))
 
 
+class RatioValue(FloatValue):
+    slider = None
+
+    def as_widget(self, parent=None):
+        self.widget = QtGui.QGroupBox(parent)
+        self.widget.setContentsMargins(0, 0, 0, 0)
+
+        layout = QtGui.QHBoxLayout(self.widget)
+        layout.setMargin(0)
+        self.widget.setLayout(layout)
+
+        if self.option.left_label:
+            layout.addWidget(QtGui.QLabel(self.option.left_label))
+
+        self.slider = QtGui.QSlider(QtCore.Qt.Horizontal, self.widget)
+        self.slider.setSingleStep(5)
+        # self.slider.setSingleStep(self.option.step)
+        self.slider.setTickInterval(100)
+        self.slider.setTickPosition(QtGui.QSlider.TicksBelow)
+        self.slider.valueChanged.connect(lambda x: self.set_value(x * .01))
+        layout.addWidget(self.slider)
+
+        if self.option.right_label:
+            layout.addWidget(QtGui.QLabel(self.option.right_label))
+        self.update_gui()
+        return self.widget
+
+    def update_gui(self):
+        if self.widget and self.value != self.slider.value() / 100:
+            self.slider.setValue(self.value * 100)
+
+
+class RatioOption(BaseOption):
+    ValueClass = RatioValue
+
+    def __init__(self, name=None, *, default=.5, step=.01,
+                 left_label='', right_label='', **kwargs):
+        super().__init__(name, default=default, **kwargs)
+        self.step = step
+        self.left_label = left_label
+        self.right_label = right_label
+
+
 class ChoiceValue(Value):
     @property
     def index(self):

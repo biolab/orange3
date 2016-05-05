@@ -38,7 +38,8 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
 
 
 class LearnerOptions:
-    l1_ratio = options.FloatOption('l1_ratio', default=.5, range=(0., 1.), step=0.05)
+    l1_ratio = options.RatioOption('l1_ratio', default=.5, step=0.05,
+                                   left_label='L1', right_label='L2')
 
     alpha = options.FloatOption('alpha', default=1., range=(0., 1000.), step=.1)
     tol = options.FloatOption('tol', default=1e-4, range=(1e-8, .1), step=1e-5)
