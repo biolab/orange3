@@ -8,6 +8,7 @@ from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess import Continuize, Normalize, RemoveNaNColumns, SklImpute
 from Orange.preprocess.score import LearnerScorer
 from Orange.regression import Learner, Model, SklLearner, SklModel
+from Orange import options
 
 
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
@@ -29,48 +30,51 @@ class _FeatureScorerMixin(LearnerScorer):
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
     name = 'linreg'
+    verbose_name = 'Linear'
 
-    def __init__(self, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         model = super().fit(X, Y, W)
         return LinearModel(model.skl_model)
+
+
+class LearnerOptions:
+    l1_ratio = options.FloatOption('l1_ratio', default=.5, range=(0., 1.), step=0.05)
+
+    alpha = options.FloatOption('alpha', default=1., range=(0., 1000.), step=.1)
+    tol = options.FloatOption('tol', default=1e-4, range=(1e-8, .1), step=1e-5)
+    random_state = options.DisableableOption('random_state',
+                                             option=options.IntegerOption(),
+                                             disable_value=None)
 
 
 class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
     name = 'ridge'
+    verbose_name = 'Ridge'
 
-    def __init__(self, alpha=1.0, fit_intercept=True,
-                 normalize=False, copy_X=True, max_iter=None,
-                 tol=0.001, solver='auto', preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = [
+        LearnerOptions.alpha,
+        LearnerOptions.tol,
+        LearnerOptions.random_state,
+    ]
 
 
 class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
     name = 'lasso'
+    verbose_name = 'Lasso'
 
-    def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
-                 precompute=False, copy_X=True, max_iter=1000,
-                 tol=0.0001, warm_start=False, positive=False,
-                 preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = RidgeRegressionLearner.options
 
 
 class ElasticNetLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNet
     name = 'elastic'
+    verbose_name = 'ElasticNet'
 
-    def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
-                 normalize=False, precompute=False, max_iter=1000,
-                 copy_X=True, tol=0.0001, warm_start=False, positive=False,
-                 preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = [
+        LearnerOptions.l1_ratio,
+    ] + RidgeRegressionLearner.options
 
 
 class ElasticNetCVLearner(LinearRegressionLearner):
@@ -89,19 +93,56 @@ class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
     name = 'sgd'
 
-    def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,
-                 eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25,
-                 learning_rate='invscaling', n_iter=5, fit_intercept=True,
-                 preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    LOSSES = (
+        options.Choice('squared_loss'),
+        options.Choice('huber', related_options=('epsilon',)),
+        options.Choice('epsilon_insensitive', related_options=('epsilon',)),
+        options.Choice('squared_epsilon_insensitive', related_options=('epsilon',)),
+    )
 
-    def fit(self, X, Y, W):
-        sk = self.__wraps__(**self.params)
+    PENALTIES = (
+        options.Choice('none'),
+        options.Choice('l1', related_options=('alpha', )),
+        options.Choice('l2', related_options=('alpha', )),
+        options.Choice('elasticnet', related_options=('alpha', 'l1_ratio')),
+    )
+
+    RATES = (
+        options.Choice('constant', related_options=('eta0', ), label='eta0'),
+        options.Choice('invscaling', verbose_name='Inverse scaling',
+                       related_options=('eta0', 'power_t'), label='eta0/(t^p)'),
+    )
+
+    options = [
+        LearnerOptions.alpha,
+        LearnerOptions.l1_ratio,
+        options.FloatOption('epsilon', default=.1, range=(0., 10.)),
+        options.FloatOption('eta0', default=.01, verbose_name='eta0',
+                            range=(1e-5, 1.), step=0.05),
+        options.FloatOption('power_t', verbose_name='p',
+                            default=.01, range=(0., 1.), step=0.05),
+
+        options.ChoiceOption('loss', choices=LOSSES),
+        options.ChoiceOption('penalty', choices=PENALTIES),
+        options.ChoiceOption('learning_rate', choices=RATES),
+        options.IntegerOption('n_iter', verbose_name='Number of iterations',
+                              default=5, range=(1, 10 ** 4), step=10),
+    ]
+
+    def fit(self, X, Y, W=None):
+        sk = self.instance
         clf = skl_pipeline.Pipeline(
             [('scaler', skl_preprocessing.StandardScaler()), ('sgd', sk)])
         clf.fit(X, Y.ravel())
         return LinearModel(clf)
+
+    class GUI:
+        main = (
+            options.ChoiceGroup('loss', ('epsilon',)),
+            options.ChoiceGroup('penalty', ('alpha', 'l1_ratio')),
+            options.ChoiceGroup('learning_rate', ('eta0', 'power_t')),
+            'n_iter'
+        )
 
 
 class PolynomialLearner(Learner):
@@ -115,7 +156,7 @@ class PolynomialLearner(Learner):
         self.degree = degree
         self.learner = learner
 
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
         X = polyfeatures.fit_transform(X)
         clf = self.learner

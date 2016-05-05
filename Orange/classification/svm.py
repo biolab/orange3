@@ -48,7 +48,7 @@ class SVMOptions:
     C = options.FloatOption('C', verbose_name='Cost (C)', default=1.,
                             range=(.0001, 1000), step=.001)
     nu = options.FloatOption('nu', verbose_name='Complexity (ν)', default=.5,
-                             range=(.05, 1.), step=.5)
+                             range=(.05, 1.), step=.05)
 
     tol = options.FloatOption('tol', default=1e-3, range=(1e-5, 1.), step=1e-4)
     max_inter = options.DisableableOption(
