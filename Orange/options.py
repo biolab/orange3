@@ -232,3 +232,147 @@ class FloatOption(BaseOption):
         self.step = step
         self.range = range
         self.decimals = decimals or np.ceil(abs(np.log10(self.step)))
+
+
+class ChoiceValue(Value):
+    @property
+    def index(self):
+        return self.option.choice_values.index(self.value)
+
+    def as_widget(self, parent=None):
+        self.widget = QtGui.QComboBox(parent)
+        self.widget.addItems(self.option.choice_names)
+        self.widget.setCurrentIndex(self.index)
+        self.widget.currentIndexChanged.connect(self.update_value)
+        return self.widget
+
+    def as_buttons(self):
+        layout = QtGui.QVBoxLayout()
+        button_group = QtGui.QButtonGroup()
+        button_group.buttonClicked[int].connect(
+            lambda i: self.update_value(i)
+        )
+
+        for i, choice in enumerate(self.option.choices):
+            button = QtGui.QRadioButton(text=str(choice))
+            button.setChecked(choice.value == self.value)
+            button_group.addButton(button, i)
+            layout.addWidget(button)
+
+        return button_group, layout
+
+    def update_value(self, index):
+        self.value = self.option.choice_values[index]
+
+    def update_gui(self):
+        if self.widget and self.widget.currentIndex() != self.index:
+            self.widget.setCurrentIndex(self.index)
+
+
+class Choice:
+    """Choice with addition options."""
+    def __init__(self, value, verbose_name=None, related_options=None, label=None):
+        self.value = value
+        self.verbose_name = verbose_name or textify(value)
+        self.related_options = related_options or ()
+        self.label = label
+
+    def __str__(self):
+        return self.verbose_name
+
+
+class ChoiceOption(BaseOption):
+    ValueClass = ChoiceValue
+
+    def __init__(self, name=None, *, choices, default=None, **kwargs):
+        self.choices = choices
+
+        if isinstance(choices[0], Choice):
+            self.choice_names = [str(c) for c in choices]
+            self.choice_values = [c.value for c in choices]
+        elif isinstance(choices[0], tuple):
+            self.choice_names = [c[1] for c in choices]
+            self.choice_values = [c[0] for c in choices]
+        else:
+            self.choice_names = [textify(c) for c in choices]
+            self.choice_values = choices
+
+        if default is None:
+            default = self.choice_values[0]
+
+        super().__init__(name, default=default, **kwargs)
+
+
+class DisableableValue(Value):
+    """Value that can be disabled (for instance, has `None` value)
+    or enabled (has value from another one."""
+    disable_check_box = None
+    stacked_layout = None
+
+    def __init__(self, value, option):
+        super().__init__(value, option)
+        if value == self.option.disable_value:
+            self.enabled = False
+            self.sub_value = option.sub_option(option.sub_option.default)
+        else:
+            self.enabled = True
+            self.sub_value = option.sub_option(value)
+
+        self.sub_value.add_callback(self.update_value)
+
+    def update_value(self):
+        if self.enabled:
+            self.value = self.sub_value.value
+        else:
+            self.value = self.option.disable_value
+
+    def check_state(self):
+        if self.enabled != self.disable_check_box.isChecked():
+            self.enabled = self.disable_check_box.isChecked()
+            self.update_value()
+
+    def update_gui(self):
+        if self.disable_check_box:
+            self.disable_check_box.setChecked(self.enabled)
+        if self.stacked_layout:
+            self.stacked_layout.setCurrentIndex(int(self.enabled))
+
+    def as_widget(self, parent=None):
+        self.widget = QtGui.QGroupBox(parent)
+
+        layout = QtGui.QHBoxLayout(self.widget)
+        layout.setMargin(0)
+        self.widget.setContentsMargins(0, 0, 0, 0)
+        self.disable_check_box = QtGui.QCheckBox()
+        self.disable_check_box.stateChanged.connect(self.check_state)
+        layout.addWidget(self.disable_check_box)
+
+        self.stacked_layout = QtGui.QStackedLayout()
+        self.stacked_layout.addWidget(QtGui.QLabel(text=self.option.disable_label))
+        self.stacked_layout.addWidget(self.sub_value.as_widget(parent=parent))
+
+        layout.addLayout(self.stacked_layout)
+        self.widget.setLayout(layout)
+        self.update_gui()
+        return self.widget
+
+
+class DisableableOption(BaseOption):
+    """Option that holds another one and a constant value."""
+    ValueClass = DisableableValue
+
+    def __init__(self, name=None, *, option, disable_value=None, disable_label=None, **kwargs):
+        """
+        Args:
+            option (BaseOption): main option.
+            disable_value: value in disabled state
+            disable_label (Optional[str]): text to be shown in disabled state
+        """
+        super().__init__(name, **kwargs)
+        self.sub_option = option
+        self._verbose_name = self._verbose_name or option._verbose_name
+        self.default = disable_value
+        self.validator = None
+        self.disable_value = disable_value
+        self.disable_label = disable_label or textify(disable_value)
+        self.help_text = option.help_text
