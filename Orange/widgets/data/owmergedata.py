@@ -83,26 +83,32 @@ class OWMergeData(widget.OWWidget):
         # resize
         self.resize(400, 500)
 
+    def setAttrs(self):
+        add = ()
+        if self.dataA is not None and self.dataB is not None \
+                and len(numpy.intersect1d(self.dataA.ids, self.dataB.ids)):
+            add = (INSTANCEID,)
+        if self.dataA is not None:
+            self.attrModelA[:] = add + allvars(self.dataA)
+        else:
+            self.attrModelA[:] = []
+        if self.dataB is not None:
+            self.attrModelB[:] = add + allvars(self.dataB)
+        else:
+            self.attrModelB[:] = []
+
     @check_sql_input
     def setDataA(self, data):
         #self.closeContext()
         self.dataA = data
-        if data is not None:
-            self.attrModelA[:] = allvars(data)
-        else:
-            self.attrModelA[:] = []
-
+        self.setAttrs()
         self.infoBoxDataA.setText(self.dataInfoText(data))
 
     @check_sql_input
     def setDataB(self, data):
         #self.closeContext()
         self.dataB = data
-        if data is not None:
-            self.attrModelB[:] = allvars(data)
-        else:
-            self.attrModelB[:] = []
-
+        self.setAttrs()
         self.infoBoxDataB.setText(self.dataInfoText(data))
 
     def handleNewSignals(self):
@@ -167,7 +173,7 @@ def selected_row(view):
 
 
 def allvars(data):
-    return (INSTANCEID,) + data.domain.attributes + data.domain.class_vars + data.domain.metas
+    return data.domain.attributes + data.domain.class_vars + data.domain.metas
 
 
 def merge(A, varA, B, varB):
