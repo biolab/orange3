@@ -437,7 +437,7 @@ def _define_symbols():
     """
     symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
     path = QPainterPath()
-    path.addEllipse(QRectF(-0.25, -0.25, 0.5, 0.5))
+    path.addEllipse(QRectF(-0.35, -0.35, 0.7, 0.7))
     path.moveTo(-0.5, 0.5)
     path.lineTo(0.5, -0.5)
     path.moveTo(-0.5, -0.5)
@@ -469,6 +469,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     MinShapeSize = 6
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
+
+    ID_MISSING_COORDS, ID_MISSING_SIZE, ID_MISSING_SHAPE = range(1, 4)
 
     def __init__(self, scatter_widget, parent=None, _="None"):
         gui.OWComponent.__init__(self, scatter_widget)
@@ -536,6 +538,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.set_data(data, **args)
 
     def update_data(self, attr_x, attr_y, reset_view=True):
+        self.master.warning(self.ID_MISSING_COORDS)
+        self.master.information(self.ID_MISSING_COORDS)
         self.shown_x = attr_x
         self.shown_y = attr_y
 
@@ -557,14 +561,22 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         if self.scaled_data is None or not len(self.scaled_data):
             self.valid_data = None
+        else:
+            index_x = self.attribute_name_index[attr_x]
+            index_y = self.attribute_name_index[attr_y]
+            self.valid_data = self.get_valid_list([index_x, index_y],
+                                                  also_class_if_exists=False)
+            if not np.any(self.valid_data):
+                self.valid_data = None
+        if self.valid_data is None:
             self.selection = None
             self.n_points = 0
+            self.master.warning(
+                self.ID_MISSING_COORDS,
+                "Plot cannot be displayed because '{}' or '{}' is missing for "
+                "all data points".format(self.shown_x, self.shown_y))
             return
 
-        index_x = self.attribute_name_index[attr_x]
-        index_y = self.attribute_name_index[attr_y]
-        self.valid_data = self.get_valid_list([index_x, index_y],
-                                              also_class_if_exists=False)
         x_data, y_data = self.get_xy_data_positions(
             attr_x, attr_y, self.valid_data)
         self.n_points = len(x_data)
@@ -600,6 +612,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.plot_widget.addItem(self.density_img)
 
         data_indices = np.flatnonzero(self.valid_data)
+        if len(data_indices) != self.original_data.shape[1]:
+            self.master.information(
+                self.ID_MISSING_COORDS,
+                "Points with missing '{}' or '{}' are not displayed".
+                format(self.shown_x, self.shown_y))
+
         self.scatterplot_item = ScatterPlotItem(
             x=x_data, y=y_data, data=data_indices,
             symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
@@ -656,14 +674,22 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return size_index
 
     def compute_sizes(self):
+        self.master.information(self.ID_MISSING_SIZE)
         size_index = self.get_size_index()
         if size_index == -1:
             size_data = np.full((self.n_points,), self.point_width)
         else:
             size_data = \
                 self.MinShapeSize + \
-                self.no_jittering_scaled_data[size_index, self.valid_data] * self.point_width
-        size_data[np.isnan(size_data)] = self.MinShapeSize - 2
+                self.no_jittering_scaled_data[size_index, self.valid_data] * \
+                self.point_width
+        nans = np.isnan(size_data)
+        if np.any(nans):
+            size_data[nans] = self.MinShapeSize - 2
+            self.master.information(
+                self.ID_MISSING_SIZE,
+                "Points with undefined '{}' are shown in smaller size".
+                format(self.attr_size))
         return size_data
 
     def update_sizes(self):
@@ -834,12 +860,19 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return shape_index
 
     def compute_symbols(self):
+        self.master.information(self.ID_MISSING_SHAPE)
         shape_index = self.get_shape_index()
         if shape_index == -1:
             shape_data = self.CurveSymbols[np.zeros(self.n_points, dtype=int)]
         else:
             shape_data = self.original_data[shape_index, self.valid_data]
-            shape_data[np.isnan(shape_data)] = len(self.CurveSymbols) - 1
+            nans = np.isnan(shape_data)
+            if np.any(nans):
+                shape_data[nans] = len(self.CurveSymbols) - 1
+                self.master.information(
+                    self.ID_MISSING_SHAPE,
+                    "Points with undefined '{}' are shown as crossed circles".
+                    format(self.attr_shape))
             shape_data = self.CurveSymbols[shape_data.astype(int)]
         return shape_data
 
