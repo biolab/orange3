@@ -21,8 +21,8 @@ class OWPurgeDomain(widget.OWWidget):
 
     removeValues = Setting(1)
     removeAttributes = Setting(1)
-    removeClassAttribute = Setting(1)
     removeClasses = Setting(1)
+    removeClassAttribute = Setting(1)
     removeMetaAttributeValues = Setting(1)
     removeMetaAttributes = Setting(1)
     autoSend = Setting(False)
@@ -44,14 +44,14 @@ class OWPurgeDomain(widget.OWWidget):
     meta_options = (('removeMetaAttributeValues', 'Remove unused meta attribute values'),
                     ('removeMetaAttributes', 'Remove constant meta attributes'))
 
-    stat_labels = (('Removed features', 'removedAttrs'),
+    stat_labels = (('Sorted features', 'resortedAttrs'),
                    ('Reduced features', 'reducedAttrs'),
-                   ('Resorted features', 'resortedAttrs'),
-                   ('Removed classes', 'removedClasses'),
+                   ('Removed features', 'removedAttrs'),
+                   ('Sorted classes', 'resortedClasses'),
                    ('Reduced classes', 'reducedClasses'),
-                   ('Resorted classes', 'resortedClasses'),
-                   ('Removed metas', 'removedMetas'),
-                   ('Reduced metas', 'reducedMetas'))
+                   ('Removed classes', 'removedClasses'),
+                   ('Reduced metas', 'reducedMetas'),
+                   ('Removed metas', 'removedMetas'))
 
     def __init__(self):
         super().__init__()
@@ -88,7 +88,10 @@ class OWPurgeDomain(widget.OWWidget):
                          callback=self.optionsChanged)
 
         box3 = gui.vBox(self.controlArea, 'Statistics', addSpace=True)
-        for label, value in self.stat_labels:
+        for i, (label, value) in enumerate(self.stat_labels):
+            # add a separator after each group of three
+            if i != 0 and i % 3 == 0:
+                gui.separator(box3, 2)
             gui.label(box3, self, "{}: %({})s".format(label, value))
 
         gui.auto_commit(self.buttonsArea, self, "autoSend", "Send Data",
