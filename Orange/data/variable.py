@@ -842,6 +842,15 @@ class TimeVariable(ContinuousVariable):
         (1, 0, '%Y-%m'),
         (1, 0, '%Y-%j'),
     ]
+    # The regex that matches all above formats
+    REGEX = (r'^('
+             '\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
+             '\d{1,4}\d{2}\d{2}(T?\d{2}\d{2}\d{2}([+-]\d{4})?)?|'
+             '\d{2}:\d{2}(:\d{2}(\.\d+)?)?|'
+             '\d{2}\d{2}\d{2}\.\d+|'
+             '\d{1,4}(-?\d{2,3})?'
+             ')$')
+    _matches_iso_format = re.compile(REGEX).match
 
     # UTC offset and associated timezone. If parsed datetime values provide an
     # offset, it is used for display. If not all values have the same offset,
@@ -891,6 +900,11 @@ class TimeVariable(ContinuousVariable):
         if datestr in MISSING_VALUES:
             return Unknown
         datestr = datestr.strip().rstrip('Z')
+
+        ERROR = ValueError('Invalid datetime format. Only ISO 8601 supported.')
+        if not self._matches_iso_format(datestr):
+            raise ERROR
+
         for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
             try:
                 dt = datetime.strptime(datestr, fmt)
@@ -910,7 +924,7 @@ class TimeVariable(ContinuousVariable):
                                     self.UNIX_EPOCH.day)
                 break
         else:
-            raise ValueError('Invalid datetime format. Only ISO 8601 supported.')
+            raise ERROR
 
         # Remember UTC offset. If not all parsed values share the same offset,
         # remember none of it.
