@@ -144,7 +144,7 @@ class OWReport(OWWidget):
         box = gui.hBox(self.controlArea)
         box.setContentsMargins(-6, 0, -6, 0)
         self.save_button = gui.button(
-            box, self, "Save", callback=self._save_report
+            box, self, "Save", callback=self.save_report
         )
         self.print_button = gui.button(
             box, self, "Print", callback=self._print_report
@@ -189,6 +189,10 @@ class OWReport(OWWidget):
 
     def _remove_item(self, row):
         self.table_model.removeRow(row)
+        self._build_html()
+
+    def clear(self):
+        self.table_model.clear()
         self._build_html()
 
     def _add_item(self, widget):
@@ -262,12 +266,13 @@ class OWReport(OWWidget):
             if canvas:
                 canvas.load_scheme_xml(self.last_scheme)
 
-    def _save_report(self):
+    def save_report(self):
+        """Save report"""
         filename = QFileDialog.getSaveFileName(
             self, "Save Report", self.save_dir,
             "HTML (*.html);;PDF (*.pdf);;Report (*.report)")
         if not filename:
-            return
+            return QDialog.Rejected
 
         self.save_dir = os.path.dirname(filename)
         self.saveSettings()
@@ -285,6 +290,7 @@ class OWReport(OWWidget):
             frame = self.report_view.page().currentFrame()
             with open(filename, "w") as f:
                 f.write(frame.documentElement().toInnerXml())
+        return QDialog.Accepted
 
     def _print_report(self):
         printer = QPrinter()
@@ -321,6 +327,9 @@ class OWReport(OWWidget):
         self.table.selectRow(0)
         self.show()
         self.raise_()
+
+    def is_empty(self):
+        return not self.table_model.rowCount()
 
     @staticmethod
     def set_instance(report):

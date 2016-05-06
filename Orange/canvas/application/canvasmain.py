@@ -856,16 +856,24 @@ class CanvasMainWindow(QMainWindow):
     #################
     # Action handlers
     #################
+    def pre_close_save(self):
+        """
+        Ask whether to save the schenma (if changed) and the report (if
+        not empty).
+
+        Returns: `False` if the user cancelled, `True` otherwise
+        """
+        return (not self.current_document().isModifiedStrict() or
+                self.ask_save_changes() != QDialog.Rejected
+            ) and self.ask_clear_report() != QDialog.Rejected
+
     def new_scheme(self):
         """New scheme. Return QDialog.Rejected if the user canceled
         the operation and QDialog.Accepted otherwise.
 
         """
-        document = self.current_document()
-        if document.isModifiedStrict():
-            # Ask for save changes
-            if self.ask_save_changes() == QDialog.Rejected:
-                return QDialog.Rejected
+        if not self.pre_close_save():
+            return QDialog.Rejected
 
         new_scheme = widgetsscheme.WidgetsScheme(parent=self)
 
@@ -890,15 +898,13 @@ class CanvasMainWindow(QMainWindow):
         the operation and QDialog.Accepted otherwise.
 
         """
-        document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                return QDialog.Rejected
+        if not self.pre_close_save():
+            return QDialog.Rejected
 
         if self.last_scheme_dir is None:
             # Get user 'Documents' folder
             start_dir = QDesktopServices.storageLocation(
-                            QDesktopServices.DocumentsLocation)
+                QDesktopServices.DocumentsLocation)
         else:
             start_dir = self.last_scheme_dir
 
@@ -945,12 +951,8 @@ class CanvasMainWindow(QMainWindow):
         """
         if isinstance(filename, QUrl):
             filename = filename.toLocalFile()
-
-        document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                return QDialog.Rejected
-
+        if not self.pre_close_save():
+            return QDialog.Rejected
         self.load_scheme(filename)
         return QDialog.Accepted
 
@@ -1024,11 +1026,8 @@ class CanvasMainWindow(QMainWindow):
         user canceled the operation and QDialog.Accepted otherwise.
 
         """
-        document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                return QDialog.Rejected
-
+        if not self.pre_close_save():
+            return QDialog.Rejected
         # TODO: Search for a temp backup scheme with per process
         # locking.
         if self.recent_schemes:
@@ -1056,6 +1055,56 @@ class CanvasMainWindow(QMainWindow):
         QApplication.sendEvent(old_scheme, QEvent(QEvent.Close))
 
         old_scheme.deleteLater()
+
+    def ask_clear_report(self):
+        """
+        Ask whether to keep, clear or save and clear the report.
+
+        Returns:
+            `QDialog.Rejected` if user cancels, `QDialog.Accepted` otherwise
+        """
+        from Orange.canvas.report.owreport import OWReport
+        report = OWReport.get_instance()
+        if report.is_empty():
+            return QDialog.Accepted
+
+        msgbox = QMessageBox(QMessageBox.Question, "Report", "Clear report?",
+                             parent=self)
+        # Cancel must have AcceptRole, otherwise Os X reorders the buttons
+        cancel = msgbox.addButton("Cancel", QMessageBox.AcceptRole)
+        keep = msgbox.addButton("Keep", QMessageBox.AcceptRole)
+        msgbox.addButton("Clear", QMessageBox.AcceptRole)
+        save = msgbox.addButton("Save && Clear", QMessageBox.AcceptRole)
+        msgbox.exec()
+        button = msgbox.clickedButton()
+        if button is cancel or \
+                button is save and report.save_report() == QDialog.Rejected:
+            return QDialog.Rejected
+        if button is not keep:
+            report.clear()
+        return QDialog.Accepted
+
+    def ask_save_report(self):
+        """
+        Ask whether to save the report or not.
+
+        Returns:
+            `QDialog.Rejected` if user cancels, `QDialog.Accepted` otherwise
+        """
+        from Orange.canvas.report.owreport import OWReport
+        report = OWReport.get_instance()
+        if report.is_empty():
+            return QDialog.Accepted
+
+        answ = message_question(
+            "Save report?", "Report",
+            buttons=QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            parent=self)
+        if answ == QMessageBox.Cancel:
+            return QDialog.Rejected
+        if answ == QMessageBox.Yes:
+            return report.save_report()
+        return QDialog.Accepted
 
     def ask_save_changes(self):
         """Ask the user to save the changes to the current scheme.
@@ -1304,13 +1353,9 @@ class CanvasMainWindow(QMainWindow):
         model.deleteLater()
 
         if status == QDialog.Accepted:
-            doc = self.current_document()
-            if doc.isModifiedStrict():
-                if self.ask_save_changes() == QDialog.Rejected:
-                    return QDialog.Rejected
-
+            if not self.pre_close_save():
+                return QDialog.Rejected
             selected = model.item(index)
-
             self.load_scheme(str(selected.path()))
 
         return status
@@ -1342,13 +1387,9 @@ class CanvasMainWindow(QMainWindow):
         dialog.deleteLater()
 
         if status == QDialog.Accepted:
-            doc = self.current_document()
-            if doc.isModifiedStrict():
-                if self.ask_save_changes() == QDialog.Rejected:
-                    return QDialog.Rejected
-
+            if not self.pre_close_save():
+                return QDialog.Rejected
             selected = model.item(index)
-
             new_scheme = self.new_scheme_from(str(selected.path()))
             if new_scheme is not None:
                 self.set_new_scheme(new_scheme)
@@ -1677,11 +1718,8 @@ class CanvasMainWindow(QMainWindow):
     def _on_recent_scheme_action(self, action):
         """A recent scheme action was triggered by the user
         """
-        document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                return
-
+        if not self.pre_close_save():
+            return QDialog.Rejected
         filename = str(action.data())
         self.load_scheme(filename)
 
@@ -1714,11 +1752,11 @@ class CanvasMainWindow(QMainWindow):
         """Close the main window.
         """
         document = self.current_document()
-        if document.isModifiedStrict():
-            if self.ask_save_changes() == QDialog.Rejected:
-                # Reject the event
-                event.ignore()
-                return
+        if document.isModifiedStrict() and \
+                self.ask_save_changes() == QDialog.Rejected or \
+                self.ask_save_report() == QDialog.Rejected:
+            event.ignore()
+            return
 
         old_scheme = document.scheme()
 
