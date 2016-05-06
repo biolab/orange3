@@ -2,7 +2,7 @@ Orange
 ======
 
 [![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
-[![codecov.io](https://codecov.io/github/biolab/orange3/coverage.svg?branch=master)](https://codecov.io/github/biolab/orange3?branch=master)
+[![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
 
 [Orange] is a component-based data mining software. It includes a range of data
 visualization, exploration, preprocessing and modeling techniques. It can be
