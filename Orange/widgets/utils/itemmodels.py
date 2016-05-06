@@ -29,14 +29,12 @@ class _store(dict):
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
     if key is not None:
-        items = sorted(enumerate(seq), key=lambda pair: key(pair[1]))
+        return sorted(enumerate(seq), key=lambda pair: key(pair[1]), reverse=reverse)
     elif cmp is not None:
-        items = sorted(enumerate(seq), cmp=lambda a, b: cmp(a[1], b[1]))
+        from functools import cmp_to_key
+        return sorted(enumerate(seq), key=cmp_to_key(lambda a, b: cmp(a[1], b[1])), reverse=reverse)
     else:
-        items = sorted(enumerate(seq), key=operator.itemgetter(1))
-    if reverse:
-        items = reversed(items)
-    return items
+        return sorted(enumerate(seq), key=operator.itemgetter(1), reverse=reverse)
 
 
 @contextmanager
@@ -49,13 +47,153 @@ def signal_blocking(obj):
         obj.blockSignals(blocked)
 
 
-def _as_contiguous_range(start, stop, step):
+def _as_contiguous_range(the_slice, length):
+    start, stop, step = the_slice.indices(length)
     if step == -1:
         # Equivalent range with positive step
-        start, stop = stop + 1, start + 1
+        start, stop, step = stop + 1, start + 1, 1
     elif not (step == 1 or step is None):
         raise IndexError("Non-contiguous range.")
     return start, stop, step
+
+
+class PyTableModel(QAbstractTableModel):
+    """ A model for displaying python tables (sequences of sequences) in
+    QTableView objects """
+    # All methods are either necessary overrides of super methods, or
+    # methods likened to the Python list's. Hence, docstrings aren't.
+    # pylint: disable=missing-docstring
+    def __init__(self, sequence=None, parent=None):
+        super().__init__(parent)
+        self._headers = {}
+        self._table = None
+        self.wrap(sequence or [])
+
+    def rowCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else len(self)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 0 if parent.isValid() else max(map(len, self._table), default=0)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid() and role == Qt.DisplayRole:
+            try:
+                return self[index.row()][index.column()]
+            except IndexError:
+                pass
+
+    def sort(self, column, order=Qt.AscendingOrder):
+        self.beginResetModel()
+        self._table = sorted(self._table,
+                             key=operator.itemgetter(column),
+                             reverse=order != Qt.AscendingOrder)
+        self.endResetModel()
+
+    def setHorizontalHeaderLabels(self, labels):
+        self._headers[Qt.Horizontal] = labels
+
+    def setVerticalHeaderLabels(self, labels):
+        self._headers[Qt.Vertical] = labels
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            headers = self._headers.get(orientation)
+            return headers[section] if headers else str(section)
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        if not parent.isValid():
+            del self[row:row + count]
+            return True
+        return False
+
+    def removeColumns(self, column, count, parent=QModelIndex()):
+        self.beginRemoveColumns(parent, column, column + count - 1)
+        for row in self._table:
+            del row[column:column + count]
+        del self._headers.get(Qt.Horizontal, [])[column:column + count]
+        self.endRemoveColumns()
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        self.beginInsertRows(parent, row, row + count - 1)
+        self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
+        self.endInsertRows()
+
+    def insertColumns(self, column, count, parent=QModelIndex()):
+        self.beginInsertColumns(parent, column, column + count - 1)
+        for row in self._table:
+            row[column:column] = [''] * count
+        self.endInsertColumns()
+
+    def __len__(self):
+        return len(self._table)
+
+    def __bool__(self):
+        return len(self) != 0
+
+    def __iter__(self):
+        return iter(self._table)
+
+    def __getitem__(self, item):
+        return self._table[item]
+
+    def __delitem__(self, i):
+        if isinstance(i, slice):
+            start, stop, step = _as_contiguous_range(i, len(self))
+            stop -= 1
+        else:
+            start = stop = i = i if i >= 0 else len(self) + i
+        self.beginRemoveRows(QModelIndex(), start, stop)
+        del self._table[i]
+        self.endRemoveRows()
+
+    def __setitem__(self, i, value):
+        if isinstance(i, slice):
+            start, stop, _ = _as_contiguous_range(i, len(self))
+            stop -= 1
+        else:
+            start = stop = i = i if i >= 0 else len(self) + i
+        self._table[i] = value
+        self.dataChanged.emit(self.index(start), self.index(stop))
+
+    def wrap(self, table):
+        self.beginResetModel()
+        self._table = table
+        self.endResetModel()
+
+    def clear(self):
+        self.beginResetModel()
+        self._table.clear()
+        self.endResetModel()
+
+    def append(self, row):
+        self.extend([row])
+
+    @contextmanager
+    def _insertColumns(self, n_max):
+        if self.columnCount() < n_max:
+            self.beginInsertColumns(QModelIndex(), self.columnCount(), n_max - 1)
+            try:
+                yield
+            finally:
+                self.endInsertColumns()
+        else:
+            yield
+
+    def extend(self, rows):
+        i, rows = len(self), list(rows)
+        self.beginInsertRows(QModelIndex(), i, i + len(rows) - 1)
+        with self._insertColumns(max(map(len, rows))):
+            self._table.extend(rows)
+        self.endInsertRows()
+
+    def insert(self, i, row):
+        self.beginInsertRows(QModelIndex(), i, i)
+        with self._insertColumns(len(row)):
+            self._table.insert(i, row)
+        self.endInsertRows()
+
+    def remove(self, val):
+        del self[self._table.index(val)]
 
 
 class PyListModel(QAbstractListModel):
@@ -216,6 +354,9 @@ class PyListModel(QAbstractListModel):
         self.__delitem__(i)
         return item
 
+    def clear(self):
+        del self[:]
+
     def __len__(self):
         return len(self._list)
 
@@ -241,8 +382,7 @@ class PyListModel(QAbstractListModel):
 
     def __delitem__(self, s):
         if isinstance(s, slice):
-            start, stop, step = s.indices(len(self))
-            start, stop, step = _as_contiguous_range(start, stop, step)
+            start, stop, step = _as_contiguous_range(s, len(self))
             self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
             s = len(self) + s if s < 0 else s
@@ -253,8 +393,7 @@ class PyListModel(QAbstractListModel):
 
     def __setitem__(self, s, value):
         if isinstance(s, slice):
-            start, stop, step = s.indices(len(self))
-            start, stop, step = _as_contiguous_range(start, stop, step)
+            start, stop, step = _as_contiguous_range(s, len(self))
             self.__delitem__(slice(start, stop, step))
 
             if not isinstance(value, list):
