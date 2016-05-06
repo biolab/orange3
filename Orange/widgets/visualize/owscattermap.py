@@ -472,7 +472,7 @@ class OWScatterMap(widget.OWWidget):
     sample_percentages = []
     sample_percentages_captions = []
     sample_times = [0.5, 3, 5, 20, 40, 80]
-    sample_times_captions = ['1s', '5s', '10s', '30s', '1min', '2min']
+    sample_times_captions = ['1 s', '5 s', '10 s', '30 s', '1 min', '2 min']
 
     use_cache = settings.Setting(True)
 
@@ -524,7 +524,7 @@ class OWScatterMap(widget.OWWidget):
         )
         gui.comboBox(box, self, "color_scale", label="Scale: ",
                      orientation=Qt.Horizontal,
-                     items=["Linear", "Square root", "Logarithmic"],
+                     items=["Linear", "Square Root", "Logarithmic"],
                      callback=self._on_color_scale_changed)
 
         self.sampling_box = gui.vBox(self.controlArea, "Sampling")

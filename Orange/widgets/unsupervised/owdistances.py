@@ -14,9 +14,9 @@ _METRICS = [
     ("Cosine", distance.Cosine),
     ("Jaccard", distance.Jaccard),
     ("Spearman", distance.SpearmanR),
-    ("Spearman absolute", distance.SpearmanRAbsolute),
+    ("Spearman Absolute", distance.SpearmanRAbsolute),
     ("Pearson", distance.PearsonR),
-    ("Pearson absolute", distance.PearsonRAbsolute),
+    ("Pearson Absolute", distance.PearsonRAbsolute),
 ]
 
 
@@ -40,7 +40,7 @@ class OWDistances(widget.OWWidget):
 
         self.data = None
 
-        gui.radioButtons(self.controlArea, self, "axis", ["rows", "columns"],
+        gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
         )
         gui.comboBox(self.controlArea, self, "metric_idx",
@@ -91,6 +91,6 @@ class OWDistances(widget.OWWidget):
 
     def send_report(self):
         self.report_items((
-            ("Distances between", ["rows", "columns"][self.axis]),
+            ("Distances Between", ["Rows", "Columns"][self.axis]),
             ("Metric", _METRICS[self.metric_idx][0])
         ))

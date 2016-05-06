@@ -184,7 +184,7 @@ class OWTestLearners(widget.OWWidget):
 
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
-        gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test",
+        gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test:",
                  callback=self.shuffle_split_changed)
         gui.widgetLabel(ibox, "Relative training set size:")
         gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=99,
@@ -202,7 +202,7 @@ class OWTestLearners(widget.OWWidget):
         self.apply_button = gui.button(
             rbox, self, "&Apply", callback=self.apply, default=True)
 
-        self.cbox = gui.vBox(self.controlArea, "Target class")
+        self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
             self.cbox, self, "class_selection", items=[],
             sendSelectedValue=True, valueType=str,

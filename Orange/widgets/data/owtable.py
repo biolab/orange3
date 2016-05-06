@@ -353,7 +353,7 @@ TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 class OWDataTable(widget.OWWidget):
     name = "Data Table"
-    description = "View data set in a spreadsheet."
+    description = "View the data set in a spreadsheet."
     icon = "icons/Table.svg"
     priority = 100
 
@@ -418,7 +418,7 @@ class OWDataTable(widget.OWWidget):
             tooltip="Show rows in the original order", autoDefault=False)
         self.buttonsArea.layout().insertWidget(0, reset)
         gui.auto_commit(self.buttonsArea, self, "auto_commit",
-                        "Send Selected Rows", "Auto send is on")
+                        "Send Selected Rows", "Auto Send is On")
 
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)

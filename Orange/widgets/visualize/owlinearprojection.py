@@ -214,7 +214,7 @@ class LegendItem(LegendItem):
 
 class OWLinearProjection(widget.OWWidget):
     name = "Linear Projection"
-    description = "A multi-axes projection of data to a two-dimension plane."
+    description = "A multi-axis projection of data onto a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
     priority = 2000
 
@@ -339,27 +339,27 @@ class OWLinearProjection(widget.OWWidget):
                           callback=self._on_color_change,
                           contentsLength=12)
         cb.setModel(self.colorvar_model)
-        form.addRow("Colors", cb)
+        form.addRow("Colors:", cb)
 
         alpha_slider = QSlider(
             Qt.Horizontal, minimum=10, maximum=255, pageStep=25,
             tickPosition=QSlider.TicksBelow, value=self.alpha_value)
         alpha_slider.valueChanged.connect(self._set_alpha)
-        form.addRow("Opacity", alpha_slider)
+        form.addRow("Opacity:", alpha_slider)
 
         cb = gui.comboBox(box, self, "shape_index",
                           callback=self._on_shape_change,
                           contentsLength=12)
 
         cb.setModel(self.shapevar_model)
-        form.addRow("Shape", cb)
+        form.addRow("Shape:", cb)
 
         cb = gui.comboBox(box, self, "size_index",
                           callback=self._on_size_change,
                           contentsLength=12)
 
         cb.setModel(self.sizevar_model)
-        form.addRow("Size", cb)
+        form.addRow("Size:", cb)
 
         size_slider = QSlider(
             Qt.Horizontal,  minimum=3, maximum=30, value=self.point_size,
@@ -370,13 +370,13 @@ class OWLinearProjection(widget.OWWidget):
 
         cb = self.jitter_combo = gui.comboBox(
             box, self, "jitter_value",
-            items=["None", "0.01%", "0.1%", "0.5%", "1%", "2%"],
+            items=["None", "0.01 %", "0.1 %", "0.5 %", "1 %", "2 %"],
             callback=self._invalidate_plot)
-        form.addRow("Jittering", cb)
+        form.addRow("Jittering:", cb)
 
         self.cb_class_density = gui.checkBox(box, self, "class_density", label="",
                                              callback=self._update_density)
-        form.addRow("Class density", self.cb_class_density)
+        form.addRow("Class density:", self.cb_class_density)
 
         toolbox = gui.vBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()

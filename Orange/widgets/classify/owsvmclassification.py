@@ -65,10 +65,10 @@ class OWBaseSVM(OWBaseLearner):
 
     def _add_optimization_box(self):
         self.optimization_box = gui.vBox(
-            self.controlArea, "Optimization parameters")
+            self.controlArea, "Optimization Parameters")
         gui.doubleSpin(
             self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
-            label="Numerical Tolerance",
+            label="Numerical tolerance:",
             decimals=6, alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed
         )
@@ -115,7 +115,7 @@ class OWBaseSVM(OWBaseLearner):
 
 class OWSVMClassification(OWBaseSVM):
     name = "SVM"
-    description = "Support vector machines classifier with standard " \
+    description = "A support vector machine classifier with a standard " \
                   "selection of kernels."
     icon = "icons/SVM.svg"
     priority = 50
@@ -141,7 +141,7 @@ class OWSVMClassification(OWBaseSVM):
 
         form.addWidget(gui.appendRadioButton(box, "C-SVM", addToLayout=False),
                        0, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Cost (C)"),
+        form.addWidget(QtGui.QLabel("Cost (C):"),
                        0, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "C", 1e-3, 1000.0, 0.1,
                                       decimals=3, alignment=Qt.AlignRight,
@@ -151,7 +151,7 @@ class OWSVMClassification(OWBaseSVM):
 
         form.addWidget(gui.appendRadioButton(box, "ν-SVM", addToLayout=False),
                        1, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Complexity (ν)"),
+        form.addWidget(QtGui.QLabel("Complexity (ν):"),
                        1, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
                                       decimals=2, alignment=Qt.AlignRight,
@@ -162,7 +162,7 @@ class OWSVMClassification(OWBaseSVM):
     def _add_optimization_box(self):
         super()._add_optimization_box()
         gui.spin(self.optimization_box, self, "max_iter", 50, 1e6, 50,
-                 label="Iteration Limit", checked="limit_iter",
+                 label="Iteration limit:", checked="limit_iter",
                  alignment=Qt.AlignRight, controlWidth=100,
                  callback=self.settings_changed)
 

@@ -11,7 +11,7 @@ from Orange.widgets.utils.sql import check_sql_input
 class OWPurgeDomain(widget.OWWidget):
     name = "Purge Domain"
     description = "Remove redundant values and features from the data set. " \
-                  "Sorts values."
+                  "Sort values."
     icon = "icons/PurgeDomain.svg"
     category = "Data"
     keywords = ["data", "purge", "domain"]

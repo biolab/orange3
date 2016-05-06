@@ -25,7 +25,7 @@ class RegressionTreeNode(TreeNode):
 
 class OWRegressionTreeGraph(OWTreeGraph):
     name = "Regression Tree Viewer"
-    description = "Graphical visualization of a regression tree."
+    description = "A graphical visualization of a regression tree."
     icon = "icons/RegressionTreeGraph.svg"
     priority = 35
 

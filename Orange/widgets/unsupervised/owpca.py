@@ -73,8 +73,8 @@ class OWPCA(widget.OWWidget):
         )
         self.variance_spin.setSuffix("%")
 
-        form.addRow("Components", self.components_spin)
-        form.addRow("Variance covered", self.variance_spin)
+        form.addRow("Components:", self.components_spin)
+        form.addRow("Variance covered:", self.variance_spin)
 
         # Incremental learning
         self.sampling_box = gui.vBox(self.controlArea, "Incremental learning")
@@ -116,8 +116,8 @@ class OWPCA(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send data",
-                        checkbox_label="Auto send on change")
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Data",
+                        checkbox_label="Auto Send on Change")
 
         self.plot = pg.PlotWidget(background="w")
 

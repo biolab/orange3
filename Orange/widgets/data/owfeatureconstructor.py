@@ -106,7 +106,7 @@ class FeatureEditor(QtGui.QFrame):
         )
 
         self.attrs_model = itemmodels.VariableListModel(
-            ["Select feature"], parent=self)
+            ["Select Feature"], parent=self)
         self.attributescb = QtGui.QComboBox(
             minimumContentsLength=16,
             sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon,
@@ -119,7 +119,7 @@ class FeatureEditor(QtGui.QFrame):
         self.funcs_model = itemmodels.PyListModelTooltip()
         self.funcs_model.setParent(self)
 
-        self.funcs_model[:] = chain(["Select function"], sorted_funcs)
+        self.funcs_model[:] = chain(["Select Function"], sorted_funcs)
         self.funcs_model.tooltips[:] = chain(
             [''],
             [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
@@ -397,7 +397,7 @@ class OWFeatureConstructor(widget.OWWidget):
                 StringDescriptor(generate_newname("S{}"), ""))
         )
         menu.addSeparator()
-        self.duplicateaction = menu.addAction("Duplicate selected variable")
+        self.duplicateaction = menu.addAction("Duplicate Selected Variable")
         self.duplicateaction.triggered.connect(self.duplicateFeature)
         self.duplicateaction.setEnabled(False)
         self.addbutton.setMenu(menu)

@@ -1032,7 +1032,7 @@ class NewArrowAnnotation(UserInteraction):
         helpevent = QuickHelpTipEvent(
             self.tr("Click and drag to create a new arrow"),
             self.tr('<h3>New arrow annotation</h3>'
-                    '<p>Click and drag to create a new arrow annotation</p>'
+                    '<p>Click and drag to create a new arrow annotation.</p>'
 #                    '<a href="help://orange-canvas/arrow-annotations>'
 #                    'More ...</a>'
                     )

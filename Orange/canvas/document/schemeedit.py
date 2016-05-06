@@ -178,7 +178,7 @@ class SchemeEditWidget(QWidget):
         self.__cleanUpAction = \
             QAction(self.tr("Clean Up"), self,
                     objectName="cleanup-action",
-                    toolTip=self.tr("Align widget to a grid."),
+                    toolTip=self.tr("Align widgets to a grid."),
                     triggered=self.alignToGrid,
                     )
 
@@ -215,7 +215,7 @@ class SchemeEditWidget(QWidget):
         self.__newArrowAnnotationAction = \
             QAction(self.tr("Arrow"), self,
                     objectName="new-arrow-action",
-                    toolTip=self.tr("Add a arrow annotation to the workflow."),
+                    toolTip=self.tr("Add an arrow annotation to the workflow."),
                     checkable=True,
                     toggled=self.__toggleNewArrowAnnotation,
                     )
@@ -260,7 +260,7 @@ class SchemeEditWidget(QWidget):
         self.__redoAction.setObjectName("redo-action")
 
         self.__selectAllAction = \
-            QAction(self.tr("Select all"), self,
+            QAction(self.tr("Select All"), self,
                     objectName="select-all-action",
                     toolTip=self.tr("Select all items."),
                     triggered=self.selectAll,

@@ -82,11 +82,11 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
 
         box2 = gui.hBox(box)
-        self.add_button = gui.button(box2, self, "Add condition",
+        self.add_button = gui.button(box2, self, "Add Condition",
                                      callback=self.add_row)
-        self.add_all_button = gui.button(box2, self, "Add all variables",
+        self.add_all_button = gui.button(box2, self, "Add All Variables",
                                          callback=self.add_all)
-        self.remove_all_button = gui.button(box2, self, "Remove all",
+        self.remove_all_button = gui.button(box2, self, "Remove All",
                                             callback=self.remove_all)
         gui.rubber(box2)
 

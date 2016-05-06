@@ -757,7 +757,7 @@ class OWPaintData(widget.OWWidget):
     ]
 
     name = "Paint Data"
-    description = "Create data by painting data points in the plane."
+    description = "Create data by painting data points on a plane."
     long_description = ""
     icon = "icons/PaintData.svg"
     priority = 10
@@ -809,12 +809,12 @@ class OWPaintData(widget.OWWidget):
         namesBox = gui.vBox(self.controlArea, "Names")
 
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
-        gui.lineEdit(hbox, self, "attr1", "Variable X ",
+        gui.lineEdit(hbox, self, "attr1", "Variable X: ",
                      controlWidth=80, orientation=Qt.Horizontal,
                      enterPlaceholder=True, callback=self._attr_name_changed)
         gui.separator(hbox, 18)
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
-        attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y ",
+        attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y: ",
                              controlWidth=80, orientation=Qt.Horizontal,
                              enterPlaceholder=True,
                              callback=self._attr_name_changed)
@@ -905,14 +905,14 @@ class OWPaintData(widget.OWWidget):
             indBox, self, "brushRadius", minValue=1, maxValue=100,
             createLabel=False
         )
-        form.addRow("Radius", slider)
+        form.addRow("Radius:", slider)
 
         slider = gui.hSlider(
             indBox, self, "density", None, minValue=1, maxValue=100,
             createLabel=False
         )
 
-        form.addRow("Intensity", slider)
+        form.addRow("Intensity:", slider)
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.left_side, self, "autocommit",

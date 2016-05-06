@@ -102,7 +102,7 @@ class OWScatterPlot(OWWidget):
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
         self.vizrank_button = gui.button(
-            vizrank_box, self, "Rank projections", callback=self.vizrank.reshow,
+            vizrank_box, self, "Rank projections:", callback=self.vizrank.reshow,
             tooltip="Find projections with good class separation")
         self.vizrank_button.setEnabled(False)
         gui.separator(box)

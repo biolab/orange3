@@ -95,7 +95,7 @@ class OWRank(widget.OWWidget):
                              if issubclass(ContinuousVariable, m.score.class_type)]
 
         selMethBox = gui.vBox(
-                self.controlArea, "Select attributes", addSpace=True)
+                self.controlArea, "Select Attributes", addSpace=True)
 
         grid = QtGui.QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
@@ -128,7 +128,7 @@ class OWRank(widget.OWWidget):
         selMethBox.layout().addLayout(grid)
 
         gui.auto_commit(self.buttonsArea, self, "auto_apply", "Commit",
-                        auto_label="Commit on change", box=False)
+                        auto_label="Commit on Change", box=False)
 
         gui.rubber(self.controlArea)
 

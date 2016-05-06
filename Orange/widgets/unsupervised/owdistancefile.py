@@ -11,7 +11,7 @@ from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
-    description = "Read distances from file"
+    description = "Read distances from a file."
     icon = "icons/DistanceFile.svg"
     priority = 10
     category = "Data"
@@ -55,7 +55,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def set_file_list(self):
         super().set_file_list()
-        self.file_combo.addItem("Browse documentation data sets...")
+        self.file_combo.addItem("Browse Documentation Data Sets...")
 
     def reload(self):
         return self.open_file()

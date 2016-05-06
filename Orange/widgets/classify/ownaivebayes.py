@@ -8,7 +8,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWNaiveBayes(OWBaseLearner):
     name = "Naive Bayes"
-    description = "Naive Bayesian classifier."
+    description = "The Naive Bayesian classifier."
     icon = "icons/NaiveBayes.svg"
     priority = 70
 

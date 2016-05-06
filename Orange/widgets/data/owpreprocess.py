@@ -394,7 +394,7 @@ class UnivariateFeatureSelect(QWidget):
         self.__spins = {}
 
         form = QFormLayout()
-        fixedrb = QRadioButton("Fixed", checked=True)
+        fixedrb = QRadioButton("Fixed:", checked=True)
         group.addButton(fixedrb, UnivariateFeatureSelect.Fixed)
         kspin = QSpinBox(
             minimum=1, value=self.__k,
@@ -405,7 +405,7 @@ class UnivariateFeatureSelect(QWidget):
         self.__spins[UnivariateFeatureSelect.Fixed] = kspin
         form.addRow(fixedrb, kspin)
 
-        percrb = QRadioButton("Percentile")
+        percrb = QRadioButton("Percentile:")
         group.addButton(percrb, UnivariateFeatureSelect.Percentile)
         pspin = QDoubleSpinBox(
             minimum=0.0, maximum=100.0, singleStep=0.5,
@@ -511,9 +511,9 @@ class FeatureSelectEditor(BaseEditor):
 
         self.__uni_fs = UnivariateFeatureSelect()
         self.__uni_fs.setItems(
-            [{"text": "Information gain", "tooltip": ""},
-             {"text": "Gain ratio"},
-             {"text": "Gini index"},
+            [{"text": "Information Gain", "tooltip": ""},
+             {"text": "Gain Ratio"},
+             {"text": "Gini Index"},
              {"text": "ReliefF"},
              {"text": "Fast Correlation Based Filter"}
             ]
@@ -623,15 +623,15 @@ class Scale(BaseEditor):
 
         form = QFormLayout()
         self.__centercb = QComboBox()
-        self.__centercb.addItems(["No centering", "Center by mean",
-                                  "Center by median"])
+        self.__centercb.addItems(["No Centering", "Center by Mean",
+                                  "Center by Median"])
 
         self.__scalecb = QComboBox()
-        self.__scalecb.addItems(["No scaling", "Scale by std",
-                                 "Scale by span"])
+        self.__scalecb.addItems(["No scaling", "Scale by SD",
+                                 "Scale by Span"])
 
-        form.addRow("Center", self.__centercb)
-        form.addRow("Scale", self.__scalecb)
+        form.addRow("Center:", self.__centercb)
+        form.addRow("Scale:", self.__scalecb)
         self.layout().addLayout(form)
         self.__centercb.currentIndexChanged.connect(self.changed)
         self.__scalecb.currentIndexChanged.connect(self.changed)
@@ -700,7 +700,7 @@ class Randomize(BaseEditor):
                                       "Features",
                                       "Meta data"])
 
-        form.addRow("Randomize", self.__rand_type_cb)
+        form.addRow("Randomize:", self.__rand_type_cb)
         self.layout().addLayout(form)
         self.__rand_type_cb.currentIndexChanged.connect(self.changed)
         self.__rand_type_cb.activated.connect(self.edited)
@@ -731,7 +731,7 @@ class PCA(BaseEditor):
         self.cspin.valueChanged[int].connect(self.setC)
         self.cspin.editingFinished.connect(self.edited)
 
-        form.addRow("Components", self.cspin)
+        form.addRow("Components:", self.cspin)
         self.layout().addLayout(form)
 
     def setParameters(self, params):
@@ -771,8 +771,8 @@ class CUR(BaseEditor):
         self.espin.valueChanged[float].connect(self.setE)
         self.espin.editingFinished.connect(self.edited)
 
-        form.addRow("Rank", self.rspin)
-        form.addRow("Relative error", self.espin)
+        form.addRow("Rank:", self.rspin)
+        form.addRow("Relative error:", self.espin)
         self.layout().addLayout(form)
 
     def setParameters(self, params):

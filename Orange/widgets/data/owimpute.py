@@ -80,7 +80,7 @@ class OWImpute(OWWidget):
         main_layout.setMargin(10)
         self.controlArea.layout().addLayout(main_layout)
 
-        box = QtGui.QGroupBox(title=self.tr("Default method"), flat=False)
+        box = QtGui.QGroupBox(title=self.tr("Default Method"), flat=False)
         box_layout = QtGui.QVBoxLayout(box)
         main_layout.addWidget(box)
 
@@ -95,7 +95,7 @@ class OWImpute(OWWidget):
 
         self.default_button_group = button_group
 
-        box = QtGui.QGroupBox(title=self.tr("Individual attribute settings"),
+        box = QtGui.QGroupBox(title=self.tr("Individual Attribute Settings"),
                               flat=False)
         main_layout.addWidget(box)
 
@@ -147,7 +147,7 @@ class OWImpute(OWWidget):
         method_layout.addStretch(2)
 
         reset_button = QtGui.QPushButton(
-                "Restore all to default", checked=False, checkable=False,
+                "Restore All to Default", checked=False, checkable=False,
                 clicked=self.reset_variable_methods, default=False,
                 autoDefault=False)
         method_layout.addWidget(reset_button)

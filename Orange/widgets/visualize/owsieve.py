@@ -19,9 +19,9 @@ from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 class OWSieveDiagram(OWWidget):
     name = "Sieve Diagram"
-    description = "A two-way contingency table providing information in " \
-                  "relation to expected frequency of combination of feature " \
-                  "values under independence."
+    description = "A two-way contingency table providing information on the " \
+                  "relation between the observed and expected frequencies " \
+                  "of a combination of feature values under the assumption of independence."
     icon = "icons/SieveDiagram.svg"
     priority = 4200
 

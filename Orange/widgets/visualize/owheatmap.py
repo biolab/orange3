@@ -1501,8 +1501,8 @@ class OWHeatMap(widget.OWWidget):
 
     def send_report(self):
         self.report_items((
-            ("Columns", self.ColumnOrdering[self.sort_columns_idx][1].lower()),
-            ("Rows", self.RowOrdering[self.sort_rows_idx][1].lower()),
+            ("Columns:", self.ColumnOrdering[self.sort_columns_idx][1].lower()),
+            ("Rows:", self.RowOrdering[self.sort_rows_idx][1].lower()),
             ("Row annotation",
              self.annotation_index > 0 and
              self.annotation_vars[self.annotation_index])

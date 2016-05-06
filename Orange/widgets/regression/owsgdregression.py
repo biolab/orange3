@@ -12,7 +12,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWSGDRegression(OWBaseLearner):
     name = "Stochastic Gradient Descent"
-    description = "Stochastic gradient descent algorithm for regression."
+    description = "A stochastic gradient descent algorithm for regression."
     icon = "icons/SGDRegression.svg"
     priority = 90
     LEARNER = SGDRegressionLearner
@@ -52,7 +52,7 @@ class OWSGDRegression(OWBaseLearner):
             return form
 
         box = gui.radioButtons(
-            self.controlArea, self, "loss_function", box="Loss function",
+            self.controlArea, self, "loss_function", box="Loss Function",
             btnLabels=self.LOSS_FUNCTIONS, callback=self._on_func_changed,
             orientation=Qt.Vertical)
         form = add_form(box)
@@ -77,7 +77,7 @@ class OWSGDRegression(OWBaseLearner):
         self._on_penalty_changed()
 
         box = gui.radioButtons(
-            self.controlArea, self, "learning_rate", box="Learning rate",
+            self.controlArea, self, "learning_rate", box="Learning Rate",
             btnLabels=self.LEARNING_RATES, callback=self._on_lrate_changed,
             orientation=Qt.Vertical)
         form = add_form(box)

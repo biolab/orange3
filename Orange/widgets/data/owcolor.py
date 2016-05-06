@@ -218,7 +218,7 @@ class ContinuousTable(ColorTable):
 
 class OWColor(widget.OWWidget):
     name = "Color"
-    description = "Set color legend for variables"
+    description = "Set color legend for variables."
     icon = "icons/Colors.svg"
 
     inputs = [("Data", Orange.data.Table, "set_data")]
@@ -240,21 +240,21 @@ class OWColor(widget.OWWidget):
         self.disc_colors = []
         self.cont_colors = []
 
-        box = gui.hBox(self.controlArea, "Discrete variables")
+        box = gui.hBox(self.controlArea, "Discrete Variables")
         self.disc_model = DiscColorTableModel()
         disc_view = self.disc_view = DiscreteTable(self.disc_model)
         disc_view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.disc_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(disc_view)
 
-        box = gui.hBox(self.controlArea, "Numeric variables")
+        box = gui.hBox(self.controlArea, "Numeric Variables")
         self.cont_model = ContColorTableModel()
         cont_view = self.cont_view = ContinuousTable(self, self.cont_model)
         cont_view.setColumnWidth(1, 256)
         self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(cont_view)
 
-        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send data",
+        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send Data",
                               orientation=Qt.Horizontal,
                               checkbox_label="Resend data on every change")
         box.layout().insertSpacing(0, 20)

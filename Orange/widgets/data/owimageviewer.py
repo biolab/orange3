@@ -373,7 +373,7 @@ class OWImageViewer(widget.OWWidget):
         gui.rubber(self.controlArea)
 
         gui.auto_commit(self.buttonsArea, self, "autoCommit",
-                        "Commit", "Auto commit", box=False)
+                        "Commit", "Auto Commit", box=False)
 
         self.scene = GraphicsScene()
         self.sceneView = QGraphicsView(self.scene, self)
@@ -435,7 +435,7 @@ class OWImageViewer(widget.OWWidget):
             if self.stringAttrs:
                 self.setupScene()
         else:
-            self.info.setText("Waiting for input\n")
+            self.info.setText("Waiting for input.\n")
 
     def clear(self):
         self.data = None

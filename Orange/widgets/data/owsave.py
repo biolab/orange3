@@ -42,7 +42,7 @@ class OWSave(widget.OWWidget):
             commit=self.save_file, callback=self.adjust_label,
             disabled=True, addSpace=True)
         self.saveAs = gui.button(
-            self.controlArea, self, "Save as ...",
+            self.controlArea, self, "Save As...",
             callback=self.save_file_as, disabled=True)
         self.saveAs.setMinimumWidth(220)
         self.adjustSize()

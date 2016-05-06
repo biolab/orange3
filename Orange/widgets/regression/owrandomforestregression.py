@@ -5,7 +5,7 @@ from Orange.widgets import settings
 
 class OWRandomForestRegression(owrandomforest.OWRandomForest):
     name = "Random Forest Regression"
-    description = "Random forest regression algorithm."
+    description = "The random forest regression algorithm."
     icon = "icons/RandomForest.svg"
     priority = 40
 

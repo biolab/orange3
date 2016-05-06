@@ -72,7 +72,7 @@ class OWDataSampler(widget.OWWidget):
             callback=set_sampling_type(self.FixedProportion),
             addSpace=12)
 
-        gui.appendRadioButton(sampling, "Fixed sample size:")
+        gui.appendRadioButton(sampling, "Fixed sample size")
         ibox = gui.indentedBox(sampling)
         self.sampleSizeSpin = gui.spin(
             ibox, self, "sampleSizeNumber", label="Instances: ",
@@ -83,13 +83,13 @@ class OWDataSampler(widget.OWWidget):
             callback=set_sampling_type(self.FixedSize),
             addSpace=12)
 
-        gui.appendRadioButton(sampling, "Cross Validation:")
+        gui.appendRadioButton(sampling, "Cross Validation")
         form = QtGui.QFormLayout(
             formAlignment=Qt.AlignLeft | Qt.AlignTop,
             labelAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow)
         ibox = gui.indentedBox(sampling, addSpace=True, orientation=form)
-        form.addRow("Number of folds",
+        form.addRow("Number of folds:",
                     gui.spin(
                         ibox, self, "number_of_folds", 2, 100,
                         addToLayout=False,
@@ -97,7 +97,7 @@ class OWDataSampler(widget.OWWidget):
         self.selected_fold_spin = gui.spin(
             ibox, self, "selectedFold", 1, self.number_of_folds,
             addToLayout=False, callback=self.fold_changed)
-        form.addRow("Selected fold", self.selected_fold_spin)
+        form.addRow("Selected fold:", self.selected_fold_spin)
 
         gui.appendRadioButton(sampling, "Boostrap")
 

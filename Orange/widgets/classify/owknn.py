@@ -9,7 +9,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWKNNLearner(OWBaseLearner):
     name = "Nearest Neighbors"
-    description = "k-nearest neighbors classification algorithm."
+    description = "The k-nearest neighbors classification algorithm."
     icon = "icons/KNN.svg"
     priority = 20
 
@@ -25,13 +25,13 @@ class OWKNNLearner(OWBaseLearner):
 
     def add_main_layout(self):
         box = gui.vBox(self.controlArea, "Neighbors")
-        gui.spin(box, self, "n_neighbors", 1, 100, label="Number of neighbors",
+        gui.spin(box, self, "n_neighbors", 1, 100, label="Number of neighbors:",
                  alignment=Qt.AlignRight, callback=self.settings_changed)
-        gui.comboBox(box, self, "metric_index", label="Metric",
+        gui.comboBox(box, self, "metric_index", label="Metric:",
                      orientation=Qt.Horizontal,
                      items=[i.capitalize() for i in self.metrics],
                      callback=self.settings_changed)
-        gui.comboBox(box, self, "weight_type", label='Weight',
+        gui.comboBox(box, self, "weight_type", label="Weight:",
                      orientation=Qt.Horizontal,
                      items=[i.capitalize() for i in self.weights],
                      callback=self.settings_changed)

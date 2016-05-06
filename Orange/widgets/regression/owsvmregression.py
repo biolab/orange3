@@ -12,7 +12,7 @@ from Orange.widgets.classify.owsvmclassification import OWBaseSVM
 
 class OWSVMRegression(OWBaseSVM):
     name = "SVM Regression"
-    description = "Support vector machine regression algorithm."
+    description = "A support vector machine regression algorithm."
     icon = "icons/SVMRegression.svg"
     priority = 50
 
@@ -41,12 +41,12 @@ class OWSVMRegression(OWBaseSVM):
 
         form.addWidget(gui.appendRadioButton(box, "ε-SVR", addToLayout=False),
                        0, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Cost (C)"),
+        form.addWidget(QtGui.QLabel("Cost (C):"),
                        0, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "epsilon_C", 0.1, 512.0, 0.1,
                                       decimals=2, addToLayout=False),
                        0, 2)
-        form.addWidget(QLabel("Loss Epsilon (ε)"),
+        form.addWidget(QLabel("Loss epsilon (ε):"),
                        1, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "epsilon", 0.1, 512.0, 0.1,
                                       decimals=2, addToLayout=False),
@@ -54,12 +54,12 @@ class OWSVMRegression(OWBaseSVM):
 
         form.addWidget(gui.appendRadioButton(box, "ν-SVR", addToLayout=False),
                        2, 0, Qt.AlignLeft)
-        form.addWidget(QLabel("Cost (C)"),
+        form.addWidget(QLabel("Cost (C):"),
                        2, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "nu_C", 0.1, 512.0, 0.1,
                                       decimals=2, addToLayout=False),
                        2, 2)
-        form.addWidget(QLabel("Complexity bound (ν)"),
+        form.addWidget(QLabel("Complexity bound (ν):"),
                        3, 1, Qt.AlignRight)
         form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
                                       decimals=2, addToLayout=False),

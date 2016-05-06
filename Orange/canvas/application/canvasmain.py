@@ -427,7 +427,7 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.save_as_action = \
-            QAction(self.tr("Save As ..."), self,
+            QAction(self.tr("Save As..."), self,
                     objectName="action-save-as",
                     toolTip=self.tr("Save current workflow as."),
                     triggered=self.save_scheme_as,
@@ -596,7 +596,7 @@ class CanvasMainWindow(QMainWindow):
             self.set_scheme_margins_enabled)
 
         self.reset_widget_settings_action = \
-            QAction(self.tr("Reset widget settings..."), self,
+            QAction(self.tr("Reset Widget Settings..."), self,
                     triggered=self.reset_widget_settings)
 
     def setup_menu(self):

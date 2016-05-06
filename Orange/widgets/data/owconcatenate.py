@@ -54,7 +54,7 @@ class OWConcatenate(widget.OWWidget):
     domain_opts = ("Union of attributes appearing in all tables",
                    "Intersection of attributes in all tables")
 
-    id_roles = ("Class attribute", "Attribute", "Meta attribute")
+    id_roles = ("Class Attribute", "Attribute", "Meta Attribute")
 
     auto_commit = Setting(True)
 
@@ -64,7 +64,7 @@ class OWConcatenate(widget.OWWidget):
         self.primary_data = None
         self.more_data = OrderedDict()
 
-        mergebox = gui.vBox(self.controlArea, "Domains merging")
+        mergebox = gui.vBox(self.controlArea, "Domain Merging")
         box = gui.radioButtons(
             mergebox, self, "merge_type",
             callback=self._merge_type_changed)
@@ -80,13 +80,13 @@ class OWConcatenate(widget.OWWidget):
 
         label = gui.widgetLabel(
             box,
-            self.tr("The resulting table will have class only if there " +
+            self.tr("The resulting table will have a class only if there " +
                     "is no conflict between input classes."))
         label.setWordWrap(True)
 
         ###
         box = gui.vBox(
-            self.controlArea, self.tr("Source identification"),
+            self.controlArea, self.tr("Source Identification"),
             addSpace=False)
 
         cb = gui.checkBox(
@@ -103,11 +103,11 @@ class OWConcatenate(widget.OWWidget):
         )
 
         form.addRow(
-            self.tr("Feature name"),
+            self.tr("Feature name:"),
             gui.lineEdit(ibox, self, "source_attr_name", valueType=str))
 
         form.addRow(
-            self.tr("Place"),
+            self.tr("Place:"),
             gui.comboBox(ibox, self, "source_column_role", items=self.id_roles)
         )
 
@@ -120,7 +120,7 @@ class OWConcatenate(widget.OWWidget):
 
         box = gui.auto_commit(
             self.controlArea, self, "auto_commit", "Apply Changes",
-            "Apply on change", commit=self.apply)
+            "Apply on Change", commit=self.apply)
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 20)
 

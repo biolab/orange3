@@ -55,30 +55,30 @@ class OWContinuize(widget.OWWidget):
         ("One class per value", Continuize.Indicators),
     )
 
-    value_ranges = ["from -1 to 1", "from 0 to 1"]
+    value_ranges = ["From -1 to 1", "From 0 to 1"]
 
     def __init__(self):
         super().__init__()
 
-        box = gui.vBox(self.controlArea, "Multinomial attributes")
+        box = gui.vBox(self.controlArea, "Multinomial Attributes")
         gui.radioButtonsInBox(
             box, self, "multinomial_treatment",
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.settings_changed)
 
-        box = gui.vBox(self.controlArea, "Continuous attributes")
+        box = gui.vBox(self.controlArea, "Continuous Attributes")
         gui.radioButtonsInBox(
             box, self, "continuous_treatment",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
 
-        box = gui.vBox(self.controlArea, "Discrete class attribute")
+        box = gui.vBox(self.controlArea, "Discrete Class Attribute")
         gui.radioButtonsInBox(
             box, self, "class_treatment",
             btnLabels=[t[0] for t in self.class_treats],
             callback=self.settings_changed)
 
-        zbbox = gui.vBox(self.controlArea, "Value range")
+        zbbox = gui.vBox(self.controlArea, "Value Range")
 
         gui.radioButtonsInBox(
             zbbox, self, "zero_based",

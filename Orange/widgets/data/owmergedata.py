@@ -17,7 +17,7 @@ INDEX = "Index"
 
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
-    description = "Merge data sets based on values of selected data feature."
+    description = "Merge data sets based on the values of selected data features."
     icon = "icons/MergeData.svg"
     priority = 1110
 

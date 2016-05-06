@@ -18,11 +18,11 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
 
     inputs = [("Learner", LearnerRegression, "set_base_learner")]
 
-    losses = ["linear", "square", "exponential"]
+    losses = ["Linear", "Square", "Exponential"]
     loss = Setting(0)
 
     def add_specific_parameters(self, box):
-        gui.comboBox(box, self, "loss", label="Loss",
+        gui.comboBox(box, self, "loss", label="Loss:",
                      orientation=Qt.Horizontal, items=self.losses,
                      callback=self.settings_changed)
 

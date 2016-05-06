@@ -35,7 +35,7 @@ class OWPredictions(widget.OWWidget):
     name = "Predictions"
     icon = "icons/Predictions.svg"
     priority = 200
-    description = "Display predictions of models for an input data set."
+    description = "Display the predictions of models for an input data set."
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Predictors", Model,
                "set_predictor", widget.Multiple)]
@@ -73,7 +73,7 @@ class OWPredictions(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(
-            box, "No data on input\nPredictors: 0\nTask: N/A")
+            box, "No data on input.\nPredictors: 0\nTask: N/A")
         self.infolabel.setMinimumWidth(150)
         gui.button(box, self, "Restore Original Order",
                    callback=self._reset_order,
@@ -97,7 +97,7 @@ class OWPredictions(widget.OWWidget):
         gui.checkBox(box, self, "draw_dist", "Draw distribution bars",
                      callback=self._update_prediction_delegate)
 
-        box = gui.vBox(self.controlArea, "Data view")
+        box = gui.vBox(self.controlArea, "Data View")
         gui.checkBox(box, self, "show_attrs", "Show full data set",
                      callback=self._update_column_visibility)
 

@@ -11,7 +11,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWLogisticRegression(OWBaseLearner):
     name = "Logistic Regression"
-    description = "Logistic regression classification algorithm with " \
+    description = "The logistic regression classification algorithm with " \
                   "LASSO (L1) or ridge (L2) regularization."
     icon = "icons/LogisticRegression.svg"
     priority = 60

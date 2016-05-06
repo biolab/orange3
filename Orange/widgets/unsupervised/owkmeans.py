@@ -13,7 +13,7 @@ from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWKMeans(widget.OWWidget):
-    name = "k-Means"
+    name = "k-means"
     description = "k-means clustering algorithm with silhouette-based " \
                   "quality estimation."
     icon = "icons/KMeans.svg"
@@ -25,13 +25,13 @@ class OWKMeans(widget.OWWidget):
                ("Centroids", Table)]
 
     INIT_KMEANS, INIT_RANDOM = range(2)
-    INIT_METHODS = "Initialize with KMeans++", "Random initialization"
+    INIT_METHODS = "Initialize with KMeans++", "Random Initialization"
 
     SILHOUETTE, INTERCLUSTER, DISTANCES = range(3)
     SCORING_METHODS = [("Silhouette", lambda km: km.silhouette, False),
-                       ("Inter-cluster distance",
+                       ("Inter-cluster Distance",
                         lambda km: km.inter_cluster, True),
-                       ("Distance to centroids",
+                       ("Distance to Centroids",
                         lambda km: km.inertia, True)]
 
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
@@ -65,7 +65,7 @@ class OWKMeans(widget.OWWidget):
             box, self, "optimize_k", [], orientation=layout,
             callback=self.update)
         layout.addWidget(
-            gui.appendRadioButton(bg, "Fixed", addToLayout=False),
+            gui.appendRadioButton(bg, "Fixed:", addToLayout=False),
             1, 1)
         sb = gui.hBox(None, margin=0)
         self.fixedSpinBox = gui.spin(
@@ -75,7 +75,7 @@ class OWKMeans(widget.OWWidget):
         layout.addWidget(sb, 1, 2)
 
         layout.addWidget(
-            gui.appendRadioButton(bg, "Optimized", addToLayout=False), 2, 1)
+            gui.appendRadioButton(bg, "Optimized from", addToLayout=False), 2, 1)
         ftobox = gui.hBox(None)
         ftobox.layout().setContentsMargins(0, 0, 0, 0)
         layout.addWidget(ftobox)
@@ -83,7 +83,7 @@ class OWKMeans(widget.OWWidget):
             ftobox, self, "k_from", minv=2, maxv=29,
             controlWidth=60, alignment=Qt.AlignRight,
             callback=self.update_from)
-        gui.widgetLabel(ftobox, "  To: ")
+        gui.widgetLabel(ftobox, "to")
         self.fixedSpinBox = gui.spin(
             ftobox, self, "k_to", minv=3, maxv=30,
             controlWidth=60, alignment=Qt.AlignRight,
@@ -125,10 +125,10 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Output")
         gui.comboBox(box, self, "place_cluster_ids",
-                     label="Append cluster id as ", orientation=Qt.Horizontal,
+                     label="Append cluster ID as", orientation=Qt.Horizontal,
                      callback=self.send_data, items=self.OUTPUT_METHODS)
         gui.lineEdit(box, self, "output_name",
-                     label="Name ", orientation=Qt.Horizontal,
+                     label="Name:", orientation=Qt.Horizontal,
                      callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
