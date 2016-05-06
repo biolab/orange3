@@ -278,6 +278,18 @@ class FileFormat(metaclass=FileFormatMeta):
         return cls.write_file(filename, data)
 
     @classmethod
+    def write_table_metadata(cls, filename, data):
+        if isinstance(filename, str) and data.attributes:
+            with open(filename + '.metadata', 'wb') as f:
+                pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
+
+    @classmethod
+    def set_table_metadata(cls, filename, table):
+        if isinstance(filename, str) and path.exists(filename + '.metadata'):
+            with open(filename + '.metadata', 'rb') as f:
+                table.attributes = pickle.load(f)
+
+    @classmethod
     def locate(cls, filename, search_dirs=('.',)):
         """Locate a file with given filename that can be opened by one
         of the available readers.
@@ -662,6 +674,7 @@ class CSVReader(FileFormat):
                                    '{}{}').format(pos,
                                                   ('-' + str(endpos)) if (endpos - pos) > 1 else '')
                         warnings.warn(warning)
+                    self.set_table_metadata(self.filename, data)
                     return data
                 except Exception as e:
                     error = e
@@ -674,6 +687,7 @@ class CSVReader(FileFormat):
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data)
             cls.write_data(writer.writerow, data)
+        cls.write_table_metadata(filename, data)
 
 
 class TabReader(CSVReader):
