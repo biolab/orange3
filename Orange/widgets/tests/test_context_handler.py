@@ -38,3 +38,5 @@ class ContextHandlerTestCase(TestCase):
         context = widget.current_context = handler.new_context()
         handler.fast_save(widget, 'context_setting', 55)
         self.assertEqual(context.values['context_setting'], 55)
+        self.assertEqual(handler.known_settings['context_setting'].default,
+                         SimpleWidget.context_setting.default)

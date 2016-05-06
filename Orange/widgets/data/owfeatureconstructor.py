@@ -21,7 +21,7 @@ from PyQt4.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
 import Orange
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import DomainContextHandler, ContextSetting
+from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
@@ -287,6 +287,30 @@ class DescriptorModel(itemmodels.PyListModel):
             return super().data(index, role)
 
 
+class FeatureConstructorSettingsHandler(DomainContextHandler):
+    """Context handler that filters descriptors"""
+
+    def is_valid_item(self, setting, descriptor, attrs, metas):
+        """Check if descriptor can be used with given domain.
+
+        Return True if descriptor's expression contains only
+        available variables and descriptors name does not clash with
+        existing variables.
+        """
+        if descriptor.name in attrs or descriptor.name in metas:
+            return False
+
+        try:
+            exp_ast = ast.parse(descriptor.expression, mode="eval")
+        except Exception:
+            return False
+
+        for name in freevars(exp_ast, []):
+            if not (name in attrs or name in metas):
+                return False
+        return True
+
+
 class OWFeatureConstructor(widget.OWWidget):
     name = "Feature Constructor"
     description = "Construct new features (data columns) from a set of " \
@@ -297,7 +321,7 @@ class OWFeatureConstructor(widget.OWWidget):
 
     want_main_area = False
 
-    settingsHandler = DomainContextHandler()
+    settingsHandler = FeatureConstructorSettingsHandler()
     descriptors = ContextSetting([])
     currentIndex = ContextSetting(-1)
 
@@ -463,6 +487,8 @@ class OWFeatureConstructor(widget.OWWidget):
         if self.data is not None:
             descriptors = list(self.descriptors)
             currindex = self.currentIndex
+            self.descriptors = []
+            self.currentIndex = -1
             self.openContext(data)
 
             if descriptors != self.descriptors or \

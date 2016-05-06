@@ -742,17 +742,16 @@ class ContextHandler(SettingsHandler):
     def fast_save(self, widget, name, value):
         """Update value of `name` setting in the current context to `value`
         """
+        setting = self.known_settings.get(name)
+        if isinstance(setting, ContextSetting):
+            context = widget.current_context
+            if context is None:
+                return
 
-        super().fast_save(widget, name, value)
-
-        context = widget.current_context
-        if context is None:
-            return
-
-        if name in self.known_settings:
-            setting = self.known_settings[name]
             value = self.encode_setting(context, setting, value)
             self.update_packed_data(context.values, name, value)
+        else:
+            super().fast_save(widget, name, value)
 
     @staticmethod
     def update_packed_data(data, name, value):
@@ -860,24 +859,24 @@ class DomainContextHandler(ContextHandler):
 
         super().open_context(widget, domain, *self.encode_domain(domain))
 
-    def filter_value(self, setting, data, domain, attributes, metas):
+    def filter_value(self, setting, data, domain, attrs, metas):
         value = data.get(setting.name, None)
         if isinstance(value, list):
             sel_name = getattr(setting, "selected", None)
             selected = set(data.pop(sel_name, []))
             new_selected, new_value = [], []
-            for i, val in enumerate(value):
-                if self._var_exists(setting, val, attributes, metas):
+            for i, item in enumerate(value):
+                if self.is_valid_item(setting, item, attrs, metas):
                     if i in selected:
                         new_selected.append(len(new_value))
-                    new_value.append(val)
+                    new_value.append(item)
 
             data[setting.name] = new_value
             if hasattr(setting, 'selected'):
                 data[setting.selected] = new_selected
         elif value is not None:
             if (value[1] >= 0 and
-                    not self._var_exists(setting, value, attributes, metas)):
+                    not self._var_exists(setting, value, attrs, metas)):
                 del data[setting.name]
 
     def settings_to_widget(self, widget):
@@ -909,23 +908,6 @@ class DomainContextHandler(ContextHandler):
                 self.attributes_in_res and get_attribute(a[0]) == a[1] or
                 self.metas_in_res and get_meta(a[0]) == a[1])]
             setattr(widget, self.reservoir, ll)
-
-    def fast_save(self, widget, name, value):
-        super().fast_save(widget, name, value)
-
-        context = widget.current_context
-        if not context:
-            return
-
-        if name in self.known_settings:
-            setting = self.known_settings[name]
-
-            if name == setting.name or name.endswith(".{0}".format(setting.name)):
-                value = self.encode_setting(context, setting, value)
-            else:
-                value = list(value)
-
-            self.update_packed_data(context.values, name, value)
 
     def encode_setting(self, context, setting, value):
         value = copy.copy(value)
@@ -993,7 +975,7 @@ class DomainContextHandler(ContextHandler):
             selected = set()
 
         for i, item in enumerate(value):
-            if self._var_exists(setting, item, attrs, metas):
+            if self.is_valid_item(setting, item, attrs, metas):
                 matched += 1
             else:
                 if setting.required == ContextSetting.REQUIRED:
@@ -1012,6 +994,14 @@ class DomainContextHandler(ContextHandler):
             return 1, 1
         else:
             raise IncompatibleContext()
+
+    def is_valid_item(self, setting, item, attrs, metas):
+        """Return True if given item can be used with attrs and metas
+
+        Subclasses can override this method to checks data in alternative
+        representations.
+        """
+        return self._var_exists(setting, item, attrs, metas)
 
     def mergeBack(self, widget):
         """Merge contexts loaded from schema with localy available list of
