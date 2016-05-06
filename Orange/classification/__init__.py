@@ -5,7 +5,6 @@ from .base_classification import (ModelClassification as Model,
 from .knn import *
 from .logistic_regression import *
 from .majority import *
-from .mlp import *
 from .naive_bayes import *
 from .random_forest import *
 from .softmax_regression import *
