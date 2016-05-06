@@ -294,6 +294,11 @@ class TimeVariableTest(VariableTest):
         self.assertEqual(var.repr_val(ts2), datestr)
         self.assertEqual(var.repr_val(ts1), '2015-10-18 20:48:20')
 
+    def test_parse_invalid(self):
+        var = TimeVariable('var')
+        with self.assertRaises(ValueError):
+            var.parse('123')
+
     def test_have_date(self):
         var = TimeVariable('time')
         ts = var.parse('1937-08-02')  # parse date
