@@ -4,7 +4,7 @@ from itertools import chain
 from PyQt4 import QtGui, QtCore
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
-                         Table)
+                         Table, TimeVariable)
 import Orange.data.filter as data_filter
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
@@ -47,6 +47,7 @@ class OWSelectRows(widget.OWWidget):
                          "is between", "is outside", "contains",
                          "begins with", "ends with",
                          "is defined"]}
+    operator_names[TimeVariable] = operator_names[ContinuousVariable]
 
     def __init__(self):
         super().__init__()
@@ -219,6 +220,11 @@ class OWSelectRows(widget.OWWidget):
             le.setValidator(OWSelectRows.QDoubleValidatorEmpty())
             return le
 
+        def add_datetime(contents):
+            le = add_textual(contents)
+            le.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp(TimeVariable.REGEX)))
+            return le
+
         var = self.data.domain[oper_combo.attr_combo.currentText()]
         box = self.cond_list.cellWidget(oper_combo.row, 2)
         if selected_values is not None:
@@ -254,10 +260,11 @@ class OWSelectRows(widget.OWWidget):
             box.var_type = vartype(var)
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
             if var.is_continuous:
-                box.controls = [add_numeric(lc[0])]
+                validator = add_datetime if isinstance(var, TimeVariable) else add_numeric
+                box.controls = [validator(lc[0])]
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
-                    box.controls.append(add_numeric(lc[1]))
+                    box.controls.append(validator(lc[1]))
                 gui.rubber(box)
             elif var.is_string:
                 box.controls = [add_textual(lc[0])]
@@ -320,12 +327,22 @@ class OWSelectRows(widget.OWWidget):
     def commit(self):
         matching_output = self.data
         non_matching_output = None
+        self.error(21)
         if self.data:
             domain = self.data.domain
             conditions = []
             for attr_name, oper, values in self.conditions:
                 attr_index = domain.index(attr_name)
                 attr = domain[attr_index]
+
+                # Parse datetime strings into floats
+                if isinstance(attr, TimeVariable):
+                    try:
+                        values = [attr.parse(v) for v in values]
+                    except ValueError as e:
+                        self.error(21, e.args[0])
+                        return
+
                 if attr.is_continuous:
                     if any(not v for v in values):
                         continue
