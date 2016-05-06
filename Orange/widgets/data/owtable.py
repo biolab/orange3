@@ -315,9 +315,8 @@ def ranges(indices):
     >>> [(1, 4), (5, 6), (3, 5)]
 
     """
-    g = itertools.groupby(enumerate(indices),
-                          key=lambda t: t[1] - t[0])
-    for _, range_ind in g:
+    groups = itertools.groupby(enumerate(indices), key=lambda t: t[1] - t[0])
+    for _, range_ind in groups:
         range_ind = list(range_ind)
         _, start = range_ind[0]
         _, end = range_ind[-1]
@@ -965,6 +964,7 @@ def format_summary(summary):
             text[-1] += " (no missing values)"
 
     def format_part(part):
+        # pylint: disable=missing-docstring
         if isinstance(part, NotAvailable):
             return ""
         elif part.nans + part.non_nans == 0:
@@ -984,7 +984,8 @@ def format_summary(summary):
             # MISSING, N/A
             return ""
 
-    def sp(n):
+    def plural(n):
+        # pylint: disable=missing-docstring
         if n == 0:
             return "No", "s"
         elif n == 1:
@@ -992,23 +993,23 @@ def format_summary(summary):
         else:
             return str(n), 's'
 
-    text += [("%s feature%s" % sp(len(summary.domain.attributes)))
+    text += [("%s feature%s" % plural(len(summary.domain.attributes)))
              + format_part(summary.X)]
 
     if not summary.domain.class_vars:
         text += ["No target variable."]
     else:
         if len(summary.domain.class_vars) > 1:
-            c_text = "%s outcome%s" % sp(len(summary.domain.class_vars))
+            c_text = "%s outcome%s" % plural(len(summary.domain.class_vars))
         elif summary.domain.has_continuous_class:
             c_text = "Continuous target variable"
         else:
-            c_text = "Discrete class with %s value%s" % sp(
+            c_text = "Discrete class with %s value%s" % plural(
                 len(summary.domain.class_var.values))
         c_text += format_part(summary.Y)
         text += [c_text]
 
-    text += [("%s meta attribute%s" % sp(len(summary.domain.metas)))
+    text += [("%s meta attribute%s" % plural(len(summary.domain.metas)))
              + format_part(summary.M)]
 
     return text
