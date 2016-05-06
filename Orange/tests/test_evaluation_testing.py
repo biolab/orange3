@@ -7,7 +7,8 @@ import numpy as np
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table
-from Orange.evaluation import CrossValidation, LeaveOneOut, TestOnTrainingData, TestOnTestData, ShuffleSplit, sample
+from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrainingData,
+                               TestOnTestData, ShuffleSplit, sample)
 from Orange.preprocess import discretize, preprocess
 
 
@@ -142,6 +143,18 @@ class CrossValidationTestCase(CommonSamplingTests):
         res = CrossValidation(self.random_table, learners, k=5, store_models=True)
         self.assertEqual(len(res.models), 5)
         self.check_models(res, learners, 5)
+
+    def test_split_by_model(self):
+        learners = [NaiveBayesLearner(), MajorityLearner()]
+        res = CrossValidation(self.random_table, learners, k=5, store_models=True)
+
+        for i, result in enumerate(res.split_by_model()):
+            self.assertIsInstance(result, Results)
+            self.assertTrue((result.predicted == res.predicted[i]).all())
+            self.assertTrue((result.probabilities == res.probabilities[i]).all())
+            self.assertEqual(len(result.models), 5)
+            for model in result.models:
+                self.assertIsInstance(model, learners[i].__returns__)
 
     def test_10_fold_probs(self):
         learners = [MajorityLearner(), MajorityLearner()]

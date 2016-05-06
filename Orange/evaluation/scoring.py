@@ -41,11 +41,11 @@ class Score(metaclass=WrapperMeta):
             return self
 
     def __call__(self, results, **kwargs):
-        if not (self.separate_folds and results.folds):
-            return self.compute_score(results, **kwargs)
+        if self.separate_folds and results.score_by_folds and results.folds:
+            scores = self.scores_by_folds(results, **kwargs)
+            return self.average(scores)
 
-        scores = self.scores_by_folds(results, **kwargs)
-        return self.average(scores)
+        return self.compute_score(results, **kwargs)
 
     def average(self, scores):
         if self.is_scalar:

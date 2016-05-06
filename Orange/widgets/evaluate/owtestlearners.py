@@ -419,7 +419,7 @@ class OWTestLearners(widget.OWWidget):
                 return
 
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
-        for learner, result in zip(learners, split_by_model(results)):
+        for learner, result in zip(learners, results.split_by_model()):
             stats = None
             if class_var.is_discrete:
                 scorers = classification_stats.scores
@@ -630,33 +630,6 @@ class OWTestLearners(widget.OWWidget):
 
 def learner_name(learner):
     return getattr(learner, "name", type(learner).__name__)
-
-
-def split_by_model(results):
-    """
-    Split evaluation results by models
-    """
-    data = results.data
-    nmethods = len(results.predicted)
-    for i in range(nmethods):
-        res = Orange.evaluation.Results()
-        res.data = data
-        res.domain = results.domain
-        res.row_indices = results.row_indices
-        res.actual = results.actual
-        res.predicted = results.predicted[(i,), :]
-
-        if getattr(results, "probabilities", None) is not None:
-            res.probabilities = results.probabilities[(i,), :, :]
-
-        if results.models is not None:
-            res.models = [mf[i] for mf in results.models]
-
-        if results.folds is not None:
-            res.folds = results.folds
-
-        res.failed = [results.failed[i]]
-        yield res
 
 
 def results_add_by_model(x, y):

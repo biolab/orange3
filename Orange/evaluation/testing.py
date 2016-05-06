@@ -42,7 +42,7 @@ class Results:
         folds (List[Slice or List[int]]): A list of indices (or slice objects)
             corresponding to rows of each fold.
     """
-
+    score_by_folds = True
     # noinspection PyBroadException
     # noinspection PyNoneFunctionAssignment
     def __init__(self, data=None, nmethods=0, *, learners=None, train_data=None,
@@ -350,6 +350,30 @@ class Results:
         """
         raise NotImplementedError()
 
+    def split_by_model(self):
+        """Split evaluation results by models
+        """
+        data = self.data
+        nmethods = len(self.predicted)
+        for i in range(nmethods):
+            res = Results()
+            res.data = data
+            res.domain = self.domain
+            res.row_indices = self.row_indices
+            res.actual = self.actual
+            res.folds = self.folds
+            res.score_by_folds = self.score_by_folds
+
+            res.predicted = self.predicted[(i,), :]
+            if getattr(self, "probabilities", None) is not None:
+                res.probabilities = self.probabilities[(i,), :, :]
+
+            if self.models is not None:
+                res.models = self.models[:, i]
+
+            res.failed = [self.failed[i]]
+            yield res
+
 
 class CrossValidation(Results):
     """
@@ -368,8 +392,6 @@ class CrossValidation(Results):
     """
     def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
                  store_models=False, preprocessor=None, callback=None, warnings=None):
-        self.folds = []
-        self.learners = learners
         self.k = k
         self.stratified = stratified
         self.random_state = random_state
@@ -399,6 +421,7 @@ class CrossValidation(Results):
 
 class LeaveOneOut(Results):
     """Leave-one-out testing"""
+    score_by_folds = False
 
     def __init__(self, data, learners, store_data=False, store_models=False,
                  preprocessor=None, callback=None):
