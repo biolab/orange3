@@ -29,12 +29,18 @@ class _store(dict):
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
     if key is not None:
-        return sorted(enumerate(seq), key=lambda pair: key(pair[1]), reverse=reverse)
+        return sorted(enumerate(seq),
+                      key=lambda pair: key(pair[1]),
+                      reverse=reverse)
     elif cmp is not None:
         from functools import cmp_to_key
-        return sorted(enumerate(seq), key=cmp_to_key(lambda a, b: cmp(a[1], b[1])), reverse=reverse)
+        return sorted(enumerate(seq),
+                      key=cmp_to_key(lambda a, b: cmp(a[1], b[1])),
+                      reverse=reverse)
     else:
-        return sorted(enumerate(seq), key=operator.itemgetter(1), reverse=reverse)
+        return sorted(enumerate(seq),
+                      key=operator.itemgetter(1),
+                      reverse=reverse)
 
 
 @contextmanager
@@ -197,6 +203,7 @@ class PyTableModel(QAbstractTableModel):
 
 
 class PyListModel(QAbstractListModel):
+    # pylint: disable=missing-docstring
     """ A model for displaying python list like objects in Qt item view classes
     """
     MIME_TYPES = ["application/x-Orange-PyListModelData"]
@@ -233,7 +240,6 @@ class PyListModel(QAbstractListModel):
         self._list = lst
         self._other_data = [_store() for _ in lst]
         self.endResetModel()
-
 
     # noinspection PyMethodOverriding
     def index(self, row, column=0, parent=QModelIndex()):
@@ -305,7 +311,6 @@ class PyListModel(QAbstractListModel):
         else:
             return self._flags | Qt.ItemIsDropEnabled
 
-
     # noinspection PyMethodOverriding
     def insertRows(self, row, count, parent=QModelIndex()):
         """ Insert ``count`` rows at ``row``, the list fill be filled
@@ -316,7 +321,6 @@ class PyListModel(QAbstractListModel):
             return True
         else:
             return False
-
 
     # noinspection PyMethodOverriding
     def removeRows(self, row, count, parent=QModelIndex()):
@@ -371,8 +375,7 @@ class PyListModel(QAbstractListModel):
                                self.parent(),
                                flags=self._flags,
                                list_item_role=self.list_item_role,
-                               supportedDropActions=self.supportedDropActions()
-                               )
+                               supportedDropActions=self.supportedDropActions())
         new_list._other_data = list(self._other_data)
         new_list.extend(iterable)
         return new_list
@@ -484,6 +487,7 @@ class PyListModelTooltip(PyListModel):
         self.tooltips = []
 
     def data(self, index, role=Qt.DisplayRole):
+        # pylint: disable=missing-docstring
         if role == Qt.ToolTipRole:
             return self.tooltips[index.row()]
         else:
@@ -922,11 +926,9 @@ class TableModel(QAbstractTableModel):
                                    ClassValueRole,
                                    VariableRole,
                                    DomainRole,
-                                   VariableStatsRole]),
+                                   VariableStatsRole])
              ):
-        """
-        Reimplemented from `QAbstractItemModel.data`
-        """
+        """Reimplemented from `QAbstractItemModel.data`"""
         if role not in _recognizedRoles:
             return None
 
@@ -972,6 +974,7 @@ class TableModel(QAbstractTableModel):
             return None
 
     def setData(self, index, value, role):
+        """Reimplemented from `QAbstractItemModel.setData`"""
         row, col = self.__sortIndInv[index.row()], index.column()
         if role == Qt.EditRole:
             try:
