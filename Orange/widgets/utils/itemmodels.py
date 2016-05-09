@@ -17,7 +17,7 @@ from PyQt4.QtGui import (
 
 import numpy
 
-from Orange.data import Variable, Storage
+from Orange.data import Variable, DiscreteVariable, Storage
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -775,6 +775,12 @@ class TableModel(QAbstractTableModel):
         self.__sortInd = None
         # The inverse of __sortInd
         self.__sortIndInv = None
+        self.__sortValueKeys = [
+            numpy.array([int(x) for x in var.values])
+            if isinstance(var, DiscreteVariable) and
+            all(map(str.isdigit, var.values))
+            else None
+            for var in self.vars]
 
     def sort(self, column, order):
         """
@@ -853,6 +859,9 @@ class TableModel(QAbstractTableModel):
             col_data = numpy.asarray(col_view)
             if self.__sortInd is not None:
                 col_data = col_data[self.__sortInd]
+            value_keys = self.__sortValueKeys[column]
+            if value_keys is not None:
+                col_data = value_keys[col_data.astype(numpy.int)]
             return col_data
         else:
             if self.__sortInd is not None:
