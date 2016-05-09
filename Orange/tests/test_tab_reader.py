@@ -4,13 +4,13 @@
 import io
 from os import path
 import unittest
-from unittest.mock import Mock
+import tempfile
+import shutil
 
 import numpy as np
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.data.io import TabReader
-
 
 def read_tab_file(filename):
     return TabReader(filename).read()
@@ -142,3 +142,13 @@ class TestTabReader(unittest.TestCase):
         reader = TabReader(file1)
 
         self.assertEqual(reader.sheets, ())
+
+    def test_attributes_saving(self):
+        tempdir = tempfile.mkdtemp()
+        table = Table("iris")
+        self.assertEqual(table.attributes, {})
+        table.attributes[1] = "test"
+        table.save(path.join(tempdir, "out.tab"))
+        table = Table(path.join(tempdir, "out.tab"))
+        self.assertEqual(table.attributes[1], "test")
+        shutil.rmtree(tempdir)

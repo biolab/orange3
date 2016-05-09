@@ -1166,6 +1166,7 @@ class TableTestCase(unittest.TestCase):
         x = filter.Values([f])(d)
         for e in x:
             self.assertTrue(str(e["name"]).endswith("ion"))
+            self.assertTrue(str(e["name"]).endswith("ion"))
         self.assertEqual(len(x), len([e for e in col if e.endswith("ion")]))
 
     def test_valueFilter_regex(self):
@@ -1189,6 +1190,15 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(new_table.X.dtype, np.float64)
         self.assertEqual(new_table.Y.dtype, np.float64)
         self.assertEqual(new_table.metas.dtype, np.float64)
+
+    def test_attributes(self):
+        table = data.Table("iris")
+        self.assertEqual(table.attributes, {})
+        table.attributes[1] = "test"
+        table2 = table[:4]
+        self.assertEqual(table2.attributes[1], "test")
+        table2.attributes[1] = "modified"
+        self.assertEqual(table.attributes[1], "modified")
 
     # TODO Test conjunctions and disjunctions of conditions
 
