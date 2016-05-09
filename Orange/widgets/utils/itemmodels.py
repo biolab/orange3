@@ -17,7 +17,7 @@ from PyQt4.QtGui import (
 
 import numpy
 
-from Orange.data import Variable, Storage
+from Orange.data import Variable, DiscreteVariable, Storage
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -719,6 +719,21 @@ class TableModel(QAbstractTableModel):
                 partial(format_dense, var)
             )
 
+        def _create_sort_keys():
+            keys = []
+            for var in self.vars:
+                vkeys = None
+                if isinstance(var, DiscreteVariable):
+                    try:
+                        vkeys = [int(x) for x in var.values]
+                    except ValueError:
+                        pass
+                    else:
+                        vkeys.append(max(vkeys) + 1)
+                        vkeys = numpy.array(vkeys)
+                keys.append(vkeys)
+            return keys
+
         columns = []
 
         if self.X_density != Storage.DENSE:
@@ -775,6 +790,7 @@ class TableModel(QAbstractTableModel):
         self.__sortInd = None
         # The inverse of __sortInd
         self.__sortIndInv = None
+        self.__sortValueKeys = _create_sort_keys()
 
     def sort(self, column, order):
         """
@@ -849,10 +865,17 @@ class TableModel(QAbstractTableModel):
         coldesc = self.columns[column]
         if isinstance(coldesc, TableModel.Column) \
                 and role == TableModel.ValueRole:
-            col_view, _ = self.source.get_column_view(coldesc.var)
+            var = coldesc.var
+            col_view, _ = self.source.get_column_view(var)
             col_data = numpy.asarray(col_view)
             if self.__sortInd is not None:
                 col_data = col_data[self.__sortInd]
+            value_keys = self.__sortValueKeys[column]
+            if value_keys is not None:
+                if col_data is col_view:
+                    col_data = numpy.array(col_data)
+                col_data[numpy.isnan(col_data)] = len(var.values)
+                col_data = value_keys[col_data.astype(numpy.int)]
             return col_data
         else:
             if self.__sortInd is not None:
