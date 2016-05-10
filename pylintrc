@@ -192,7 +192,7 @@ callbacks=cb_,_cb,on_,_on_
 [BASIC]
 
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=map,filter
+bad-functions=print
 
 # Good variable names which should always be accepted, separated by a comma
 good-names=ex,Run,_,a,c,d,e,i,j,k,m,n,o,p,t,u,v,w,x,y,A,X,Y,M
@@ -205,7 +205,7 @@ bad-names=foo,bar,baz,toto,tutu,tata
 name-group=
 
 # Include a hint for the correct naming format with invalid-name
-include-naming-hint=no
+include-naming-hint=yes
 
 # Regular expression matching correct method names
 # TODO: find a better way to allow long method names in test classes.
@@ -331,7 +331,7 @@ exclude-protected=_asdict,_fields,_replace,_source,_make
 [DESIGN]
 
 # Maximum number of arguments for function / method
-max-args=10
+max-args=20
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
@@ -359,7 +359,7 @@ max-attributes=20
 min-public-methods=0
 
 # Maximum number of public methods for a class (see R0904).
-max-public-methods=20
+max-public-methods=40
 
 # Maximum number of boolean expressions in a if statement
 max-bool-expr=10
