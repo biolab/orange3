@@ -20,7 +20,7 @@ import Orange.classification
 import Orange.regression
 
 from Orange.base import Learner
-from Orange.evaluation import scoring
+from Orange.evaluation import scoring, Results
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
@@ -129,14 +129,13 @@ class OWTestLearners(widget.OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Learner,
-               "set_learner", widget.Multiple),
+    inputs = [("Learner", Learner, "set_learner", widget.Multiple),
               ("Data", Table, "set_train_data", widget.Default),
               ("Test Data", Table, "set_test_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
-    outputs = [("Predictions", Orange.data.Table),
-               ("Evaluation Results", Orange.evaluation.Results)]
+    outputs = [("Predictions", Table),
+               ("Evaluation Results", Results)]
 
     settingsHandler = settings.ClassValuesContextHandler()
 
@@ -168,8 +167,7 @@ class OWTestLearners(widget.OWWidget):
         self.train_data_missing_vals = False
         self.test_data_missing_vals = False
 
-        #: An Ordered dictionary with current inputs and their testing
-        #: results.
+        #: An Ordered dictionary with current inputs and their testing results.
         self.learners = OrderedDict()
 
         sbox = gui.vBox(self.controlArea, "Sampling")
@@ -202,7 +200,7 @@ class OWTestLearners(widget.OWWidget):
 
         rbox.layout().addSpacing(5)
         self.apply_button = gui.button(
-            rbox, self, "Apply", callback=self.apply, default=True)
+            rbox, self, "&Apply", callback=self.apply, default=True)
 
         self.cbox = gui.vBox(self.controlArea, "Target class")
         self.class_selection_combo = gui.comboBox(
@@ -304,6 +302,7 @@ class OWTestLearners(widget.OWWidget):
         self.warning(4)
         self.test_data_missing_vals = data is not None and \
                                       np.isnan(data.Y).any()
+
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.warning(4, self._get_missing_data_warning(
                 self.train_data_missing_vals, self.test_data_missing_vals
@@ -390,7 +389,6 @@ class OWTestLearners(widget.OWWidget):
                     if len(self.data) < self.k_folds:
                         self.error(4, "Number of folds exceeds the data size")
                         return
-
                     warnings = []
                     results = Orange.evaluation.CrossValidation(
                         self.data, learners, k=self.k_folds,
@@ -415,13 +413,13 @@ class OWTestLearners(widget.OWWidget):
                         self.data, self.test_data, learners, **common_args)
                 else:
                     assert False
-            except RuntimeError as e:
+            except (RuntimeError, ValueError) as e:
                 self.error(2, str(e))
                 self.setStatusMessage("")
                 return
 
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
-        for learner, result in zip(learners, split_by_model(results)):
+        for learner, result in zip(learners, results.split_by_model()):
             stats = None
             if class_var.is_discrete:
                 scorers = classification_stats.scores
@@ -632,33 +630,6 @@ class OWTestLearners(widget.OWWidget):
 
 def learner_name(learner):
     return getattr(learner, "name", type(learner).__name__)
-
-
-def split_by_model(results):
-    """
-    Split evaluation results by models
-    """
-    data = results.data
-    nmethods = len(results.predicted)
-    for i in range(nmethods):
-        res = Orange.evaluation.Results()
-        res.data = data
-        res.domain = results.domain
-        res.row_indices = results.row_indices
-        res.actual = results.actual
-        res.predicted = results.predicted[(i,), :]
-
-        if getattr(results, "probabilities", None) is not None:
-            res.probabilities = results.probabilities[(i,), :, :]
-
-        if results.models:
-            res.models = [mf[i] for mf in results.models]
-
-        if results.folds:
-            res.folds = results.folds
-
-        res.failed = [results.failed[i]]
-        yield res
 
 
 def results_add_by_model(x, y):
