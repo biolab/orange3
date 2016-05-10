@@ -12,6 +12,9 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 
 
+INSTANCEID = "Same source"
+INDEX = "Index"
+
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge data sets based on values of selected data feature."
@@ -81,26 +84,32 @@ class OWMergeData(widget.OWWidget):
         # resize
         self.resize(400, 500)
 
+    def setAttrs(self):
+        add = ()
+        if self.dataA is not None and self.dataB is not None \
+                and len(numpy.intersect1d(self.dataA.ids, self.dataB.ids)):
+            add = (INSTANCEID,)
+        if self.dataA is not None:
+            self.attrModelA[:] = add + allvars(self.dataA)
+        else:
+            self.attrModelA[:] = []
+        if self.dataB is not None:
+            self.attrModelB[:] = add + allvars(self.dataB)
+        else:
+            self.attrModelB[:] = []
+
     @check_sql_input
     def setDataA(self, data):
         #self.closeContext()
         self.dataA = data
-        if data is not None:
-            self.attrModelA[:] = allvars(data)
-        else:
-            self.attrModelA[:] = []
-
+        self.setAttrs()
         self.infoBoxDataA.setText(self.dataInfoText(data))
 
     @check_sql_input
     def setDataB(self, data):
         #self.closeContext()
         self.dataB = data
-        if data is not None:
-            self.attrModelB[:] = allvars(data)
-        else:
-            self.attrModelB[:] = []
-
+        self.setAttrs()
         self.infoBoxDataB.setText(self.dataInfoText(data))
 
     def handleNewSignals(self):
@@ -165,7 +174,7 @@ def selected_row(view):
 
 
 def allvars(data):
-    return data.domain.attributes + data.domain.class_vars + data.domain.metas
+    return (INDEX,) + data.domain.attributes + data.domain.class_vars + data.domain.metas
 
 
 def merge(A, varA, B, varB):
@@ -202,7 +211,9 @@ def group_table_indices(table, key_vars, exclude_unknown=False):
     """
     groups = defaultdict(list)
     for i, inst in enumerate(table):
-        key = [inst[a] for a in key_vars]
+        key = [inst.id if a == INSTANCEID else
+               i if a == INDEX else inst[a]
+                   for a in key_vars]
         if exclude_unknown and any(math.isnan(k) for k in key):
             continue
         key = tuple([str(k) for k in key])
@@ -215,7 +226,9 @@ def left_join_indices(table1, table2, vars1, vars2):
     key_map2 = group_table_indices(table2, vars2)
     indices = []
     for i, inst in enumerate(table1):
-        key = tuple([str(inst[v]) for v in vars1])
+        key = tuple([str(inst.id if v == INSTANCEID else
+                         i if v == INDEX else inst[v])
+                            for v in vars1])
         if key in key_map1 and key in key_map2:
             for j in key_map2[key]:
                 indices.append((i, j))
