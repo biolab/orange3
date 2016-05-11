@@ -8,7 +8,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 from Orange.data import (Table, Domain, ContinuousVariable,
-                         DiscreteVariable, StringVariable)
+                         DiscreteVariable, StringVariable, Instance)
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
                              Jaccard, _preprocess)
@@ -769,3 +769,8 @@ class TestDistances(TestCase):
     def test_preprocess_impute(self):
         new_table = _preprocess(self.test5)
         self.assertFalse(np.isnan(new_table.X).any())
+
+    def test_distance_to_instance(self):
+        iris = Table('iris')
+        inst = Instance(iris.domain, np.concatenate((iris[1].x, iris[1].y)))
+        self.assertEqual(Euclidean(iris[1], inst), 0)
