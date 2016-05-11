@@ -12,6 +12,7 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget
+from Orange.classification import SimpleTreeLearner
 
 
 class DisplayFormatDelegate(QtGui.QStyledItemDelegate):
@@ -20,27 +21,31 @@ class DisplayFormatDelegate(QtGui.QStyledItemDelegate):
         method = index.data(Qt.UserRole)
         var = index.model()[index.row()]
         if method:
-            option.text = method.str(var)
-            if (not method.support_continuous and var.is_continuous) or \
-               (not method.support_discrete and var.is_discrete):
-                option.palette.setColor(option.palette.Text, Qt.gray)
+            option.text = method.format_variable(var)
+
+            if not method.supports_variable(var):
+                option.palette.setColor(option.palette.Text, Qt.darkRed)
+
+            if isinstance(getattr(method, 'method', method), impute.DoNotImpute):
+                option.palette.setColor(option.palette.Text, Qt.darkGray)
 
 
-class Default(impute.BaseImputeMethod):
+class AsDefault(impute.BaseImputeMethod):
     name = "Default (above)"
     short_name = ""
     format = "{var.name}"
     columns_only = True
 
-    method = impute.BaseImputeMethod()
+    method = impute.DoNotImpute()
 
-    @property
-    def support_discrete(self):
-        return self.method.support_discrete
+    def __getattr__(self, item):
+        return getattr(self.method, item)
 
-    @property
-    def support_continuous(self):
-        return self.method.support_continuous
+    def supports_variable(self, variable):
+        return self.method.supports_variable(variable)
+
+    def __call__(self, *args, **kwargs):
+        return self.method(*args, **kwargs)
 
 
 class OWImpute(OWWidget):
@@ -53,17 +58,18 @@ class OWImpute(OWWidget):
               ("Learner", Learner, "set_learner")]
     outputs = [("Data", Orange.data.Table)]
 
-    METHODS = [Default(), impute.BaseImputeMethod(), impute.Average(),
-               impute.AsValue(), impute.Model(), impute.Random(),
+    DEFAULT_LEARNER = SimpleTreeLearner()
+    METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),
+               impute.AsValue(), impute.Model(DEFAULT_LEARNER), impute.Random(),
                impute.DropInstances(), impute.Default()]
-    DEFAULT, DONT_IMPUTE, MODEL_BASED_IMPUTER, AS_DEFAULT = 0, 1, 4, 7
+    DEFAULT, DO_NOT_IMPUTE, MODEL_BASED_IMPUTER, AS_INPUT = 0, 1, 4, 7
 
     settingsHandler = settings.DomainContextHandler()
 
-    _default_method_index = settings.Setting(DONT_IMPUTE)
+    _default_method_index = settings.Setting(DO_NOT_IMPUTE)
     variable_methods = settings.ContextSetting({})
     autocommit = settings.Setting(False)
-    value_line = settings.Setting('value')
+    default_value = settings.Setting(0.)
 
     want_main_area = False
     resizing_enabled = False
@@ -121,10 +127,13 @@ class OWImpute(OWWidget):
         self.value_combo = QComboBox(
             minimumContentsLength=8,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
-            activated=self._on_value_changed)
+            activated=self._on_value_selected
+            )
+        self.value_combo.currentIndexChanged.connect(self._on_value_changed)
         self.value_double = QtGui.QDoubleSpinBox(
-            editingFinished=self._on_value_changed,
-            minimum=-1000., maximum=1000., singleStep=.1, decimals=3
+            editingFinished=self._on_value_selected,
+            minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
+            value=self.default_value
             )
         self.value_stack = value_stack = QtGui.QStackedLayout()
         value_stack.addWidget(self.value_combo)
@@ -154,7 +163,7 @@ class OWImpute(OWWidget):
         self.data = None
         self.modified = False
         self.default_method = self.METHODS[self.default_method_index]
-        self.set_learner(None)
+        self.update_varview()
 
     @property
     def default_method_index(self):
@@ -191,32 +200,32 @@ class OWImpute(OWWidget):
         if data is not None:
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
-            itemmodels.select_row(self.varview, 0)
 
+        self.update_varview()
         self.unconditional_commit()
 
     def set_learner(self, learner):
-        self.learner = learner
-        self.METHODS[self.MODEL_BASED_IMPUTER].learner = learner
+        self.learner = learner or self.DEFAULT_LEARNER
+        imputer = self.METHODS[self.MODEL_BASED_IMPUTER]
+        imputer.learner = self.learner
 
         button = self.default_button_group.button(self.MODEL_BASED_IMPUTER)
+        button.setText(imputer.name)
+
         variable_button = self.variable_button_group.button(self.MODEL_BASED_IMPUTER)
-        if self.learner is None:
-            button.setEnabled(False)
-            variable_button.setEnabled(False)
-            self.set_default_method(self.DONT_IMPUTE)
-        else:
+        variable_button.setText(imputer.name)
+
+        if learner is not None:
             self.default_method_index = self.MODEL_BASED_IMPUTER
-            button.setText("{} ({})".format(self.default_method.name,
-                                            learner.name))
-            button.setEnabled(True)
-            variable_button.setEnabled(True)
 
         self.commit()
 
     def get_method_for_column(self, column_index):
         """Returns the imputation method for column by its index.
         """
+        if not isinstance(column_index, int):
+            column_index = column_index.row()
+
         return self.variable_methods.get(column_index,
                                          self.METHODS[self.DEFAULT])
 
@@ -233,19 +242,26 @@ class OWImpute(OWWidget):
             attributes = []
             class_vars = []
 
+            self.warning(1)
             with self.progressBar(len(self.varmodel)) as progress:
                 for i, var in enumerate(self.varmodel):
                     method = self.variable_methods.get(i, self.default_method)
 
-                    if isinstance(method, impute.DropInstances):
+                    if not method.supports_variable(var):
+                        self.warning(1, "Default method could not impute some "
+                                        "of the variables.")
+                    elif isinstance(method, impute.DropInstances):
                         drop_mask |= method(self.data, var)
                     else:
                         var = method(self.data, var)
 
+                    if isinstance(var, Orange.data.Variable):
+                        var = [var]
+
                     if i < len(self.data.domain.attributes):
-                        attributes.append(var)
+                        attributes.extend(var)
                     else:
-                        class_vars.append(var)
+                        class_vars.extend(var)
 
                     progress.advance()
 
@@ -277,7 +293,6 @@ class OWImpute(OWWidget):
         methods = set(self.get_method_for_column(i.row()).name for i in indexes)
 
         selected_vars = [self.varmodel[index.row()] for index in indexes]
-        has_continuous = any(var.is_continuous for var in selected_vars)
         has_discrete = any(var.is_discrete for var in selected_vars)
 
         if len(methods) == 1:
@@ -292,8 +307,8 @@ class OWImpute(OWWidget):
 
         for method, button in zip(self.METHODS,
                                   self.variable_button_group.buttons()):
-            enabled = (not has_continuous or method.support_continuous) and \
-                      (not has_discrete or method.support_discrete)
+            enabled = all(method.supports_variable(var) for var in
+                          selected_vars)
             button.setEnabled(enabled)
 
         if not has_discrete:
@@ -307,7 +322,7 @@ class OWImpute(OWWidget):
             self.value_combo.addItems(selected_vars[0].values)
             self._on_value_changed()
         else:
-            self.variable_button_group.button(self.AS_DEFAULT).setEnabled(False)
+            self.variable_button_group.button(self.AS_INPUT).setEnabled(False)
             self.value_stack.setEnabled(False)
 
     def set_method_for_current_selection(self, method_index):
@@ -315,13 +330,27 @@ class OWImpute(OWWidget):
         self.set_method_for_indexes(indexes, method_index)
 
     def set_method_for_indexes(self, indexes, method_index):
-        method = self.METHODS[method_index].copy()
+        if method_index == self.DEFAULT:
+            for index in indexes:
+                self.variable_methods.pop(index, None)
+        else:
+            method = self.METHODS[method_index].copy()
+            for index in indexes:
+                self.variable_methods[index.row()] = method
+
+        self.update_varview(indexes)
+        self._invalidate()
+
+    def update_varview(self, indexes=None):
+        if indexes is None:
+            indexes = map(self.varmodel.index, range(len(self.varmodel)))
 
         for index in indexes:
-            self.varmodel.setData(index, method, Qt.UserRole)
-            self.variable_methods[index.row()] = method
+            self.varmodel.setData(index, self.get_method_for_column(index.row()), Qt.UserRole)
 
-        self._invalidate()
+    def _on_value_selected(self):
+        self.variable_button_group.button(self.AS_INPUT).setChecked(True)
+        self._on_value_changed()
 
     def _on_value_changed(self):
         widget = self.value_stack.currentWidget()
@@ -329,10 +358,12 @@ class OWImpute(OWWidget):
             value = self.value_combo.currentText()
         else:
             value = self.value_double.value()
+            self.default_value = value
 
-        self.METHODS[self.AS_DEFAULT].default = value
+        self.METHODS[self.AS_INPUT].default = value
         index = self.variable_button_group.checkedId()
-        self.set_method_for_current_selection(index)
+        if index == self.AS_INPUT:
+            self.set_method_for_current_selection(index)
 
     def reset_variable_methods(self):
         indexes = map(self.varmodel.index, range(len(self.varmodel)))
@@ -341,7 +372,7 @@ class OWImpute(OWWidget):
 
 
 def main(argv=sys.argv):
-    from Orange.classification import SimpleTreeLearner
+
     app = QtGui.QApplication(list(argv))
     argv = app.argv()
     if len(argv) > 1:
@@ -355,8 +386,6 @@ def main(argv=sys.argv):
 
     data = Orange.data.Table(filename)
     w.set_data(data)
-    w.handleNewSignals()
-    w.set_learner(SimpleTreeLearner())
     w.handleNewSignals()
     app.exec_()
     w.set_data(None)

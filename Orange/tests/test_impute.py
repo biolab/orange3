@@ -35,31 +35,35 @@ class TestDropInstances(unittest.TestCase):
         self.assertEqual(list(ind), [False, False, False, True, True])
 
 
-class TestBaseImputer(unittest.TestCase):
-    def test_call(self):
-        X = np.random.rand(5, 3)
-        X[3:5, 1] = np.nan
-        table = data.Table.from_numpy(None, X)
-        imputer = impute.BaseImputeMethod()
-        var = imputer(table, table.domain[1])
-        self.assertEqual(var, table.domain[1])
-
+class TestDoNotImpute(unittest.TestCase):
     def test_str(self):
         table = data.Table.from_file("iris")
         imputer = impute.BaseImputeMethod()
         var = table.domain[0]
-        self.assertIn(var.name, imputer.str(var))
-        self.assertIn(imputer.short_name, imputer.str(var))
+        self.assertIn(var.name, imputer.format_variable(var))
+        self.assertIn(imputer.short_name, imputer.format_variable(var))
         self.assertIn(imputer.name, str(imputer))
 
     def test_copy(self):
         imputer = impute.BaseImputeMethod()
         self.assertIs(imputer, imputer.copy())
 
-    def test_eq(self):
-        imputer = impute.BaseImputeMethod()
-        imputer2 = impute.BaseImputeMethod()
-        self.assertEqual(imputer, imputer2)
+    def test_call(self):
+        X = np.random.rand(5, 3)
+        X[3:5, 1] = np.nan
+        table = data.Table.from_numpy(None, X)
+        imputer = impute.DoNotImpute()
+        var = imputer(table, table.domain[1])
+        self.assertEqual(var, table.domain[1])
+
+    def test_support(self):
+        table = data.Table.from_file("iris")
+        continuous = table.domain.variables[0]
+        discrete = table.domain.variables[-1]
+
+        imputer = impute.DoNotImpute()
+        self.assertTrue(imputer.supports_variable(discrete))
+        self.assertTrue(imputer.supports_variable(continuous))
 
 
 class TestAverage(unittest.TestCase):
@@ -132,7 +136,7 @@ class TestDefault(unittest.TestCase):
 
     def test_str(self):
         imputer = impute.Default(1)
-        self.assertIn('1', imputer.str(data.Variable()))
+        self.assertIn('1', imputer.format_variable(data.Variable()))
 
 
 class TestAsValue(unittest.TestCase):
@@ -229,21 +233,21 @@ class TestModel(unittest.TestCase):
         self.assertIsNot(copied.learner, imputer.learner)
 
     def test_support(self):
-        imputer = impute.Model()
-        self.assertFalse(imputer.support_continuous)
-        self.assertFalse(imputer.support_discrete)
+        table = data.Table.from_file("iris")
+        continuous = table.domain.variables[0]
+        discrete = table.domain.variables[-1]
 
         imputer = impute.Model(MajorityLearner())
-        self.assertTrue(imputer.support_discrete)
-        self.assertFalse(imputer.support_continuous)
+        self.assertTrue(imputer.supports_variable(discrete))
+        self.assertFalse(imputer.supports_variable(continuous))
 
         imputer = impute.Model(MeanLearner())
-        self.assertTrue(imputer.support_continuous)
-        self.assertFalse(imputer.support_discrete)
+        self.assertFalse(imputer.supports_variable(discrete))
+        self.assertTrue(imputer.supports_variable(continuous))
 
     def test_str(self):
         imputer = impute.Model(MajorityLearner())
-        self.assertIn(MajorityLearner.name, imputer.str(data.Variable()))
+        self.assertIn(MajorityLearner.name, imputer.format_variable(data.Variable()))
 
     def test_bad_domain(self):
         table = data.Table.from_file('iris')

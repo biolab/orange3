@@ -2,9 +2,11 @@ import numpy
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
+from Orange.util import abstract
 from .transformation import Transformation, Lookup
 
-__all__ = ["ReplaceUnknowns", "Average"]
+__all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", 'DropInstances',
+           "Model", "AsValue", "Random", "Default"]
 
 
 class ReplaceUnknowns(Transformation):
@@ -27,19 +29,28 @@ class ReplaceUnknowns(Transformation):
 
 
 class BaseImputeMethod:
-    name = "Don't impute"
-    short_name = "leave"
+    name = ""
+    short_name = ""
     description = ""
-    format = "{var.name} -> {short_name}"
+    format = "{var.name} -> {self.short_name}"
     columns_only = False
-    support_discrete = True
-    support_continuous = True
 
+    @abstract
     def __call__(self, data, variable):
-        return variable
+        """ Imputes table along variable column.
 
-    def str(self, var):
-        return self.format.format(var=var, short_name=self.short_name)
+        Args:
+            data (Table): A table to impute.
+            variable (Variable): Variable for completing missing values.
+
+        Returns:
+            A new Variable instance with completed missing values or
+            a array mask of rows to drop out.
+        """
+        raise NotImplementedError()
+
+    def format_variable(self, var):
+        return self.format.format(var=var, self=self)
 
     def __str__(self):
         return self.name
@@ -47,8 +58,18 @@ class BaseImputeMethod:
     def copy(self):
         return self
 
-    def __eq__(self, other):
-        return type(self) == type(other)
+    @classmethod
+    def supports_variable(cls, variable):
+        return True
+
+
+class DoNotImpute(BaseImputeMethod):
+    name = "Don't impute"
+    short_name = "leave"
+    description = ""
+
+    def __call__(self, data, variable):
+        return variable
 
 
 class DropInstances(BaseImputeMethod):
@@ -64,7 +85,7 @@ class DropInstances(BaseImputeMethod):
 class Average(BaseImputeMethod):
     name = "Average/Most frequent"
     short_name = "average"
-    description = "Replace with average/modus for the column"
+    description = "Replace with average/mode of the column"
 
     def __call__(self, data, variable, value=None):
         variable = data.domain[variable]
@@ -97,6 +118,7 @@ class Default(BaseImputeMethod):
     short_name = "value"
     description = ""
     columns_only = True
+    format = '{var} -> {self.default}'
 
     def __init__(self, default=0):
         self.default = default
@@ -108,9 +130,6 @@ class Default(BaseImputeMethod):
 
     def copy(self):
         return Default(self.default)
-
-    def str(self, var):
-        return self.format.format(var=var, short_name=self.default)
 
 
 class ReplaceUnknownsModel:
@@ -149,14 +168,18 @@ class ReplaceUnknownsModel:
 
 
 class Model(BaseImputeMethod):
-    name = "Model-based imputer"
+    _name = "Model-based imputer"
     short_name = "model"
     description = ""
+    format = BaseImputeMethod.format + " ({self.learner.name})"
+    @property
+    def name(self):
+        return "{} ({})".format(self._name, getattr(self.learner, 'name', ''))
 
-    def __init__(self, learner=None):
+    def __init__(self, learner):
         self.learner = learner
 
-    def __call__(self, data, variable, copy=False):
+    def __call__(self, data, variable):
         variable = data.domain[variable]
         domain = domain_with_class_var(data.domain, variable)
 
@@ -168,27 +191,14 @@ class Model(BaseImputeMethod):
                 compute_value=ReplaceUnknownsModel(variable, model))
         else:
             raise ValueError("`{}` doesn't support domain type"
-                             .format(self.learner))
-
-    def str(self, var):
-        return super().str(var) + " ({})".format(self.learner)
+                             .format(self.learner.name))
 
     def copy(self):
         return Model(self.learner)
 
-    @property
-    def support_discrete(self):
-        if self.learner is None:
-            return False
-        from Orange.regression.base_regression import LearnerRegression
-        return not isinstance(self.learner, LearnerRegression)
-
-    @property
-    def support_continuous(self):
-        if self.learner is None:
-            return False
-        from Orange.classification.base_classification import LearnerClassification
-        return not isinstance(self.learner, LearnerClassification)
+    def supports_variable(self, variable):
+        domain = Orange.data.Domain([], class_vars=variable)
+        return self.learner.check_learner_adequacy(domain)
 
 
 def domain_with_class_var(domain, class_var):
@@ -231,8 +241,6 @@ class Lookup(Lookup):
 
 
 class AsValue(BaseImputeMethod):
-    # name = "Value"
-    # short_name = "value"
     name = "As a distinct value"
     short_name = "new value"
     description = ""
