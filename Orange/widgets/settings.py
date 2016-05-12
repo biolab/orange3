@@ -134,6 +134,10 @@ class SettingProvider:
         if data is None and self.initialization_data is not None:
             data = self.initialization_data
 
+        self._initialize_settings(instance, data)
+        self._initialize_providers(instance, data)
+
+    def _initialize_settings(self, instance, data):
         for name, setting in self.settings.items():
             if data and name in data:
                 setattr(instance, name, data[name])
@@ -142,14 +146,19 @@ class SettingProvider:
             else:
                 setattr(instance, name, copy.copy(setting.default))
 
-        for name, provider in self.providers.items():
-            if data and name in data:
-                member = getattr(instance, name, None)
-                if member is None or isinstance(member, SettingProvider):
-                    provider.store_initialization_data(data[name])
-                else:
-                    provider.initialize(member, data[name])
+    def _initialize_providers(self, instance, data):
+        if not data:
+            return
 
+        for name, provider in self.providers.items():
+            if name not in data:
+                continue
+
+            member = getattr(instance, name, None)
+            if member is None or isinstance(member, SettingProvider):
+                provider.store_initialization_data(data[name])
+            else:
+                provider.initialize(member, data[name])
 
     def store_initialization_data(self, initialization_data):
         """Store initialization data for later use.
