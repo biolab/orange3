@@ -135,15 +135,12 @@ class OWMergeData(widget.OWWidget):
     def commit(self):
         indexA = self.selectedIndexA()
         indexB = self.selectedIndexB()
-        if indexA is None or indexB is None:
-            return
-
-        varA = self.attrModelA[indexA]
-        varB = self.attrModelB[indexB]
-
-        AB = merge(self.dataA, varA, self.dataB, varB)
-        BA = merge(self.dataB, varB, self.dataA, varA)
-
+        AB, BA = None, None
+        if indexA is not None and indexB is not None:
+            varA = self.attrModelA[indexA]
+            varB = self.attrModelB[indexB]
+            AB = merge(self.dataA, varA, self.dataB, varB)
+            BA = merge(self.dataB, varB, self.dataA, varA)
         self.send("Merged Data A+B", AB)
         self.send("Merged Data B+A", BA)
 
