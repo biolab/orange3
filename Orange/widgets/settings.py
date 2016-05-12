@@ -1003,29 +1003,6 @@ class DomainContextHandler(ContextHandler):
         """
         return self._var_exists(setting, item, attrs, metas)
 
-    def mergeBack(self, widget):
-        """Merge contexts loaded from schema with localy available list of
-        known contexts."""
-        glob = self.global_contexts
-        mp = self.max_vars_to_pickle
-        if widget.context_settings is not glob:
-            ids = {id(c) for c in glob}
-            glob += (c for c in widget.context_settings
-                     if id(c) not in ids
-                     and ((c.attributes and len(c.attributes) or 0) +
-                          (c.class_vars and len(c.class_vars) or 0) +
-                          (c.metas and len(c.metas) or 0)) <= mp)
-            glob.sort(key=lambda context: -context.time)
-            del glob[self.MAX_SAVED_CONTEXTS:]
-        else:
-            for i in range(len(glob) - 1, -1, -1):
-                c = glob[i]
-                n_attrs = ((c.attributes and len(c.attributes) or 0) +
-                           (c.class_vars and len(c.class_vars) or 0) +
-                           (c.metas and len(c.metas) or 0))
-                if n_attrs >= mp:
-                    del glob[i]
-
 
 class IncompatibleContext(Exception):
     """Raised when a required variable in context is not available in data."""
