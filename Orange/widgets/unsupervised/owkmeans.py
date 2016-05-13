@@ -229,7 +229,6 @@ class OWKMeans(widget.OWWidget):
         self.show_results()
         self.send_data()
 
-
     def cluster(self):
         if not self.check_data_size(self.k):
             return
