@@ -532,8 +532,7 @@ def get_html_img(scene):
     byte_array = QByteArray()
     filename = QBuffer(byte_array)
     filename.open(QIODevice.WriteOnly)
-    writer = PngFormat()
-    writer.write(filename, scene)
+    PngFormat.write(filename, scene)
     img_encoded = byte_array.toBase64().data().decode("utf-8")
     return "<img src='data:image/png;base64,%s'/>" % img_encoded
 
