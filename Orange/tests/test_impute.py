@@ -10,6 +10,8 @@ from Orange.preprocess import impute
 from Orange import data
 from Orange.data import Unknown, Table
 
+from Orange.classification import MajorityLearner, SimpleTreeLearner
+from Orange.regression import MeanLearner
 
 class TestReplaceUnknowns(unittest.TestCase):
     def test_replacement(self):
@@ -21,6 +23,47 @@ class TestReplaceUnknowns(unittest.TestCase):
         a[1] = a[5] = Unknown
         ia = preprocess.ReplaceUnknowns(None, value=42).transform(a)
         np.testing.assert_equal(ia, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
+
+
+class TestDropInstances(unittest.TestCase):
+    def test_drop(self):
+        X = np.random.rand(5, 3)
+        X[3:5, 1] = np.nan
+        table = data.Table.from_numpy(None, X)
+        drop = impute.DropInstances()
+        ind = drop(table, table.domain[1])
+        self.assertEqual(list(ind), [False, False, False, True, True])
+
+
+class TestDoNotImpute(unittest.TestCase):
+    def test_str(self):
+        table = data.Table.from_file("iris")
+        imputer = impute.BaseImputeMethod()
+        var = table.domain[0]
+        self.assertIn(var.name, imputer.format_variable(var))
+        self.assertIn(imputer.short_name, imputer.format_variable(var))
+        self.assertIn(imputer.name, str(imputer))
+
+    def test_copy(self):
+        imputer = impute.BaseImputeMethod()
+        self.assertIs(imputer, imputer.copy())
+
+    def test_call(self):
+        X = np.random.rand(5, 3)
+        X[3:5, 1] = np.nan
+        table = data.Table.from_numpy(None, X)
+        imputer = impute.DoNotImpute()
+        var = imputer(table, table.domain[1])
+        self.assertEqual(var, table.domain[1])
+
+    def test_support(self):
+        table = data.Table.from_file("iris")
+        continuous = table.domain.variables[0]
+        discrete = table.domain.variables[-1]
+
+        imputer = impute.DoNotImpute()
+        self.assertTrue(imputer.supports_variable(discrete))
+        self.assertTrue(imputer.supports_variable(continuous))
 
 
 class TestAverage(unittest.TestCase):
@@ -85,6 +128,16 @@ class TestDefault(unittest.TestCase):
         v3 = impute.Default()(table, domain["C"], default=42)
         self.assertEqual(v3.compute_value.value, 42)
 
+    def test_copy(self):
+        imputer = impute.Default(1)
+        copied = imputer.copy()
+        imputer.default = 2
+        self.assertEqual(copied.default, 1)
+
+    def test_str(self):
+        imputer = impute.Default(1)
+        self.assertIn('1', imputer.format_variable(data.Variable()))
+
 
 class TestAsValue(unittest.TestCase):
     def test_replacement(self):
@@ -132,9 +185,6 @@ class TestAsValue(unittest.TestCase):
 
 class TestModel(unittest.TestCase):
     def test_replacement(self):
-        from Orange.classification import MajorityLearner, SimpleTreeLearner
-        from Orange.regression import MeanLearner
-
         nan = np.nan
         X = [
             [1.0, nan, 0.0],
@@ -175,6 +225,35 @@ class TestModel(unittest.TestCase):
         v = Aimp(table[-1])
         self.assertEqual(v.shape, (1,))
         self.assertTrue(np.all(np.isfinite(v)))
+
+    def test_copy(self):
+        imputer = impute.Model(MajorityLearner())
+        copied = imputer.copy()
+        imputer.learner = MajorityLearner()
+        self.assertIsNot(copied.learner, imputer.learner)
+
+    def test_support(self):
+        table = data.Table.from_file("iris")
+        continuous = table.domain.variables[0]
+        discrete = table.domain.variables[-1]
+
+        imputer = impute.Model(MajorityLearner())
+        self.assertTrue(imputer.supports_variable(discrete))
+        self.assertFalse(imputer.supports_variable(continuous))
+
+        imputer = impute.Model(MeanLearner())
+        self.assertFalse(imputer.supports_variable(discrete))
+        self.assertTrue(imputer.supports_variable(continuous))
+
+    def test_str(self):
+        imputer = impute.Model(MajorityLearner())
+        self.assertIn(MajorityLearner.name, imputer.format_variable(data.Variable()))
+
+    def test_bad_domain(self):
+        table = data.Table.from_file('iris')
+        imputer = impute.Model(MajorityLearner())
+        self.assertRaises(ValueError, imputer, data=table,
+                          variable=table.domain[0])
 
 
 class TestRandom(unittest.TestCase):

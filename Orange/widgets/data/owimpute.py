@@ -1,169 +1,51 @@
 import sys
-
-from collections import namedtuple
+import numpy as np
 
 from PyQt4 import QtGui
-from PyQt4.QtGui import (
-    QWidget, QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
-    QVBoxLayout, QStackedLayout, QComboBox, QLineEdit,
-    QDoubleValidator, QButtonGroup
-)
-from PyQt4.QtCore import Qt, QMargins
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QComboBox
 
 import Orange.data
-import Orange.preprocess.impute as impute
-import Orange.classification
-
+from Orange.preprocess import impute
 from Orange.base import Learner
-
 from Orange.widgets import gui, settings
-from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget
-
-
-def _margins(margins, container):
-    if isinstance(margins, tuple):
-        left, top, right, bottom = margins
-    elif isinstance(margins, int):
-        left = top = right = bottom = margins
-    elif isinstance(margins, QMargins):
-        left, top, right, bottom = \
-            margins.left(), margins.top(), margins.right(), margins.bottom()
-    else:
-        raise TypeError
-
-    container_margins = container.getContentsMargins()
-    margins = [c if m == -1 else m
-               for c, m in zip([left, top, right, bottom],
-                               container_margins)]
-    return margins
-
-
-def layout(orientation=Qt.Vertical, margins=None, spacing=None,):
-    if orientation == Qt.Vertical:
-        lay = QVBoxLayout()
-    else:
-        lay = QHBoxLayout()
-
-    if margins is not None:
-        left, top, right, bottom = _margins(margins, lay)
-        lay.setContentsMargins(left, right, top, bottom)
-    return lay
-
-
-def group_box(title=None, layout=None, margin=None, flat=False, ):
-    gb = QGroupBox(title=title, flat=flat)
-    if layout is not None:
-        gb.setLayout(layout)
-    return gb
-
-
-def widget(layout=None, tooltip=None, objname=None, enabled=True,):
-    w = QWidget(toolTip=tooltip, objectName=objname, enabled=enabled)
-    if layout is not None:
-        w.setLayout(layout)
-    return w
-
-
-def radio_button(text="", checked=False, group=None, group_id=None):
-    button = QRadioButton(text, checked=checked)
-    if group is not None:
-        group.addButton(button, )
-        if group_id is not None:
-            group.setId(button, group_id)
-    return button
-
-
-def push_button(text="", checked=False, checkable=False,
-                group=None, group_id=None, **kwargs):
-    button = QPushButton(text, checked=checked, checkable=checkable, **kwargs)
-    if group is not None:
-        group.addButton(button)
-        if group_id is not None:
-            group.setId(button, group_id)
-    return button
+from Orange.classification import SimpleTreeLearner
 
 
 class DisplayFormatDelegate(QtGui.QStyledItemDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
-        state = index.data(Qt.UserRole)
+        method = index.data(Qt.UserRole)
         var = index.model()[index.row()]
-        if state:
-            fmt = state.method.format
-            text = fmt.format(var=var, params=state.params,
-                              **state.method._asdict())
-            option.text = text
+        if method:
+            option.text = method.format_variable(var)
+
+            if not method.supports_variable(var):
+                option.palette.setColor(option.palette.Text, Qt.darkRed)
+
+            if isinstance(getattr(method, 'method', method), impute.DoNotImpute):
+                option.palette.setColor(option.palette.Text, Qt.darkGray)
 
 
-METHODS = (
-    {"name": "Default (above)",
-     "short": "",
-     "description": "As above so below",
-     "format": "{var.name}"},
-    {"name": "Don't impute",
-     "short": "leave",
-     "description": "I",
-     "format": "{var.name} -> leave"},
-    {"name": "Average/Most frequent",
-     "short": "avg",
-     "description": "Replace with average/modus for the column",
-     "format": "{var.name} -> avg"},
-    {"name": "As a distinct value",
-     "short": "as_value",
-     "description": "",
-     "format": "{var.name} -> new value"},
-    {"name": "Model-based imputer",
-     "short": "model",
-     "description": "",
-     "format": "{var.name} -> {params[0]!r}"},
-    {"name": "Random values",
-     "short": "random",
-     "description": "Replace with a random value",
-     "format": "{var.name} -> random"},
-    {"name": "Remove instances with unknown values",
-     "short": "drop",
-     "description": "",
-     "format": "{var.name} -> drop"},
-    {"name": "Value",
-     "short": "value",
-     "description": "",
-     "format": "{var.name} -> {params[0]!s}"},
-)
+class AsDefault(impute.BaseImputeMethod):
+    name = "Default (above)"
+    short_name = ""
+    format = "{var.name}"
+    columns_only = True
 
+    method = impute.DoNotImpute()
 
-Method = namedtuple(
-    "Method",
-    ["name", "short", "description", "format"]
-)
+    def __getattr__(self, item):
+        return getattr(self.method, item)
 
+    def supports_variable(self, variable):
+        return self.method.supports_variable(variable)
 
-class Method(Method):
-    pass
-
-
-State = namedtuple("State", ["method", "params"])
-
-
-class State(State):
-    def __new__(cls, method, params=()):
-        return super().__new__(cls, method, params)
-
-    def _asdict(self):
-        return {"method": self.method._asdict(),
-                "params": self.params}
-
-# state
-#  - selected default
-#  - for each variable (indexed by (vartype, name)):
-#     - selected method (method index, *params)
-
-# vartype * name -> method
-# data method = Method(name) | Method2(name, (*params))
-
-
-METHODS = [Method(**m) for m in METHODS]
+    def __call__(self, *args, **kwargs):
+        return self.method(*args, **kwargs)
 
 
 class OWImpute(OWWidget):
@@ -176,38 +58,49 @@ class OWImpute(OWWidget):
               ("Learner", Learner, "set_learner")]
     outputs = [("Data", Orange.data.Table)]
 
-    METHODS = METHODS
+    DEFAULT_LEARNER = SimpleTreeLearner()
+    METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),
+               impute.AsValue(), impute.Model(DEFAULT_LEARNER), impute.Random(),
+               impute.DropInstances(), impute.Default()]
+    DEFAULT, DO_NOT_IMPUTE, MODEL_BASED_IMPUTER, AS_INPUT = 0, 1, 4, 7
 
     settingsHandler = settings.DomainContextHandler()
 
-    default_method = settings.Setting(1)
+    _default_method_index = settings.Setting(DO_NOT_IMPUTE)
     variable_methods = settings.ContextSetting({})
-    autocommit = settings.Setting(True)
+    autocommit = settings.Setting(False)
+    default_value = settings.Setting(0.)
 
     want_main_area = False
     resizing_enabled = False
 
     def __init__(self):
         super().__init__()
-        self.modified = False
+        main_layout = QtGui.QVBoxLayout()
+        main_layout.setMargin(10)
+        self.controlArea.layout().addLayout(main_layout)
 
-        box = group_box(self.tr("Default method"),
-                        layout=layout(Qt.Vertical))
-        self.controlArea.layout().addWidget(box)
+        box = QtGui.QGroupBox(title=self.tr("Default method"), flat=False)
+        box_layout = QtGui.QVBoxLayout(box)
+        main_layout.addWidget(box)
 
-        bgroup = QButtonGroup()
+        button_group = QtGui.QButtonGroup()
+        button_group.buttonClicked[int].connect(self.set_default_method)
+        for i, method in enumerate(self.METHODS):
+            if not method.columns_only:
+                button = QtGui.QRadioButton(method.name)
+                button.setChecked(i == self.default_method_index)
+                button_group.addButton(button, i)
+                box_layout.addWidget(button)
 
-        for i, m in enumerate(self.METHODS[1:-1], 1):
-            b = radio_button(m.name, checked=i == self.default_method,
-                             group=bgroup, group_id=i)
-            box.layout().addWidget(b)
+        self.default_button_group = button_group
 
-        self.defbggroup = bgroup
+        box = QtGui.QGroupBox(title=self.tr("Individual attribute settings"),
+                              flat=False)
+        main_layout.addWidget(box)
 
-        bgroup.buttonClicked[int].connect(self.set_default_method)
-        box = group_box(self.tr("Individual attribute settings"),
-                        layout=layout(Qt.Horizontal))
-        self.controlArea.layout().addWidget(box)
+        horizontal_layout = QtGui.QHBoxLayout(box)
+        main_layout.addWidget(box)
 
         self.varview = QtGui.QListView(
             selectionMode=QtGui.QListView.ExtendedSelection
@@ -220,192 +113,173 @@ class OWImpute(OWWidget):
         )
         self.selection = self.varview.selectionModel()
 
-        box.layout().addWidget(self.varview)
+        horizontal_layout.addWidget(self.varview)
 
-        method_layout = layout(Qt.Vertical, margins=0)
-        box.layout().addLayout(method_layout)
+        method_layout = QtGui.QVBoxLayout()
+        horizontal_layout.addLayout(method_layout)
 
-        methodbox = group_box(layout=layout(Qt.Vertical))
+        button_group = QtGui.QButtonGroup()
+        for i, method in enumerate(self.METHODS):
+            button = QtGui.QRadioButton(text=method.name)
+            button_group.addButton(button, i)
+            method_layout.addWidget(button)
 
-        bgroup = QButtonGroup()
-        for i, m in enumerate(self.METHODS):
-            b = radio_button(m.name, group=bgroup, group_id=i)
-            methodbox.layout().addWidget(b)
-
-        assert self.METHODS[-1].short == "value"
-
-        self.value_stack = value_stack = QStackedLayout()
         self.value_combo = QComboBox(
             minimumContentsLength=8,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
-            activated=self._on_value_changed)
-        self.value_line = QLineEdit(editingFinished=self._on_value_changed)
-        self.value_line.setValidator(QDoubleValidator())
+            activated=self._on_value_selected
+            )
+        self.value_combo.currentIndexChanged.connect(self._on_value_changed)
+        self.value_double = QtGui.QDoubleSpinBox(
+            editingFinished=self._on_value_selected,
+            minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
+            value=self.default_value
+            )
+        self.value_stack = value_stack = QtGui.QStackedLayout()
         value_stack.addWidget(self.value_combo)
-        value_stack.addWidget(self.value_line)
-        methodbox.layout().addLayout(value_stack)
+        value_stack.addWidget(self.value_double)
+        method_layout.addLayout(value_stack)
 
-        bgroup.buttonClicked[int].connect(
+        button_group.buttonClicked[int].connect(
             self.set_method_for_current_selection
         )
-        reset_button = push_button("Restore all to default",
-                                   clicked=self.reset_var_methods,
-                                   default=False, autoDefault=False)
 
-        method_layout.addWidget(methodbox)
         method_layout.addStretch(2)
+
+        reset_button = QtGui.QPushButton(
+                "Restore all to default", checked=False, checkable=False,
+                clicked=self.reset_variable_methods, default=False,
+                autoDefault=False)
         method_layout.addWidget(reset_button)
-        self.varmethodbox = methodbox
-        self.varbgroup = bgroup
+
+        self.variable_button_group = button_group
 
         box = gui.auto_commit(
             self.controlArea, self, "autocommit", "Commit",
             orientation=Qt.Horizontal, checkbox_label="Commit on any change")
         box.layout().insertSpacing(0, 80)
         box.layout().insertWidget(0, self.report_button)
+
         self.data = None
-        self.learner = None
+        self.modified = False
+        self.default_method = self.METHODS[self.default_method_index]
+        self.update_varview()
+
+    @property
+    def default_method_index(self):
+        return self._default_method_index
+
+    @default_method_index.setter
+    def default_method_index(self, index):
+        if self._default_method_index != index:
+            self._default_method_index = index
+            self.default_button_group.button(index).setChecked(True)
+            self.default_method = self.METHODS[self.default_method_index]
+            self.METHODS[self.DEFAULT].method = self.default_method
+
+            # update variable view
+            for index in map(self.varmodel.index, range(len(self.varmodel))):
+                self.varmodel.setData(index,
+                                      self.variable_methods.get(index.row(), self.METHODS[self.DEFAULT]),
+                                      Qt.UserRole)
+            self._invalidate()
 
     def set_default_method(self, index):
+        """Set the current selected default imputation method.
         """
-        Set the current selected default imputation method.
-        """
-        if self.default_method != index:
-            self.default_method = index
-            self.defbggroup.button(index).setChecked(True)
-            self._invalidate()
+        self.default_method_index = index
 
     @check_sql_input
     def set_data(self, data):
         self.closeContext()
-        self.clear()
+        self.varmodel[:] = []
+        self.variable_methods = {}
+        self.modified = False
         self.data = data
+
         if data is not None:
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
-            self.restore_state(self.variable_methods)
-            itemmodels.select_row(self.varview, 0)
+
+        self.update_varview()
         self.unconditional_commit()
 
     def set_learner(self, learner):
-        self.learner = learner
+        self.learner = learner or self.DEFAULT_LEARNER
+        imputer = self.METHODS[self.MODEL_BASED_IMPUTER]
+        imputer.learner = self.learner
 
-        if self.data is not None and \
-                any(state.method.short == "model" for state in
-                    map(self.state_for_column, range(len(self.data.domain)))):
-            self.commit()
+        button = self.default_button_group.button(self.MODEL_BASED_IMPUTER)
+        button.setText(imputer.name)
 
-    def restore_state(self, state):
-        for i, var in enumerate(self.varmodel):
-            key = variable_key(var)
-            if key in state:
-                index = self.varmodel.index(i)
-                self.varmodel.setData(index, state[key], Qt.UserRole)
+        variable_button = self.variable_button_group.button(self.MODEL_BASED_IMPUTER)
+        variable_button.setText(imputer.name)
 
-    def clear(self):
-        self.varmodel[:] = []
-        self.variable_methods = {}
-        self.data = None
-        self.modified = False
+        if learner is not None:
+            self.default_method_index = self.MODEL_BASED_IMPUTER
 
-    def state_for_column(self, column):
+        self.commit()
+
+    def get_method_for_column(self, column_index):
+        """Returns the imputation method for column by its index.
         """
-        #:: int -> State
-        Return the effective imputation state for `column`.
+        if not isinstance(column_index, int):
+            column_index = column_index.row()
 
-        :param int column:
-        :rtype State:
+        return self.variable_methods.get(column_index,
+                                         self.METHODS[self.DEFAULT])
 
-        """
-        var = self.varmodel[column]
-
-        state = self.variable_methods.get(variable_key(var), None)
-        if state is None or state.method == METHODS[0]:
-            state = State(METHODS[self.default_method], ())
-        return state
-
-    def imputed_vars_for_column(self, column):
-        state = self.state_for_column(column)
-        data = self.data
-        var = data.domain[column]
-        method, params = state
-        if method.short == "leave":
-            return var
-        elif method.short == "drop":
-            return var
-        elif method.short == "avg":
-            return impute.Average()(data, var)
-        elif method.short == "model":
-            learner = (self.learner if self.learner is not None
-                       else Orange.classification.SimpleTreeLearner())
-            return impute.Model(learner)(data, var)
-        elif method.short == "random":
-            return impute.Random()(data, var)
-        elif method.short == "value":
-            return impute.Default(float(params[0]))(data, var)
-        elif method.short == "as_value":
-            return impute.AsValue()(data, var)
-        else:
-            assert False
+    def _invalidate(self):
+        self.modified = True
+        self.commit()
 
     def commit(self):
+        data = self.data
+
         if self.data is not None:
-            varstates = [(var, self.state_for_column(i))
-                         for i, var in enumerate(self.varmodel)]
-            attrs = []
+            drop_mask = np.zeros(len(self.data), bool)
+
+            attributes = []
             class_vars = []
-            filter_columns = []
-            for i, (var, state) in enumerate(varstates):
-                if state.method.short == "drop":
-                    imputedvars = [var]
-                    filter_columns.append(i)
-                elif state.method.short == "leave":
-                    imputedvars = [var]
-                else:
-                    imputedvars = self.imputed_vars_for_column(i)
-                    if imputedvars is None:
-                        imputedvars = []
-                    elif isinstance(imputedvars, Orange.data.Variable):
-                        imputedvars = [imputedvars]
 
-                if i < len(self.data.domain.attributes):
-                    attrs.extend(imputedvars)
-                else:
-                    class_vars.extend(imputedvars)
+            self.warning(1)
+            with self.progressBar(len(self.varmodel)) as progress:
+                for i, var in enumerate(self.varmodel):
+                    method = self.variable_methods.get(i, self.default_method)
 
-            domain = Orange.data.Domain(
-                attrs, class_vars, self.data.domain.metas)
+                    if not method.supports_variable(var):
+                        self.warning(1, "Default method could not impute some "
+                                        "of the variables.")
+                    elif isinstance(method, impute.DropInstances):
+                        drop_mask |= method(self.data, var)
+                    else:
+                        var = method(self.data, var)
 
-            data = self.data.from_table(domain, self.data)
+                    if isinstance(var, Orange.data.Variable):
+                        var = [var]
 
-            if filter_columns:
-                filter_ = Orange.data.filter.IsDefined(filter_columns)
-                data = filter_(data)
-        else:
-            data = None
+                    if i < len(self.data.domain.attributes):
+                        attributes.extend(var)
+                    else:
+                        class_vars.extend(var)
+
+                    progress.advance()
+
+            domain = Orange.data.Domain(attributes, class_vars,
+                                        self.data.domain.metas)
+            data = self.data.from_table(domain, self.data[~drop_mask])
 
         self.send("Data", data)
         self.modified = False
 
     def send_report(self):
         specific = []
-        for var in self.varmodel:
-            state = self.variable_methods.get(variable_key(var), None)
-            if state is not None and state.method.short:
-                if state.method.short == "value":
-                    if var.is_continuous:
-                        specific.append(
-                            "{} (impute value {})".
-                            format(var.name, float(state.params[0])))
-                    else:
-                        specific.append(
-                            "{} (impute value '{}'".
-                            format(var.name, var.values[state.params[0]]))
-                else:
-                    specific.append(
-                        "{} ({})".
-                        format(var.name, state.method.name.lower()))
-        default = self.METHODS[self.default_method].name
+        for i, var in enumerate(self.varmodel):
+            method = self.variable_methods.get(i, None)
+            if method is not None:
+                specific.append("{} ({})".format(var.name, str(method)))
+
+        default = self.default_method.name
         if specific:
             self.report_items((
                 ("Default method", default),
@@ -414,104 +288,91 @@ class OWImpute(OWWidget):
         else:
             self.report_items((("Method", default),))
 
-    def _invalidate(self):
-        self.modified = True
-        self.commit()
-
     def _on_var_selection_changed(self):
         indexes = self.selection.selectedIndexes()
+        methods = set(self.get_method_for_column(i.row()).name for i in indexes)
 
-        vars = [self.varmodel[index.row()] for index in indexes]
-        defstate = State(METHODS[0], ())
-        states = [self.variable_methods.get(variable_key(var), defstate)
-                  for var in vars]
-        all_cont = all(var.is_continuous for var in vars)
-        states = list(unique(states))
-        method = None
-        params = ()
-        state = None
-        if len(states) == 1:
-            state = states[0]
-            method, params = state
-            mindex = METHODS.index(method)
-            self.varbgroup.button(mindex).setChecked(True)
-        elif self.varbgroup.checkedButton() is not None:
-            self.varbgroup.setExclusive(False)
-            self.varbgroup.checkedButton().setChecked(False)
-            self.varbgroup.setExclusive(True)
+        selected_vars = [self.varmodel[index.row()] for index in indexes]
+        has_discrete = any(var.is_discrete for var in selected_vars)
 
-        values, enabled, stack_index = [], False, 0
-        value, value_index = "0.0", 0
-        if all_cont:
-            enabled, stack_index = True, 1
-            if method is not None and method.short == "value":
-                value = params[0]
+        if len(methods) == 1:
+            method = methods.pop()
+            for i, m in enumerate(self.METHODS):
+                if method == m.name:
+                    self.variable_button_group.button(i).setChecked(True)
+        elif self.variable_button_group.checkedButton() is not None:
+            self.variable_button_group.setExclusive(False)
+            self.variable_button_group.checkedButton().setChecked(False)
+            self.variable_button_group.setExclusive(True)
 
-        elif len(vars) == 1 and vars[0].is_discrete:
-            values, enabled, stack_index = vars[0].values, True, 0
-            if method is not None and method.short == "value":
-                try:
-                    value_index = values.index(params[0])
-                except IndexError:
-                    pass
+        for method, button in zip(self.METHODS,
+                                  self.variable_button_group.buttons()):
+            enabled = all(method.supports_variable(var) for var in
+                          selected_vars)
+            button.setEnabled(enabled)
 
-        self.value_stack.setCurrentIndex(stack_index)
-        self.value_stack.setEnabled(enabled)
-
-        if stack_index == 0:
+        if not has_discrete:
+            self.value_stack.setEnabled(True)
+            self.value_stack.setCurrentWidget(self.value_double)
+            self._on_value_changed()
+        elif len(selected_vars) == 1:
+            self.value_stack.setEnabled(True)
+            self.value_stack.setCurrentWidget(self.value_combo)
             self.value_combo.clear()
-            self.value_combo.addItems(values)
-            self.value_combo.setCurrentIndex(value_index)
+            self.value_combo.addItems(selected_vars[0].values)
+            self._on_value_changed()
         else:
-            self.value_line.setText(value)
+            self.variable_button_group.button(self.AS_INPUT).setEnabled(False)
+            self.value_stack.setEnabled(False)
 
-    def _on_value_changed(self):
-        # The "fixed" value in the widget has been changed by the user.
-        index = self.varbgroup.checkedId()
-        self.set_method_for_current_selection(index)
-
-    def set_method_for_current_selection(self, methodindex):
+    def set_method_for_current_selection(self, method_index):
         indexes = self.selection.selectedIndexes()
-        self.set_method_for_indexes(indexes, methodindex)
+        self.set_method_for_indexes(indexes, method_index)
 
-    def set_method_for_indexes(self, indexes, methodindex):
-        method = METHODS[methodindex]
-        params = (None,)
-        if method.short == "value":
-            if self.value_stack.currentIndex() == 0:
-                value = self.value_combo.currentIndex()
-            else:
-                value = self.value_line.text()
-            params = (value, )
-        elif method.short == "model":
-            params = ("model", )
-        state = State(method, params)
+    def set_method_for_indexes(self, indexes, method_index):
+        if method_index == self.DEFAULT:
+            for index in indexes:
+                self.variable_methods.pop(index, None)
+        else:
+            method = self.METHODS[method_index].copy()
+            for index in indexes:
+                self.variable_methods[index.row()] = method
 
-        for index in indexes:
-            self.varmodel.setData(index, state, Qt.UserRole)
-            var = self.varmodel[index.row()]
-            self.variable_methods[variable_key(var)] = state
-
+        self.update_varview(indexes)
         self._invalidate()
 
-    def reset_var_methods(self):
+    def update_varview(self, indexes=None):
+        if indexes is None:
+            indexes = map(self.varmodel.index, range(len(self.varmodel)))
+
+        for index in indexes:
+            self.varmodel.setData(index, self.get_method_for_column(index.row()), Qt.UserRole)
+
+    def _on_value_selected(self):
+        self.variable_button_group.button(self.AS_INPUT).setChecked(True)
+        self._on_value_changed()
+
+    def _on_value_changed(self):
+        widget = self.value_stack.currentWidget()
+        if widget is self.value_combo:
+            value = self.value_combo.currentText()
+        else:
+            value = self.value_double.value()
+            self.default_value = value
+
+        self.METHODS[self.AS_INPUT].default = value
+        index = self.variable_button_group.checkedId()
+        if index == self.AS_INPUT:
+            self.set_method_for_current_selection(index)
+
+    def reset_variable_methods(self):
         indexes = map(self.varmodel.index, range(len(self.varmodel)))
-        self.set_method_for_indexes(indexes, 0)
-
-
-def variable_key(variable):
-    return (vartype(variable), variable.name)
-
-
-def unique(iterable):
-    seen = set()
-    for el in iterable:
-        if el not in seen:
-            seen.add(el)
-            yield el
+        self.set_method_for_indexes(indexes, self.DEFAULT)
+        self.variable_button_group.button(self.DEFAULT).setChecked(True)
 
 
 def main(argv=sys.argv):
+
     app = QtGui.QApplication(list(argv))
     argv = app.argv()
     if len(argv) > 1:
@@ -525,8 +386,6 @@ def main(argv=sys.argv):
 
     data = Orange.data.Table(filename)
     w.set_data(data)
-    w.handleNewSignals()
-    w.set_learner(Orange.classification.SimpleTreeLearner())
     w.handleNewSignals()
     app.exec_()
     w.set_data(None)
