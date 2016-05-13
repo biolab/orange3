@@ -1,4 +1,5 @@
 import sys
+from functools import wraps
 
 from collections import namedtuple
 
@@ -94,8 +95,13 @@ class DisplayFormatDelegate(QtGui.QStyledItemDelegate):
             fmt = state.method.format
             text = fmt.format(var=var, params=state.params,
                               **state.method._asdict())
+
+            if var in show_error_vars:
+                text += " (!)"
+
             option.text = text
 
+show_error_vars = set()
 
 METHODS = (
     {"name": "Default (above)",
@@ -177,6 +183,8 @@ class OWImpute(OWWidget):
     outputs = [("Data", Orange.data.Table)]
 
     METHODS = METHODS
+    model_mthd_index = [i for i, m in enumerate(METHODS[1:-1], 1) if
+                        m.short == "model"][0]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -265,6 +273,7 @@ class OWImpute(OWWidget):
         box.layout().insertWidget(0, self.report_button)
         self.data = None
         self.learner = None
+        self.not_compatible_with_learner = None
 
     def set_default_method(self, index):
         """
@@ -285,15 +294,26 @@ class OWImpute(OWWidget):
             self.openContext(data.domain)
             self.restore_state(self.variable_methods)
             itemmodels.select_row(self.varview, 0)
+        self.check_var_compatibility_with_learner()
         self.unconditional_commit()
 
     def set_learner(self, learner):
         self.learner = learner
+        self.check_var_compatibility_with_learner()
+        if self.model_mthd_index == self.default_method:
+            self._invalidate()
+        else:
+            self.set_default_method(self.model_mthd_index)
 
-        if self.data is not None and \
-                any(state.method.short == "model" for state in
-                    map(self.state_for_column, range(len(self.data.domain)))):
-            self.commit()
+    def check_var_compatibility_with_learner(self):
+        data = self.data
+        self.not_compatible_with_learner = set()
+
+        if data is not None and self.learner is not None:
+            for var in self.varmodel:
+                domain = impute.domain_with_class_var(data.domain, var)
+                if not self.learner.check_learner_adequacy(domain):
+                    self.not_compatible_with_learner.add(var)
 
     def restore_state(self, state):
         for i, var in enumerate(self.varmodel):
@@ -348,6 +368,33 @@ class OWImpute(OWWidget):
         else:
             assert False
 
+    def _handle_learner_inadequacy(func):
+        """
+        Indicate an error on learner inadequacy for given data domain
+        variable(s) when model-based imputation is selected.
+
+        To avoid raising exceptions and consequently crashing the widget,
+        commit() calls are deterred until a suitable input learner
+        configuration is selected.
+        """
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            global show_error_vars
+            show_error_vars = set()
+            for i, var in enumerate(self.varmodel):
+                state = self.state_for_column(i)
+                if (var in self.not_compatible_with_learner and
+                        state.method.short == "model"):
+                    show_error_vars.add(var)
+
+            if not show_error_vars:
+                self.error()
+                func(self, *args, **kwargs)
+            else:
+                self.error(self.learner.learner_adequacy_err_msg)
+        return wrapper
+
+    @_handle_learner_inadequacy
     def commit(self):
         if self.data is not None:
             varstates = [(var, self.state_for_column(i))
