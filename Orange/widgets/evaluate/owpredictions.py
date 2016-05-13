@@ -174,8 +174,6 @@ class OWPredictions(widget.OWWidget):
             modelproxy.setSourceModel(model)
             self.dataview.setModel(modelproxy)
             self._update_column_visibility()
-            self.dataview.scrollTo(
-                modelproxy.index(0, len(data.domain.attributes)))
 
         self.invalidate_predictions()
 
@@ -300,12 +298,13 @@ class OWPredictions(widget.OWWidget):
 
     def _update_column_visibility(self):
         """Update data column visibility."""
+        domain = self.data.domain
+        first_attr = len(domain.class_vars) + len(domain.metas)
         if self.data is not None:
-            for i in range(len(self.data.domain.attributes)):
+            for i in range(first_attr, first_attr + len(domain.attributes)):
                 self.dataview.setColumnHidden(i, not self.show_attrs)
-            if self.data.domain.class_var:
-                self.dataview.setColumnHidden(
-                    len(self.data.domain.attributes), False)
+            if domain.class_var:
+                self.dataview.setColumnHidden(0, False)
             self._update_spliter()
 
     def _update_data_sort_order(self):
@@ -426,8 +425,6 @@ class OWPredictions(widget.OWWidget):
             self.dataview.setMaximumWidth(QWIDGETSIZE_MAX)
 
             self.spliter_restore_state = 0, w
-            self.dataview.horizontalScrollBar().triggerAction(
-                QtGui.QScrollBar.SliderToMaximum)
 
     def commit(self):
         if self.data is None or not self.predictors:

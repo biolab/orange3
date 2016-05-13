@@ -658,13 +658,13 @@ class TableModel(QAbstractTableModel):
     DomainRole = next(gui.OrangeUserRole)
 
     #: Column domain roles
-    Attribute, ClassVar, Meta = range(3)
+    ClassVar, Meta, Attribute = range(3)
 
     #: Default background color for domain roles
     ColorForRole = {
-        Attribute: None,
         ClassVar: QColor(160, 160, 160),
-        Meta: QColor(220, 220, 200)
+        Meta: QColor(220, 220, 200),
+        Attribute: None,
     }
 
     #: Standard column descriptor
@@ -721,14 +721,6 @@ class TableModel(QAbstractTableModel):
 
         columns = []
 
-        if self.X_density != Storage.DENSE:
-            coldesc = make_basket(domain.attributes, self.X_density,
-                                  TableModel.Attribute)
-            columns.append(coldesc)
-        else:
-            columns += [make_column(var, TableModel.Attribute)
-                        for var in domain.attributes]
-
         if self.Y_density != Storage.DENSE:
             coldesc = make_basket(domain.class_vars, self.Y_density,
                                   TableModel.ClassVar)
@@ -745,8 +737,16 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.Meta)
                         for var in domain.metas]
 
-        #: list of all domain variables (attrs + class_vars + metas)
-        self.vars = domain.attributes + domain.class_vars + domain.metas
+        if self.X_density != Storage.DENSE:
+            coldesc = make_basket(domain.attributes, self.X_density,
+                                  TableModel.Attribute)
+            columns.append(coldesc)
+        else:
+            columns += [make_column(var, TableModel.Attribute)
+                        for var in domain.attributes]
+
+        #: list of all domain variables (class_vars + metas + attrs)
+        self.vars = domain.class_vars + domain.metas + domain.attributes
         self.columns = columns
 
         #: A list of all unique attribute labels (in all variables)
