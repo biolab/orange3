@@ -50,14 +50,14 @@ class IsDefined(Filter):
 
     def __call__(self, data):
         if isinstance(data, Instance):
-            return self.negate != bn.anynan(data._values)
+            return self.negate == bn.anynan(data._x)
         if isinstance(data, Storage):
             try:
                 return data._filter_is_defined(self.columns, self.negate)
             except NotImplementedError:
                 pass
 
-        r = np.fromiter((bn.anynan(inst._values) for inst in data),
+        r = np.fromiter((not bn.anynan(inst._x) for inst in data),
                         dtype=bool, count=len(data))
         if self.negate:
             r = np.logical_not(r)

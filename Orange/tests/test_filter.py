@@ -8,7 +8,7 @@ import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.filter import \
-    FilterContinuous, FilterDiscrete, FilterString, Values, HasClass
+    FilterContinuous, FilterDiscrete, FilterString, Values, HasClass, IsDefined
 
 NIMOCK = MagicMock(side_effect=NotImplementedError())
 
@@ -34,6 +34,41 @@ class TestFilterValues(unittest.TestCase):
         self.assertEqual(len(d123),
                          (~((self.iris.X[:, 0] < 5) | (self.iris.X[:, 1] > 3)) &
                           (self.iris.Y == 2)).sum())
+
+
+class TestIsDefinedFilter(unittest.TestCase):
+    def setUp(self):
+        self.table = Table('imports-85')
+        self.n_missing = 46
+        self.assertTrue(self.table.has_missing())
+
+    def test_is_defined_filter_table(self):
+        filter_ = IsDefined()
+        without_missing = filter_(self.table)
+        self.assertEqual(len(without_missing),
+                         len(self.table) - self.n_missing)
+        self.assertFalse(without_missing.has_missing())
+
+        filter_ = IsDefined(negate=True)
+        just_missing = filter_(self.table)
+        self.assertEqual(len(just_missing), self.n_missing)
+        self.assertTrue(just_missing.has_missing())
+
+    def test_is_defined_filter_instance(self):
+        instance_with_missing = self.table[0]
+        instance_without_missing = self.table[3]
+
+        filter_ = IsDefined()
+        self.assertFalse(filter_(instance_with_missing))
+        self.assertTrue(filter_(instance_without_missing))
+
+        filter_ = IsDefined(negate=True)
+        self.assertTrue(filter_(instance_with_missing))
+        self.assertFalse(filter_(instance_without_missing))
+
+    @patch('Orange.data.Table._filter_is_defined', NIMOCK)
+    def test_is_defined_filter_not_implemented(self):
+        self.test_is_defined_filter_table()
 
 
 class TestHasClassFilter(unittest.TestCase):
