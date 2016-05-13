@@ -20,8 +20,6 @@ class KMeans(SklProjector):
 
     def fit(self, X, Y=None):
         proj = skl_cluster.KMeans(**self.params)
-        if isinstance(X, Table):
-            X = X.X
         proj = proj.fit(X, Y)
         if 2 <= proj.n_clusters < len(X):
             proj.silhouette = silhouette_score(X, proj.labels_)
