@@ -12,7 +12,8 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWSGDRegression(OWBaseLearner):
     name = "Stochastic Gradient Descent"
-    description = "A stochastic gradient descent algorithm for regression."
+    description = "Minimize an objective function using a stochastic " \
+                  "approximation of gradient descent. "
     icon = "icons/SGDRegression.svg"
     priority = 90
     LEARNER = SGDRegressionLearner

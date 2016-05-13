@@ -12,7 +12,8 @@ from Orange.widgets.classify.owsvmclassification import OWBaseSVM
 
 class OWSVMRegression(OWBaseSVM):
     name = "SVM Regression"
-    description = "A support vector machine regression algorithm."
+    description = "Support Vector Machines map inputs to higher-dimensional " \
+                  "feature spaces that best map instances to a linear function.  "
     icon = "icons/SVMRegression.svg"
     priority = 50
 

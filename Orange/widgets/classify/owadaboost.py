@@ -11,7 +11,8 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWAdaBoostClassification(OWBaseLearner):
     name = "AdaBoost"
-    description = "An AdaBoost classifier."
+    description = "An ensemble meta-algorithm that combines weak learners " \
+                  "and adapts to the 'hardness' of each training sample. "
     icon = "icons/AdaBoost.svg"
     priority = 80
 

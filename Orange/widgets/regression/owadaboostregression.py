@@ -10,7 +10,8 @@ from Orange.widgets.settings import Setting
 
 class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
     name = "AdaBoost"
-    description = "An AdaBoost regression algorithm."
+    description = "An ensemble meta-algorithm that combines weak learners " \
+                  "and adapts to the 'hardness' of each training sample. "
     icon = "icons/AdaBoost.svg"
     priority = 80
 

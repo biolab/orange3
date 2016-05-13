@@ -11,7 +11,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWRandomForest(OWBaseLearner):
     name = "Random Forest Classification"
-    description = "The random forest classification algorithm."
+    description = "Predict using an ensemble of decision trees."
     icon = "icons/RandomForest.svg"
     priority = 40
 

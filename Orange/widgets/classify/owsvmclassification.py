@@ -115,8 +115,8 @@ class OWBaseSVM(OWBaseLearner):
 
 class OWSVMClassification(OWBaseSVM):
     name = "SVM"
-    description = "A support vector machine classifier with a standard " \
-                  "selection of kernels."
+    description = "Support Vector Machines map inputs to higher-dimensional " \
+                  "feature spaces that best separate different classes. "
     icon = "icons/SVM.svg"
     priority = 50
 

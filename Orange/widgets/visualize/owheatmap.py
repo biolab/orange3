@@ -373,7 +373,7 @@ _default_palette_index = \
 
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
-    description = "Heatmap visualization."
+    description = "Plot a heat map for a pair of attributes."
     icon = "icons/Heatmap.svg"
     priority = 1040
 

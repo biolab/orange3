@@ -196,7 +196,7 @@ class DistanceMatrixContextHandler(ContextHandler):
 
 class OWDistanceMatrix(widget.OWWidget):
     name = "Distance Matrix"
-    description = "View distance matrix"
+    description = "View distance matrix."
     icon = "icons/DistanceMatrix.svg"
     priority = 200
 

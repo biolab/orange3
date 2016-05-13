@@ -9,7 +9,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWKNNLearner(OWBaseLearner):
     name = "Nearest Neighbors"
-    description = "The k-nearest neighbors classification algorithm."
+    description = "Predict according to the nearest training instances."
     icon = "icons/KNN.svg"
     priority = 20
 
