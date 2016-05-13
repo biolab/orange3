@@ -134,6 +134,10 @@ class SettingProvider:
         if data is None and self.initialization_data is not None:
             data = self.initialization_data
 
+        self._initialize_settings(instance, data)
+        self._initialize_providers(instance, data)
+
+    def _initialize_settings(self, instance, data):
         for name, setting in self.settings.items():
             if data and name in data:
                 setattr(instance, name, data[name])
@@ -142,14 +146,19 @@ class SettingProvider:
             else:
                 setattr(instance, name, copy.copy(setting.default))
 
-        for name, provider in self.providers.items():
-            if data and name in data:
-                member = getattr(instance, name, None)
-                if member is None or isinstance(member, SettingProvider):
-                    provider.store_initialization_data(data[name])
-                else:
-                    provider.initialize(member, data[name])
+    def _initialize_providers(self, instance, data):
+        if not data:
+            return
 
+        for name, provider in self.providers.items():
+            if name not in data:
+                continue
+
+            member = getattr(instance, name, None)
+            if member is None or isinstance(member, SettingProvider):
+                provider.store_initialization_data(data[name])
+            else:
+                provider.initialize(member, data[name])
 
     def store_initialization_data(self, initialization_data):
         """Store initialization data for later use.
@@ -572,7 +581,7 @@ class ContextHandler(SettingsHandler):
         if data and "context_settings" in data:
             instance.context_settings = data["context_settings"]
         else:
-            instance.context_settings = self.global_contexts
+            instance.context_settings = []
 
     def read_defaults_file(self, settings_file):
         """Call the inherited method, then read global context from the
@@ -641,32 +650,50 @@ class ContextHandler(SettingsHandler):
         """Find the best matching context or create a new one if nothing
         useful is found. The returned context is moved to or added to the top
         of the context list."""
-        best_context, best_score = None, self.NO_MATCH
-        for i, context in enumerate(widget.context_settings):
-            score = self.match(context, *args)
-            if score == self.PERFECT_MATCH:
-                self.move_context_up(widget, i)
-                return context, False
-            if score > best_score:  # NO_MATCH is not OK!
-                best_context, best_score = context, score
+
+        # First search the contexts that were already used in this widget instance
+        best_context, best_score = self.find_context(widget.context_settings, args)
+        # If the exact data was used, reuse the context
+        if best_score == self.PERFECT_MATCH:
+            return best_context, False
+        # Otherwise check if a better match is available in global_contexts
+        best_context, best_score = self.find_context(self.global_contexts, args,
+                                                     best_score, best_context)
         if best_context:
             context = self.clone_context(best_context, *args)
         else:
             context = self.new_context(*args)
-        self.add_context(widget, context)
+        # Store context in widget instance. It will be pushed to global_contexts
+        # when (if) update defaults is called.
+        self.add_context(widget.context_settings, context)
         return context, best_context is None
 
-    @staticmethod
-    def move_context_up(widget, index):
-        """Move the context to the top of the context list and set the time
-        stamp to current."""
-        setting = widget.context_settings.pop(index)
-        setting.time = time.time()
-        widget.context_settings.insert(0, setting)
+    def find_context(self, known_contexts, args, best_score=0, best_context=None):
+        """Search the given list of contexts and return the context
+         which best matches the given args.
 
-    def add_context(self, widget, setting):
+        best_score and best_context can be used to provide base_values.
+        """
+
+        for i, context in enumerate(known_contexts):
+            score = self.match(context, *args)
+            if score == self.PERFECT_MATCH:
+                self.move_context_up(known_contexts, i)
+                return context, score
+            if score > best_score:  # NO_MATCH is not OK!
+                best_context, best_score = context, score
+        return best_context, best_score
+
+    @staticmethod
+    def move_context_up(contexts, index):
+        """Move the context to the top of the list and set
+        the timestamp to current."""
+        setting = contexts.pop(index)
+        setting.time = time.time()
+        contexts.insert(0, setting)
+
+    def add_context(self, contexts, setting):
         """Add the context to the top of the list."""
-        contexts = widget.context_settings
         contexts.insert(0, setting)
         del contexts[self.MAX_SAVED_CONTEXTS:]
 
@@ -1002,29 +1029,6 @@ class DomainContextHandler(ContextHandler):
         representations.
         """
         return self._var_exists(setting, item, attrs, metas)
-
-    def mergeBack(self, widget):
-        """Merge contexts loaded from schema with localy available list of
-        known contexts."""
-        glob = self.global_contexts
-        mp = self.max_vars_to_pickle
-        if widget.context_settings is not glob:
-            ids = {id(c) for c in glob}
-            glob += (c for c in widget.context_settings
-                     if id(c) not in ids
-                     and ((c.attributes and len(c.attributes) or 0) +
-                          (c.class_vars and len(c.class_vars) or 0) +
-                          (c.metas and len(c.metas) or 0)) <= mp)
-            glob.sort(key=lambda context: -context.time)
-            del glob[self.MAX_SAVED_CONTEXTS:]
-        else:
-            for i in range(len(glob) - 1, -1, -1):
-                c = glob[i]
-                n_attrs = ((c.attributes and len(c.attributes) or 0) +
-                           (c.class_vars and len(c.class_vars) or 0) +
-                           (c.metas and len(c.metas) or 0))
-                if n_attrs >= mp:
-                    del glob[i]
 
 
 class IncompatibleContext(Exception):
