@@ -8,7 +8,6 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
-from Orange.util import abstract
 
 
 __all__ = ["Chi2",
@@ -127,9 +126,8 @@ class UnivariateLinearRegression(SklScorer):
 
 class LearnerScorer(Scorer):
 
-    @abstract
     def score(self, data):
-        pass
+        raise NotImplementedError
 
     def score_data(self, data, feature=None):
         scores = self.score(data)

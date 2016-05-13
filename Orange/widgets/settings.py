@@ -38,7 +38,6 @@ import warnings
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
-from Orange.util import abstract
 from Orange.widgets.utils import vartype
 
 __all__ = ["Setting", "SettingsHandler",
@@ -631,7 +630,6 @@ class ContextHandler(SettingsHandler):
         else:
             self.settings_to_widget(widget)
 
-    @abstract
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
         passed in additional arguments).
@@ -644,7 +642,7 @@ class ContextHandler(SettingsHandler):
 
         Derived classes must overload this method.
         """
-        pass
+        raise NotImplementedError
 
     def find_or_create_context(self, widget, *args):
         """Find the best matching context or create a new one if nothing
