@@ -772,7 +772,10 @@ class DiscreteVariable(Variable):
         for presorted in DiscreteVariable.presorted_values:
             if values == set(presorted):
                 return presorted
-        return sorted(values)
+        try:
+            return sorted(values, key=float)
+        except ValueError:
+            return sorted(values)
 
     def copy(self, compute_value=None):
         return DiscreteVariable(self.name, self.values, self.ordered,
