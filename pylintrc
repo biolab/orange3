@@ -274,7 +274,7 @@ no-docstring-rgx=^_
 
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
-docstring-min-length=1
+docstring-min-length=7
 
 
 [ELIF]
