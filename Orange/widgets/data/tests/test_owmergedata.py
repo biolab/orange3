@@ -1,12 +1,19 @@
 import unittest
 from collections import defaultdict
-from Orange.data import Table
+
+from os.path import dirname
+
+from Orange.data import Table, dataset_dirs
 from Orange.widgets.data.owmergedata import group_table_indices
 
-
 class MergeDataTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from Orange import tests
+        dataset_dirs.append(dirname(tests.__file__))
+
     def test_group_table_indices(self):
-        table = Table("../../../tests/test9.tab")
+        table = Table("test9.tab")
         dd = defaultdict(list)
         dd[("1",)] = [0, 1]
         dd[("huh",)] = [2]

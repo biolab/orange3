@@ -1,6 +1,6 @@
 from unittest import TestCase
-from PyQt4.QtGui import QApplication
 from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, OWComponent
+from Orange.widgets.tests.base import GuiTest
 from Orange.widgets.widget import OWWidget
 
 
@@ -20,15 +20,7 @@ class MyWidget(OWWidget):
             self.widget = None
 
 
-class WidgetTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.qApp = QApplication([])
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.qApp.quit()
-
+class WidgetTestCase(GuiTest):
     def test_setattr(self):
         widget = MyWidget()
 
