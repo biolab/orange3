@@ -48,7 +48,7 @@ class OWDistances(widget.OWWidget):
                      callback=self._invalidate
         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
-                              box=False, checkbox_label="Apply on any change")
+                              box=False, checkbox_label="Auto apply on change")
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 8)
 

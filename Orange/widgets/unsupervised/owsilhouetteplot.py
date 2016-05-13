@@ -92,8 +92,8 @@ class OWSilhouettePlot(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "add_scores", "Add silhouette scores",)
-        gui.auto_commit(box, self, "auto_commit", "Commit",
-                        auto_label="Auto Commit", box=False)
+        gui.auto_commit(box, self, "auto_commit", "Apply",
+                        auto_label="Auto Apply", box=False)
 
         self.scene = QtGui.QGraphicsScene()
         self.view = QtGui.QGraphicsView(self.scene)

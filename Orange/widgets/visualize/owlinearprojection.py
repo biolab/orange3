@@ -382,7 +382,7 @@ class OWLinearProjection(widget.OWWidget):
         toollayout = QtGui.QHBoxLayout()
         toolbox.layout().addLayout(toollayout)
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection")
 
         self.controlArea.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Expanding)

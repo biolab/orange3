@@ -572,7 +572,7 @@ class OWHeatMap(widget.OWWidget):
                      callback=self.__aspect_mode_changed)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Commit")
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection")
 
         # Scene with heatmap
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)

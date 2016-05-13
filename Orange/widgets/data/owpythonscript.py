@@ -460,7 +460,8 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        gui.auto_commit(self.controlArea, self, "auto_execute", "Execute")
+        gui.auto_commit(self.controlArea, self, "auto_execute", "Execute",
+                        auto_label="Auto Execute")
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)

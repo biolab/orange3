@@ -119,8 +119,7 @@ class OWConcatenate(widget.OWWidget):
         cb.makeConsistent()
 
         box = gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply Changes",
-            "Apply on Change", commit=self.apply)
+            self.controlArea, self, "auto_commit", "Apply", commit=self.apply)
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 20)
 

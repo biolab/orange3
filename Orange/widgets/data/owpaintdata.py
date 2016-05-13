@@ -916,7 +916,7 @@ class OWPaintData(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.left_side, self, "autocommit",
-                        "Send", "Send on change")
+                        "Send")
 
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)

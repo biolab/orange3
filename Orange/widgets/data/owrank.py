@@ -127,8 +127,7 @@ class OWRank(widget.OWWidget):
 
         selMethBox.layout().addLayout(grid)
 
-        gui.auto_commit(self.buttonsArea, self, "auto_apply", "Commit",
-                        auto_label="Commit on Change", box=False)
+        gui.auto_commit(self.buttonsArea, self, "auto_apply", "Send", box=False)
 
         gui.rubber(self.controlArea)
 

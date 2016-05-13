@@ -440,7 +440,7 @@ class OWFeatureConstructor(widget.OWWidget):
         box.layout().addWidget(self.report_button)
         self.report_button.setMinimumWidth(180)
         gui.rubber(box)
-        commit = gui.button(box, self, "Commit", callback=self.apply,
+        commit = gui.button(box, self, "Send", callback=self.apply,
                             default=True)
         commit.setMinimumWidth(180)
 

@@ -137,7 +137,7 @@ class OWConfusionMatrix(widget.OWWidget):
                      callback=self._invalidate)
 
         gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send Data", "Auto send is on")
+                        "Send Selected", "Auto Send is On")
 
         grid = QGridLayout()
 

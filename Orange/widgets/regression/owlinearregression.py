@@ -78,8 +78,7 @@ class OWLinearRegression(OWBaseLearner):
         self._set_l1_ratio_label()
 
         auto_commit = gui.auto_commit(
-                self.controlArea, self, "autosend",
-                "Apply", auto_label="Apply on change")
+                self.controlArea, self, "autosend", "Apply")
         auto_commit.layout().insertWidget(0, self.report_button)
         auto_commit.layout().insertSpacing(1, 20)
         self.report_button.setMinimumWidth(150)

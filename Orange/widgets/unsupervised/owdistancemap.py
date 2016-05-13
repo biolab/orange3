@@ -324,7 +324,7 @@ class OWDistanceMap(widget.OWWidget):
         self.controlArea.layout().addStretch()
 
         gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send data", "Auto send is on")
+                        "Send Selected")
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)

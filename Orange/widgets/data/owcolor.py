@@ -254,9 +254,9 @@ class OWColor(widget.OWWidget):
         self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(cont_view)
 
-        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Send Data",
+        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Apply",
                               orientation=Qt.Horizontal,
-                              checkbox_label="Resend data on every change")
+                              checkbox_label="Auto apply on change")
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)
 

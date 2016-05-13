@@ -372,8 +372,7 @@ class OWImageViewer(widget.OWWidget):
         )
         gui.rubber(self.controlArea)
 
-        gui.auto_commit(self.buttonsArea, self, "autoCommit",
-                        "Commit", "Auto Commit", box=False)
+        gui.auto_commit(self.buttonsArea, self, "autoCommit", "Send", box=False)
 
         self.scene = GraphicsScene()
         self.sceneView = QGraphicsView(self.scene, self)

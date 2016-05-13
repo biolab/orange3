@@ -132,8 +132,7 @@ class OWKMeans(widget.OWWidget):
                      callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
-        gui.auto_commit(self.buttonsArea, self, "auto_run", "Run",
-                        "Run on change", box=None)
+        gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)

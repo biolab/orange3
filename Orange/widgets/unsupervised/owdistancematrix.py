@@ -244,9 +244,8 @@ class OWDistanceMatrix(widget.OWWidget):
         gui.rubber(settings_box)
         settings_box.layout().addWidget(self.report_button)
         gui.separator(settings_box, 40)
-        gui.auto_commit(
-            settings_box, self, "auto_commit",
-            "Send Selected Data", "Auto send is on", box=None)
+        gui.auto_commit(settings_box, self, "auto_commit",
+                        "Send Selected", "Auto Send is On", box=None)
         # Signal must be connected after self.commit is redirected
         selmodel.selectionChanged.connect(self.commit)
 

@@ -110,8 +110,8 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        gui.auto_commit(box, self, "auto_commit", label="Commit",
-                        checkbox_label="Commit on change")
+        gui.auto_commit(box, self, "auto_commit", label="Send",
+                        checkbox_label="Auto send on change")
         self.set_data(None)
         self.resize(600, 400)
 

@@ -384,8 +384,7 @@ class OWEditDomain(widget.OWWidget):
         gui.button(box, self, "Reset Selected", callback=self.reset_selected)
         gui.button(box, self, "Reset All", callback=self.reset_all)
 
-        gui.auto_commit(self.controlArea, self, "autocommit", "Commit",
-                        "Commit on Change is On")
+        gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
         box = gui.vBox(self.mainArea, "Edit")
         self.editor_stack = QtGui.QStackedWidget()

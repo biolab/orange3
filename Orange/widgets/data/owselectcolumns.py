@@ -412,7 +412,8 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_meta_button = gui.button(bbox, self, "Down",
             callback=partial(self.move_down, self.meta_attrs_view))
 
-        autobox = gui.auto_commit(None, self, "auto_commit", "Apply", "Auto Apply")
+        autobox = gui.auto_commit(None, self, "auto_commit", "Send Selected",
+                                  "Auto Send")
         layout.addWidget(autobox, 3, 0, 1, 3)
         reset = gui.button(None, self, "Reset", callback=self.reset)
         autobox.layout().insertWidget(0, self.report_button)

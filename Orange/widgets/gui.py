@@ -2202,7 +2202,7 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
         if checkbox_label:
             auto_label = label
         else:
-            auto_label = "Auto " + label.lower() + " is on"
+            auto_label = "Auto " + label.title() + " is On"
     if isinstance(box, QtGui.QWidget):
         b = box
     else:

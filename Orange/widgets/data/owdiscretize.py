@@ -223,7 +223,7 @@ class OWDiscretize(widget.OWWidget):
         box = gui.auto_commit(
             self.controlArea, self, "autosend", "Apply",
             orientation=Qt.Horizontal,
-            checkbox_label="Send data after every change")
+            checkbox_label="Auto apply on change")
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)
 

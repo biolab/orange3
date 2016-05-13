@@ -321,8 +321,8 @@ class OWMDS(widget.OWWidget):
                    "Coordinates as Features",
                    "Coordinates as Meta Attributes"],
             callback=self._invalidate_output, addSpace=4)
-        gui.auto_commit(box, self, "autocommit", "Send Data",
-                        checkbox_label="Send After Any Change",
+        gui.auto_commit(box, self, "autocommit", "Send Selected",
+                        checkbox_label="Auto send selected on change",
                         box=None)
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)

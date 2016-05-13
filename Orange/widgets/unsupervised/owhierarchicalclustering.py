@@ -860,7 +860,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         ibox.layout().addLayout(form)
         ibox.layout().addSpacing(5)
 
-        gui.auto_commit(box, self, "autocommit", "Send Data", "Auto Send is On",
+        gui.auto_commit(box, self, "autocommit", "Send Selected", "Auto Send is On",
                         box=False)
 
         self.scene = QGraphicsScene()

@@ -110,7 +110,7 @@ class OWVennDiagram(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "output_duplicates", "Output duplicates",
                      callback=lambda: self.commit())
-        gui.auto_commit(box, self, "autocommit", "Commit", box=False)
+        gui.auto_commit(box, self, "autocommit", "Send Selection", box=False)
 
         # Main area view
         self.scene = QGraphicsScene()
