@@ -25,6 +25,12 @@ reproducible) and a screenshot (if applicable).
 [bug reporting guidelines]: https://www.google.com/search?q=reporting+bugs
 
 
+Human interface guidelines 
+--------------------------
+
+Use title case for titles, push buttons, menu titles and menu options. Elsewhere, use sentence case.
+
+
 Coding style
 ------------
 
