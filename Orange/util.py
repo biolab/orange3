@@ -82,32 +82,6 @@ def scale(values, min=0, max=1):
     return (-np.nanmin(values) + values) / ptp * (max - min) + min
 
 
-def abstract(obj):
-    """Designate decorated class or method abstract."""
-    if isinstance(obj, type):
-        old__init__ = obj.__init__
-
-        def _refuse__init__(self, *args, **kwargs):
-            if self.__class__ == obj:
-                raise NotImplementedError("Can't instantiate abstract class " + obj.__name__)
-            return old__init__(self, *args, **kwargs)
-
-        obj.__init__ = _refuse__init__
-        return obj
-    else:
-        if not hasattr(obj, '__qualname__'):
-            raise TypeError('Put @abstract decorator below (evaluated before) '
-                            'any of @staticmethod, @classmethod, or @property.')
-        cls_name = obj.__qualname__.rsplit('.', 1)[0]
-
-        @wraps(obj)
-        def _refuse__call__(*args, **kwargs):
-            raise NotImplementedError("Can't call abstract method {} of class {}"
-                                      .format(obj.__name__, cls_name))
-
-        return _refuse__call__
-
-
 class Registry(type):
     """Metaclass that registers subtypes."""
     def __new__(cls, name, bases, attrs):

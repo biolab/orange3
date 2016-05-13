@@ -2,7 +2,6 @@ import numpy
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
-from Orange.util import abstract
 from .transformation import Transformation, Lookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", 'DropInstances',
@@ -35,7 +34,6 @@ class BaseImputeMethod:
     format = "{var.name} -> {self.short_name}"
     columns_only = False
 
-    @abstract
     def __call__(self, data, variable):
         """ Imputes table along variable column.
 
@@ -47,7 +45,7 @@ class BaseImputeMethod:
             A new Variable instance with completed missing values or
             a array mask of rows to drop out.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def format_variable(self, var):
         return self.format.format(var=var, self=self)

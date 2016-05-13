@@ -4,7 +4,6 @@ from PyQt4.QtCore import QTimer
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
 from Orange.preprocess.preprocess import Preprocess
-from Orange.util import abstract
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -92,7 +91,6 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
         return attrib
 
 
-@abstract
 class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     """Abstract widget for classification/regression learners.
 

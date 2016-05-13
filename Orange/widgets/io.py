@@ -1,36 +1,29 @@
 from PyQt4 import QtGui, QtCore, QtSvg
 from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QWidget
 
-from Orange.util import abstract
 from Orange.data.io import FileFormat
 
 
-@abstract
 class ImgFormat(FileFormat):
     @staticmethod
-    @abstract
     def _get_buffer(size, filename):
-        pass
+        raise NotImplementedError
 
     @staticmethod
-    @abstract
     def _get_target(scene, painter, buffer):
-        pass
+        raise NotImplementedError
 
     @staticmethod
-    @abstract
     def _save_buffer(buffer, filename):
-        pass
+        raise NotImplementedError
 
     @staticmethod
-    @abstract
     def _get_exporter():
-        pass
+        raise NotImplementedError
 
     @staticmethod
-    @abstract
     def _export(self, exporter, filename):
-        pass
+        raise NotImplementedError
 
     @classmethod
     def write_image(cls, filename, scene):
