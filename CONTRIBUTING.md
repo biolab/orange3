@@ -72,6 +72,12 @@ Please ensure your commits pass code quality assurance by executing:
 [keyword args to the constructor]: http://pyqt.sourceforge.net/Docs/PyQt5/qt_properties.html
 
 
+Human Interface Guidelines
+--------------------------
+For UI design, conform to the [OS X Human Interface Guidelines](https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html).
+Of special note are the capitalization, ellipsis and colon guidelines.
+
+
 Tests
 -----
 [tests]: #tests
