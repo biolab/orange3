@@ -213,22 +213,21 @@ class OWKMeans(widget.OWWidget):
         try:
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
-            if self.check_data_size(self.k_to):
-                self.optimization_runs = []
-                kmeans = KMeans(
-                    init=['random', 'k-means++'][self.smart_init],
-                    n_init=self.n_init,
-                    max_iter=self.max_iterations)
-                with self.progressBar(self.k_to - self.k_from + 1) as progress:
-                    for k in range(self.k_from, self.k_to + 1):
-                        progress.advance()
-                        kmeans.params["n_clusters"] = k
-                        self.optimization_runs.append((k, kmeans(self.data)))
+            if not self.check_data_size(self.k_to):
+                return
+            kmeans = KMeans(
+                init=['random', 'k-means++'][self.smart_init],
+                n_init=self.n_init,
+                max_iter=self.max_iterations)
+            with self.progressBar(self.k_to - self.k_from + 1) as progress:
+                for k in range(self.k_from, self.k_to + 1):
+                    progress.advance()
+                    kmeans.params["n_clusters"] = k
+                    self.optimization_runs.append((k, kmeans(self.data)))
         finally:
             self.controlArea.setDisabled(False)
         self.show_results()
         self.send_data()
-
 
     def cluster(self):
         if not self.check_data_size(self.k):
@@ -265,7 +264,7 @@ class OWKMeans(widget.OWWidget):
         score_span = (best_score - worst_score) or 1
         max_score = max(scores)
         nplaces = min(5, int(abs(math.log(max(max_score, 1e-10)))) + 2)
-        fmt = "{{:.{}}}".format(nplaces)
+        fmt = "{{:.{}f}}".format(nplaces)
         model = self.table_model
         model.setRowCount(len(k_scores))
         for i, (k, score) in enumerate(k_scores):
