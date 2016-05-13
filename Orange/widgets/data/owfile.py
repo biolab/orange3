@@ -193,6 +193,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # explicitly re-enters the event loop (by a progress bar)
         QtCore.QTimer.singleShot(0, self.load_data)
 
+        self.setAcceptDrops(True)
+
     def reload(self):
         if self.recent_paths:
             basename = self.file_combo.currentText()
@@ -404,6 +406,23 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.report_data("Data", self.data)
 
+    def dragEnterEvent(self, event):
+        """Accept drops of valid file urls"""
+        urls = event.mimeData().urls()
+        if urls:
+            try:
+                FileFormat.get_reader(urls[0].toLocalFile())
+                event.acceptProposedAction()
+            except IOError:
+                pass
+
+    def dropEvent(self, event):
+        """Handle file drops"""
+        urls = event.mimeData().urls()
+        if urls:
+            self.add_path(urls[0].toLocalFile())  # add first file
+            self.source = self.LOCAL_FILE
+            self.load_data()
 
 if __name__ == "__main__":
     import sys
