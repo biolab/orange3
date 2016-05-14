@@ -48,7 +48,8 @@ def init():
     # Hack to make sure the correct plugin search path is added. (Github issue #1143)
     for path in site.getsitepackages():
         if path.endswith("site-packages"):
-            QCoreApplication.addLibraryPath(os.path.join(path, "PyQt4", "plugins"))
+            QCoreApplication.setLibraryPaths(
+                QCoreApplication.libraryPaths() + [os.path.join(path, "PyQt4", "plugins")])
 
     # Make it a null op.
     global init
