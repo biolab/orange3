@@ -1,5 +1,6 @@
 import sklearn.svm as skl_svm
 
+from Orange.classification.svm import SVMLearner, NuSVMLearner, SVMOptions
 from Orange.regression import SklLearner
 from Orange.preprocess import Normalize
 
@@ -11,25 +12,34 @@ svm_pps = SklLearner.preprocessors + [Normalize()]
 class SVRLearner(SklLearner):
     __wraps__ = skl_svm.SVR
     name = 'svr'
+    verbose_name = 'C-SVR'
     preprocessors = svm_pps
 
-    def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
-                 tol=0.001, C=1.0, epsilon=0.1, shrinking=True,
-                 cache_size=200, max_iter=-1, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = SVMOptions.kernels + [
+        SVMOptions.C,
+        SVMOptions.shrinking,
+        SVMOptions.tol,
+        SVMOptions.cache_size,
+        SVMOptions.max_inter,
+    ]
+
+    GUI = SVMLearner.GUI
 
 
 class NuSVRLearner(SklLearner):
     __wraps__ = skl_svm.NuSVR
     name = 'nu svr'
+    verbose_name = 'ν-SVR'
     preprocessors = svm_pps
 
-    def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma="auto",
-                 coef0=0.0, shrinking=True, tol=0.001,
-                 cache_size=200, max_iter=-1, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = SVMOptions.kernels + [
+        SVMOptions.nu,
+        SVMOptions.shrinking,
+        SVMOptions.tol,
+        SVMOptions.cache_size,
+        SVMOptions.max_inter,
+    ]
+    GUI = NuSVMLearner.GUI
 
 
 if __name__ == '__main__':

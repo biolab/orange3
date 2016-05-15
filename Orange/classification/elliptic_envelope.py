@@ -2,6 +2,7 @@ import sklearn.covariance as skl_covariance
 
 from Orange.base import SklLearner, SklModel
 from Orange.data import Table
+from Orange import options
 
 __all__ = ["EllipticEnvelopeLearner"]
 
@@ -29,8 +30,14 @@ class EllipticEnvelopeLearner(SklLearner):
     __returns__ = EllipticEnvelopeClassifier
     name = 'elliptic envelope'
 
-    def __init__(self, store_precision=True, assume_centered=False,
-                 support_fraction=None, contamination=0.1,
-                 random_state=None, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = (
+        options.BoolOption('store_precision', default=True),
+        options.BoolOption('assume_centered', default=False),
+        options.DisableableOption(
+            'support_fraction',
+            option=options.FloatOption(default=.5, range=(0., 1.)),
+            disable_value=None, disable_label='auto'
+        ),
+        options.FloatOption('contamination', default=.1, range=(0., .5)),
+        options.IntegerOption('random_state', default=0),
+    )

@@ -1,4 +1,3 @@
-from Orange.data import Table
 from Orange.classification.majority import MajorityLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -16,6 +15,7 @@ class OWMajority(OWBaseLearner):
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+    from Orange.data import Table
 
     a = QApplication(sys.argv)
     ow = OWMajority()

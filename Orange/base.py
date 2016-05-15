@@ -5,6 +5,7 @@ import scipy
 import bottlechest as bn
 
 from Orange.data import Table, Storage, Instance, Value
+from Orange.wrappers import BaseWrapper
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -22,6 +23,9 @@ class Learner:
     learner_adequacy_err_msg = ''
 
     def __init__(self, preprocessors=None):
+        self.set_preprocessors(preprocessors)
+
+    def set_preprocessors(self, preprocessors=None):
         if preprocessors is None:
             preprocessors = type(self).preprocessors
         self.preprocessors = list(preprocessors)
@@ -198,7 +202,7 @@ class SklModel(Model, metaclass=WrapperMeta):
         return '{} {}'.format(self.name, self.params)
 
 
-class SklLearner(Learner, metaclass=WrapperMeta):
+class SklLearner(BaseWrapper, Learner):
     """
     ${skldoc}
     Additional Orange parameters
@@ -217,25 +221,9 @@ class SklLearner(Learner, metaclass=WrapperMeta):
                      RemoveNaNColumns(),
                      SklImpute()]
 
-    @property
-    def params(self):
-        return self._params
-
-    @params.setter
-    def params(self, value):
-        self._params = self._get_sklparams(value)
-
-    def _get_sklparams(self, values):
-        skllearner = self.__wraps__
-        if skllearner is not None:
-            spec = inspect.getargs(skllearner.__init__.__code__)
-            # first argument is 'self'
-            assert spec.args[0] == "self"
-            params = {name: values[name] for name in spec.args[1:]
-                      if name in values}
-        else:
-            raise TypeError("Wrapper does not define '__wraps__'")
-        return params
+    def __init__(self, preprocessors=None, **kwargs):
+        self.set_preprocessors(preprocessors)
+        super().__init__(**kwargs)
 
     def preprocess(self, data):
         data = super().preprocess(data)
@@ -250,18 +238,18 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def __call__(self, data):
         m = super().__call__(data)
         m.used_vals = [np.unique(y) for y in data.Y[:, None].T]
-        m.params = self.params
+        m.params = self.state
         return m
 
     def fit(self, X, Y, W=None):
-        clf = self.__wraps__(**self.params)
+        clf = self.instance
         Y = Y.reshape(-1)
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 
     def __repr__(self):
-        return '{} {}'.format(self.name, self.params)
+        return '{} {}'.format(self.name, self.state)
 
     @property
     def supports_weights(self):

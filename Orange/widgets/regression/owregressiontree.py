@@ -1,5 +1,4 @@
 from Orange.regression.tree import TreeRegressionLearner
-from Orange.widgets.settings import Setting
 from Orange.widgets.classify import owclassificationtree
 
 

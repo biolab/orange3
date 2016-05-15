@@ -6,6 +6,7 @@ from Orange.classification import SklLearner, SklModel
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
 from Orange.data import Variable, DiscreteVariable
+from Orange import options
 
 __all__ = ["LogisticRegressionLearner"]
 
@@ -37,8 +38,10 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
     name = 'logreg'
     preprocessors = SklLearner.preprocessors
 
-    def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
-                 fit_intercept=True, intercept_scaling=1, class_weight=None,
-                 random_state=None, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    PENALTIES = (('l1', 'Lasso (L1)'), ('l2', 'Ridge (L2)'))
+    options = [
+        options.ChoiceOption('penalty', verbose_name='Regularization',
+                             choices=PENALTIES, default='l2'),
+        options.FloatOption('C', default=1., verbose_name='C',
+                            range=(.0001, 1000.), step=.001)
+    ]

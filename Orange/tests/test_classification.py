@@ -8,7 +8,6 @@ import unittest
 
 import traceback
 import numpy as np
-from Orange.base import SklLearner
 
 import Orange.classification
 from Orange.classification import (Learner, Model, NaiveBayesLearner,
@@ -199,10 +198,6 @@ class SklTest(unittest.TestCase):
         self.assertEqual(len(res.models[0][0].domain.attributes), 2)
         self.assertGreater(Orange.evaluation.CA(res)[0], 0.8)
 
-    def test_params(self):
-        learner = SklLearner()
-        self.assertIsInstance(learner.params, dict)
-
 
 class ClassfierListInputTest(unittest.TestCase):
     def test_discrete(self):
@@ -243,7 +238,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
             try:
                 learner = learner()
                 if isinstance(learner, NuSVMLearner):
-                    learner.params["nu"] = 0.01
+                    learner.nu = 0.01
                 model = learner(table)
                 model(table)
             except TypeError:

@@ -1,5 +1,8 @@
 import sklearn.ensemble as skl_ensemble
+
+from Orange.classification import RandomForestLearner
 from Orange.regression import SklLearner, SklModel
+from Orange.regression.tree import TreeRegressionLearner
 from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess.score import LearnerScorer
 
@@ -24,20 +27,7 @@ class RandomForestRegressionLearner(SklLearner, _FeatureScorerMixin):
     __returns__ = RandomForestRegressor
     name = 'random forest regression'
 
-    def __init__(self,
-                 n_estimators=10,
-                 criterion="mse",
-                 max_depth=None,
-                 min_samples_split=2,
-                 min_samples_leaf=1,
-                 min_weight_fraction_leaf=0.,
-                 max_features="auto",
-                 max_leaf_nodes=None,
-                 bootstrap=True,
-                 oob_score=False,
-                 n_jobs=1,
-                 random_state=None,
-                 verbose=0,
-                 preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+    options = RandomForestLearner.ENSEMBLE_OPTIONS + \
+              TreeRegressionLearner.options
+
+    GUI = RandomForestLearner.GUI

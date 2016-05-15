@@ -1,6 +1,5 @@
 from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.classify import owrandomforest
-from Orange.widgets import settings
 
 
 class OWRandomForestRegression(owrandomforest.OWRandomForest):
