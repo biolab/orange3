@@ -2,6 +2,8 @@
  * Our general helpers for Highcharts, JS, QWebView bridge ...
  */
 
+var _ARRAY_KEYS = ['series', 'yAxis', 'xAxis'];
+
 function fixupOptionsObject(obj) {
     /**
      * Replace any strings with their eval'd value if they
@@ -31,7 +33,7 @@ function fixupOptionsObject(obj) {
         if (typeof val === 'string' && val.indexOf('/**/') == 0) {
             obj[key] = eval(val)
         } else if (val.constructor === Object ||
-                   val.constructor === Array && key === 'series')
+                   val.constructor === Array && _ARRAY_KEYS.indexOf(key) != -1)
             fixupOptionsObject(val);
     }
 }

@@ -26,7 +26,7 @@ Highcharts.theme = {
         // As of Highcharts 4.2.3, panning sometimes only seems to work
         // in the X axis. There an add-on:
         // http://www.highcharts.com/plugin-registry/single/27/Y-Axis%20Panning
-        panning: true,
+        panning: true,  // FIXME: https://github.com/highcharts/highcharts/issues/5240
         panKey: 'alt'
     },
     drilldown: {

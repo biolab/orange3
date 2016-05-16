@@ -5,7 +5,7 @@ Highcharts JS library.
 from json import dumps as json
 
 from collections import defaultdict
-from collections.abc import MutableMapping, Mapping, Set, Sequence
+from collections.abc import MutableMapping, Mapping, Set, Sequence, Iterable
 
 from os.path import join, dirname
 from urllib.parse import urljoin
@@ -41,7 +41,7 @@ def _to_primitive_types(d):
         return {k: _to_primitive_types(d[k]) for k in d}
     if isinstance(d, Set):
         return {k: 1 for k in d}
-    if isinstance(d, Sequence):
+    if isinstance(d, (Sequence, Iterable)):
         return [_to_primitive_types(i) for i in d]
     if d is None:
         return None
@@ -180,14 +180,17 @@ class Highchart(WebView):
         if kwargs:
             _merge_dicts(options, _kwargs_options(kwargs))
 
-        self.frame.loadFinished.connect(
-            lambda: self.evalJS('''
-                {javascript};
+        super_evalJS = super().evalJS
+
+        def evalOptions():
+            super_evalJS(javascript)
+            self.evalJS('''
                 var options = {options};
                 fixupOptionsObject(options);
                 Highcharts.setOptions(options);
-                '''.format(javascript=javascript,
-                           options=json(options))))
+            '''.format(options=json(options)))
+
+        self.frame.loadFinished.connect(evalOptions)
         # Give above scripts time to load
         qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
         qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
@@ -199,16 +202,29 @@ class Highchart(WebView):
         if self.debug:
             super().contextMenuEvent(event)
 
-    class _Options(QObject):
-        """ This class hopefully prevent options data from being marshalled
-        into a string-like dumb (JSON) object when passed into JavaScript. """
-        def __init__(self, parent, obj):
-            super().__init__(parent)
-            self._obj = obj
+    @staticmethod
+    def _JSObject_factory(obj):
+        pyqt_type = type(obj).__mro__[-2]
+        if isinstance(obj, (list, np.ndarray)):
+            pyqt_type = 'QVariantList'
+        elif isinstance(obj, Mapping):
+            pyqt_type = 'QVariantMap'
+        else:
+            raise TypeError("Can't expose object of type {}. Too easy. Use "
+                            "evalJS method instead.".format(type(obj)))
 
-        @pyqtProperty('QVariantMap')
-        def _options(self):
-            return self._obj
+        class _JSObject(QObject):
+            """ This class hopefully prevent options data from being marshalled
+            into a string-like dumb (JSON) object when passed into JavaScript. """
+            def __init__(self, parent, obj):
+                super().__init__(parent)
+                self._obj = obj
+
+            @pyqtProperty(pyqt_type)
+            def _options(self):
+                return self._obj
+
+        return _JSObject
 
     def exposeObject(self, name, obj):
         """Expose the object `obj` as ``window.<name>`` in JavaScript.
@@ -229,8 +245,6 @@ class Highchart(WebView):
             The object to expose. Must contain only primitive types, such as:
             int, float, str, bool, list, dict, set, numpy.ndarray.
         """
-        if not isinstance(obj, Mapping):
-            raise TypeError('top level object must be a dict')
         try:
             obj = _to_primitive_types(obj)
         except TypeError:
@@ -239,7 +253,7 @@ class Highchart(WebView):
                 '(allowed: int, float, str, bool, list, '
                 'dict, set, numpy.ndarray, ...)') from None
 
-        pydata = self._Options(self, obj)
+        pydata = self._JSObject_factory(obj)(self, obj)
         self.frame.addToJavaScriptWindowObject('_' + name, pydata)
         self.evalJS('''
             window.{0} = window._{0}._options;
@@ -294,10 +308,12 @@ class Highchart(WebView):
     def clear(self):
         """Remove all series from the chart"""
         self.evalJS('''
-        while(chart.series.length > 0) {
-            chart.series[0].remove(false);
-        }
-        chart.redraw();
+            if (window.chart) {
+                while(chart.series.length > 0) {
+                    chart.series[0].remove(false);
+                }
+                chart.redraw();
+            }
         ''')
 
     @pyqtSlot('QVariantList')
