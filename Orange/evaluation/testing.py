@@ -85,7 +85,7 @@ class Results:
                  store_data=False, store_models=False,
                  domain=None, actual=None, row_indices=None,
                  predicted=None, probabilities=None,
-                 preprocessor=None, callback=None):
+                 preprocessor=None, callback=None, n_jobs=-1):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -120,10 +120,15 @@ class Results:
         :param callback: Function for reporting back the progress as a value
             between 0 and 1
         :type callback: callable
+        :param n_jobs: The number of processes to parallelize the evaluation
+            on. -1 to parallelize on all but one CPUs (the default). 1 for no
+            parallelization.
+        :type n_jobs: int
         """
         self.store_data = store_data
         self.store_models = store_models
         self.dtype = np.float32
+        self.n_jobs = max(1, joblib.cpu_count() - 1 if n_jobs < 0 else n_jobs)
 
         self.models = None
         self.folds = None
@@ -313,7 +318,7 @@ class Results:
         self._prepare_arrays(test_data)
 
         n_callbacks = len(self.learners) * len(self.indices)
-        n_jobs = max(1, min(joblib.cpu_count(), n_callbacks) - 1)
+        n_jobs = max(1, min(self.n_jobs, n_callbacks))
 
         def _is_picklable(obj):
             try:
@@ -329,9 +334,33 @@ class Results:
         # Workaround for NumPy locking on Macintosh.
         # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
         mp_ctx = mp.get_context(
-            'forkserver' if sys.platform == 'darwin' else None)
+            'forkserver' if sys.platform == 'darwin' and n_jobs > 1 else None)
 
-        mp_queue = mp_ctx.Manager().Queue()
+        try:
+            # Use context-adapted Queue or just the regular Queue if no
+            # multiprocessing (otherwise it shits itself at least on Windos)
+            mp_queue = mp_ctx.Manager().Queue() if n_jobs > 1 else mp.Queue()
+        except (EOFError, RuntimeError):
+            raise RuntimeError('''
+
+        Can't run multiprocessing code without a __main__ guard.
+
+        Multiprocessing strategies 'forkserver' (used by Orange's evaluation
+        methods by default on Mac OS X) and 'spawn' (default on Windos)
+        require the main code entry point be guarded with:
+
+            if __name__ == '__main__':
+                import multiprocessing as mp
+                mp.freeze_support()  # Needed only on Windos
+                ...  # Rest of your code
+                ...  # See: https://docs.python.org/3/library/__main__.html
+
+        Otherwise, as the module is re-imported in another process, infinite
+        recursion ensues.
+
+        Guard your executed code with above Python idiom, or pass n_jobs=1
+        to evaluation methods, i.e. {}(..., n_jobs=1).
+            '''.format(self.__class__.__name__)) from None
 
         data_splits = (
             (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
@@ -452,7 +481,8 @@ class CrossValidation(Results):
 
     """
     def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, warnings=None):
+                 store_models=False, preprocessor=None, callback=None, warnings=None,
+                 n_jobs=-1):
         self.k = k
         self.stratified = stratified
         self.random_state = random_state
@@ -463,7 +493,7 @@ class CrossValidation(Results):
 
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         self.indices = None
@@ -485,10 +515,10 @@ class LeaveOneOut(Results):
     score_by_folds = False
 
     def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None):
+                 preprocessor=None, callback=None, n_jobs=-1):
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         self.indices = skl_cross_validation.LeaveOneOut(len(test_data))
@@ -503,7 +533,7 @@ class LeaveOneOut(Results):
 class ShuffleSplit(Results):
     def __init__(self, data, learners, n_resamples=10, train_size=None,
                  test_size=0.1, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None):
+                 store_models=False, preprocessor=None, callback=None, n_jobs=-1):
         self.n_resamples = n_resamples
         self.train_size = train_size
         self.test_size = test_size
@@ -512,7 +542,7 @@ class ShuffleSplit(Results):
 
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         if self.stratified and test_data.domain.has_discrete_class:
@@ -532,11 +562,11 @@ class TestOnTestData(Results):
     Test on a separate test data set.
     """
     def __init__(self, train_data, test_data, learners, store_data=False,
-                 store_models=False, preprocessor=None, callback=None):
+                 store_models=False, preprocessor=None, callback=None, n_jobs=-1):
         super().__init__(test_data, train_data=train_data, learners=learners,
                          store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         self.indices = ((Ellipsis, Ellipsis),)
@@ -553,14 +583,14 @@ class TestOnTrainingData(TestOnTestData):
     """
 
     def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None):
+                 preprocessor=None, callback=None, n_jobs=-1):
 
         if preprocessor is not None:
             data = preprocessor(data)
 
         super().__init__(train_data=data, test_data=data, learners=learners,
                          store_data=store_data, store_models=store_models,
-                         preprocessor=None, callback=callback)
+                         preprocessor=None, callback=callback, n_jobs=n_jobs)
         self.preprocessor = preprocessor
 
 
