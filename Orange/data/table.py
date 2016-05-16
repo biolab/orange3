@@ -330,10 +330,7 @@ class Table(MutableSequence, Storage):
             else:
                 self.W = np.empty((n_rows, 0))
             self.name = getattr(source, 'name', '')
-            if hasattr(source, 'ids'):
-                self.ids = np.array(source.ids[row_indices])
-            else:
-                cls._init_ids(self)
+            cls._init_ids(self)
             cls.conversion_cache[(id(domain), id(source))] = self
             return self
         finally:
@@ -363,7 +360,7 @@ class Table(MutableSequence, Storage):
             self.metas = self.metas.reshape(-1, len(self.domain.metas))
         self.W = source.W[row_indices]
         self.name = getattr(source, 'name', '')
-        self.ids = np.array(source.ids[row_indices])
+        cls._init_ids(self)
         return self
 
     @classmethod
@@ -484,7 +481,7 @@ class Table(MutableSequence, Storage):
             desc = FileFormat.names.get(ext)
             if desc:
                 raise IOError("Writing of {}s is not supported".
-                    format(desc.lower()))
+                              format(desc.lower()))
             else:
                 raise IOError("Unknown file name extension.")
         writer.write_file(filename, self)
@@ -905,6 +902,8 @@ class Table(MutableSequence, Storage):
         Return a copy of the table
         """
         t = self.__class__(self)
+        t.domain = Domain(t.domain.attributes, t.domain.class_vars,
+                          t.domain.metas, getattr(t.domain, 'source', None))
         t.ensure_copy()
         return t
 
