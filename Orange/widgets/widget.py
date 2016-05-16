@@ -149,6 +149,14 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
+    class _AttributeName:
+        def __init__(self, obj):
+            self.obj = obj
+
+        def __getattr__(self, name):
+            getattr(self.obj, name)  # raise error if attribute does not exist
+            return name
+
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
@@ -198,6 +206,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         sc = QShortcut(QKeySequence(Qt.ShiftModifier | Qt.Key_F1), self)
         sc.activated.connect(self.__quicktip)
 
+        self.my = self._AttributeName(self)
         return self
 
     def __init__(self, *args, **kwargs):
