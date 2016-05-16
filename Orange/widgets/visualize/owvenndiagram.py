@@ -139,7 +139,6 @@ class OWVennDiagram(widget.OWWidget):
             # Store hints only on the first setData call.
             self._storeHints()
             self._inputUpdate = True
-
         if key in self.data:
             if data is None:
                 # Remove the input

@@ -242,7 +242,7 @@ class Report:
 
         def report_list(data,
                         header_rows=header_rows, header_columns=header_columns):
-            cells = ["<td>{}</td>", "<th>{}</th>"]
+            cells = ["<td style=\"border : 1px solid black\">{}</td>", "<th>{}</th>"]
             return join("  <tr>\n    {}</tr>\n".format(
                 join(cells[rowi < header_rows or coli < header_columns]
                      .format(fmtnum(elm)) for coli, elm in enumerate(row))
@@ -265,7 +265,7 @@ class Report:
         else:
             body = None
         if body:
-            self.report_html += "<table>\n" + body + "</table>"
+            self.report_html += "<table border = '1px' style = 'border-collapse: collapse;'>\n" + body + "</table>"
 
     # noinspection PyBroadException
     def report_list(self, name, data=None, limit=1000):
