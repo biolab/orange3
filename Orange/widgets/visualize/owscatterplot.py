@@ -20,6 +20,7 @@ from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.statistics.basic_stats import BasicStats
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -59,6 +60,7 @@ class OWScatterPlot(OWWidget):
     attr_y = ContextSetting("")
 
     graph = SettingProvider(OWScatterPlotGraph)
+    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
 
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
@@ -75,13 +77,15 @@ class OWScatterPlot(OWWidget):
         axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
         axis = plot.getAxis("bottom")
         axis.setPen(axispen)
-
         axis = plot.getAxis("left")
         axis.setPen(axispen)
 
+        self.attr_nans = dict()
+
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
-        self.data_metas_X = None  # self.data, where primitive metas are moved to X
+        # self.data, where primitive metas are moved to X
+        self.data_metas_X = None
         self.sql_data = None  # Orange.data.sql.table.SqlTable
         self.attribute_selection_list = None  # list of Orange.data.Variable
         self.__timer = QTimer(self, interval=1200)
@@ -132,11 +136,11 @@ class OWScatterPlot(OWWidget):
             **common_options)
         self.cb_attr_shape = gui.comboBox(
             box, self, "graph.attr_shape", label="Shape:",
-            emptyString="(Same shape)", callback=self.graph.update_shapes,
+            emptyString="(Same shape)", callback=self.update_shapes,
             **common_options)
         self.cb_attr_size = gui.comboBox(
             box, self, "graph.attr_size", label="Size:",
-            emptyString="(Same size)", callback=self.graph.update_sizes,
+            emptyString="(Same size)", callback=self.update_sizes,
             **common_options)
 
         g = self.graph.gui
@@ -158,7 +162,8 @@ class OWScatterPlot(OWWidget):
         buttons = self.zoom_select_toolbar.buttons
         buttons[g.Zoom].clicked.connect(self.graph.zoom_button_clicked)
         buttons[g.Pan].clicked.connect(self.graph.pan_button_clicked)
-        buttons[g.SimpleSelect].clicked.connect(self.graph.select_button_clicked)
+        buttons[g.SimpleSelect].clicked.connect(
+            self.graph.select_button_clicked)
         buttons[g.ZoomReset].clicked.connect(self.graph.reset_button_clicked)
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
@@ -217,6 +222,7 @@ class OWScatterPlot(OWWidget):
     def set_data(self, data):
         self.information(1)
         self.__timer.stop()
+        self.attr_nans.clear()
         self.sampling.setVisible(False)
         self.sql_data = None
         if isinstance(data, SqlTable):
@@ -283,7 +289,8 @@ class OWScatterPlot(OWWidget):
             if subset_data.approx_len() < AUTO_DL_LIMIT:
                 subset_data = Table(subset_data)
             else:
-                self.warning(0, "Data subset does not support large Sql tables")
+                self.warning(
+                    0, "Data subset does not support large Sql tables")
                 subset_data = None
         self.subset_data = self.move_primitive_metas_to_X(subset_data)
 
@@ -367,7 +374,27 @@ class OWScatterPlot(OWWidget):
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.send_features()
 
+    def update_shapes(self):
+        if (self.cb_attr_shape.count() > 1 and
+            self.combo_value(self.cb_attr_shape) == None):
+                self.warning("Please select a shape attribute")
+        else:
+            self.warning()
+        self.graph.update_shapes()
+
+    def update_sizes(self):
+        if (self.cb_attr_size.count() > 1 and
+            self.combo_value(self.cb_attr_size) == None):
+                self.warning("Please select a size attribute")
+        else:
+            self.warning()
+        self.graph.update_sizes()
+
     def update_colors(self):
+        if self.combo_value(self.cb_attr_color) == None:
+            self.warning("Please select a color attribute")
+        else:
+            self.warning()
         self.graph.update_colors()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
@@ -378,6 +405,54 @@ class OWScatterPlot(OWWidget):
         self.graph.zoomStack = []
         if attributes and len(attributes) == 2:
             self.attr_x, self.attr_y = attributes
+        data_x = self.data[:, self.attr_x]
+        data_y = self.data[:, self.attr_y]
+        if self.attr_x not in self.attr_nans:
+            self.attr_nans[self.attr_x] = BasicStats(data_x, self.attr_x).nans
+        if self.attr_y not in self.attr_nans:
+            self.attr_nans[self.attr_y] = BasicStats(data_y, self.attr_y).nans
+        self.information()
+        self.warning()
+        flag_x = 0
+        flag_y = 0
+        if self.attr_nans[self.attr_x]:
+            flag_x = 1
+            if self.attr_nans[self.attr_x] == len(data_x):
+                flag_x = 2
+        if self.attr_nans[self.attr_y]:
+            flag_y = 1
+            if self.attr_nans[self.attr_y] == len(data_y):
+                flag_y = 2
+        if flag_x == 2:
+            if flag_y == 2:
+                self.warning("'{}' and '{}' have no defined values".format(
+                    self.attr_x, self.attr_y))
+            else:
+                self.warning("'{}' has no defined values".format(
+                    self.attr_x))
+        else:
+            if flag_y == 2:
+                self.warning("'{}' has no defined values".format(
+                    self.attr_y))
+        if flag_x == 1:
+            if flag_y == 1:
+                self.information("'{}' and '{}' have missing values".format(
+                    self.attr_x, self.attr_y))
+            else:
+                self.information("'{}' has missing values".format(
+                    self.attr_x))
+        else:
+            if flag_y == 1:
+                self.information("'{}' has missing values".format(
+                    self.attr_y))
+            if self.combo_value(self.cb_attr_color) == None:
+                    self.warning("Please select a color attribute")
+            if (self.cb_attr_size.count() > 1 and
+                self.combo_value(self.cb_attr_size) == None):
+                    self.warning("Please select a size attribute")
+            if (self.cb_attr_shape.count() > 1 and
+                self.combo_value(self.cb_attr_shape) == None):
+                    self.warning("Please select a shape attribute")
         if not self.graph.have_data:
             return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
@@ -428,15 +503,15 @@ class OWScatterPlot(OWWidget):
         disc_attr = False
         if self.data:
             domain = self.data.domain
-            disc_attr = domain[self.attr_x].is_discrete or \
-                        domain[self.attr_y].is_discrete
+            disc_attr = (domain[self.attr_x].is_discrete or
+                         domain[self.attr_y].is_discrete)
         caption = report.render_items_vert((
-             ("Color", self.combo_value(self.cb_attr_color)),
-             ("Label", self.combo_value(self.cb_attr_label)),
-             ("Shape", self.combo_value(self.cb_attr_shape)),
-             ("Size", self.combo_value(self.cb_attr_size)),
-             ("Jittering", (self.graph.jitter_continuous or disc_attr) and
-              self.graph.jitter_size)))
+            ("Color", self.combo_value(self.cb_attr_color)),
+            ("Label", self.combo_value(self.cb_attr_label)),
+            ("Shape", self.combo_value(self.cb_attr_shape)),
+            ("Size", self.combo_value(self.cb_attr_size)),
+            ("Jittering", (self.graph.jitter_continuous or disc_attr) and
+             self.graph.jitter_size)))
         self.report_plot()
         if caption:
             self.report_caption(caption)
@@ -445,7 +520,6 @@ class OWScatterPlot(OWWidget):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
-
 
     class VizRank(OWWidget):
         name = "Rank projections (Scatter Plot)"
@@ -492,7 +566,6 @@ class OWScatterPlot(OWWidget):
             if self.progress:
                 self.progress.finish()
             self.progress = None
-
 
             self.information(0)
             if self.parent_widget.data:
