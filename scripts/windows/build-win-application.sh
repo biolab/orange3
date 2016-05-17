@@ -49,7 +49,7 @@ while [[ ${1:0:1} = "-" ]]; do
             exit 0
             ;;
         -*)
-            echo "Unkown argument $1" >&2
+            echo "Unknown argument $1" >&2
             print_usage >&2
             exit 1
             ;;
@@ -355,6 +355,11 @@ function prepare_all {
     if [[ "$REQUIREMENT" ]]; then
         prepare_extra "$REQUIREMENT"
     fi
+
+    # Remove any remaining --find-links directives from the requirements.txt
+    # All of the wheels must be bundled in the installer itself.
+    local req_contents=$(cat "$BUILDBASE/requirements.txt")
+    echo "$req_contents" | grep -v -E '(--find-links)|(-f)' > "$BUILDBASE"/requirements.txt
 }
 
 function abs_dir_path {
