@@ -106,6 +106,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     want_main_area = False
     resizing_enabled = False
+    auto_apply = Setting(False)
 
     DATA_ERROR_ID = 1
     OUTDATED_LEARNER_WARNING_ID = 2
@@ -182,7 +183,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                 self.error(self.DATA_ERROR_ID, self.learner.learner_adequacy_err_msg)
             elif len(np.unique(self.data.Y)) < 2:
                 self.error(self.DATA_ERROR_ID,
-                           "Data contains single target value. "
+                           "Data contains a single target value. "
                            "There is nothing to learn.")
             else:
                 self.valid_data = True
@@ -191,7 +192,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     def settings_changed(self, *args, **kwargs):
         self.outdated_settings = True
         self.warning(self.OUTDATED_LEARNER_WARNING_ID,
-                     "Press Apply to submit changes.")
+                     None if self.auto_apply else "Press Apply to submit changes.")
+        self.apply()
 
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
@@ -225,5 +227,5 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         box = gui.hBox(self.controlArea, True)
         box.layout().addWidget(self.report_button)
         gui.separator(box, 15)
-        self.apply_button = gui.button(box, self, "&Apply", callback=self.apply,
-                                       disabled=0, default=True)
+        self.apply_button = gui.auto_commit(box, self, 'auto_apply', '&Apply',
+                                            box=False, commit=self.apply)
