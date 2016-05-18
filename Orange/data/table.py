@@ -229,6 +229,7 @@ class Table(MutableSequence, Storage):
             self.W = np.empty((n_rows, 0))
         self.metas = np.empty((n_rows, len(self.domain.metas)), object)
         cls._init_ids(self)
+        self.attributes = {}
         return self
 
     conversion_cache = None
@@ -334,6 +335,7 @@ class Table(MutableSequence, Storage):
                 self.ids = np.array(source.ids[row_indices])
             else:
                 cls._init_ids(self)
+            self.attributes = getattr(source, 'attributes', {})
             cls.conversion_cache[(id(domain), id(source))] = self
             return self
         finally:
@@ -364,6 +366,7 @@ class Table(MutableSequence, Storage):
         self.W = source.W[row_indices]
         self.name = getattr(source, 'name', '')
         self.ids = np.array(source.ids[row_indices])
+        self.attributes = getattr(source, 'attributes', {})
         return self
 
     @classmethod
@@ -434,6 +437,7 @@ class Table(MutableSequence, Storage):
         self.W = W
         self.n_rows = self.X.shape[0]
         cls._init_ids(self)
+        self.attributes = {}
         return self
 
     @classmethod
