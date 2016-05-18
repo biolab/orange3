@@ -149,6 +149,7 @@ class Report:
         if not (isinstance(name, str) and plot is None):
             name, plot = self._fix_args(name, plot)
         from pyqtgraph import PlotWidget, PlotItem, GraphicsWidget
+        from Orange.widgets.highcharts import Highchart
         self.report_name(name)
         if plot is None:
             plot = getdeepattr(self, self.graph_name)
@@ -160,6 +161,8 @@ class Report:
             self.report_html += get_html_img(plot.plotItem)
         elif isinstance(plot, GraphicsWidget):
             self.report_html += get_html_img(plot.scene())
+        elif isinstance(plot, Highchart):
+            self.report_html += plot.svg()
 
     # noinspection PyBroadException
     def report_table(self, name, table=None, header_rows=0, header_columns=0,
