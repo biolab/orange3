@@ -219,6 +219,9 @@ class OWDistributions(widget.OWWidget):
                 return
             domain = self.data.domain
             self.varmodel[:] = list(domain)
+            for meta in domain._metas:
+                if meta.is_continuous or meta.is_discrete:
+                    self.varmodel.append(meta)
 
             self.groupvarview.clear()
             self.groupvarmodel = \
