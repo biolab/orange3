@@ -111,6 +111,8 @@ class OWReport(OWWidget):
     def __init__(self):
         super().__init__()
         self._setup_ui_()
+        self.report_changed = False
+
         index_file = pkg_resources.resource_filename(__name__, "index.html")
         self.report_html_template = open(index_file, "r").read()
 
@@ -189,10 +191,12 @@ class OWReport(OWWidget):
 
     def _remove_item(self, row):
         self.table_model.removeRow(row)
+        self.report_changed = True
         self._build_html()
 
     def clear(self):
         self.table_model.clear()
+        self.report_changed = True
         self._build_html()
 
     def _add_item(self, widget):
@@ -201,6 +205,7 @@ class OWReport(OWWidget):
         item = ReportItem(name, widget.report_html, self._get_scheme(),
                           widget.__module__, widget.icon)
         self.table_model.add_item(item)
+        self.report_changed = True
         return item
 
     def _build_html(self):
@@ -229,6 +234,8 @@ class OWReport(OWWidget):
             "   sel_el.className = 'normal';".format(item.id))
         self.report_view.evalJS("document.getElementById('{}')."
                                 "className = 'selected';".format(item.id))
+        self.report_changed = True
+
 
     @pyqtSlot(str)
     def _select_item(self, item_id):
@@ -240,6 +247,7 @@ class OWReport(OWWidget):
     def _add_comment(self, item_id, value):
         item = self.table_model.get_item_by_id(item_id)
         item.comment = value
+        self.report_changed = True
 
     def make_report(self, widget):
         item = self._add_item(widget)
@@ -290,6 +298,7 @@ class OWReport(OWWidget):
             frame = self.report_view.page().currentFrame()
             with open(filename, "w") as f:
                 f.write(frame.documentElement().toInnerXml())
+        self.report_changed = False
         return QDialog.Accepted
 
     def _print_report(self):
@@ -306,6 +315,7 @@ class OWReport(OWWidget):
         if not filename:
             return
 
+        self.report_changed = False
         self.open_dir = os.path.dirname(filename)
         self.saveSettings()
 
@@ -330,6 +340,9 @@ class OWReport(OWWidget):
 
     def is_empty(self):
         return not self.table_model.rowCount()
+
+    def is_changed(self):
+        return self.report_changed
 
     @staticmethod
     def set_instance(report):

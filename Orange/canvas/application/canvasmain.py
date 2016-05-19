@@ -858,7 +858,7 @@ class CanvasMainWindow(QMainWindow):
     #################
     def pre_close_save(self):
         """
-        Ask whether to save the schenma (if changed) and the report (if
+        Ask whether to save the schema (if changed) and the report (if
         not empty).
 
         Returns: `False` if the user cancelled, `True` otherwise
@@ -1068,13 +1068,15 @@ class CanvasMainWindow(QMainWindow):
         if report.is_empty():
             return QDialog.Accepted
 
-        msgbox = QMessageBox(QMessageBox.Question, "Report", "Clear report?",
-                             parent=self)
+        msgbox = QMessageBox(QMessageBox.Question,
+                             "Report", "Report window has unsaved changes.",
+                             parent=self,
+                             informativeText="Save the report?")
         # Cancel must have AcceptRole, otherwise Os X reorders the buttons
-        cancel = msgbox.addButton("Cancel", QMessageBox.AcceptRole)
-        keep = msgbox.addButton("Keep", QMessageBox.AcceptRole)
-        msgbox.addButton("Clear", QMessageBox.AcceptRole)
         save = msgbox.addButton("Save && Clear", QMessageBox.AcceptRole)
+        msgbox.addButton("Clear", QMessageBox.DestructiveRole)
+        keep = msgbox.addButton("Keep", QMessageBox.AcceptRole)
+        cancel = msgbox.addButton("Cancel", QMessageBox.RejectRole)
         msgbox.exec()
         button = msgbox.clickedButton()
         if button is cancel or \
@@ -1093,11 +1095,12 @@ class CanvasMainWindow(QMainWindow):
         """
         from Orange.canvas.report.owreport import OWReport
         report = OWReport.get_instance()
-        if report.is_empty():
+        if not report.is_changed():
             return QDialog.Accepted
 
         answ = message_question(
-            "Save report?", "Report",
+            "Report window contains unsaved changes", "Report window",
+            "Save the report?",
             buttons=QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
             parent=self)
         if answ == QMessageBox.Cancel:
