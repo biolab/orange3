@@ -331,6 +331,12 @@ class Results:
             warnings.warn("Not all arguments (learners) are picklable. "
                           "Setting n_jobs=1", OrangeWarning)
 
+        if n_jobs > 1 and mp.current_process().daemon:
+            n_jobs = 1
+            warnings.warn("Worker subprocesses cannot spawn new worker "
+                          "subprocesses (e.g. parameter tuning with internal "
+                          "cross-validation). Setting n_jobs=1", OrangeWarning)
+
         # Workaround for NumPy locking on Macintosh.
         # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
         mp_ctx = mp.get_context(

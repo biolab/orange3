@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import multiprocessing as mp
 import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
@@ -27,6 +28,13 @@ class TestingTestCase(unittest.TestCase):
     def test_no_data(self):
         self.assertRaises(TypeError, CrossValidation,
                           learners=[NaiveBayesLearner()])
+
+
+class _ParameterTuningLearner(MajorityLearner):
+    def __call__(self, data):
+        learner = MajorityLearner()
+        CrossValidation(data, [learner], k=2)
+        return learner(data)
 
 
 # noinspection PyUnresolvedReferences
@@ -253,6 +261,14 @@ class TestCrossValidation(TestSampling):
         self.assertWarns(OrangeWarning,
                          CrossValidation, self.iris, [NonPicklableLearner()], k=3)
 
+    def test_internal_cv(self):
+        # This test just covers; can't catch warnings from subprocesses
+        proc = mp.current_process()
+        was_daemon = proc.daemon
+        proc.daemon = True
+        self.assertWarns(OrangeWarning,
+                         CrossValidation, self.iris, [_ParameterTuningLearner()], k=2)
+        proc.daemon = was_daemon
 
 class TestLeaveOneOut(TestSampling):
     def test_results(self):
