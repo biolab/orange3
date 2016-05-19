@@ -45,19 +45,16 @@ class NaiveBayesModel(Model):
     def predict_storage(self, data):
         if isinstance(data, Instance):
             data = [data]
-        ncv = len(self.domain.class_var.values)
-        probs = np.zeros((len(data), ncv))
-        for i, ins in enumerate(data):
-            for c in range(ncv):
-                py = (1 + self.class_freq[c]) / (ncv + sum(self.class_freq))
-                log_prob = np.log(py)
-                for ai, a in enumerate(self.domain.attributes):
-                    if not np.isnan(ins[a]):
-                        relevant = 1 + self.cont[ai][c][a.to_val(ins[a])]
-                        total = len(a.values) + self.class_freq[c]
-                        log_prob += np.log(relevant / total)
-                probs[i, c] = log_prob
-        np.exp(probs, out=probs)
+        n_cls = len(self.class_freq)
+        class_prob = (self.class_freq + 1) / (np.sum(self.class_freq) + n_cls)
+        log_cont_prob = [np.log(np.divide(np.array(c) + 1,
+                                          self.class_freq.reshape((n_cls, 1)) +
+                                          c.shape[1])) for c in self.cont]
+        probs = np.exp(np.array([np.sum(attr_prob[:, int(attr_val)]
+                                        for attr_val, attr_prob
+                                        in zip(ins, log_cont_prob)
+                                        if not np.isnan(attr_val))
+                                 for ins in data]) + np.log(class_prob))
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs
