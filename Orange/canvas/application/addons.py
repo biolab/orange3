@@ -14,6 +14,7 @@ from glob import iglob
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
+from email.parser import HeaderParser
 
 import pkg_resources
 
@@ -35,8 +36,10 @@ from PyQt4.QtCore import (
 )
 from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from ..config import ADDON_KEYWORD
 from ..gui.utils import message_warning, message_information, \
-                        message_critical as message_error
+                        message_critical as message_error, \
+                        OSX_NSURL_toLocalFile
 from ..help.manager import get_dist_meta, trim
 
 OFFICIAL_ADDONS = [
@@ -390,7 +393,7 @@ class AddonManagerDialog(QDialog):
     _packages = None
 
     def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
+        super().__init__(parent, acceptDrops=True, **kwargs)
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
 
@@ -519,8 +522,29 @@ class AddonManagerDialog(QDialog):
             self.__thread.quit()
             self.__thread.wait(1000)
 
-    def __accepted(self):
-        steps = self.addonwidget.item_state()
+    ADDON_EXTENSIONS = ('.zip', '.whl', '.tar.gz')
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls()
+        if any((OSX_NSURL_toLocalFile(url) or url.toLocalFile())
+                .endswith(self.ADDON_EXTENSIONS) for url in urls):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Allow dropping add-ons (zip or wheel archives) on this dialog to
+        install them"""
+        steps = []
+        for url in event.mimeData().urls():
+            path = OSX_NSURL_toLocalFile(url) or url.toLocalFile()
+            if path.endswith(self.ADDON_EXTENSIONS):
+                steps.append((Install,
+                              Available(
+                                  Installable(path, '999', '', '', path, path))))
+        if steps:
+            self.__accepted(steps)
+
+    def __accepted(self, steps=None):
+        steps = steps or self.addonwidget.item_state()
 
         if steps:
             # Move all uninstall steps to the front
@@ -603,6 +627,18 @@ def list_pypi_addons():
                             release["summary"], release["description"],
                             release["package_url"],
                             urls)
+            )
+
+    # Also add installed packages that have the correct keyword but
+    # perhaps aren't featured on PyPI
+    for dist in pkg_resources.working_set:
+        info = HeaderParser().parsestr(
+            '\n'.join(dist.get_metadata_lines(dist.PKG_INFO)))
+        if ADDON_KEYWORD in info.get('Keywords', ''):
+            packages.append(
+                Installable(dist.project_name, dist.version,
+                            info.get('Summary', ''), info.get('Description', ''),
+                            '', [])
             )
 
     return packages
