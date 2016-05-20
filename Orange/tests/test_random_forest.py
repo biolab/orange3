@@ -70,18 +70,18 @@ class RandomForestTest(unittest.TestCase):
     def test_classification_scorer(self):
         learner = RandomForestLearner()
         scores = learner.score_data(self.iris)
-        self.assertEqual(len(scores), len(self.iris.domain.attributes))
-        self.assertNotEqual(sum(scores), 0)
+        self.assertEqual(scores.shape[1], len(self.iris.domain.attributes))
+        self.assertNotEqual(sum(scores[0]), 0)
         self.assertEqual(['petal length', 'petal width'],
                          sorted([self.iris.domain.attributes[i].name
-                                 for i in np.argsort(scores)[-2:]]))
+                                 for i in np.argsort(scores[0])[-2:]]))
 
     def test_regression_scorer(self):
         learner = RandomForestRegressionLearner()
         scores = learner.score_data(self.house)
         self.assertEqual(['LSTAT', 'RM'],
                          sorted([self.house.domain.attributes[i].name
-                                 for i in np.argsort(scores)[-2:]]))
+                                 for i in np.argsort(scores[0])[-2:]]))
 
     def test_scorer_feature(self):
         np.random.seed(42)
@@ -91,4 +91,4 @@ class RandomForestTest(unittest.TestCase):
         for i, attr in enumerate(data.domain.attributes):
             np.random.seed(42)
             score = learner.score_data(data, attr)
-            self.assertEqual(score, scores[i])
+            np.testing.assert_array_almost_equal(score, scores[:, i])

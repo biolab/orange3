@@ -17,8 +17,7 @@ class _FeatureScorerMixin(LearnerScorer):
     def score(self, data):
         data = Normalize(data)
         model = self(data)
-        # Take the maximum attribute score across all classes
-        return np.max(np.abs(model.coefficients), axis=0)
+        return np.abs(model.coefficients)
 
 
 class LogisticRegressionClassifier(SklModel):

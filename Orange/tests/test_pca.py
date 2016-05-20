@@ -15,6 +15,7 @@ class TestPCA(unittest.TestCase):
     def setUpClass(cls):
         cls.ionosphere = Table('ionosphere')
         cls.iris = Table('iris')
+        cls.zoo = Table('zoo')
 
     def test_pca(self):
         data = self.ionosphere
@@ -105,21 +106,36 @@ class TestPCA(unittest.TestCase):
         self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)
 
     def test_chain(self):
-        zoo = Table('zoo')
-        zoo_c = Continuize(zoo)
-        pca = PCA(n_components=3)(zoo_c)(zoo)
+        zoo_c = Continuize(self.zoo)
+        pca = PCA(n_components=3)(zoo_c)(self.zoo)
         pca2 = PCA(n_components=3)(zoo_c)(zoo_c)
-        pca3 = PCA(n_components=3, preprocessors=[Continuize()])(zoo)(zoo)
+        pp = [Continuize()]
+        pca3 = PCA(n_components=3, preprocessors=pp)(self.zoo)(self.zoo)
         np.testing.assert_almost_equal(pca.X, pca2.X)
         np.testing.assert_almost_equal(pca.X, pca3.X)
 
     def test_PCA_scorer(self):
         data = self.iris
         pca = PCA(preprocessors=[Normalize()])
+        pca.component = 1
         scores = pca.score_data(data)
-        self.assertEqual(len(scores), len(data.domain.attributes))
+        self.assertEqual(scores.shape[1], len(data.domain.attributes))
         self.assertEqual(['petal length', 'petal width'],
                          sorted([data.domain.attributes[i].name
-                                 for i in np.argsort(scores)[-2:]]))
-        self.assertEqual([round(s, 4) for s in scores],
+                                 for i in np.argsort(scores[0])[-2:]]))
+        self.assertEqual([round(s, 4) for s in scores[0]],
                          [0.5224, 0.2634, 0.5813, 0.5656])
+
+    def test_PCA_scorer_component(self):
+        pca = PCA()
+        for i in range(1, len(self.zoo.domain.attributes) + 1):
+            pca.component = i
+            scores = pca.score_data(self.zoo)
+            self.assertEqual(scores.shape,
+                             (pca.component, len(self.zoo.domain.attributes)))
+
+    def test_PCA_scorer_all_components(self):
+        n_attr = len(self.iris.domain.attributes)
+        pca = PCA()
+        scores = pca.score_data(self.iris)
+        self.assertEqual(scores.shape, (n_attr, n_attr))

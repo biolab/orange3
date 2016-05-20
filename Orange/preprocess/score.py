@@ -132,19 +132,23 @@ class LearnerScorer(Scorer):
     def score_data(self, data, feature=None):
         scores = self.score(data)
 
-        if data.domain != self.domain:
+        def average_scores(scores):
             scores_grouped = defaultdict(list)
             for attr, score in zip(self.domain.attributes, scores):
                 # Go up the chain of preprocessors to obtain the original variable
                 while getattr(attr, 'compute_value', False):
                     attr = getattr(attr.compute_value, 'variable', attr)
                 scores_grouped[attr].append(score)
-            scores = [sum(scores_grouped[attr]) / len(scores_grouped[attr])
-                      if attr in scores_grouped else 0
-                      for attr in data.domain.attributes]
+            return [sum(scores_grouped[attr]) / len(scores_grouped[attr])
+                    if attr in scores_grouped else 0
+                    for attr in data.domain.attributes]
 
-        return scores[data.domain.attributes.index(feature)] if feature \
-            else scores
+        scores = np.atleast_2d(scores)
+        if data.domain != self.domain:
+            scores = np.array([average_scores(row) for row in scores])
+
+        return scores[:, data.domain.attributes.index(feature)] \
+            if feature else scores
 
 
 class ClassificationScorer(Scorer):
