@@ -9,8 +9,7 @@ import numpy
 import sklearn.metrics
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, QEvent, QRectF, QSizeF
-from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import Qt, QEvent, QRectF, QSizeF, pyqtSignal as Signal
 
 import pyqtgraph as pg
 
@@ -26,7 +25,7 @@ from Orange.widgets.unsupervised.owhierarchicalclustering import \
 
 class OWSilhouettePlot(widget.OWWidget):
     name = "Silhouette Plot"
-    description = "Show a silhouette plot. "
+    description = "Silhouette Plot"
 
     icon = "icons/Silhouette.svg"
 
@@ -55,6 +54,9 @@ class OWSilhouettePlot(widget.OWWidget):
     Distances = [("Euclidean", Orange.distance.Euclidean),
                  ("Manhattan", Orange.distance.Manhattan)]
 
+    graph_name = "scene"
+    buttons_area_orientation = Qt.Vertical
+
     def __init__(self):
         super().__init__()
 
@@ -65,35 +67,44 @@ class OWSilhouettePlot(widget.OWWidget):
         self._labels = None
         self._silplot = None
 
-        box = gui.vBox(self.controlArea, "Settings",)
-        gui.comboBox(box, self, "distance_idx", label="Distance:",
-                     items=[name for name, _ in OWSilhouettePlot.Distances],
-                     callback=self._invalidate_distances)
+        gui.comboBox(
+            self.controlArea, self, "distance_idx", box="Distance",
+            items=[name for name, _ in OWSilhouettePlot.Distances],
+            orientation=Qt.Horizontal, callback=self._invalidate_distances)
+
+        box = gui.vBox(self.controlArea, "Cluster Label")
         self.cluster_var_cb = gui.comboBox(
-            box, self, "cluster_var_idx", label="Cluster:",
+            box, self, "cluster_var_idx", addSpace=4,
             callback=self._invalidate_scores)
+        gui.checkBox(
+            box, self, "group_by_cluster", "Group by cluster",
+            callback=self._replot)
         self.cluster_var_model = itemmodels.VariableListModel(parent=self)
         self.cluster_var_cb.setModel(self.cluster_var_model)
 
-        gui.spin(box, self, "bar_size", minv=1, maxv=10, label="Bar size:",
-                 callback=self._update_bar_size)
-
-        gui.checkBox(box, self, "group_by_cluster", "Group by cluster",
-                     callback=self._replot)
-
+        box = gui.vBox(self.controlArea, "Bars")
+        gui.widgetLabel(box, "Annotations:")
         self.annotation_cb = gui.comboBox(
-            box, self, "annotation_var_idx", label="Annotations:",
-            callback=self._update_annotations)
+            box, self, "annotation_var_idx", callback=self._update_annotations,
+            addSpace=6)
         self.annotation_var_model = itemmodels.VariableListModel(parent=self)
         self.annotation_var_model[:] = ["None"]
         self.annotation_cb.setModel(self.annotation_var_model)
+        gui.widgetLabel(box, "Bar width:")
+        gui.hSlider(
+            box, self, "bar_size", minValue=1, maxValue=10, step=1,
+            callback=self._update_bar_size)
 
         gui.rubber(self.controlArea)
 
-        box = gui.vBox(self.controlArea, "Output")
-        box.setFixedWidth(190)
+        gui.separator(self.buttonsArea)
+        box = gui.vBox(self.buttonsArea, "Output")
         gui.checkBox(box, self, "add_scores", "Add silhouette scores",)
-        gui.auto_commit(box, self, "auto_commit", "Apply", box=False)
+        gui.auto_commit(
+            box, self, "auto_commit", "Commit",
+            auto_label="Auto commit", box=False)
+        # Ensure that the controlArea is not narrower than buttonsArea
+        self.controlArea.layout().addWidget(self.buttonsArea)
 
         self.scene = QtGui.QGraphicsScene()
         self.view = QtGui.QGraphicsView(self.scene)
@@ -116,8 +127,9 @@ class OWSilhouettePlot(widget.OWWidget):
         warning_msg = ""
         candidatevars = []
         if data is not None:
-            candidatevars = [v for v in data.domain.variables + data.domain.metas
-                             if v.is_discrete and len(v.values) >= 2]
+            candidatevars = [
+                v for v in data.domain.variables + data.domain.metas
+                if v.is_discrete and len(v.values) >= 2]
             if not candidatevars:
                 error_msg = "Input does not have any suitable cluster labels."
                 data = None
@@ -136,7 +148,8 @@ class OWSilhouettePlot(widget.OWWidget):
         if data is not None:
             self.cluster_var_model[:] = candidatevars
             if data.domain.class_var in candidatevars:
-                self.cluster_var_idx = candidatevars.index(data.domain.class_var)
+                self.cluster_var_idx = \
+                    candidatevars.index(data.domain.class_var)
             else:
                 self.cluster_var_idx = 0
 
@@ -308,6 +321,16 @@ class OWSilhouettePlot(widget.OWWidget):
         self.send("Selected Data", selected)
         self.send("Other Data", other)
 
+    def send_report(self):
+        self.report_plot()
+        caption = "Silhouette plot ({} distance), clustered by '{}'".format(
+            self.Distances[self.distance_idx][0],
+            self.cluster_var_model[self.cluster_var_idx])
+        if self.annotation_var_idx and self._silplot.rowNamesVisible():
+            caption += ", annotated with '{}'".format(
+                self.annotation_var_model[self.annotation_var_idx])
+        self.report_caption(caption)
+
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
@@ -360,7 +383,7 @@ class SilhouettePlot(QtGui.QGraphicsWidget):
         if rownames is not None:
             rownames = numpy.asarray(rownames, dtype=object)
 
-        if not (scores.ndim == labels.ndim == 1):
+        if not scores.ndim == labels.ndim == 1:
             raise ValueError("scores and labels must be 1 dimensional")
         if scores.shape != labels.shape:
             raise ValueError("scores and labels must have the same shape")
