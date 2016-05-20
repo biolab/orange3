@@ -117,7 +117,7 @@ class OWPCA(widget.OWWidget):
         self.controlArea.layout().addStretch()
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Apply",
-                        checkbox_label="Auto Apply on Change")
+                        checkbox_label="Apply automatically")
 
         self.plot = pg.PlotWidget(background="w")
 

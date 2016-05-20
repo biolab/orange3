@@ -524,7 +524,7 @@ class OWScatterMap(widget.OWWidget):
         )
         gui.comboBox(box, self, "color_scale", label="Scale: ",
                      orientation=Qt.Horizontal,
-                     items=["Linear", "Square Root", "Logarithmic"],
+                     items=["Linear", "Square root", "Logarithmic"],
                      callback=self._on_color_scale_changed)
 
         self.sampling_box = gui.vBox(self.controlArea, "Sampling")

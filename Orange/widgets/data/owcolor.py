@@ -256,7 +256,7 @@ class OWColor(widget.OWWidget):
 
         box = gui.auto_commit(self.controlArea, self, "auto_apply", "Apply",
                               orientation=Qt.Horizontal,
-                              checkbox_label="Auto apply on change")
+                              checkbox_label="Apply automatically")
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)
 

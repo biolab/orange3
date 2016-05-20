@@ -98,7 +98,7 @@ class OWRank(widget.OWWidget):
                 self.controlArea, "Select Attributes", addSpace=True)
 
         grid = QtGui.QGridLayout()
-        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setContentsMargins(6, 0, 6, 0)
         self.selectButtons = QtGui.QButtonGroup()
         self.selectButtons.buttonClicked[int].connect(self.setSelectMethod)
 
@@ -112,7 +112,7 @@ class OWRank(widget.OWWidget):
         b1 = button(self.tr("None"), OWRank.SelectNone)
         b2 = button(self.tr("All"), OWRank.SelectAll)
         b3 = button(self.tr("Manual"), OWRank.SelectManual)
-        b4 = button(self.tr("Best ranked"), OWRank.SelectNBest)
+        b4 = button(self.tr("Best ranked:"), OWRank.SelectNBest)
 
         s = gui.spin(selMethBox, self, "nSelected", 1, 100,
                      callback=self.nSelectedChanged)

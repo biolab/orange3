@@ -740,7 +740,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Cluster variable domain role
     AttributeRole, ClassRole, MetaRole = 0, 1, 2
 
-    cluster_roles = ["Attribute", "Class Variable", "Meta Variable"]
+    cluster_roles = ["Attribute", "Class variable", "Meta variable"]
 
     def __init__(self):
         super().__init__()
@@ -860,7 +860,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         ibox.layout().addLayout(form)
         ibox.layout().addSpacing(5)
 
-        gui.auto_commit(box, self, "autocommit", "Send Selected", "Auto Send is On",
+        gui.auto_commit(box, self, "autocommit", "Send Selected", "Send Automatically",
                         box=False)
 
         self.scene = QGraphicsScene()

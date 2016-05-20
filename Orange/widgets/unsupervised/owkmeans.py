@@ -25,13 +25,13 @@ class OWKMeans(widget.OWWidget):
                ("Centroids", Table)]
 
     INIT_KMEANS, INIT_RANDOM = range(2)
-    INIT_METHODS = "Initialize with KMeans++", "Random Initialization"
+    INIT_METHODS = "Initialize with KMeans++", "Random initialization"
 
     SILHOUETTE, INTERCLUSTER, DISTANCES = range(3)
     SCORING_METHODS = [("Silhouette", lambda km: km.silhouette, False),
-                       ("Inter-cluster Distance",
+                       ("Inter-cluster distance",
                         lambda km: km.inter_cluster, True),
-                       ("Distance to Centroids",
+                       ("Distance to centroids",
                         lambda km: km.inertia, True)]
 
     OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
@@ -125,7 +125,7 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Output")
         gui.comboBox(box, self, "place_cluster_ids",
-                     label="Append cluster ID as", orientation=Qt.Horizontal,
+                     label="Append cluster ID as:", orientation=Qt.Horizontal,
                      callback=self.send_data, items=self.OUTPUT_METHODS)
         gui.lineEdit(box, self, "output_name",
                      label="Name:", orientation=Qt.Horizontal,

@@ -53,7 +53,7 @@ class OWDistanceTransformation(widget.OWWidget):
                          callback=self._invalidate)
 
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
-                              checkbox_label="Auto apply on change", box=None)
+                              checkbox_label="Apply automatically", box=None)
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 8)
 

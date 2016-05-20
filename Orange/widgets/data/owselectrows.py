@@ -111,7 +111,7 @@ class OWSelectRows(widget.OWWidget):
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
         gui.auto_commit(box, self, "auto_commit", label="Send",
-                        checkbox_label="Auto send on change")
+                        checkbox_label="Send automatically")
         self.set_data(None)
         self.resize(600, 400)
 

@@ -80,9 +80,9 @@ class OWConfusionMatrix(widget.OWWidget):
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
     outputs = [("Selected Data", Orange.data.Table)]
 
-    quantities = ["Number of Instances",
-                  "Proportion of Predicted",
-                  "Proportion of Actual"]
+    quantities = ["Number of instances",
+                  "Proportion of predicted",
+                  "Proportion of actual"]
 
     settingsHandler = settings.ClassValuesContextHandler()
 
@@ -137,7 +137,7 @@ class OWConfusionMatrix(widget.OWWidget):
                      callback=self._invalidate)
 
         gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send Selected", "Auto Send is On")
+                        "Send Selected", "Send Automatically")
 
         grid = QGridLayout()
 

@@ -628,7 +628,7 @@ class Scale(BaseEditor):
 
         self.__scalecb = QComboBox()
         self.__scalecb.addItems(["No scaling", "Scale by SD",
-                                 "Scale by Span"])
+                                 "Scale by span"])
 
         form.addRow("Center:", self.__centercb)
         form.addRow("Scale:", self.__scalecb)

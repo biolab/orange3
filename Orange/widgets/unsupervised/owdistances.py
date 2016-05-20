@@ -14,9 +14,9 @@ _METRICS = [
     ("Cosine", distance.Cosine),
     ("Jaccard", distance.Jaccard),
     ("Spearman", distance.SpearmanR),
-    ("Spearman Absolute", distance.SpearmanRAbsolute),
+    ("Spearman absolute", distance.SpearmanRAbsolute),
     ("Pearson", distance.PearsonR),
-    ("Pearson Absolute", distance.PearsonRAbsolute),
+    ("Pearson absolute", distance.PearsonRAbsolute),
 ]
 
 
@@ -48,7 +48,7 @@ class OWDistances(widget.OWWidget):
                      callback=self._invalidate
         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
-                              box=False, checkbox_label="Auto apply on change")
+                              box=False, checkbox_label="Apply automatically")
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 8)
 

@@ -165,7 +165,7 @@ class FeatureEditor(QtGui.QFrame):
         self.expressionedit.setText(data.expression)
         self.setModified(False)
         self.featureChanged.emit()
-        self.attrs_model[:] = ["Select feature"]
+        self.attrs_model[:] = ["Select Feature"]
         if domain:
             self.attrs_model[:] += chain(domain.attributes,
                                          domain.class_vars,

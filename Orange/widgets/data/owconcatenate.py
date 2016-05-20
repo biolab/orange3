@@ -54,7 +54,7 @@ class OWConcatenate(widget.OWWidget):
     domain_opts = ("Union of attributes appearing in all tables",
                    "Intersection of attributes in all tables")
 
-    id_roles = ("Class Attribute", "Attribute", "Meta Attribute")
+    id_roles = ("Class attribute", "Attribute", "Meta attribute")
 
     auto_commit = Setting(True)
 

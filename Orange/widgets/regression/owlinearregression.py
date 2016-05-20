@@ -49,7 +49,7 @@ class OWLinearRegression(OWBaseLearner):
                          callback=self._reg_type_changed)
 
         gui.separator(box, 20, 20)
-        self.alpha_box = box2 = gui.vBox(box, margin=0)
+        self.alpha_box = box2 = gui.vBox(box, margin=10)
         gui.widgetLabel(box2, "Regularization strength:")
         self.alpha_slider = gui.hSlider(
             box2, self, "alpha_index",

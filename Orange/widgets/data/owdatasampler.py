@@ -83,7 +83,7 @@ class OWDataSampler(widget.OWWidget):
             callback=set_sampling_type(self.FixedSize),
             addSpace=12)
 
-        gui.appendRadioButton(sampling, "Cross Validation")
+        gui.appendRadioButton(sampling, "Cross validation")
         form = QtGui.QFormLayout(
             formAlignment=Qt.AlignLeft | Qt.AlignTop,
             labelAlignment=Qt.AlignLeft,

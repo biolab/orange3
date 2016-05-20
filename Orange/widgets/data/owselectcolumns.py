@@ -412,13 +412,12 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_meta_button = gui.button(bbox, self, "Down",
             callback=partial(self.move_down, self.meta_attrs_view))
 
-        autobox = gui.auto_commit(None, self, "auto_commit", "Send Selected",
-                                  "Auto Send")
+        autobox = gui.auto_commit(None, self, "auto_commit", "Send")
         layout.addWidget(autobox, 3, 0, 1, 3)
         reset = gui.button(None, self, "Reset", callback=self.reset)
         autobox.layout().insertWidget(0, self.report_button)
         autobox.layout().insertWidget(1, reset)
-        autobox.layout().insertSpacing(2, 40)
+        autobox.layout().insertSpacing(2, 10)
         reset.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
         self.report_button.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
 

@@ -68,8 +68,13 @@ Please ensure your commits pass code quality assurance by executing:
 
 Human Interface Guidelines
 --------------------------
-For UI design, conform to the [OS X Human Interface Guidelines](https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html).
-Of special note are the capitalization, ellipsis and colon guidelines.
+For UI design, conform to the [OS X Human Interface Guidelines].
+In a nutshell, use title case for titles, push buttons, menu titles
+and menu options. Elsewhere, use sentence case. Use title case for
+combo box options where the item is imperative (e.g. Initialize with Method)
+and sentence case otherwise.
+
+[OS X Human Interface Guidelines]: (https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html).
 
 
 Tests

@@ -55,7 +55,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def set_file_list(self):
         super().set_file_list()
-        self.file_combo.addItem("Browse Documentation Data Sets...")
+        self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
         return self.open_file()

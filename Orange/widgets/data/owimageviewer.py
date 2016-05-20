@@ -343,7 +343,7 @@ class OWImageViewer(widget.OWWidget):
 
         self.info = gui.widgetLabel(
             gui.vBox(self.controlArea, "Info"),
-            "Waiting for input\n"
+            "Waiting for input.\n"
         )
 
         self.imageAttrCB = gui.comboBox(

@@ -176,7 +176,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         box = gui.hBox(self.controlArea)
         gui.button(
-            box, self, "Browse Documentation Data Sets",
+            box, self, "Browse documentation data sets",
             callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
         box.layout().addWidget(self.report_button)

@@ -107,11 +107,11 @@ class OWMDS(widget.OWWidget):
 
     #: Refresh rate
     RefreshRate = [
-        ("Every Iteration", 1),
-        ("Every 5 Steps", 5),
-        ("Every 10 Steps", 10),
-        ("Every 25 Steps", 25),
-        ("Every 50 Steps", 50),
+        ("Every iteration", 1),
+        ("Every 5 steps", 5),
+        ("Every 10 steps", 10),
+        ("Every 25 steps", 25),
+        ("Every 50 steps", 50),
         ("None", -1)
     ]
 
@@ -229,7 +229,7 @@ class OWMDS(widget.OWWidget):
 
         self.labelvar_model = itemmodels.VariableListModel()
         self.cb_label_value = gui.comboBox(
-            box, self, "label_value", label="Label.",
+            box, self, "label_value", label="Label:",
             callback=self._on_label_index_changed, **common_options)
         self.cb_label_value.setModel(self.labelvar_model)
 
@@ -316,13 +316,13 @@ class OWMDS(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Output")
         self.output_combo = gui.comboBox(
             box, self, "output_embedding_role",
-            items=["Original Features Only",
-                   "Coordinates Only",
-                   "Coordinates as Features",
-                   "Coordinates as Meta Attributes"],
+            items=["Original features only",
+                   "Coordinates only",
+                   "Coordinates as features",
+                   "Coordinates as meta attributes"],
             callback=self._invalidate_output, addSpace=4)
         gui.auto_commit(box, self, "autocommit", "Send Selected",
-                        checkbox_label="Auto send selected on change",
+                        checkbox_label="Send selected automatically",
                         box=None)
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
@@ -413,10 +413,10 @@ class OWMDS(widget.OWWidget):
         self._label_data = None
         self._similar_pairs = None
 
-        self.colorvar_model[:] = ["Same Color"]
-        self.shapevar_model[:] = ["Same Shape"]
-        self.sizevar_model[:] = ["Same Size"]
-        self.labelvar_model[:] = ["No Labels"]
+        self.colorvar_model[:] = ["Same color"]
+        self.shapevar_model[:] = ["Same shape"]
+        self.sizevar_model[:] = ["Same size"]
+        self.labelvar_model[:] = ["No labels"]
 
         self.color_value = self.colorvar_model[0]
         self.shape_value = self.shapevar_model[0]
@@ -441,9 +441,9 @@ class OWMDS(widget.OWWidget):
         if self.data is None and getattr(self.matrix, 'axis', 1) == 0:
             # Column-wise distances
             attr = "Attribute names"
-            self.labelvar_model[:] = ["No Labels", attr]
-            self.shapevar_model[:] = ["Same Shape", attr]
-            self.colorvar_model[:] = ["Same Color", attr]
+            self.labelvar_model[:] = ["No labels", attr]
+            self.shapevar_model[:] = ["Same shape", attr]
+            self.colorvar_model[:] = ["Same solor", attr]
 
             self.color_value = attr
             self.shape_value = attr
@@ -456,16 +456,16 @@ class OWMDS(widget.OWWidget):
             cont_vars = [var for var in all_vars if var.is_continuous]
             shape_vars = [var for var in disc_vars
                           if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
-            self.colorvar_model[:] = chain(["Same Color"],
+            self.colorvar_model[:] = chain(["Same color"],
                                            [self.colorvar_model.Separator],
                                            cd_vars)
-            self.shapevar_model[:] = chain(["Same Shape"],
+            self.shapevar_model[:] = chain(["Same shape"],
                                            [self.shapevar_model.Separator],
                                            shape_vars)
-            self.sizevar_model[:] = chain(["Same Size", "Stress"],
+            self.sizevar_model[:] = chain(["Same size", "Stress"],
                                           [self.sizevar_model.Separator],
                                           cont_vars)
-            self.labelvar_model[:] = chain(["No Labels"],
+            self.labelvar_model[:] = chain(["No labels"],
                                            [self.labelvar_model.Separator],
                                            all_vars)
 
@@ -1053,10 +1053,10 @@ class OWMDS(widget.OWWidget):
             return
         self.report_plot()
         caption = report.render_items_vert((
-            ("Color", self.color_value != "Same Color" and self.color_value),
-            ("Shape", self.shape_value != "Same Shape" and self.shape_value),
-            ("Size", self.size_value != "Same Size" and self.size_value),
-            ("Labels", self.label_value != "No Labels" and self.label_value)))
+            ("Color", self.color_value != "Same color" and self.color_value),
+            ("Shape", self.shape_value != "Same shape" and self.shape_value),
+            ("Size", self.size_value != "Same size" and self.size_value),
+            ("Labels", self.label_value != "No labels" and self.label_value)))
         if caption:
             self.report_caption(caption)
         self.report_items((("Output", self.output_combo.currentText()),))
