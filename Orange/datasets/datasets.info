@@ -251,6 +251,21 @@
             "values": 4
         }
     },
+    "conferences": {
+        "features": {
+            "continuous": 2,
+            "discrete": 1,
+            "meta": 2
+        },
+        "location": "conferences.tab",
+        "missing": false,
+        "name": "conferences",
+        "rows": 42,
+        "target": {
+            "type": false,
+            "values": null
+        }
+    },
     "crx": {
         "features": {
             "continuous": 6,

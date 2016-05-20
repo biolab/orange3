@@ -84,7 +84,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
             start_file = self.last_path() or os.path.expanduser("~/")
 
         filename = QtGui.QFileDialog.getOpenFileName(
-            self, 'Open Distance File', start_file, "(*.dst *.txt)")
+            self, 'Open Distance File', start_file, "(*.dst)")
         if not filename:
             return
         self.add_path(filename)
