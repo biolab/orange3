@@ -220,8 +220,8 @@ function prepare_pyqt4 {
 }
 
 function prepare_scipy_stack {
-	local numpy_superpack=numpy-$NUMPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
-	local scipy_superpack=scipy-$SCIPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
+    local numpy_superpack=numpy-$NUMPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
+    local scipy_superpack=scipy-$SCIPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
 
     download_url http://sourceforge.net/projects/numpy/files/NumPy/$NUMPY_VER/$numpy_superpack/download \
                  "$DOWNLOADDIR"/$numpy_superpack \
@@ -234,24 +234,24 @@ function prepare_scipy_stack {
     7z -o"$DOWNLOADDIR"/numpy -y e "$DOWNLOADDIR"/$numpy_superpack
     7z -o"$DOWNLOADDIR"/scipy -y e "$DOWNLOADDIR"/$scipy_superpack
 
-	local wheeltag=cp${PYVER}-none-win32
-	local wheeldir=
+    local wheeltag=cp${PYVER}-none-win32
+    local wheeldir=
 
     for SSE in nosse sse2 sse3; do
-		wheeldir="$BUILDBASE"/wheelhouse/$SSE
+        wheeldir="$BUILDBASE"/wheelhouse/$SSE
         mkdir -p "$wheeldir"
 
         python -m wheel convert -d "$wheeldir" \
                "$DOWNLOADDIR"/numpy/numpy-$NUMPY_VER-$SSE.exe
 
         mv "$wheeldir"/numpy-$NUMPY_VER-*$SSE.whl \
-		   "$wheeldir"/numpy-$NUMPY_VER-$wheeltag.whl
+           "$wheeldir"/numpy-$NUMPY_VER-$wheeltag.whl
 
         python -m wheel convert -d "$wheeldir" \
-			   "$DOWNLOADDIR"/scipy/scipy-$SCIPY_VER-$SSE.exe
+               "$DOWNLOADDIR"/scipy/scipy-$SCIPY_VER-$SSE.exe
 
         mv "$wheeldir"/scipy-$SCIPY_VER-*$SSE.whl \
-		   "$wheeldir"/scipy-$SCIPY_VER-$wheeltag.whl
+           "$wheeldir"/scipy-$SCIPY_VER-$wheeltag.whl
     done
 
     # copy the CpuCaps.dll nsis plugin into place
@@ -386,7 +386,7 @@ function create_installer {
              -DPYTHON_VERSION=$PYTHON_VER \
              -DPYTHON_VERSION_SHORT=$PYTHON_VER_SHORT \
              -DPYVER=$PYVER \
-			 -DBASEDIR="$basedir_abs" \
+             -DBASEDIR="$basedir_abs" \
              -DNSIS_PLUGINS_PATH="$basedir_abs"/nsisplugins \
              "$nsis_script"
 }
