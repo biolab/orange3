@@ -4,8 +4,9 @@
 import unittest
 
 import numpy as np
-
-import Orange
+from Orange.regression import SGDRegressionLearner
+from Orange.evaluation import CrossValidation, RMSE
+from Orange.data import Table
 
 
 class SGDRegressionTest(unittest.TestCase):
@@ -13,7 +14,7 @@ class SGDRegressionTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Orange.data.Table(X, y)
-        sgd = Orange.regression.SGDRegressionLearner()
-        res = Orange.evaluation.CrossValidation(data, [sgd], k=3)
-        self.assertLess(Orange.evaluation.RMSE(res)[0], 0.1)
+        data = Table(X, y)
+        sgd = SGDRegressionLearner()
+        res = CrossValidation(data, [sgd], k=3)
+        self.assertLess(RMSE(res)[0], 0.1)

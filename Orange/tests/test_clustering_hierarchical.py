@@ -45,9 +45,6 @@ class TestHierarchical(unittest.TestCase):
         self.assertEqual(len(indices), len(self.matrix.items))
         self.assertEqual(set(indices), set(range(len(self.matrix.items))))
 
-        #self.assertEqual(indices,
-        #                 [3, 1, 2, 6, 0, 4, 8, 9, 5, 7])
-
     def test_order(self):
         post = list(hierarchical.postorder(self.cluster))
         seen = set()
@@ -77,14 +74,11 @@ class TestHierarchical(unittest.TestCase):
              [4, 7, 8, 0]]
 
         m = numpy.array(m)
-        dist = hierarchical.condensedform(m, mode="lower")
-        numpy.testing.assert_equal(dist, numpy.array([2, 3, 6, 4, 7, 8]))
-        numpy.testing.assert_equal(
-            hierarchical.squareform(dist, mode="lower"), m)
-        dist = hierarchical.condensedform(m, mode="upper")
-        numpy.testing.assert_equal(dist, numpy.array([2, 3, 4, 6, 7, 8]))
-        numpy.testing.assert_equal(
-            hierarchical.squareform(dist, mode="upper"), m)
+        for modeValue, arrayVector in (("lower", [2, 3, 6, 4, 7, 8]), ("upper", [2, 3, 4, 6, 7, 8])):
+            dist = hierarchical.condensedform(m, mode=modeValue)
+            numpy.testing.assert_equal(dist, numpy.array(arrayVector))
+            numpy.testing.assert_equal(
+                hierarchical.squareform(dist, mode=modeValue), m)
 
     def test_pre_post_order(self):
         tree = hierarchical.Tree

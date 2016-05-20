@@ -153,33 +153,23 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         self.domain = Domain(attr_vars, class_vars, meta_vars)
         self.x = np.random.random_integers(0, 1, (rows, attr))
 
-    def test_single_class(self):
+    def test_class(self):
         rows = 10
         attr = 3
-        vars = 1
         class_var_domain = 20
-        self.prepareTable(rows, attr, vars, class_var_domain)
-        y = np.random.random_integers(2, 5, (rows, vars)) * 2
-        t = Table(self.domain, self.x, y)
-        learn = DummyLearner()
-        clf = learn(t)
-        z, p = clf(self.x, ret=Model.ValueProbs)
-        self.assertEqual(p.shape, (rows, class_var_domain))
-        self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
-
-    def test_multi_class(self):
-        rows = 10
-        attr = 3
-        vars = 5
-        class_var_domain = 20
-        self.prepareTable(rows, attr, vars, class_var_domain)
-        y = np.random.random_integers(2, 5, (rows, vars)) * 2
-        t = Table(self.domain, self.x, y)
-        learn = DummyMulticlassLearner()
-        clf = learn(t)
-        z, p = clf(self.x, ret=Model.ValueProbs)
-        self.assertEqual(p.shape, (rows, vars, class_var_domain))
-        self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
+        for learner, varsValue in ((DummyLearner(), 1), (DummyMulticlassLearner(), 5)):
+            vars = varsValue
+            self.prepareTable(rows, attr, vars, class_var_domain)
+            y = np.random.random_integers(2, 5, (rows, vars)) * 2
+            t = Table(self.domain, self.x, y)
+            learn = learner
+            clf = learn(t)
+            z, p = clf(self.x, ret=Model.ValueProbs)
+            if vars == 1:
+                self.assertEqual(p.shape, (rows, class_var_domain))
+            else:
+                self.assertEqual(p.shape, (rows, vars, class_var_domain))
+            self.assertTrue(np.all(z == np.argmax(p, axis=-1)))
 
 
 class SklTest(unittest.TestCase):
@@ -210,7 +200,7 @@ class ClassfierListInputTest(unittest.TestCase):
         tree = Orange.classification.TreeLearner()(table)
         strlist = [["crew", "adult", "male"],
                    ["crew", "adult", None]]
-        for se in strlist: #individual examples
+        for se in strlist:  # individual examples
             assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
 
@@ -219,7 +209,7 @@ class ClassfierListInputTest(unittest.TestCase):
         tree = Orange.classification.TreeLearner()(table)
         strlist = [[2, 3, 4, 5],
                    [1, 2, 3, 5]]
-        for se in strlist: #individual examples
+        for se in strlist:  # individual examples
             assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
 
@@ -264,13 +254,13 @@ class LearnerAccessibility(unittest.TestCase):
             path=Orange.classification.__path__,
             prefix="Orange.classification.",
             onerror=lambda x: None)
-        for importer, modname, ispkg in classification_modules:
+        for _, modname, _ in classification_modules:
             try:
                 module = pkgutil.importlib.import_module(modname)
             except ImportError:
                 continue
 
-            for name, class_ in inspect.getmembers(module, inspect.isclass):
+            for _, class_ in inspect.getmembers(module, inspect.isclass):
                 if issubclass(class_, Learner) and 'base' not in class_.__module__:
                     yield class_
 
@@ -286,7 +276,7 @@ class LearnerAccessibility(unittest.TestCase):
         for learner in list(self.all_learners()):
             try:
                 learner = learner()
-            except Exception as err:
+            except Exception as _:
                 print('%s cannot be used with default parameters' % learner.__name__)
                 traceback.print_exc()
                 continue
@@ -299,7 +289,6 @@ class LearnerAccessibility(unittest.TestCase):
                 np.testing.assert_almost_equal(Table(model.domain, ds).X, Table(model2.domain, ds).X)
                 np.testing.assert_almost_equal(model(ds), model2(ds),
                                                err_msg='%s does not return same values when unpickled %s' % (learner.__class__.__name__, ds.name))
-                #print('%s on %s works' % (learner, ds.name))
 
     def test_adequacy_all_learners(self):
         for learner in self.all_learners():
@@ -307,7 +296,7 @@ class LearnerAccessibility(unittest.TestCase):
                 learner = learner()
                 table = Table("housing")
                 self.assertRaises(ValueError, learner, table)
-            except TypeError as err:
+            except TypeError as _:
                 traceback.print_exc()
                 continue
 
@@ -317,6 +306,6 @@ class LearnerAccessibility(unittest.TestCase):
                 learner = learner()
                 table = Table("test8.tab")
                 self.assertRaises(ValueError, learner, table)
-            except TypeError as err:
+            except TypeError as _:
                 traceback.print_exc()
                 continue

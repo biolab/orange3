@@ -29,20 +29,12 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc, self.freqs)
 
-        disc2 = distribution.Discrete(d, d.domain.class_var)
-        self.assertIsInstance(disc2, np.ndarray)
-        self.assertIs(disc2.variable, d.domain.class_var)
-        self.assertEqual(disc, disc2)
-
-        disc3 = distribution.Discrete(d, len(d.domain.attributes))
-        self.assertIsInstance(disc3, np.ndarray)
-        self.assertIs(disc3.variable, d.domain.class_var)
-        self.assertEqual(disc, disc3)
-
-        disc5 = distribution.class_distribution(d)
-        self.assertIsInstance(disc5, np.ndarray)
-        self.assertIs(disc5.variable, d.domain.class_var)
-        self.assertEqual(disc, disc5)
+        for discComp in (distribution.Discrete(d, d.domain.class_var),
+                         distribution.Discrete(d, len(d.domain.attributes)),
+                         distribution.class_distribution(d)):
+            self.assertIsInstance(discComp, np.ndarray)
+            self.assertIs(discComp.variable, d.domain.class_var)
+            self.assertEqual(disc, discComp)
 
     def test_construction(self):
         d = data.Table("zoo")
@@ -54,7 +46,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertIs(disc.variable, d.domain.class_var)
 
         disc7 = distribution.Discrete(self.freqs)
-        self.assertIsInstance(disc, np.ndarray)
+        self.assertIsInstance(disc7, np.ndarray)
         self.assertIsNone(disc7.variable)
         self.assertEqual(disc7.unknowns, 0)
         self.assertEqual(disc, disc7)
@@ -142,8 +134,6 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         disc = distribution.Discrete(d, "type")
         disc.normalize()
         self.assertEqual(disc, self.rfreqs)
-        disc.normalize()
-        self.assertEqual(disc, self.rfreqs)
 
         disc1 = distribution.Discrete(None, d.domain.class_var)
         disc1.normalize()
@@ -159,7 +149,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         d = data.Table("zoo")
         disc = distribution.Discrete(d, "type")
         ans = set()
-        for i in range(1000):
+        for _ in range(1000):
             ans.add(int(disc.random()))
         self.assertEqual(ans, set(range(len(d.domain.class_var.values))))
 
@@ -266,7 +256,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
         disc = distribution.Continuous(d, "petal length")
         ans = set()
-        for i in range(1000):
+        for _ in range(1000):
             v = disc.random()
             self.assertIn(v, self.freqs)
             ans.add(v)
@@ -370,56 +360,21 @@ class Domain_Distribution_Test(unittest.TestCase):
         ddist = distribution.get_distributions(d)
 
         self.assertEqual(len(ddist), 20)
-        np.testing.assert_almost_equal(ddist[0], [0, 0, 0])
-        np.testing.assert_almost_equal(ddist[1], [0, 0, 1])
-        np.testing.assert_almost_equal(ddist[2], [0, 1, 1])
-        np.testing.assert_almost_equal(ddist[3], [0, 2, 1])
-        np.testing.assert_almost_equal(ddist[4], [1, 1, 0])
-        np.testing.assert_almost_equal(ddist[5], [2, 1, 1])
-        np.testing.assert_almost_equal(ddist[6], [1, 2, 1])
-        np.testing.assert_almost_equal(ddist[7], [0, 0, 0])
-        np.testing.assert_almost_equal(ddist[8], [0, 0, 1])
-        np.testing.assert_almost_equal(ddist[9], [0, 1, 0])
-
         z = np.zeros((2, 0))
-        np.testing.assert_almost_equal(ddist[10], z)
-        np.testing.assert_almost_equal(ddist[11], z)
-        np.testing.assert_almost_equal(ddist[12], z)
-        np.testing.assert_almost_equal(ddist[13], [[1, 1.1], [1, 1]])
-        np.testing.assert_almost_equal(ddist[14], [[1, 2], [1, 1]])
-        np.testing.assert_almost_equal(ddist[15], z)
-        np.testing.assert_almost_equal(ddist[16], [[1, 2], [1, 1]])
-        np.testing.assert_almost_equal(ddist[17], [[0], [2]])
-        np.testing.assert_almost_equal(ddist[18], [[2], [1]])
-        np.testing.assert_almost_equal(ddist[19], z)
+        for i, item in enumerate([[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 2, 1], [1, 1, 0], [2, 1, 1],
+                                  [1, 2, 1], [0, 0, 0], [0, 0, 1], [0, 1, 0], z, z, z, [[1, 1.1], [1, 1]],
+                                  [[1, 2], [1, 1]], z, [[1, 2], [1, 1]], [[0], [2]], [[2], [1]], z]):
+            np.testing.assert_almost_equal(ddist[i], item)
 
         d.set_weights(np.array([1, 2, 3, 4, 5]))
 
         ddist = distribution.get_distributions(d)
 
         self.assertEqual(len(ddist), 20)
-        np.testing.assert_almost_equal(ddist[0], [0, 0, 0])
-        np.testing.assert_almost_equal(ddist[1], [0, 0, 1])
-        np.testing.assert_almost_equal(ddist[2], [0, 2, 5])
-        np.testing.assert_almost_equal(ddist[3], [0, 5, 1])
-        np.testing.assert_almost_equal(ddist[4], [2, 1, 0])
-        np.testing.assert_almost_equal(ddist[5], [7, 1, 3])
-        np.testing.assert_almost_equal(ddist[6], [3, 7, 1])
-        np.testing.assert_almost_equal(ddist[7], [0, 0, 0])
-        np.testing.assert_almost_equal(ddist[8], [0, 0, 2])
-        np.testing.assert_almost_equal(ddist[9], [0, 1, 0])
-
-        z = np.zeros((2, 0))
-        np.testing.assert_almost_equal(ddist[10], z)
-        np.testing.assert_almost_equal(ddist[11], z)
-        np.testing.assert_almost_equal(ddist[12], z)
-        np.testing.assert_almost_equal(ddist[13], [[1, 1.1], [1, 5]])
-        np.testing.assert_almost_equal(ddist[14], [[1, 2], [1, 2]])
-        np.testing.assert_almost_equal(ddist[15], z)
-        np.testing.assert_almost_equal(ddist[16], [[1, 2], [2, 1]])
-        np.testing.assert_almost_equal(ddist[17], [[0], [3]])
-        np.testing.assert_almost_equal(ddist[18], [[2], [1]])
-        np.testing.assert_almost_equal(ddist[19], z)
+        for i, item in enumerate([[0, 0, 0], [0, 0, 1], [0, 2, 5], [0, 5, 1], [2, 1, 0], [7, 1, 3],
+                                  [3, 7, 1], [0, 0, 0], [0, 0, 2], [0, 1, 0], z, z, z, [[1, 1.1], [1, 5]],
+                                  [[1, 2], [1, 2]], z, [[1, 2], [2, 1]], [[0], [3]], [[2], [1]], z]):
+            np.testing.assert_almost_equal(ddist[i], item)
 
     def test_compute_distributions_metas(self):
         d = data.Table("test9.tab")
