@@ -7,7 +7,7 @@ from collections import OrderedDict, namedtuple
 
 import numpy
 from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt, pyqtSlot as Slot
+from PyQt4.QtCore import Qt, pyqtSlot as Slot, QLocale
 
 import Orange
 import Orange.evaluation
@@ -495,6 +495,43 @@ class OWPredictions(widget.OWWidget):
 
         self.send("Predictions", predictions)
         self.send("Evaluation Results", results)
+
+    def send_report(self):
+        def merge_data_with_predictions():
+            data_model = self.dataview.model()
+            predictions_model = self.predictionsview.model()
+
+            # use ItemDelegate to style prediction values
+            style = lambda x: self.predictionsview.itemDelegate().displayText(x, QLocale())
+
+            # iterate only over visible columns of data's QTableView
+            iter_data_cols = list(filter(lambda x: not self.dataview.isColumnHidden(x),
+                                         range(data_model.columnCount())))
+
+            # print header
+            yield [''] + \
+                  [predictions_model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
+                   for col in range(predictions_model.columnCount())] + \
+                  [data_model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
+                   for col in iter_data_cols]
+
+            # print data & predictions
+            for i in range(data_model.rowCount()):
+                yield [data_model.headerData(i, Qt.Vertical, Qt.DisplayRole)] + \
+                      [style(predictions_model.data(predictions_model.index(i, j)))
+                       for j in range(predictions_model.columnCount())] + \
+                      [data_model.data(data_model.index(i, j))
+                       for j in iter_data_cols]
+
+        if self.data is not None:
+            text = self.infolabel.text().replace('\n', '<br>')
+            if self.show_probabilities and self.selected_classes:
+                text += '<br>Showing probabilities for: '
+                text += ', '. join([self.data.domain.class_var.values[i]
+                                    for i in self.selected_classes])
+            self.report_paragraph('Info', text)
+            self.report_table("Data & Predictions", merge_data_with_predictions(),
+                              header_rows=1, header_columns=1)
 
     @classmethod
     def predict(cls, predictor, data):
