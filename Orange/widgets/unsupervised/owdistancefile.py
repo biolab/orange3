@@ -50,26 +50,29 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         self.warnings.setSizePolicy(
             QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
 
+        box = gui.hBox(self.controlArea)
+        gui.button(
+            box, self, "Browse documentation data sets",
+            callback=lambda: self.browse_file(True), autoDefault=False)
+        gui.rubber(box)
+        box.layout().addWidget(self.report_button)
+        self.report_button.setFixedWidth(170)
+
         self.set_file_list()
         QtCore.QTimer.singleShot(0, self.open_file)
 
     def set_file_list(self):
         super().set_file_list()
-        self.file_combo.addItem("Browse documentation data sets...")
 
     def reload(self):
         return self.open_file()
 
     def select_file(self, n):
-        if n < len(self.recent_paths):
-            super().select_file(n)
-        elif n:
-            self.browse_file(True)
-
+        super().select_file(n)
         self.set_file_list()
         self.open_file()
 
-    def browse_file(self, in_demos=0):
+    def browse_file(self, in_demos=False):
         if in_demos:
             start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
@@ -81,7 +84,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
             start_file = self.last_path() or os.path.expanduser("~/")
 
         filename = QtGui.QFileDialog.getOpenFileName(
-            self, 'Open Distance File', start_file)
+            self, 'Open Distance File', start_file, "(*.dst *.txt)")
         if not filename:
             return
         self.add_path(filename)
@@ -134,9 +137,11 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.send("Distances", distances)
 
-    def sendReport(self):
-        if self.loaded_file:
-            self.reportSettings("File", [("File name", self.loaded_file)])
+    def send_report(self):
+        if not self.loaded_file:
+            self.report_paragraph("No data was loaded.")
+        else:
+            self.report_items([("File name", self.loaded_file)])
 
 if __name__ == "__main__":
     a = QtGui.QApplication(sys.argv)
