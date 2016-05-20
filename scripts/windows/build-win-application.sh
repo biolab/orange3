@@ -65,10 +65,11 @@ PYTHON_VER_SHORT=${PYTHON_VER%.[0-9]*}
 PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
 PYTHON_MSI=python-$PYTHON_VER.msi
 
-# The minimum pip version required (this is the version which was shipped
-# with Python 3.4.3 (ensurepip)
-PIP_VER=6.0.8
-PIP_MD5=41e73fae2c86ba2270ff51c1d86f7e09
+# The minimum pip version required (v8.* is required in order to install
+# wheel files build using wheel>=0.29; wheel issue #165, #159)
+PIP_VER=8.1.2
+PIP_URL=https://pypi.python.org/packages/9c/32/004ce0852e0a127f07f358b715015763273799bd798956fa930814b60f39/pip-8.1.2-py2.py3-none-any.whl
+PIP_MD5=0570520434c5b600d89ec95393b2650b
 
 PYQT_VER=4.11.4
 PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
@@ -199,7 +200,7 @@ function prepare_msvcr100 {
 
 function prepare_pip {
     local version=${PIP_VER:?}
-    local url=https://pypi.python.org/packages/py2.py3/p/pip/pip-${version}-py2.py3-none-any.whl
+    local url=${PIP_URL:?}
     local md5=${PIP_MD5:?}
     download_url "${url}" \
                  "${DOWNLOADDIR}"/pip-${version}-py2.py3-none-any.whl \
@@ -272,6 +273,10 @@ function prepare_orange {
                 --only-binary numpy,scipy \
                 numpy==$NUMPY_VER, scipy==$SCIPY_VER
 
+    # ensure that the wheel package in the build env creates .whl files that
+    # can be installed with pip v7.* (wheel issue #165, #159) which is the
+    # version installed by ensurepip for Python 3.4.4
+    pip install 'wheel==0.26.*'
     python setup.py egg_info
     local version=$(grep -E "^Version: .*$" Orange.egg-info/PKG-INFO | awk '{ print $2 }')
 
