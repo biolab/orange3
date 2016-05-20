@@ -421,7 +421,9 @@ class Variable(metaclass=VariableMeta):
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
     def copy(self, compute_value):
-        return Variable(self.name, compute_value)
+        var = Variable(self.name, compute_value)
+        var.attributes = dict(self.attributes)
+        return var
 
 
 class ContinuousVariable(Variable):
@@ -515,7 +517,9 @@ class ContinuousVariable(Variable):
     str_val = repr_val
 
     def copy(self, compute_value=None):
-        return ContinuousVariable(self.name, self.number_of_decimals, compute_value)
+        var = ContinuousVariable(self.name, self.number_of_decimals, compute_value)
+        var.attributes = dict(self.attributes)
+        return var
 
 
 class DiscreteVariable(Variable):
@@ -778,8 +782,10 @@ class DiscreteVariable(Variable):
             return sorted(values)
 
     def copy(self, compute_value=None):
-        return DiscreteVariable(self.name, self.values, self.ordered,
-                                self.base_value, compute_value)
+        var = DiscreteVariable(self.name, self.values, self.ordered,
+                               self.base_value, compute_value)
+        var.attributes = dict(self.attributes)
+        return var
 
 
 class StringVariable(Variable):
