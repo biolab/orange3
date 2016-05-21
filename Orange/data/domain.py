@@ -93,7 +93,7 @@ class Domain:
         for lst in (attributes, class_vars, metas):
             for i, var in enumerate(lst):
                 if not isinstance(var, Variable):
-                    if source and isinstance(var, (str, int)):
+                    if source is not None and isinstance(var, (str, int)):
                         lst[i] = source[var]
                     else:
                         raise TypeError(
