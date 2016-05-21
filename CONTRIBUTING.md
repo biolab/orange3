@@ -74,7 +74,7 @@ and menu options. Elsewhere, use sentence case. Use title case for
 combo box options where the item is imperative (e.g. Initialize with Method)
 and sentence case otherwise.
 
-[OS X Human Interface Guidelines]: (https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html).
+[OS X Human Interface Guidelines]: https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html
 
 
 Tests
