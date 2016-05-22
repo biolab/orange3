@@ -26,7 +26,6 @@ from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils import classdensity
 from Orange.canvas import report
 
@@ -104,16 +103,14 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
 
 class AxisItem(pg.GraphicsObject):
-    def __init__(self, parent=None, line=None, label=None, **kwargs):
-        super().__init__(parent, **kwargs)
+    def __init__(self, parent=None, line=None, label=None, *args):
+        super().__init__(parent, *args)
         self.setFlag(pg.GraphicsObject.ItemHasNoContents)
 
         if line is None:
             line = QLineF(0, 0, 1, 0)
 
         self._spine = QGraphicsLineItem(line, self)
-        angle = QLineF(0, 0, 1, 0).angleTo(line)
-        angle = (180 - angle) % 360
         dx = line.x2() - line.x1()
         dy = line.y2() - line.y1()
         rad = numpy.arctan2(dy, dx)
@@ -174,6 +171,10 @@ class AxisItem(pg.GraphicsObject):
 
 
 class LegendItem(LegendItem):
+    def __init__(self):
+        super().__init__()
+        self.items = []
+
     def clear(self):
         """
         Clear all legend items.
@@ -214,7 +215,8 @@ class LegendItem(LegendItem):
 
 class OWLinearProjection(widget.OWWidget):
     name = "Linear Projection"
-    description = "A multi-axis projection of data onto a two-dimensional plane."
+    description = "A multi-axis projection of data onto " \
+                  "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
     priority = 2000
 
@@ -371,7 +373,7 @@ class OWLinearProjection(widget.OWWidget):
         form.addRow("Size:", cb)
 
         size_slider = QSlider(
-            Qt.Horizontal,  minimum=3, maximum=30, value=self.point_size,
+            Qt.Horizontal, minimum=3, maximum=30, value=self.point_size,
             pageStep=3,
             tickPosition=QSlider.TicksBelow)
         size_slider.valueChanged.connect(self._set_size)
@@ -544,6 +546,9 @@ class OWLinearProjection(widget.OWWidget):
     def set_data(self, data):
         """
         Set the input dataset.
+
+        Args:
+            data (Orange.data.table): data instances
         """
         self.closeContext()
         self.clear()
@@ -567,7 +572,8 @@ class OWLinearProjection(widget.OWWidget):
                      in state.items()}
 
             self.openContext(data.domain)
-            selected_keys = [key for key, (sind, _) in self.variable_state.items()
+            selected_keys = [key
+                             for key, (sind, _) in self.variable_state.items()
                              if sind == 0]
 
             if set(selected_keys).issubset(set(state.keys())):
@@ -600,6 +606,9 @@ class OWLinearProjection(widget.OWWidget):
     def set_subset_data(self, subset):
         """
         Set the supplementary input subset dataset.
+
+        Args:
+            subset (Orange.data.table): subset of data instances
         """
         self.subset_data = subset
         self._subset_mask = None
@@ -629,13 +638,15 @@ class OWLinearProjection(widget.OWWidget):
         )
         super().closeContext()
 
-    def _encode_var_state(self, lists):
+    @staticmethod
+    def _encode_var_state(lists):
         return {(type(var), var.name): (source_ind, pos)
                 for source_ind, var_list in enumerate(lists)
                 for pos, var in enumerate(var_list)
                 if isinstance(var, Variable)}
 
-    def _decode_var_state(self, state, lists):
+    @staticmethod
+    def _decode_var_state(state, lists):
         all_vars = reduce(list.__iadd__, lists, [])
 
         newlists = [[] for _ in lists]
@@ -784,11 +795,12 @@ class OWLinearProjection(widget.OWWidget):
         self._update_legend()
 
         color_var = self.color_var()
-        if self.class_density and color_var is not None and color_var.is_discrete:
+        if self.class_density and \
+                color_var is not None and color_var.is_discrete:
             [min_x, max_x], [min_y, max_y] = self.viewbox.viewRange()
             rgb_data = [brush.color().getRgb()[:3] for brush in brush_data]
-            self._density_img = classdensity.class_density_image(min_x, max_x, min_y, max_y, self.resolution,
-                                                                X, Y, rgb_data)
+            self._density_img = classdensity.class_density_image(
+                min_x, max_x, min_y, max_y, self.resolution, X, Y, rgb_data)
             self.viewbox.addItem(self._density_img)
 
     def _color_data(self, mask=None):
@@ -890,7 +902,7 @@ class OWLinearProjection(widget.OWWidget):
             max_symbol = len(ScatterPlotItem.Symbols) - 1
             shape = self._get_data(shape_var)
             shape_mask = numpy.isnan(shape)
-            shape = shape % (max_symbol - 1)
+            shape %= max_symbol - 1
             shape[shape_mask] = max_symbol
 
             symbols = numpy.array(list(ScatterPlotItem.Symbols))
@@ -1125,7 +1137,7 @@ class PlotTool(QObject):
         return self.__viewbox
 
     @Slot(QObject)
-    def __viewdestroyed(self, obj):
+    def __viewdestroyed(self, _):
         self.__viewbox = None
 
     def mousePressEvent(self, event):
@@ -1561,7 +1573,8 @@ class PlotPinchZoomTool(PlotTool):
 class plotutils:
     @ staticmethod
     def continuous_colors(data, palette=None,
-                          low=(220, 220, 220), high=(0,0,0), through_black=False):
+                          low=(220, 220, 220), high=(0,0,0),
+                          through_black=False):
         if palette is None:
             palette = colorpalette.ContinuousPaletteGenerator(
                 QtGui.QColor(*low), QtGui.QColor(*high), through_black)
