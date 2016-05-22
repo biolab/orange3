@@ -66,7 +66,7 @@ def get_file_name(start_dir, start_filter, file_formats):
 
     while True:
         filename, filter = QFileDialog.getSaveFileNameAndFilter(
-            None, 'Save as ...', start_dir, ';;'.join(filters), start_filter)
+            None, 'Save As...', start_dir, ';;'.join(filters), start_filter)
         if not filename:
             return None, None, None
 

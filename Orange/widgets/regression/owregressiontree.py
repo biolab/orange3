@@ -5,7 +5,7 @@ from Orange.widgets.classify import owclassificationtree
 
 class OWRegressionTree(owclassificationtree.OWClassificationTree):
     name = "Regression Tree"
-    description = "Regression tree algorithm with forward pruning."
+    description = "A regression tree algorithm with forward pruning."
     icon = "icons/RegressionTree.svg"
     priority = 30
 

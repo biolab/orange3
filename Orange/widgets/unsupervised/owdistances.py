@@ -40,7 +40,7 @@ class OWDistances(widget.OWWidget):
 
         self.data = None
 
-        gui.radioButtons(self.controlArea, self, "axis", ["rows", "columns"],
+        gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
         )
         gui.comboBox(self.controlArea, self, "metric_idx",
@@ -48,7 +48,7 @@ class OWDistances(widget.OWWidget):
                      callback=self._invalidate
         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
-                              box=False, checkbox_label="Apply on any change")
+                              box=False, checkbox_label="Apply automatically")
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 8)
 
@@ -91,6 +91,6 @@ class OWDistances(widget.OWWidget):
 
     def send_report(self):
         self.report_items((
-            ("Distances between", ["rows", "columns"][self.axis]),
+            ("Distances Between", ["Rows", "Columns"][self.axis]),
             ("Metric", _METRICS[self.metric_idx][0])
         ))

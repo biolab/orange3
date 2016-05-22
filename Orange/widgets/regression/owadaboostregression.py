@@ -10,7 +10,8 @@ from Orange.widgets.settings import Setting
 
 class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
     name = "AdaBoost"
-    description = "An AdaBoost regression algorithm."
+    description = "An ensemble meta-algorithm that combines weak learners " \
+                  "and adapts to the 'hardness' of each training sample. "
     icon = "icons/AdaBoost.svg"
     priority = 80
 
@@ -18,11 +19,11 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
 
     inputs = [("Learner", LearnerRegression, "set_base_learner")]
 
-    losses = ["linear", "square", "exponential"]
+    losses = ["Linear", "Square", "Exponential"]
     loss = Setting(0)
 
     def add_specific_parameters(self, box):
-        gui.comboBox(box, self, "loss", label="Loss",
+        gui.comboBox(box, self, "loss", label="Loss:",
                      orientation=Qt.Horizontal, items=self.losses,
                      callback=self.settings_changed)
 

@@ -91,7 +91,7 @@ class OWBoxPlot(widget.OWWidget):
     display_changed call display_changed_disc that draws everything.
     """
     name = "Box Plot"
-    description = "Visualize distribution of feature values in a box plots."
+    description = "Visualize the distribution of feature values in a box plot."
     icon = "icons/BoxPlot.svg"
     priority = 100
     inputs = [("Data", Orange.data.Table, "set_data")]

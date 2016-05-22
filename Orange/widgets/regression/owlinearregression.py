@@ -12,8 +12,8 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWLinearRegression(OWBaseLearner):
     name = "Linear Regression"
-    description = "A linear regression algorithm with optional L1 and L2 " \
-                  "regularization."
+    description = "A linear regression algorithm with optional L1 (LASSO), " \
+                  "L2 (ridge) or L1L2 (elastic net) regularization."
     icon = "icons/LinearRegression.svg"
     priority = 60
 
@@ -49,8 +49,8 @@ class OWLinearRegression(OWBaseLearner):
                          callback=self._reg_type_changed)
 
         gui.separator(box, 20, 20)
-        self.alpha_box = box2 = gui.vBox(box, margin=0)
-        gui.widgetLabel(box2, "Regularization strength")
+        self.alpha_box = box2 = gui.vBox(box, margin=10)
+        gui.widgetLabel(box2, "Regularization strength:")
         self.alpha_slider = gui.hSlider(
             box2, self, "alpha_index",
             minValue=0, maxValue=len(self.alphas) - 1,
@@ -62,7 +62,7 @@ class OWLinearRegression(OWBaseLearner):
 
         gui.separator(box2, 10, 10)
         box4 = gui.vBox(box2, margin=0)
-        gui.widgetLabel(box4, "Elastic net mixing")
+        gui.widgetLabel(box4, "Elastic net mixing:")
         box5 = gui.hBox(box4)
         gui.widgetLabel(box5, "L1")
         self.l1_ratio_slider = gui.hSlider(
@@ -78,8 +78,7 @@ class OWLinearRegression(OWBaseLearner):
         self._set_l1_ratio_label()
 
         auto_commit = gui.auto_commit(
-                self.controlArea, self, "autosend",
-                "Apply", auto_label="Apply on change")
+                self.controlArea, self, "autosend", "Apply")
         auto_commit.layout().insertWidget(0, self.report_button)
         auto_commit.layout().insertSpacing(1, 20)
         self.report_button.setMinimumWidth(150)

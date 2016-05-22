@@ -343,7 +343,7 @@ class OWImageViewer(widget.OWWidget):
 
         self.info = gui.widgetLabel(
             gui.vBox(self.controlArea, "Info"),
-            "Waiting for input\n"
+            "Waiting for input.\n"
         )
 
         self.imageAttrCB = gui.comboBox(
@@ -372,8 +372,7 @@ class OWImageViewer(widget.OWWidget):
         )
         gui.rubber(self.controlArea)
 
-        gui.auto_commit(self.buttonsArea, self, "autoCommit",
-                        "Commit", "Auto commit", box=False)
+        gui.auto_commit(self.buttonsArea, self, "autoCommit", "Send", box=False)
 
         self.scene = GraphicsScene()
         self.sceneView = QGraphicsView(self.scene, self)
@@ -435,7 +434,7 @@ class OWImageViewer(widget.OWWidget):
             if self.stringAttrs:
                 self.setupScene()
         else:
-            self.info.setText("Waiting for input\n")
+            self.info.setText("Waiting for input.\n")
 
     def clear(self):
         self.data = None

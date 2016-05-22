@@ -442,8 +442,8 @@ class OWPythonScript(widget.OWWidget):
 
         action = QAction("More", self, toolTip="More actions")
 
-        new_from_file = QAction("Import a script from a file", self)
-        save_to_file = QAction("Save selected script to a file", self)
+        new_from_file = QAction("Import Script from File", self)
+        save_to_file = QAction("Save Selected Script to File", self)
         save_to_file.setShortcut(QKeySequence(QKeySequence.SaveAs))
 
         new_from_file.triggered.connect(self.onAddScriptFromFile)
@@ -460,7 +460,8 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        gui.auto_commit(self.controlArea, self, "auto_execute", "Execute")
+        gui.auto_commit(self.controlArea, self, "auto_execute", "Execute",
+                        auto_label="Auto Execute")
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -468,7 +469,7 @@ class OWPythonScript(widget.OWWidget):
         self.defaultFont = defaultFont = \
             "Monaco" if sys.platform == "darwin" else "Courier"
 
-        self.textBox = gui.vBox(self, 'Python script')
+        self.textBox = gui.vBox(self, 'Python Script')
         self.splitCanvas.addWidget(self.textBox)
         self.text = PythonScriptEditor(self)
         self.textBox.layout().addWidget(self.text)

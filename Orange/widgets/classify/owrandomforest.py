@@ -11,7 +11,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 class OWRandomForest(OWBaseLearner):
     name = "Random Forest Classification"
-    description = "Random forest classification algorithm."
+    description = "Predict using an ensemble of decision trees."
     icon = "icons/RandomForest.svg"
     priority = 40
 
@@ -31,9 +31,9 @@ class OWRandomForest(OWBaseLearner):
     def add_main_layout(self):
         form = QGridLayout()
         basic_box = gui.widgetBox(
-            self.controlArea, "Basic properties", orientation=form)
+            self.controlArea, "Basic Properties", orientation=form)
 
-        form.addWidget(QLabel(self.tr("Number of trees ")),
+        form.addWidget(QLabel(self.tr("Number of trees: ")),
                        0, 0, Qt.AlignLeft)
         spin = gui.spin(basic_box, self, "n_estimators", minv=1, maxv=1e4,
                         callback=self.settings_changed, addToLayout=False,
@@ -43,7 +43,7 @@ class OWRandomForest(OWBaseLearner):
         max_features_cb = gui.checkBox(
             basic_box, self, "use_max_features",
             callback=self.settings_changed, addToLayout=False,
-            label="Number of considered attributes at each split ")
+            label="Number of attributes considered at each split: ")
 
         max_features_spin = gui.spin(
             basic_box, self, "max_features", 2, 50, addToLayout=False,
@@ -54,7 +54,7 @@ class OWRandomForest(OWBaseLearner):
 
         random_state_cb = gui.checkBox(
             basic_box, self, "use_random_state", callback=self.settings_changed,
-            addToLayout=False, label="Fixed seed for random generator ")
+            addToLayout=False, label="Fixed seed for random generator: ")
         random_state_spin = gui.spin(
             basic_box, self, "random_state", 0, 2 ** 31 - 1, addToLayout=False,
             callback=self.settings_changed, controlWidth=50)
@@ -67,11 +67,11 @@ class OWRandomForest(OWBaseLearner):
         # Growth control
         form = QGridLayout()
         growth_box = gui.widgetBox(
-            self.controlArea, "Growth control", orientation=form)
+            self.controlArea, "Growth Control", orientation=form)
 
         max_depth_cb = gui.checkBox(
             growth_box, self, "use_max_depth",
-            label="Limit depth of individual trees",
+            label="Limit depth of individual trees: ",
             callback=self.settings_changed,
             addToLayout=False)
 
@@ -84,7 +84,7 @@ class OWRandomForest(OWBaseLearner):
 
         max_leaf_nodes_cb = gui.checkBox(
             growth_box, self, "use_max_leaf_nodes",
-            label="Do not split subsets smaller than ",
+            label="Do not split subsets smaller than: ",
             callback=self.settings_changed, addToLayout=False)
 
         max_leaf_nodes_spin = gui.spin(

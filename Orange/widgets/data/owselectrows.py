@@ -82,11 +82,11 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
 
         box2 = gui.hBox(box)
-        self.add_button = gui.button(box2, self, "Add condition",
+        self.add_button = gui.button(box2, self, "Add Condition",
                                      callback=self.add_row)
-        self.add_all_button = gui.button(box2, self, "Add all variables",
+        self.add_all_button = gui.button(box2, self, "Add All Variables",
                                          callback=self.add_all)
-        self.remove_all_button = gui.button(box2, self, "Remove all",
+        self.remove_all_button = gui.button(box2, self, "Remove All",
                                             callback=self.remove_all)
         gui.rubber(box2)
 
@@ -110,8 +110,8 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        gui.auto_commit(box, self, "auto_commit", label="Commit",
-                        checkbox_label="Commit on change")
+        gui.auto_commit(box, self, "auto_commit", label="Send",
+                        checkbox_label="Send automatically")
         self.set_data(None)
         self.resize(600, 400)
 

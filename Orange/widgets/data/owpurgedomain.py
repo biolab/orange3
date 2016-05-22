@@ -11,7 +11,7 @@ from Orange.widgets.utils.sql import check_sql_input
 class OWPurgeDomain(widget.OWWidget):
     name = "Purge Domain"
     description = "Remove redundant values and features from the data set. " \
-                  "Sorts values."
+                  "Sort values."
     icon = "icons/PurgeDomain.svg"
     category = "Data"
     keywords = ["data", "purge", "domain"]
@@ -94,8 +94,7 @@ class OWPurgeDomain(widget.OWWidget):
                 gui.separator(box3, 2)
             gui.label(box3, self, "{}: %({})s".format(label, value))
 
-        gui.auto_commit(self.buttonsArea, self, "autoSend", "Send Data",
-                        checkbox_label="Send automatically",
+        gui.auto_commit(self.buttonsArea, self, "autoSend", "Apply",
                         orientation=Qt.Horizontal)
         gui.rubber(self.controlArea)
 

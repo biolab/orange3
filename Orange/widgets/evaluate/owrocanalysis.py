@@ -274,8 +274,8 @@ class InfiniteLine(pg.InfiniteLine):
 
 class OWROCAnalysis(widget.OWWidget):
     name = "ROC Analysis"
-    description = "Display Receiver Operating Characteristics curve " \
-                  "based on evaluation of classifiers."
+    description = "Display the Receiver Operating Characteristics curve " \
+                  "based on the evaluation of classifiers."
     icon = "icons/ROCAnalysis.svg"
     priority = 1010
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
@@ -329,8 +329,8 @@ class OWROCAnalysis(widget.OWWidget):
         abox = gui.vBox(box, "Combine ROC Curves From Folds")
         abox.setFlat(True)
         gui.comboBox(abox, self, "roc_averaging",
-                     items=["Merge predictions from folds", "Mean TP rate",
-                            "Mean TP and FP at threshold", "Show individual curves"],
+                     items=["Merge Predictions from Folds", "Mean TP Rate",
+                            "Mean TP and FP at Threshold", "Show Individual Curves"],
                      callback=self._replot)
 
         hbox = gui.vBox(box, "ROC Convex Hull")
@@ -353,18 +353,18 @@ class OWROCAnalysis(widget.OWWidget):
 
         sp = gui.spin(box, self, "fp_cost", 1, 1000, 10,
                       callback=self._on_display_perf_line_changed)
-        grid.addWidget(QtGui.QLabel("FP Cost"), 0, 0)
+        grid.addWidget(QtGui.QLabel("FP Cost:"), 0, 0)
         grid.addWidget(sp, 0, 1)
 
         sp = gui.spin(box, self, "fn_cost", 1, 1000, 10,
                       callback=self._on_display_perf_line_changed)
-        grid.addWidget(QtGui.QLabel("FN Cost"))
+        grid.addWidget(QtGui.QLabel("FN Cost:"))
         grid.addWidget(sp, 1, 1)
         sp = gui.spin(box, self, "target_prior", 1, 99,
                       callback=self._on_display_perf_line_changed)
         sp.setSuffix("%")
         sp.addAction(QtGui.QAction("Auto", sp))
-        grid.addWidget(QtGui.QLabel("Prior target class probability"))
+        grid.addWidget(QtGui.QLabel("Prior target class probability:"))
         grid.addWidget(sp, 2, 1)
 
         self.plotview = pg.GraphicsView(background="w")

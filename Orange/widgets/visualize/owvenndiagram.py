@@ -34,7 +34,7 @@ _ItemSet = namedtuple("_ItemSet", ["key", "name", "title", "items"])
 
 class OWVennDiagram(widget.OWWidget):
     name = "Venn Diagram"
-    description = "A graphical visualization of an overlap of data instances " \
+    description = "A graphical visualization of the overlap of data instances " \
                   "from a collection of input data sets."
     icon = "icons/VennDiagram.svg"
 
@@ -72,7 +72,7 @@ class OWVennDiagram(widget.OWWidget):
 
         # GUI
         box = gui.vBox(self.controlArea, "Info")
-        self.info = gui.widgetLabel(box, "No data on input\n")
+        self.info = gui.widgetLabel(box, "No data on input.\n")
 
         self.identifiersBox = gui.radioButtonsInBox(
             self.controlArea, self, "useidentifiers", [],
@@ -110,7 +110,7 @@ class OWVennDiagram(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "output_duplicates", "Output duplicates",
                      callback=lambda: self.commit())
-        gui.auto_commit(box, self, "autocommit", "Commit", box=False)
+        gui.auto_commit(box, self, "autocommit", "Send Selection", "Send Automatically", box=False)
 
         # Main area view
         self.scene = QGraphicsScene()

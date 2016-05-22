@@ -4,7 +4,7 @@ from Orange.regression.knn import KNNRegressionLearner
 
 class OWKNNRegression(owknn.OWKNNLearner):
     name = "Nearest Neighbors"
-    description = "k-nearest neighbours regression algorithm."
+    description = "Predict according to the nearest training instances."
     icon = "icons/kNearestNeighbours.svg"
     priority = 20
 

@@ -133,7 +133,7 @@ class VariableEditor(QWidget):
 
     def _setup_gui_name(self):
         self.name_edit = QLineEdit()
-        self.main_form.addRow("Name", self.name_edit)
+        self.main_form.addRow("Name:", self.name_edit)
         self.name_edit.editingFinished.connect(self.on_name_changed)
 
     def _setup_gui_labels(self):
@@ -189,7 +189,7 @@ class VariableEditor(QWidget):
         hlayout.addStretch(10)
         vlayout.addLayout(hlayout)
 
-        self.main_form.addRow("Labels", vlayout)
+        self.main_form.addRow("Labels:", vlayout)
 
     def set_data(self, var):
         """Set the variable to edit.
@@ -300,7 +300,7 @@ class DiscreteVariableEditor(VariableEditor):
         self.values_edit.setModel(self.values_model)
 
         self.values_model.dataChanged.connect(self.on_values_changed)
-        self.main_form.addRow("Values", self.values_edit)
+        self.main_form.addRow("Values:", self.values_edit)
 
     def set_data(self, var):
         """Set the variable to edit
@@ -381,11 +381,10 @@ class OWEditDomain(widget.OWWidget):
         box.layout().addWidget(self.domain_view)
 
         box = gui.hBox(self.controlArea)
-        gui.button(box, self, "Reset selected", callback=self.reset_selected)
-        gui.button(box, self, "Reset all", callback=self.reset_all)
+        gui.button(box, self, "Reset Selected", callback=self.reset_selected)
+        gui.button(box, self, "Reset All", callback=self.reset_all)
 
-        gui.auto_commit(self.controlArea, self, "autocommit", "Commit",
-                        "Commit on change is on")
+        gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
         box = gui.vBox(self.mainArea, "Edit")
         self.editor_stack = QtGui.QStackedWidget()

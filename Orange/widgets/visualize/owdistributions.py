@@ -157,7 +157,7 @@ class OWDistributions(widget.OWWidget):
             tooltip="Normalize probabilities so that probabilities for each group-by value sum to 1.")
         gui.separator(box2)
         self.cb_prob = gui.comboBox(
-            box2, self, "show_prob", label="Show probabilities",
+            box2, self, "show_prob", label="Show probabilities:",
             orientation=Qt.Horizontal,
             callback=self._on_relative_freq_changed,
             tooltip="Show probabilities for a chosen group-by value (at each point probabilities for all group-by values sum to 1).")

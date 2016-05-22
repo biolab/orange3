@@ -778,7 +778,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
 
         grid.addWidget(
-            gui.appendRadioButton(box, "Max depth", addToLayout=False),
+            gui.appendRadioButton(box, "Max depth:", addToLayout=False),
             1, 0)
         grid.addWidget(self.max_depth_spin, 1, 1)
 
@@ -794,7 +794,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             0, 0
         )
         grid.addWidget(
-            gui.appendRadioButton(box, "Height ratio", addToLayout=False),
+            gui.appendRadioButton(box, "Height ratio:", addToLayout=False),
             1, 0
         )
         self.cut_ratio_spin = gui.spin(
@@ -806,7 +806,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         grid.addWidget(self.cut_ratio_spin, 1, 1)
 
         grid.addWidget(
-            gui.appendRadioButton(box, "Top N", addToLayout=False),
+            gui.appendRadioButton(box, "Top N:", addToLayout=False),
             2, 0
         )
         self.top_n_spin = gui.spin(box, self, "top_n", 1, 20,
@@ -853,14 +853,14 @@ class OWHierarchicalClustering(widget.OWWidget):
             labelAlignment=Qt.AlignLeft,
             spacing=8
         )
-        form.addRow("Name", name_edit)
-        form.addRow("Place", cb)
+        form.addRow("Name:", name_edit)
+        form.addRow("Place:", cb)
 
         ibox.layout().addSpacing(5)
         ibox.layout().addLayout(form)
         ibox.layout().addSpacing(5)
 
-        gui.auto_commit(box, self, "autocommit", "Send data", "Auto send is on",
+        gui.auto_commit(box, self, "autocommit", "Send Selected", "Send Automatically",
                         box=False)
 
         self.scene = QGraphicsScene()

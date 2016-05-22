@@ -62,7 +62,7 @@ class XlsContextHandler(ContextHandler):
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
-    description = "Read a data from an input file or network" \
+    description = "Read a data from an input file or network " \
                   "and send the data table to the output."
     icon = "icons/File.svg"
     priority = 10
@@ -112,7 +112,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
                                 callback=self.load_data, addToLayout=False)
 
-        rb_button = gui.appendRadioButton(vbox, "File", addToLayout=False)
+        rb_button = gui.appendRadioButton(vbox, "File:", addToLayout=False)
         layout.addWidget(rb_button, 0, 0, QtCore.Qt.AlignVCenter)
 
         box = gui.hBox(None, addToLayout=False, margin=0)
@@ -153,7 +153,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         layout.addWidget(self.sheet_box, 2, 1)
         self.sheet_box.hide()
 
-        rb_button = gui.appendRadioButton(vbox, "URL", addToLayout=False)
+        rb_button = gui.appendRadioButton(vbox, "URL:", addToLayout=False)
         layout.addWidget(rb_button, 3, 0, QtCore.Qt.AlignVCenter)
 
         self.url_combo = url_combo = QtGui.QComboBox()

@@ -381,27 +381,27 @@ class OWTreeViewer2D(OWWidget):
             gui.widgetBox(self.controlArea, "Display", addSpace=True,
                           orientation=layout)
         layout.addRow(
-            "Zoom ",
+            "Zoom: ",
             gui.hSlider(box, self, 'zoom',
                         minValue=1, maxValue=10, step=1, ticks=False,
                         callback=self.toggle_zoom_slider,
                         createLabel=False, addToLayout=False, addSpace=False))
         layout.addRow(
-            "Width ",
+            "Width: ",
             gui.hSlider(box, self, 'max_node_width',
                         minValue=50, maxValue=200, step=1, ticks=False,
                         callback=self.toggle_node_size,
                         createLabel=False, addToLayout=False, addSpace=False))
         policy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         layout.addRow(
-            "Depth ",
+            "Depth: ",
             gui.comboBox(box, self, 'max_tree_depth',
                          items=["Unlimited"] + [
                              "{} levels".format(x) for x in range(2, 10)],
                          addToLayout=False, sendSelectedValue=False,
                          callback=self.toggle_tree_depth, sizePolicy=policy))
         layout.addRow(
-            "Edge width ",
+            "Edge width: ",
             gui.comboBox(box, self, 'line_width_method',
                          items=['Fixed', 'Relative to root',
                                 'Relative to parent'],

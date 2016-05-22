@@ -26,7 +26,7 @@ from Orange.widgets.unsupervised.owhierarchicalclustering import \
 
 class OWSilhouettePlot(widget.OWWidget):
     name = "Silhouette Plot"
-    description = "Silhouette Plot"
+    description = "Show a silhouette plot. "
 
     icon = "icons/Silhouette.svg"
 
@@ -66,23 +66,23 @@ class OWSilhouettePlot(widget.OWWidget):
         self._silplot = None
 
         box = gui.vBox(self.controlArea, "Settings",)
-        gui.comboBox(box, self, "distance_idx", label="Distance",
+        gui.comboBox(box, self, "distance_idx", label="Distance:",
                      items=[name for name, _ in OWSilhouettePlot.Distances],
                      callback=self._invalidate_distances)
         self.cluster_var_cb = gui.comboBox(
-            box, self, "cluster_var_idx", label="Cluster",
+            box, self, "cluster_var_idx", label="Cluster:",
             callback=self._invalidate_scores)
         self.cluster_var_model = itemmodels.VariableListModel(parent=self)
         self.cluster_var_cb.setModel(self.cluster_var_model)
 
-        gui.spin(box, self, "bar_size", minv=1, maxv=10, label="Bar Size",
+        gui.spin(box, self, "bar_size", minv=1, maxv=10, label="Bar size:",
                  callback=self._update_bar_size)
 
         gui.checkBox(box, self, "group_by_cluster", "Group by cluster",
                      callback=self._replot)
 
         self.annotation_cb = gui.comboBox(
-            box, self, "annotation_var_idx", label="Annotations",
+            box, self, "annotation_var_idx", label="Annotations:",
             callback=self._update_annotations)
         self.annotation_var_model = itemmodels.VariableListModel(parent=self)
         self.annotation_var_model[:] = ["None"]
@@ -91,9 +91,9 @@ class OWSilhouettePlot(widget.OWWidget):
         gui.rubber(self.controlArea)
 
         box = gui.vBox(self.controlArea, "Output")
+        box.setFixedWidth(190)
         gui.checkBox(box, self, "add_scores", "Add silhouette scores",)
-        gui.auto_commit(box, self, "auto_commit", "Commit",
-                        auto_label="Auto commit", box=False)
+        gui.auto_commit(box, self, "auto_commit", "Apply", box=False)
 
         self.scene = QtGui.QGraphicsScene()
         self.view = QtGui.QGraphicsView(self.scene)

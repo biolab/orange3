@@ -278,7 +278,7 @@ class OWDistanceMap(widget.OWWidget):
         self._selection = None
 
         self.sorting_cb = gui.comboBox(
-            self.controlArea, self, "sorting", box="Element sorting",
+            self.controlArea, self, "sorting", box="Element Sorting",
             items=["None", "Clustering", "Clustering with ordered leaves"],
             callback=self._invalidate_ordering)
 
@@ -303,13 +303,13 @@ class OWDistanceMap(widget.OWWidget):
 #                         createLabel=False, callback=self._update_color)
 #         )
         form.addRow(
-            "Low",
+            "Low:",
             gui.hSlider(box, self, "color_low", minValue=0.0, maxValue=1.0,
                         step=0.05, ticks=True, intOnly=False,
                         createLabel=False, callback=self._update_color)
         )
         form.addRow(
-            "High",
+            "High:",
             gui.hSlider(box, self, "color_high", minValue=0.0, maxValue=1.0,
                         step=0.05, ticks=True, intOnly=False,
                         createLabel=False, callback=self._update_color)
@@ -324,7 +324,7 @@ class OWDistanceMap(widget.OWWidget):
         self.controlArea.layout().addStretch()
 
         gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send data", "Auto send is on")
+                        "Send Selected")
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)

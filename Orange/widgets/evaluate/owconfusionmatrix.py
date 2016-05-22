@@ -72,8 +72,8 @@ class OWConfusionMatrix(widget.OWWidget):
     """Confusion matrix widget"""
 
     name = "Confusion Matrix"
-    description = "Display confusion matrix constructed from results " \
-                  "of evaluation of classifiers."
+    description = "Display a confusion matrix constructed from " \
+                  "the results of classifier evaluations."
     icon = "icons/ConfusionMatrix.svg"
     priority = 1001
 
@@ -126,7 +126,7 @@ class OWConfusionMatrix(widget.OWWidget):
                    callback=self.select_correct, autoDefault=False)
         gui.button(box, self, "Select Misclassified",
                    callback=self.select_wrong, autoDefault=False)
-        gui.button(box, self, "Clear selection",
+        gui.button(box, self, "Clear Selection",
                    callback=self.select_none, autoDefault=False)
 
         self.outputbox = box = gui.vBox(self.controlArea, "Output")
@@ -137,7 +137,7 @@ class OWConfusionMatrix(widget.OWWidget):
                      callback=self._invalidate)
 
         gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send Data", "Auto send is on")
+                        "Send Selected", "Send Automatically")
 
         grid = QGridLayout()
 

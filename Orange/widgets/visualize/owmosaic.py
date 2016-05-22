@@ -83,7 +83,7 @@ class OWMosaicDisplay(OWWidget):
             for i in range(1, 5)]
         self.rb_colors = gui.radioButtonsInBox(
                 self.controlArea, self, "interior_coloring",
-                self.interior_coloring_opts, box="Interior coloring",
+                self.interior_coloring_opts, box="Interior Coloring",
                 callback=self.update_graph)
         self.bar_button = gui.checkBox(
                 gui.indentedBox(self.rb_colors),

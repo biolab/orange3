@@ -25,12 +25,6 @@ reproducible) and a screenshot (if applicable).
 [bug reporting guidelines]: https://www.google.com/search?q=reporting+bugs
 
 
-Human interface guidelines 
---------------------------
-
-Use title case for titles, push buttons, menu titles and menu options. Elsewhere, use sentence case.
-
-
 Coding style
 ------------
 
@@ -70,6 +64,17 @@ Please ensure your commits pass code quality assurance by executing:
 [Google Python Style Guide]: https://google.github.io/styleguide/pyguide.html
 [Napoleon]: http://www.sphinx-doc.org/en/stable/ext/napoleon.html
 [keyword args to the constructor]: http://pyqt.sourceforge.net/Docs/PyQt5/qt_properties.html
+
+
+Human Interface Guidelines
+--------------------------
+For UI design, conform to the [OS X Human Interface Guidelines].
+In a nutshell, use title case for titles, push buttons, menu titles
+and menu options. Elsewhere, use sentence case. Use title case for
+combo box options where the item is imperative (e.g. Initialize with Method)
+and sentence case otherwise.
+
+[OS X Human Interface Guidelines]: https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html
 
 
 Tests

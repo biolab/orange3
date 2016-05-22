@@ -38,7 +38,7 @@ def font_resize(font, factor, minsize=None, maxsize=None):
 
 class OWScatterPlot(OWWidget):
     name = 'Scatter Plot'
-    description = 'Scatter plot visualization.'
+    description = 'Scatterplot visualization with explorative analysis and intelligent data visualization enhancements.'
     icon = "icons/ScatterPlot.svg"
 
     inputs = [("Data", Table, "set_data", Default),
@@ -102,7 +102,7 @@ class OWScatterPlot(OWWidget):
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
         self.vizrank_button = gui.button(
-            vizrank_box, self, "Rank projections", callback=self.vizrank.reshow,
+            vizrank_box, self, "Rank Projections", callback=self.vizrank.reshow,
             tooltip="Find projections with good class separation")
         self.vizrank_button.setEnabled(False)
         gui.separator(box)
@@ -167,7 +167,7 @@ class OWScatterPlot(OWWidget):
         self.graph.set_palette(p)
 
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
-                        "Send Selection")
+                        "Send Selection", "Send Automatically")
 
         def zoom(s):
             """Zoom in/out by factor `s`."""

@@ -117,10 +117,10 @@ class OWMDS(widget.OWWidget):
 
     JitterAmount = [
         ("None", 0),
-        ("0.1%", 0.1),
-        ("0.5%", 0.5),
-        ("1%", 1.0),
-        ("2%", 2.0)
+        ("0.1 %", 0.1),
+        ("0.5 %", 0.5),
+        ("1 %", 1.0),
+        ("2 %", 2.0)
     ]
     #: Runtime state
     Running, Finished, Waiting = 1, 2, 3
@@ -188,13 +188,13 @@ class OWMDS(widget.OWWidget):
         form.addRow("Max iterations:",
                     gui.spin(box, self, "max_iter", 10, 10 ** 4, step=1))
 
-        form.addRow("Initialization",
+        form.addRow("Initialization:",
                     gui.comboBox(box, self, "initialization",
                                  items=["PCA (Torgerson)", "Random"],
                                  callback=self.__invalidate_embedding))
 
         box.layout().addLayout(form)
-        form.addRow("Refresh",
+        form.addRow("Refresh:",
                     gui.comboBox(
                         box, self, "refresh_rate",
                         items=[t for t, _ in OWMDS.RefreshRate],
@@ -211,25 +211,25 @@ class OWMDS(widget.OWWidget):
             labelWidth=50, contentsLength=12)
 
         self.cb_color_value = gui.comboBox(
-            box, self, "color_value", label="Color",
+            box, self, "color_value", label="Color:",
             callback=self._on_color_index_changed, **common_options)
         self.cb_color_value.setModel(self.colorvar_model)
 
         self.shapevar_model = itemmodels.VariableListModel()
         self.cb_shape_value = gui.comboBox(
-            box, self, "shape_value", label="Shape",
+            box, self, "shape_value", label="Shape:",
             callback=self._on_shape_index_changed, **common_options)
         self.cb_shape_value.setModel(self.shapevar_model)
 
         self.sizevar_model = itemmodels.VariableListModel()
         self.cb_size_value = gui.comboBox(
-            box, self, "size_value", label="Size",
+            box, self, "size_value", label="Size:",
             callback=self._on_size_index_changed, **common_options)
         self.cb_size_value.setModel(self.sizevar_model)
 
         self.labelvar_model = itemmodels.VariableListModel()
         self.cb_label_value = gui.comboBox(
-            box, self, "label_value", label="Label",
+            box, self, "label_value", label="Label:",
             callback=self._on_label_index_changed, **common_options)
         self.cb_label_value.setModel(self.labelvar_model)
 
@@ -239,23 +239,23 @@ class OWMDS(widget.OWWidget):
             fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
             verticalSpacing=10
         )
-        form.addRow("Symbol size",
+        form.addRow("Symbol size:",
                     gui.hSlider(box, self, "symbol_size",
                                 minValue=1, maxValue=20,
                                 callback=self._on_size_index_changed,
                                 createLabel=False))
-        form.addRow("Symbol opacity",
+        form.addRow("Symbol opacity:",
                     gui.hSlider(box, self, "symbol_opacity",
                                 minValue=100, maxValue=255, step=100,
                                 callback=self._on_color_index_changed,
                                 createLabel=False))
-        form.addRow("Show similar pairs",
+        form.addRow("Show similar pairs:",
                     gui.hSlider(
                         gui.hBox(self.controlArea),
                         self, "connected_pairs", minValue=0, maxValue=20,
                         createLabel=False,
                         callback=self._on_connected_changed))
-        form.addRow("Jitter",
+        form.addRow("Jitter:",
                     gui.comboBox(
                         box, self, "jitter",
                         items=[text for text, _ in self.JitterAmount],
@@ -321,8 +321,8 @@ class OWMDS(widget.OWWidget):
                    "Coordinates as features",
                    "Coordinates as meta attributes"],
             callback=self._invalidate_output, addSpace=4)
-        gui.auto_commit(box, self, "autocommit", "Send data",
-                        checkbox_label="Send after any change",
+        gui.auto_commit(box, self, "autocommit", "Send Selected",
+                        checkbox_label="Send selected automatically",
                         box=None)
 
         self.plot = pg.PlotWidget(background="w", enableMenu=False)
@@ -443,7 +443,7 @@ class OWMDS(widget.OWWidget):
             attr = "Attribute names"
             self.labelvar_model[:] = ["No labels", attr]
             self.shapevar_model[:] = ["Same shape", attr]
-            self.colorvar_model[:] = ["Same color", attr]
+            self.colorvar_model[:] = ["Same solor", attr]
 
             self.color_value = attr
             self.shape_value = attr

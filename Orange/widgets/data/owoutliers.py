@@ -13,7 +13,7 @@ from Orange.widgets.utils.sql import check_sql_input
 
 class OWOutliers(widget.OWWidget):
     name = "Outliers"
-    description = "Detects outliers."
+    description = "Detect outliers."
     icon = "icons/Outliers.svg"
     priority = 3000
     category = "Data"
@@ -46,11 +46,11 @@ class OWOutliers(widget.OWWidget):
         self.in_out_info_label = gui.widgetLabel(box,
                                                  self.in_out_info_default)
 
-        box = gui.vBox(self.controlArea, "Outlier detection method")
+        box = gui.vBox(self.controlArea, "Outlier Detection Method")
         detection = gui.radioButtons(box, self, "outlier_method")
 
         gui.appendRadioButton(detection,
-                              "One class SVM with non-linear kernel (RBF):")
+                              "One class SVM with non-linear kernel (RBF)")
         ibox = gui.indentedBox(detection)
         tooltip = "An upper bound on the fraction of training errors and a " \
                   "lower bound of the fraction of support vectors"
@@ -63,7 +63,7 @@ class OWOutliers(widget.OWWidget):
             spinType=float, minv=0.01, maxv=10, callback=self.gamma_changed)
         gui.separator(detection, 12)
 
-        self.rb_cov = gui.appendRadioButton(detection, "Covariance estimator:")
+        self.rb_cov = gui.appendRadioButton(detection, "Covariance estimator")
         ibox = gui.indentedBox(detection)
         self.l_cov = gui.widgetLabel(ibox, 'Contamination:')
         self.cont_slider = gui.hSlider(

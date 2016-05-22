@@ -453,7 +453,7 @@ class ClassificationTreeNode(TreeNode):
 
 class OWClassificationTreeGraph(OWTreeGraph):
     name = "Classification Tree Viewer"
-    description = "Graphical visualization of a classification tree."
+    description = "A graphical visualization of a classification tree."
     icon = "icons/ClassificationTreeGraph.svg"
 
     settingsHandler = ClassValuesContextHandler()
@@ -470,7 +470,7 @@ class OWClassificationTreeGraph(OWTreeGraph):
             addToLayout=False,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
                                    QSizePolicy.Fixed))
-        self.display_box.layout().addRow("Target class ", self.target_combo)
+        self.display_box.layout().addRow("Target class: ", self.target_combo)
         gui.rubber(self.controlArea)
 
     def ctree(self, model=None):
