@@ -266,7 +266,7 @@ class OWLinearProjection(widget.OWWidget):
         box1 = gui.vBox(box, "Displayed", margin=0)
         box1.setFlat(True)
         self.active_view = view = QListView(
-            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Ignored),
+            sizePolicy=QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored),
             selectionMode=QListView.ExtendedSelection,
             dragEnabled=True,
             defaultDropAction=Qt.MoveAction,
@@ -298,14 +298,14 @@ class OWLinearProjection(widget.OWWidget):
         box1 = gui.vBox(box, "Other", margin=0)
         box1.setFlat(True)
         self.other_view = view = QListView(
-            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Ignored),
+            sizePolicy=QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored),
             selectionMode=QListView.ExtendedSelection,
             dragEnabled=True,
             defaultDropAction=Qt.MoveAction,
             dragDropOverwriteMode=False,
             dragDropMode=QListView.DragDrop,
             showDropIndicator=True,
-            minimumHeight=150
+            minimumHeight=100
         )
         view.viewport().setAcceptDrops(True)
         moveup = QtGui.QAction(
@@ -320,7 +320,7 @@ class OWLinearProjection(widget.OWWidget):
 
         box1.layout().addWidget(view)
 
-        box = gui.vBox(self.controlArea, "Plot Properties")
+        box = gui.vBox(self.controlArea, box=True)
         box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
@@ -337,26 +337,35 @@ class OWLinearProjection(widget.OWWidget):
 
         cb = gui.comboBox(box, self, "color_index",
                           callback=self._on_color_change,
-                          contentsLength=12)
+                          contentsLength=10)
         cb.setModel(self.colorvar_model)
-        form.addRow("Colors:", cb)
+        form.addRow("Color:", cb)
 
+        box = gui.vBox(None)
+        hbox = gui.indentedBox(box, orientation=Qt.Horizontal)
+        gui.widgetLabel(hbox, "Opacity: ")
         alpha_slider = QSlider(
             Qt.Horizontal, minimum=10, maximum=255, pageStep=25,
             tickPosition=QSlider.TicksBelow, value=self.alpha_value)
         alpha_slider.valueChanged.connect(self._set_alpha)
-        form.addRow("Opacity:", alpha_slider)
+        hbox.layout().addWidget(alpha_slider)
+
+        self.cb_class_density = gui.checkBox(
+            gui.indentedBox(box), self, "class_density",
+            label="Show class density", callback=self._update_density)
+        gui.separator(box)
+        form.addRow(box)
 
         cb = gui.comboBox(box, self, "shape_index",
                           callback=self._on_shape_change,
-                          contentsLength=12)
+                          contentsLength=10)
 
         cb.setModel(self.shapevar_model)
         form.addRow("Shape:", cb)
 
         cb = gui.comboBox(box, self, "size_index",
                           callback=self._on_size_change,
-                          contentsLength=12)
+                          contentsLength=10)
 
         cb.setModel(self.sizevar_model)
         form.addRow("Size:", cb)
@@ -374,15 +383,12 @@ class OWLinearProjection(widget.OWWidget):
             callback=self._invalidate_plot)
         form.addRow("Jittering:", cb)
 
-        self.cb_class_density = gui.checkBox(box, self, "class_density", label="",
-                                             callback=self._update_density)
-        form.addRow("Class density:", self.cb_class_density)
-
         toolbox = gui.vBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()
         toolbox.layout().addLayout(toollayout)
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection")
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
+                        auto_label="Send Automatically")
 
         self.controlArea.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Expanding)
