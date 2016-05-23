@@ -1,5 +1,6 @@
 from bisect import bisect_left
 import sys
+from Orange.widgets.tests.base  import GuiTest
 
 import numpy as np
 from PyQt4.QtCore import Qt, QTimer
@@ -618,6 +619,35 @@ def test_main(argv=None):
     ow.onDeleteWidget()
 
     return rval
+
+
+class Test(GuiTest):
+    def setUp(self):
+        filename = "iris"
+        self.ow = OWScatterPlot()
+        self.data = Orange.data.Table(filename)
+
+    def test_set_data(self):
+        self.ow.set_data(self.data)
+        self.assertEqual(self.ow.data, self.data)
+        self.assertEqual(self.ow.subset_data, None)
+
+    def test_subset_data(self):
+        self.ow.set_subset_data(self.data[:30])
+        self.assertEqual(len(self.ow.subset_data), 30)
+        self.assertEqual(self.ow.data, None)
+        np.testing.assert_array_equal(self.ow.subset_data, self.data[:30])
+
+    def test_set_data_none(self):
+        self.ow.set_data(None)
+        self.assertEqual(self.ow.data, None)
+        self.assertEqual(self.ow.subset_data, None)
+
+    def test_subset_data_none(self):
+        self.ow.set_subset_data(None)
+        self.assertEqual(self.ow.subset_data, None)
+        self.assertEqual(self.ow.data, None)
+
 
 if __name__ == "__main__":
     test_main()
