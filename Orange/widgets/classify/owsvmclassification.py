@@ -33,9 +33,9 @@ class OWBaseSVM(OWBaseLearner):
         # Initialize with the widest label to measure max width
         self.kernel_eq = self.kernels[-1][1]
 
-        self.kernel_box = box = gui.hBox(self.controlArea, "Kernel")
+        box = gui.hBox(self.controlArea, "Kernel")
 
-        buttonbox = gui.radioButtonsInBox(
+        self.kernel_box = buttonbox = gui.radioButtonsInBox(
             box, self, "kernel_type", btnLabels=[k[0] for k in self.kernels],
             callback=self._on_kernel_changed, addSpace=20)
         buttonbox.layout().setSpacing(10)
@@ -70,8 +70,7 @@ class OWBaseSVM(OWBaseLearner):
             self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
             label="Numerical tolerance:",
             decimals=6, alignment=Qt.AlignRight, controlWidth=100,
-            callback=self.settings_changed
-        )
+            callback=self.settings_changed)
 
     def add_main_layout(self):
         self._add_type_box()
@@ -88,7 +87,6 @@ class OWBaseSVM(OWBaseLearner):
         mask = enabled[self.kernel_type]
         for spin, enabled in zip(self._kernel_params, mask):
             [spin.box.hide, spin.box.show][enabled]()
-
         self.settings_changed()
 
     def _report_kernel_parameters(self, items):
@@ -97,12 +95,12 @@ class OWBaseSVM(OWBaseLearner):
         elif self.kernel_type == 1:
             items["Kernel"] = \
                 "Polynomial, ({g:.4} x⋅y + {c:.4})<sup>{d}</sup>".format(
-                g=self.gamma, c=self.coef0, d=self.degree)
+                    g=self.gamma, c=self.coef0, d=self.degree)
         elif self.kernel_type == 2:
             items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(self.gamma)
         else:
             items["Kernel"] = "Sigmoid, tanh({g:.4} x⋅y + {c:.4})".format(
-                    g=self.gamma, c=self.coef0)
+                g=self.gamma, c=self.coef0)
 
     def update_model(self):
         super().update_model()
@@ -136,8 +134,8 @@ class OWSVMClassification(OWBaseSVM):
     def _add_type_box(self):
         form = QtGui.QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
-                self.controlArea, self, "svmtype", [], box="SVM Type",
-                orientation=form, callback=self.settings_changed)
+            self.controlArea, self, "svmtype", [], box="SVM Type",
+            orientation=form, callback=self.settings_changed)
 
         form.addWidget(gui.appendRadioButton(box, "C-SVM", addToLayout=False),
                        0, 0, Qt.AlignLeft)
