@@ -4,6 +4,7 @@ from xlrd import open_workbook
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
+from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import PyListModel
@@ -411,7 +412,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         urls = event.mimeData().urls()
         if urls:
             try:
-                FileFormat.get_reader(urls[0].toLocalFile())
+                FileFormat.get_reader(OSX_NSURL_toLocalFile(urls[0]) or
+                                      urls[0].toLocalFile())
                 event.acceptProposedAction()
             except IOError:
                 pass
@@ -420,7 +422,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         """Handle file drops"""
         urls = event.mimeData().urls()
         if urls:
-            self.add_path(urls[0].toLocalFile())  # add first file
+            self.add_path(OSX_NSURL_toLocalFile(urls[0]) or
+                          urls[0].toLocalFile())  # add first file
             self.source = self.LOCAL_FILE
             self.load_data()
 

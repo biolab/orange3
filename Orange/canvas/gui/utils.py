@@ -13,7 +13,7 @@ from PyQt4.QtGui import (
     QPainter, QStyleOption, QStyle
 )
 
-from PyQt4.QtCore import QPointF
+from PyQt4.QtCore import QPointF, QUrl
 
 import sip
 
@@ -305,3 +305,15 @@ def message(icon, text, title=None, informative_text=None, details=None,
         mbox.setDefaultButton(default_button)
 
     return mbox.exec_()
+
+
+def OSX_NSURL_toLocalFile(url):
+    """Return OS X NSURL file reference as local file path or '' if not NSURL"""
+    if isinstance(url, QUrl):
+        url = url.toString()
+    if not url.startswith('file:///.file/id='):
+        return ''
+    from subprocess import Popen, PIPE, DEVNULL
+    process = Popen(['osascript', '-e', 'get POSIX path of POSIX file "{}"'.format(url)],
+                    stdout=PIPE, stderr=DEVNULL)
+    return process.stdout.read().strip().decode()
