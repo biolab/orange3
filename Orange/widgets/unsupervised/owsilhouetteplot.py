@@ -83,17 +83,21 @@ class OWSilhouettePlot(widget.OWWidget):
         self.cluster_var_cb.setModel(self.cluster_var_model)
 
         box = gui.vBox(self.controlArea, "Bars")
-        gui.widgetLabel(box, "Annotations:")
-        self.annotation_cb = gui.comboBox(
-            box, self, "annotation_var_idx", callback=self._update_annotations,
-            addSpace=6)
-        self.annotation_var_model = itemmodels.VariableListModel(parent=self)
-        self.annotation_var_model[:] = ["None"]
-        self.annotation_cb.setModel(self.annotation_var_model)
         gui.widgetLabel(box, "Bar width:")
         gui.hSlider(
             box, self, "bar_size", minValue=1, maxValue=10, step=1,
-            callback=self._update_bar_size)
+            callback=self._update_bar_size, addSpace=6)
+        gui.widgetLabel(box, "Annotations:")
+        self.annotation_cb = gui.comboBox(
+            box, self, "annotation_var_idx", callback=self._update_annotations)
+        self.annotation_var_model = itemmodels.VariableListModel(parent=self)
+        self.annotation_var_model[:] = ["None"]
+        self.annotation_cb.setModel(self.annotation_var_model)
+        ibox = gui.indentedBox(box, 5)
+        self.ann_hidden_warning = warning = gui.widgetLabel(
+            ibox, "(increase the width to show)")
+        ibox.setFixedWidth(ibox.sizeHint().width())
+        warning.setVisible(False)
 
         gui.rubber(self.controlArea)
 
@@ -229,14 +233,20 @@ class OWSilhouettePlot(widget.OWWidget):
         self._labels = labels
         self._silhouette = silhouette
 
+    def _set_bar_height(self):
+        visible = self.bar_size >= 5
+        self._silplot.setBarHeight(self.bar_size)
+        self._silplot.setRowNamesVisible(visible)
+        self.ann_hidden_warning.setVisible(
+            not visible and self.annotation_var_idx > 0)
+
     def _replot(self):
         # Clear and replot/initialize the scene
         self._clear_scene()
         if self._silhouette is not None and self._labels is not None:
             var = self.cluster_var_model[self.cluster_var_idx]
-            silplot = SilhouettePlot()
-            silplot.setBarHeight(self.bar_size)
-            silplot.setRowNamesVisible(self.bar_size >= 5)
+            self._silplot = silplot = SilhouettePlot()
+            self._set_bar_height()
 
             if self.group_by_cluster:
                 silplot.setScores(self._silhouette, self._labels, var.values)
@@ -248,7 +258,6 @@ class OWSilhouettePlot(widget.OWWidget):
                 )
 
             self.scene.addItem(silplot)
-            self._silplot = silplot
             self._update_annotations()
 
             silplot.resize(silplot.effectiveSizeHint(Qt.PreferredSize))
@@ -260,9 +269,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _update_bar_size(self):
         if self._silplot is not None:
-            self._silplot.setBarHeight(self.bar_size)
-            self._silplot.setRowNamesVisible(self.bar_size >= 5)
-
+            self._set_bar_height()
             self.scene.setSceneRect(
                 QRectF(QtCore.QPointF(0, 0),
                        self._silplot.effectiveSizeHint(Qt.PreferredSize)))
@@ -272,6 +279,8 @@ class OWSilhouettePlot(widget.OWWidget):
             annot_var = self.annotation_var_model[self.annotation_var_idx]
         else:
             annot_var = None
+        self.ann_hidden_warning.setVisible(
+            self.bar_size < 5 and annot_var is not None)
 
         if self._silplot is not None:
             if annot_var is not None:
