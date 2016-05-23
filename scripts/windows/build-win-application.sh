@@ -268,6 +268,9 @@ function prepare_req {
 }
 
 function prepare_orange {
+    # ensure pip v8 is installed in the build env (so it is able to retrieve
+    # wheel>=0.27 build .whl packages.
+    python -m pip install pip==8.1.2
     # ensure that correct numpy and scipy are installed in the build env
     pip install --no-index -f "$BUILDBASE/wheelhouse" \
                 --only-binary numpy,scipy \
