@@ -35,6 +35,7 @@ from Orange.widgets.data.owselectrows import OWSelectRows
 from Orange.widgets.data.owsql import OWSql
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.data.owcolor import OWColor
+from Orange.widgets.data.owpreprocess import OWPreprocess
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
@@ -90,7 +91,7 @@ class TestReportWidgets(unittest.TestCase):
                     OWDiscretize, OWFeatureConstructor, OWOutliers, OWImpute,
                     OWMergeData, OWFile, OWPaintData, OWPurgeDomain, OWRank,
                     OWSelectAttributes, OWSelectRows, OWSql, OWDataTable,
-                    OWColor]
+                    OWColor, OWPreprocess]
     eval_widgets = [OWCalibrationPlot, OWLiftCurve, OWROCAnalysis]
     regr_widgets = [OWRegressionTree, OWKNNRegression, OWMean, OWSVMRegression]
     unsu_widgets = [OWCorrespondenceAnalysis, OWDistances, OWKMeans,
@@ -134,7 +135,7 @@ class TestReportWidgets(unittest.TestCase):
         rep = OWReport.get_instance()
         data = Table("zoo")
         widgets = self.data_widgets
-        self.assertEqual(len(widgets), 18)
+        self.assertEqual(len(widgets), 19)
         self._create_report(widgets, rep, data, app)
 
     def test_report_widgets_evaluate(self):

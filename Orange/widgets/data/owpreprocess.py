@@ -2,7 +2,7 @@ import sys
 import bisect
 import contextlib
 import warnings
-
+from collections import OrderedDict
 import pkg_resources
 
 import numpy
@@ -226,15 +226,20 @@ class DiscretizeEditor(BaseEditor):
         resolved.update(params)
         return preprocess.Discretize(method(**params), remove_const=False)
 
+    def __repr__(self):
+        n_int = ", Number of intervals: {}".format(self.__nintervals) \
+            if self.__method in [self.EqualFreq, self.EqualWidth] else ""
+        return "{}{}".format(self.Names[self.__method], n_int)
+
 
 class ContinuizeEditor(BaseEditor):
-    Continuizers = [
-        ("Most frequent is base", Continuize.FrequentAsBase),
-        ("One attribute per value", Continuize.Indicators),
-        ("Remove multinomial attributes", Continuize.RemoveMultinomial),
-        ("Remove all discrete attributes", Continuize.Remove),
-        ("Treat as ordinal", Continuize.AsOrdinal),
-        ("Divide by number of values", Continuize.AsNormalizedOrdinal)]
+    Continuizers = OrderedDict({
+        Continuize.FrequentAsBase: "Most frequent is base",
+        Continuize.Indicators: "One attribute per value",
+        Continuize.RemoveMultinomial: "Remove multinomial attributes",
+        Continuize.Remove: "Remove all discrete attributes",
+        Continuize.AsOrdinal: "Treat as ordinal",
+        Continuize.AsNormalizedOrdinal: "Divide by number of values"})
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -244,7 +249,7 @@ class ContinuizeEditor(BaseEditor):
         self.__group = group = QButtonGroup(exclusive=True)
         group.buttonClicked.connect(self.__on_buttonClicked)
 
-        for text, treatment in ContinuizeEditor.Continuizers:
+        for treatment, text in ContinuizeEditor.Continuizers.items():
             rb = QRadioButton(
                 text=text,
                 checked=self.__treatment == treatment)
@@ -280,6 +285,9 @@ class ContinuizeEditor(BaseEditor):
         params = dict(params)
         treatment = params.pop("multinomial_treatment", Continuize.Indicators)
         return Continuize(multinomial_treatment=treatment)
+
+    def __repr__(self):
+        return self.Continuizers[self.__treatment]
 
 
 class _RemoveNaNRows(preprocess.preprocess.Preprocess):
@@ -362,6 +370,9 @@ class ImputeEditor(BaseEditor):
             defaults = dict(defaults)
             defaults.update(params)
             return preprocess.Impute(method=method)
+
+    def __repr__(self):
+        return self.Names[self.__method]
 
 
 class UnivariateFeatureSelect(QWidget):
@@ -541,6 +552,11 @@ class FeatureSelectEditor(BaseEditor):
             # TODO: implement top percentile selection
             raise NotImplementedError
 
+    def __repr__(self):
+        params = self.__uni_fs.parameters()
+        return "Score: {}, Strategy (Fixed): {}".format(
+            self.MEASURES[params["score"]][0], params["k"])
+
 # TODO: Model based FS (random forest variable importance, ...), RFE
 # Unsupervised (min variance, constant, ...)??
 
@@ -673,6 +689,10 @@ class Scale(BaseEditor):
 
         return _Scaling(center=center, scale=scale)
 
+    def __repr__(self):
+        return "{}, {}".format(self.__centercb.currentText(),
+                               self.__scalecb.currentText())
+
 
 class _Randomize(preprocess.preprocess.Preprocess):
     """
@@ -717,6 +737,9 @@ class Randomize(BaseEditor):
         rand_type = params.get("rand_type", Randomize.RandomizeClasses)
         return _Randomize(rand_type=rand_type)
 
+    def __repr__(self):
+        return self.__rand_type_cb.currentText()
+
 
 class PCA(BaseEditor):
 
@@ -750,6 +773,9 @@ class PCA(BaseEditor):
     def createinstance(params):
         n_components = params.get("n_components", 10)
         return ProjectPCA(n_components=n_components)
+
+    def __repr__(self):
+        return "Components: {}".format(self.cspin.value())
 
 
 class CUR(BaseEditor):
@@ -799,6 +825,10 @@ class CUR(BaseEditor):
         rank = params.get("rank", 10)
         max_error = params.get("max_error", 1)
         return ProjectCUR(rank=rank, max_error=max_error)
+
+    def __repr__(self):
+        return "Rank: {}, Relative error: {}".format(self.rspin.value(),
+                                                     self.espin.value())
 
 
 # This is intended for future improvements.
@@ -1907,6 +1937,12 @@ class OWPreprocess(widget.OWWidget):
     def sizeHint(self):
         sh = super().sizeHint()
         return sh.expandedTo(QSize(sh.width(), 500))
+
+    def send_report(self):
+        pp = [(self.controler.model().index(i, 0).data(Qt.DisplayRole), w)
+              for i, w in enumerate(self.controler.view.widgets())]
+        if len(pp):
+            self.report_items("Settings", pp)
 
 
 def test_main(argv=sys.argv):
