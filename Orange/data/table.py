@@ -203,6 +203,10 @@ class Table(MutableSequence, Storage):
 
         return cls.from_numpy(domain, *args, **kwargs)
 
+    def __init__(self, *args, **kwargs):
+        # So subclasses can expect to call super without breakage; noop
+        pass
+
     @classmethod
     def from_domain(cls, domain, n_rows=0, weights=False):
         """
@@ -494,7 +498,7 @@ class Table(MutableSequence, Storage):
         writer.write_file(filename, self)
 
     @classmethod
-    def from_file(cls, filename, wrapper=None):
+    def from_file(cls, filename):
         """
         Read a data table from a file. The path can be absolute or relative.
 
@@ -508,8 +512,12 @@ class Table(MutableSequence, Storage):
         absolute_filename = FileFormat.locate(filename, dataset_dirs)
         reader = FileFormat.get_reader(absolute_filename)
         data = reader.read()
-        if wrapper:
-            data = wrapper(data)
+
+        # Readers return plain table. Make sure to cast it to appropriate
+        # (subclass) type
+        if cls != data.__class__:
+            data = cls(data)
+
         data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
@@ -521,7 +529,10 @@ class Table(MutableSequence, Storage):
     def from_url(cls, url):
         from Orange.data.io import UrlReader
         reader = UrlReader(url)
-        return reader.read()
+        data = reader.read()
+        if cls != data.__class__:
+            data = cls(data)
+        return data
 
     # Helper function for __setitem__ and insert:
     # Set the row of table data matrices
