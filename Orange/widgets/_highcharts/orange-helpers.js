@@ -16,6 +16,9 @@ function fixupOptionsObject(obj) {
         var key = keys[i],
             val = obj[key];
 
+        if (val === null || val === undefined)
+            continue;
+
         // Make sure arrays are of type Array and not Qt's RuntimeArray
         // Can probably be removed once Qt 4's WebKit support is dropped.
         if (val.constructor === Array &&
