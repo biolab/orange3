@@ -297,9 +297,10 @@ class OWPredictions(widget.OWWidget):
 
     def _update_column_visibility(self):
         """Update data column visibility."""
-        domain = self.data.domain
-        first_attr = len(domain.class_vars) + len(domain.metas)
         if self.data is not None:
+            domain = self.data.domain
+            first_attr = len(domain.class_vars) + len(domain.metas)
+
             for i in range(first_attr, first_attr + len(domain.attributes)):
                 self.dataview.setColumnHidden(i, not self.show_attrs)
             if domain.class_var:
