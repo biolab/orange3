@@ -120,14 +120,14 @@ class OWPredictions(widget.OWWidget):
             handleWidth=2,
         )
         self.dataview = QtGui.QTableView(
-            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
             selectionMode=QtGui.QTableView.NoSelection,
             focusPolicy=Qt.StrongFocus
         )
         self.predictionsview = QtGui.QTableView(
-            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
             selectionMode=QtGui.QTableView.NoSelection,
@@ -136,7 +136,7 @@ class OWPredictions(widget.OWWidget):
         )
 
         self.predictionsview.setItemDelegate(PredictionsItemDelegate())
-        self.predictionsview.verticalHeader().hide()
+        self.dataview.verticalHeader().hide()
 
         dsbar = self.dataview.verticalScrollBar()
         psbar = self.predictionsview.verticalScrollBar()
@@ -152,11 +152,10 @@ class OWPredictions(widget.OWWidget):
                     .resizeSection(index, size)
         )
 
-        self.splitter.addWidget(self.dataview)
         self.splitter.addWidget(self.predictionsview)
+        self.splitter.addWidget(self.dataview)
 
         self.mainArea.layout().addWidget(self.splitter)
-        self.spliter_restore_state = int(self.show_attrs), 300
 
     @check_sql_input
     def set_data(self, data):
@@ -305,7 +304,6 @@ class OWPredictions(widget.OWWidget):
                 self.dataview.setColumnHidden(i, not self.show_attrs)
             if domain.class_var:
                 self.dataview.setColumnHidden(0, False)
-            self._update_spliter()
 
     def _update_data_sort_order(self):
         """Update data row order to match the current predictions view order"""
@@ -377,6 +375,7 @@ class OWPredictions(widget.OWWidget):
             proxy = self.predictionsview.model()
             if proxy is not None:
                 proxy.setProbInd(numpy.array(self.selected_classes, dtype=int))
+        self._update_spliter()
 
     def _update_spliter(self):
         if self.data is None:
@@ -387,44 +386,9 @@ class OWPredictions(widget.OWWidget):
             v_header = view.verticalHeader()
             return h_header.length() + v_header.width()
 
-        def widthForColumns(view, start=0, end=None):
-            h_header = view.horizontalHeader()
-            v_header = view.verticalHeader()
-            width = sum([h_header.sectionSize(i)
-                         for i in range(h_header.count())[start: end]])
-            return v_header.width() + width
-
-        if not self.show_attrs:
-            w1, w2 = self.splitter.sizes()
-            # w = widthHint(self.dataview)
-            w = width(self.dataview) + 4
-            self.splitter.setSizes([w, w1 + w2 - w])
-            self.dataview.setMaximumWidth(w)
-
-            state, w = self.spliter_restore_state
-            if state == 0:
-                # save dataview width on change from 'show all' to 'hide all'
-                self.spliter_restore_state = 1, w1
-        else:
-            w1, w2 = self.splitter.sizes()
-            state, w = self.spliter_restore_state
-            if state == 1:
-                # restore dataview on change from 'hide all' to 'show all'
-                # extend the dataview to the saved width but no further
-                # then 2/3 of the available space
-                w = min(w, (w1 + w2) * 2 // 3)
-            else:
-                # shrink the dataview width if its contents are smaller then
-                # its width
-                w1, w2 = self.splitter.sizes()
-                w = widthForColumns(self.dataview, -2) + 4
-                w = min(w,  (w1 + w2) // 2)
-                predw = widthForColumns(self.predictionsview)
-                w = max(w,  min(w1 + w2 - predw - 20, w1 + w2 - w))
-            self.splitter.setSizes([w, w1 + w2 - w])
-            self.dataview.setMaximumWidth(QWIDGETSIZE_MAX)
-
-            self.spliter_restore_state = 0, w
+        w = width(self.predictionsview) + 4
+        w1, w2 = self.splitter.sizes()
+        self.splitter.setSizes([w, w1 + w2 - w])
 
     def commit(self):
         if self.data is None or not self.predictors:
