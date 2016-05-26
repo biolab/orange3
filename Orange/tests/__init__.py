@@ -3,7 +3,7 @@ import unittest
 import tempfile
 from contextlib import contextmanager
 
-from Orange import widgets
+import Orange
 
 
 @contextmanager
@@ -47,14 +47,13 @@ def test_filename(path):
 
 def suite(loader=None, pattern='test*.py'):
     test_dir = os.path.dirname(__file__)
-    widgets_dir = os.path.dirname(widgets.__file__)
     if loader is None:
         loader = unittest.TestLoader()
     if pattern is None:
         pattern = 'test*.py'
+    top_level_dir = os.path.dirname(os.path.dirname(Orange.__file__))
     all_tests = [
-        loader.discover(test_dir, pattern),
-        loader.discover(widgets_dir, pattern, widgets_dir)
+        loader.discover(test_dir, pattern, top_level_dir),
     ]
 
     return unittest.TestSuite(all_tests)

@@ -11,4 +11,4 @@ cd "$ORANGE_DIR"
 python -c "from Orange.tests import *"
 cp "$TRAVIS_BUILD_DIR"/.coveragerc ./  # for covereage and codecov
 export PYTHONPATH="$ORANGE_DIR" PYTHONUNBUFFERED=x
-catchsegv xvfb-run coverage run --source=Orange -m unittest -v Orange.tests
+catchsegv xvfb-run coverage run --source=Orange -m unittest -v Orange.tests Orange.widgets.tests
