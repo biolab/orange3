@@ -40,7 +40,7 @@ from ..config import ADDON_KEYWORD
 from ..gui.utils import message_warning, message_information, \
                         message_critical as message_error, \
                         OSX_NSURL_toLocalFile
-from ..help.manager import get_dist_meta, trim
+from ..help.manager import get_dist_meta, trim, parse_meta
 
 OFFICIAL_ADDONS = [
     "Orange-Bioinformatics",
@@ -148,6 +148,33 @@ class TristateCheckItemDelegate(QStyledItemDelegate):
                 Qt.Unchecked if checkstate == Qt.Checked else Qt.Checked
 
         return model.setData(index, checkstate, Qt.CheckStateRole)
+
+
+def get_meta_from_archive(path):
+    """Return project name, version and summary extracted from
+    sdist or wheel metadata in a ZIP or tar.gz archive, or None if metadata
+    can't be found."""
+
+    def is_metadata(fname):
+        return fname.endswith(('PKG-INFO', 'METADATA'))
+
+    meta = None
+    if path.endswith(('.zip', '.whl')):
+        from zipfile import ZipFile
+        with ZipFile(path) as archive:
+            meta = next(filter(is_metadata, archive.namelist()), None)
+            if meta:
+                meta = archive.read(meta).decode('utf-8')
+    elif path.endswith(('.tar.gz', '.tgz')):
+        import tarfile
+        with tarfile.open(path) as archive:
+            meta = next(filter(is_metadata, archive.getnames()), None)
+            if meta:
+                meta = archive.extractfile(meta).read().decode('utf-8')
+    if meta:
+        meta = parse_meta(meta)
+        return [meta.get(key, '')
+                for key in ('Name', 'Version', 'Description', 'Summary')]
 
 
 class AddonManagerWidget(QWidget):
@@ -296,6 +323,14 @@ class AddonManagerWidget(QWidget):
         else:
             return -1
 
+    def set_install_projects(self, names):
+        """Mark for installation the add-ons that match any of names"""
+        model = self.__model
+        for row in range(model.rowCount()):
+            item = model.item(row, 1)
+            if item.text() in names:
+                model.item(row, 0).setCheckState(Qt.Checked)
+
     def __data_changed(self, topleft, bottomright):
         rows = range(topleft.row(), bottomright.row() + 1)
         proxy = self.__view.model()
@@ -345,8 +380,8 @@ class AddonManagerWidget(QWidget):
         if isinstance(item, Installed):
             remote, dist = item
             if remote is None:
-                description = get_dist_meta(dist).get("Description")
-                description = description
+                meta = get_dist_meta(dist)
+                description = meta.get("Description") or meta.get('Summary')
             else:
                 description = remote.description
         else:
@@ -533,18 +568,24 @@ class AddonManagerDialog(QDialog):
     def dropEvent(self, event):
         """Allow dropping add-ons (zip or wheel archives) on this dialog to
         install them"""
-        steps = []
+        packages = []
+        names = []
         for url in event.mimeData().urls():
             path = OSX_NSURL_toLocalFile(url) or url.toLocalFile()
             if path.endswith(self.ADDON_EXTENSIONS):
-                steps.append((Install,
-                              Available(
-                                  Installable(path, '999', '', '', path, path))))
-        if steps:
-            self.__accepted(steps)
+                name, vers, summary, descr = (get_meta_from_archive(path) or
+                                              (os.path.basename(path), '', '', ''))
+                names.append(name)
+                packages.append(
+                    Installable(name, vers, summary,
+                                descr or summary, path, [path]))
+        future = concurrent.futures.Future()
+        future.set_result((AddonManagerDialog._packages or []) + packages)
+        self._set_packages(future)
+        self.addonwidget.set_install_projects(names)
 
-    def __accepted(self, steps=None):
-        steps = steps or self.addonwidget.item_state()
+    def __accepted(self):
+        steps = self.addonwidget.item_state()
 
         if steps:
             # Move all uninstall steps to the front
@@ -636,19 +677,6 @@ def list_pypi_addons():
                             release["package_url"],
                             urls)
             )
-
-    # Also add installed packages that have the correct keyword but
-    # perhaps aren't featured on PyPI
-    for dist in pkg_resources.working_set:
-        info = HeaderParser().parsestr(
-            '\n'.join(dist.get_metadata_lines(dist.PKG_INFO)))
-        if ADDON_KEYWORD in info.get('Keywords', ''):
-            packages.append(
-                Installable(dist.project_name, dist.version,
-                            info.get('Summary', ''), info.get('Description', ''),
-                            '', [])
-            )
-
     return packages
 
 
@@ -703,11 +731,12 @@ class Installer(QObject):
         command, pkg = self.__queue.popleft()
         if command == Install:
             inst = pkg.installable
+            inst_name = inst.name if inst.package_url.startswith("http://") else inst.package_url
             self.setStatusMessage("Installing {}".format(inst.name))
 
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
-                   [inst.name])
+                   [inst_name])
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
 
@@ -717,11 +746,12 @@ class Installer(QObject):
 
         elif command == Upgrade:
             inst = pkg.installable
+            inst_name = inst.name if inst.package_url.startswith("http://") else inst.package_url
             self.setStatusMessage("Upgrading {}".format(inst.name))
 
             cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
                    (["--user"] if self.__user_install else []) +
-                   [inst.name])
+                   [inst_name])
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
 
@@ -732,7 +762,7 @@ class Installer(QObject):
             # Why is this here twice??
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
-                   [inst.name])
+                   [inst_name])
             process = python_process(cmd, bufsize=-1, universal_newlines=True)
             retcode, output = self.__subprocessrun(process)
 
