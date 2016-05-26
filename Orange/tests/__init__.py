@@ -1,5 +1,6 @@
 import os
 import unittest
+import tempfile
 from contextlib import contextmanager
 
 from Orange import widgets
@@ -7,8 +8,6 @@ from Orange import widgets
 
 @contextmanager
 def named_file(content, encoding=None):
-    import tempfile
-    import os
     file = tempfile.NamedTemporaryFile("wt", delete=False, encoding=encoding)
     file.write(content)
     name = file.name
@@ -17,6 +16,33 @@ def named_file(content, encoding=None):
         yield name
     finally:
         os.remove(name)
+
+
+def test_dirname():
+    """
+    Return the absolute path to the Orange.tests package.
+
+    Returns
+    -------
+    path : str
+    """
+    return os.path.dirname(__file__)
+
+
+def test_filename(path):
+    """
+    Return an absolute path to a resource within Orange.tests package.
+
+    Parameters
+    ----------
+    path : str
+        Path relative to `test_dirname()`
+    Returns
+    -------
+    abspath : str
+        Absolute path
+    """
+    return os.path.join(test_dirname(), path)
 
 
 def suite(loader=None, pattern='test*.py'):

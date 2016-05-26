@@ -17,7 +17,7 @@ from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
-from Orange.data.table import dataset_dirs
+from Orange.tests import test_filename
 
 
 class MultiClassTest(unittest.TestCase):
@@ -227,10 +227,6 @@ class ClassfierListInputTest(unittest.TestCase):
 class UnknownValuesInPrediction(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
-        dataset_dirs.append("Orange/tests")
-
-    def tearDown(self):
-        dataset_dirs.pop()
 
     def test_unknown(self):
         table = Table("iris")
@@ -238,7 +234,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
         tree([1, 2, None])
 
     def test_missing_class(self):
-        table = Table("adult_sample_missing")
+        table = Table(test_filename("adult_sample_missing"))
         for learner in LearnerAccessibility().all_learners():
             try:
                 learner = learner()
@@ -252,12 +248,9 @@ class UnknownValuesInPrediction(unittest.TestCase):
 
 
 class LearnerAccessibility(unittest.TestCase):
+
     def setUp(self):
         Variable._clear_all_caches()
-        dataset_dirs.append("Orange/tests")
-
-    def tearDown(self):
-        dataset_dirs.pop()
 
     def all_learners(self):
         classification_modules = pkgutil.walk_packages(
@@ -315,7 +308,7 @@ class LearnerAccessibility(unittest.TestCase):
         for learner in self.all_learners():
             try:
                 learner = learner()
-                table = Table("test8.tab")
+                table = Table(test_filename("test8.tab"))
                 self.assertRaises(ValueError, learner, table)
             except TypeError as err:
                 traceback.print_exc()

@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 from unittest import TestCase
+import os
 import pickle
 
 import numpy as np
@@ -13,7 +14,7 @@ from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
                              Jaccard, _preprocess)
 from Orange.misc import DistMatrix
-from Orange.tests import named_file
+from Orange.tests import named_file, test_filename
 from Orange.util import OrangeDeprecationWarning
 
 
@@ -738,7 +739,7 @@ class TestPearsonRAbsolute(TestCase):
 class TestDistances(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test5 = Table('test5.tab')
+        cls.test5 = Table(test_filename('test5.tab'))
 
     def test_preprocess(self):
         domain = Domain([ContinuousVariable("c"),

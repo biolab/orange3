@@ -5,12 +5,10 @@ import unittest
 from tempfile import NamedTemporaryFile
 import os
 import warnings
-from io import StringIO
-
-import numpy as np
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable
 from Orange.data.io import CSVReader
+from Orange.tests import test_filename
 
 tab_file = """\
 Feature 1\tFeature 2\tFeature 3
@@ -72,13 +70,13 @@ class TestTabReader(unittest.TestCase):
 
     def test_read_nonutf8_encoding(self):
         with self.assertRaises(ValueError) as cm:
-            data = Table('binary-blob.tab')
+            data = Table(test_filename('binary-blob.tab'))
         self.assertIn('NULL byte', cm.exception.args[0])
 
         with self.assertRaises(ValueError):
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
-                data = Table('invalid_characters.tab')
+                data = Table(test_filename('invalid_characters.tab'))
 
     def test_noncontinous_marked_continuous(self):
         file = NamedTemporaryFile("wt", delete=False)

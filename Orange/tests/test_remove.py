@@ -6,13 +6,13 @@ import unittest
 import numpy as np
 from Orange.data import Table
 from Orange.preprocess import Remove
-
+from Orange.tests import test_filename
 
 class TestRemover(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.test8 = Table('test8.tab')
+        cls.test8 = Table(test_filename('test8.tab'))
 
     def test_remove(self):
         data = Table("iris")[:5]
@@ -125,7 +125,7 @@ class TestRemover(unittest.TestCase):
                              {'removed': 0, 'reduced': 1, 'sorted': 0})
 
     def test_remove_unused_values_metas(self):
-        data = Table("test9.tab")
+        data = Table(test_filename("test9.tab"))
         subset = data[:4]
         res = Remove(subset,
                      attr_flags=Remove.RemoveUnusedValues,
