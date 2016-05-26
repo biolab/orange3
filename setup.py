@@ -236,7 +236,7 @@ def setup_package():
         install_requires=INSTALL_REQUIRES,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
-        test_suite='Orange.tests.test_suite',
+        test_suite='Orange.tests.suite',
         cmdclass={
             'lint': LintCommand,
             'coverage': CoverageCommand,

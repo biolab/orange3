@@ -59,9 +59,6 @@ def suite(loader=None, pattern='test*.py'):
     return unittest.TestSuite(all_tests)
 
 
-test_suite = suite()
-
-
 def load_tests(loader, tests, pattern):
     return suite(loader, pattern)
 
