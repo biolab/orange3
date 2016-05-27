@@ -65,10 +65,11 @@ PYTHON_VER_SHORT=${PYTHON_VER%.[0-9]*}
 PYVER=$(echo $PYTHON_VER_SHORT | sed s/\\.//g)
 PYTHON_MSI=python-$PYTHON_VER.msi
 
-# The minimum pip version required (this is the version which was shipped
-# with Python 3.4.3 (ensurepip)
-PIP_VER=6.0.8
-PIP_MD5=41e73fae2c86ba2270ff51c1d86f7e09
+# The minimum pip version required (v8.* is required in order to install
+# wheel files build using wheel>=0.29; wheel issue #165, #159)
+PIP_VER=8.1.2
+PIP_URL=https://pypi.python.org/packages/9c/32/004ce0852e0a127f07f358b715015763273799bd798956fa930814b60f39/pip-8.1.2-py2.py3-none-any.whl
+PIP_MD5=0570520434c5b600d89ec95393b2650b
 
 PYQT_VER=4.11.4
 PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
@@ -113,8 +114,8 @@ touch "$BUILDBASE"/requirements.txt
 
 # pinned requirements (numpy and scipy are handled separately)
 echo "
-#:wheel: scikit-learn https://pypi.python.org/packages/cp34/s/scikit-learn/scikit_learn-0.16.1-cp34-none-win32.whl#md5=ca5864cdf9f1938aa1a55d6092bf5c86
-scikit-learn==0.16.1
+#:wheel: scikit-learn https://pypi.python.org/packages/b8/9a/02d5d76be66c57aaa9f917c87007b9b0bf486992cc7701512464d1ce11e9/scikit_learn-0.17.1-cp34-cp34m-win32.whl#md5=ab00daed7cdac4cb16ad0613b91be07e
+scikit-learn==0.17.1
 
 #:wheel: Bottlecheset https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl#md5=629ba2a148dfa784d0e6817497d42e97
 --find-links https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl
@@ -199,7 +200,7 @@ function prepare_msvcr100 {
 
 function prepare_pip {
     local version=${PIP_VER:?}
-    local url=https://pypi.python.org/packages/py2.py3/p/pip/pip-${version}-py2.py3-none-any.whl
+    local url=${PIP_URL:?}
     local md5=${PIP_MD5:?}
     download_url "${url}" \
                  "${DOWNLOADDIR}"/pip-${version}-py2.py3-none-any.whl \
@@ -219,8 +220,8 @@ function prepare_pyqt4 {
 }
 
 function prepare_scipy_stack {
-	local numpy_superpack=numpy-$NUMPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
-	local scipy_superpack=scipy-$SCIPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
+    local numpy_superpack=numpy-$NUMPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
+    local scipy_superpack=scipy-$SCIPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
 
     download_url http://sourceforge.net/projects/numpy/files/NumPy/$NUMPY_VER/$numpy_superpack/download \
                  "$DOWNLOADDIR"/$numpy_superpack \
@@ -233,24 +234,24 @@ function prepare_scipy_stack {
     7z -o"$DOWNLOADDIR"/numpy -y e "$DOWNLOADDIR"/$numpy_superpack
     7z -o"$DOWNLOADDIR"/scipy -y e "$DOWNLOADDIR"/$scipy_superpack
 
-	local wheeltag=cp${PYVER}-none-win32
-	local wheeldir=
+    local wheeltag=cp${PYVER}-none-win32
+    local wheeldir=
 
     for SSE in nosse sse2 sse3; do
-		wheeldir="$BUILDBASE"/wheelhouse/$SSE
+        wheeldir="$BUILDBASE"/wheelhouse/$SSE
         mkdir -p "$wheeldir"
 
         python -m wheel convert -d "$wheeldir" \
                "$DOWNLOADDIR"/numpy/numpy-$NUMPY_VER-$SSE.exe
 
         mv "$wheeldir"/numpy-$NUMPY_VER-*$SSE.whl \
-		   "$wheeldir"/numpy-$NUMPY_VER-$wheeltag.whl
+           "$wheeldir"/numpy-$NUMPY_VER-$wheeltag.whl
 
         python -m wheel convert -d "$wheeldir" \
-			   "$DOWNLOADDIR"/scipy/scipy-$SCIPY_VER-$SSE.exe
+               "$DOWNLOADDIR"/scipy/scipy-$SCIPY_VER-$SSE.exe
 
         mv "$wheeldir"/scipy-$SCIPY_VER-*$SSE.whl \
-		   "$wheeldir"/scipy-$SCIPY_VER-$wheeltag.whl
+           "$wheeldir"/scipy-$SCIPY_VER-$wheeltag.whl
     done
 
     # copy the CpuCaps.dll nsis plugin into place
@@ -267,11 +268,18 @@ function prepare_req {
 }
 
 function prepare_orange {
+    # ensure pip v8 is installed in the build env (so it is able to retrieve
+    # wheel>=0.27 build .whl packages.
+    python -m pip install pip==8.1.2
     # ensure that correct numpy and scipy are installed in the build env
     pip install --no-index -f "$BUILDBASE/wheelhouse" \
                 --only-binary numpy,scipy \
-                numpy==$NUMPY_VER, scipy==$SCIPY_VER
+                numpy==$NUMPY_VER scipy==$SCIPY_VER
 
+    # ensure that the wheel package in the build env creates .whl files that
+    # can be installed with pip v7.* (wheel issue #165, #159) which is the
+    # version installed by ensurepip for Python 3.4.4
+    pip install 'wheel==0.26.*'
     python setup.py egg_info
     local version=$(grep -E "^Version: .*$" Orange.egg-info/PKG-INFO | awk '{ print $2 }')
 
@@ -381,7 +389,7 @@ function create_installer {
              -DPYTHON_VERSION=$PYTHON_VER \
              -DPYTHON_VERSION_SHORT=$PYTHON_VER_SHORT \
              -DPYVER=$PYVER \
-			 -DBASEDIR="$basedir_abs" \
+             -DBASEDIR="$basedir_abs" \
              -DNSIS_PLUGINS_PATH="$basedir_abs"/nsisplugins \
              "$nsis_script"
 }
