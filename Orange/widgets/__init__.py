@@ -11,7 +11,7 @@ import Orange
 
 # Entry point for main Orange categories/widgets discovery
 def widget_discovery(discovery):
-    dist = pkg_resources.get_distribution("Orange")
+    dist = pkg_resources.get_distribution("Orange3")
     pkgs = [
         "Orange.widgets.data",
         "Orange.widgets.visualize",

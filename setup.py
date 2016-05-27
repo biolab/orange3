@@ -12,7 +12,7 @@ try:
 except ImportError:
     sys.exit('setup requires numpy; install numpy first')
 
-NAME = 'Orange'
+NAME = 'Orange3'
 
 VERSION = '3.3.4'
 ISRELEASED = False

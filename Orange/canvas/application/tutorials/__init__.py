@@ -27,7 +27,7 @@ def is_ows(filename):
 
 
 def default_entry_point():
-    dist = pkg_resources.get_distribution("Orange")
+    dist = pkg_resources.get_distribution("Orange3")
     ep = pkg_resources.EntryPoint("Orange Canvas", __name__, dist=dist)
     return ep
 

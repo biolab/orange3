@@ -13,10 +13,10 @@ cat requirements-core.txt \
 # Create a source tarball from the git checkout
 foldable python setup.py sdist
 # Create a binary wheel from the packed source
-foldable pip wheel --no-deps -w dist dist/Orange-*.tar.gz
+foldable pip wheel --no-deps -w dist dist/Orange3-*.tar.gz
 # Install into a testing folder
 ORANGE_DIR="$(pwd)"/build/travis-test
 mkdir -p "$ORANGE_DIR"
-pip install --no-deps --target "$ORANGE_DIR"  dist/Orange-*.whl
+pip install --no-deps --target "$ORANGE_DIR"  dist/Orange3-*.whl
 
 cd $TRAVIS_BUILD_DIR

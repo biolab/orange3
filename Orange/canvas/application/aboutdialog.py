@@ -43,7 +43,7 @@ class AboutDialog(QDialog):
             from Orange.version import version
             from Orange.version import git_revision
         except ImportError:
-            dist = pkg_resources.get_distribution("Orange")
+            dist = pkg_resources.get_distribution("Orange3")
             version = dist.version
             git_revision = "Unknown"
 

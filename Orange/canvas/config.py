@@ -34,7 +34,7 @@ def init():
               Otherwise it can break Qt's plugin search paths.
 
     """
-    dist = pkg_resources.get_distribution("Orange")
+    dist = pkg_resources.get_distribution("Orange3")
     version = dist.version
     # Use only major.minor
     version = ".".join(version.split(".", 2)[:2])
@@ -257,7 +257,7 @@ def default_entry_point():
     default Orange Widgets.
 
     """
-    dist = pkg_resources.get_distribution("Orange")
+    dist = pkg_resources.get_distribution("Orange3")
     ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.widgets",
                                   dist=dist)
     return ep
