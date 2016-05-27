@@ -1,8 +1,8 @@
 import itertools
 import time
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 from itertools import chain
-from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
+from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
 from PyQt4.QtGui import QGraphicsScene, QStandardItemModel, QColor
 from Orange.widgets.io import PngFormat
 from Orange.data.sql.table import SqlTable
@@ -208,13 +208,24 @@ class Report:
             return report_list(content, header_rows + has_header)
 
         # noinspection PyBroadException
-        def report_abstract_model(model):
-            content = ((model.data(model.index(row, col))
-                        for col in range(model.columnCount())
+        def report_abstract_model(model, view=None):
+            # use ItemDelegate to style values
+            style = lambda x: view.itemDelegate().displayText(x, QLocale())
+
+            # iterate only over visible columns of QTableView
+            iter_columns = list(filter(lambda x: not view.isColumnHidden(x),
+                                       range(model.columnCount())))
+
+            # If all columns are hidden
+            if len(iter_columns) == 0:
+                return
+
+            content = ((style(model.data(model.index(row, col)),)
+                        for col in iter_columns
                         ) for row in range(model.rowCount()))
             try:
                 header = [model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
-                          for col in range(model.columnCount())]
+                          for col in iter_columns]
             except:
                 header = None
             if header:
@@ -259,9 +270,9 @@ class Report:
         if isinstance(model, QStandardItemModel):
             body = report_standard_model(model)
         elif isinstance(model, QAbstractItemModel):
-            body = report_abstract_model(model)
-        elif isinstance(table, list):
-            body = report_list(table)
+            body = report_abstract_model(model, table)
+        elif isinstance(table, Iterable):
+            body = report_list(table, header_rows, header_columns)
         else:
             body = None
         if body:
