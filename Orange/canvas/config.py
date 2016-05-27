@@ -5,6 +5,7 @@ Orange Canvas Configuration
 
 import os
 import sys
+import site
 import logging
 import pickle as pickle
 import itertools
@@ -43,6 +44,12 @@ def init():
     QCoreApplication.setApplicationName("Orange Canvas")
     QCoreApplication.setApplicationVersion(version)
     QSettings.setDefaultFormat(QSettings.IniFormat)
+
+    # Hack to make sure the correct plugin search path is added. (Github issue #1143)
+    for path in site.getsitepackages():
+        if path.endswith("site-packages"):
+            QCoreApplication.setLibraryPaths(
+                QCoreApplication.libraryPaths() + [os.path.join(path, "PyQt4", "plugins")])
 
     # Make it a null op.
     global init
