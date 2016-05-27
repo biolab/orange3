@@ -26,7 +26,6 @@ from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils import classdensity
 from Orange.canvas import report
 
@@ -104,16 +103,14 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
 
 class AxisItem(pg.GraphicsObject):
-    def __init__(self, parent=None, line=None, label=None, **kwargs):
-        super().__init__(parent, **kwargs)
+    def __init__(self, parent=None, line=None, label=None, *args):
+        super().__init__(parent, *args)
         self.setFlag(pg.GraphicsObject.ItemHasNoContents)
 
         if line is None:
             line = QLineF(0, 0, 1, 0)
 
         self._spine = QGraphicsLineItem(line, self)
-        angle = QLineF(0, 0, 1, 0).angleTo(line)
-        angle = (180 - angle) % 360
         dx = line.x2() - line.x1()
         dy = line.y2() - line.y1()
         rad = numpy.arctan2(dy, dx)
@@ -174,6 +171,10 @@ class AxisItem(pg.GraphicsObject):
 
 
 class LegendItem(LegendItem):
+    def __init__(self):
+        super().__init__()
+        self.items = []
+
     def clear(self):
         """
         Clear all legend items.
@@ -214,7 +215,8 @@ class LegendItem(LegendItem):
 
 class OWLinearProjection(widget.OWWidget):
     name = "Linear Projection"
-    description = "A multi-axis projection of data onto a two-dimensional plane."
+    description = "A multi-axis projection of data onto " \
+                  "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
     priority = 2000
 
@@ -266,7 +268,7 @@ class OWLinearProjection(widget.OWWidget):
         box1 = gui.vBox(box, "Displayed", margin=0)
         box1.setFlat(True)
         self.active_view = view = QListView(
-            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Ignored),
+            sizePolicy=QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored),
             selectionMode=QListView.ExtendedSelection,
             dragEnabled=True,
             defaultDropAction=Qt.MoveAction,
@@ -298,14 +300,14 @@ class OWLinearProjection(widget.OWWidget):
         box1 = gui.vBox(box, "Other", margin=0)
         box1.setFlat(True)
         self.other_view = view = QListView(
-            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Ignored),
+            sizePolicy=QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored),
             selectionMode=QListView.ExtendedSelection,
             dragEnabled=True,
             defaultDropAction=Qt.MoveAction,
             dragDropOverwriteMode=False,
             dragDropMode=QListView.DragDrop,
             showDropIndicator=True,
-            minimumHeight=150
+            minimumHeight=100
         )
         view.viewport().setAcceptDrops(True)
         moveup = QtGui.QAction(
@@ -320,7 +322,7 @@ class OWLinearProjection(widget.OWWidget):
 
         box1.layout().addWidget(view)
 
-        box = gui.vBox(self.controlArea, "Plot Properties")
+        box = gui.vBox(self.controlArea, box=True)
         box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
         self.colorvar_model = itemmodels.VariableListModel(parent=self)
@@ -337,32 +339,41 @@ class OWLinearProjection(widget.OWWidget):
 
         cb = gui.comboBox(box, self, "color_index",
                           callback=self._on_color_change,
-                          contentsLength=12)
+                          contentsLength=10)
         cb.setModel(self.colorvar_model)
-        form.addRow("Colors:", cb)
+        form.addRow("Color:", cb)
 
+        box = gui.vBox(None)
+        hbox = gui.indentedBox(box, orientation=Qt.Horizontal)
+        gui.widgetLabel(hbox, "Opacity: ")
         alpha_slider = QSlider(
             Qt.Horizontal, minimum=10, maximum=255, pageStep=25,
             tickPosition=QSlider.TicksBelow, value=self.alpha_value)
         alpha_slider.valueChanged.connect(self._set_alpha)
-        form.addRow("Opacity:", alpha_slider)
+        hbox.layout().addWidget(alpha_slider)
+
+        self.cb_class_density = gui.checkBox(
+            gui.indentedBox(box), self, "class_density",
+            label="Show class density", callback=self._update_density)
+        gui.separator(box)
+        form.addRow(box)
 
         cb = gui.comboBox(box, self, "shape_index",
                           callback=self._on_shape_change,
-                          contentsLength=12)
+                          contentsLength=10)
 
         cb.setModel(self.shapevar_model)
         form.addRow("Shape:", cb)
 
         cb = gui.comboBox(box, self, "size_index",
                           callback=self._on_size_change,
-                          contentsLength=12)
+                          contentsLength=10)
 
         cb.setModel(self.sizevar_model)
         form.addRow("Size:", cb)
 
         size_slider = QSlider(
-            Qt.Horizontal,  minimum=3, maximum=30, value=self.point_size,
+            Qt.Horizontal, minimum=3, maximum=30, value=self.point_size,
             pageStep=3,
             tickPosition=QSlider.TicksBelow)
         size_slider.valueChanged.connect(self._set_size)
@@ -374,15 +385,12 @@ class OWLinearProjection(widget.OWWidget):
             callback=self._invalidate_plot)
         form.addRow("Jittering:", cb)
 
-        self.cb_class_density = gui.checkBox(box, self, "class_density", label="",
-                                             callback=self._update_density)
-        form.addRow("Class density:", self.cb_class_density)
-
         toolbox = gui.vBox(self.controlArea, "Zoom/Select")
         toollayout = QtGui.QHBoxLayout()
         toolbox.layout().addLayout(toollayout)
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection")
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
+                        auto_label="Send Automatically")
 
         self.controlArea.setSizePolicy(
             QSizePolicy.Preferred, QSizePolicy.Expanding)
@@ -538,6 +546,9 @@ class OWLinearProjection(widget.OWWidget):
     def set_data(self, data):
         """
         Set the input dataset.
+
+        Args:
+            data (Orange.data.table): data instances
         """
         self.closeContext()
         self.clear()
@@ -561,7 +572,8 @@ class OWLinearProjection(widget.OWWidget):
                      in state.items()}
 
             self.openContext(data.domain)
-            selected_keys = [key for key, (sind, _) in self.variable_state.items()
+            selected_keys = [key
+                             for key, (sind, _) in self.variable_state.items()
                              if sind == 0]
 
             if set(selected_keys).issubset(set(state.keys())):
@@ -594,6 +606,9 @@ class OWLinearProjection(widget.OWWidget):
     def set_subset_data(self, subset):
         """
         Set the supplementary input subset dataset.
+
+        Args:
+            subset (Orange.data.table): subset of data instances
         """
         self.subset_data = subset
         self._subset_mask = None
@@ -623,13 +638,15 @@ class OWLinearProjection(widget.OWWidget):
         )
         super().closeContext()
 
-    def _encode_var_state(self, lists):
+    @staticmethod
+    def _encode_var_state(lists):
         return {(type(var), var.name): (source_ind, pos)
                 for source_ind, var_list in enumerate(lists)
                 for pos, var in enumerate(var_list)
                 if isinstance(var, Variable)}
 
-    def _decode_var_state(self, state, lists):
+    @staticmethod
+    def _decode_var_state(state, lists):
         all_vars = reduce(list.__iadd__, lists, [])
 
         newlists = [[] for _ in lists]
@@ -778,11 +795,12 @@ class OWLinearProjection(widget.OWWidget):
         self._update_legend()
 
         color_var = self.color_var()
-        if self.class_density and color_var is not None and color_var.is_discrete:
+        if self.class_density and \
+                color_var is not None and color_var.is_discrete:
             [min_x, max_x], [min_y, max_y] = self.viewbox.viewRange()
             rgb_data = [brush.color().getRgb()[:3] for brush in brush_data]
-            self._density_img = classdensity.class_density_image(min_x, max_x, min_y, max_y, self.resolution,
-                                                                X, Y, rgb_data)
+            self._density_img = classdensity.class_density_image(
+                min_x, max_x, min_y, max_y, self.resolution, X, Y, rgb_data)
             self.viewbox.addItem(self._density_img)
 
     def _color_data(self, mask=None):
@@ -884,7 +902,7 @@ class OWLinearProjection(widget.OWWidget):
             max_symbol = len(ScatterPlotItem.Symbols) - 1
             shape = self._get_data(shape_var)
             shape_mask = numpy.isnan(shape)
-            shape = shape % (max_symbol - 1)
+            shape %= max_symbol - 1
             shape[shape_mask] = max_symbol
 
             symbols = numpy.array(list(ScatterPlotItem.Symbols))
@@ -1119,7 +1137,7 @@ class PlotTool(QObject):
         return self.__viewbox
 
     @Slot(QObject)
-    def __viewdestroyed(self, obj):
+    def __viewdestroyed(self, _):
         self.__viewbox = None
 
     def mousePressEvent(self, event):
@@ -1555,7 +1573,8 @@ class PlotPinchZoomTool(PlotTool):
 class plotutils:
     @ staticmethod
     def continuous_colors(data, palette=None,
-                          low=(220, 220, 220), high=(0,0,0), through_black=False):
+                          low=(220, 220, 220), high=(0,0,0),
+                          through_black=False):
         if palette is None:
             palette = colorpalette.ContinuousPaletteGenerator(
                 QtGui.QColor(*low), QtGui.QColor(*high), through_black)
