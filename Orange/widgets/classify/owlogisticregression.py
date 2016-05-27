@@ -55,13 +55,10 @@ class OWLogisticRegression(OWBaseLearner):
         self.set_c()
 
     def set_c(self):
-        self.settings_changed()
         self.C = self.C_s[self.C_index]
-        if self.C >= 1:
-            frmt = "C={}"
-        else:
-            frmt = "C={:.3f}"
-        self.c_label.setText(frmt.format(self.C))
+        fmt = "C={}" if self.C >= 1 else "C={:.3f}"
+        self.c_label.setText(fmt.format(self.C))
+        self.settings_changed()
 
     def create_learner(self):
         penalty = ["l1", "l2"][self.penalty_type]
