@@ -5,11 +5,32 @@ Change Log
 ------------
 * ...
 
+[3.3.4] - 2016-05-27
+--------------------
+##### Enhancements
+* Install add-on by dragging zip/tgz/wheel onto the addons dialog (#1269)
+* Added missing reports (#1270, #1271, #1272, #1273, #1279)
+* Add auto-apply checkboxes to learner dialogs (#1263)
+* Sort numeric values as numbers in Table (#1255)
+* Open dragged files in OWFile (#1176)
+* Support context cloning in FeatureConstructor and SelectRows (#1196)
+
+##### Bugfixes
+* Depend on scikit-learn>=0.17 (#1277)
+* Fix installation problem on windows (#1278)
+* Fix crash in K-means when silhouette cannot be computed (#1247)
+* Fix crash in Distributions on empty data (#1246)
+* Reset outputs in MergeData (#1240)
+* Compute distances between constructed Instances (#1242)
+* Fix links in Changelog (#1244)
+
+
 [3.3.3] - 2016-05-03
 --------------------
 ##### Bugfixes
 * Revert installation of desktop launcher on Linux (#1218)
 * Fix a crash when learner is connected to file (#1220)
+
 
 [3.3.2] - 2016-04-22
 --------------------
@@ -90,7 +111,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.3...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.4...HEAD
+[3.3.4]: https://github.com/biolab/orange3/compare/3.3.3...3.3.4
 [3.3.3]: https://github.com/biolab/orange3/compare/3.3.2...3.3.3
 [3.3.2]: https://github.com/biolab/orange3/compare/3.3.1...3.3.2
 [3.3.1]: https://github.com/biolab/orange3/compare/3.3...3.3.1
