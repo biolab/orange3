@@ -22,10 +22,21 @@ Installing
 This version of Orange requires Python 3.4 or newer. To build it and install
 it in a development environment, run:
 
+    # Install some build requirements via your system's package manager
+    sudo apt-get install virtualenv git python3-dev g++ gfortran \
+                         libblas-dev liblapack-dev libatlas-base-dev
+
+    # Also install Qt dependencies for the GUI
+    sudo apt-get install python3-pyqt4
+
     # Create a separate Python environment for Orange and its dependencies,
     # and make it the active one
     virtualenv --python=python3 --system-site-packages orange3venv
     source orange3venv/bin/activate
+
+    # Clone the repository and move into it
+    git clone https://github.com/biolab/orange3.git
+    cd orange3
 
     # Install the minimum required dependencies first
     pip install numpy

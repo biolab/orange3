@@ -2017,6 +2017,19 @@ class InterfaceTest(unittest.TestCase):
         for i in self.table:
             self.fail("Table should not contain any rows.")
 
+    def test_subclasses(self):
+        from pathlib import Path
+
+        class _ExtendedTable(data.Table):
+            pass
+
+        data_file = _ExtendedTable('iris')
+        data_url = _ExtendedTable.from_url(
+            Path(os.path.dirname(__file__), 'test1.tab').as_uri())
+
+        self.assertIsInstance(data_file, _ExtendedTable)
+        self.assertIsInstance(data_url, _ExtendedTable)
+
 
 class TestRowInstance(unittest.TestCase):
     def test_assignment(self):

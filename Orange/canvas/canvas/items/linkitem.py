@@ -32,7 +32,7 @@ class LinkCurveItem(QGraphicsPathItem):
         self.setAcceptHoverEvents(True)
 
         self.shadow = QGraphicsDropShadowEffect(
-            blurRadius=5, color=QColor(SHADOW_COLOR),
+            blurRadius=10, color=QColor(SHADOW_COLOR),
             offset=QPointF(0, 0)
         )
 
@@ -79,9 +79,9 @@ class LinkCurveItem(QGraphicsPathItem):
     def shape(self):
         if self.__shape is None:
             path = self.path()
-            pen = QPen(self.pen())
-            pen.setWidthF(max(pen.widthF(), 7.0))
-            pen.setStyle(Qt.SolidLine)
+            pen = QPen(QBrush(Qt.black),
+                       max(self.pen().widthF(), 20),
+                       Qt.SolidLine)
             self.__shape = stroke_path(path, pen)
         return self.__shape
 

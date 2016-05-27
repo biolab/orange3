@@ -2,6 +2,8 @@
  * Our general helpers for Highcharts, JS, QWebView bridge ...
  */
 
+var _ARRAY_KEYS = ['series', 'yAxis', 'xAxis'];
+
 function fixupOptionsObject(obj) {
     /**
      * Replace any strings with their eval'd value if they
@@ -16,6 +18,9 @@ function fixupOptionsObject(obj) {
         var key = keys[i],
             val = obj[key];
 
+        if (val === null || val === undefined)
+            continue;
+
         // Make sure arrays are of type Array and not Qt's RuntimeArray
         // Can probably be removed once Qt 4's WebKit support is dropped.
         if (val.constructor === Array &&
@@ -28,7 +33,7 @@ function fixupOptionsObject(obj) {
         if (typeof val === 'string' && val.indexOf('/**/') == 0) {
             obj[key] = eval(val)
         } else if (val.constructor === Object ||
-                   val.constructor === Array && key === 'series')
+                   val.constructor === Array && _ARRAY_KEYS.indexOf(key) != -1)
             fixupOptionsObject(val);
     }
 }
