@@ -29,6 +29,16 @@ class VariableTest:
     def test_dont_make_anonymous_variables(self):
         self.assertRaises(ValueError, self.varcls.make, "")
 
+    def test_copy_copies_attributes(self):
+        var = self.varcls()
+        var.attributes["a"] = "b"
+        var2 = var.copy(compute_value=None)
+        self.assertIn("a", var2.attributes)
+
+        var2.attributes["a"] = "c"
+        # Attributes of original value should not change
+        self.assertEqual(var.attributes["a"], "b")
+
 
 class BaseVariableTest(unittest.TestCase):
     @classmethod
@@ -79,6 +89,7 @@ class BaseVariableTest(unittest.TestCase):
         self.assertEqual(a, a)
         self.assertNotEqual(a, b)
         self.assertNotEqual(a, "somestring")
+
 
 def variabletest(varcls):
     def decorate(cls):
