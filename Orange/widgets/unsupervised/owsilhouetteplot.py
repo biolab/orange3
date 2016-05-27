@@ -994,7 +994,7 @@ class TextListWidget(QtGui.QGraphicsWidget):
         fm = QtGui.QFontMetrics(self.font())
         naturalheight = fm.height()
         th = (crect.height() - (N - 1) * spacing) / N
-        if th > naturalheight:
+        if th > naturalheight and N > 1:
             th = naturalheight
             spacing = (crect.height() - N * th) / (N - 1)
 
