@@ -274,7 +274,7 @@ function prepare_orange {
     # ensure that correct numpy and scipy are installed in the build env
     pip install --no-index -f "$BUILDBASE/wheelhouse" \
                 --only-binary numpy,scipy \
-                numpy==$NUMPY_VER, scipy==$SCIPY_VER
+                numpy==$NUMPY_VER scipy==$SCIPY_VER
 
     # ensure that the wheel package in the build env creates .whl files that
     # can be installed with pip v7.* (wheel issue #165, #159) which is the
