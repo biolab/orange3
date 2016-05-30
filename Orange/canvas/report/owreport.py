@@ -7,6 +7,8 @@ from PyQt4.QtCore import Qt, pyqtSlot
 from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QCursor,
                          QPrintDialog, QFileDialog, QTableView,
                          QStandardItemModel, QStandardItem, QHeaderView)
+
+from Orange.util import deprecated
 from Orange.widgets import gui
 from Orange.widgets.webview import WebView
 from Orange.widgets.widget import OWWidget
@@ -153,6 +155,7 @@ class OWReport(OWWidget):
         )
         self.report_view = WebView(self.mainArea, bridge=self)
 
+    @deprecated("Widgets should not be pickled")
     def __getstate__(self):
         rep_dict = self.__dict__.copy()
         for key in ('_OWWidget__env', 'controlArea', 'mainArea',
@@ -161,6 +164,7 @@ class OWReport(OWWidget):
         items_len = self.table_model.rowCount()
         return rep_dict, [self.table_model.item(i) for i in range(items_len)]
 
+    @deprecated("Widgets should not be pickled")
     def __setstate__(self, state):
         rep_dict, items = state
         self.__dict__.update(rep_dict)
@@ -292,8 +296,7 @@ class OWReport(OWWidget):
             printer.setOutputFileName(filename)
             self.report_view.print_(printer)
         elif extension == ".report":
-            with open(filename, 'wb') as f:
-                pickle.dump(self, f)
+            self.save(filename)
         else:
             frame = self.report_view.page().currentFrame()
             with open(filename, "w") as f:
@@ -320,8 +323,7 @@ class OWReport(OWWidget):
         self.saveSettings()
 
         try:
-            with open(filename, 'rb') as f:
-                report = pickle.load(f)
+            report = self.load(filename)
         except (IOError, AttributeError) as e:
             message_critical(
                  self.tr("Could not load an Orange Report file"),
@@ -337,6 +339,36 @@ class OWReport(OWWidget):
         self.table.selectRow(0)
         self.show()
         self.raise_()
+
+    def save(self, filename):
+        attributes = {}
+        for key in ('last_scheme', 'open_dir'):
+            attributes[key] = getattr(self, key, None)
+        items = [self.table_model.item(i)
+                 for i in range(self.table_model.rowCount())]
+        report = dict(__version__=1,
+                      attributes=attributes,
+                      items=items)
+
+        with open(filename, 'wb') as f:
+            pickle.dump(report, f)
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, 'rb') as f:
+            report = pickle.load(f)
+
+        if not isinstance(report, dict):
+            return report
+
+        self = cls()
+        self.__dict__.update(report['attributes'])
+        for item in report['items']:
+            self.table_model.add_item(
+                ReportItem(item.name, item.html, item.scheme,
+                           item.module, item.icon_name, item.comment)
+            )
+        return self
 
     def is_empty(self):
         return not self.table_model.rowCount()
