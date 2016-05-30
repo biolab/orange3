@@ -1,9 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import sys
 import math
 import unittest
 import pickle
+import pkgutil
+
 from io import StringIO
 
 import numpy as np
@@ -12,6 +15,26 @@ from Orange.testing import create_pickling_tests
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
 from Orange.data.io import CSVReader
+
+
+def is_on_path(name):
+    """
+    Is a top level package/module found on sys.path
+
+    Parameters
+    ----------
+    name : str
+        Top level module/package name
+
+    Returns
+    -------
+    found : bool
+    """
+    for loader, name_, ispkg in pkgutil.iter_modules(sys.path):
+        if name == name_:
+            return True
+    else:
+        return False
 
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
@@ -190,6 +213,7 @@ class DiscreteVariableTest(VariableTest):
             repr(var),
             "DiscreteVariable('a', values=['1', '2', '3', '4', '5', ...])")
 
+    @unittest.skipUnless(is_on_path("PyQt4"), "PyQt4 is not importable")
     def test_colors(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertIsNone(var._colors)
