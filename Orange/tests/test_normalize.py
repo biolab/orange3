@@ -5,7 +5,7 @@ import unittest
 
 from Orange.data import Table
 from Orange.preprocess import Normalize
-
+from Orange.tests import test_filename
 
 class TestNormalizer(unittest.TestCase):
     def compare_tables(self, dataNorm, solution):
@@ -21,7 +21,8 @@ class TestNormalizer(unittest.TestCase):
                          ["cl1", "cl2"])
     @classmethod
     def setUpClass(cls):
-        cls.data = Table("test5.tab")
+        cls.data = Table(test_filename("test5.tab"))
+
     def test_normalize_default(self):
         normalizer = Normalize()
         data_norm = normalizer(self.data)

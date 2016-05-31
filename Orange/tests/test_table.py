@@ -13,6 +13,7 @@ import numpy as np
 from Orange import data
 from Orange.data import filter, Variable
 from Orange.data import Unknown
+from Orange.tests import test_dirname
 
 
 @np.vectorize
@@ -32,8 +33,10 @@ def assert_array_nanequal(*args, **kwargs):
 class TableTestCase(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
-        test_dir = os.path.dirname(__file__)
-        data.table.dataset_dirs.append(test_dir)
+        data.table.dataset_dirs.append(test_dirname())
+
+    def tearDown(self):
+        data.table.dataset_dirs.remove(test_dirname())
 
     def test_indexing_class(self):
         d = data.Table("test1")

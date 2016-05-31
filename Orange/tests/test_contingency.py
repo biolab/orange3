@@ -9,12 +9,12 @@ import scipy.sparse as sp
 
 from Orange.statistics import contingency
 from Orange import data
+from Orange.tests import test_filename
 
 
 class Discrete_Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        data.table.dataset_dirs.append("Orange/tests")
         cls.zoo = data.Table("zoo")
 
     def test_discrete(self):
@@ -245,7 +245,7 @@ class Discrete_Test(unittest.TestCase):
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
     def test_compute_contingency_metas(self):
-        d = data.Table("test9.tab")
+        d = data.Table(test_filename("test9.tab"))
         var1, var2 = d.domain[-2], d.domain[-4]
         cont, _ = d._compute_contingency([var1], var2)[0][0]
         np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],

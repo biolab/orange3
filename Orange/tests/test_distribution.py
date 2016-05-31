@@ -9,13 +9,9 @@ import scipy.sparse as sp
 
 from Orange.statistics import distribution
 from Orange import data
-
+from Orange.tests import test_filename
 
 class Distribution_DiscreteTestCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        data.table.dataset_dirs.append("Orange/tests")
-
     def setUp(self):
         self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
         s = sum(self.freqs)
@@ -167,7 +163,6 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
 class Distribution_ContinuousTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        data.table.dataset_dirs.append("Orange/tests")
         cls.iris = data.Table("iris")
 
     def setUp(self):
@@ -274,10 +269,6 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
 
 class Class_Distribution_Test(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        data.table.dataset_dirs.append("Orange/tests")
-
     def test_class_distribution(self):
         d = data.Table("zoo")
         disc = distribution.class_distribution(d)
@@ -288,10 +279,6 @@ class Class_Distribution_Test(unittest.TestCase):
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
 class Get_Distribution_Test(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        data.table.dataset_dirs.append("Orange/tests")
-
     def test_get_distribution(self):
         d = data.Table("iris")
         cls = d.domain.class_var
@@ -316,10 +303,6 @@ class Get_Distribution_Test(unittest.TestCase):
 
 
 class Domain_Distribution_Test(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        data.table.dataset_dirs.append("Orange/tests")
-
     def test_get_distributions(self):
         d = data.Table("iris")
         ddist = distribution.get_distributions(d)
@@ -422,7 +405,7 @@ class Domain_Distribution_Test(unittest.TestCase):
         np.testing.assert_almost_equal(ddist[19], z)
 
     def test_compute_distributions_metas(self):
-        d = data.Table("test9.tab")
+        d = data.Table(test_filename("test9.tab"))
         variable = d.domain[-2]
         dist, _ = d._compute_distributions([variable])[0]
         np.testing.assert_almost_equal(dist, [3, 3, 2])

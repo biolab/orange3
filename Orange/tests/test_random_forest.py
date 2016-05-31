@@ -7,7 +7,7 @@ from Orange.data import Table
 from Orange.evaluation import CrossValidation, CA, RMSE
 from Orange.classification import RandomForestLearner
 from Orange.regression import RandomForestRegressionLearner
-
+from Orange.tests import test_filename
 
 class RandomForestTest(unittest.TestCase):
     @classmethod
@@ -85,7 +85,7 @@ class RandomForestTest(unittest.TestCase):
 
     def test_scorer_feature(self):
         np.random.seed(42)
-        data = Table('test4.tab')
+        data = Table(test_filename('test4.tab'))
         learner = RandomForestLearner()
         scores = learner.score_data(data)
         for i, attr in enumerate(data.domain.attributes):

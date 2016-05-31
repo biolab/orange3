@@ -9,16 +9,12 @@ import traceback
 import Orange
 from Orange.data import Table, Variable
 from Orange.regression import Learner
-from Orange.data.table import dataset_dirs
+from Orange.tests import test_filename
 
 
 class RegressionLearnersTest(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
-        dataset_dirs.append("Orange/tests")
-
-    def tearDown(self):
-        dataset_dirs.pop()
 
     def all_learners(self):
         regression_modules = pkgutil.walk_packages(
@@ -49,7 +45,7 @@ class RegressionLearnersTest(unittest.TestCase):
         for learner in self.all_learners():
             try:
                 learner = learner()
-                table = Table("test8.tab")
+                table = Table(test_filename("test8.tab"))
                 self.assertRaises(ValueError, learner, table)
             except TypeError as err:
                 traceback.print_exc()
