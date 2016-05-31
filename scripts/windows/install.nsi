@@ -129,7 +129,7 @@ Section ""
 
 	DetailPrint "Installing Orange"
 	${Pip} 'install --no-deps --no-index \
-			-f "${TEMPDIR}\wheelhouse" Orange'
+			-f "${TEMPDIR}\wheelhouse" Orange3'
 
 	Pop $0
 	${If} $0 != 0
@@ -195,7 +195,7 @@ Section Uninstall
 
 	ReadRegStr $PythonDir SHELL_CONTEXT Software\OrangeCanvas\Current "PythonDir"
 
-	${PythonExec} "-m pip uninstall -y Orange"
+	${PythonExec} "-m pip uninstall -y Orange3"
 
 	RmDir /R $PythonDir\share\Orange
 

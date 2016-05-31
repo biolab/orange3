@@ -280,10 +280,9 @@ function prepare_orange {
     # can be installed with pip v7.* (wheel issue #165, #159) which is the
     # version installed by ensurepip for Python 3.4.4
     pip install 'wheel==0.26.*'
-    python setup.py egg_info
-    local version=$(grep -E "^Version: .*$" Orange.egg-info/PKG-INFO | awk '{ print $2 }')
-
-    python setup.py egg_info \
+    local version=$(python setup.py --version)
+    local name=$(python setup.py --name)
+    python setup.py  \
         build --compiler=msvc \
         bdist_wheel -d "$BUILDBASE/wheelhouse"
 
@@ -291,7 +290,7 @@ function prepare_orange {
     prepare_req --only-binary numpy,scipy,scikit-learn,bottlechest .
 
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
-    echo "Orange==$version" >> "$BUILDBASE/requirements.txt"
+    echo "$name==$version" >> "$BUILDBASE/requirements.txt"
 }
 
 function prepare_extra {
@@ -397,7 +396,7 @@ function create_installer {
 # Prepare prerequisites
 prepare_all
 
-VERSION=$(grep -E "^Orange==" "$BUILDBASE/requirements.txt" | sed s/^Orange==//g)
+VERSION=$(python setup.py --version)
 
 # Package everything in an installer
 if [[ $STANDALONE ]]; then
