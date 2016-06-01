@@ -152,6 +152,21 @@ echo "================="
 
 "$PIP" install .
 
+echo "Running tests"
+echo "============="
+
+# Run in an empty dir to avoid imports from source checkout
+(
+    tmpdir=$(mktemp -d -t temp-test)
+    cleanup-on-exit() {
+        rm -r $tmpdir
+    }
+    trap cleanup-on-exit  EXIT
+    cd "$tmpdir"
+    "$PYTHON" -m unittest Orange.tests
+)
+
+
 cat <<-'EOF' > "$TEMPLATE"/Contents/MacOS/Orange
 	#!/bin/bash
 
