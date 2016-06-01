@@ -1,4 +1,7 @@
 import pickle
+from numbers import Number, Integral
+from math import isnan, isinf
+
 import operator
 from collections import namedtuple
 from contextlib import contextmanager
@@ -59,7 +62,13 @@ def _as_contiguous_range(the_slice, length):
 
 class PyTableModel(QAbstractTableModel):
     """ A model for displaying python tables (sequences of sequences) in
-    QTableView objects """
+    QTableView objects.
+
+    Notes
+    -----
+    The model rounds numbers to human readable precision, e.g.:
+    1.23e-04, 1.234, 1234.5, 12345, 1.234e06.
+    """
     # All methods are either necessary overrides of super methods, or
     # methods likened to the Python list's. Hence, docstrings aren't.
     # pylint: disable=missing-docstring
@@ -76,11 +85,29 @@ class PyTableModel(QAbstractTableModel):
         return 0 if parent.isValid() else max(map(len, self._table), default=0)
 
     def data(self, index, role=Qt.DisplayRole):
-        if index.isValid() and role == Qt.DisplayRole:
-            try:
-                return self[index.row()][index.column()]
-            except IndexError:
-                pass
+        if not index.isValid():
+            return
+        try:
+            value = self[index.row()][index.column()]
+        except IndexError:
+            return
+        if role == Qt.DisplayRole:
+            if (isinstance(value, Number) and
+                    not (isnan(value) or isinf(value) or isinstance(value, Integral))):
+                absval = abs(value)
+                strlen = len(str(int(absval)))
+                value = '{:.{}{}}'.format(value,
+                                          2 if absval < .001 else
+                                          3 if strlen < 2 else
+                                          1 if strlen < 5 else
+                                          0 if strlen < 6 else
+                                          3,
+                                          'f' if strlen < 6 and absval >= .001 else 'e')
+            return str(value)
+        if role == Qt.TextAlignmentRole and isinstance(value, Number):
+            return Qt.AlignRight | Qt.AlignVCenter
+        if role == Qt.ToolTipRole:
+            return str(value)
 
     def sort(self, column, order=Qt.AscendingOrder):
         self.beginResetModel()
