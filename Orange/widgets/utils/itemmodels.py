@@ -3,7 +3,7 @@ from numbers import Number, Integral
 from math import isnan, isinf
 
 import operator
-from collections import namedtuple
+from collections import namedtuple, Sequence
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache
 from xml.sax.saxutils import escape
@@ -64,6 +64,16 @@ class PyTableModel(QAbstractTableModel):
     """ A model for displaying python tables (sequences of sequences) in
     QTableView objects.
 
+    Parameters
+    ----------
+    sequence : list
+        The initial list to wrap.
+    parent : QObject
+        Parent QObject.
+    editable: bool or sequence
+        If True, all items are flagged editable. If sequence, the True-ish
+        fields mark their respective columns editable.
+
     Notes
     -----
     The model rounds numbers to human readable precision, e.g.:
@@ -72,9 +82,10 @@ class PyTableModel(QAbstractTableModel):
     # All methods are either necessary overrides of super methods, or
     # methods likened to the Python list's. Hence, docstrings aren't.
     # pylint: disable=missing-docstring
-    def __init__(self, sequence=None, parent=None):
+    def __init__(self, sequence=None, parent=None, editable=False):
         super().__init__(parent)
         self._headers = {}
+        self._editable = editable
         self._table = None
         self.wrap(sequence or [])
 
@@ -84,6 +95,21 @@ class PyTableModel(QAbstractTableModel):
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else max(map(len, self._table), default=0)
 
+    def flags(self, index):
+        flags = super().flags(index)
+        if not self._editable or not index.isValid():
+            return flags
+        if isinstance(self._editable, Sequence):
+            return flags | Qt.ItemIsEditable if self._editable[index.column()] else flags
+        return flags | Qt.ItemIsEditable
+
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            self[index.row()][index.column()] = value
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return
@@ -91,6 +117,8 @@ class PyTableModel(QAbstractTableModel):
             value = self[index.row()][index.column()]
         except IndexError:
             return
+        if role == Qt.EditRole:
+            return value
         if role == Qt.DecorationRole and isinstance(value, Variable):
             return gui.attributeIconDict[value]
         if role == Qt.DisplayRole:
@@ -188,7 +216,8 @@ class PyTableModel(QAbstractTableModel):
         else:
             start = stop = i = i if i >= 0 else len(self) + i
         self._table[i] = value
-        self.dataChanged.emit(self.index(start), self.index(stop))
+        self.dataChanged.emit(self.index(start, 0),
+                              self.index(stop, self.columnCount() - 1))
 
     def wrap(self, table):
         self.beginResetModel()
