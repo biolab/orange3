@@ -5,6 +5,13 @@ Change Log
 ------------
 * ...
 
+[3.3.5] - 2016-06-01
+--------------------
+##### Bugfixes
+* Revert hack that caused missing icons in osx build
+* Fix installation in environments without numpy installed (#1291)
+* Allow running of library test when PyQt is not available (#1289)
+
 [3.3.4] - 2016-05-27
 --------------------
 ##### Enhancements
@@ -111,7 +118,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.4...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.5...HEAD
+[3.3.5]: https://github.com/biolab/orange3/compare/3.3.4...3.3.5
 [3.3.4]: https://github.com/biolab/orange3/compare/3.3.3...3.3.4
 [3.3.3]: https://github.com/biolab/orange3/compare/3.3.2...3.3.3
 [3.3.2]: https://github.com/biolab/orange3/compare/3.3.1...3.3.2
