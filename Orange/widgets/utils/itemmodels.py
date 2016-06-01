@@ -418,6 +418,9 @@ class PyListModel(QAbstractListModel):
         self.__delitem__(i)
         return item
 
+    def indexOf(self, value):
+        return self._list.index(value)
+
     def clear(self):
         del self[:]
 
