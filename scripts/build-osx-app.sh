@@ -1,10 +1,12 @@
-#!/bin/bash -e
-# Build an OSX Applicaiton (.app) for Orange Canvas
+#!/bin/bash
+# Build an OSX Application (.app) for Orange Canvas
 #
 # Example:
 #
 #     $ build-osx-app.sh $HOME/Applications/Orange3.app
 #
+
+set -e
 
 function print_usage() {
     echo 'build-osx-app.sh [-i] [--template] Orange3.app
