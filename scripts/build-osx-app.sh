@@ -139,6 +139,14 @@ sed -i.bak "s@/.*\.app/@$TEMPLATE/@g" "${SITE_PACKAGES}"/sipconfig.py
     "$PIP" install qt-graph-helpers
 )
 
+# Explicitly specify a numpy version due to an undeclared dependency of
+# scikit-learn's osx wheel files (0.17.1) which seem to be build against
+# numpy 1.10.*, and require numpy >= 1.10 ABI.
+echo "Installing numpy"
+echo "================"
+
+"$PIP" install --only-binary numpy 'numpy==1.10.*'
+
 echo "Installing Orange"
 echo "================="
 
