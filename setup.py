@@ -7,15 +7,23 @@ from setuptools import find_packages, Command
 
 if sys.version_info < (3, 4):
     sys.exit('Orange requires Python >= 3.4')
+
 try:
     from numpy.distutils.core import setup
+    have_numpy = True
 except ImportError:
-    sys.exit('setup requires numpy; install numpy first')
+    from setuptools import setup
+    have_numpy = False
+
+from distutils.command.build_ext import build_ext
 
 NAME = 'Orange3'
 
 VERSION = '3.3.5'
 ISRELEASED = False
+# full version identifier including a git revision identifier for development
+# build/releases (this is filled/updated in `write_version_py`)
+FULLVERSION = VERSION
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
@@ -58,6 +66,7 @@ INSTALL_REQUIRES = sorted(set(
                  for file in requirements)
     for line in open(file)
 ) - {''})
+
 
 ENTRY_POINTS = {
     "orange.canvas.help": (
@@ -111,6 +120,7 @@ if not release:
     version = full_version
     short_version += ".dev"
 """
+    global FULLVERSION
     FULLVERSION = VERSION
     if os.path.exists('.git'):
         GIT_REVISION = git_version()
@@ -150,9 +160,6 @@ def configuration(parent_package='', top_path=None):
                        quiet=True)
 
     config.add_subpackage('Orange')
-
-    config.get_version('Orange/version.py')  # sets config.version
-
     return config
 
 
@@ -218,11 +225,34 @@ class CoverageCommand(Command):
 
 
 
+class build_ext_error(build_ext):
+    def initialize_options(self):
+        raise SystemExit(
+            "Cannot compile extensions. numpy is required to build Orange."
+        )
+
+
 def setup_package():
     write_version_py()
+    cmdclass = {
+        'lint': LintCommand,
+        'coverage': CoverageCommand,
+    }
+
+    if have_numpy:
+        extra_args = {
+            "configuration": configuration
+        }
+    else:
+        # substitute a build_ext command with one that raises an error when
+        # building. In order to fully support `pip install` we need to
+        # survive a `./setup egg_info` without numpy so pip can properly
+        # query our install dependencies
+        extra_args = {}
+        cmdclass["build_ext"] = build_ext_error
     setup(
-        configuration=configuration,
         name=NAME,
+        version=FULLVERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         author=AUTHOR,
@@ -237,10 +267,8 @@ def setup_package():
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         test_suite='Orange.tests.suite',
-        cmdclass={
-            'lint': LintCommand,
-            'coverage': CoverageCommand,
-        },
+        cmdclass=cmdclass,
+        **extra_args
     )
 
 if __name__ == '__main__':
