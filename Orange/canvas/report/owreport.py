@@ -299,7 +299,7 @@ class OWReport(OWWidget):
             self.save(filename)
         else:
             frame = self.report_view.page().currentFrame()
-            with open(filename, "w") as f:
+            with open(filename, "w", encoding="utf-8") as f:
                 f.write(frame.documentElement().toInnerXml())
         self.report_changed = False
         return QDialog.Accepted
