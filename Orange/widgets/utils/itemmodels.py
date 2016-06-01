@@ -91,6 +91,8 @@ class PyTableModel(QAbstractTableModel):
             value = self[index.row()][index.column()]
         except IndexError:
             return
+        if role == Qt.DecorationRole and isinstance(value, Variable):
+            return gui.attributeIconDict[value]
         if role == Qt.DisplayRole:
             if (isinstance(value, Number) and
                     not (isnan(value) or isinf(value) or isinstance(value, Integral))):
