@@ -111,9 +111,15 @@ class PyTableModel(QAbstractTableModel):
 
     def sort(self, column, order=Qt.AscendingOrder):
         self.beginResetModel()
-        self._table = sorted(self._table,
-                             key=operator.itemgetter(column),
-                             reverse=order != Qt.AscendingOrder)
+        indices = sorted(range(len(self._table)),
+                         key=lambda i: self._table[i][column],
+                         reverse=order != Qt.AscendingOrder)
+        self._table[:] = [self._table[i] for i in indices]
+        vheaders = self._headers.get(Qt.Vertical, ())
+        if vheaders:
+            vheaders = tuple(vheaders) + ('',) * max(0, (len(self._table) - len(vheaders)))
+            vheaders = [vheaders[i] for i in indices]
+            self._headers[Qt.Vertical] = vheaders
         self.endResetModel()
 
     def setHorizontalHeaderLabels(self, labels):
