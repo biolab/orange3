@@ -44,12 +44,6 @@ def init():
     QCoreApplication.setApplicationVersion(version)
     QSettings.setDefaultFormat(QSettings.IniFormat)
 
-    # Hack to make sure the correct plugin search path is added. (Github issue #1143)
-    QCoreApplication.setLibraryPaths(QCoreApplication.libraryPaths() +
-                                     [os.path.join(path, "PyQt4", "plugins")
-                                      for path in sys.path
-                                      if path.endswith('site-packages')])
-
     # Make it a null op.
     global init
     init = lambda: None
