@@ -171,7 +171,7 @@ Section "Main"
 
 	DetailPrint "Installing Orange"
 	${Pip} 'install --no-deps --no-index \
-			-f "${TEMPDIR}\wheelhouse" Orange'
+			-f "${TEMPDIR}\wheelhouse" Orange3'
 
 	Pop $0
 	${If} $0 != 0
