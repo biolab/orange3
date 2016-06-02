@@ -693,6 +693,11 @@ class OWLinearProjection(widget.OWWidget):
         shape_vars = [var for var in disc_vars
                       if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
 
+        self.warning(0)
+        if not len(cont_vars):
+            self.warning(
+                "Need at least one continuous feature to plot the data.")
+
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]
         self.varmodel_other[:] = cont_vars[3:]
