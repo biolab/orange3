@@ -322,7 +322,7 @@ class PyListModel(QAbstractListModel):
         row = index.row()
         if role in [self.list_item_role, Qt.EditRole] \
                 and self._is_index_valid_for(index, self):
-            return self[row]
+            return str(self[row]) if role == Qt.DisplayRole else self[row]
         elif self._is_index_valid_for(row, self._other_data):
             return self._other_data[row].get(role, None)
 
