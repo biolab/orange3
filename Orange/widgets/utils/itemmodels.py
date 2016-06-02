@@ -161,7 +161,7 @@ class PyTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             headers = self._headers.get(orientation)
-            return headers[section] if headers else str(section)
+            return headers[section] if headers and section < len(headers) else str(section)
 
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():
