@@ -74,8 +74,12 @@ PIP_MD5=0570520434c5b600d89ec95393b2650b
 PYQT_VER=4.11.4
 PYQT_MD5=b4164a0f97780fbb7c5c1e265dd37473
 
-NUMPY_VER=1.9.2
-NUMPY_MD5=0c06b7beabdc053ef63699ada0ee5e98
+# numpy version included in the installer
+NUMPY_VER=1.10.4
+
+# numpy version used in the build env
+NUMPY_BUILD_VER=1.9.2
+NUMPY_BUILD_MD5=0c06b7beabdc053ef63699ada0ee5e98
 
 SCIPY_VER=0.16.1
 SCIPY_MD5=30bf5159326d859a42ed7718a8a09704
@@ -220,12 +224,12 @@ function prepare_pyqt4 {
 }
 
 function prepare_scipy_stack {
-    local numpy_superpack=numpy-$NUMPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
+    local numpy_superpack=numpy-$NUMPY_BUILD_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
     local scipy_superpack=scipy-$SCIPY_VER-win32-superpack-python$PYTHON_VER_SHORT.exe
 
-    download_url http://sourceforge.net/projects/numpy/files/NumPy/$NUMPY_VER/$numpy_superpack/download \
+    download_url http://sourceforge.net/projects/numpy/files/NumPy/$NUMPY_BUILD_VER/$numpy_superpack/download \
                  "$DOWNLOADDIR"/$numpy_superpack \
-                 $NUMPY_MD5
+                 $NUMPY_BUILD_MD5
 
     download_url http://sourceforge.net/projects/scipy/files/scipy/$SCIPY_VER/$scipy_superpack/download \
                  "$DOWNLOADDIR"/$scipy_superpack \
@@ -242,10 +246,10 @@ function prepare_scipy_stack {
         mkdir -p "$wheeldir"
 
         python -m wheel convert -d "$wheeldir" \
-               "$DOWNLOADDIR"/numpy/numpy-$NUMPY_VER-$SSE.exe
+               "$DOWNLOADDIR"/numpy/numpy-$NUMPY_BUILD_VER-$SSE.exe
 
-        mv "$wheeldir"/numpy-$NUMPY_VER-*$SSE.whl \
-           "$wheeldir"/numpy-$NUMPY_VER-$wheeltag.whl
+        mv "$wheeldir"/numpy-$NUMPY_BUILD_VER-*$SSE.whl \
+           "$wheeldir"/numpy-$NUMPY_BUILD_VER-$wheeltag.whl
 
         python -m wheel convert -d "$wheeldir" \
                "$DOWNLOADDIR"/scipy/scipy-$SCIPY_VER-$SSE.exe
@@ -273,8 +277,8 @@ function prepare_orange {
     python -m pip install pip==8.1.2
     # ensure that correct numpy and scipy are installed in the build env
     pip install --no-index -f "$BUILDBASE/wheelhouse" \
-                --only-binary numpy,scipy \
-                numpy==$NUMPY_VER scipy==$SCIPY_VER
+                --only-binary numpy \
+                numpy==$NUMPY_BUILD_VER
 
     # ensure that the wheel package in the build env creates .whl files that
     # can be installed with pip v7.* (wheel issue #165, #159) which is the
@@ -344,6 +348,7 @@ function prepare_startupscripts {
 }
 
 function prepare_all {
+    python -m pip install pip==8.1.2
     prepare_python
     prepare_msvcr100
     prepare_pip

@@ -146,6 +146,7 @@ Section "Main"
 
 	DetailPrint "Installing scipy stack ($SSE)"
 	${Pip} 'install --no-deps --no-index \
+			-f "${TEMPDIR}\wheelhouse" \
 			-f "${TEMPDIR}\wheelhouse\$SSE" numpy scipy'
 	Pop $0
 	${If} $0 != 0
