@@ -532,9 +532,6 @@ class AddonManagerDialog(QDialog):
                 assert False
             items.append(item)
 
-        installed_first = lambda x: (-isinstance(x, Installed), x)
-        items.sort(key=installed_first)
-
         self.addonwidget.set_items(items)
 
     def showEvent(self, event):
