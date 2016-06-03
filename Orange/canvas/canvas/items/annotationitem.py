@@ -107,8 +107,9 @@ class TextAnnotation(Annotation):
         self.__textMargins = (2, 2, 2, 2)
 
         rect = self.geometry().translated(-self.pos())
+        self.__framePen = QPen(Qt.NoPen)
         self.__framePathItem = QGraphicsPathItem(self)
-        self.__framePathItem.setPen(QPen(Qt.NoPen))
+        self.__framePathItem.setPen(self.__framePen)
 
         self.__textItem = GraphicsTextEdit(self)
         self.__textItem.setPlaceholderText(self.tr("Enter text here"))
@@ -137,14 +138,15 @@ class TextAnnotation(Annotation):
     def setFramePen(self, pen):
         """Set the frame pen. By default Qt.NoPen is used (i.e. the frame
         is not shown).
-
         """
-        self.__framePathItem.setPen(pen)
+        if pen != self.__framePen:
+            self.__framePen = QPen(pen)
+            self.__updateFrameStyle()
 
     def framePen(self):
         """Return the frame pen.
         """
-        return self.__framePathItem.pen()
+        return QPen(self.__framePen)
 
     def setFrameBrush(self, brush):
         """Set the frame brush.
@@ -155,6 +157,13 @@ class TextAnnotation(Annotation):
         """Return the frame brush.
         """
         return self.__framePathItem.brush()
+
+    def __updateFrameStyle(self):
+        if self.isSelected():
+            pen = QPen(Qt.DashDotLine)
+        else:
+            pen = self.__framePen
+        self.__framePathItem.setPen(pen)
 
     def setPlainText(self, text):
         """Set the annotation plain text.
@@ -285,10 +294,7 @@ class TextAnnotation(Annotation):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            if self.isSelected():
-                self.setFramePen(QPen(Qt.DashDotLine))
-            else:
-                self.setFramePen(QPen(Qt.NoPen))
+            self.__updateFrameStyle()
 
         return Annotation.itemChange(self, change, value)
 
