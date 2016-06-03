@@ -465,7 +465,7 @@ class OWConfusionMatrix(widget.OWWidget):
                 "Confusion matrix for {} (showing {})".
                 format(self.learners[self.selected_learner],
                        self.quantities[self.selected_quantity].lower()),
-                self.tablemodel)
+                self.tableview)
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication

@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict, Iterable
 from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
-from PyQt4.QtGui import QGraphicsScene, QStandardItemModel, QColor
+from PyQt4.QtGui import QGraphicsScene, QAbstractItemView, QColor
 from Orange.widgets.io import PngFormat
 from Orange.data.sql.table import SqlTable
 from Orange.widgets.utils import getdeepattr
@@ -197,54 +197,77 @@ class Report:
         def data(item):
             return item and item.data(Qt.DisplayRole) or ""
 
-        def report_standard_model(model):
-            content = ((data(model.item(row, col))
-                        for col in range(model.columnCount())
-                        ) for row in range(model.rowCount()))
-            has_header = not hasattr(table, "isHeaderHidden") or \
-                not table.isHeaderHidden()
-            if has_header:
-                try:
-                    header = (data(model.horizontalHeaderItem(col))
-                              for col in range(model.columnCount())),
-                    content = chain(header, content)
-                except:
-                    has_header = False
-            return report_list(content, header_rows + has_header)
-
-        # noinspection PyBroadException
         def report_abstract_model(model, view=None):
-            # use ItemDelegate to style values
-            style = lambda x: view.itemDelegate().displayText(x, QLocale())
+            columns = [i for i in range(model.columnCount())
+                       if not view or not view.isColumnHidden(i)]
+            rows = [i for i in range(model.rowCount())
+                    if not view or not view.isRowHidden(i)]
 
-            # iterate only over visible columns of QTableView
-            iter_columns = list(filter(lambda x: not view.isColumnHidden(x),
-                                       range(model.columnCount())))
+            has_horizontal_header = has_vertical_header = False
+            if view:
+                _hheader = getattr(view, 'horizontalHeader',
+                                   getattr(view, 'header', lambda: None))()
+                has_horizontal_header = _hheader and not _hheader.isHidden()
+                _vheader = getattr(view, 'verticalHeader', lambda: None)()
+                has_horizontal_header = _vheader and not _vheader.isHidden()
 
-            # If all columns are hidden
-            if len(iter_columns) == 0:
-                return
+            def item_html(row, col):
 
-            content = ((style(model.data(model.index(row, col)),)
-                        for col in iter_columns
-                        ) for row in range(model.rowCount()))
-            try:
-                header = [model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
-                          for col in iter_columns]
-            except:
-                header = None
-            if header:
-                content = chain([header], content)
-            try:
-                header_vertical = [model.headerData(row, Qt.Vertical, Qt.DisplayRole)
-                                   for row in range(model.rowCount())]
-                header_vertical = [" "] + header_vertical
-                content = chain(chain([header_vertical[rowi]], row)
-                                for rowi, row in enumerate(content))
-                has_vertical_header = True
-            except:
-                has_vertical_header = False
-            return report_list(content, header_rows + bool(header), header_columns + has_vertical_header)
+                def data(role=Qt.DisplayRole,
+                         orientation=Qt.Horizontal if row is None else Qt.Vertical):
+                    if row is None or col is None:
+                        return model.headerData(col if row is None else row,
+                                                orientation, role)
+                    return model.data(model.index(row, col), role)
+
+                selected = (view.selectionModel().isSelected(model.index(row, col))
+                            if view and row is not None and col is not None else False)
+
+                fgcolor = data(Qt.ForegroundRole)
+                fgcolor = fgcolor.color().name() if fgcolor else 'black'
+
+                bgcolor = data(Qt.BackgroundRole)
+                bgcolor = bgcolor.color().name() if bgcolor else 'transparent'
+                if bgcolor.lower() == '#ffffff':
+                    bgcolor = 'transparent'
+
+                font = data(Qt.FontRole)
+                weight = 'bold' if font and font.bold() else 'normal'
+
+                alignment = data(Qt.TextAlignmentRole) or Qt.AlignLeft
+                halign = ('left' if alignment & Qt.AlignLeft else
+                          'right' if alignment & Qt.AlignRight else
+                          'center')
+                valign = ('top' if alignment & Qt.AlignTop else
+                          'bottom' if alignment & Qt.AlignBottom else
+                          'middle')
+                return ('<{tag} style="'
+                        'color:{fgcolor};'
+                        'border:{border};'
+                        'background:{bgcolor};'
+                        'font-weight:{weight};'
+                        'text-align:{halign};'
+                        'vertical-align:{valign};">{text}</{tag}>'.format(
+                            tag='th' if row is None or col is None else 'td',
+                            border='1px solid black' if selected else '0',
+                            text=data() or '', weight=weight, fgcolor=fgcolor,
+                            bgcolor=bgcolor, halign=halign, valign=valign))
+
+            stream = []
+
+            if has_horizontal_header:
+                stream.append('<tr>')
+                stream.extend(item_html(None, col) for col in columns)
+                stream.append('</tr>')
+
+            for row in rows:
+                stream.append('<tr>')
+                if has_vertical_header:
+                    stream.append(item_html(row, None))
+                stream.extend(item_html(row, col) for col in columns)
+                stream.append('</tr>')
+
+            return ''.join(stream)
 
         if num_format:
             def fmtnum(s):
@@ -265,17 +288,10 @@ class Report:
             ) for rowi, row in enumerate(data))
 
         self.report_name(name)
-        if isinstance(table, QAbstractItemModel):
-            model = table
-        else:
-            try:
-                model = table.model()
-            except:
-                model = None
-        if isinstance(model, QStandardItemModel):
-            body = report_standard_model(model)
-        elif isinstance(model, QAbstractItemModel):
-            body = report_abstract_model(model, table)
+        if isinstance(table, QAbstractItemView):
+            body = report_abstract_model(table.model(), table)
+        elif isinstance(table, QAbstractItemModel):
+            body = report_abstract_model(table)
         elif isinstance(table, Iterable):
             body = report_list(table, header_rows, header_columns)
         else:

@@ -1,7 +1,8 @@
 import unittest
 import pickle
 import sys
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import QApplication, QFont, QBrush
+from PyQt4.QtCore import Qt
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
@@ -9,6 +10,7 @@ from Orange.regression.tree import TreeRegressionLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
 from Orange.canvas.report.owreport import OWReport
+from Orange.widgets import gui
 from Orange.widgets.classify.owclassificationtree import OWClassificationTree
 from Orange.widgets.classify.owclassificationtreegraph import OWClassificationTreeGraph
 from Orange.widgets.classify.owknn import OWKNNLearner
@@ -37,6 +39,7 @@ from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.data.owcolor import OWColor
 from Orange.widgets.data.owpreprocess import OWPreprocess
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
+from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.owtestlearners import OWTestLearners
@@ -52,6 +55,7 @@ from Orange.widgets.unsupervised.owhierarchicalclustering import OWHierarchicalC
 from Orange.widgets.unsupervised.owkmeans import OWKMeans
 from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.unsupervised.owpca import OWPCA
+from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.visualize.owboxplot import OWBoxPlot
 from Orange.widgets.visualize.owdistributions import OWDistributions
 from Orange.widgets.visualize.owheatmap import OWHeatMap
@@ -81,6 +85,49 @@ class TestReport(unittest.TestCase):
         p = pickle.dumps(rep)
         rep2 = pickle.loads(p)
         self.assertEqual(type(rep), type(rep2))
+
+    def test_report_table(self):
+        rep = OWReport().get_instance()
+        model = PyTableModel([['x', 1, 2],
+                              ['y', 2, 2]])
+        model.setHorizontalHeaderLabels(['a', 'b', 'c'])
+
+        model.setData(model.index(0, 0), Qt.AlignHCenter | Qt.AlignTop, Qt.TextAlignmentRole)
+        model.setData(model.index(1, 0), QFont('', -1, QFont.Bold), Qt.FontRole)
+        model.setData(model.index(1, 2), QBrush(Qt.red), Qt.BackgroundRole)
+
+        view = gui.TableView()
+        view.show()
+        view.setModel(model)
+        rep.report_table('Name', view)
+        self.maxDiff = None
+        self.assertEqual(
+            rep.report_html,
+            '<h2>Name</h2><table>\n'
+            '<tr>'
+            '<th style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:left;vertical-align:middle;">a</th>'
+            '<th style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:left;vertical-align:middle;">b</th>'
+            '<th style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:left;vertical-align:middle;">c</th>'
+            '</tr>'
+            '<tr>'
+            '<td style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:center;vertical-align:top;">x</td>'
+            '<td style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:right;vertical-align:middle;">1</td>'
+            '<td style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
+            '</tr>'
+            '<tr>'
+            '<td style="color:black;border:0;background:transparent;'
+            'font-weight:bold;text-align:left;vertical-align:middle;">y</td>'
+            '<td style="color:black;border:0;background:transparent;'
+            'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
+            '<td style="color:black;border:0;background:#ff0000;'
+            'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
+            '</tr></table>')
 
 
 class TestReportWidgets(unittest.TestCase):
