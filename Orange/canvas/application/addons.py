@@ -82,8 +82,6 @@ Installed = namedtuple(
      "local"]
 )
 
-_DUMMY_INSTALLABLE = Installable('', '', '', '', '', '')
-
 
 def is_updatable(item):
     if isinstance(item, Available):
@@ -533,10 +531,6 @@ class AddonManagerDialog(QDialog):
             else:
                 assert False
             items.append(item)
-
-        installed_first = lambda x: (-isinstance(x, Installed),
-                                     x if x[0] else _DUMMY_INSTALLABLE)
-        items.sort(key=installed_first)
 
         self.addonwidget.set_items(items)
 
