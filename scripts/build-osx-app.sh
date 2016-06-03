@@ -1,10 +1,12 @@
-#!/bin/bash -e
-# Build an OSX Applicaiton (.app) for Orange Canvas
+#!/bin/bash
+# Build an OSX Application (.app) for Orange Canvas
 #
 # Example:
 #
 #     $ build-osx-app.sh $HOME/Applications/Orange3.app
 #
+
+set -e
 
 function print_usage() {
     echo 'build-osx-app.sh [-i] [--template] Orange3.app
@@ -139,10 +141,33 @@ sed -i.bak "s@/.*\.app/@$TEMPLATE/@g" "${SITE_PACKAGES}"/sipconfig.py
     "$PIP" install qt-graph-helpers
 )
 
+# Explicitly specify a numpy version due to an undeclared dependency of
+# scikit-learn's osx wheel files (0.17.1) which seem to be build against
+# numpy 1.10.*, and require numpy >= 1.10 ABI.
+echo "Installing numpy"
+echo "================"
+
+"$PIP" install --only-binary numpy 'numpy==1.10.*'
+
 echo "Installing Orange"
 echo "================="
 
 "$PIP" install .
+
+echo "Running tests"
+echo "============="
+
+# Run in an empty dir to avoid imports from source checkout
+(
+    tmpdir=$(mktemp -d -t temp-test)
+    cleanup-on-exit() {
+        rm -r $tmpdir
+    }
+    trap cleanup-on-exit  EXIT
+    cd "$tmpdir"
+    "$PYTHON" -m unittest Orange.tests
+)
+
 
 cat <<-'EOF' > "$TEMPLATE"/Contents/MacOS/Orange
 	#!/bin/bash
