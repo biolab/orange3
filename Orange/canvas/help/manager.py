@@ -106,7 +106,7 @@ class HelpManager(QObject):
 
 def get_by_id(registry, descriptor_id):
     for desc in registry.widgets():
-        if desc.id == descriptor_id:
+        if desc.qualified_name == descriptor_id:
             return desc
 
     raise KeyError(descriptor_id)
