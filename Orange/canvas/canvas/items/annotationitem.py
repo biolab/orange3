@@ -107,8 +107,9 @@ class TextAnnotation(Annotation):
         self.__textMargins = (2, 2, 2, 2)
 
         rect = self.geometry().translated(-self.pos())
+        self.__framePen = QPen(Qt.NoPen)
         self.__framePathItem = QGraphicsPathItem(self)
-        self.__framePathItem.setPen(QPen(Qt.NoPen))
+        self.__framePathItem.setPen(self.__framePen)
 
         self.__textItem = GraphicsTextEdit(self)
         self.__textItem.setPlaceholderText(self.tr("Enter text here"))
@@ -137,14 +138,15 @@ class TextAnnotation(Annotation):
     def setFramePen(self, pen):
         """Set the frame pen. By default Qt.NoPen is used (i.e. the frame
         is not shown).
-
         """
-        self.__framePathItem.setPen(pen)
+        if pen != self.__framePen:
+            self.__framePen = QPen(pen)
+            self.__updateFrameStyle()
 
     def framePen(self):
         """Return the frame pen.
         """
-        return self.__framePathItem.pen()
+        return QPen(self.__framePen)
 
     def setFrameBrush(self, brush):
         """Set the frame brush.
@@ -155,6 +157,14 @@ class TextAnnotation(Annotation):
         """Return the frame brush.
         """
         return self.__framePathItem.brush()
+
+    def __updateFrameStyle(self):
+        if self.isSelected():
+            pen = QPen(QColor(96, 158, 215), 1.25, Qt.DashDotLine)
+        else:
+            pen = self.__framePen
+
+        self.__framePathItem.setPen(pen)
 
     def setPlainText(self, text):
         """Set the annotation plain text.
@@ -285,10 +295,7 @@ class TextAnnotation(Annotation):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            if self.isSelected():
-                self.setFramePen(QPen(Qt.DashDotLine))
-            else:
-                self.setFramePen(QPen(Qt.NoPen))
+            self.__updateFrameStyle()
 
         return Annotation.itemChange(self, change, value)
 
@@ -544,7 +551,7 @@ class ArrowAnnotation(Annotation):
         """
         if self.__color != color:
             self.__color = QColor(color)
-            self.__updateBrush()
+            self.__updateStyleState()
 
     def color(self):
         """
@@ -595,17 +602,24 @@ class ArrowAnnotation(Annotation):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.__updateBrush()
+            self.__updateStyleState()
 
         return Annotation.itemChange(self, change, value)
 
-    def __updateBrush(self):
+    def __updateStyleState(self):
         """
-        Update the arrow brush.
+        Update the arrows' brush, pen, ... based on it's state
         """
         if self.isSelected():
             color = self.__color.darker(150)
+            pen = QPen(QColor(96, 158, 215), Qt.DashDotLine)
+            pen.setWidthF(1.25)
+            pen.setCosmetic(True)
+            self.__shadow.setColor(pen.color().darker(150))
         else:
             color = self.__color
+            pen = QPen(Qt.NoPen)
+            self.__shadow.setColor(QColor(63, 63, 63, 180))
 
         self.__arrowItem.setBrush(color)
+        self.__arrowItem.setPen(pen)
