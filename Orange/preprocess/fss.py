@@ -1,6 +1,7 @@
 import random
 import Orange
 import numpy as np
+from scipy.sparse import issparse
 
 from itertools import takewhile
 from operator import itemgetter
@@ -139,6 +140,10 @@ class RemoveNaNColumns(Preprocess):
         self.threshold = threshold
 
     def __call__(self, data, threshold=None):
+        # missing entries in sparse data are treated as zeros so we skip removing NaNs
+        if issparse(data.X):
+            return data
+
         if threshold is None:
             threshold = data.X.shape[0] if self.threshold is None else \
                         self.threshold
