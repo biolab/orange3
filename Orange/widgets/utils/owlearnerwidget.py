@@ -106,7 +106,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     want_main_area = False
     resizing_enabled = False
-    auto_apply = Setting(False)
+    auto_apply = Setting(True)
 
     DATA_ERROR_ID = 1
     OUTDATED_LEARNER_WARNING_ID = 2
