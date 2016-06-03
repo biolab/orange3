@@ -332,7 +332,7 @@ def whats_this_helper(desc, include_more_link=False):
     help_url = desc.help
 
     if not help_url:
-        help_url = "help://search?" + urlencode({"id": desc.id})
+        help_url = "help://search?" + urlencode({"id": desc.qualified_name})
 
     description = desc.description
     long_description = desc.long_description

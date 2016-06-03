@@ -1458,7 +1458,7 @@ class SchemeEditWidget(QWidget):
             node = nodes[0]
             desc = node.description
 
-            help_url = "help://search?" + urlencode({"id": desc.id})
+            help_url = "help://search?" + urlencode({"id": desc.qualified_name})
             self.__showHelpFor(help_url)
 
     def __showHelpFor(self, help_url):
