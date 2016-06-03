@@ -74,9 +74,9 @@ class ConstantModel(Model):
         :return: predicted value
         :rtype: vector of majority values
         """
-        probs = np.tile(self.dist, (len(X), 1))
+        probs = np.tile(self.dist, (X.shape[0], 1))
         if self.unif_maj is not None:
-            value = np.tile(self.unif_maj, (len(X), ))
+            value = np.tile(self.unif_maj, (X.shape[0], ))
             return value, probs
         return probs
 
