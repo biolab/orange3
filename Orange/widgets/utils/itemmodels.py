@@ -218,7 +218,7 @@ class PyTableModel(QAbstractTableModel):
 
     def __delitem__(self, i):
         if isinstance(i, slice):
-            start, stop, step = _as_contiguous_range(i, len(self))
+            start, stop, _ = _as_contiguous_range(i, len(self))
             stop -= 1
         else:
             start = stop = i = i if i >= 0 else len(self) + i

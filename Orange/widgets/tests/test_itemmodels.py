@@ -4,7 +4,7 @@
 from unittest import TestCase
 
 from PyQt4.QtCore import Qt
-from Orange.widgets.utils.itemmodels import PyTableModel
+from Orange.widgets.utils.itemmodels import PyTableModel, PyListModel
 
 
 class TestPyTableModel(TestCase):
@@ -24,7 +24,14 @@ class TestPyTableModel(TestCase):
         self.assertEqual(self.model.columnCount(), 2)
 
     def test_data(self):
-        self.assertEqual(str(self.model.data(self.model.index(0, 0))), '1')
+        mi = self.model.index(0, 0)
+        self.assertEqual(self.model.data(mi), '1')
+        self.assertEqual(self.model.data(mi, Qt.EditRole), 1)
+
+    def test_editable(self):
+        editable_model = PyTableModel([[0]], editable=True)
+        self.assertFalse(int(self.model.flags(self.model.index(0, 0)) & Qt.ItemIsEditable))
+        self.assertTrue(int(editable_model.flags(editable_model.index(0, 0)) & Qt.ItemIsEditable))
 
     def test_sort(self):
         self.model.sort(1)
@@ -80,3 +87,27 @@ class TestPyTableModel(TestCase):
     def test_remove(self):
         self.model.remove([2, 3])
         self.assertEqual(self.model.rowCount(), 1)
+
+    def test_other_roles(self):
+        self.model.append([2, 3])
+        self.model.setData(self.model.index(2, 0),
+                           Qt.AlignCenter,
+                           Qt.TextAlignmentRole)
+        del self.model[1]
+        self.assertTrue(Qt.AlignCenter &
+                        self.model.data(self.model.index(1, 0),
+                                        Qt.TextAlignmentRole))
+
+
+class TestPyListModel(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.model = PyListModel([1, 2, 3, 4])
+
+    def test_indexOf(self):
+        self.assertEqual(self.model.indexOf(3), 2)
+
+    def test_data(self):
+        mi = self.model.index(2)
+        self.assertEqual(self.model.data(mi), '3')
+        self.assertEqual(self.model.data(mi, Qt.EditRole), 3)
