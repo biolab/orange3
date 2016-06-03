@@ -311,7 +311,7 @@ class Table(MutableSequence, Storage):
                 if n_rows < 0:
                     n_rows = 0
             elif row_indices is ...:
-                n_rows = len(source.X)
+                n_rows = len(source)
             else:
                 n_rows = len(row_indices)
 
