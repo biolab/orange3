@@ -160,9 +160,10 @@ class TextAnnotation(Annotation):
 
     def __updateFrameStyle(self):
         if self.isSelected():
-            pen = QPen(Qt.DashDotLine)
+            pen = QPen(QColor(96, 158, 215), 1.25, Qt.DashDotLine)
         else:
             pen = self.__framePen
+
         self.__framePathItem.setPen(pen)
 
     def setPlainText(self, text):
