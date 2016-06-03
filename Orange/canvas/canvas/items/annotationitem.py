@@ -550,7 +550,7 @@ class ArrowAnnotation(Annotation):
         """
         if self.__color != color:
             self.__color = QColor(color)
-            self.__updateBrush()
+            self.__updateStyleState()
 
     def color(self):
         """
@@ -601,17 +601,24 @@ class ArrowAnnotation(Annotation):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.__updateBrush()
+            self.__updateStyleState()
 
         return Annotation.itemChange(self, change, value)
 
-    def __updateBrush(self):
+    def __updateStyleState(self):
         """
-        Update the arrow brush.
+        Update the arrows' brush, pen, ... based on it's state
         """
         if self.isSelected():
             color = self.__color.darker(150)
+            pen = QPen(QColor(96, 158, 215), Qt.DashDotLine)
+            pen.setWidthF(1.25)
+            pen.setCosmetic(True)
+            self.__shadow.setColor(pen.color().darker(150))
         else:
             color = self.__color
+            pen = QPen(Qt.NoPen)
+            self.__shadow.setColor(QColor(63, 63, 63, 180))
 
         self.__arrowItem.setBrush(color)
+        self.__arrowItem.setPen(pen)
