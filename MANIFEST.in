@@ -8,6 +8,7 @@ recursive-include Orange/canvas *.qss *ico *.png *.svg *.ico *.html
 recursive-include Orange/canvas/application/tutorials *.ows
 
 recursive-include Orange/widgets *.png *.svg
+recursive-include Orange/widgets/_highcharts *.js *.css *.html README
 recursive-include Orange/widgets/utils/plot *.fs *.vs *.gs *.obj
 
 recursive-include distribute *.svg *.desktop
