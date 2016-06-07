@@ -654,7 +654,7 @@ class ImageLoader(QObject):
     _NETMANAGER_REF = None
 
     def __init__(self, parent=None):
-        QObject.__init__(self, parent=None)
+        QObject.__init__(self, parent)
         assert QThread.currentThread() is QApplication.instance().thread()
 
         netmanager = self._NETMANAGER_REF and self._NETMANAGER_REF()
