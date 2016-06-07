@@ -7,8 +7,23 @@ from Orange.widgets.data.owcolor import HorizontalGridDelegate
 from Orange.widgets.utils.itemmodels import TableModel
 
 
+class Column:
+    name = 0
+    tpe = 1
+    place = 2
+    values = 3
+    not_valid = 4
+
+
+class Place:
+    feature = 0
+    class_var = 1
+    meta = 2
+    skip = 3
+
+
 class VarTableModel(QtCore.QAbstractTableModel):
-    places = "feature", "class", "meta", "skip"
+    places = "feature", "target", "meta", "skip"
     typenames = "nominal", "numeric", "string"
     vartypes = DiscreteVariable, ContinuousVariable, StringVariable
     name2type = dict(zip(typenames, vartypes))
@@ -41,44 +56,52 @@ class VarTableModel(QtCore.QAbstractTableModel):
         ]
         self.modelReset.emit()
 
+    def reset(self):
+        self.modelAboutToBeReset.emit()
+        self.variables[:] = []
+        self.modelReset.emit()
+
     def rowCount(self, parent):
         return 0 if parent.isValid() else len(self.variables)
 
     def columnCount(self, parent):
-        return 0 if parent.isValid() else 4
+        return 0 if parent.isValid() else Column.not_valid
 
     def data(self, index, role):
         row, col = index.row(), index.column()
         val = self.variables[row][col]
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
-            if col == 1:
+            if col == Column.tpe:
                 return self.type2name[val]
-            if col == 2:
+            if col == Column.place:
                 return self.places[val]
             else:
                 return val
         if role == QtCore.Qt.DecorationRole:
-            if col == 1:
+            if col == Column.tpe:
                 return gui.attributeIconDict[self.vartypes.index(val) + 1]
         if role == QtCore.Qt.ForegroundRole:
-            if self.variables[row][2] == 3 and col != 2:
+            if self.variables[row][Column.place] == Place.skip \
+                    and col != Column.place:
                 return QtGui.QColor(160, 160, 160)
         if role == QtCore.Qt.BackgroundRole:
-            place = self.variables[row][2]
-            return TableModel.ColorForRole.get(place, None)
+            place = self.variables[row][Column.place]
+            mapping = [Place.meta, Place.feature, Place.class_var, None]
+            return TableModel.ColorForRole.get(mapping[place], None)
 
     def setData(self, index, value, role):
         row, col = index.row(), index.column()
         row_data = self.variables[row]
         if role == QtCore.Qt.EditRole:
-            if col == 0:
+            if col == Column.name:
                 row_data[col] = value
-            elif col == 1:
+            elif col == Column.tpe:
                 vartype = self.name2type[value]
                 row_data[col] = vartype
-                if not vartype.is_primitive() and row_data[2] < 2:
-                    row_data[2] = 2
-            elif col == 2:
+                if not vartype.is_primitive() and \
+                                row_data[Column.place] < Place.meta:
+                    row_data[Column.place] = Place.meta
+            elif col == Column.place:
                 row_data[col] = self.places.index(value)
             else:
                 return False
@@ -87,6 +110,8 @@ class VarTableModel(QtCore.QAbstractTableModel):
             return True
 
     def flags(self, index):
+        if index.column() == Column.values:
+            return super().flags(index)
         return super().flags(index) | QtCore.Qt.ItemIsEditable
 
 
@@ -127,7 +152,8 @@ class ComboDelegate(HorizontalGridDelegate):
 class VarTypeDelegate(ComboDelegate):
     def setEditorData(self, combo, index):
         combo.clear()
-        no_numeric = not self.view.model().variables[index.row()][4]
+        no_numeric = not self.view.model().variables[
+            index.row()][Column.not_valid]
         ind = self.items.index(index.data())
         combo.addItems(self.items[:1] + self.items[1 + no_numeric:])
         combo.setCurrentIndex(ind - (no_numeric and ind > 1))
@@ -136,7 +162,8 @@ class VarTypeDelegate(ComboDelegate):
 class PlaceDelegate(ComboDelegate):
     def setEditorData(self, combo, index):
         combo.clear()
-        to_meta = not self.view.model().variables[index.row()][1].is_primitive()
+        to_meta = not self.view.model().variables[
+            index.row()][Column.tpe].is_primitive()
         combo.addItems(self.items[2 * to_meta:])
         combo.setCurrentIndex(self.items.index(index.data()) - 2 * to_meta)
 
@@ -159,6 +186,6 @@ class DomainEditor(QTableView):
         self.grid_delegate = HorizontalGridDelegate()
         self.setItemDelegate(self.grid_delegate)
         self.vartype_delegate = VarTypeDelegate(self, VarTableModel.typenames)
-        self.setItemDelegateForColumn(1, self.vartype_delegate)
+        self.setItemDelegateForColumn(Column.tpe, self.vartype_delegate)
         self.place_delegate = PlaceDelegate(self, VarTableModel.places)
-        self.setItemDelegateForColumn(2, self.place_delegate)
+        self.setItemDelegateForColumn(Column.place, self.place_delegate)

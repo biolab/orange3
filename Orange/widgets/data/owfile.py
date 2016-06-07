@@ -1,21 +1,21 @@
 import os
-from itertools import chain
-from itertools import count
+from itertools import chain, count
 from warnings import catch_warnings
-from xlrd import open_workbook
+
+import numpy as np
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import Domain
+from Orange.data import Domain, DiscreteVariable, StringVariable
+from Orange.data.table import Table, get_sample_datasets_dir
+from Orange.data.io import FileFormat, UrlReader
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
     PerfectDomainContextHandler
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
-from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, ExcelReader, UrlReader
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -169,7 +169,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_model.wrap(self.recent_urls)
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        url_combo.setMaximumWidth(500)
         url_combo.setEditable(True)
         url_combo.setInsertPolicy(url_combo.InsertAtTop)
         url_edit = url_combo.lineEdit()
@@ -207,6 +206,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         QtCore.QTimer.singleShot(0, self.load_data)
 
         self.setAcceptDrops(True)
+
     def sizeHint(self):
         return QtCore.QSize(600, 550)
 
@@ -241,7 +241,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
-
+        self.loaded_file = filename
         self.add_path(filename)
         self.source = self.LOCAL_FILE
         self.load_data()
@@ -259,6 +259,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 errors.append("An error occured:")
                 errors.append(str(ex))
                 data = None
+                self.editor_model.reset()
             self.warning(
                 33, warnings[-1].message.args[0] if warnings else '')
 
@@ -271,6 +272,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         add_origin(data, self.loaded_file)
         self.send("Data", data)
+        self.editor_model.set_domain(data.domain)
+        self.data = data
 
     def _get_reader(self):
         """
@@ -340,22 +343,42 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         attributes = []
         class_vars = []
         metas = []
-        weight = []
-        places = [attributes, class_vars, metas, weight]
-        cols = [[], [], [], []]  # Xcols, Ycols, Mcols, Wcols
-        for column, (name, tpe, place, vals), orig_var in \
+        places = [attributes, class_vars, metas]
+        X, y, m = [], [], []
+        cols = [X, y, m]  # Xcols, Ycols, Mcols
+        for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
             zip(count(), self.editor_model.variables,
-                chain(self.data.domain.variables, self.data.domain.metas)):
+                chain([(at, 0) for at in self.data.domain.attributes],
+                      [(cl, 1) for cl in self.data.domain.class_vars],
+                      [(mt, 2) for mt in self.data.domain.metas])):
             if place == 3:
                 continue
+            if orig_plc == 2:
+                col_data = list(chain(*self.data[:, orig_var].metas))
+            else:
+                col_data = list(chain(*self.data[:, orig_var]))
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
+            elif tpe == DiscreteVariable:
+                values = list(str(i) for i in set(col_data))
+                var = tpe(name, values)
+                col_data = [values.index(str(x)) for x in col_data]
+            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
+                var = tpe(name)
+                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
+                            for x in col_data]
             else:
                 var = tpe(name)
             places[place].append(var)
-            cols[place].append(column)  # This assumes that no columns were skipped in the original file!
+            cols[place].append(col_data)
         domain = Domain(attributes, class_vars, metas)
-        # data = Table.from_file(self.loaded_file, domain=domain, columns=cols)
+        X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
+        y = np.array(y).T if len(y) else None
+        dtpe = object if any(isinstance(m, StringVariable)
+                             for m in domain.metas) else float
+        m = np.array(m, dtype=dtpe).T if len(m) else None
+        table = Table.from_numpy(domain, X, y, m, self.data.W)
+        self.send("Data", table)
         self.apply_button.hide()
 
     def get_widget_name_extension(self):
