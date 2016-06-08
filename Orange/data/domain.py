@@ -57,6 +57,16 @@ class DomainConversion:
             else var.compute_value for var in destination.metas]
 
 
+def filter_visible(feats):
+    """
+    Args:
+        feats (iterable): Features to be filtered.
+
+    Returns: A filtered tuple of features that are visible (i.e. not hidden).
+    """
+    return (f for f in feats if not f.attributes.get('hidden', False))
+
+
 class Domain:
     def __init__(self, attributes, class_vars=None, metas=None, source=None):
         """
