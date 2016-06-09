@@ -31,9 +31,7 @@ from PyQt4.QtNetwork import (
 import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
-from Orange.widgets.io import FileFormat
 
-# from OWConcurrent import Future, FutureWatcher
 from concurrent.futures import Future
 
 _log = logging.getLogger(__name__)
@@ -311,9 +309,9 @@ class GraphicsScene(QGraphicsScene):
 
 _ImageItem = namedtuple(
     "_ImageItem",
-    ["index",  # Row index in the input data table
-     "widget",  # GraphicsThumbnailWidget belonging to this item.
-     "url",  # Composed final url.
+    ["index",   # Row index in the input data table
+     "widget",  # GraphicsThumbnailWidget displaying the image.
+     "url",     # Composed final image url.
      "future"]  # Future instance yielding an QImage
 )
 
@@ -471,12 +469,14 @@ class OWImageViewer(widget.OWWidget):
 
                 if url.isValid():
                     future = self.loader.get(url)
-                    watcher = _FutureWatcher(parent=thumbnail)
-                    # watcher = FutureWatcher(future, parent=thumbnail)
 
-                    def set_pixmap(thumb=thumbnail, future=future):
+                    @future.add_done_callback
+                    def set_pixmap(future, thumb=thumbnail):
                         if future.cancelled():
                             return
+
+                        assert future.done()
+
                         if future.exception():
                             # Should be some generic error image.
                             pixmap = QPixmap()
@@ -491,8 +491,6 @@ class OWImageViewer(widget.OWWidget):
 
                         self._updateStatus(future)
 
-                    watcher.finished.connect(set_pixmap, Qt.QueuedConnection)
-                    watcher.setFuture(future)
                 else:
                     future = None
                 self.items.append(_ImageItem(i, thumbnail, url, future))
@@ -540,17 +538,22 @@ class OWImageViewer(widget.OWWidget):
         size = QSizeF(pixmap.size()) * scale
         return size.expandedTo(QSizeF(16, 16))
 
-    def clearScene(self):
+    def _cancelAllFutures(self):
         for item in self.items:
-            if item.future:
-                item.future._reply.close()
+            if item.future is not None:
                 item.future.cancel()
+                if item.future._reply is not None:
+                    item.future._reply.close()
+                    item.future._reply.deleteLater()
+                    item.future._reply = None
 
+    def clearScene(self):
+        self._cancelAllFutures()
+
+        self.scene.clear()
         self.items = []
         self._errcount = 0
         self._successcount = 0
-
-        self.scene.clear()
         self.thumbnailWidget = None
         self.sceneLayout = None
 
@@ -630,9 +633,7 @@ class OWImageViewer(widget.OWWidget):
         self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
     def onDeleteWidget(self):
-        for item in self.items:
-            item.future._reply.abort()
-            item.future.cancel()
+        self._cancelAllFutures()
 
     def eventFilter(self, receiver, event):
         if receiver is self.sceneView and event.type() == QEvent.Resize \
@@ -653,7 +654,7 @@ class ImageLoader(QObject):
     _NETMANAGER_REF = None
 
     def __init__(self, parent=None):
-        QObject.__init__(self, parent=None)
+        QObject.__init__(self, parent)
         assert QThread.currentThread() is QApplication.instance().thread()
 
         netmanager = self._NETMANAGER_REF and self._NETMANAGER_REF()
@@ -670,7 +671,7 @@ class ImageLoader(QObject):
 
     def get(self, url):
         future = Future()
-        url = url = QUrl(url)
+        url = QUrl(url)
         request = QNetworkRequest(url)
         request.setRawHeader(b"User-Agent", b"OWImageViewer/1.0")
         request.setAttribute(
@@ -681,12 +682,24 @@ class ImageLoader(QObject):
         # Future yielding a QNetworkReply when finished.
         reply = self._netmanager.get(request)
         future._reply = reply
+
+        @future.add_done_callback
+        def abort_on_cancel(f):
+            # abort the network request on future.cancel()
+            if f.cancelled() and f._reply is not None:
+                f._reply.abort()
+
         n_redir = 0
 
         def on_reply_ready(reply, future):
             nonlocal n_redir
+            # schedule deferred delete to ensure the reply is closed
+            # otherwise we will leak file/socket descriptors
+            reply.deleteLater()
+            future._reply = None
             if reply.error() == QNetworkReply.OperationCanceledError:
-                # The network request itself was canceled
+                # The network request was cancelled
+                reply.close()
                 future.cancel()
                 return
 
@@ -694,6 +707,7 @@ class ImageLoader(QObject):
                 # XXX Maybe convert the error into standard
                 # http and urllib exceptions.
                 future.set_exception(Exception(reply.errorString()))
+                reply.close()
                 return
 
             # Handle a possible redirection
@@ -710,10 +724,12 @@ class ImageLoader(QObject):
                 future._reply = newreply
                 newreply.finished.connect(
                     partial(on_reply_ready, newreply, future))
+                reply.close()
                 return
 
             reader = QImageReader(reply)
             image = reader.read()
+            reply.close()
 
             if image.isNull():
                 future.set_exception(Exception(reader.errorString()))
@@ -722,27 +738,6 @@ class ImageLoader(QObject):
 
         reply.finished.connect(partial(on_reply_ready, reply, future))
         return future
-
-
-class _FutureWatcher(QObject):
-    finished = Signal()
-    cancelled = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.future = None
-
-    def setFuture(self, future):
-        self.future = future
-        future.add_done_callback(self._future_done)
-
-    def _future_done(self, f):
-        if f.cancelled():
-            self.cancelled.emit()
-        elif f.done():
-            self.finished.emit()
-        else:
-            assert False
 
 
 def main():
