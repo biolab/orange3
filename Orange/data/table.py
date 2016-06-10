@@ -259,6 +259,11 @@ class Table(MutableSequence, Storage):
         """
 
         def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
+            def sparse_to_flat(x):
+                if sp.issparse(x):
+                    x = np.ravel(x.toarray())
+                return x
+
             if not len(src_cols):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
@@ -289,7 +294,7 @@ class Table(MutableSequence, Storage):
                 elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
                 elif col < n_src_attrs:
-                    a[:, i] = source.X[row_indices, col]
+                    a[:, i] = sparse_to_flat(source.X[row_indices, col])
                 else:
                     a[:, i] = source._Y[row_indices, col - n_src_attrs]
             return a
@@ -311,7 +316,7 @@ class Table(MutableSequence, Storage):
                 if n_rows < 0:
                     n_rows = 0
             elif row_indices is ...:
-                n_rows = len(source.X)
+                n_rows = len(source)
             else:
                 n_rows = len(row_indices)
 

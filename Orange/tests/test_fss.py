@@ -4,6 +4,7 @@
 import unittest
 
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from Orange.data import Table, Variable
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
@@ -86,6 +87,13 @@ class TestRemoveNaNColumns(unittest.TestCase):
         new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
+
+    def test_column_filtering_sparse(self):
+        data = Table("iris")
+        data.X = csr_matrix(data.X)
+
+        new_data = RemoveNaNColumns(data)
+        self.assertEqual(data, new_data)
 
 
 class TestSelectRandomFeatures(unittest.TestCase):

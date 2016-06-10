@@ -8,6 +8,7 @@ from math import isnan
 import random
 
 from unittest.mock import Mock, MagicMock, patch
+from scipy.sparse import csr_matrix, issparse
 import numpy as np
 
 from Orange import data
@@ -1735,6 +1736,24 @@ class CreateTableWithDomainAndTable(TableTests):
         new_table = data.Table.from_table(new_domain, self.table, [])
         self.assert_table_with_filter_matches(
             new_table, self.table[:0], xcols=order, ycols=order, mcols=order)
+
+    def test_from_table_on_sparse_data(self):
+        iris = data.Table("iris")
+        iris.X = csr_matrix(iris.X)
+
+        new_domain = data.domain.Domain(iris.domain.attributes[:2], iris.domain.class_vars,
+                                        iris.domain.metas, source=iris.domain)
+        new_iris = data.Table.from_table(new_domain, iris)
+        self.assertTrue(issparse(new_iris.X))
+        self.assertEqual(new_iris.X.shape[1], 2)
+        self.assertEqual(len(new_iris.domain.attributes), 2)
+
+        all_vars = chain(iris.domain.variables, iris.domain.metas)
+        n_all = len(iris.domain) + len(iris.domain.metas)
+        new_domain = data.domain.Domain([], [], all_vars, source=iris.domain)
+        new_iris = data.Table.from_table(new_domain, iris)
+        self.assertEqual(len(new_iris.domain.metas), n_all)
+        self.assertEqual(new_iris.metas.shape[1], n_all)
 
     def assert_table_with_filter_matches(
             self, new_table, old_table,
