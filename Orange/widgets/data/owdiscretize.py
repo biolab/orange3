@@ -161,7 +161,11 @@ class OWDiscretize(widget.OWWidget):
         box = gui.vBox(self.controlArea, self.tr("Default Discretization"))
         self.default_bbox = rbox = gui.radioButtons(
             box, self, "default_method", callback=self._default_disc_changed)
-
+        rb = gui.hBox(rbox)
+        self.left = gui.vBox(rb)
+        right = gui.vBox(rb)
+        rb.layout().setStretch(0, 1)
+        rb.layout().setStretch(1, 1)
         options = self.options = [
             self.tr("Default"),
             self.tr("Leave numeric"),
@@ -171,17 +175,26 @@ class OWDiscretize(widget.OWWidget):
             self.tr("Remove numeric variables")
         ]
 
-        for opt in options[1:5]:
-            gui.appendRadioButton(rbox, opt)
+        for opt in options[1:]:
+            t = gui.appendRadioButton(rbox, opt)
+            # This condition is ugly, but it keeps the same order of
+            # options for backward compatibility of saved schemata
+            [right, self.left][opt.startswith("Equal")].layout().addWidget(t)
+        gui.separator(right, 18, 18)
 
-        s = gui.hSlider(gui.indentedBox(rbox),
-                        self, "default_k", minValue=2, maxValue=10,
-                        label="Num. of intervals:",
-                        callback=self._default_disc_changed)
-        s.setTracking(False)
+        def _intbox(widget, attr, callback):
+            box = gui.indentedBox(widget)
+            s = gui.spin(
+                box, self, attr, minv=2, maxv=10, label="Num. of intervals:",
+                callback=callback)
+            s.setMaximumWidth(60)
+            s.setAlignment(Qt.AlignRight)
+            gui.rubber(s.box)
+            return box.box
 
-        gui.appendRadioButton(rbox, options[-1])
-
+        self.k_general = _intbox(self.left, "default_k",
+                                 self._default_disc_changed)
+        self.k_general.layout().setMargin(0)
         vlayout = QHBoxLayout()
         box = gui.widgetBox(
             self.controlArea, "Individual Attribute Settings",
@@ -207,11 +220,7 @@ class OWDiscretize(widget.OWWidget):
         for opt in options[:5]:
             gui.appendRadioButton(controlbox, opt)
 
-        s = gui.hSlider(gui.indentedBox(controlbox),
-                        self, "k", minValue=2, maxValue=10,
-                        label="Num. of intervals:",
-                        callback=self._disc_method_changed)
-        s.setTracking(False)
+        self.k_specific = _intbox(controlbox, "k", self._disc_method_changed)
 
         gui.appendRadioButton(controlbox, "Remove attribute")
 
@@ -226,6 +235,7 @@ class OWDiscretize(widget.OWWidget):
             checkbox_label="Apply automatically")
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)
+        self._update_spin_positions()
 
 
     def set_data(self, data):
@@ -358,7 +368,21 @@ class OWDiscretize(widget.OWWidget):
             assert False
         return method
 
+    def _update_spin_positions(self):
+        self.k_general.setDisabled(self.default_method not in [2, 3])
+        if self.default_method == 2:
+            self.left.layout().insertWidget(1, self.k_general)
+        elif self.default_method == 3:
+            self.left.layout().insertWidget(2, self.k_general)
+
+        self.k_specific.setDisabled(self.method not in [3, 4])
+        if self.method == 3:
+            self.bbox.layout().insertWidget(4, self.k_specific)
+        elif self.method == 4:
+            self.bbox.layout().insertWidget(5, self.k_specific)
+
     def _default_disc_changed(self):
+        self._update_spin_positions()
         method = self._current_default_method()
         state = DState(Default(method), None, None)
         for i, _ in enumerate(self.varmodel):
@@ -367,6 +391,7 @@ class OWDiscretize(widget.OWWidget):
         self._update_points()
 
     def _disc_method_changed(self):
+        self._update_spin_positions()
         indices = self.selected_indices()
         method = self._current_method()
         state = DState(method, None, None)
@@ -392,6 +417,7 @@ class OWDiscretize(widget.OWWidget):
             self.method = -1
             bg = self.controlbox.group
             button_group_reset(bg)
+        self._update_spin_positions()
 
     def selected_indices(self):
         rows = self.varview.selectionModel().selectedRows()

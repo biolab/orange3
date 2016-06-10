@@ -448,6 +448,7 @@ def indentedBox(widget, sep=20, orientation=Qt.Vertical, **misc):
     separator(outer, sep, 0)
     indented = widgetBox(outer, orientation=orientation)
     miscellanea(indented, outer, widget, **misc)
+    indented.box = outer
     return indented
 
 
