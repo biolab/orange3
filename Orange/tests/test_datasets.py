@@ -10,6 +10,9 @@ from Orange import datasets
 
 
 class TestDatasets(unittest.TestCase):
+    def tearDown(self):
+        Variable._clear_all_caches()
+
     def test_access(self):
         d1 = datasets.anneal
         fname = datasets.anneal['location']
