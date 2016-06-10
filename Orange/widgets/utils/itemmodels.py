@@ -553,7 +553,7 @@ _html_replace = [("<", "&lt;"), (">", "&gt;")]
 
 def safe_text(text):
     for old, new in _html_replace:
-        text = text.replace(old, new)
+        text = str(text).replace(old, new)
     return text
 
 

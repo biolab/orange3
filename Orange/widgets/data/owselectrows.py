@@ -7,6 +7,7 @@ from PyQt4.QtCore import Qt
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
 import Orange.data.filter as data_filter
+from Orange.data.domain import filter_visible
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
@@ -132,7 +133,7 @@ class OWSelectRows(widget.OWWidget):
             minimumContentsLength=12,
             sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row
-        for var in chain(self.data.domain.variables, self.data.domain.metas):
+        for var in filter_visible(chain(self.data.domain.variables, self.data.domain.metas)):
             attr_combo.addItem(*gui.attributeItem(var))
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
