@@ -1233,8 +1233,7 @@ class Table(MutableSequence, Storage):
                 return M[:, col], self.W if self.has_weights() else None, None
             if cachedM is None:
                 if single_column:
-                    warn(ResourceWarning,
-                         "computing distributions on sparse data "
+                    warn("computing distributions on sparse data "
                          "for a single column is inefficient")
                 cachedM = sp.csc_matrix(self.X)
             data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col + 1]]
