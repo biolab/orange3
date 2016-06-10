@@ -1092,5 +1092,20 @@
             "type": "discrete",
             "values": 7
         }
+    },
+    "zoo-with-images": {
+        "features": {
+            "continuous": 0,
+            "discrete": 5,
+            "meta": 2
+        },
+        "location": "zoo-with-images.tab",
+        "missing": false,
+        "name": "zoo-with-images",
+        "rows": 15,
+        "target": {
+            "type": "discrete",
+            "values": 3
+        }
     }
 }
