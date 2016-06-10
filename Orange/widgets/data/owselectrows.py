@@ -2,6 +2,7 @@ from collections import OrderedDict
 from itertools import chain
 
 from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import Qt
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
@@ -68,10 +69,9 @@ class OWSelectRows(widget.OWWidget):
         self.data_desc = self.match_desc = self.nonmatch_desc = None
 
         box = gui.vBox(self.controlArea, 'Conditions', stretch=100)
-        self.cond_list = QtGui.QTableWidget(box)
+        self.cond_list = QtGui.QTableWidget(
+            box, showGrid=False, selectionMode=QtGui.QTableWidget.NoSelection)
         box.layout().addWidget(self.cond_list)
-        self.cond_list.setShowGrid(False)
-        self.cond_list.setSelectionMode(QtGui.QTableWidget.NoSelection)
         self.cond_list.setColumnCount(3)
         self.cond_list.setRowCount(0)
         self.cond_list.verticalHeader().hide()
@@ -82,27 +82,26 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
 
         box2 = gui.hBox(box)
-        self.add_button = gui.button(box2, self, "Add Condition",
-                                     callback=self.add_row)
-        self.add_all_button = gui.button(box2, self, "Add All Variables",
-                                         callback=self.add_all)
-        self.remove_all_button = gui.button(box2, self, "Remove All",
-                                            callback=self.remove_all)
+        gui.rubber(box2)
+        self.add_button = gui.button(
+            box2, self, "Add Condition", callback=self.add_row)
+        self.add_all_button = gui.button(
+            box2, self, "Add All Variables", callback=self.add_all)
+        self.remove_all_button = gui.button(
+            box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        info = gui.hBox(self.controlArea)
-        box_data_in = gui.vBox(info, 'Data In')
-#        self.data_in_rows = gui.widgetLabel(box_data_in, " ")
-        self.data_in_variables = gui.widgetLabel(box_data_in, " ")
-        gui.rubber(box_data_in)
+        boxes = gui.widgetBox(self.controlArea, orientation=QtGui.QGridLayout())
+        layout = boxes.layout()
+        layout.setColumnStretch(0, 1)
+        layout.setColumnStretch(1, 1)
 
-        box_data_out = gui.vBox(info, 'Data Out')
-        self.data_out_rows = gui.widgetLabel(box_data_out, " ")
-#        self.dataOutAttributesLabel = gui.widgetLabel(box_data_out, " ")
-        gui.rubber(box_data_out)
+        box_data = gui.vBox(boxes, 'Data', addToLayout=False)
+        self.data_in_variables = gui.widgetLabel(box_data, " ")
+        self.data_out_rows = gui.widgetLabel(box_data, " ")
+        layout.addWidget(box_data, 0, 0)
 
-        box = gui.hBox(self.controlArea)
-        box_setting = gui.vBox(box, 'Purging')
+        box_setting = gui.vBox(boxes, 'Purging', addToLayout=False)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -110,8 +109,17 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        gui.auto_commit(box, self, "auto_commit", label="Send",
-                        checkbox_label="Send automatically")
+        layout.addWidget(box_setting, 0, 1)
+
+        self.report_button.setFixedWidth(120)
+        gui.rubber(self.buttonsArea.layout())
+        layout.addWidget(self.buttonsArea, 1, 0)
+
+        acbox = gui.auto_commit(
+            None, self, "auto_commit", label="Send", orientation=Qt.Horizontal,
+            checkbox_label="Send automatically")
+        layout.addWidget(acbox, 1, 1)
+
         self.set_data(None)
         self.resize(600, 400)
 
@@ -307,7 +315,7 @@ class OWSelectRows(widget.OWWidget):
 
         if not self.conditions and len(data.domain.variables):
             self.add_row()
-        self.update_info(data, self.data_in_variables)
+        self.update_info(data, self.data_in_variables, "In: ")
         for attr, cond_type, cond_value in self.conditions:
             attrs = [a.name for a in
                      data.domain.variables + data.domain.metas]
@@ -408,16 +416,17 @@ class OWSelectRows(widget.OWWidget):
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
 
-        self.update_info(matching_output, self.data_out_rows)
+        self.update_info(matching_output, self.data_out_rows, "Out: ")
 
-    def update_info(self, data, lab1):
+    def update_info(self, data, lab1, label):
         def sp(s, capitalize=True):
             return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
 
         if data is None:
             lab1.setText("")
         else:
-            lab1.setText("~%s row%s, %s variable%s" % (sp(data.approx_len()) +
+            lab1.setText(label + "~%s row%s, %s variable%s" %
+                         (sp(data.approx_len()) +
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
     def send_report(self):
