@@ -2223,8 +2223,9 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
                           QtGui.QSizePolicy.Preferred)
     checkbox_toggled()
     setattr(master, commit_name, unconditional_commit)
-    miscellanea(b, widget, widget,
-                addToLayout=not isinstance(box, QtGui.QWidget), **misc)
+    misc['addToLayout'] = misc.get('addToLayout', True) and \
+                          not isinstance(box, QtGui.QWidget)
+    miscellanea(b, widget, widget, **misc)
     return b
 
 
