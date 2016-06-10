@@ -199,10 +199,10 @@ class OWKMeans(widget.OWWidget):
         self.updateOptimizationGui()
         self.update()
 
-    def check_data_size(self, n):
+    def check_data_size(self, n, msg_func):
         if n > len(self.data):
-            self.error("Not enough unique data instances ({}) for given "
-                       "number of clusters ({}).".format(len(self.data), n))
+            msg_func("Too few unique data instances ({}) for {} clusters".
+                     format(len(self.data), n))
             return False
         return True
 
@@ -212,14 +212,15 @@ class OWKMeans(widget.OWWidget):
         try:
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
-            if not self.check_data_size(self.k_to):
+            if not self.check_data_size(self.k_from, self.error):
                 return
+            self.check_data_size(self.k_to, self.warning)
+            k_to = min(self.k_to, len(self.data))
             kmeans = KMeans(
                 init=['random', 'k-means++'][self.smart_init],
-                n_init=self.n_init,
-                max_iter=self.max_iterations)
-            with self.progressBar(self.k_to - self.k_from + 1) as progress:
-                for k in range(self.k_from, self.k_to + 1):
+                n_init=self.n_init, max_iter=self.max_iterations)
+            with self.progressBar(k_to - self.k_from + 1) as progress:
+                for k in range(self.k_from, k_to + 1):
                     progress.advance()
                     kmeans.params["n_clusters"] = k
                     self.optimization_runs.append((k, kmeans(self.data)))
@@ -229,7 +230,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def cluster(self):
-        if not self.check_data_size(self.k):
+        if not self.check_data_size(self.k, self.error):
             return
         self.km = KMeans(
             n_clusters=self.k,
@@ -240,6 +241,7 @@ class OWKMeans(widget.OWWidget):
 
     def run(self):
         self.error()
+        self.warning()
         if not self.data:
             return
         if self.optimize_k:
