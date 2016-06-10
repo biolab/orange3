@@ -12,6 +12,7 @@ import urllib.parse
 from distutils.version import StrictVersion
 
 from operator import itemgetter
+from sysconfig import get_path
 
 import pkg_resources
 
@@ -248,7 +249,8 @@ def get_dist_meta(dist):
 def _replacements_for_dist(dist):
     replacements = {"PROJECT_NAME": dist.project_name,
                     "PROJECT_NAME_LOWER": dist.project_name.lower(),
-                    "PROJECT_VERSION": dist.version}
+                    "PROJECT_VERSION": dist.version,
+                    "DATA_DIR": get_path("data")}
     try:
         replacements["URL"] = get_dist_url(dist)
     except KeyError:
@@ -404,8 +406,8 @@ def get_help_provider_for_distribution(dist):
             except pkg_resources.DistributionNotFound as err:
                 log.warning("Unsatisfied dependencies (%r)", err)
                 continue
-            except Exception:
-                log.exception("Exception")
+            except Exception as ex:
+                log.exception("Exception {}".format(ex))
             if provider:
                 log.info("Created %s provider for %s",
                          type(provider), dist)
