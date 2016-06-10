@@ -121,7 +121,8 @@ class SelectRandomFeatures:
         if type(self.k) == float:
             self.k = int(len(data.domain.attributes) * self.k)
         domain = Orange.data.Domain(
-            random.sample(data.domain.attributes, self.k),
+            random.sample(data.domain.attributes,
+                          min(self.k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 

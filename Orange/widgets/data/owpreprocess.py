@@ -560,6 +560,108 @@ class FeatureSelectEditor(BaseEditor):
 # TODO: Model based FS (random forest variable importance, ...), RFE
 # Unsupervised (min variance, constant, ...)??
 
+class RandomFeatureSelectEditor(BaseEditor):
+    #: Strategy
+    Fixed, Percentage = 1, 2
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+
+        self.__strategy = RandomFeatureSelectEditor.Fixed
+        self.__k = 10
+        self.__p = 75.0
+
+        box = QGroupBox(title="Strategy", flat=True)
+        self.__group = group = QButtonGroup(self, exclusive=True)
+        self.__spins = {}
+
+        form = QFormLayout()
+        fixedrb = QRadioButton("Fixed", checked=True)
+        group.addButton(fixedrb, RandomFeatureSelectEditor.Fixed)
+        kspin = QSpinBox(
+            minimum=1, value=self.__k,
+            enabled=self.__strategy == RandomFeatureSelectEditor.Fixed
+        )
+        kspin.valueChanged[int].connect(self.setK)
+        kspin.editingFinished.connect(self.edited)
+        self.__spins[RandomFeatureSelectEditor.Fixed] = kspin
+        form.addRow(fixedrb, kspin)
+
+        percrb = QRadioButton("Percentage")
+        group.addButton(percrb, RandomFeatureSelectEditor.Percentage)
+        pspin = QDoubleSpinBox(
+            minimum=0.0, maximum=100.0, singleStep=0.5,
+            value=self.__p, suffix="%",
+            enabled=self.__strategy == RandomFeatureSelectEditor.Percentage
+        )
+        pspin.valueChanged[float].connect(self.setP)
+        pspin.editingFinished.connect(self.edited)
+        self.__spins[RandomFeatureSelectEditor.Percentage] = pspin
+        form.addRow(percrb, pspin)
+
+        self.__group.buttonClicked.connect(self.__on_buttonClicked)
+        box.setLayout(form)
+        self.layout().addWidget(box)
+
+    def setStrategy(self, strategy):
+        if self.__strategy != strategy:
+            self.__strategy = strategy
+            b = self.__group.button(strategy)
+            b.setChecked(True)
+            for st, rb in self.__spins.items():
+                rb.setEnabled(st == strategy)
+            self.changed.emit()
+
+    def setK(self, k):
+        if self.__k != k:
+            self.__k = k
+            spin = self.__spins[RandomFeatureSelectEditor.Fixed]
+            spin.setValue(k)
+            if self.__strategy == RandomFeatureSelectEditor.Fixed:
+                self.changed.emit()
+
+    def setP(self, p):
+        if self.__p != p:
+            self.__p = p
+            spin = self.__spins[RandomFeatureSelectEditor.Percentage]
+            spin.setValue(p)
+            if self.__strategy == RandomFeatureSelectEditor.Percentage:
+                self.changed.emit()
+
+    def __on_buttonClicked(self):
+        strategy = self.__group.checkedId()
+        self.setStrategy(strategy)
+        self.edited.emit()
+
+    def setParameters(self, params):
+        strategy = params.get("strategy", RandomFeatureSelectEditor.Fixed)
+        self.setStrategy(strategy)
+        if strategy == RandomFeatureSelectEditor.Fixed:
+            self.setK(params.get("k", 10))
+        else:
+            self.setP(params.get("p", 75.0))
+
+    def parameters(self):
+        strategy = self.__strategy
+        p = self.__p
+        k = self.__k
+
+        return {"strategy": strategy, "p": p, "k": k}
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        strategy = params.get("strategy", RandomFeatureSelectEditor.Fixed)
+        k = params.get("k", 10)
+        p = params.get("p", 75.0)
+        if strategy == RandomFeatureSelectEditor.Fixed:
+            return preprocess.fss.SelectRandomFeatures(k=k)
+        elif strategy == RandomFeatureSelectEditor.Percentage:
+            return preprocess.fss.SelectRandomFeatures(k=p/100)
+        else:
+            # further implementations
+            raise NotImplementedError
 
 class _Scaling(preprocess.preprocess.Preprocess):
     """
@@ -893,6 +995,13 @@ PREPROCESSORS = [
         Description("Select Relevant Features",
                     icon_path("SelectColumns.svg")),
         FeatureSelectEditor
+    ),
+    PreprocessAction(
+        "Random Feature Selection", "orange.preprocess.randomfss",
+        "Random Feature Selection",
+        Description("Select Random Features",
+                    icon_path("SelectColumnsRandom.svg")),
+        RandomFeatureSelectEditor
     ),
     PreprocessAction(
         "Normalize", "orange.preprocess.scale", "Scaling",

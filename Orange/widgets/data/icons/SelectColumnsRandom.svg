@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="-281 373 48 48" style="enable-background:new -281 373 48 48;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FFFFFF;}
+	.st1{fill:#333333;}
+	.st2{fill:#666666;}
+	.st3{fill:#B2B2B2;}
+	.st4{fill:#989898;}
+	.st5{fill:#231F20;stroke:#FFFFFF;stroke-width:1.67;stroke-miterlimit:10;}
+</style>
+<rect x="-251" y="405" class="st0" width="10" height="8"/>
+<g>
+	<path class="st1" d="M-275,379v36h36v-36H-275z M-241,387v8v1v8v9h-11h-10h-1h-10v-8v-1v-8v-1v-8l0,0h10l0,0h1l0,0h10l0,0h1l0,0
+		H-241L-241,387z"/>
+	<polygon class="st2" points="-262,404 -262,396 -262,395 -262,387 -263,387 -263,395 -273,395 -273,396 -263,396 -263,404 
+		-273,404 -273,405 -263,405 -263,413 -262,413 -262,405 	"/>
+	<polygon class="st2" points="-251,387 -252,387 -252,395 -252,396 -252,404 -252,405 -252,413 -241,413 -241,404 -251,404 
+		-251,396 -241,396 -241,395 -251,395 	"/>
+	<rect x="-273" y="405" class="st0" width="10" height="8"/>
+	<rect x="-273" y="396" class="st0" width="10" height="8"/>
+	<polygon class="st0" points="-273,387 -263,387 -263,387 	"/>
+	<rect x="-273" y="387" class="st0" width="10" height="8"/>
+	<rect x="-262" y="405" class="st3" width="10" height="8"/>
+	<rect x="-262" y="396" class="st3" width="10" height="8"/>
+	<polygon class="st3" points="-262,387 -252,387 -252,387 	"/>
+	<rect x="-262" y="387" class="st3" width="10" height="8"/>
+	<rect x="-251" y="396" class="st0" width="10" height="8"/>
+	<rect x="-251" y="405" class="st0" width="10" height="8"/>
+	<polygon class="st0" points="-251,387 -241,387 -241,387 	"/>
+	<rect x="-251" y="387" class="st0" width="10" height="8"/>
+	<rect x="-262" y="395" class="st4" width="10" height="1"/>
+	<rect x="-262" y="404" class="st4" width="10" height="1"/>
+</g>
+<g>
+	<path class="st5" d="M-261,390.6h-5c0-2.4,0.8-4.3,2.5-5.9c1.7-1.6,4-2.3,6.7-2.3c1.8,0,3.3,0.3,4.6,1c1.3,0.6,2.3,1.6,3,2.8
+		c0.8,1.2,1.1,2.5,1.1,3.8c0,0.7-0.1,1.4-0.4,2.2c-0.2,0.7-0.6,1.4-1.1,2.2c-0.3,0.4-1,1.2-2.2,2.2c-1.1,1-1.8,1.7-2.1,2.1
+		c-0.3,0.4-0.5,0.9-0.7,1.6c-0.2,0.7-0.3,1.6-0.4,2.8h-5.2l0-0.8c0-1.7,0.3-3.2,0.9-4.5c0.6-1.4,1.6-2.6,3-3.8
+		c1.3-1.1,2.2-1.9,2.4-2.4c0.3-0.4,0.4-0.9,0.4-1.5c0-0.8-0.3-1.5-1-2c-0.7-0.6-1.6-0.8-2.7-0.8c-1.2,0-2.1,0.3-2.9,1
+		C-260.6,388.7-261,389.5-261,390.6z M-257.4,405c0.9,0,1.7,0.3,2.4,0.9c0.7,0.6,1,1.4,1,2.2s-0.3,1.6-1,2.3
+		c-0.6,0.6-1.4,0.9-2.3,0.9c-0.9,0-1.7-0.3-2.3-0.9c-0.6-0.6-1-1.4-1-2.3c0-0.9,0.3-1.6,1-2.2C-259,405.3-258.3,405-257.4,405z"/>
+</g>
+</svg>
