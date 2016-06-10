@@ -45,7 +45,6 @@ CLASSIFIERS = (
     'Environment :: Console',
     'Environment :: Plugins',
     'Programming Language :: Python',
-    'Framework :: Orange',
     'License :: OSI Approved :: '
     'GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: POSIX',
