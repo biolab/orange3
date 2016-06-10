@@ -232,10 +232,11 @@ class VariableMeta(Registry):
         return obj
 
 
-class Variable(metaclass=VariableMeta):
+class Variable(str, metaclass=VariableMeta):
     """
     The base class for variable descriptors contains the variable's
-    name and some basic properties.
+    name and some basic properties. This extends str so it plays nicely with
+    pandas' column values.
 
     .. attribute:: name
 
@@ -274,6 +275,7 @@ class Variable(metaclass=VariableMeta):
         """
         Construct a variable descriptor.
         """
+        super().__init__()
         self.name = name
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES
