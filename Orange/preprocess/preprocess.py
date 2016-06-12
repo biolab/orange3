@@ -168,7 +168,9 @@ class SklImpute(Preprocess):
         assert X.shape[1] == len(features)
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
-        return Orange.data.Table(domain, X, data.Y, data.metas, W=data.W)
+        new_data = Orange.data.Table(domain, X, data.Y, data.metas, W=data.W)
+        new_data.attributes = getattr(data, 'attributes', {})
+        return new_data
 
 
 class RemoveConstant(Preprocess):
