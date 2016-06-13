@@ -43,7 +43,7 @@ class _ToolGridButton(QToolButton):
 
     def __textLayout(self):
         fm = QFontMetrics(self.font())
-        text = str(self.defaultAction().iconText())
+        text = str(self.defaultAction().text())
         words = deque(text.split())
 
         lines = []
@@ -91,6 +91,7 @@ class _ToolGridButton(QToolButton):
             lines.append(curr_line)
 
         text = "\n".join(lines)
+        text = text.replace('&', '&&')  # Need escaped ampersand to show
 
         self.__text = text
 
