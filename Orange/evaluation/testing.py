@@ -85,7 +85,7 @@ class Results:
                  store_data=False, store_models=False,
                  domain=None, actual=None, row_indices=None,
                  predicted=None, probabilities=None,
-                 preprocessor=None, callback=None, n_jobs=-1):
+                 preprocessor=None, callback=None, n_jobs=1):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -121,7 +121,7 @@ class Results:
             between 0 and 1
         :type callback: callable
         :param n_jobs: The number of processes to parallelize the evaluation
-            on. -1 to parallelize on all but one CPUs (the default). 1 for no
+            on. -1 to parallelize on all but one CPUs. 1 for no
             parallelization.
         :type n_jobs: int
         """
