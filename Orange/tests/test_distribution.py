@@ -268,7 +268,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         self.assertGreater(len(ans), 10)
 
 
-class Class_Distribution_Test(unittest.TestCase):
+class TestClassDistribution(unittest.TestCase):
     def test_class_distribution(self):
         d = data.Table("zoo")
         disc = distribution.class_distribution(d)
@@ -278,7 +278,7 @@ class Class_Distribution_Test(unittest.TestCase):
         np.testing.assert_array_equal(disc,
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
-class Get_Distribution_Test(unittest.TestCase):
+class TestGetDistribution(unittest.TestCase):
     def test_get_distribution(self):
         d = data.Table("iris")
         cls = d.domain.class_var
@@ -302,7 +302,7 @@ class Get_Distribution_Test(unittest.TestCase):
         np.testing.assert_almost_equal(disc, freqs)
 
 
-class Domain_Distribution_Test(unittest.TestCase):
+class TestDomainDistribution(unittest.TestCase):
     def test_get_distributions(self):
         d = data.Table("iris")
         ddist = distribution.get_distributions(d)

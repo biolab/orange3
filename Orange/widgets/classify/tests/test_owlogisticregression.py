@@ -29,7 +29,7 @@ class LogisticRegressionTest(unittest.TestCase):
                          len(classifier.domain.class_var.values))
 
 
-class WidgetTests(GuiTest):
+class TestOWLogisticRegression(GuiTest):
     def test_data_before_apply(self):
         widget = OWLogisticRegression()
         widget.set_data(Table("iris"))

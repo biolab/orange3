@@ -12,7 +12,7 @@ from Orange import data
 from Orange.tests import test_filename
 
 
-class Discrete_Test(unittest.TestCase):
+class TestDiscrete(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.zoo = data.Table("zoo")

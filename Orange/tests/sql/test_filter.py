@@ -9,7 +9,7 @@ from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
 
 
 @sql_test
-class IsDefinedFilterTests(PostgresTest):
+class TestIsDefinedSql(PostgresTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, None, 'm'],
@@ -62,7 +62,7 @@ class IsDefinedFilterTests(PostgresTest):
 
 
 @sql_test
-class HasClassFilterTests(PostgresTest):
+class TestHasClass(PostgresTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, None, 'm'],
@@ -96,7 +96,7 @@ class HasClassFilterTests(PostgresTest):
 
 
 @sql_test
-class SameValueFilterTests(PostgresTest):
+class TestSameValueSql(PostgresTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, 'a', 'm'],
@@ -184,7 +184,7 @@ class SameValueFilterTests(PostgresTest):
 
 
 @sql_test
-class ValuesFilterTests(PostgresTest):
+class TestValuesSql(PostgresTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, 'a', 'm'],
@@ -318,7 +318,7 @@ class ValuesFilterTests(PostgresTest):
 
 
 @sql_test
-class FilterStringTest(PostgresTest):
+class TestFilterStringSql(PostgresTest):
     def setUp(self):
         self.data = [
             [w] for w in "Lorem ipsum dolor sit amet, consectetur adipiscing"

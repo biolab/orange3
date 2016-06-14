@@ -7,7 +7,7 @@ import Orange
 from Orange.clustering.dbscan import DBSCAN
 
 
-class DBSCANTest(unittest.TestCase):
+class TestDBSCAN(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):

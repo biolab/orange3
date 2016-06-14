@@ -8,7 +8,7 @@ import numpy as np
 import Orange
 
 
-class SGDRegressionTest(unittest.TestCase):
+class TestSGDRegressionLearner(unittest.TestCase):
     def test_SGDRegression(self):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)

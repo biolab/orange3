@@ -7,7 +7,7 @@ import Orange
 from Orange.clustering.kmeans import KMeans
 
 
-class KMeansTest(unittest.TestCase):
+class TestKMeans(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Orange.data.Table('iris')

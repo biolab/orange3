@@ -14,7 +14,7 @@ from Orange.evaluation import CrossValidation, RMSE
 from sklearn import linear_model
 
 
-class LinearRegressionTest(unittest.TestCase):
+class TestLinearRegressionLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.housing = Table("housing")

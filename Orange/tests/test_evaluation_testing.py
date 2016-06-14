@@ -29,7 +29,7 @@ class TestingTestCase(unittest.TestCase):
 
 
 # noinspection PyUnresolvedReferences
-class CommonSamplingTests(unittest.TestCase):
+class TestSampling(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
@@ -90,7 +90,7 @@ class CommonSamplingTests(unittest.TestCase):
                 self.assertIsInstance(model, learner.__returns__)
 
 
-class CrossValidationTestCase(CommonSamplingTests):
+class TestCrossValidation(TestSampling):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
@@ -193,8 +193,51 @@ class CrossValidationTestCase(CommonSamplingTests):
     def test_preprocessor(self):
         self.run_test_preprocessor(CrossValidation, [135] * 10)
 
+    def test_augmented_data_classification(self):
+        data = Table("iris")
+        n_classes = len(data.domain.class_var.values)
+        res = CrossValidation(data, [NaiveBayesLearner()], store_data=True)
+        table = res.get_augmented_data(['Naive Bayes'])
 
-class LeaveOneOutTestCase(CommonSamplingTests):
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        # +1 for class, +n_classes for probabilities, +1 for fold
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + n_classes + 1)
+        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
+
+        res = CrossValidation(data, [NaiveBayesLearner(), MajorityLearner()], store_data=True)
+        table = res.get_augmented_data(['Naive Bayes', 'Majority'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2*(n_classes+1) + 1)
+        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
+        self.assertEqual(table.domain.metas[len(data.domain.metas)+1].values, data.domain.class_var.values)
+
+    def test_augmented_data_regression(self):
+        data = Table("housing")
+        res = CrossValidation(data, [LinearRegressionLearner(), ], store_data=True)
+        table = res.get_augmented_data(['Linear Regression'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        # +1 for class, +1 for fold
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + 1)
+
+        res = CrossValidation(data, [LinearRegressionLearner(), MeanLearner()], store_data=True)
+        table = res.get_augmented_data(['Linear Regression', 'Mean Learner'])
+
+        self.assertEqual(len(table), len(data))
+        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
+        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
+        # +2 for class, +1 for fold
+        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)
+
+
+class TestLeaveOneOut(TestSampling):
     def test_results(self):
         nrows = self.nrows
         t = self.random_table
@@ -278,7 +321,7 @@ class LeaveOneOutTestCase(CommonSamplingTests):
         self.run_test_preprocessor(LeaveOneOut, [149] * 150)
 
 
-class TestOnTrainingTestCase(CommonSamplingTests):
+class TestTestOnTrainingData(TestSampling):
     def test_results(self):
         nrows, ncols = self.random_table.X.shape
         t = self.random_table
@@ -348,7 +391,7 @@ class TestOnTrainingTestCase(CommonSamplingTests):
         self.run_test_preprocessor(TestOnTrainingData, [150])
 
 
-class TestOnTestingTestCase(CommonSamplingTests):
+class TestTestOnTestData(TestSampling):
     def test_results(self):
         nrows, ncols = self.random_table.X.shape
         t = self.random_table
@@ -491,7 +534,7 @@ class TestTrainTestSplit(unittest.TestCase):
         self.assertGreater(len(train) + len(test), len(data))
 
 
-class TestShuffleSplit(CommonSamplingTests):
+class TestShuffleSplit(TestSampling):
     def test_results(self):
         data = self.random_table
         train_size, n_resamples = 0.6, 10
@@ -527,48 +570,3 @@ class TestShuffleSplit(CommonSamplingTests):
             strata_samples.append(np.count_nonzero(train < 2 * n) == n)
 
         self.assertTrue(not all(strata_samples))
-
-
-class TestAugmentedData(unittest.TestCase):
-    def test_augmented_data_classification(self):
-        data = Table("iris")
-        n_classes = len(data.domain.class_var.values)
-        res = CrossValidation(data, [NaiveBayesLearner()], store_data=True)
-        table = res.get_augmented_data(['Naive Bayes'])
-
-        self.assertEqual(len(table), len(data))
-        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
-        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
-        # +1 for class, +n_classes for probabilities, +1 for fold
-        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + n_classes + 1)
-        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
-
-        res = CrossValidation(data, [NaiveBayesLearner(), MajorityLearner()], store_data=True)
-        table = res.get_augmented_data(['Naive Bayes', 'Majority'])
-
-        self.assertEqual(len(table), len(data))
-        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
-        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
-        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2*(n_classes+1) + 1)
-        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
-        self.assertEqual(table.domain.metas[len(data.domain.metas)+1].values, data.domain.class_var.values)
-
-    def test_augmented_data_regression(self):
-        data = Table("housing")
-        res = CrossValidation(data, [LinearRegressionLearner(), ], store_data=True)
-        table = res.get_augmented_data(['Linear Regression'])
-
-        self.assertEqual(len(table), len(data))
-        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
-        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
-        # +1 for class, +1 for fold
-        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + 1)
-
-        res = CrossValidation(data, [LinearRegressionLearner(), MeanLearner()], store_data=True)
-        table = res.get_augmented_data(['Linear Regression', 'Mean Learner'])
-
-        self.assertEqual(len(table), len(data))
-        self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
-        self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
-        # +2 for class, +1 for fold
-        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)

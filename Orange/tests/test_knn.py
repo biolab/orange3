@@ -10,7 +10,7 @@ from Orange.classification import KNNLearner
 from Orange.evaluation import CA, CrossValidation
 
 
-class KNNTest(unittest.TestCase):
+class TestKNNLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')

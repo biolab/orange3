@@ -13,24 +13,29 @@ from Orange.evaluation import AUC, CA, Results, Recall, \
 from Orange.preprocess import discretize, Discretize
 
 
-class ScoringTest(unittest.TestCase):
-
+class TestRecall(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Table('iris')
 
-    def test_Recall(self):
+    def test_recall(self):
         learner = LogisticRegressionLearner(preprocessors=[])
         results = TestOnTrainingData(self.data, [learner])
         self.assertAlmostEqual(Recall(results)[0], 0.960, 3)
 
-    def test_Precision(self):
+
+class TestPrecision(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table('iris')
+
+    def test_precision(self):
         learner = LogisticRegressionLearner(preprocessors=[])
         results = TestOnTrainingData(self.data, [learner])
         self.assertAlmostEqual(Precision(results)[0], 0.962, 3)
 
 
-class Scoring_CA_Test(unittest.TestCase):
+class TestCA(unittest.TestCase):
     def test_init(self):
         res = Results(nmethods=2, nrows=100)
         res.actual[:50] = 0
@@ -75,7 +80,7 @@ class Scoring_CA_Test(unittest.TestCase):
         self.assertLess(CA(res)[0], 1)
 
 
-class Scoring_AUC_Test(unittest.TestCase):
+class TestAUC(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
@@ -131,8 +136,8 @@ class Scoring_AUC_Test(unittest.TestCase):
         return AUC(results)[0]
 
 
-class ScoringCDTest(unittest.TestCase):
-    def test_cd_score(self):
+class TestComputeCD(unittest.TestCase):
+    def test_compute_CD(self):
         avranks = [1.9, 3.2, 2.8, 3.3]
         cd = scoring.compute_CD(avranks, 30)
         np.testing.assert_almost_equal(cd, 0.856344)
@@ -141,7 +146,7 @@ class ScoringCDTest(unittest.TestCase):
         np.testing.assert_almost_equal(cd, 0.798)
 
 
-class ScoringLogLossTest(unittest.TestCase):
+class TestLogLoss(unittest.TestCase):
     def test_log_loss(self):
         data = Table('iris')
         majority = MajorityLearner()
@@ -169,7 +174,7 @@ class ScoringLogLossTest(unittest.TestCase):
         self.assertEqual(ll_calc, ll_orange[0])
 
 
-class ScoringF1Test(unittest.TestCase):
+class TestF1(unittest.TestCase):
     def test_F1_multiclass(self):
         results = Results(
             domain=Domain([], DiscreteVariable(name="y", values="01234")),

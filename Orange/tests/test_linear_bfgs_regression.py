@@ -8,7 +8,7 @@ from Orange.evaluation import CrossValidation, RMSE
 from Orange.regression.linear_bfgs import LinearRegressionLearner
 
 
-class LinearRegressionTest(unittest.TestCase):
+class TestLinearRegressionLearner(unittest.TestCase):
     def test_preprocessors(self):
         table = Table('housing')
         learners = [LinearRegressionLearner(preprocessors=[]),
