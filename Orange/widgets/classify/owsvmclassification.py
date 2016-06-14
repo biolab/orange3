@@ -76,8 +76,9 @@ class OWBaseSVM(OWBaseLearner):
         self._add_type_box()
         self._add_kernel_box()
         self._add_optimization_box()
+        self._show_right_kernel()
 
-    def _on_kernel_changed(self):
+    def _show_right_kernel(self):
         enabled = [[False, False, False],  # linear
                    [True, True, True],  # poly
                    [True, False, False],  # rbf
@@ -87,6 +88,9 @@ class OWBaseSVM(OWBaseLearner):
         mask = enabled[self.kernel_type]
         for spin, enabled in zip(self._kernel_params, mask):
             [spin.box.hide, spin.box.show][enabled]()
+
+    def _on_kernel_changed(self):
+        self._show_right_kernel()
         self.settings_changed()
 
     def _report_kernel_parameters(self, items):
