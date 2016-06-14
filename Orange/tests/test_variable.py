@@ -11,10 +11,10 @@ from io import StringIO
 
 import numpy as np
 
-from Orange.testing import create_pickling_tests
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
 from Orange.data.io import CSVReader
+from Orange.tests.base import create_pickling_tests
 
 
 def is_on_path(name):
