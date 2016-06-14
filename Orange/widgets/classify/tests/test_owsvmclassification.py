@@ -1,17 +1,20 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import unittest
 from Orange.data import Table
 from Orange.widgets.classify.owsvmclassification import OWSVMClassification
 from Orange.widgets.tests.base import GuiTest
+from PyQt4 import QtGui
 
 
 class TestOWSVMClassification(GuiTest):
     def setUp(self):
         self.widget = OWSVMClassification()
+        self.widget.spin_boxes = self.widget.findChildren(QtGui.QDoubleSpinBox)
+        self.widget.spin_boxes.append(self.widget.findChildren(QtGui.QSpinBox)[0])  # for max iter spin
+        self.widget.max_iter_check_box = self.widget.findChildren(QtGui.QCheckBox)[0]  # for max iter checkbox
+        self.spin_boxes = self.widget.spin_boxes
         self.event_data = None
 
-    @unittest.skip("Not corrected widget on load")
     def test_kernel_equation_run(self):
         """ Check if right text is written for specific kernel """
         for i in range(0, 4):
@@ -24,7 +27,6 @@ class TestOWSVMClassification(GuiTest):
             self.widget.kernel_box.buttons[index].click()
             self.assertEqual(self.widget.kernel_eq, self.widget.kernels[index][1])
 
-    @unittest.skip("Not corrected widget on load")
     def test_kernel_display_run(self):
         """ Check if right spinner box for selected kernel are visible after widget start """
         for button_pos, value in ((0, [False, False, False]),
@@ -32,7 +34,7 @@ class TestOWSVMClassification(GuiTest):
                                   (2, [True, False, False]),
                                   (3, [True, True, False])):
             if self.widget.kernel_box.buttons[button_pos].isChecked():
-                self.assertEqual([not self.widget._kernel_params[i].box.isHidden() for i in range(0, 3)], value)
+                self.assertEqual([not self.spin_boxes[i].box.isHidden() for i in range(2, 5)], value)
                 break
 
     def test_kernel_display(self):
@@ -43,19 +45,19 @@ class TestOWSVMClassification(GuiTest):
                                   (3, [True, True, False])):
             self.widget.kernel_box.buttons[button_pos].click()
             self.widget.kernel_box.buttons[button_pos].isChecked()
-            self.assertEqual([not self.widget._kernel_params[i].box.isHidden() for i in range(0, 3)], value)
+            self.assertEqual([not self.spin_boxes[i].box.isHidden() for i in range(2, 5)], value)
 
     def test_optimization_box_visible(self):
         """ Check if both spinner box is visible after starting widget """
-        self.assertEqual(self.widget._optimization_params[0].box.isHidden(), False)
-        self.assertEqual(self.widget._optimization_params[1][1].box.isHidden(), False)
+        self.assertEqual(self.spin_boxes[5].box.isHidden(), False)
+        self.assertEqual(self.spin_boxes[6].box.isHidden(), False)
 
     def test_optimization_box_checked(self):
         """ Check if spinner box for iteration limit is enabled or disabled """
         for value in (True, False):
-            self.widget._optimization_params[1][0].setChecked(value)
-            self.assertEqual(self.widget._optimization_params[1][0].isChecked(), value)
-            self.assertEqual(self.widget._optimization_params[1][1].isEnabled(), value)
+            self.widget.max_iter_check_box.setChecked(value)
+            self.assertEqual(self.widget.max_iter_check_box.isChecked(), value)
+            self.assertEqual(self.spin_boxes[6].isEnabled(), value)
 
     def test_type_button_checked(self):
         """ Check if SVM type is selected after click """
@@ -66,8 +68,8 @@ class TestOWSVMClassification(GuiTest):
 
     def test_type_button_properties_visible(self):
         """ Check if spinner box in SVM type are visible """
-        self.assertEqual(not self.widget._type_params[0].isHidden(), True)
-        self.assertEqual(not self.widget._type_params[1].isHidden(), True)
+        self.assertEqual(not self.spin_boxes[0].isHidden(), True)
+        self.assertEqual(not self.spin_boxes[1].isHidden(), True)
 
     def test_data_before_apply(self):
         """ Check if data are set """
@@ -96,14 +98,16 @@ class TestOWSVMClassification(GuiTest):
         """ Check ouput params """
         self.widget.kernel_box.buttons[0].click()
         self.widget.set_data(Table("iris")[:100])
-        self.widget._optimization_params[1][0].setChecked(True)
+        self.widget.max_iter_check_box.setChecked(True)
         self.widget.apply()
-        self.assertEqual(self.widget.learner.params.get('tol'), self.widget._optimization_params[0].value())
-        self.assertEqual(self.widget.learner.params.get('max_iter'), self.widget._optimization_params[1][1].value())
-        self.assertEqual(self.widget.learner.params.get('gamma'), self.widget._kernel_params[0].value())
-        self.assertEqual(self.widget.learner.params.get('coef0'), self.widget._kernel_params[1].value())
-        self.assertEqual(self.widget.learner.params.get('degree'), self.widget._kernel_params[2].value())
         self.widget.type_box.buttons[0].click()
-        self.assertEqual(self.widget.learner.params.get('C'), self.widget._type_params[0].value())
+        params = self.widget.learner.params
+        self.assertEqual(params.get('C'), self.spin_boxes[0].value())
         self.widget.type_box.buttons[1].click()
-        self.assertEqual(self.widget.learner.params.get('nu'), self.widget._type_params[1].value())
+        params = self.widget.learner.params
+        self.assertEqual(params.get('nu'), self.spin_boxes[1].value())
+        self.assertEqual(params.get('gamma'), self.spin_boxes[2].value())
+        self.assertEqual(params.get('coef0'), self.spin_boxes[3].value())
+        self.assertEqual(params.get('degree'), self.spin_boxes[4].value())
+        self.assertEqual(params.get('tol'), self.spin_boxes[5].value())
+        self.assertEqual(params.get('max_iter'), self.spin_boxes[6].value())

@@ -66,12 +66,11 @@ class OWBaseSVM(OWBaseLearner):
     def _add_optimization_box(self):
         self.optimization_box = gui.vBox(
             self.controlArea, "Optimization Parameters")
-        numerical_tol = gui.doubleSpin(
+        gui.doubleSpin(
             self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
             label="Numerical tolerance:",
             decimals=6, alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed)
-        self._optimization_params = [numerical_tol]
 
     def add_main_layout(self):
         self._add_type_box()
@@ -146,30 +145,28 @@ class OWSVMClassification(OWBaseSVM):
                        0, 0, Qt.AlignLeft)
         form.addWidget(QtGui.QLabel("Cost (C):"),
                        0, 1, Qt.AlignRight)
-        c_spin = gui.doubleSpin(box, self, "C", 1e-3, 1000.0, 0.1,
-                                decimals=3, alignment=Qt.AlignRight,
-                                controlWidth=80, addToLayout=False,
-                                callback=self.settings_changed)
-        form.addWidget(c_spin, 0, 2)
+        form.addWidget(gui.doubleSpin(box, self, "C", 1e-3, 1000.0, 0.1,
+                                      decimals=3, alignment=Qt.AlignRight,
+                                      controlWidth=80, addToLayout=False,
+                                      callback=self.settings_changed),
+                       0, 2)
 
         form.addWidget(gui.appendRadioButton(box, "ν-SVM", addToLayout=False),
                        1, 0, Qt.AlignLeft)
         form.addWidget(QtGui.QLabel("Complexity (ν):"),
                        1, 1, Qt.AlignRight)
-        nu_spin = gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
-                                 decimals=2, alignment=Qt.AlignRight,
-                                 controlWidth=80, addToLayout=False,
-                                 callback=self.settings_changed)
-        form.addWidget(nu_spin, 1, 2)
-        self._type_params = [c_spin, nu_spin]
+        form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
+                                      decimals=2, alignment=Qt.AlignRight,
+                                      controlWidth=80, addToLayout=False,
+                                      callback=self.settings_changed),
+                       1, 2)
 
     def _add_optimization_box(self):
         super()._add_optimization_box()
-        iter_limit = gui.spin(self.optimization_box, self, "max_iter", 50, 1e6, 50,
-                              label="Iteration limit:", checked="limit_iter",
-                              alignment=Qt.AlignRight, controlWidth=100,
-                              callback=self.settings_changed)
-        self._optimization_params.append(iter_limit)
+        gui.spin(self.optimization_box, self, "max_iter", 50, 1e6, 50,
+                 label="Iteration limit:", checked="limit_iter",
+                 alignment=Qt.AlignRight, controlWidth=100,
+                 callback=self.settings_changed)
 
     def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
