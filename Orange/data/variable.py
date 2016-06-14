@@ -936,7 +936,11 @@ class TimeVariable(ContinuousVariable):
 
         ERROR = ValueError('Invalid datetime format. Only ISO 8601 supported.')
         if not self._matches_iso_format(datestr):
-            raise ERROR
+            try:
+                # If it is a number, assume it is a unix timestamp
+                return float(datestr)
+            except ValueError:
+                raise ERROR
 
         for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
             try:
