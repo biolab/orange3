@@ -18,7 +18,7 @@ from collections import OrderedDict
 from urllib.parse import urlparse, unquote as urlunquote
 from urllib.request import urlopen
 
-import bottlechest as bn
+import bottleneck as bn
 import numpy as np
 from chardet.universaldetector import UniversalDetector
 
