@@ -120,10 +120,6 @@ touch "$BUILDBASE"/requirements.txt
 echo "
 #:wheel: scikit-learn https://pypi.python.org/packages/b8/9a/02d5d76be66c57aaa9f917c87007b9b0bf486992cc7701512464d1ce11e9/scikit_learn-0.17.1-cp34-cp34m-win32.whl#md5=ab00daed7cdac4cb16ad0613b91be07e
 scikit-learn==0.17.1
-
-#:wheel: Bottlecheset https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl#md5=629ba2a148dfa784d0e6817497d42e97
---find-links https://dl.dropboxusercontent.com/u/100248799/Bottlechest-0.7.1-cp34-none-win32.whl
-Bottlechest==0.7.1
 " > "$BUILDBASE"/requirements.txt
 
 function __download_url {
