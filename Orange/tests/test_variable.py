@@ -6,6 +6,7 @@ import math
 import unittest
 import pickle
 import pkgutil
+from datetime import datetime, timezone
 
 from io import StringIO
 
@@ -328,6 +329,12 @@ class TimeVariableTest(VariableTest):
         ts2 = var.parse(datestr)
         self.assertEqual(var.repr_val(ts2), datestr)
         self.assertEqual(var.repr_val(ts1), '2015-10-18 20:48:20')
+
+    def test_parse_timestamp(self):
+        var = TimeVariable("time")
+        datestr = str(datetime(2016, 6, 14, 23, 8, tzinfo=timezone.utc).timestamp())
+        ts1 = var.parse(datestr)
+        self.assertEqual(var.repr_val(ts1), '2016-06-14 23:08:00')
 
     def test_parse_invalid(self):
         var = TimeVariable('var')
