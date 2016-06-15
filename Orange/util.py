@@ -90,6 +90,22 @@ def scale(values, min=0, max=1):
     return (-np.nanmin(values) + values) / ptp * (max - min) + min
 
 
+def one_hot(values, dtype=float):
+    """Return a one-hot transform of values
+
+    Parameters
+    ----------
+    values : 1d array
+        Integer values (hopefully 0-max).
+
+    Returns
+    -------
+    result
+        2d array with ones in respective indicator columns.
+    """
+    return np.eye(np.max(values) + 1, dtype=dtype)[np.asanyarray(values, dtype=int)]
+
+
 class Registry(type):
     """Metaclass that registers subtypes."""
     def __new__(cls, name, bases, attrs):

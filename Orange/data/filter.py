@@ -5,7 +5,7 @@ from math import isnan
 
 from ..misc.enum import Enum
 import numpy as np
-import bottlechest as bn
+import bottleneck as bn
 from Orange.data import Instance, Storage, Variable
 
 

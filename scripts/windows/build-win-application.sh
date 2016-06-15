@@ -291,7 +291,7 @@ function prepare_orange {
         bdist_wheel -d "$BUILDBASE/wheelhouse"
 
     # Ensure all install dependencies are available in the wheelhouse
-    prepare_req --only-binary numpy,scipy,scikit-learn,bottlechest .
+    prepare_req --only-binary numpy,scipy,scikit-learn .
 
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
     echo "$name==$version" >> "$BUILDBASE/requirements.txt"
