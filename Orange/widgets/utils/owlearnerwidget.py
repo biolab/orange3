@@ -162,6 +162,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def update_learner(self):
         self.learner = self.create_learner()
+        self.learner.name = self.learner_name
         self.send("Learner", self.learner)
         self.outdated_settings = False
         self.warning(self.OUTDATED_LEARNER_WARNING_ID)
