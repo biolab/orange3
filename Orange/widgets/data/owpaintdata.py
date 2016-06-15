@@ -24,7 +24,6 @@ import Orange.data
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
-from Orange.widgets.io import FileFormat
 
 from Orange.util import scale, namegen
 
@@ -780,7 +779,9 @@ class OWPaintData(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.data = None
+        self.data = self.input_data = None
+        self.input_classes = []
+        self.input_has_attr2 = True
         self.current_tool = None
         self._selected_indices = None
         self._scatter_item = None
@@ -913,6 +914,9 @@ class OWPaintData(widget.OWWidget):
         )
 
         form.addRow("Intensity:", slider)
+        self.btResetToInput = gui.button(
+            tBox, self, "Reset to Input Data", self.reset_to_input)
+        self.btResetToInput.setDisabled(True)
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.left_side, self, "autocommit",
@@ -968,18 +972,60 @@ class OWPaintData(widget.OWWidget):
                 button.setDisabled(not self.hasAttr2)
 
     def set_data(self, data):
-        if data:
-            try:
-                y = next(cls for cls in data.domain.class_vars if cls.is_discrete)
-            except StopIteration:
-                y = np.ones(X.shape[0])
-            else:
-                y = data[:, y].Y
-            while len(self.class_model) < np.unique(y).size:
-                self.add_new_class_label(undoable=False)
+        """Set the input_data and call reset_to_input"""
+        def _check_and_set_data(data):
+            self.warning()
+            self.information()
+            if data is not None:
+                if not data.domain.attributes:
+                    self.warning("Input data has no variables")
+                    data = None
+                elif len(data.domain.attributes) > 2:
+                    self.information(
+                        "Paint Data uses data from the first two attributes.")
+            self.input_data = data
+            self.btResetToInput.setDisabled(data is None)
+            return data is not None
 
-            X = np.array([scale(vals) for vals in data.X[:, :2].T]).T
-            self.data = np.column_stack((X, y))
+        if not _check_and_set_data(data):
+            return
+
+        X = np.array([scale(vals) for vals in data.X[:, :2].T]).T
+        try:
+            y = next(cls for cls in data.domain.class_vars if cls.is_discrete)
+        except StopIteration:
+            if data.domain.class_vars:
+                self.warning("Target value is continuous and can not be used.")
+            self.input_classes = ["C1"]
+            y = np.zeros(len(data))
+        else:
+            self.input_classes = y.values
+            y = data[:, y].Y
+
+        self.input_has_attr2 = len(data.domain.attributes) >= 2
+        if not self.input_has_attr2:
+            self.input_data = np.column_stack((X, np.zeros(len(data)), y))
+        else:
+            self.input_data = np.column_stack((X, y))
+        self.reset_to_input()
+
+    def reset_to_input(self):
+        """Reset the painting to input data if present."""
+        if self.input_data is None:
+            return
+        self.undo_stack.clear()
+
+        index = self.selected_class_label()
+        self.class_model[:] = self.input_classes
+        newindex = min(max(index, 0), len(self.class_model) - 1)
+        itemmodels.select_row(self.classValuesView, newindex)
+
+        self.data = self.input_data
+        prev_attr2 = self.hasAttr2
+        self.hasAttr2 = self.input_has_attr2
+        if prev_attr2 != self.hasAttr2:
+            self.set_dimensions()
+        else:  # set_dimensions already calls _replot, no need to call it again
             self._replot()
 
     def add_new_class_label(self, undoable=True):
