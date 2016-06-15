@@ -12,7 +12,7 @@ from Orange.regression import Learner
 from Orange.tests import test_filename
 
 
-class RegressionLearnersTest(unittest.TestCase):
+class TestRegression(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
 
@@ -51,11 +51,9 @@ class RegressionLearnersTest(unittest.TestCase):
                 traceback.print_exc()
                 continue
 
-
-class MissingValuesTest(unittest.TestCase):
     def test_missing_class(self):
         table = Table("imports-85")
-        for learner in RegressionLearnersTest().all_learners():
+        for learner in self.all_learners():
             try:
                 learner = learner()
                 model = learner(table)

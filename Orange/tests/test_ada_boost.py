@@ -10,8 +10,7 @@ from Orange.ensembles import SklAdaBoostLearner, SklAdaBoostRegressionLearner
 from Orange.evaluation import CrossValidation, CA, RMSE
 
 
-class SklAdaBoostTest(unittest.TestCase):
-
+class TestSklAdaBoostLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table("iris")

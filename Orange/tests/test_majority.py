@@ -9,7 +9,7 @@ from Orange.data import Table
 from Orange.classification import MajorityLearner
 
 
-class MajorityTest(unittest.TestCase):
+class TestMajorityLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')

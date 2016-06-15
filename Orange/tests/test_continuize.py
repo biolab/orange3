@@ -10,7 +10,7 @@ from Orange.preprocess import transformation
 from Orange.tests import test_filename
 
 
-class ContinuizerTest(unittest.TestCase):
+class TestDomainContinuizer(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
         self.data = Table(test_filename("test4"))

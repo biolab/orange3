@@ -8,7 +8,7 @@ from Orange.data import Table
 from Orange.regression import MeanLearner
 
 
-class MeanTest(unittest.TestCase):
+class TestMeanLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.learn = MeanLearner()

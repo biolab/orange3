@@ -12,10 +12,10 @@ from io import StringIO
 
 import numpy as np
 
-from Orange.testing import create_pickling_tests
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
 from Orange.data.io import CSVReader
+from Orange.tests.base import create_pickling_tests
 
 
 def is_on_path(name):
@@ -64,7 +64,7 @@ class VariableTest:
         self.assertEqual(var.attributes["a"], "b")
 
 
-class BaseVariableTest(unittest.TestCase):
+class TestVariable(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.var = Variable("x")
@@ -122,7 +122,7 @@ def variabletest(varcls):
 
 
 @variabletest(DiscreteVariable)
-class DiscreteVariableTest(VariableTest):
+class TestDiscreteVariable(VariableTest):
     def test_to_val(self):
         values = ["F", "M"]
         var = DiscreteVariable(name="Feature 0", values=values)
@@ -237,7 +237,7 @@ class DiscreteVariableTest(VariableTest):
 
 
 @variabletest(ContinuousVariable)
-class ContinuousVariableTest(VariableTest):
+class TestContinuousVariable(VariableTest):
     def test_make(self):
         ContinuousVariable._clear_cache()
         age1 = ContinuousVariable.make("age")
@@ -275,7 +275,7 @@ class ContinuousVariableTest(VariableTest):
 
 
 @variabletest(StringVariable)
-class StringVariableTest(VariableTest):
+class TestStringVariable(VariableTest):
     def test_val(self):
         a = StringVariable("a")
         self.assertEqual(a.to_val(None), "")
@@ -285,7 +285,7 @@ class StringVariableTest(VariableTest):
 
 
 @variabletest(TimeVariable)
-class TimeVariableTest(VariableTest):
+class TestTimeVariable(VariableTest):
     TESTS = [
         # in str, UTC timestamp, out str (in UTC)
         ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.010000+0200'),

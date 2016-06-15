@@ -12,7 +12,7 @@ from Orange.classification import TreeLearner
 from Orange.regression import TreeRegressionLearner
 
 
-class TreeTest(unittest.TestCase):
+class TestTreeLearner(unittest.TestCase):
     def test_classification(self):
         table = Table('iris')
         learn = TreeLearner()
@@ -28,7 +28,7 @@ class TreeTest(unittest.TestCase):
         self.assertTrue(np.all(table.Y.flatten() == pred))
 
 
-class SklearnTreeTest(unittest.TestCase):
+class TestDecisionTreeClassifier(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')

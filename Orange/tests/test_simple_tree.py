@@ -12,7 +12,7 @@ from Orange.regression import SimpleTreeLearner as SimpleTreeReg
 from Orange.data import ContinuousVariable, Domain, DiscreteVariable, Table
 
 
-class SimpleTreeTest(unittest.TestCase):
+class TestSimpleTreeLearner(unittest.TestCase):
     def setUp(self):
         self.N = 50
         self.Mi = 3

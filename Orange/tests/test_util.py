@@ -8,7 +8,7 @@ from Orange.util import scale, export_globals, flatten, deprecated
 SOMETHING = 0xf00babe
 
 
-class UtilTest(unittest.TestCase):
+class TestUtil(unittest.TestCase):
     def test_scale(self):
         self.assertTrue(np.all(scale([0, 1, 2], -1, 1) == [-1, 0, 1]))
         self.assertTrue(np.all(scale([3, 3, 3]) == [1, 1, 1]))
@@ -16,7 +16,7 @@ class UtilTest(unittest.TestCase):
 
     def test_export_globals(self):
         self.assertEqual(sorted(export_globals(globals(), __name__)),
-                         ['SOMETHING', 'UtilTest'])
+                         ['SOMETHING', 'TestUtil'])
 
     def test_flatten(self):
         self.assertEqual(list(flatten([[1, 2], [3]])), [1, 2, 3])

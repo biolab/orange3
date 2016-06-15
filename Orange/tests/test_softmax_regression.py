@@ -8,7 +8,7 @@ from Orange.classification import Model, SoftmaxRegressionLearner
 from Orange.evaluation import CrossValidation, CA
 
 
-class SoftmaxRegressionTest(unittest.TestCase):
+class TestSoftmaxRegressionLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')

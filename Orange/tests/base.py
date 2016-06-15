@@ -1,17 +1,17 @@
 import pickle
-import unittest
+from unittest import TestCase
 
-from Orange import data
+from Orange.data import Variable, Domain
 
 
-class PickleTest(unittest.TestCase):
+class PickleTest(TestCase):
     def setUp(self):
         """ Override __eq__ for Orange objects that do not implement it"""
-        self.add_comparator(data.Domain,
+        self.add_comparator(Domain,
                             compare_members=("attributes", "class_vars",
                                              "class_var", "variables",
                                              "metas", "anonymous"))
-        data.Variable._clear_all_caches()
+        Variable._clear_all_caches()
 
     old_comparators = {}
 

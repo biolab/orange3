@@ -8,7 +8,7 @@ from Orange.data import Table, Domain, ContinuousVariable
 from Orange.classification import EllipticEnvelopeLearner
 
 
-class EllipticEnvelopeTest(unittest.TestCase):
+class TestEllipticEnvelopeLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         np.random.seed(42)

@@ -9,7 +9,7 @@ from Orange.classification import LogisticRegressionLearner, Model
 from Orange.evaluation import CrossValidation, CA
 
 
-class LogisticRegressionTest(unittest.TestCase):
+class TestLogisticRegressionLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')

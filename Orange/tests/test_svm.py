@@ -12,7 +12,7 @@ from Orange.data import Table, Domain, ContinuousVariable
 from Orange.evaluation import CrossValidation, CA, RMSE
 
 
-class SVMTest(unittest.TestCase):
+class TestSVMLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Table('ionosphere')

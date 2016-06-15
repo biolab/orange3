@@ -8,7 +8,7 @@ from Orange.data import Table
 from Orange.evaluation import CrossValidation, CA
 
 
-class NaiveBayesTest(unittest.TestCase):
+class TestNaiveBayesLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data = Table('titanic')

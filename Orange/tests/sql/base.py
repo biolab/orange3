@@ -89,7 +89,7 @@ def create_iris():
     return get_dburi(), 'iris'
 
 
-class ParseUriTests(unittest.TestCase):
+class TestParseUri(unittest.TestCase):
     def test_parses_connection_uri(self):
         parameters = parse_uri(
             "sql://user:password@host:7678/database/table")

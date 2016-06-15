@@ -8,7 +8,7 @@ from Orange.classification import SimpleRandomForestLearner as SimpRandForestCls
 from Orange.regression import SimpleRandomForestLearner as SimpRandForestReg
 
 
-class SimpleRandomForestTest(unittest.TestCase):
+class TestSimpleRandomForestLearner(unittest.TestCase):
     def test_SimpleRandomForest_classification(self):
         data = Orange.data.Table('iris')
         lrn = SimpRandForestCls()

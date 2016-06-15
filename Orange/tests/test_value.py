@@ -8,7 +8,7 @@ import numpy as np
 from Orange.data import Table, Domain, DiscreteVariable
 
 
-class ValueTests(unittest.TestCase):
+class TestValue(unittest.TestCase):
     def test_pickling_discrete_values(self):
         iris = Table('iris')
 

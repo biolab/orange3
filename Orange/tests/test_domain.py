@@ -14,7 +14,7 @@ from Orange.data import (ContinuousVariable, DiscreteVariable, Domain, Table,
                          StringVariable, Variable, DomainConversion)
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
-from Orange.testing import create_pickling_tests
+from Orange.tests.base import create_pickling_tests
 
 
 def create_domain(*ss):

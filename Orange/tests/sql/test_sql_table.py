@@ -17,7 +17,7 @@ from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
 
 
 @sql_test
-class SqlTableTests(PostgresTest):
+class TestSqlTable(PostgresTest):
     def test_constructs_correct_attributes(self):
         data = list(zip(self.float_variable(21),
                         self.discrete_variable(21),
