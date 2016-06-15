@@ -254,7 +254,7 @@ class Normalize(Preprocess):
     >>> from Orange.data import Table
     >>> from Orange.preprocess import Normalize
     >>> data = Table("iris")
-    >>> normalizer = Normalize(Normalize.NormalizeBySpan)
+    >>> normalizer = Normalize(norm_type=Normalize.NormalizeBySpan)
     >>> normalized_data = normalizer(data)
     """
 
