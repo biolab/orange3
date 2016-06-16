@@ -78,6 +78,8 @@ class PyTableModel(QAbstractTableModel):
     -----
     The model rounds numbers to human readable precision, e.g.:
     1.23e-04, 1.234, 1234.5, 12345, 1.234e06.
+
+    To set additional item roles, use setData().
     """
     # All methods are either necessary overrides of super methods, or
     # methods likened to the Python list's. Hence, docstrings aren't.
@@ -87,6 +89,7 @@ class PyTableModel(QAbstractTableModel):
         self._headers = {}
         self._editable = editable
         self._table = None
+        self._roleData = None
         self.wrap(sequence or [])
 
     def rowCount(self, parent=QModelIndex()):
@@ -107,12 +110,18 @@ class PyTableModel(QAbstractTableModel):
         if role == Qt.EditRole:
             self[index.row()][index.column()] = value
             self.dataChanged.emit(index, index)
-            return True
-        return False
+        else:
+            self._roleData[index.row()][index.column()][role] = value
+        return True
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return
+
+        role_value = self._roleData[index.row()][index.column()].get(role)
+        if role_value is not None:
+            return role_value
+
         try:
             value = self[index.row()][index.column()]
         except IndexError:
@@ -145,6 +154,7 @@ class PyTableModel(QAbstractTableModel):
                          key=lambda i: self._table[i][column],
                          reverse=order != Qt.AscendingOrder)
         self._table[:] = [self._table[i] for i in indices]
+        self._roleData[:] = [self._roleData[i] for i in indices]
         vheaders = self._headers.get(Qt.Vertical, ())
         if vheaders:
             vheaders = tuple(vheaders) + ('',) * max(0, (len(self._table) - len(vheaders)))
@@ -166,6 +176,7 @@ class PyTableModel(QAbstractTableModel):
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():
             del self[row:row + count]
+            del self._roleData[row:row + count]
             return True
         return False
 
@@ -173,18 +184,24 @@ class PyTableModel(QAbstractTableModel):
         self.beginRemoveColumns(parent, column, column + count - 1)
         for row in self._table:
             del row[column:column + count]
+        for row in self._roleData:
+            del row[column:column + count]
         del self._headers.get(Qt.Horizontal, [])[column:column + count]
         self.endRemoveColumns()
 
     def insertRows(self, row, count, parent=QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
+        self._roleData[row:row] = [[{} for _ in range(self.columnCount())]
+                                   for _ in range(count)]
         self.endInsertRows()
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
+        for row in self._roleData:
+            row[column:column] = [{} for _ in range(count)]
         self.endInsertColumns()
 
     def __len__(self):
@@ -222,39 +239,34 @@ class PyTableModel(QAbstractTableModel):
     def wrap(self, table):
         self.beginResetModel()
         self._table = table
+        rows, cols = range(len(table)), range(len(table[0]) if table else 0)
+        self._roleData = [[{} for _ in cols] for _ in rows]
         self.endResetModel()
 
     def clear(self):
         self.beginResetModel()
         self._table.clear()
+        self._roleData.clear()
         self.endResetModel()
 
     def append(self, row):
         self.extend([row])
 
-    @contextmanager
-    def _insertColumns(self, n_max):
+    def _insertColumns(self, rows):
+        n_max = max(map(len, rows))
         if self.columnCount() < n_max:
-            self.beginInsertColumns(QModelIndex(), self.columnCount(), n_max - 1)
-            try:
-                yield
-            finally:
-                self.endInsertColumns()
-        else:
-            yield
+            self.insertColumns(self.columnCount(), n_max - self.columnCount())
 
     def extend(self, rows):
         i, rows = len(self), list(rows)
-        self.beginInsertRows(QModelIndex(), i, i + len(rows) - 1)
-        with self._insertColumns(max(map(len, rows))):
-            self._table.extend(rows)
-        self.endInsertRows()
+        self.insertRows(i, len(rows))
+        self._insertColumns(rows)
+        self[i:] = rows
 
     def insert(self, i, row):
-        self.beginInsertRows(QModelIndex(), i, i)
-        with self._insertColumns(len(row)):
-            self._table.insert(i, row)
-        self.endInsertRows()
+        self.insertRows(i, 1)
+        self._insertColumns((row,))
+        self[i] = row
 
     def remove(self, val):
         del self[self._table.index(val)]
