@@ -95,8 +95,9 @@ class RecentPath:
     prefix = None   #: Option[str]  # BASEDIR | SAMPLE-DATASETS | ...
     relpath = ''  #: Option[str]  # path relative to `prefix`
     title = ''    #: Option[str]  # title of filename (e.g. from URL)
+    sheet = ''    #: Option[str]  # sheet
 
-    def __init__(self, abspath, prefix, relpath, title=''):
+    def __init__(self, abspath, prefix, relpath, title='', sheet=''):
         if os.name == "nt":
             # always use a cross-platform pathname component separator
             abspath = abspath.replace(os.path.sep, "/")
@@ -106,6 +107,7 @@ class RecentPath:
         self.prefix = prefix
         self.relpath = relpath
         self.title = title
+        self.sheet = sheet
 
     def __eq__(self, other):
         return (self.abspath == other.abspath or
@@ -114,7 +116,7 @@ class RecentPath:
                  self.relpath == other.relpath))
 
     @staticmethod
-    def create(path, searchpaths):
+    def create(path, searchpaths, **kwargs):
         """
         Create a RecentPath item inferring a suitable prefix name and relpath.
 
@@ -146,9 +148,9 @@ class RecentPath:
         for prefix, base in searchpaths:
             if isprefixed(base, abspath):
                 relpath = os.path.relpath(abspath, base)
-                return RecentPath(abspath, prefix, relpath)
+                return RecentPath(abspath, prefix, relpath, **kwargs)
 
-        return RecentPath(abspath, None, None)
+        return RecentPath(abspath, None, None, **kwargs)
 
     def search(self, searchpaths):
         """
@@ -269,13 +271,14 @@ class RecentPathsWidgetMixin:
         search_paths = self._search_paths()
         rec = []
         for recent in self.recent_paths:
+            kwargs = dict(title=recent.title, sheet=recent.sheet)
             resolved = recent.resolve(search_paths)
             if resolved is not None:
                 rec.append(
-                    RecentPath.create(resolved.abspath, search_paths))
+                    RecentPath.create(resolved.abspath, search_paths, **kwargs))
             elif recent.search(search_paths) is not None:
                 rec.append(
-                    RecentPath.create(recent.search(search_paths), search_paths)
+                    RecentPath.create(recent.search(search_paths), search_paths, **kwargs)
                 )
         # change the list in-place for the case the widgets wraps this list
         # in some model (untested!)
