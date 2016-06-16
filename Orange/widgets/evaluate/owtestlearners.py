@@ -201,7 +201,9 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Test on test data")
 
         rbox.layout().addSpacing(5)
-        self.apply_button = gui.auto_commit(rbox, self, "auto_apply", "&Apply")
+        self.apply_button = gui.auto_commit(
+            rbox, self, "auto_apply", "&Apply Changes", "Apply Immediately",
+            box=None)
 
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
@@ -330,7 +332,7 @@ class OWTestLearners(widget.OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self.commit()
+        self.unconditional_commit()
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
@@ -574,8 +576,7 @@ class OWTestLearners(widget.OWWidget):
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
 
-        if self.auto_apply:
-            self.commit()
+        self.commit()
 
     def commit(self):
         self._update_header()
