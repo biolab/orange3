@@ -635,7 +635,10 @@ def list_pypi_addons():
     """
     from ..config import ADDON_PYPI_SEARCH_SPEC
     import xmlrpc.client
-    pypi = xmlrpc.client.ServerProxy("http://pypi.python.org/pypi")
+    pypi = xmlrpc.client.ServerProxy(
+        "https://pypi.python.org/pypi",
+        transport=xmlrpc.client.SafeTransport()
+    )
     addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
 
     for addon in OFFICIAL_ADDONS:
