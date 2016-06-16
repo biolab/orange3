@@ -4,6 +4,8 @@ from collections import OrderedDict, Iterable
 from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
 from PyQt4.QtGui import QGraphicsScene, QAbstractItemView, QColor
+
+from Orange.util import try_
 from Orange.widgets.io import PngFormat
 from Orange.data.sql.table import SqlTable
 from Orange.widgets.utils import getdeepattr
@@ -203,13 +205,9 @@ class Report:
             rows = [i for i in range(model.rowCount())
                     if not view or not view.isRowHidden(i)]
 
-            has_horizontal_header = has_vertical_header = False
-            if view:
-                _hheader = getattr(view, 'horizontalHeader',
-                                   getattr(view, 'header', lambda: None))()
-                has_horizontal_header = _hheader and not _hheader.isHidden()
-                _vheader = getattr(view, 'verticalHeader', lambda: None)()
-                has_horizontal_header = _vheader and not _vheader.isHidden()
+            has_horizontal_header = (try_(lambda: not view.horizontalHeader().isHidden()) or
+                                     try_(lambda: not view.header().isHidden()))
+            has_vertical_header = try_(lambda: not view.verticalHeader().isHidden())
 
             def item_html(row, col):
 

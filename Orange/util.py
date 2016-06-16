@@ -69,6 +69,14 @@ def deprecated(obj):
     return decorator if alternative else decorator(obj)
 
 
+def try_(func, default=None):
+    """Try return the result of func, else return default."""
+    try:
+        return func()
+    except Exception:
+        return default
+
+
 def flatten(lst):
     """Flatten iterable a single level."""
     return chain.from_iterable(lst)

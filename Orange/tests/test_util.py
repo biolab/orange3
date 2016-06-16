@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from Orange.util import scale, export_globals, flatten, deprecated
+from Orange.util import scale, export_globals, flatten, deprecated, try_
 
 
 SOMETHING = 0xf00babe
@@ -30,3 +30,8 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(x, 10)
         self.assertTrue('deprecated' in cm.warning.args[0])
         self.assertTrue('identity' in cm.warning.args[0])
+
+    def test_try_(self):
+        self.assertTrue(try_(lambda: np.ones(3).any()))
+        self.assertFalse(try_(lambda: np.whatever()))
+        self.assertEqual(try_(len, default=SOMETHING), SOMETHING)
