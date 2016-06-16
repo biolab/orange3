@@ -158,6 +158,8 @@ class OWTestLearners(widget.OWWidget):
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
+    auto_apply = settings.Setting(False)
+
     def __init__(self):
         super().__init__()
 
@@ -199,8 +201,7 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Test on test data")
 
         rbox.layout().addSpacing(5)
-        self.apply_button = gui.button(
-            rbox, self, "&Apply", callback=self.apply, default=True)
+        self.apply_button = gui.auto_commit(rbox, self, "auto_apply", "&Apply")
 
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
@@ -329,7 +330,7 @@ class OWTestLearners(widget.OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self.apply()
+        self.commit()
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
@@ -573,18 +574,15 @@ class OWTestLearners(widget.OWWidget):
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
 
-        self.apply_button.setEnabled(True)
+        if self.auto_apply:
+            self.commit()
 
-    def apply(self):
-        self.apply_button.setEnabled(False)
+    def commit(self):
         self._update_header()
         # Update the view to display the model names
         self._update_stats_model()
         self._update_results()
         self._update_stats_model()
-        self.commit()
-
-    def commit(self):
         valid = [slot for slot in self.learners.values()
                  if slot.results is not None and slot.results.success]
         if valid:
