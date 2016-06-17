@@ -2,7 +2,7 @@
  * Our general helpers for Highcharts, JS, QWebView bridge ...
  */
 
-var _ARRAY_KEYS = ['series', 'yAxis', 'xAxis'];
+var _PREVENT_KEYS = ['data'];
 
 function fixupOptionsObject(obj) {
     /**
@@ -33,7 +33,7 @@ function fixupOptionsObject(obj) {
         if (typeof val === 'string' && val.indexOf('/**/') == 0) {
             obj[key] = eval(val)
         } else if (val.constructor === Object ||
-                   val.constructor === Array && _ARRAY_KEYS.indexOf(key) != -1)
+                   val.constructor === Array && _PREVENT_KEYS.indexOf(key) == -1)
             fixupOptionsObject(val);
     }
 }
