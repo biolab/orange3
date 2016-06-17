@@ -3,7 +3,7 @@ from numbers import Number, Integral
 from math import isnan, isinf
 
 import operator
-from collections import namedtuple, Sequence
+from collections import namedtuple, Sequence, defaultdict
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache
 from xml.sax.saxutils import escape
@@ -81,6 +81,11 @@ class PyTableModel(QAbstractTableModel):
 
     To set additional item roles, use setData().
     """
+
+    @staticmethod
+    def _RoleData():
+        return defaultdict(lambda: defaultdict(dict))
+
     # All methods are either necessary overrides of super methods, or
     # methods likened to the Python list's. Hence, docstrings aren't.
     # pylint: disable=missing-docstring
@@ -118,7 +123,10 @@ class PyTableModel(QAbstractTableModel):
         if not index.isValid():
             return
 
-        role_value = self._roleData[index.row()][index.column()].get(role)
+        role_value = (self._roleData
+                      .get(index.row(), {})
+                      .get(index.column(), {})
+                      .get(role))
         if role_value is not None:
             return role_value
 
@@ -154,7 +162,13 @@ class PyTableModel(QAbstractTableModel):
                          key=lambda i: self._table[i][column],
                          reverse=order != Qt.AscendingOrder)
         self._table[:] = [self._table[i] for i in indices]
-        self._roleData[:] = [self._roleData[i] for i in indices]
+
+        rd = self._roleData
+        self._roleData = self._RoleData()
+        self._roleData.update((i, rd.get(row))
+                              for i, row in enumerate(indices)
+                              if rd.get(row))
+
         vheaders = self._headers.get(Qt.Vertical, ())
         if vheaders:
             vheaders = tuple(vheaders) + ('',) * max(0, (len(self._table) - len(vheaders)))
@@ -176,7 +190,8 @@ class PyTableModel(QAbstractTableModel):
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():
             del self[row:row + count]
-            del self._roleData[row:row + count]
+            for row in range(row, row + count):
+                self._roleData.pop(row, None)
             return True
         return False
 
@@ -184,24 +199,21 @@ class PyTableModel(QAbstractTableModel):
         self.beginRemoveColumns(parent, column, column + count - 1)
         for row in self._table:
             del row[column:column + count]
-        for row in self._roleData:
-            del row[column:column + count]
+        for cols in self._roleData.values():
+            for col in range(column, column + count):
+                cols.pop(col, None)
         del self._headers.get(Qt.Horizontal, [])[column:column + count]
         self.endRemoveColumns()
 
     def insertRows(self, row, count, parent=QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
-        self._roleData[row:row] = [[{} for _ in range(self.columnCount())]
-                                   for _ in range(count)]
         self.endInsertRows()
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
-        for row in self._roleData:
-            row[column:column] = [{} for _ in range(count)]
         self.endInsertColumns()
 
     def __len__(self):
@@ -239,8 +251,7 @@ class PyTableModel(QAbstractTableModel):
     def wrap(self, table):
         self.beginResetModel()
         self._table = table
-        rows, cols = range(len(table)), range(len(table[0]) if table else 0)
-        self._roleData = [[{} for _ in cols] for _ in rows]
+        self._roleData = self._RoleData()
         self.endResetModel()
 
     def clear(self):
