@@ -831,7 +831,7 @@ class OWMDS(widget.OWWidget):
                 symbols = numpy.array(list(Symbols.keys()))
 
                 shape_var = self.shapevar_model[shape_index]
-                data = column(self.data, shape_var)
+                data = column(self.data, shape_var).astype(numpy.float)
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
