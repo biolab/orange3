@@ -1,11 +1,13 @@
 import numpy as np
-from scipy import stats, sparse
+from scipy import stats
 import sklearn.metrics as skl_metrics
 
 from Orange import data
 from Orange.misc import DistMatrix
 from Orange.preprocess import SklImpute
 
+__all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', 'SpearmanR', 'SpearmanRAbsolute',
+           'PearsonR', 'PearsonRAbsolute']
 
 def _preprocess(table):
     """Remove categorical attributes and impute missing values."""
@@ -31,7 +33,7 @@ def _orange_to_numpy(x):
         return x    # e.g. None
 
 
-class Distance():
+class Distance:
     def __call__(self, e1, e2=None, axis=1, impute=False):
         """
         :param e1: input data instances, we calculate distances between all pairs
@@ -52,12 +54,16 @@ class Distance():
 
 class SklDistance(Distance):
     """Generic scikit-learn distance."""
-    def __init__(self, metric):
+    def __init__(self, metric, name, supports_sparse):
         """
-        :param metric: The metric to be used for distance calculation
-        :type metric: str
+        Args:
+            metric: The metric to be used for distance calculation
+            name (str): Name of the distance
+            supports_sparse (boolean): Whether this metric works on sparse data or not.
         """
         self.metric = metric
+        self.name = name
+        self.supports_sparse = supports_sparse
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
@@ -73,22 +79,28 @@ class SklDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-Euclidean = SklDistance('euclidean')
-Manhattan = SklDistance('manhattan')
-Cosine = SklDistance('cosine')
-Jaccard = SklDistance('jaccard')
+Euclidean = SklDistance('euclidean', 'Euclidean', True)
+Manhattan = SklDistance('manhattan', 'Manhattan', True)
+Cosine = SklDistance('cosine', 'Cosine', True)
+Jaccard = SklDistance('jaccard', 'Jaccard', False)
 
 
 class SpearmanDistance(Distance):
     """ Generic Spearman's rank correlation coefficient. """
-    def __init__(self, absolute):
+    def __init__(self, absolute, name):
         """
         Constructor for Spearman's and Absolute Spearman's distances.
 
-        :param absolute: Whether to use absolute values or not.
-        :return: If absolute=True return Spearman's Absolute rank class else return Spearman's rank class.
+        Args:
+            absolute (boolean): Whether to use absolute values or not.
+            name (str): Name of the distance
+
+        Returns:
+            If absolute=True return Spearman's Absolute rank class else return Spearman's rank class.
         """
         self.absolute = absolute
+        self.name = name
+        self.supports_sparse = False
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
@@ -113,20 +125,26 @@ class SpearmanDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-SpearmanR = SpearmanDistance(absolute=False)
-SpearmanRAbsolute = SpearmanDistance(absolute=True)
+SpearmanR = SpearmanDistance(absolute=False, name='Spearman')
+SpearmanRAbsolute = SpearmanDistance(absolute=True, name='Spearman absolute')
 
 
 class PearsonDistance(Distance):
     """ Generic Pearson's rank correlation coefficient. """
-    def __init__(self, absolute):
+    def __init__(self, absolute, name):
         """
         Constructor for Pearson's and Absolute Pearson's distances.
 
-        :param absolute: Whether to use absolute values or not.
-        :return: If absolute=True return Pearson's Absolute rank class else return Pearson's rank class.
+        Args:
+            absolute (boolean): Whether to use absolute values or not.
+            name (str): Name of the distance
+
+        Returns:
+            If absolute=True return Pearson's Absolute rank class else return Pearson's rank class.
         """
         self.absolute = absolute
+        self.name = name
+        self.supports_sparse = False
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
@@ -150,5 +168,5 @@ class PearsonDistance(Distance):
         return dist
 
 
-PearsonR = PearsonDistance(absolute=False)
-PearsonRAbsolute = PearsonDistance(absolute=True)
+PearsonR = PearsonDistance(absolute=False, name='Pearson')
+PearsonRAbsolute = PearsonDistance(absolute=True, name='Pearson absolute')
