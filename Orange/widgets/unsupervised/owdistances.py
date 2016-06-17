@@ -1,5 +1,8 @@
+from inspect import getmembers
+
 import numpy
 from PyQt4.QtCore import Qt
+from scipy.sparse import issparse
 
 import Orange.data
 import Orange.misc
@@ -7,17 +10,9 @@ from Orange import distance
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.sql import check_sql_input
 
-
-_METRICS = [
-    ("Euclidean", distance.Euclidean),
-    ("Manhattan", distance.Manhattan),
-    ("Cosine", distance.Cosine),
-    ("Jaccard", distance.Jaccard),
-    ("Spearman", distance.SpearmanR),
-    ("Spearman absolute", distance.SpearmanRAbsolute),
-    ("Pearson", distance.PearsonR),
-    ("Pearson absolute", distance.PearsonRAbsolute),
-]
+DENSE_METRICS = [obj for name, obj in getmembers(distance,
+                                                 lambda x: isinstance(x, distance.Distance))]
+SPARSE_METRICS = list(filter(lambda x: x.supports_sparse, DENSE_METRICS))
 
 
 class OWDistances(widget.OWWidget):
@@ -39,13 +34,15 @@ class OWDistances(widget.OWWidget):
         super().__init__()
 
         self.data = None
+        self.available_metrics = DENSE_METRICS
 
         gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
         )
-        gui.comboBox(self.controlArea, self, "metric_idx",
-                     box="Distance Metric", items=list(zip(*_METRICS))[0],
-                     callback=self._invalidate
+        self.metrics_combo = gui.comboBox(self.controlArea, self, "metric_idx",
+                                          box="Distance Metric",
+                                          items=[m.name for m in self.available_metrics],
+                                          callback=self._invalidate
         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
                               box=False, checkbox_label="Apply automatically")
@@ -57,7 +54,17 @@ class OWDistances(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.data = data
+        self.refresh_metrics()
         self.unconditional_commit()
+
+    def refresh_metrics(self):
+        sparse = self.data and issparse(self.data.X)
+        self.available_metrics = SPARSE_METRICS if sparse else DENSE_METRICS
+
+        self.metrics_combo.clear()
+        self.metric_idx = 0
+        for m in self.available_metrics:
+            self.metrics_combo.addItem(m.name)
 
     def commit(self):
         self.warning(1)
@@ -65,12 +72,13 @@ class OWDistances(widget.OWWidget):
 
         data = distances = None
         if self.data is not None:
-            metric = _METRICS[self.metric_idx][1]
+            metric = self.available_metrics[self.metric_idx]
+
             if not any(a.is_continuous for a in self.data.domain.attributes):
                 self.error(1, "No continuous features")
                 data = None
-            elif (any(a.is_discrete for a in self.data.domain.attributes) or
-                  numpy.any(numpy.isnan(self.data.X))):
+            elif any(a.is_discrete for a in self.data.domain.attributes) or \
+                    (not issparse(self.data.X) and numpy.any(numpy.isnan(self.data.X))):
                 data = distance._preprocess(self.data)
                 if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
                     self.warning(1, "Ignoring discrete features")
@@ -92,5 +100,5 @@ class OWDistances(widget.OWWidget):
     def send_report(self):
         self.report_items((
             ("Distances Between", ["Rows", "Columns"][self.axis]),
-            ("Metric", _METRICS[self.metric_idx][0])
+            ("Metric", self.available_metrics[self.metric_idx].name)
         ))

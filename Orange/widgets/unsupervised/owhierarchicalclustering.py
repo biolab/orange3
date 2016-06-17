@@ -23,6 +23,7 @@ from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
 import Orange.data
+from Orange.data.domain import filter_visible
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, leaves, prune, top_clusters
@@ -967,8 +968,9 @@ class OWHierarchicalClustering(widget.OWWidget):
                 [model.Separator],
                 items.domain.class_vars,
                 items.domain.metas,
-                [model.Separator] if items.domain.class_vars or items.domain.metas else [],
-                items.domain.attributes
+                [model.Separator] if (items.domain.class_vars or items.domain.metas) and
+                                     next(filter_visible(items.domain.attributes), False) else [],
+                filter_visible(items.domain.attributes)
             )
         elif isinstance(items, list) and \
                 all(isinstance(var, Orange.data.Variable) for var in items):

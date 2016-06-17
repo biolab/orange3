@@ -19,6 +19,7 @@ import pyqtgraph as pg
 import Orange.data
 import Orange.misc
 from Orange.clustering import hierarchical
+from Orange.data.domain import filter_visible
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
@@ -432,7 +433,7 @@ class OWDistanceMap(widget.OWWidget):
         elif not axis:
             model[:] = ["None", "Enumeration", "Attribute names"]
         elif isinstance(items, Orange.data.Table):
-            annot_vars = list(items.domain) + list(items.domain.metas)
+            annot_vars = list(filter_visible(items.domain)) + list(items.domain.metas)
             model[:] = ["None", "Enumeration"] + annot_vars
             self.annotation_idx = 0
             self.openContext(items.domain)
