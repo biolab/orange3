@@ -759,7 +759,7 @@ class OWPaintData(widget.OWWidget):
     description = "Create data by painting data points on a plane."
     long_description = ""
     icon = "icons/PaintData.svg"
-    priority = 10
+    priority = 15
     keywords = ["data", "paint", "create"]
 
     outputs = [("Data", Orange.data.Table)]
