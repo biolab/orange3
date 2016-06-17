@@ -95,18 +95,22 @@ class Table(Storage, DataFrame):
         """A read-only list of meta column variables."""
         return [c for c in self.columns if c in self._columns_meta]
 
-    def _to_numpy(self, X=False, Y=False, meta=False):
+    def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
         """
         Exports a numpy matrix. The order is always X, Y, meta.
         The columns are in the same order as in
         Table.columns, Table.columns_X, Table.columns_Y, Table.columns_meta
+        If writable == False (default), the numpy writable flag is set to false.
+            This means write operations on this array will loudly fail. 
         """
         # TODO: only return numeric values here, need to transform
         cols = []
         cols += self.columns_X if X else []
         cols += self.columns_Y if Y else []
         cols += self.columns_meta if meta else []
-        return self[cols].values
+        res = self[cols].values
+        res.setflags(write=writable)
+        return res
 
     @property
     def X(self):
