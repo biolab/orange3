@@ -1,7 +1,8 @@
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtGui import QTableView, QSizePolicy
 
-from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable
+from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
+    TimeVariable
 from Orange.widgets import gui
 from Orange.widgets.data.owcolor import HorizontalGridDelegate
 from Orange.widgets.utils.itemmodels import TableModel
@@ -24,8 +25,8 @@ class Place:
 
 class VarTableModel(QtCore.QAbstractTableModel):
     places = "feature", "target", "meta", "skip"
-    typenames = "nominal", "numeric", "string"
-    vartypes = DiscreteVariable, ContinuousVariable, StringVariable
+    typenames = "nominal", "numeric", "string", "datetime"
+    vartypes = DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
     name2type = dict(zip(typenames, vartypes))
     type2name = dict(zip(vartypes, typenames))
 
