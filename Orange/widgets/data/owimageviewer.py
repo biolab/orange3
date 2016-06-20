@@ -550,12 +550,12 @@ class OWImageViewer(widget.OWWidget):
     def clearScene(self):
         self._cancelAllFutures()
 
-        self.scene.clear()
         self.items = []
-        self._errcount = 0
-        self._successcount = 0
         self.thumbnailWidget = None
         self.sceneLayout = None
+        self.scene.clear()
+        self._errcount = 0
+        self._successcount = 0
 
     def thumbnailItems(self):
         return [item.widget for item in self.items]
