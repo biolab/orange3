@@ -73,6 +73,8 @@ class OWDistances(widget.OWWidget):
         data = distances = None
         if self.data is not None:
             metric = self.available_metrics[self.metric_idx]
+            if isinstance(metric, distance.MahalanobisDistance):
+                metric.fit(self.data, axis=1-self.axis)
 
             if not any(a.is_continuous for a in self.data.domain.attributes):
                 self.error(1, "No continuous features")

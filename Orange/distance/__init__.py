@@ -7,7 +7,7 @@ from Orange.misc import DistMatrix
 from Orange.preprocess import SklImpute
 
 __all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', 'SpearmanR', 'SpearmanRAbsolute',
-           'PearsonR', 'PearsonRAbsolute']
+           'PearsonR', 'PearsonRAbsolute', 'Mahalanobis', 'MahalanobisDistance']
 
 def _preprocess(table):
     """Remove categorical attributes and impute missing values."""
@@ -167,6 +167,59 @@ class PearsonDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-
 PearsonR = PearsonDistance(absolute=False, name='Pearson')
 PearsonRAbsolute = PearsonDistance(absolute=True, name='Pearson absolute')
+
+
+class MahalanobisDistance(Distance):
+    """Mahalanobis distance."""
+    def __init__(self, data=None, axis=1, name='Mahalanobis'):
+        self.name = name
+        self.supports_sparse = False
+        self.axis = None
+        self.VI = None
+        if data is not None:
+            self.fit(data, axis)
+
+    def fit(self, data, axis=1):
+        """
+        Compute the covariance matrix needed for calculating distances.
+
+        Args:
+            data: The dataset used for calculating covariances.
+            axis: If axis=1 we calculate distances between rows, if axis=0 we calculate distances between columns.
+        """
+        x = _orange_to_numpy(data)
+        if axis == 0:
+            x = x.T
+        n, m = x.shape
+        if n <= m:
+            raise ValueError('Too few observations for the number of dimensions.')
+        self.axis = axis
+        self.VI = np.linalg.inv(np.cov(x.T))
+
+    def __call__(self, e1, e2=None, axis=None, impute=False):
+        assert self.VI is not None, "Mahalanobis distance must be initialized with the fit() method."
+
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
+
+        if axis is not None:
+            assert axis == self.axis, "Axis must match its value at initialization."
+        if self.axis == 0:
+            x1 = x1.T
+            if x2 is not None:
+                x2 = x2.T
+        if x1.shape[1] != self.VI.shape[0] or x2 is not None and x2.shape[1] != self.VI.shape[0]:
+            raise ValueError('Incorrect number of features.')
+
+        dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric='mahalanobis', VI=self.VI)
+        if np.isnan(dist).any() and impute:
+            dist = np.nan_to_num(dist)
+        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+            dist = DistMatrix(dist, e1, e2, self.axis)
+        else:
+            dist = DistMatrix(dist)
+        return dist
+
+Mahalanobis = MahalanobisDistance()

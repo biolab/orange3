@@ -6,13 +6,14 @@ import os
 import pickle
 
 import numpy as np
+import scipy
 from scipy.sparse import csr_matrix
 
 from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
-                             Jaccard, _preprocess)
+                             Jaccard, _preprocess, Mahalanobis, MahalanobisDistance)
 from Orange.misc import DistMatrix
 from Orange.tests import named_file, test_filename
 from Orange.util import OrangeDeprecationWarning
@@ -734,6 +735,49 @@ class TestPearsonRAbsolute(TestCase):
                                                  [0.21006195, 0.1155948, 0.11607395, 0.13891172, 0.17324382, 0.25512861, 0., 0.14419442, 0.42023881],
                                                  [0.24072005, 0.08043531, 0.06493949, 0.21622332, 0.21452448, 0.29560909, 0.14419442, 0., 0.45930368],
                                                  [0.42847752, 0.43326547, 0.46590168, 0.37404826, 0.42283252, 0.42766076, 0.42023881, 0.45930368, 0.]]))
+
+
+class TestMahalanobis(TestCase):
+    def setUp(self):
+        self.n, self.m = 10, 5
+        self.x = np.random.rand(self.n, self.m)
+        self.x1 = np.random.rand(self.m)
+        self.x2 = np.random.rand(self.m)
+
+    def test_correctness(self):
+        mah = MahalanobisDistance(self.x)
+        d = scipy.spatial.distance.pdist(self.x, 'mahalanobis')
+        d = scipy.spatial.distance.squareform(d)
+        for i in range(self.n):
+            for j in range(self.n):
+                self.assertAlmostEqual(d[i][j], mah(self.x[i], self.x[j]), delta=1e-5)
+
+    def test_attributes(self):
+        Mahalanobis.fit(self.x)
+        self.assertEqual(Mahalanobis(self.x[0], self.x[1]).shape, (1, 1))
+        self.assertEqual(Mahalanobis(self.x).shape, (self.n, self.n))
+        self.assertEqual(Mahalanobis(self.x[0:3], self.x[5:7]).shape, (3, 2))
+        self.assertEqual(Mahalanobis(self.x1, self.x2).shape, (1, 1))
+        Mahalanobis(self.x, impute=True)
+        Mahalanobis(self.x[:-1, :])
+        self.assertRaises(ValueError, Mahalanobis, self.x[:, :-1])
+        self.assertRaises(ValueError, Mahalanobis, self.x1[:-1], self.x2)
+        self.assertRaises(ValueError, Mahalanobis, self.x1, self.x2[:-1])
+        self.assertRaises(ValueError, Mahalanobis, self.x.T)
+
+    def test_iris(self):
+        tab = Table('iris')
+        Mahalanobis.fit(tab)
+        self.assertEqual(Mahalanobis(tab).shape, (150, 150))
+        self.assertEqual(Mahalanobis(tab[0], tab[1]).shape, (1, 1))
+
+    def test_axis(self):
+        mah = MahalanobisDistance(self.x, axis=1)
+        self.assertEqual(mah(self.x, self.x).shape, (self.n, self.n))
+        x = self.x.T
+        mah = MahalanobisDistance(x, axis=0)
+        self.assertRaises(AssertionError, mah, x, axis=1)
+        self.assertEqual(mah(x, x).shape, (self.n, self.n))
 
 
 class TestDistances(TestCase):
