@@ -158,7 +158,7 @@ class OWTestLearners(widget.OWWidget):
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
-    auto_apply = settings.Setting(False)
+    auto_apply = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
