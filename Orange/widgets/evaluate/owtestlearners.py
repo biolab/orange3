@@ -9,7 +9,7 @@ import numpy as np
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
     QTreeView, QStandardItemModel, QStandardItem, QHeaderView,
-    QStyledItemDelegate
+    QStyledItemDelegate, QSizePolicy
 )
 from PyQt4.QtCore import Qt, QSize
 
@@ -141,15 +141,19 @@ class OWTestLearners(widget.OWWidget):
 
     #: Resampling/testing types
     KFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
+    #: Numbers of folds
+    NFolds = [2, 3, 5, 10, 20]
+    #: Number of repetitions
+    NRepeats = [2, 3, 5, 10, 20, 50, 100]
 
     #: Selected resampling type
     resampling = settings.Setting(0)
     #: Number of folds for K-fold cross validation
-    k_folds = settings.Setting(10)
+    n_folds = settings.Setting(3)
     #: Stratified sampling for K-fold
     cv_stratified = settings.Setting(True)
     #: Number of repeats for ShuffleSplit sampling
-    n_repeat = settings.Setting(10)
+    n_repeats = settings.Setting(3)
     #: ShuffleSplit sampling p
     sample_p = settings.Setting(75)
     #: Stratified sampling for Random Sampling
@@ -158,7 +162,7 @@ class OWTestLearners(widget.OWWidget):
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
-    auto_apply = settings.Setting(False)
+    auto_apply = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -179,21 +183,29 @@ class OWTestLearners(widget.OWWidget):
 
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
-        gui.spin(ibox, self, "k_folds", 2, 50, label="Number of folds:",
-                 callback=self.kfold_changed)
-        gui.checkBox(ibox, self, "cv_stratified", "Stratified",
-                     callback=self.kfold_changed)
+        gui.comboBox(
+            ibox, self, "n_folds", label="Number of folds:",
+            orientation=Qt.Horizontal,
+            items=self.NFolds, callback=self.kfold_changed)
+        gui.checkBox(
+            ibox, self, "cv_stratified", "Stratified",
+            callback=self.kfold_changed)
 
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
-        gui.spin(ibox, self, "n_repeat", 2, 50, label="Repeat train/test:",
-                 callback=self.shuffle_split_changed)
+        gui.comboBox(
+            ibox, self, "n_repeats", label="Repeat train/test:",
+            orientation=Qt.Horizontal,
+            items=self.NRepeats, callback=self.shuffle_split_changed,
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
         gui.widgetLabel(ibox, "Relative training set size:")
-        gui.hSlider(ibox, self, "sample_p", minValue=1, maxValue=99,
-                    ticks=20, vertical=False, labelFormat="%d %%",
-                    callback=self.shuffle_split_changed)
-        gui.checkBox(ibox, self, "shuffle_stratified", "Stratified",
-                     callback=self.shuffle_split_changed)
+        gui.hSlider(
+            ibox, self, "sample_p", minValue=1, maxValue=99,
+            ticks=20, vertical=False, labelFormat="%d %%", tracking=False,
+            callback=self.shuffle_split_changed)
+        gui.checkBox(
+            ibox, self, "shuffle_stratified", "Stratified",
+            callback=self.shuffle_split_changed)
 
         gui.appendRadioButton(rbox, "Leave one out")
 
@@ -388,13 +400,14 @@ class OWTestLearners(widget.OWWidget):
 
         with self.progressBar():
             try:
+                folds = self.NFolds[self.n_folds]
                 if self.resampling == OWTestLearners.KFold:
-                    if len(self.data) < self.k_folds:
+                    if len(self.data) < folds:
                         self.error(4, "Number of folds exceeds the data size")
                         return
                     warnings = []
                     results = Orange.evaluation.CrossValidation(
-                        self.data, learners, k=self.k_folds,
+                        self.data, learners, k=folds,
                         random_state=rstate, warnings=warnings, **common_args)
                     if warnings:
                         self.warning(2, warnings[0])
@@ -404,7 +417,8 @@ class OWTestLearners(widget.OWWidget):
                 elif self.resampling == OWTestLearners.ShuffleSplit:
                     train_size = self.sample_p / 100
                     results = Orange.evaluation.ShuffleSplit(
-                        self.data, learners, n_resamples=self.n_repeat,
+                        self.data, learners,
+                        n_resamples=self.NRepeats[self.n_repeats],
                         train_size=train_size, test_size=None,
                         stratified=self.shuffle_stratified,
                         random_state=rstate, **common_args)
@@ -606,14 +620,15 @@ class OWTestLearners(widget.OWWidget):
         if self.resampling == self.KFold:
             stratified = 'Stratified ' if self.cv_stratified else ''
             items = [("Sampling type", "{}{}-fold Cross validation".
-                      format(stratified, self.k_folds))]
+                      format(stratified, self.NFolds[self.n_folds]))]
         elif self.resampling == self.LeaveOneOut:
             items = [("Sampling type", "Leave one out")]
         elif self.resampling == self.ShuffleSplit:
             stratified = 'Stratified ' if self.shuffle_stratified else ''
             items = [("Sampling type",
                       "{}Shuffle split, {} random samples with {}% data "
-                      .format(stratified, self.n_repeat, self.sample_p))]
+                      .format(stratified, self.NRepeats[self.n_repeats],
+                              self.sample_p))]
         elif self.resampling == self.TestOnTrain:
             items = [("Sampling type", "No sampling, test on training data")]
         elif self.resampling == self.TestOnTest:
