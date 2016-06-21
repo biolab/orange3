@@ -64,9 +64,10 @@ class ItemDelegate(QStyledItemDelegate):
 
 
 class Try(abc.ABC):
-    # Try to walk in a Turing tar pit.
+    """Try to walk in a Turing tar pit."""
 
     class Success:
+        """Data type for instance constructed on success"""
         __slots__ = ("__value",)
 #         __bool__ = lambda self: True
         success = property(lambda self: True)
@@ -86,6 +87,7 @@ class Try(abc.ABC):
             return Try(lambda: fn(self.value))
 
     class Fail:
+        """Data type for instance constructed on fail"""
         __slots__ = ("__exception", )
 #         __bool__ = lambda self: False
         success = property(lambda self: False)
@@ -593,6 +595,7 @@ class OWTestLearners(widget.OWWidget):
         self.commit()
 
     def commit(self):
+        """Recompute and output the results"""
         self._update_header()
         # Update the view to display the model names
         self._update_stats_model()
@@ -615,6 +618,7 @@ class OWTestLearners(widget.OWWidget):
         self.send("Predictions", predictions)
 
     def send_report(self):
+        """Report on the testing schema and results"""
         if not self.data or not self.learners:
             return
         if self.resampling == self.KFold:
@@ -643,6 +647,8 @@ class OWTestLearners(widget.OWWidget):
 
 
 def learner_name(learner):
+    """Return the value of `learner.name` if it exists, or the learner's type
+    name otherwise"""
     return getattr(learner, "name", type(learner).__name__)
 
 
@@ -689,6 +695,7 @@ def results_one_vs_rest(results, pos_index):
 
 
 def main(argv=None):
+    """Show and test the widget"""
     if argv is None:
         argv = sys.argv
     argv = list(argv)
