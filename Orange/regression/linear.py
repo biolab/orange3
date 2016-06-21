@@ -160,3 +160,6 @@ class PolynomialModel(Model):
 
     def __str__(self):
         return 'PolynomialModel {}'.format(self.model)
+
+
+PolynomialLearner.__returns__ = PolynomialModel

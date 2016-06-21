@@ -5,9 +5,11 @@ import pyqtgraph as pg
 import numpy as np
 
 from Orange.data import Table, Domain
-from Orange.regression.linear import (
-    RidgeRegressionLearner,  LinearRegressionLearner, PolynomialLearner)
+from Orange.data.variable import ContinuousVariable, StringVariable
+from Orange.regression.linear import (RidgeRegressionLearner, PolynomialLearner,
+                                      LinearRegressionLearner, LinearModel)
 from Orange.regression import Learner
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import settings, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -16,13 +18,15 @@ from Orange.canvas import report
 
 
 class OWUnivariateRegression(OWBaseLearner):
-    name = "Univariate Regression"
+    name = "Univariate Polynomial Regression"
     description = "Univariate regression with polynomial expansion."
     icon = "icons/UnivariateRegression.svg"
 
-    LEARNER = LinearRegressionLearner
-
     inputs = [("Learner", Learner, "set_learner")]
+
+    outputs = [("Coefficients", Table)]
+
+    LEARNER = PolynomialLearner
 
     learner_name = settings.Setting("Univariate Regression")
 
@@ -34,6 +38,11 @@ class OWUnivariateRegression(OWBaseLearner):
     want_main_area = True
 
     def add_main_layout(self):
+
+        self.data = None
+        self.preprocessors = None
+        self.learner = None
+
         self.scatterplot_item = None
         self.plot_item = None
 
@@ -99,6 +108,8 @@ class OWUnivariateRegression(OWBaseLearner):
         self.report_plot(self.plot)
         if caption:
             self.report_caption(caption)
+
+
 
     def clear(self):
         self.data = None
@@ -178,21 +189,28 @@ class OWUnivariateRegression(OWBaseLearner):
         predictor = None
 
         if self.data is not None:
-            if self.learner is None:
-                learner = self.LEARNER(preprocessors=self.preprocessors)
+
+            degree = int(self.polynomialexpansion)
+            learner = self.LEARNER(preprocessors=self.preprocessors,
+                                   degree=degree,
+                                   learner=LinearRegressionLearner() if self.learner is None
+                                    else learner)
 
             attributes = self.x_var_model[self.x_var_index]
             class_var = self.y_var_model[self.y_var_index]
             data_table = Table(Domain([attributes], class_vars=[class_var]), self.data)
 
-            degree = int(self.polynomialexpansion)
-
-            learner = PolynomialLearner(learner, degree=degree)
             learner.name = self.learner_name
             predictor = learner(data_table)
 
-            x = data_table.X.ravel()
-            y = data_table.Y.ravel()
+            preprocessed_data = data_table
+            if self.preprocessors is not None:
+                for preprocessor in self.preprocessors:
+                    preprocessed_data = preprocessor(preprocessed_data)
+
+            x = preprocessed_data.X.ravel()
+            y = preprocessed_data.Y.ravel()
+
             linspace = np.linspace(min(x), max(x), 1000).reshape(-1,1)
             values = predictor(linspace, predictor.Value)
 
@@ -212,6 +230,26 @@ class OWUnivariateRegression(OWBaseLearner):
 
         self.send("Learner", learner)
         self.send("Predictor", predictor)
+
+        # Send model coefficents
+        model = None
+        if predictor is not None:
+            model = predictor.model
+            if hasattr(model, "model"):
+                model = model.model
+            elif hasattr(model, "skl_model"):
+                model = model.skl_model
+        if model is not None and hasattr(model, "coef_"):
+            domain = Domain([ContinuousVariable("coef", number_of_decimals=7)],
+                            metas=[StringVariable("name")])
+            coefs = [model.intercept_ + model.coef_[0]] + list(model.coef_[1:])
+            names = ["1", x_label] + \
+                    ["{}^{}".format(x_label, i) for i in range(2, degree + 1)]
+            coef_table = Table(domain, list(zip(coefs, names)))
+            self.send("Coefficients", coef_table)
+        else:
+            self.send("Coefficients", None)
+
 
 
 if __name__ == "__main__":
