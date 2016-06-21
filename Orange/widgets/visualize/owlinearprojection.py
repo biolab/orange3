@@ -1059,7 +1059,7 @@ class OWLinearProjection(widget.OWWidget):
         self.send("Selected Data", subset)
 
     def send_report(self):
-        self.report_plot()
+        self.report_plot(name="", plot=self.viewbox.getViewBox())
         caption = report.render_items_vert((
             ("Colors",
              self.color_index > 0 and self.colorvar_model[self.color_index]),
