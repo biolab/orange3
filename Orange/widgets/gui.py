@@ -186,7 +186,7 @@ class OWComponent:
 
 def miscellanea(control, box, parent,
                 addToLayout=True, stretch=0, sizePolicy=None, addSpace=False,
-                disabled=False, tooltip=None):
+                disabled=False, tooltip=None, **kwargs):
     """
     Helper function that sets various properties of the widget using a common
     set of arguments.
@@ -206,6 +206,11 @@ def miscellanea(control, box, parent,
 
     If `box` is the same as `parent` it is set to `None`; this is convenient
     because of the way complex controls are inserted.
+
+    Unused keyword arguments are assumed to be properties; with this `gui`
+    function mimic the behaviour of PyQt's constructors. For instance, if
+    `gui.lineEdit` is called with keyword argument `sizePolicy=some_policy`,
+    `miscallenea` will call `control.setSizePolicy(some_policy)`.
 
     :param control: the control, e.g. a `QCheckBox`
     :type control: PyQt4.QtGui.QWidget
@@ -228,6 +233,8 @@ def miscellanea(control, box, parent,
     :param sizePolicy: the size policy for the box or the control
     :type sizePolicy: PyQt4.QtQui.QSizePolicy
     """
+    for prop, val in kwargs.items():
+        getattr(control, "set" + prop[0].upper() + prop[1:])(val)
     if disabled:
         # if disabled==False, do nothing; it can be already disabled
         control.setDisabled(disabled)
