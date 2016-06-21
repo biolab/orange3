@@ -29,7 +29,7 @@ from PyQt4.QtCore import pyqtProperty as Property
 
 from PyQt4.QtCore import (
     Qt, QObject, QPoint, QSize, QRect, QEventLoop, QEvent, QModelIndex,
-    QTimer
+    QTimer, QRegExp
 )
 
 
@@ -1039,7 +1039,9 @@ class QuickMenu(FramelessWindow):
         self.__clearCurrentItems()
 
         self.__search.setText(searchText)
-        self.__suggestPage.setFilterFixedString(searchText)
+        patt = QRegExp("(^|\W)"+searchText)
+        patt.setCaseSensitivity(False)
+        self.__suggestPage.setFilterRegExp(patt)
 
         self.ensurePolished()
 
@@ -1145,7 +1147,9 @@ class QuickMenu(FramelessWindow):
         self.triggered.emit(action)
 
     def __on_textEdited(self, text):
-        self.__suggestPage.setFilterFixedString(text)
+        patt = QRegExp("(^|\W)" + text)
+        patt.setCaseSensitivity(False)
+        self.__suggestPage.setFilterRegExp(patt)
         self.__pages.setCurrentPage(self.__suggestPage)
 
     def triggerSearch(self):
