@@ -781,7 +781,7 @@ class OWLinearProjection(widget.OWWidget):
             pen=pen_data,
             brush=brush_data,
             size=size_data,
-            shape=shape_data,
+            symbol=shape_data,
             antialias=True,
             data=numpy.arange(len(self.data))[mask]
         )
@@ -975,7 +975,7 @@ class OWLinearProjection(widget.OWWidget):
         symbols = list(ScatterPlotItem.Symbols)
 
         if shape_var is color_var:
-            items = [(QtGui.QColor(color_var.colors[i]), symbols[i], name)
+            items = [(QtGui.QColor(*color_var.colors[i]), symbols[i], name)
                      for i, name in enumerate(color_var.values)]
         else:
             colors = shapes = []
