@@ -332,6 +332,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.filter_edit.installEventFilter(self.completer_navigator)
 
         self.available_attrs = VariablesListItemModel()
+        self.available_attrs.rowsRemoved.connect(self.update_completer_model)
 
         self.available_attrs_proxy = VariableFilterProxyModel()
         self.available_attrs_proxy.setSourceModel(self.available_attrs)
@@ -339,10 +340,6 @@ class OWSelectAttributes(widget.OWWidget):
             acceptedType=Orange.data.Variable)
         self.available_attrs_view.setModel(self.available_attrs_proxy)
 
-        aa = self.available_attrs
-        aa.dataChanged.connect(self.update_completer_model)
-        aa.rowsInserted.connect(self.update_completer_model)
-        aa.rowsRemoved.connect(self.update_completer_model)
 
         self.available_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.available_attrs_view))
@@ -355,6 +352,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
+        self.used_attrs.rowsRemoved.connect(self.update_completer_model)
         self.used_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
@@ -367,6 +365,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
         self.class_attrs = ClassVarListItemModel()
+        self.class_attrs.rowsRemoved.connect(self.update_completer_model)
         self.class_attrs_view = ClassVariableItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
@@ -379,6 +378,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
+        self.meta_attrs.rowsRemoved.connect(self.update_completer_model)
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
