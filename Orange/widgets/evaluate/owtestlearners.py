@@ -9,7 +9,7 @@ import numpy as np
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
     QTreeView, QStandardItemModel, QStandardItem, QHeaderView,
-    QStyledItemDelegate, QSizePolicy
+    QStyledItemDelegate
 )
 from PyQt4.QtCore import Qt, QSize
 
@@ -147,6 +147,8 @@ class OWTestLearners(widget.OWWidget):
     NFolds = [2, 3, 5, 10, 20]
     #: Number of repetitions
     NRepeats = [2, 3, 5, 10, 20, 50, 100]
+    #: Sample sizes
+    SampleSizes = [5, 10, 20, 25, 30, 33, 40, 50, 60, 66, 70, 75, 80, 90, 95]
 
     #: Selected resampling type
     resampling = settings.Setting(0)
@@ -156,15 +158,13 @@ class OWTestLearners(widget.OWWidget):
     cv_stratified = settings.Setting(True)
     #: Number of repeats for ShuffleSplit sampling
     n_repeats = settings.Setting(3)
-    #: ShuffleSplit sampling p
-    sample_p = settings.Setting(75)
+    #: ShuffleSplit sample size
+    sample_size = settings.Setting(9)
     #: Stratified sampling for Random Sampling
     shuffle_stratified = settings.Setting(True)
 
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
-
-    auto_apply = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -180,15 +180,14 @@ class OWTestLearners(widget.OWWidget):
 
         sbox = gui.vBox(self.controlArea, "Sampling")
         rbox = gui.radioButtons(
-            sbox, self, "resampling", callback=self._param_changed
-        )
+            sbox, self, "resampling", callback=self._param_changed)
 
         gui.appendRadioButton(rbox, "Cross validation")
         ibox = gui.indentedBox(rbox)
         gui.comboBox(
-            ibox, self, "n_folds", label="Number of folds:",
-            orientation=Qt.Horizontal,
-            items=self.NFolds, callback=self.kfold_changed)
+            ibox, self, "n_folds", label="Number of folds: ",
+            items=[str(x) for x in self.NFolds], maximumContentsLength=3,
+            orientation=Qt.Horizontal, callback=self.kfold_changed)
         gui.checkBox(
             ibox, self, "cv_stratified", "Stratified",
             callback=self.kfold_changed)
@@ -196,14 +195,13 @@ class OWTestLearners(widget.OWWidget):
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.comboBox(
-            ibox, self, "n_repeats", label="Repeat train/test:",
-            orientation=Qt.Horizontal,
-            items=self.NRepeats, callback=self.shuffle_split_changed,
-            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        gui.widgetLabel(ibox, "Relative training set size:")
-        gui.hSlider(
-            ibox, self, "sample_p", minValue=1, maxValue=99,
-            ticks=20, vertical=False, labelFormat="%d %%", tracking=False,
+            ibox, self, "n_repeats", label="Repeat train/test: ",
+            items=[str(x) for x in self.NRepeats], maximumContentsLength=3,
+            orientation=Qt.Horizontal, callback=self.shuffle_split_changed)
+        gui.comboBox(
+            ibox, self, "sample_size", label="Training set size: ",
+            items=["{} %".format(x) for x in self.SampleSizes],
+            maximumContentsLength=5, orientation=Qt.Horizontal,
             callback=self.shuffle_split_changed)
         gui.checkBox(
             ibox, self, "shuffle_stratified", "Stratified",
@@ -213,11 +211,6 @@ class OWTestLearners(widget.OWWidget):
 
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
-
-        rbox.layout().addSpacing(5)
-        self.apply_button = gui.auto_commit(
-            rbox, self, "auto_apply", "&Apply Changes", "Apply Immediately",
-            box=None)
 
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
@@ -346,7 +339,7 @@ class OWTestLearners(widget.OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self.unconditional_commit()
+        self.commit()
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
@@ -417,7 +410,7 @@ class OWTestLearners(widget.OWWidget):
                     results = Orange.evaluation.LeaveOneOut(
                         self.data, learners, **common_args)
                 elif self.resampling == OWTestLearners.ShuffleSplit:
-                    train_size = self.sample_p / 100
+                    train_size = self.SampleSizes[self.sample_size] / 100
                     results = Orange.evaluation.ShuffleSplit(
                         self.data, learners,
                         n_resamples=self.NRepeats[self.n_repeats],
@@ -632,7 +625,7 @@ class OWTestLearners(widget.OWWidget):
             items = [("Sampling type",
                       "{}Shuffle split, {} random samples with {}% data "
                       .format(stratified, self.NRepeats[self.n_repeats],
-                              self.sample_p))]
+                              self.SampleSizes[self.sample_size]))]
         elif self.resampling == self.TestOnTrain:
             items = [("Sampling type", "No sampling, test on training data")]
         elif self.resampling == self.TestOnTest:
