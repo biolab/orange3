@@ -273,14 +273,16 @@ def variable_icon(dtype):
         return QtGui.QIcon()
 
 
+class FeatureItemDelegate(QtGui.QStyledItemDelegate):
+    def displayText(self, value, locale):
+        return value.name + " := " + value.expression
+
+
 class DescriptorModel(itemmodels.PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DecorationRole:
             value = self[index.row()]
             return variable_icon(type(value))
-        elif role == Qt.DisplayRole:
-            value = self[index.row()]
-            return value.name + " := " + value.expression
         else:
             return super().data(index, role)
 
@@ -424,6 +426,7 @@ class OWFeatureConstructor(widget.OWWidget):
                                    QSizePolicy.MinimumExpanding)
         )
 
+        self.featureview.setItemDelegate(FeatureItemDelegate(self))
         self.featureview.setModel(self.featuremodel)
         self.featureview.selectionModel().selectionChanged.connect(
             self._on_selectedVariableChanged

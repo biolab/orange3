@@ -109,5 +109,5 @@ class TestPyListModel(TestCase):
 
     def test_data(self):
         mi = self.model.index(2)
-        self.assertEqual(self.model.data(mi), '3')
+        self.assertEqual(self.model.data(mi), 3)
         self.assertEqual(self.model.data(mi, Qt.EditRole), 3)
