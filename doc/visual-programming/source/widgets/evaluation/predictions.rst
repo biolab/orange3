@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-Data set.
+A data set.
 
 -  **Predictors**
 
@@ -34,7 +34,11 @@ and the predictions.
 .. figure:: images/Predictions-stamped.png
 
 1. Information on the input
-2. Select the desired output
+2. The user can select the options for classification. If *Show predicted class* is ticked, the appended data table provides information on predicted class. If *Show predicted probabilities* is ticked, the appended data table provides information on probabilities predicted by the classifiers. The user can also select the predicted class he or she wants displayed in the appended data table. The option *Draw distribution bars* provides a nice visualization of the predictions. 
+3. By ticking the *Show full data set*, the user can append the entire data table to the *Predictions* widget. 
+4. Select the desired output.
+5. The appended data table
+6. Produce a report.
 
 Despite its simplicity, the widget allows for quite an interesting
 analysis of decisions of `predictive
@@ -43,12 +47,9 @@ a simple demonstration at the bottom of the page. :doc:`Confusion Matrix<../eval
 is a related widget and although many things can be done with any of
 them, there are tasks for which one of them might be much more
 convenient than the other.
-
-.. figure:: images/Predictions-DataTable.png
-
 The output of the widget is another data set, where predictions are
 appended as new meta attributes. You can select which features you wish
-to output (original data, predictions, probabilities).
+to output (original data, predictions, probabilities). The resulting data set can be appended to the widget, but you can still choose to display it in a separate data table. 
 
 Example
 -------
@@ -62,15 +63,11 @@ classifiers. Classifiers are then sent into **Predictions**, among with
 the remaining 30 % of the data. Predictions shows how these examples are
 classified.
 
-The results of this procedure on the *heart disease* data are shown in
-the :doc:`Data Table<../data/datatable>` snapshot. We see probabilities of class "1", class
-"0" and the predicted class for both classifiers.
+To save the predictions, we simply attach the :doc:`Save<../data/save>` widget to
+**Predictions**. The final file is a data table and can be saved as in a
+.tab or .tsv format.
 
-To save the predictions, we simply attach the :doc:`Save<../data/savedata>` widget to
-**Predictions**. The final file is a data table and can be saved as a
-.tab or .csv format.
-
-Finally, we can analyze the classifier’s predictions. For that, we first
+Finally, we can analyze the classifiers' predictions. For that, we first
 take :doc:`Select Columns<../data/selectcolumns>` with which we move the meta attributes with
 probability predictions to features. The transformed data is then given
 to the :doc:`Scatterplot<../visualize/scatterplot>`, which we set to use the attributes with
@@ -91,5 +88,5 @@ conclusions may be ungrounded. Here is the entire workflow:
 
 .. figure:: images/Predictions-Example1.png
 
-Another example of using this widget is given in the documentation for
+Another example of using this widget is given in the documentation for the
 widget :doc:`Confusion Matrix<../evaluation/confusionmatrix>`.

@@ -3,7 +3,7 @@ Classification Tree Viewer
 
 .. figure:: icons/classification-tree-viewer.png
 
-Visualization of classification tree.
+A visualization of a classification tree. 
 
 Signals
 -------
@@ -12,55 +12,54 @@ Signals
 
 -  **Classification Tree**
 
-Classification tree.
+A classification tree.
 
 **Outputs**:
 
 -  **Data**
 
-Data from the selected tree node.
+Data from a selected tree node.
 
 Description
 -----------
 
 This is a versatile widget with 2-D visualization of a `classification
 tree`_. The user can select a node, instructing the widget to output the
-data associated with the node thus enabling explorative data analysis.
+data associated with the node, thus enabling explorative data analysis.
 
 .. figure:: images/ClassificationTreeViewer-stamped.png
 
 1. Information on the input.
 
-2. Set the zoom and define the tree width. Nodes display information
-   bubble when hovering over them.
+2. Display options:
 
-3. Edges between nodes in the tree graph are drawn based on the selected
-   edge width.
+   - Zoom in and zoom out
+   - Select the tree width. The nodes display information bubbles when hovering over them.
+   - Select the depth of your tree.
+   - Select edge width. The edges between the nodes in the tree graph are drawn based on the selected edge width.
 
    -  All the edges will be of equal width if *Fixed* is chosen.
    -  When *Relative to root* is selected, the width of the edge will
       correspond to the proportion of instances in the corresponding
       node with respect to all the instances in the training data. Under
-      this selection the edge will get thinner and thinner when
+      this selection, the edge will get thinner and thinner when
       traversing toward the bottom of the tree.
-   -  *Relative to parent* makes the edge width correspond to proportion
+   -  *Relative to parent* makes the edge width correspond to the proportion
       of instances in the nodes with respect to the instances in their
       parent node.
+   -  Define the target class, which you can change based on classes in the data. 
 
-4. Nodes box defines the target class, which you can change based on
-   classes in the data. You can also set the color scheme in *Set
-   Colors*.
-
-5. Press *Save Graph* to save the classification tree graph as a file.
+3. Press *Save image* to save the created classification tree graph to your computer as a *.svg* or *.png* file. 
+4. Produce a report. 
 
 Examples
 --------
 
-Below is a simple schema where we have read the data, constructed the
+Below, is a simple schema, where we have read the data, constructed the
 classification tree and viewed it in our tree viewer. If both the viewer
-and :doc:`Classification Tree<../classify/classificationtree>` are open, any run of tree induction
+and :doc:`Classification Tree<../classify/classificationtree>` are open, any run of the tree induction
 algorithm will immediately affect the visualization. You can thus use
-this combination to explore how parameters of the induction algorithm
+this combination to explore how the parameters of the induction algorithm
 influence the structure of the resulting tree.
 
 .. figure:: images/ClassificationTreeViewer-SimpleSchema.png

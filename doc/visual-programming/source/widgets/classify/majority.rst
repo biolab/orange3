@@ -3,7 +3,7 @@ Majority
 
 .. figure:: icons/majority.png
 
-A learner that returns the majority class in the data set for all
+A learner that returns a majority class in a data set for all
 instances.
 
 Signals
@@ -13,21 +13,21 @@ Signals
 
 -  **Data**
 
-Data set.
+A data set
 
 -  **Preprocessor**
 
-Preprocessed data.
+Preprocessed data
 
 **Outputs**:
 
 -  **Learner**
 
-Majority learning algorithm.
+A majority learning algorithm
 
 -  **Classifier**
 
-Trained classifier. In the output only if the learning data (signal
+A trained classifier. In the output only if the learning data (signal
 *Data*) is present.
 
 Description
@@ -43,11 +43,15 @@ randomly, but always returns the same class for a particular example.
 The widget is typically used to compare other learning algorithms with
 the default classification accuracy.
 
-.. figure:: images/Majority1.png
+.. figure:: images/Majority1-stamped.png
 
-The only option is the name under which it will appear in other widgets.
-The default name is “Majority”. When you change it, you need to click
-*Apply*.
+This widget provides the user with two options:
+
+1. The name under which it will appear in other widgets (the default name is "Majority").
+
+2. Producing a report. 
+
+If you change the widget's name, you need to click *Apply*. Alternatively, tick the box on the left side and changes will be communicated automatically. 
 
 Example
 -------

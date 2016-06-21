@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-Input data set.
+An input data set
 
 **Outputs**:
 
@@ -21,7 +21,7 @@ Input data set.
 Description
 -----------
 
-**Box Plot** shows distributions of attribute values. It is a good
+The **Box Plot** widget shows the distributions of attribute values. It is a good
 practice to check any new data with this widget to quickly discover any
 anomalies, such as duplicated values (e.g. gray and grey), outliers, and
 alike.
@@ -33,7 +33,7 @@ alike.
 2. Choose *Grouping* to see `box
    plots <https://en.wikipedia.org/wiki/Box_plot>`__ displayed by class.
 
-3. When instances are grouped by class you can change the display mode.
+3. When instances are grouped by class, you can change the display mode.
    Annotated boxes will display the end values, the mean and the median,
    while compare medians and compare means will, naturally, compare the
    selected value between class groups.
@@ -42,17 +42,19 @@ alike.
 
 For continuous attributes the widget displays:
 
-4. The mean (dark blue vertical line).
+4. The mean (the dark blue vertical line)
 
 5. Border values for the `standard deviation of the
    mean <https://en.wikipedia.org/wiki/Standard_deviation#Standard_deviation_of_the_mean>`__.
-   Blue highlighted area is the entire standard deviation of the mean.
+   The blue highlighted area is the entire standard deviation of the mean.
 
 6. The median (yellow vertical line). The thin blue line represents the
    area between the first (25%) and the third (75%) quantile, while the
    thin dotted line represents the entire range of values (from the
    lowest to the highest value in the data set for the selected
    parameter).
+7. Save image.
+8. Produce a report. 
 
 For discrete attributes, the bars represent the number of instances with
 each particular attribute value. The plot shows the number of different
@@ -64,11 +66,14 @@ birds and so on.
 Example
 -------
 
-**Box Plot** is most commonly used immediately after the :doc:`File<../data/file>` widget
-to observe statistical properties of the data set. It is also useful for
-finding properties of a specific data set, for instance a set of
+The **Box Plot** widget is most commonly used immediately after the :doc:`File<../data/file>` widget
+to observe the statistical properties of a data set. It is also useful for
+finding the properties of a specific data set, for instance a set of
 instances manually defined in another widget (e.g. :doc:`Scatterplot<../visualize/scatterplot>`) or
 instances belonging to some cluster or a classification tree node, as
 shown in the schema below.
 
-.. figure:: images/box-plot-example.png
+.. figure:: images/box-plot-example1.png
+
+.. figure:: images/box-plot-example2.png
+

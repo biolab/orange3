@@ -12,30 +12,30 @@ Signals
 
 -  **Data**
 
-Data set
+A data set
 
 -  **Preprocessor**
 
-Preprocesed data set.
+A preprocessed data set.
 
 **Outputs**:
 
 -  **Learner**
 
-Learning algorithm with the supplied parameters
+A learning algorithm with the supplied parameters
 
 -  **Predictor**
 
-Trained regressor. Signal *Predictor* sends the output signal only if
+A trained regressor. Signal *Predictor* sends the output signal only if
 signal *Data* is present.
 
 Description
 -----------
 
-**Linear Regression** widget constructs a learner/predictor that learns
+The **Linear Regression** widget constructs a learner/predictor that learns
 a `linear function <https://en.wikipedia.org/wiki/Linear_regression>`__
 from its input data. The model can identify the relationship between a
-predictor xi and the response variable y. Additionally
+predictor xi and the response variable y. Additionally,
 `Lasso <https://en.wikipedia.org/wiki/Least_squares#Lasso_method>`__
 and `Ridge <https://en.wikipedia.org/wiki/Tikhonov_regularization>`__
 regularization parameters can be specified. Lasso regression minimizes a
@@ -47,22 +47,26 @@ penalty and Ridge regularization with L2-norm penalty.
 1. The learner/predictor name
 2. Choose a model to train:
 
-   -  an ordinary least squares (linear regression) model,
+   -  no regularization 
    -  a
       `Ridge <https://en.wikipedia.org/wiki/Least_squares#Lasso_method>`__
       regularization (L2-norm penalty)
    -  a
       `Lasso <https://en.wikipedia.org/wiki/Least_squares#Lasso_method>`__
       bound (L1-norm penalty)
+   -  an 
+      `Elastic net <https://en.wikipedia.org/wiki/Elastic_net_regularization>`__
+      regularization
 
-3. Press *Apply* to commit changes.
+3. Produce a report.
+4. Press *Apply* to commit changes. If *Apply Automatically* is ticked, changes are committed automatically. 
 
 Example
 -------
 
-Below is a simple workflow showing how to use both the *Predictor* and
-the *Learner* output. For the *Predictor* we input the prediction model
-into :doc:`Predictions<../evaluation/predictions>` widget and view the results in :doc:`Data Table<../data/datatable>`. For
-*Learner* we can compare different learners in :doc:`Test&Score<../evaluation/testlearners>` widget.
+Below, is a simple workflow showing how to use both the *Predictor* and
+the *Learner* output. We used the *Housing* data set. For the *Predictor*, we input the prediction model
+into the :doc:`Predictions<../evaluation/predictions>` widget and view the results in the :doc:`Data Table<../data/datatable>`. For the 
+*Learner*, we can compare different learners in the :doc:`Test&Score<../evaluation/testlearners>` widget.
 
 .. figure:: images/linear-regression-example1.png

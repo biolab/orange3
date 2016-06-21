@@ -11,8 +11,7 @@ Signals
 **Inputs**:
 
 -  **Data**
-
-Data set.
+A data set.
 
 -  **Preprocessor**
 
@@ -22,11 +21,11 @@ Preprocessed data.
 
 -  **Learner**
 
-Mean learning algorithm.
+A mean learning algorithm.
 
 -  **Predictor**
 
-Trained regressor. Signal *Predictor* sends the regressor only if signal
+A trained regressor. Signal *Predictor* sends the regressor only if signal
 *Data* is present.
 
 Description
@@ -34,24 +33,25 @@ Description
 
 This is the simplest learner widget for regression problems. It *learns*
 the mean of the class variable and returns a predictor with the same
-`mean value <https://en.wikipedia.org/wiki/Mean>`__. This widget can
-serve as a baseline for other regression models due to its accuracy.
+`mean value <https://en.wikipedia.org/wiki/Mean>`__. Due to its accuracy, this widget can
+serve as a baseline for other regression models. 
 
 .. figure:: images/Mean-stamped.png
 
-1. Learner/predictor name.
-2. *Apply* button commits changes to the output.
+1. Learner/predictor name
+2. Produce a report. 
+3. The *Apply* button commits changes to the output. Alternatively, tick the box on the left side of the button to apply changes automatically. 
 
 Examples
 --------
 
-In the first example we use **Mean Learner** to construct a predictor
-and input it into the :doc:`Data Table<../data/datatable>`. In the table you can see an extra
+In the first example, we use **Mean Learner** to construct a predictor
+and input it into the :doc:`Data Table<../data/datatable>`. We used the *Housing* data set. In the table, you can see an extra
 column *Mean Learner* with one (mean) value for all instances.
 
 .. figure:: images/mean-learner-example1.png
 
 Another way to use **Mean Learner** is to compare it to other learners
-in :doc:`Test&Score<../evaluation/testlearners>` widget.
+in the :doc:`Test&Score<../evaluation/testlearners>` widget. 
 
 .. figure:: images/mean-learner-example2.png

@@ -27,13 +27,13 @@ models. The curve plots a false positive rate on an x-axis
 (1-specificity; probability that target=1 when true value=0) against a
 true positive rate on a y-axis (sensitivity; probability that target=1
 when true value=1). The closer the curve follows the left-hand border
-and then the top border of the ROC space the more accurate the
+and then the top border of the ROC space, the more accurate the
 classifier. Given the costs of false positives and false negatives, the
 widget can also determine the optimal classifier and threshold.
 
 .. figure:: images/ROCAnalysis-basic-stamped.png
 
-1. Choose the desired *Target Class*. Default class is chosen
+1. Choose the desired *Target Class*. The default class is chosen
    alphabetically.
 
 2. If test results contain more than one classifier, the user can choose
@@ -47,10 +47,11 @@ widget can also determine the optimal classifier and threshold.
 .. figure:: images/ROC-Comparison.png
 
 The averaging options are:
-    - **Merge predictions from folds** (top left), which treats all the test data as if they came from a single iteration
-    - **Mean TP rate** (top right) averages the curves vertically, showing the corresponding confidence intervals
-    - **Mean TP and FP at threshold** (bottom left) traverses over threshold, averages the positions of curves and shows horizontal and vertical confidence intervals
-    - **Show individual curves** (bottom right) does not average but prints all the curves instead
+
+- **Merge predictions from folds** (top left), which treats all the test data as if they came from a single iteration
+- **Mean TP rate** (top right) averages the curves vertically, showing the corresponding confidence intervals
+- **Mean TP and FP at threshold** (bottom left) traverses over threshold, averages the positions of curves and shows horizontal and vertical confidence intervals
+- **Show individual curves** (bottom right) does not average but prints all the curves instead
 
 4. Option *Show convex ROC curves* refers to convex curves over each
    individual classifier (the thin lines positioned over curves). *Show
@@ -59,13 +60,13 @@ The averaging options are:
    makes sense since selecting a threshold in a concave part of the
    curve cannot yield optimal results, disregarding the cost matrix.
    Besides, it is possible to reach any point on the convex curve by
-   combining the classifiers represented by the points at the border of
+   combining the classifiers represented by the points on the border of
    the concave region.
 
 .. figure:: images/ROCAnalysis-AUC.png
 
 The diagonal dotted line represents the behaviour of a random
-classifier. The full diagonal line represents iso-performace. A black
+classifier. The full diagonal line represents iso-performance. A black
 "*A*" symbol at the bottom of the graph proportionally readjusts the
 graph.
 
@@ -102,13 +103,18 @@ Defaults: both costs equal (500), Prior target class probability 50%
 False positive cost: 830, False negative cost 650, Prior target class
 probability 73%.
 
+6. Press *Save Image* if you want to save the created image
+   to your computer in a .svg or .png format.
+
+7. Produce a report. 
+
 Example
 -------
 
 At the moment, the only widget which gives the right type of signal
-needed by the **ROC Analysis** is :doc:`Test&Score<../evaluation/testlearners>`. Below we compare
+needed by the **ROC Analysis** is :doc:`Test&Score<../evaluation/testlearners>`. Below, we compare
 two classifiers, namely :doc:`Classification Tree<../classify/classificationtree>` and :doc:`Naive Bayes<../classify/naivebayes>`, in
 **Test&Score** and then compare their performance in **ROC
-Analysis**, :doc:`Life Curve<../evaluation/lifecurve>` and :doc:`Calibration Plot<../evaluation/calibrationplot>`.
+Analysis**, :doc:`Life Curve<../evaluation/liftcurve>` and :doc:`Calibration Plot<../evaluation/calibrationplot>`.
 
 .. figure:: images/ROCAnalysis-example.png

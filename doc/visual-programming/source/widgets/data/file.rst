@@ -1,3 +1,4 @@
+
 File
 ====
 
@@ -16,32 +17,31 @@ Signals
 
 -  **Data**
 
-Attribute-valued data from the input file.
+Attribute-valued data from the input file
 
 Description
 -----------
 
-**File** widget :doc:`reads the input data
+The **File** widget :doc:`reads the input data
 file <../../loading-your-data/index>` (data table
 with data instances) and sends the data set to its output channel.
-History of the most recently opened files is maintained in the widget.
+The history of most recently opened files is maintained in the widget.
 The widget also includes a directory with sample data sets that come
 pre-installed with Orange.
 
 The widget reads data from Excel (**.xlsx**), simple tab-delimited
-(**.txt**) or comma-separated files (**.csv**).
+(**.txt**), comma-separated files (**.csv**) or URLs. 
 
 .. figure:: images/File-stamped.png
 
-1. Browse for a data file.
-2. Browse through previously opened data files, or load any of the
-   sample ones.
+1. Browse through previously opened data files, or load any of the sample ones.  
+2. Browse for a data file.
 3. Reloads currently selected data file.
-4. Information on the loaded data set: data set size, number and types
-   of data features.
-5. Allows you to distinguish between columns with the same name across
-   files (otherwise columns with the same name will be considered as the
-   same attribute).
+4. Insert data from URL adresses, including data from Google Sheets. 
+5. Information on the loaded data set: data set size, number and types of data features.
+6. Additional information on the features in the data set. Features can be edited by double-clicking on them. The user can change the attribute names, select the type of variable per each attribute (*Continuous*, *Nominal*, *String*, *Datetime*), and choose how to further define the attributes (as *Features*, *Targets* or *Meta*). The user can also decide to ignore an attribute. 
+7. Browse documentation data sets.
+8. Produce a report. 
 
 Example
 -------
@@ -55,9 +55,8 @@ both the :doc:`Data Table<../data/datatable>` and the :doc:`Box Plot<../visualiz
 Loading your data
 -----------------
 
--  Orange can import any comma, .xlsx or tab-delimited data file. Use
-   :doc:`File widget<../data/file>` and then, if needed, select class and meta attributes in
-   :doc:`Select Columns<../data/selectcolumns>` widget.
+-  Orange can import any comma, .xlsx or tab-delimited data file or URL. Use the
+   :doc:`File widget<../data/file>` and then, if needed, select class and meta attributes. 
 -  To specify the domain and the type of the attribute, attribute names
    can be preceded with a label followed by a hash. Use c for class and
    m for meta attribute, i to ignore a column, and C, D, S for
@@ -73,3 +72,6 @@ Loading your data
 
 Read more on loading your data
 :doc:`here <../../loading-your-data/index>`.
+
+
+

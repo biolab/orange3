@@ -3,7 +3,7 @@ MDS
 
 .. figure:: icons/mds.png
 
-Multidimensional scaling (MDS) projects items onto a plane fitted to the
+Multidimensional scaling (MDS) projects items onto a plane fitted to
 given distances between points.
 
 Signals
@@ -13,17 +13,17 @@ Signals
 
 -  **Distances**
 
-Distance matrix
+A distance matrix
 
 -  **Data**
 
-Data set
+A data set
 
 **Outputs**:
 
 -  **Data**
 
-Data set with MDS coordinates.
+A data set with MDS coordinates.
 
 -  **Data subset**
 
@@ -40,7 +40,7 @@ well as possible. The perfect fit is typically impossible to obtain
 since the data is high-dimensional or the distances are not
 `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`__.
 
-In the input the widget needs either a data set or a matrix of
+In the input, the widget needs either a data set or a matrix of
 distances. When visualizing distances between rows, you can also adjust
 the color of the points, change their shape, mark them, and output them
 upon selection.
@@ -66,12 +66,8 @@ corresponds to the sum of forces acting on it.
       It can be at *Every iteration*, *Every 5/10/25/50 steps* or never (*None*). Setting a lower refresh interval makes
       the animation more visually appealing, but can be slow if the
       number of points is high.
-   -  *Spread points at zero-distances* allows you to jitter instances
-      with zero distances for better visualization.
 
-2. Defines how the points are visualized. These options are available
-   only when visalizing distances between rows (selected in the
-   :doc:`Distances<../unsupervised/distances>` widget).
+2. Defines how the points are visualized. These options are available only when visalizing distances between rows (selected in the :doc:`Distances<../unsupervised/distances>` widget).
 
    -  **Color**: Color of points by attribute (gray for continuous,
       colored for discrete).
@@ -83,11 +79,9 @@ corresponds to the sum of forces acting on it.
    -  **Symbol size**: Adjust the size of the dots.
    -  **Symbol opacity**: Adjust the transparency level of the dots.
    -  **Show similar pairs**: Adjust the strength of network lines.
+   -  **Jitter**: Set `jittering <https://en.wikipedia.org/wiki/Jitter>`__ to prevent the dots from overlapping. 
 
-3. Adjust the graph with *Zoom/Select*. Arrow enables you to select data
-   instances. The magnifying glass enables zooming, which can be also
-   done by scrolling in and out. Hand allows you to move the graph
-   around. Rectangle readjusts the graph proportionally.
+3. Adjust the graph with *Zoom/Select*. The arrow enables you to select data instances. The magnifying glass enables zooming, which can be also done by scrolling in and out. The hand allows you to move the graph around. The rectangle readjusts the graph proportionally.
 4. Select the desired output:
 
    -  **Original features only** (input data set)
@@ -95,21 +89,21 @@ corresponds to the sum of forces acting on it.
    -  **Coordinates as features** (input data set + MDS coordinates as
       regular attributes)
    -  **Coordinates as meta attributes** (input data set + MDS
-      coordinates as meta attributes) Sending the instances can be
-      automatic if *Send after any change* is checked. Alternatively
-      click *Send data*.
+      coordinates as meta attributes) 
 
-5. **Save Graph** allows you to save the graph either as .svg or .png
+5. Sending the instances can be automatic if *Send selected automatically* is ticked. Alternatively, click *Send selected*.
+6. **Save Image** allows you to save the created image either as .svg or .png
    file to your device.
+7. Produce a report. 
 
-The MDS graph performs many of the functions of the visualizations
-widget. It is in many respects similar to the :doc:`Scatter Plot<../visualize/scatterplot>`, so we
-recommend reading this widget's description as well.
+The MDS graph performs many of the functions of the Visualizations
+widget. It is in many respects similar to the :doc:`Scatter Plot<../visualize/scatterplot>` widget, so we
+recommend reading that widget's description as well.
 
 Example
 -------
 
-The above graphs were drawn using the following simple schema. Using the
+The above graphs were drawn using the following simple schema. We used the *iris.tab* data set. Using the
 :doc:`Distances<../unsupervised/distances>` widget we input the distance matrix into the **MDS**
 widget, where we see the *Iris* data displayed in a 2-dimensional plane.
 We can see the appended coordinates in the :doc:`Data Table<../data/datatable>` widget.

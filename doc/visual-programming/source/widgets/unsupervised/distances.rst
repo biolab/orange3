@@ -3,7 +3,7 @@ Distances
 
 .. figure:: icons/distances.png
 
-Computes distances between rows/columns in the data set.
+Computes distances between rows/columns in a data set.
 
 Signals
 -------
@@ -12,23 +12,23 @@ Signals
 
 -  **Data**
 
-Data set
+A data set
 
 **Outputs**:
 
 -  **Distances**
 
-Distance matrix
+A distance matrix
 
 Description
 -----------
 
-Widget **Distances** computes the distances between either the rows or
-columns in the data set.
+The **Distances** widget computes distances between rows or
+columns in a data set.
 
 .. figure:: images/Distances-stamped.png
 
-1. Choose which distances to measure, between rows or columns.
+1. Choose whether to measure distances between rows or columns.
 
 2. Choose the *Distance Metric*:
 
@@ -57,16 +57,16 @@ columns in the data set.
       (linear correlation between the absolute values, remapped as a
       distance in a [0, 1] interval)
 
-In case of missing values the widget automatically imputes the average
+In case of missing values, the widget automatically imputes the average
 value of the row or the column.
 
 Since the widget cannot compute distances between discrete and
 continuous attributes, it only uses continuous attributes and ignores
 the discrete ones. If you want to use discrete attributes, continuize
-them with :doc:`Continuize<../data/continuize>` widget first.
+them with the :doc:`Continuize<../data/continuize>` widget first.
 
-3. Tick '*Apply on any change*' to automatically commit changes to other
-   widgets. Alternatively, press '*Apply*'.
+3. Produce a report. 
+4. Tick *Apply Automatically* to automatically commit changes to other widgets. Alternatively, press '*Apply*'.
 
 Example
 -------

@@ -1,9 +1,9 @@
-Random Forest
-=============
+Random Forest Classification
+============================
 
 .. figure:: icons/random-forest.png
 
-Random forest learner
+Random forest learning algorithm. 
 
 Signals
 -------
@@ -12,22 +12,22 @@ Signals
 
 -  **Data**
 
-Data set
+A data set
 
 -  **Preprocessor**
 
-Preprocessed data.
+Preprocessed data
 
 **Outputs**:
 
 -  **Learner**
 
-Random forest learning algorithm with settings as specified in the
+A random forest learning algorithm with settings as specified in the
 dialog.
 
 -  **Random Forest Classifier**
 
-Trained classifier.
+A trained classifier.
 
 Description
 -----------
@@ -37,7 +37,7 @@ classification technique proposed by (Breiman, 2001). When given a set
 of class-labeled data, **Random Forest** builds a set of classification
 trees. Each tree is developed from a bootstrap sample from the training
 data. When developing individual trees, an arbitrary subset of
-attributes is drawn (hence the term “random”) from which the best
+attributes is drawn (hence the term “random”), from which the best
 attribute for the split is selected. Classification is based on the
 majority vote from individually developed tree classifiers in the
 forest.
@@ -45,7 +45,7 @@ forest.
 .. figure:: images/RandomForest-stamped.png
 
 1. Specify the name of the learner or classifier. The default name is
-   "*Random Forest Learner*".
+   "*Random Forest Classification*".
 
 2. Specify how many classification trees will be included in the forest
    (*Number of trees in the forest*), and how many attributes will be
@@ -57,15 +57,18 @@ forest.
 3. Original Brieman’s proposal is to grow the trees without any
    pre-prunning, but since pre-pruning often works quite well and is
    faster, the user can set the depth to which the trees will be grown
-   (*Set maximal depth of individual trees*). Another pre-pruning option
-   is to *stop splitting nodes* when the maximal depth is reached.
+   (*Limit depth of individual trees*). Another pre-pruning option
+   is to select the smallest subset that can be split (*Do not split subsets smaller than*)
 
-4. Click *Apply* to communicate the changes to other widgets.
+4. Produce a report. 
+
+5. Click *Apply* to communicate the changes to other widgets. Alternatively, tick the box on the left side of the *Apply* button and changes will be communicated automatically. 
+
 
 Example
 -------
 
-Example below shows a comparison schema of a random forest and a tree
+The example below shows a comparison schema of a random forest and a tree
 learner on a specific data set.
 
 .. figure:: images/RandomForest-Test.png
