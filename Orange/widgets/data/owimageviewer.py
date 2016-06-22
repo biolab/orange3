@@ -330,7 +330,7 @@ class OWImageViewer(widget.OWWidget):
     imageAttr = settings.ContextSetting(0)
     titleAttr = settings.ContextSetting(0)
 
-    zoom = settings.Setting(25)
+    imageSize = settings.Setting(100)
     autoCommit = settings.Setting(False)
 
     buttons_area_orientation = Qt.Vertical
@@ -363,9 +363,9 @@ class OWImageViewer(widget.OWWidget):
         )
 
         gui.hSlider(
-            self.controlArea, self, "zoom",
-            box="Zoom", minValue=1, maxValue=100, step=1,
-            callback=self.updateZoom,
+            self.controlArea, self, "imageSize",
+            box="Image Size", minValue=32, maxValue=1024, step=16,
+            callback=self.updateSize,
             createLabel=False
         )
         gui.rubber(self.controlArea)
@@ -452,7 +452,7 @@ class OWImageViewer(widget.OWWidget):
                          if numpy.isfinite(inst[attr])]
             widget = ThumbnailWidget()
             layout = widget.layout()
-
+            size = QSizeF(self.imageSize, self.imageSize)
             self.scene.addItem(widget)
 
             for i, inst in enumerate(instances):
@@ -462,7 +462,7 @@ class OWImageViewer(widget.OWWidget):
                 thumbnail = GraphicsThumbnailWidget(
                     QPixmap(), title=title, parent=widget
                 )
-
+                thumbnail.setThumbnailSize(size)
                 thumbnail.setToolTip(url.toString())
                 thumbnail.instance = inst
                 layout.addItem(thumbnail, i / 5, i % 5)
@@ -486,8 +486,6 @@ class OWImageViewer(widget.OWWidget):
                             pixmap = QPixmap.fromImage(future.result())
 
                         thumb.setPixmap(pixmap)
-                        if not pixmap.isNull():
-                            thumb.setThumbnailSize(self.pixmapSize(pixmap))
 
                         self._updateStatus(future)
 
@@ -530,14 +528,6 @@ class OWImageViewer(widget.OWWidget):
             url.setScheme("file")
         return url
 
-    def pixmapSize(self, pixmap):
-        """
-        Return the preferred pixmap size based on the current `zoom` value.
-        """
-        scale = 2 * self.zoom / 100.0
-        size = QSizeF(pixmap.size()) * scale
-        return size.expandedTo(QSizeF(16, 16))
-
     def _cancelAllFutures(self):
         for item in self.items:
             if item.future is not None:
@@ -560,9 +550,10 @@ class OWImageViewer(widget.OWWidget):
     def thumbnailItems(self):
         return [item.widget for item in self.items]
 
-    def updateZoom(self):
+    def updateSize(self):
+        size = QSizeF(self.imageSize, self.imageSize)
         for item in self.thumbnailItems():
-            item.setThumbnailSize(self.pixmapSize(item.pixmap()))
+            item.setThumbnailSize(size)
 
         if self.thumbnailWidget:
             width = (self.sceneView.width() -
