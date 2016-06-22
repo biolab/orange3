@@ -102,6 +102,23 @@ Many functions share common arguments.
     of :obj:`~PyQt4.QtGui.QLayout`.
 
 
+**********
+Properties
+**********
+
+PyQt support settings of properties using keyword arguments. Functions in this
+module mimic this functionality. For instance, calling
+
+    cb = gui.comboBox(..., editable=True)
+
+has the same effect as
+
+    cb = gui.comboBox(...)
+    cb.setEditable(True)
+
+Any properties that have the corresponding setter in the underlying Qt control
+can be set by using keyword arguments.
+
 *****************
 Common Attributes
 *****************
