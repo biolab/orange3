@@ -41,7 +41,7 @@ class Instance:
             self.id = id
         else:
             from Orange.data import Table
-            self.id = Table.new_id()
+            self.id = Table._new_id()
 
     @property
     def domain(self):

@@ -59,7 +59,11 @@ class Table(Storage, DataFrame):
     __file__ = None
 
     # custom properties, preserved through pandas manipulations
-    _metadata = ['name', '__file__', '_columns_X', '_columns_Y', '_columns_meta']
+    _metadata = ['name',
+                 '__file__',
+                 '_columns_X',
+                 '_columns_Y',
+                 '_columns_meta']
 
     @property
     def _constructor(self):
@@ -80,35 +84,33 @@ class Table(Storage, DataFrame):
         # TODO: probably return a Domain object constructed from columns
         return self.columns
 
-    @property
-    def columns_X(self):
-        """A read-only list of X column variables."""
-        return [c for c in self.columns if c in self._columns_X]
-
-    @property
-    def columns_Y(self):
-        """A read-only list of Y column variables."""
-        return [c for c in self.columns if c in self._columns_Y]
-
-    @property
-    def columns_meta(self):
-        """A read-only list of meta column variables."""
-        return [c for c in self.columns if c in self._columns_meta]
+    def filter_roles(self, roles):
+        """
+        Return a new Table which includes columns with specified roles.
+        Columns are in the same order as in the current table.
+        """
+        if isinstance(roles, str):
+            roles = [roles]
+        roles = [Role.from_string(r) for r in roles]
+        cols = []
+        cols += [c for c in self.columns if c in self._columns_X] if Role.x in roles else []
+        cols += [c for c in self.columns if c in self._columns_Y] if Role.y in roles else []
+        cols += [c for c in self.columns if c in self._columns_meta] if Role.meta in roles else []
+        return self[cols]
 
     def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
         """
         Exports a numpy matrix. The order is always X, Y, meta.
-        The columns are in the same order as in
-        Table.columns, Table.columns_X, Table.columns_Y, Table.columns_meta
+        The columns are in the same order as in Table.columns.
         If writable == False (default), the numpy writable flag is set to false.
             This means write operations on this array will loudly fail. 
         """
         # TODO: only return numeric values here, need to transform
-        cols = []
-        cols += self.columns_X if X else []
-        cols += self.columns_Y if Y else []
-        cols += self.columns_meta if meta else []
-        res = self[cols].values
+        roles = []
+        roles += [Role.x] if X else []
+        roles += [Role.y] if Y else []
+        roles += [Role.meta] if meta else []
+        res = self.filter_roles(roles).values
         res.setflags(write=writable)
         return res
 
@@ -116,29 +118,23 @@ class Table(Storage, DataFrame):
     def X(self):
         """
         Return a read-only numpy matrix of X.
-        Always a two-dimensional matrix, even for a single column.
-        The columns are in the same order as returned by Table.columns_X.
+        The columns are in the same order as the X columns in Table.columns.
         """
         return self._to_numpy(X=True)
 
     @property
     def Y(self):
         """
-        Return a read-only numpy array/matrix of Y.
-        If there is only one column, returns a one-dimensional array,
-            otherwise, returns a two-dimensional matrix whose columns
-            are in the same order as returned by Table.columns_Y.
+        Return a read-only numpy matrix of Y.
+        The columns are in the same order as the Y columns in Table.columns.
         """
-        res = self._to_numpy(Y=True)
-        # TODO: comment on whether this separation is okay please
-        return res.flatten() if len(self.columns_Y) else res
+        return self._to_numpy(Y=True)
 
     @property
     def metas(self):
         """
-        Return a read-only numpy matrix of meta attributes.
-        Always a two-dimensional matrix, even for a single column.
-        The columns are in the same order as returned by Table.columns_metas.
+        Return a read-only numpy matrix of metas.
+        The columns are in the same order as the meta columns in Table.columns.
         """
         return self._to_numpy(meta=True)
 
@@ -182,18 +178,18 @@ class Table(Storage, DataFrame):
             but only if those values are all numbers and are not NA/NaN.
         If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
         """
-        if np.isreal(weight):
+        if isinstance(weight, Number):
             self[Table._WEIGHTS_COLUMN] = weight
         elif isinstance(weight, str):
             if weight not in self.columns:
                 raise ValueError("{} is not a column.".format(weight))
-            if not self[weight].applymap(np.isreal).all() or self[weight].isnull().any():
+            if self[weight].isnull().any() and np.issubdtype(self[weight].dtype, Number):
                 raise ValueError("All values in the target column must be valid numbers.")
             self[Table._WEIGHTS_COLUMN] = self[weight]
         elif isinstance(weight, Sequence):
             if len(weight) != len(self):
                 raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
-            self[Table._WEIGHTS_COLUMN] = list(weight)
+            self[Table._WEIGHTS_COLUMN] = weight
         else:
             raise TypeError("Expected one of [Number, str, Sequence].")
 
@@ -244,9 +240,7 @@ class Table(Storage, DataFrame):
 
     @classmethod
     def from_domain(cls, domain, n_rows=0, weights=False):
-        # TODO: change
-        # TODO: do we really need to init with zeroes? also, how does this work with string variables etc
-        # TODO: init with nas I guess
+        # TODO: change, ignore filling with zeroes (noone uses that)
         """
         Construct a new `Table` with the given number of rows for the given
         domain. The optional vector of weights is initialized to 1's.
@@ -519,20 +513,14 @@ class Table(Storage, DataFrame):
             cls._next_instance_id += obj.X.shape[0]
 
     @classmethod
-    def new_id(cls, num=1):
+    def _new_id(cls, num=1):
         """
         Generate new globally unique numbers.
         Generate a single number or a list of them, if specified.
         """
         with cls._next_instance_lock:
-            out = []
-            for _ in range(num):
-                out.append(cls._next_instance_id)
-                cls._next_instance_id += 1
-            if num == 1:
-                return out[0]
-            else:
-                return out
+            out = np.arange(cls._next_instance_id, cls._next_instance_id + num)
+            return out[0] if num == 1 else out
 
     def save(self, filename):
         # TODO: change, will likely need to modify FileFormat.writers
@@ -591,21 +579,6 @@ class Table(Storage, DataFrame):
             data = cls(data)
         return data
 
-    def add_column(self, col_class, column_types, columns):
-        # TODO: override __setitem__ for strings, autodetermine variable type, default role X
-        """
-        Add one or multiple columns to the table.
-        Column types and column values must be of the same length.
-        If only a single value for a given column exists, the value is used in all rows (broadcasting).
-        :param col_class: Specifies the target column class (either x, y, or meta, see Table.ColumnClass).
-        :param column_types: The column type(s), in the form of Variables.
-        :param columns: The column values. Allows broadcasting single values.
-        """
-        column_types, columns = self._transform_types_columns(column_types, columns)
-        for t, c in zip(column_types, columns):
-            self._column_class_map[t] = Table.ColumnClass.get(col_class)
-            self[t] = c
-
     def __setitem__(self, key, value):
         # we only override this for certain types:
         #  - Variables
@@ -623,6 +596,7 @@ class Table(Storage, DataFrame):
             var = key
         else:  # plain string
             # we need to construct a new variable (in order of precedence)
+            #  - all numerics and all elements \in {0, 1}: discrete
             #  - all numerics: continuous
             #  - all strings and all distinct: string, meta
             #  - any string: discrete
@@ -631,13 +605,17 @@ class Table(Storage, DataFrame):
             proc_val = value  # for easier type checking even when broadcasting
             if not isinstance(proc_val, Sequence) or isinstance(proc_val, str):
                 proc_val = [value]
+            proc_val = np.array([value])  # for type checking later
 
-            if all(isinstance(v, Number) for v in proc_val):
+            if np.issubdtype(proc_val.dtype, np.number) and set(proc_val) == {0, 1}:
+                var = DiscreteVariable(key, values=[0, 1])
+            elif np.issubdtype(proc_val.dtype, np.number):
                 var = ContinuousVariable(key)
-            elif any(isinstance(v, str) for v in proc_val) and len(set(proc_val)) == len(proc_val):
-                var = DiscreteVariable(key, values=set(proc_val))
-            elif any(isinstance(v, str) for v in proc_val):
+            elif np.issubdtype(proc_val.dtype, 'U') and len(set(proc_val)) == len(proc_val):
                 var = StringVariable(key)
+                force_meta = True
+            elif np.issubdtype(proc_val.dtype, 'U'):
+                var = DiscreteVariable(key, values=sorted(set(proc_val)))
             else:
                 raise ValueError("Cannot automatically determine variable type. ")
 
@@ -670,16 +648,14 @@ class Table(Storage, DataFrame):
         row can either be a single value (broadcast),
         a list-like of values or a TableSeries (a single row slice).
         """
-        new_ix = Table.new_id()
+        new_ix = Table._new_id()
         self.loc[new_ix] = row
 
-    # TODO: this is awkward; inserting (manually, by the user) via .loc[]
-    #       doesn't maintain proper indexing, so this has to be used
-    # TODO: this inserts at the end, a proxy for append
-    # TODO: this hides df.insert(), but that is for columns (not rows)
-    @deprecated('Table.append()')
-    def insert(self, spot, instance):
-        self.append(instance)
+    @deprecated('Use t.append() for adding new rows. This inserts a new column. ')
+    def insert(self, loc, column, value, allow_duplicates=False):
+        if not allow_duplicates and column in self.columns:
+            raise ValueError("Column already exists. ")
+        self[column] = value
 
     # TODO: deprecate this?
     def extend(self, rows, weight=1):
@@ -727,7 +703,7 @@ class Table(Storage, DataFrame):
                 res = concat(newtables, axis=0, ignore_index=True)
             else:
                 res = concat(tables, axis=0, ignore_index=True)
-            new_index = Table.new_id(len(res))
+            new_index = Table._new_id(len(res))
             res.index = new_index
         elif axis == CONCAT_COLS:
             # check for same name
@@ -751,7 +727,7 @@ class Table(Storage, DataFrame):
             res[Table._WEIGHTS_COLUMN] = weight_columns[[0]]
 
             if reindex:
-                new_index = Table.new_id(len(res))
+                new_index = Table._new_id(len(res))
                 res.index = new_index
         else:
             raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
@@ -760,7 +736,7 @@ class Table(Storage, DataFrame):
 
     def _transfer_properties(self, from_table):
         """
-        Transfers properties (such as the name) to this table.
+        Transfer properties (such as the name) to this table.
         This should normally not be used, but it is used when these properties
         are not automatically transferred on manipulation, in particular when using pd.concat.
         """
@@ -768,25 +744,28 @@ class Table(Storage, DataFrame):
             if hasattr(from_table, name):
                 setattr(self, name, getattr(from_table, name))
 
-    # TODO: do we want only a single (complete table) density?
-    def X_density(self):
-        return 1 if not isinstance(self, SparseDataFrame) else self[self.columns_X].density()
-
-    def Y_density(self):
-        return 1 if not isinstance(self, SparseDataFrame) else self[self.columns_Y].density()
-
-    def metas_density(self):
-        return 1 if not isinstance(self, SparseDataFrame) else self[self.columns_metas].density()
+    def density(self):
+        """
+        Compute the table density:
+         - for sparse tables, return the reported density.
+         - for dense tables, return the ratio of null values (pandas interpretation of null).
+        :return:
+        """
+        if isinstance(self, SparseDataFrame):
+            return super(Table, self).density
+        else:
+            return 1 - self.isnull().sum().sum() / self.size
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
         # manual access to columns because dumping to a numpy array (with self.X) is slower
-        return self[self.columns_X].isnull().any().any() or self.has_missing_class()
+        return self.filter_roles(Role.x).isnull().any().any() or self.has_missing_class()
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
-        return self[self.columns_Y].Y.isnull().any().any()
+        return self.filter_roles(Role.y).isnull().any().any()
 
+    @deprecated
     def checksum(self, include_metas=True):
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object
         # (after pickling and unpickling such arrays, checksum changes)
@@ -806,7 +785,7 @@ class Table(Storage, DataFrame):
         """
         return self.sample(frac=1)
 
-    @deprecated('pandas-style column access')
+    @deprecated('pandas-style column access: t[["colname1", "colname2"]]')
     def get_column_view(self, index):
         """
         Return a vector - as a view, not a copy - with a column of the table,
