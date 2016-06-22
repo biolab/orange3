@@ -141,6 +141,7 @@ class OWMDS(widget.OWWidget):
     shape_value = settings.ContextSetting("")
     size_value = settings.ContextSetting("")
     label_value = settings.ContextSetting("")
+    label_only_selected = settings.Setting(False)
 
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
@@ -232,6 +233,9 @@ class OWMDS(widget.OWWidget):
             box, self, "label_value", label="Label:",
             callback=self._on_label_index_changed, **common_options)
         self.cb_label_value.setModel(self.labelvar_model)
+        gui.checkBox(
+            gui.indentedBox(box), self, 'label_only_selected',
+            'Label only selected points', callback=self._on_label_index_changed)
 
         form = QtGui.QFormLayout(
             labelAlignment=Qt.AlignLeft,
@@ -930,9 +934,18 @@ class OWMDS(widget.OWWidget):
         self.plot.addItem(item)
 
         if self._label_data is not None:
-            for (x, y), text_item in zip(self.embedding, self._label_data):
-                self.plot.addItem(text_item)
-                text_item.setPos(x, y)
+            if self.label_only_selected:
+                if self._selection_mask is not None:
+                    for (x, y), text_item, selected \
+                            in zip(self.embedding, self._label_data,
+                                   self._selection_mask):
+                        if selected:
+                            self.plot.addItem(text_item)
+                            text_item.setPos(x, y)
+            else:
+                for (x, y), text_item in zip(self.embedding, self._label_data):
+                    self.plot.addItem(text_item)
+                    text_item.setPos(x, y)
 
         self._legend_item = LegendItem()
         viewbox = self.plot.getViewBox()
