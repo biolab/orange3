@@ -455,6 +455,7 @@ _define_symbols()
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     attr_color = ContextSetting("", ContextSetting.OPTIONAL)
     attr_label = ContextSetting("", ContextSetting.OPTIONAL)
+    label_only_selected = Setting(False)
     attr_shape = ContextSetting("", ContextSetting.OPTIONAL)
     attr_size = ContextSetting("", ContextSetting.OPTIONAL)
 
@@ -842,7 +843,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.labels.append(ti)
 
     def update_labels(self):
-        if not self.attr_label:
+        if not self.attr_label or \
+                self.label_only_selected and self.selection is None:
             for label in self.labels:
                 label.setText("")
             return
@@ -852,8 +854,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         formatter = self.raw_data.domain[self.attr_label].str_val
         label_data = map(formatter, label_column)
         black = pg.mkColor(0, 0, 0)
-        for label, text in zip(self.labels, label_data):
-            label.setText(text, black)
+        if self.label_only_selected:
+            for label, text, selected \
+                    in zip(self.labels, label_data, self.selection):
+                label.setText(text if selected else "", black)
+        else:
+            for label, text in zip(self.labels, label_data):
+                label.setText(text, black)
 
     def get_shape_index(self):
         shape_index = -1
@@ -991,6 +998,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def unselect_all(self):
         self.selection = None
         self.update_colors(keep_colors=True)
+        if self.label_only_selected:
+            self.update_labels()
         self.master.selection_changed()
 
     def select(self, points):
@@ -1009,6 +1018,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:  # Handle shift and no modifiers
             self.selection[indices] = True
         self.update_colors(keep_colors=True)
+        if self.label_only_selected:
+            self.update_labels()
         self.master.selection_changed()
 
     def get_selection(self):

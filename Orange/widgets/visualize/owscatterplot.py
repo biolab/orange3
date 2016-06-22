@@ -130,6 +130,9 @@ class OWScatterPlot(OWWidget):
             box, self, "graph.attr_label", label="Label:",
             emptyString="(No labels)", callback=self.graph.update_labels,
             **common_options)
+        gui.checkBox(
+            gui.indentedBox(box), self, 'graph.label_only_selected',
+            'Label only selected points', callback=self.graph.update_labels)
         self.cb_attr_shape = gui.comboBox(
             box, self, "graph.attr_shape", label="Shape:",
             emptyString="(Same shape)", callback=self.graph.update_shapes,
