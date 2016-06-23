@@ -60,6 +60,7 @@ class Table(Storage, DataFrame):
 
     # custom properties, preserved through pandas manipulations
     _metadata = ['name',
+                 'attributes',
                  '__file__',
                  '_columns_X',
                  '_columns_Y',
