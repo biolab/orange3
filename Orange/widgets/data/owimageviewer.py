@@ -338,6 +338,9 @@ class OWImageViewer(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.data = None
+        self.allAttrs = []
+        self.stringAttrs = []
 
         self.info = gui.widgetLabel(
             gui.vBox(self.controlArea, "Info"),
