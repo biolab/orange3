@@ -346,6 +346,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         places = [attributes, class_vars, metas]
         X, y, m = [], [], []
         cols = [X, y, m]  # Xcols, Ycols, Mcols
+
+        def is_missing(x):
+            return str(x) in ("nan", "")
+
         for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
             zip(count(), self.editor_model.variables,
                 chain([(at, 0) for at in self.data.domain.attributes],
@@ -360,9 +364,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == DiscreteVariable:
-                values = list(str(i) for i in set(col_data))
+                values = list(str(i) for i in set(col_data) if not is_missing(i))
                 var = tpe(name, values)
-                col_data = [values.index(str(x)) for x in col_data]
+                col_data = [np.nan if is_missing(x) else values.index(str(x))
+                            for x in col_data]
             elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
                 var = tpe(name)
                 col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
