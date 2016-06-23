@@ -9,7 +9,7 @@ from numbers import Number
 
 import bottleneck as bn
 from scipy import sparse as sp
-from pandas import DataFrame, SparseDataFrame, Series, SparseSeries, Panel, SparsePanel, concat
+import pandas as pd
 
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
 from Orange.util import flatten
@@ -47,7 +47,7 @@ class Role:
 
 
 # noinspection PyPep8Naming
-class Table(Storage, DataFrame):
+class Table(pd.DataFrame):
     _WEIGHTS_COLUMN = ContinuousVariable("__weights__")
     _WEIGHTS_COLUMN.is_weight = True
 
@@ -56,7 +56,7 @@ class Table(Storage, DataFrame):
     _next_instance_id = 0
     _next_instance_lock = Lock()
 
-    __file__ = None
+    conversion_cache = None
 
     # custom properties, preserved through pandas manipulations
     _metadata = ['name',
@@ -66,14 +66,31 @@ class Table(Storage, DataFrame):
                  '_columns_Y',
                  '_columns_meta']
 
+    @staticmethod
+    def pandas_constructor_proxy(new_data, *args, **kwargs):
+        """
+        A proxy constructor, needed because we override __new__.
+        Example: when selecting a subset of a Table, pandas calls _constructor (or similar)
+                 to get the class which has to be constructed. In our case this is Table, but
+                 because __new__ is complicated--calls different factories depending on
+                 the arguments passed. Because we can't handle this behaviour (it's pandas internal),
+                 we proxy a constructor with this callable to allow pandas internals
+                 to still work.
+        """
+        # TODO: just for testing, remove afterwards
+        # we expect only one argument
+        if args or kwargs:
+            for _ in range(10):
+                print("UNEXPECTED PANDAS BEHAVIOUR")
+        return Table(data=new_data)
+
     @property
     def _constructor(self):
         """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
-        return Table
+        return Table.pandas_constructor_proxy
 
     @property
     def _constructor_sliced(self):
-        """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
         return TableSeries
 
     @property
@@ -195,17 +212,25 @@ class Table(Storage, DataFrame):
             raise TypeError("Expected one of [Number, str, Sequence].")
 
     def __new__(cls, *args, **kwargs):
-        # TODO: use modified from_X functions here
-
-        if not args and not kwargs:
+        """
+        Create a new Table. Needed because we have two construction paths: Table() or Table.from_X.
+        If called without arguments, create and initialize a blank Table, otherwise
+        intelligently call one of the Table.from_X functions, depending on the arguments.
+        Also passes through pandas.DataFrame constructor keyword arguments.
+        Do not pass positional arguments through to pandas.
+        """
+        # if we called the constructor without arguments or
+        # if we only called this with pandas DataFrame kwargs (not args),
+        # create an empty Table, the kwargs will be passed through to init
+        if not args and (not kwargs
+                         or not set(kwargs.keys()).difference(["data", "index", "columns", "dtype", "copy"])):
             return super().__new__(cls)
 
         if 'filename' in kwargs:
             args = [kwargs.pop('filename')]
 
         if not args:
-            raise TypeError(
-                "Table takes at least 1 positional argument (0 given))")
+            raise TypeError("Table takes at least 1 positional argument (0 given))")
 
         if isinstance(args[0], str):
             if args[0].startswith('https://') or args[0].startswith('http://'):
@@ -224,56 +249,43 @@ class Table(Storage, DataFrame):
                 return cls.from_list(domain, *args)
         else:
             domain = None
-
         return cls.from_numpy(domain, *args, **kwargs)
 
     def __init__(self, *args, **kwargs):
-        # TODO: use this instead of __new__
-        # all weights initialized to 1 (see the weight functions for details)
-        self[Table._WEIGHTS_COLUMN] = 1
+        # see the comment in __new__ for the rationale here
+        super(Table, self).__init__(**kwargs)
 
-        self.name = kwargs.get("name") or self.name
+        # all weights initialized to 1 (see the weight functions for details)
+        self.name = kwargs.get("name", "untitled")
+        self.attributes = kwargs.get("attributes", {})
+        self.__file__ = kwargs.get("__file__")
 
         # used for differentiating columns into x/y/meta, as a pandas property
         self._columns_X = set()
         self._columns_Y = set()
         self._columns_meta = set()
 
+        # must be after self._columns declarations
+        self[Table._WEIGHTS_COLUMN] = 1
+
     @classmethod
-    def from_domain(cls, domain, n_rows=0, weights=False):
-        # TODO: change, ignore filling with zeroes (noone uses that)
+    def from_domain(cls, domain):
         """
-        Construct a new `Table` with the given number of rows for the given
-        domain. The optional vector of weights is initialized to 1's.
+        Construct a new `Table` with the given number of rows for the given domain.
 
         :param domain: domain for the `Table`
         :type domain: Orange.data.Domain
-        :param n_rows: number of rows in the new table
-        :type n_rows: int
-        :param weights: indicates whether to construct a vector of weights
-        :type weights: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
-        self = cls()
-        self.domain = domain
-        self.n_rows = n_rows
-        self.X = np.zeros((n_rows, len(domain.attributes)))
-        self.Y = np.zeros((n_rows, len(domain.class_vars)))
-        if weights:
-            self.W = np.ones(n_rows)
-        else:
-            self.W = np.empty((n_rows, 0))
-        self.metas = np.empty((n_rows, len(self.domain.metas)), object)
-        cls._init_ids(self)
-        self.attributes = {}
-        return self
-
-    conversion_cache = None
+        res = cls(columns=domain.attributes + domain.class_vars + domain.metas)
+        res.set_role(domain.attributes or [], Role.x)
+        res.set_role(domain.class_vars or [], Role.y)
+        res.set_role(domain.metas or [], Role.meta)
+        return res
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=...):
-        # TODO: change
+    def from_table(cls, target_domain, source_table, row_indices=...):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -282,140 +294,82 @@ class Table(Storage, DataFrame):
 
         The resulting data may be a view or a copy of the existing data.
 
-        :param domain: the domain for the new table
-        :type domain: Orange.data.Domain
-        :param source: the source table
-        :type source: Orange.data.Table
+        :param target_domain: the domain for the new table
+        :type target_domain: Orange.data.Domain
+        :param source_table: the source table
+        :type source_table: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
         :return: a new table
         :rtype: Orange.data.Table
         """
-
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
-            def sparse_to_flat(x):
-                if sp.issparse(x):
-                    x = np.ravel(x.toarray())
-                return x
-
-            if not len(src_cols):
-                return np.zeros((n_rows, 0), dtype=source.X.dtype)
-
-            n_src_attrs = len(source.domain.attributes)
-            if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
-                   for x in src_cols):
-                return _subarray(source.X, row_indices, src_cols)
-            if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                arr = _subarray(source.metas, row_indices,
-                                 [-1 - x for x in src_cols])
-                if arr.dtype != dtype:
-                    return arr.astype(dtype)
-                return arr
-            if all(isinstance(x, Integral) and x >= n_src_attrs
-                   for x in src_cols):
-                return _subarray(source._Y, row_indices,
-                                 [x - n_src_attrs for x in src_cols])
-
-            a = np.empty((n_rows, len(src_cols)), dtype=dtype)
-            for i, col in enumerate(src_cols):
-                if col is None:
-                    a[:, i] = Unknown
-                elif not isinstance(col, Integral):
-                    if row_indices is not ...:
-                        a[:, i] = col(source)[row_indices]
-                    else:
-                        a[:, i] = col(source)
-                elif col < 0:
-                    a[:, i] = source.metas[row_indices, -1 - col]
-                elif col < n_src_attrs:
-                    a[:, i] = sparse_to_flat(source.X[row_indices, col])
-                else:
-                    a[:, i] = source._Y[row_indices, col - n_src_attrs]
-            return a
-
         new_cache = cls.conversion_cache is None
         try:
             if new_cache:
                 cls.conversion_cache = {}
             else:
-                cached = cls.conversion_cache.get((id(domain), id(source)))
+                cached = cls.conversion_cache.get((id(target_domain), id(source_table)))
                 if cached:
                     return cached
-            if domain == source.domain:
-                return cls.from_table_rows(source, row_indices)
+            if target_domain == source_table.domain:
+                return cls.from_table_rows(source_table, row_indices)
 
-            if isinstance(row_indices, slice):
-                start, stop, stride = row_indices.indices(source.X.shape[0])
-                n_rows = (stop - start) // stride
-                if n_rows < 0:
-                    n_rows = 0
-            elif row_indices is ...:
-                n_rows = len(source)
-            else:
-                n_rows = len(row_indices)
+            res = cls()
+            conversion = target_domain.get_conversion(source_table.domain)
+            for conv, targ in zip(conversion.attributes, target_domain.attributes):
+                if isinstance(conv, Number):
+                    col = source_table[source_table.domain.attributes[conv]]
+                else:
+                    col = conv(source_table)  # compute value
+                res[targ] = col
+                res.set_role(targ, Role.x)
 
-            self = cls()
-            self.domain = domain
-            conversion = domain.get_conversion(source.domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows)
-            if self.X.ndim == 1:
-                self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
+            for conv, targ in zip(conversion.class_vars, target_domain.class_vars):
+                if isinstance(conv, Number):
+                    # index follows attribute index
+                    col = source_table[source_table.domain.class_vars[conv - len(conversion.attributes)]]
+                else:
+                    col = conv(source_table)
+                res[targ] = col
+                res.set_role(targ, Role.y)
 
-            dtype = np.float64
-            if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = np.object
-            self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype)
-            if self.metas.ndim == 1:
-                self.metas = self.metas.reshape(-1, len(self.domain.metas))
-            if source.has_weights():
-                self.W = np.array(source.W[row_indices])
-            else:
-                self.W = np.empty((n_rows, 0))
-            self.name = getattr(source, 'name', '')
-            if hasattr(source, 'ids'):
-                self.ids = np.array(source.ids[row_indices])
-            else:
-                cls._init_ids(self)
-            self.attributes = getattr(source, 'attributes', {})
-            cls.conversion_cache[(id(domain), id(source))] = self
-            return self
+            for conv, targ in zip(conversion.metas, target_domain.metas):
+                if isinstance(conv, Number):
+                    # index is negative, starts at -1
+                    col = source_table[source_table.domain.metas[-(conv + 1)]]
+                else:
+                    col = conv(source_table)
+                res[targ] = col
+                res.set_role(targ, Role.meta)
+
+            res.set_weights(source_table.weights)
+            res.index = source_table.index  # keep previous index
+            res = res.iloc[row_indices]
+
+            cls.conversion_cache[(id(target_domain), id(source_table))] = res
+            return res
         finally:
             if new_cache:
                 cls.conversion_cache = None
 
     @classmethod
+    @deprecated("t.iloc[row_indices].copy()")
     def from_table_rows(cls, source, row_indices):
-        # TODO: change
         """
-        Construct a new table by selecting rows from the source table.
+        Construct a new table (copy) by selecting rows from the source table by their
+        position on the table.
 
         :param source: an existing table
         :type source: Orange.data.Table
-        :param row_indices: indices of the rows to include
+        :param row_indices: indices (positional) of the rows to include
         :type row_indices: a slice or a sequence
         :return: a new table
         :rtype: Orange.data.Table
         """
-        self = cls()
-        self.domain = source.domain
-        self.X = source.X[row_indices]
-        if self.X.ndim == 1:
-            self.X = self.X.reshape(-1, len(self.domain.attributes))
-        self.Y = source._Y[row_indices]
-        self.metas = source.metas[row_indices]
-        if self.metas.ndim == 1:
-            self.metas = self.metas.reshape(-1, len(self.domain.metas))
-        self.W = source.W[row_indices]
-        self.name = getattr(source, 'name', '')
-        self.ids = np.array(source.ids[row_indices])
-        self.attributes = getattr(source, 'attributes', {})
-        return self
+        return source.iloc[row_indices].copy()
 
     @classmethod
     def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
-        # TODO: change
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -434,11 +388,6 @@ class Table(Storage, DataFrame):
         :type W: np.array
         :return:
         """
-        X, Y, W = _check_arrays(X, Y, W, dtype='float64')
-        metas, = _check_arrays(metas, dtype=object)
-
-        if Y is not None and Y.ndim == 1:
-            Y = Y.reshape(Y.shape[0], 1)
         if domain is None:
             domain = Domain.from_numpy(X, Y, metas)
 
@@ -450,10 +399,6 @@ class Table(Storage, DataFrame):
                 X = X[:, :len(domain.attributes)]
         if metas is None:
             metas = np.empty((X.shape[0], 0), object)
-        if W is None or W.size == 0:
-            W = np.empty((X.shape[0], 0))
-        else:
-            W = W.reshape(W.size)
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
@@ -470,48 +415,32 @@ class Table(Storage, DataFrame):
                 "Invalid number of meta attribute columns ({} != {})".format(
                     metas.shape[1], len(domain.metas))
             )
-        if not X.shape[0] == Y.shape[0] == metas.shape[0] == W.shape[0]:
-            raise ValueError(
-                "Parts of data contain different numbers of rows.")
+        if not X.shape[0] == Y.shape[0] == metas.shape[0]:
+            raise ValueError("Parts of data contain different numbers of rows.")
 
-        self = cls()
-        self.domain = domain
-        self.X = X
-        self.Y = Y
-        self.metas = metas
-        self.W = W
-        self.n_rows = self.X.shape[0]
-        cls._init_ids(self)
-        self.attributes = {}
-        return self
+        res = cls(data=np.hstack([m for m in (X, Y, metas) if m is not None]),
+                  columns=domain.attributes + domain.class_vars + domain.metas)
+        if W is not None:
+            res.set_weights(W)
+        return res
 
     @classmethod
     def from_list(cls, domain, rows, weights=None):
-        # TODO: change
+        """
+        Construct a table from a list of rows and optionally some weights.
+        """
         if weights is not None and len(rows) != len(weights):
-            raise ValueError("mismatching number of instances and weights")
-        self = cls.from_domain(domain, len(rows), weights is not None)
-        attrs, classes = domain.attributes, domain.class_vars
-        metas = domain.metas
-        nattrs, ncls = len(domain.attributes), len(domain.class_vars)
-        for i, row in enumerate(rows):
-            if isinstance(row, Instance):
-                row = row.list
-            for j, (var, val) in enumerate(zip(attrs, row)):
-                self.X[i, j] = var.to_val(val)
-            for j, (var, val) in enumerate(zip(classes, row[nattrs:])):
-                self._Y[i, j] = var.to_val(val)
-            for j, (var, val) in enumerate(zip(metas, row[nattrs + ncls:])):
-                self.metas[i, j] = var.to_val(val)
-        if weights is not None:
-            self.W = np.array(weights)
-        return self
+            raise ValueError("Mismatching number of instances and weights.")
+        # check dimensions, pandas raises a very nondescript error
+        row_width = len(rows[0])
+        for r in rows:
+            if len(r) != row_width:
+                raise ValueError("Inconsistent number of columns.")
 
-    @classmethod
-    def _init_ids(cls, obj):
-        with cls._next_instance_lock:
-            obj.ids = np.array(range(cls._next_instance_id, cls._next_instance_id + obj.X.shape[0]))
-            cls._next_instance_id += obj.X.shape[0]
+        res = cls(data=rows, columns=domain.attributes + domain.class_vars + domain.metas)
+        if weights is not None:
+            res.set_weights(weights)
+        return res
 
     @classmethod
     def _new_id(cls, num=1):
@@ -587,7 +516,7 @@ class Table(Storage, DataFrame):
         # if the column is already in the table, we aren't adding new columns
         # otherwise we pass this along to the parent
         if not (isinstance(key, Variable) or isinstance(key, str)) or key in self.columns:
-            super(Table, self).__setitem__(key, value)
+            return super(Table, self).__setitem__(key, value)
 
         # assertion: the column is new from here on
         # the if ordering is important here, since Variable extends str
@@ -606,21 +535,25 @@ class Table(Storage, DataFrame):
             proc_val = value  # for easier type checking even when broadcasting
             if not isinstance(proc_val, Sequence) or isinstance(proc_val, str):
                 proc_val = [value]
-            proc_val = np.array([value])  # for type checking later
+            proc_val = np.array(proc_val)  # for type checking later
 
             if np.issubdtype(proc_val.dtype, np.number) and set(proc_val) == {0, 1}:
-                var = DiscreteVariable(key, values=[0, 1])
+                var = DiscreteVariable(key)
+                var.add_value(0)
+                var.add_value(1)
             elif np.issubdtype(proc_val.dtype, np.number):
                 var = ContinuousVariable(key)
             elif np.issubdtype(proc_val.dtype, 'U') and len(set(proc_val)) == len(proc_val):
                 var = StringVariable(key)
                 force_meta = True
             elif np.issubdtype(proc_val.dtype, 'U'):
-                var = DiscreteVariable(key, values=sorted(set(proc_val)))
+                var = DiscreteVariable(key)
+                for v in sorted(set(proc_val)):
+                    var.add_value(v)
             else:
                 raise ValueError("Cannot automatically determine variable type. ")
 
-        self[var] = value
+        super(Table, self).insert(len(self.columns), var, value)  # manually super to avoid deprecation warning
         # default behaviour is to include this in X, except when meta is set
         # we can't reasonably separate X and Y here
         if force_meta:
@@ -630,14 +563,16 @@ class Table(Storage, DataFrame):
 
     # TODO: update str and repr
     def __str__(self):
-        return "[" + ",\n ".join(str(ex) for ex in self)
+        # return "[" + ",\n ".join(str(ex) for ex in self)
+        return super(Table, self).__str__()
 
     def __repr__(self):
-        s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
-        if len(self) > 5:
-            s += ",\n ..."
-        s += "\n]"
-        return s
+        # s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
+        # if len(self) > 5:
+        #     s += ",\n ..."
+        # s += "\n]"
+        # return s
+        return super(Table, self).__str__()
 
     def clear(self):
         """Remove all rows from the table in-place."""
@@ -653,10 +588,8 @@ class Table(Storage, DataFrame):
         self.loc[new_ix] = row
 
     @deprecated('Use t.append() for adding new rows. This inserts a new column. ')
-    def insert(self, loc, column, value, allow_duplicates=False):
-        if not allow_duplicates and column in self.columns:
-            raise ValueError("Column already exists. ")
-        self[column] = value
+    def insert(self, *args, **kwargs):
+        super(Table, self).insert(*args, **kwargs)
 
     # TODO: deprecate this?
     def extend(self, rows, weight=1):
@@ -664,7 +597,7 @@ class Table(Storage, DataFrame):
         Extend the table with the given rows.
         rows can be either a list of rows or a descendant of DataFrame.
         """
-        if not isinstance(rows, DataFrame):
+        if not isinstance(rows, pd.DataFrame):
             rows = Table(rows)
         if Table._WEIGHTS_COLUMN not in rows:
             rows[Table._WEIGHTS_COLUMN] = weight
@@ -701,9 +634,9 @@ class Table(Storage, DataFrame):
                     new = t.copy()
                     new.columns = tables[0].columns
                     newtables.append(new)
-                res = concat(newtables, axis=0, ignore_index=True)
+                res = pd.concat(newtables, axis=0, ignore_index=True)
             else:
-                res = concat(tables, axis=0, ignore_index=True)
+                res = pd.concat(tables, axis=0, ignore_index=True)
             new_index = Table._new_id(len(res))
             res.index = new_index
         elif axis == CONCAT_COLS:
@@ -716,9 +649,9 @@ class Table(Storage, DataFrame):
                 if len(set(len(t) for t in tables)) != 1:
                     raise ValueError("Cannot colstack tables with differing numbers of rows. ")
                 # reset index temporarily because this joins by index by default
-                res = concat([t.reset_index(drop=True) for t in tables], axis=1, join_axes=[tables[0].index])
+                res = pd.concat([t.reset_index(drop=True) for t in tables], axis=1, join_axes=[tables[0].index])
             else:
-                res = concat(tables, axis=1)
+                res = pd.concat(tables, axis=1)
 
             # fix multiple weight columns
             weight_columns = res[Table._WEIGHTS_COLUMN]
@@ -752,7 +685,7 @@ class Table(Storage, DataFrame):
          - for dense tables, return the ratio of null values (pandas interpretation of null).
         :return:
         """
-        if isinstance(self, SparseDataFrame):
+        if isinstance(self, pd.SparseDataFrame):
             return super(Table, self).density
         else:
             return 1 - self.isnull().sum().sum() / self.size
@@ -801,175 +734,17 @@ class Table(Storage, DataFrame):
             col = self[index]
         else:
             col = self[self.columns[index]]
-        return col.values, isinstance(col, SparseSeries)
-
-    # TODO: remove filters in general, transform the few usages to pandas
-    def _filter_is_defined(self, columns=None, negate=False):
-        if columns is None:
-            if sp.issparse(self.X):
-                remove = (self.X.indptr[1:] !=
-                          self.X.indptr[-1:] + self.X.shape[1])
-            else:
-                remove = bn.anynan(self.X, axis=1)
-            if sp.issparse(self._Y):
-                remove = np.logical_or(remove, self._Y.indptr[1:] !=
-                                       self._Y.indptr[-1:] + self._Y.shape[1])
-            else:
-                remove = np.logical_or(remove, bn.anynan(self._Y, axis=1))
-        else:
-            remove = np.zeros(len(self), dtype=bool)
-            for column in columns:
-                col, sparse = self.get_column_view(column)
-                if sparse:
-                    remove = np.logical_or(remove, col == 0)
-                else:
-                    remove = np.logical_or(remove, bn.anynan([col], axis=0))
-        retain = remove if negate else np.logical_not(remove)
-        return self.from_table_rows(self, retain)
-
-    def _filter_has_class(self, negate=False):
-        if sp.issparse(self._Y):
-            if negate:
-                retain = (self._Y.indptr[1:] !=
-                          self._Y.indptr[-1:] + self._Y.shape[1])
-            else:
-                retain = (self._Y.indptr[1:] ==
-                          self._Y.indptr[-1:] + self._Y.shape[1])
-        else:
-            retain = bn.anynan(self._Y, axis=1)
-            if not negate:
-                retain = np.logical_not(retain)
-        return self.from_table_rows(self, retain)
-
-    def _filter_same_value(self, column, value, negate=False):
-        if not isinstance(value, Real):
-            value = self.domain[column].to_val(value)
-        sel = self.get_column_view(column)[0] == value
-        if negate:
-            sel = np.logical_not(sel)
-        return self.from_table_rows(self, sel)
-
-    def _filter_values_indicators(self, filter):
-        from Orange.data import filter as data_filter
-
-        if isinstance(filter, data_filter.Values):
-            conditions = filter.conditions
-            conjunction = filter.conjunction
-        else:
-            conditions = [filter]
-            conjunction = True
-        if conjunction:
-            sel = np.ones(len(self), dtype=bool)
-        else:
-            sel = np.zeros(len(self), dtype=bool)
-
-        for f in conditions:
-            if isinstance(f, data_filter.Values):
-                if conjunction:
-                    sel *= self._filter_values_indicators(f)
-                else:
-                    sel += self._filter_values_indicators(f)
-                continue
-            col = self.get_column_view(f.column)[0]
-            if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
-                    or isinstance(f, data_filter.FilterContinuous) and \
-                                    f.oper == f.IsDefined:
-                if conjunction:
-                    sel *= ~np.isnan(col)
-                else:
-                    sel += ~np.isnan(col)
-            elif isinstance(f, data_filter.FilterString) and \
-                            f.oper == f.IsDefined:
-                if conjunction:
-                    sel *= col.astype(bool)
-                else:
-                    sel += col.astype(bool)
-            elif isinstance(f, data_filter.FilterDiscrete):
-                if conjunction:
-                    s2 = np.zeros(len(self), dtype=bool)
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        s2 += (col == val)
-                    sel *= s2
-                else:
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        sel += (col == val)
-            elif isinstance(f, data_filter.FilterStringList):
-                if not f.case_sensitive:
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    vals = [val.lower() for val in f.values]
-                else:
-                    vals = f.values
-                if conjunction:
-                    sel *= reduce(operator.add,
-                                  (col == val for val in vals))
-                else:
-                    sel = reduce(operator.add,
-                                 (col == val for val in vals), sel)
-            elif isinstance(f, data_filter.FilterRegex):
-                sel = np.vectorize(f)(col)
-            elif isinstance(f, (data_filter.FilterContinuous,
-                                data_filter.FilterString)):
-                if (isinstance(f, data_filter.FilterString) and
-                        not f.case_sensitive):
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    fmin = f.min.lower()
-                    if f.oper in [f.Between, f.Outside]:
-                        fmax = f.max.lower()
-                else:
-                    fmin, fmax = f.min, f.max
-                if f.oper == f.Equal:
-                    col = (col == fmin)
-                elif f.oper == f.NotEqual:
-                    col = (col != fmin)
-                elif f.oper == f.Less:
-                    col = (col < fmin)
-                elif f.oper == f.LessEqual:
-                    col = (col <= fmin)
-                elif f.oper == f.Greater:
-                    col = (col > fmin)
-                elif f.oper == f.GreaterEqual:
-                    col = (col >= fmin)
-                elif f.oper == f.Between:
-                    col = (col >= fmin) * (col <= fmax)
-                elif f.oper == f.Outside:
-                    col = (col < fmin) + (col > fmax)
-                elif not isinstance(f, data_filter.FilterString):
-                    raise TypeError("Invalid operator")
-                elif f.oper == f.Contains:
-                    col = np.fromiter((fmin in e for e in col),
-                                      dtype=bool)
-                elif f.oper == f.StartsWith:
-                    col = np.fromiter((e.startswith(fmin) for e in col),
-                                      dtype=bool)
-                elif f.oper == f.EndsWith:
-                    col = np.fromiter((e.endswith(fmin) for e in col),
-                                      dtype=bool)
-                else:
-                    raise TypeError("Invalid operator")
-                if conjunction:
-                    sel *= col
-                else:
-                    sel += col
-            else:
-                raise TypeError("Invalid filter")
-
-        if filter.negate:
-            sel = ~sel
-        return sel
-
-    def _filter_values(self, filter):
-        sel = self._filter_values_indicators(filter)
-        return self.from_table(self.domain, self, sel)
+        return col.values, isinstance(col, pd.SparseSeries)
 
     # TODO: move this to statistics.py and use pandas instead if this code
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
+        """
+        Compute basic stats for each of the columns.
+
+        :param columns: columns to calculate stats for. None = all of them
+        :return: tuple(min, max, mean, 0, #nans, #non-nans)
+        """
         if compute_variance:
             raise NotImplementedError("computation of variance is "
                                       "not implemented yet")
@@ -1002,6 +777,18 @@ class Table(Storage, DataFrame):
 
     # TODO: move this to distributions.py and use pandas instead if this code
     def _compute_distributions(self, columns=None):
+        """
+        Compute distribution of values for the given columns.
+
+        :param columns: columns to calculate distributions for
+        :return: a list of distributions. Type of distribution depends on the
+                 type of the column:
+                   - for discrete, distribution is a 1d np.array containing the
+                     occurrence counts for each of the values.
+                   - for continuous, distribution is a 2d np.array with
+                     distinct (ordered) values of the variable in the first row
+                     and their counts in second.
+        """
         def _get_matrix(M, cachedM, col):
             nonlocal single_column
             if not sp.issparse(M):
@@ -1058,6 +845,35 @@ class Table(Storage, DataFrame):
 
     # TODO: move this to contingency.py and use pandas instead if this code
     def _compute_contingency(self, col_vars=None, row_var=None):
+        """
+        Compute contingency matrices for one or more discrete or
+        continuous variables against the specified discrete variable.
+
+        The resulting list  contains a pair for each column variable.
+        The first element contains the contingencies and the second
+        elements gives the distribution of the row variables for instances
+        in which the value of the column variable is missing.
+
+        The format of contingencies returned depends on the variable type:
+
+        - for discrete variables, it is a numpy array, where
+          element (i, j) contains count of rows with i-th value of the
+          row variable and j-th value of the column variable.
+
+        - for continuous variables, contingency is a list of two arrays,
+          where the first array contains ordered distinct values of the
+          column_variable and the element (i,j) of the second array
+          contains count of rows with i-th value of the row variable
+          and j-th value of the ordered column variable.
+
+        :param col_vars: variables whose values will correspond to columns of
+            contingency matrices
+        :type col_vars: list of ints, variable names or descriptors of type
+            :obj:`Orange.data.Variable`
+        :param row_var: a discrete variable whose values will correspond to the
+            rows of contingency matrices
+        :type row_var: int, variable name or :obj:`Orange.data.DiscreteVariable`
+        """
         n_atts = self.X.shape[1]
 
         if col_vars is None:
@@ -1161,7 +977,7 @@ class Table(Storage, DataFrame):
         return contingencies, unknown_rows
 
 
-class TableSeries(Series):
+class TableSeries(pd.Series):
     """
     A subclass of pandas' Series to properly override constructors to avoid problems.
     """
@@ -1173,10 +989,10 @@ class TableSeries(Series):
     @property
     def _constructor_expanddim(self):
         """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
-        return Table
+        return Table.pandas_constructor_proxy
 
 
-class TablePanel(Panel):
+class TablePanel(pd.Panel):
     """
     A subclass of pandas' Panel to properly override constructors to avoid problems.
     """
@@ -1186,98 +1002,4 @@ class TablePanel(Panel):
 
     @property
     def _constructor_sliced(self):
-        return Table
-
-
-# TODO: check usages for this (and below) and remove them once their users are gone
-def _check_arrays(*arrays, dtype=None):
-    checked = []
-    if not len(arrays):
-        return checked
-
-    def ninstances(array):
-        if hasattr(array, "shape"):
-            return array.shape[0]
-        else:
-            return len(array) if array is not None else 0
-
-    shape_1 = ninstances(arrays[0])
-
-    for array in arrays:
-        if array is None:
-            checked.append(array)
-            continue
-
-        if ninstances(array) != shape_1:
-            raise ValueError("Leading dimension mismatch (%d != %d)"
-                             % (len(array), shape_1))
-
-        if sp.issparse(array):
-            array.data = np.asarray(array.data)
-            has_inf = _check_inf(array.data)
-        else:
-            if dtype is not None:
-                array = np.asarray(array, dtype=dtype)
-            else:
-                array = np.asarray(array)
-            has_inf = _check_inf(array)
-
-        if has_inf:
-            raise ValueError("Array contains infinity.")
-        checked.append(array)
-
-    return checked
-
-
-def _check_inf(array):
-    return array.dtype.char in np.typecodes['AllFloat'] and \
-           np.isinf(array.data).any()
-
-
-def _subarray(arr, rows, cols):
-    return arr[_rxc_ix(rows, cols)]
-
-
-def _rxc_ix(rows, cols):
-    """
-    Construct an index object to index the `rows` x `cols` cross product.
-
-    Rows and columns can be a 1d bool or int sequence, a slice or an
-    Ellipsis (`...`). The later is a convenience and is interpreted the same
-    as `slice(None, None, -1)`
-
-    Parameters
-    ----------
-    rows : 1D sequence, slice or Ellipsis
-        Row indices.
-    cols : 1D sequence, slice or Ellipsis
-        Column indices.
-
-    See Also
-    --------
-    numpy.ix_
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> a = np.arange(10).reshape(2, 5)
-    >>> a[_rxc_ix([0, 1], [3, 4])]
-    array([[3, 4],
-           [8, 9]])
-    >>> a[_rxc_ix([False, True], ...)]
-    array([[5, 6, 7, 8, 9]])
-
-    """
-    rows = slice(None, None, 1) if rows is ... else rows
-    cols = slice(None, None, 1) if cols is ... else cols
-
-    isslice = (isinstance(rows, slice), isinstance(cols, slice))
-    if isslice == (True, True):
-        return rows, cols
-    elif isslice == (True, False):
-        return rows, np.asarray(np.ix_(cols), int).ravel()
-    elif isslice == (False, True):
-        return np.asarray(np.ix_(rows), int).ravel(), cols
-    else:
-        r, c = np.ix_(rows, cols)
-        return np.asarray(r, int), np.asarray(c, int)
+        return Table.pandas_constructor_proxy

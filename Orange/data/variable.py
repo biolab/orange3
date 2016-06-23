@@ -302,8 +302,14 @@ class Variable(str, metaclass=VariableMeta):
         return var
 
     def __eq__(self, other):
-        """Two variables are equivalent if the originate from the same master"""
-        return hasattr(other, "master") and self.master is other.master
+        """
+        If comparing with a string, compare names. Otherwise,
+        two variables are equivalent if the originate from the same master.
+        """
+        if isinstance(other, str):
+            return self.name == other
+        else:
+            return hasattr(other, "master") and self.master is other.master
 
     def __hash__(self):
         return super().__hash__()
