@@ -241,7 +241,7 @@ class OWMosaicDisplay(OWWidget):
         if self.discrete_data is not self.data:
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
-            selection = self.discrete_data[sel_idx]
+            selection = self.data[sel_idx]
         self.send("Selected Data", selection)
 
 
