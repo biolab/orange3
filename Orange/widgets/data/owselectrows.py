@@ -1,12 +1,13 @@
 from collections import OrderedDict
 from itertools import chain
 
+import operator
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
+import numpy as np
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
-import Orange.data.filter as data_filter
 from Orange.data.domain import filter_visible
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
@@ -23,6 +24,71 @@ class SelectRowsContextHandler(DomainContextHandler):
         """Return True if condition applies to a variable in given domain."""
         varname, *_ = condition
         return varname in attrs or varname in metas
+
+
+class Filter:
+    """
+    Provides a list of available filters and a mapping to their functionality and
+    the variables which it can process.
+    filter_function must accept arguments in the same order as they are given in
+    the GUI, with the column (i.e. a pandas Series) as the first argument.
+    """
+    values = []
+    _variable_bindings = {}
+
+    def __init__(self, filter_text, filter_function):
+        self.filter_text = filter_text
+        self.filter_function = filter_function
+        self.supported_variables = []
+
+        # register to the static values collection here, cleaner and safer
+        Filter.values.append(self)
+
+    def __call__(self, *args, **kwargs):
+        return self.filter_function(*args, **kwargs)
+
+    def __str__(self):
+        return self.filter_text
+
+    @classmethod
+    def for_variable(cls, var):
+        return cls._variable_bindings[var]
+
+    @classmethod
+    def bind(cls, var, filters):
+        """Bind a list of filters to a variable type. """
+        cls._variable_bindings[var] = filters
+        for f in filters:
+            f.supported_variables.append(var)
+
+Filter.Equals = Filter("equals", operator.eq)
+Filter.IsNot = Filter("is not", operator.ne)
+Filter.IsBelow = Filter("is below", operator.lt)
+Filter.IsAtMost = Filter("is at most", operator.le)
+Filter.IsGreaterThan = Filter("is greater than", operator.gt)
+Filter.IsAtLeast = Filter("is at least", operator.ge)
+Filter.IsBetween = Filter("is between", lambda col, low, high: (low <= col) & (col <= high))
+Filter.IsOutside = Filter("is outside", lambda col, low, high: ~((low <= col) & (col <= high)))
+Filter.IsDefined = Filter("is defined", lambda col: ~np.isnan(col))
+Filter.Is = Filter("is", operator.eq)
+Filter.IsOneOf = Filter("is one of", lambda col, vals: col.apply(lambda el: el in vals))
+Filter.IsBefore = Filter("is before", operator.lt)
+Filter.IsEqualOrBefore = Filter("is equal or before", operator.le)
+Filter.IsAfter = Filter("is after", operator.gt)
+Filter.IsEqualOrAfter = Filter("is equal or after", operator.ge)
+Filter.Contains = Filter("contains", lambda col, what: col.apply(lambda el: what in el))
+Filter.BeginsWith = Filter("begins with", lambda col, what: col.apply(lambda el: el.startswith(what)))
+Filter.EndsWith = Filter("ends with", lambda col, what: col.apply(lambda el: el.endswith(what)))
+
+# bindings here for code clarity and to allow completely independent ordering for the GUI
+Filter.bind(ContinuousVariable, [Filter.Equals, Filter.IsNot, Filter.IsBelow, Filter.IsAtMost,
+                                 Filter.IsGreaterThan, Filter.IsAtLeast, Filter.IsBetween,
+                                 Filter.IsOutside, Filter.IsDefined])
+Filter.bind(DiscreteVariable, [Filter.Is, Filter.IsNot, Filter.IsOneOf, Filter.IsDefined])
+Filter.bind(StringVariable, [Filter.Equals, Filter.IsNot, Filter.IsBefore, Filter.IsEqualOrBefore,
+                             Filter.IsAfter, Filter.IsEqualOrAfter, Filter.IsBetween, Filter.IsOutside,
+                             Filter.Contains, Filter.BeginsWith, Filter.EndsWith, Filter.IsDefined])
+Filter.bind(TimeVariable, Filter.for_variable(ContinuousVariable))
 
 
 class OWSelectRows(widget.OWWidget):
@@ -43,21 +109,6 @@ class OWSelectRows(widget.OWWidget):
     purge_attributes = Setting(True)
     purge_classes = Setting(True)
     auto_commit = Setting(True)
-
-    operator_names = {
-        ContinuousVariable: ["equals", "is not",
-                             "is below", "is at most",
-                             "is greater than", "is at least",
-                             "is between", "is outside",
-                             "is defined"],
-        DiscreteVariable: ["is", "is not", "is one of", "is defined"],
-        StringVariable: ["equals", "is not",
-                         "is before", "is equal or before",
-                         "is after", "is equal or after",
-                         "is between", "is outside", "contains",
-                         "begins with", "ends with",
-                         "is defined"]}
-    operator_names[TimeVariable] = operator_names[ContinuousVariable]
 
     def __init__(self):
         super().__init__()
@@ -174,7 +225,7 @@ class OWSelectRows(widget.OWWidget):
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
         var = self.data.domain[attr_combo.currentText()]
-        oper_combo.addItems(self.operator_names[type(var)])
+        oper_combo.addItems(Filter.for_variable(type(var)))
         oper_combo.setCurrentIndex(selected_index or 0)
         self.set_new_values(oper_combo, adding_all, selected_values)
         self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
@@ -328,9 +379,9 @@ class OWSelectRows(widget.OWWidget):
         try:
             self.conditions = []
             self.conditions = [
-                (self.cond_list.cellWidget(row, 0).currentText(),
-                 self.cond_list.cellWidget(row, 1).currentIndex(),
-                 self._get_value_contents(self.cond_list.cellWidget(row, 2)))
+                (self.cond_list.cellWidget(row, 0).currentText(),  # column name
+                 self.cond_list.cellWidget(row, 1).currentIndex(),  # dropdown index
+                 self._get_value_contents(self.cond_list.cellWidget(row, 2)))  # arguments
                 for row in range(self.cond_list.rowCount())]
             if self.update_on_change and (
                     self.last_output_conditions is None or
@@ -342,61 +393,21 @@ class OWSelectRows(widget.OWWidget):
             pass
 
     def commit(self):
-        matching_output = self.data
-        non_matching_output = None
         self.error()
         if self.data:
-            domain = self.data.domain
-            conditions = []
-            for attr_name, oper, values in self.conditions:
-                attr_index = domain.index(attr_name)
-                attr = domain[attr_index]
+            # bool element-wise filter (for subscripting)
+            subscript_filter = np.repeat(True, len(self.data))
 
-                if attr.is_continuous:
-                    if any(not v for v in values):
-                        continue
+            # operator_index is the index of the operation in Filter.for_variable(...)
+            # because they are inserted into the dropdown in the same order
+            for column, operator_index, filter_args in self.conditions:
+                filter_op = Filter.for_variable(type(column))[operator_index]
 
-                    # Parse datetime strings into floats
-                    if isinstance(attr, TimeVariable):
-                        try:
-                            values = [attr.parse(v) for v in values]
-                        except ValueError as e:
-                            self.error(e.args[0])
-                            return
+                # add (element-wise and) the filter constraints to the current filter
+                subscript_filter &= filter_op(column, *filter_args)
 
-                    filter = data_filter.FilterContinuous(
-                        attr_index, oper, *[float(v) for v in values])
-                elif attr.is_string:
-                    filter = data_filter.FilterString(
-                        attr_index, oper, *[str(v) for v in values])
-                else:
-                    if oper == 3:
-                        f_values = None
-                    else:
-                        if not values or not values[0]:
-                            continue
-                        values = [attr.values[i-1] for i in values]
-                        if oper == 0:
-                            f_values = {values[0]}
-                        elif oper == 1:
-                            f_values = set(attr.values)
-                            f_values.remove(values[0])
-                        elif oper == 2:
-                            f_values = set(values)
-                        else:
-                            raise ValueError("invalid operand")
-                    filter = data_filter.FilterDiscrete(attr_index, f_values)
-                conditions.append(filter)
-
-            if conditions:
-                filters = data_filter.Values(conditions)
-                matching_output = filters(self.data)
-                filters.negate = True
-                non_matching_output = filters(self.data)
-
-            # if hasattr(self.data, "name"):
-            #     matching_output.name = self.data.name
-            #     non_matching_output.name = self.data.name
+            matching_output = self.data[subscript_filter]
+            non_matching_output = self.data[~subscript_filter]
 
             purge_attrs = self.purge_attributes
             purge_classes = self.purge_classes
@@ -448,37 +459,34 @@ class OWSelectRows(widget.OWWidget):
             pdesc = ndesc
 
         conditions = []
-        domain = self.data.domain
-        for attr_name, oper, values in self.conditions:
-            attr_index = domain.index(attr_name)
-            attr = domain[attr_index]
-            names = self.operator_names[type(attr)]
-            name = names[oper]
-            if oper == len(names) - 1:
-                conditions.append("{} {}".format(attr, name))
-            elif attr.is_discrete:
-                if name == "is one of":
-                    if len(values) == 1:
+        for column, operator_index, filter_args in self.conditions:
+            filters = Filter.for_variable(type(column))
+            filter_op = filters[operator_index]
+            if filter_op == Filter.IsDefined:
+                conditions.append("{} {}".format(column, filter_op))
+            elif column.is_discrete:
+                if filter_op == Filter.IsOneOf:
+                    if len(filter_args) == 1:
                         conditions.append("{} is {}".format(
-                            attr, attr.values[values[0] - 1]))
-                    elif len(values) > 1:
+                            column, column.values[filter_args[0] - 1]))
+                    elif len(filter_args) > 1:
                         conditions.append("{} is {} or {}".format(
-                            attr,
-                            ", ".join(attr.values[v - 1] for v in values[:-1]),
-                            attr.values[values[-1] - 1]))
-                else:
-                    if not (values and values[0]):
+                            column,
+                            ", ".join(column.values[v - 1] for v in filter_args[:-1]),
+                            column.values[filter_args[-1] - 1]))
+                else:  # not Filter.IsOneOf
+                    if not (filter_args and filter_args[0]):
                         continue
-                    value = values[0] - 1
+                    value = filter_args[0] - 1
                     conditions.append("{} {} {}".
-                                      format(attr, name, attr.values[value]))
+                                      format(column, filter_op, column.values[value]))
             else:
-                if len(values) == 1:
+                if len(filter_args) == 1:
                     conditions.append("{} {} {}".
-                                      format(attr, name, *values))
+                                      format(column, filter_op, *filter_args))
                 else:
                     conditions.append("{} {} {} and {}".
-                                      format(attr, name, *values))
+                                      format(column, filter_op, *filter_args))
         items = OrderedDict()
         if describe_domain:
             items.update(self.data_desc)
