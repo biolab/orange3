@@ -258,11 +258,12 @@ class Table(MutableSequence, Storage):
         :rtype: Orange.data.Table
         """
 
+        def sparse_to_flat(x):
+            if sp.issparse(x):
+                x = np.ravel(x.toarray())
+            return x
+
         def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
-            def sparse_to_flat(x):
-                if sp.issparse(x):
-                    x = np.ravel(x.toarray())
-                return x
 
             if not len(src_cols):
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
@@ -326,7 +327,7 @@ class Table(MutableSequence, Storage):
             self.X = get_columns(row_indices, conversion.attributes, n_rows)
             if self.X.ndim == 1:
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = get_columns(row_indices, conversion.class_vars, n_rows)
+            self.Y = sparse_to_flat(get_columns(row_indices, conversion.class_vars, n_rows))
 
             dtype = np.float64
             if any(isinstance(var, StringVariable) for var in domain.metas):
