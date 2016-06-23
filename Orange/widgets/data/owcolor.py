@@ -1,6 +1,6 @@
-from PyQt4.QtCore import Qt, QAbstractTableModel
+from PyQt4.QtCore import Qt, QAbstractTableModel, QSize
 from PyQt4.QtGui import QStyledItemDelegate, QColor, QHeaderView, QFont, \
-    QColorDialog, QTableView, qRgb, QImage
+    QColorDialog, QTableView, qRgb, QImage, QBrush
 import numpy as np
 
 import Orange
@@ -112,15 +112,22 @@ class DiscColorTableModel(ColorTableModel):
 class ContColorTableModel(ColorTableModel):
     @staticmethod
     def n_columns():
-        return 2
+        return 3
 
     def data(self, index, role=Qt.DisplayRole):
         row, col = index.row(), index.column()
         if col == 0:
             return ColorTableModel.data(self, index, role)
+        var = self.variables[row]
+        if col == 2:
+            if role == Qt.SizeHintRole:
+                return QSize(100, 1)
+            if role == Qt.ForegroundRole:
+                return QBrush(Qt.blue)
+            if row == self.mouse_row and role == Qt.DisplayRole:
+                return "Copy to all"
         if col > 1:
             return
-        var = self.variables[row]
         if role == Qt.DecorationRole:
             continuous_palette = ContinuousPaletteGenerator(*var.colors)
             line = continuous_palette.getRGB(np.arange(0, 1, 1 / 256))
@@ -149,6 +156,13 @@ class ContColorTableModel(ColorTableModel):
             return False
         self.dataChanged.emit(index, index)
         return True
+
+    def copy_to_all(self, index):
+        colors = self.variables[index.row()].colors
+        for row in range(self.n_rows()):
+            self.variables[row].colors = colors
+        self.dataChanged.emit(self.index(0, 1), self.index(self.n_rows(), 1))
+
 
 
 class ColorTable(QTableView):
@@ -192,12 +206,27 @@ class ContinuousTable(ColorTable):
     def __init__(self, master, model):
         ColorTable.__init__(self, model)
         self.master = master
+        self.viewport().setMouseTracking(True)
+        self.model().mouse_row = None
+
+    def mouseMoveEvent(self, ev):
+        pos = ev.pos()
+        ind = self.indexAt(pos)
+        self.model().mouse_row = ind.row()
+        super().mouseMoveEvent(ev)
+        self.viewport().update()
+
+    def leaveEvent(self, _):
+        self.model().mouse_row = None
+        self.viewport().update()
 
     def handle_click(self, index, _):
         if index.column() == 0:
             self.edit(index)
-        else:
+        elif index.column() == 1:
             self.change_color(index)
+        elif index.column() == 2:
+            self.model().copy_to_all(index)
 
     def change_color(self, index):
         from_c, to_c, black = self.model().data(index, ColorRole)
@@ -214,7 +243,6 @@ class ContinuousTable(ColorTable):
                                  ColorRole)
             master.color_settings = dlg.getColorSchemas()
             master.selected_schema_index = dlg.selectedSchemaIndex
-
 
 class OWColor(widget.OWWidget):
     name = "Color"
