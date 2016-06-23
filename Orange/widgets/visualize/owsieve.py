@@ -7,7 +7,7 @@ from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
     QGraphicsScene, QColor, QPen, QBrush, QSizePolicy, QGraphicsLineItem)
 
-from Orange.data import Table, filter
+from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -259,26 +259,20 @@ class OWSieveDiagram(OWWidget):
             self.send("Selection", None)
             return
 
-        filts = []
+        filters = []
+        selection_filter = np.repeat(False, len(self.data))
         for i, area in enumerate(self.areas):
             if i in self.selection:
                 width = 4
                 val_x, val_y = area.value_pair
-                filts.append(
-                    filter.Values([
-                        filter.FilterDiscrete(self.attrX, [val_x]),
-                        filter.FilterDiscrete(self.attrY, [val_y])
-                    ]))
+                selection_filter |= self.data[self.attrX == val_x]
+                selection_filter |= self.data[self.attrY == val_y]
             else:
                 width = 1
             pen = area.pen()
             pen.setWidth(width)
             area.setPen(pen)
-        if len(filts) == 1:
-            filts = filts[0]
-        else:
-            filts = filter.Values(filts, conjunction=False)
-        selection = filts(self.discrete_data)
+        selection = self.data[selection_filter]
         if self.discrete_data is not self.data:
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]

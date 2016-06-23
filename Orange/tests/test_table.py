@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix, issparse
 import numpy as np
 
 from Orange import data
-from Orange.data import filter, Variable
+from Orange.data import Variable
 from Orange.data import Unknown
 from Orange.tests import test_dirname
 

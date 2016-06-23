@@ -999,42 +999,21 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
 
     querydomain = Orange.data.Domain(querydomain)
 
-    def interval_filter(var, low, high):
-        return Orange.data.filter.Values(
-            [Orange.data.filter.FilterContinuous(
-                 var, max=high, min=low,
-                 oper=Orange.data.filter.FilterContinuous.Between)]
-        )
-
-    def value_filter(var, val):
-        return Orange.data.filter.Values(
-            [Orange.data.filter.FilterDiscrete(var, [val])]
-        )
-
-    def filters_join(filters):
-        return Orange.data.filter.Values(
-            reduce(list.__iadd__, (f.conditions for f in filters), [])
-        )
-
     inf_bounds = np.isinf([x_min, x_max, y_min, y_max])
     if not all(inf_bounds):
         # No need to filter the data
-        range_filters = [interval_filter(xvar, x_min, x_max),
-                         interval_filter(yvar, y_min, y_max)]
-        range_filter = filters_join(range_filters)
-        subset = range_filter(data)
+        subset = data[(x_min <= data[xvar]) & (data[xvar] <= x_max)
+                      & (y_min <= data[yvar]) & (data[yvar] <= y_max)]
     else:
         subset = data
 
     if zvar and zvar.is_discrete:
-        filters = [value_filter(zvar, val) for val in zvar.values]
-        contingencies = [
-            contingency.get_contingency(
-                filter_(subset.from_table(querydomain, subset)),
-                col_variable=y_disc, row_variable=x_disc
-            )
-            for filter_ in filters
-        ]
+        contingencies = []
+        for val in zvar.values:
+            t = subset.from_table(querydomain, subset)
+            contingencies.append(contingency.get_contingencies(
+                t[t == val], col_variable=y_disc, row_variable=x_disc
+            ))
         contingencies = np.dstack(contingencies)
     else:
         contingencies = contingency.get_contingency(

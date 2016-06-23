@@ -15,7 +15,7 @@ import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
-from .. import domain, variable, table, instance, filter,\
+from .. import domain, variable, table, instance, \
     DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
 from Orange.data.sql import filter as sql_filter
 
@@ -612,11 +612,11 @@ class SqlTable(table.Table):
         return t2
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=...):
+    def from_table(cls, target_domain, source_table, row_indices=...):
         assert row_indices is ...
 
-        table = source.copy()
-        table.domain = domain
+        table = source_table.copy()
+        table.domain = target_domain
         return table
 
     # sql queries
