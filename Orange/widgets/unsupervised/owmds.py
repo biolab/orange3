@@ -17,9 +17,9 @@ import pyqtgraph.graphicsItems.ScatterPlotItem
 import Orange.data
 import Orange.projection
 import Orange.distance
+from Orange.data.domain import filter_visible
 import Orange.misc
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
@@ -450,23 +450,23 @@ class OWMDS(widget.OWWidget):
         else:
             # initialize the graph state from data
             domain = self.data.domain
-            all_vars = list(domain.variables + domain.metas)
+            all_vars = list(filter_visible(domain.variables + domain.metas))
             cd_vars = [var for var in all_vars if var.is_primitive()]
             disc_vars = [var for var in all_vars if var.is_discrete]
             cont_vars = [var for var in all_vars if var.is_continuous]
             shape_vars = [var for var in disc_vars
                           if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
             self.colorvar_model[:] = chain(["Same color"],
-                                           [self.colorvar_model.Separator],
+                                           [self.colorvar_model.Separator] if cd_vars else [],
                                            cd_vars)
             self.shapevar_model[:] = chain(["Same shape"],
-                                           [self.shapevar_model.Separator],
+                                           [self.shapevar_model.Separator] if shape_vars else [],
                                            shape_vars)
             self.sizevar_model[:] = chain(["Same size", "Stress"],
-                                          [self.sizevar_model.Separator],
+                                          [self.sizevar_model.Separator] if cont_vars else [],
                                           cont_vars)
             self.labelvar_model[:] = chain(["No labels"],
-                                           [self.labelvar_model.Separator],
+                                           [self.labelvar_model.Separator] if all_vars else [],
                                            all_vars)
 
             if domain.class_var is not None:
@@ -831,7 +831,7 @@ class OWMDS(widget.OWWidget):
                 symbols = numpy.array(list(Symbols.keys()))
 
                 shape_var = self.shapevar_model[shape_index]
-                data = column(self.data, shape_var)
+                data = column(self.data, shape_var).astype(numpy.float)
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]

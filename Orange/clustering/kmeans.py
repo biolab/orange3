@@ -21,11 +21,11 @@ class KMeans(SklProjector):
     def fit(self, X, Y=None):
         proj = skl_cluster.KMeans(**self.params)
         proj = proj.fit(X, Y)
-        if 2 <= proj.n_clusters < len(X):
+        if 2 <= proj.n_clusters < X.shape[0]:
             proj.silhouette = silhouette_score(X, proj.labels_)
         else:
             proj.silhouette = 0
-        proj.inertia = proj.inertia_ / len(X)
+        proj.inertia = proj.inertia_ / X.shape[0]
         cluster_dist = Euclidean(proj.cluster_centers_)
         proj.inter_cluster = np.mean(cluster_dist[np.triu_indices_from(cluster_dist, 1)])
         return KMeansModel(proj, self.preprocessors)
