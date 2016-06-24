@@ -111,3 +111,75 @@ class TestPyListModel(TestCase):
         mi = self.model.index(2)
         self.assertEqual(self.model.data(mi), 3)
         self.assertEqual(self.model.data(mi, Qt.EditRole), 3)
+
+    def test_set_data(self):
+        model = PyListModel([1, 2, 3, 4])
+        model.setData(model.index(0), None, Qt.EditRole)
+        self.assertIs(model.data(model.index(0), Qt.EditRole), None)
+
+        model.setData(model.index(1), "This is two", Qt.ToolTipRole)
+        self.assertEqual(model.data(model.index(1), Qt.ToolTipRole),
+                         "This is two",)
+
+    def test_setitem(self):
+        model = PyListModel([1, 2, 3, 4])
+        model[1] = 42
+        self.assertSequenceEqual(model, [1, 42, 3, 4])
+        model[-1] = 42
+        self.assertSequenceEqual(model, [1, 42, 3, 42])
+
+        with self.assertRaises(IndexError):
+            model[4]
+
+        with self.assertRaises(IndexError):
+            model[-5]
+
+        model = PyListModel([1, 2, 3, 4])
+        model[0:0] = [-1, 0]
+        self.assertSequenceEqual(model, [-1, 0, 1, 2, 3, 4])
+
+        model = PyListModel([1, 2, 3, 4])
+        model[len(model):len(model)] = [5, 6]
+        self.assertSequenceEqual(model, [1, 2, 3, 4, 5, 6])
+
+        model = PyListModel([1, 2, 3, 4])
+        model[0:2] = [-1, -2]
+        self.assertSequenceEqual(model, [-1, -2, 3, 4])
+
+        model = PyListModel([1, 2, 3, 4])
+        model[-2:] = [-3, -4]
+        self.assertSequenceEqual(model, [1, 2, -3, -4])
+
+        model = PyListModel([1, 2, 3, 4])
+        with self.assertRaises(IndexError):
+            # non unit strides currently not supported
+            model[0:-1:2] = [3, 3]
+
+    def test_delitem(self):
+        model = PyListModel([1, 2, 3, 4])
+        del model[1]
+        self.assertSequenceEqual(model, [1, 3, 4])
+
+        model = PyListModel([1, 2, 3, 4])
+        del model[1:3]
+
+        self.assertSequenceEqual(model, [1, 4])
+        model = PyListModel([1, 2, 3, 4])
+        del model[:]
+        self.assertSequenceEqual(model, [])
+
+        model = PyListModel([1, 2, 3, 4])
+        with self.assertRaises(IndexError):
+            # non unit strides currently not supported
+            del model[0:-1:2]
+
+    def test_insert_delete_rows(self):
+        model = PyListModel([1, 2, 3, 4])
+        success = model.insertRows(0, 3)
+
+        self.assertIs(success, True)
+        self.assertSequenceEqual(model, [None, None, None, 1, 2, 3, 4])
+
+        success = model.removeRows(3, 4)
+        self.assertIs(success, True)
+        self.assertSequenceEqual(model, [None, None, None])
