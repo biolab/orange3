@@ -5,12 +5,44 @@ Change Log
 ------------
 * ...
 
+
+##### Enhancements
+* Automatically discretize continuous variables in Sieve (#1372)
+* Nicer reporting of tabular data (e.g. Confusion Matrix) (#1309)
+* Match only at the beginning of word in quickMenu search (#1363)
+* Univar regression coefficients (#1186)
+* Add Mahalanobis distance (#1355)
+* Move Data Table higher in the 'suggested widgets' list (#1346)
+* Support Distances on Sparse Data (#1345)
+* Add auto apply to Test & Score (#1344)
+* Support unix timestamps in TimeVariable (#1335)
+* Skip Hidden Attributes in SelectRows (#1324)
+* Preprocessor widget: add random feature selection (#1112)
+* Sort list of available add-ons (#1305)
+
+##### Bugfixes
+* Fix and improve handling of input data in PaintData (#1342)
+* Mosaic: Output original data, not discretized (#1371)
+* Fix report for OWLinearProjection (#1360, #1361)
+* Fix auto-apply in SelectColumns (#1353)
+* Fix a RuntimeError in ImageViewer when clearing the scene (#1357)
+* Use https to query pypi API (#1343)
+* OWBaseLearner: Add name attribute to learner (#1340)
+* Pass data attributes after preprocess. (#1333)
+* Better support for sparse data (#1306)
+* gui.auto_commit: Fix crash when caller gives  argument (#1325)
+* Fix image viewer runtime error (#1322)
+* Better selection indicators in canvas (#1308)
+* Open correct help file for add-on widgets (#1307)
+
+
 [3.3.5] - 2016-06-01
 --------------------
 ##### Bugfixes
 * Revert hack that caused missing icons in osx build
 * Fix installation in environments without numpy installed (#1291)
 * Allow running of library test when PyQt is not available (#1289)
+
 
 [3.3.4] - 2016-05-27
 --------------------
@@ -118,7 +150,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.5...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.6...HEAD
+[3.3.6]: https://github.com/biolab/orange3/compare/3.3.5...3.3.6
 [3.3.5]: https://github.com/biolab/orange3/compare/3.3.4...3.3.5
 [3.3.4]: https://github.com/biolab/orange3/compare/3.3.3...3.3.4
 [3.3.3]: https://github.com/biolab/orange3/compare/3.3.2...3.3.3
