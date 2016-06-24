@@ -1,8 +1,12 @@
 from itertools import chain
 from math import sqrt, floor, ceil
 
+import numpy as np
+from scipy import stats
+
 from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush,
+from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush, QTableView,
+                         QStandardItemModel,
                          QDialog, QApplication, QSizePolicy, QGraphicsLineItem)
 
 from Orange.data import Table, filter
@@ -12,7 +16,7 @@ from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
-from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.utils import getHtmlCompatibleString as to_html
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (
     CanvasText, CanvasRectangle, ViewWithPress, get_conditional_distribution)
@@ -186,192 +190,160 @@ class OWSieveDiagram(OWWidget):
             selection = self.data[sel_idx]
         self.send("Selection", selection)
 
-    # -----------------------------------------------------------------------
-    # Everything from here on is ancient and has been changed only according
-    # to what has been changed above. Some clean-up may be in order some day
-    #
+    class ChiSqStats:
+        def __init__(self, data, attr1, attr2):
+            data = data[:, [attr1, attr2]]
+            self.observed = get_contingency(data, attr1, attr2)
+            self.n = np.sum(self.observed)
+            self.probs_x = self.observed.sum(axis=0) / self.n
+            self.probs_y = self.observed.sum(axis=1) / self.n
+            print(self.observed)
+            print(self.probs_x)
+            print(self.probs_y)
+            self.expected = np.outer(self.probs_y, self.probs_x) * self.n
+            self.residuals = \
+                (self.observed - self.expected) / np.sqrt(self.expected)
+            self.chisqs = self.residuals ** 2
+            self.chisq = np.sum(self.chisqs)
+            self.p = stats.distributions.chi2.sf(
+                self.chisq, (len(self.probs_x) - 1) * (len(self.probs_y) - 1))
+
     def updateGraph(self, *args):
+        def text(txt, *args, **kwargs):
+            return CanvasText(self.canvas, "", html_text=to_html(txt),
+                              *args, **kwargs)
+
+        def width(txt):
+            return text(txt, 0, 0, show=False).boundingRect().width()
+
         for item in self.canvas.items():
             self.canvas.removeItem(item)
         if self.data is None or len(self.data) == 0 or \
                 self.attrX is None or self.attrY is None:
             return
-        data = self.discrete_data[:, [self.attrX, self.attrY]]
-        valsX = []
-        valsY = []
-        contX = get_contingency(data, self.attrX, self.attrX)
-        contY = get_contingency(data, self.attrY, self.attrY)
-        # compute contingency of x and y attributes
-        for entry in contX:
-            sum_ = 0
-            try:
-                for val in entry: sum_ += val
-            except: pass
-            valsX.append(sum_)
 
-        for entry in contY:
-            sum_ = 0
-            try:
-                for val in entry: sum_ += val
-            except: pass
-            valsY.append(sum_)
+        ddomain = self.discrete_data.domain
+        attr_x, attr_y = self.attrX, self.attrY
+        disc_x, disc_y = ddomain[attr_x], ddomain[attr_y]
+        view = self.canvasView
 
-        contXY, _ = get_conditional_distribution(
-            data, [data.domain[self.attrX], data.domain[self.attrY]])
-        # compute probabilities
-        probs = {}
-        for i in range(len(valsX)):
-            valx = valsX[i]
-            for j in range(len(valsY)):
-                valy = valsY[j]
-                try:
-                    actualProb = contXY['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
-                    # for val in contXY['%s-%s' %(i, j)]: actualProb += val
-                except:
-                    actualProb = 0
-                probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])] = ((data.domain[self.attrX].values[i], valx), (data.domain[self.attrY].values[j], valy), actualProb, len(data))
+        chi = self.ChiSqStats(self.discrete_data, attr_x, attr_y)
+        n = chi.n
+        max_ylabel_w = max((width(val) for val in disc_y.values), default=0)
+        max_ylabel_w = min(max_ylabel_w, 200)
+        x_off = width(attr_x) + max_ylabel_w
+        y_off = 15
+        square_size = min(view.width() - x_off - 35, view.height() - y_off - 50)
+        square_size = max(square_size, 10)
+        self.canvasView.setSceneRect(0, 0, view.width(), view.height())
 
-        #get text width of Y labels
-        max_ylabel_w = 0
-        for j in range(len(valsY)):
-            xl = CanvasText(self.canvas, "", 0, 0, html_text= getHtmlCompatibleString(data.domain[self.attrY].values[j]), show=False)
-            max_ylabel_w = max(int(xl.boundingRect().width()), max_ylabel_w)
-        max_ylabel_w = min(max_ylabel_w, 200) #upper limit for label widths
-        # get text width of Y attribute name
-        text = CanvasText(self.canvas, data.domain[self.attrY].name, x  = 0, y = 0, bold = 1, show = 0, vertical=True)
-        xOff = int(text.boundingRect().height() + max_ylabel_w)
-        yOff = 55
-        sqareSize = min(self.canvasView.width() - xOff - 35, self.canvasView.height() - yOff - 50)
-        sqareSize = max(sqareSize, 10)
-        self.canvasView.setSceneRect(0, 0, self.canvasView.width(), self.canvasView.height())
-
-        # print graph name
-        name  = "<b>P(%s, %s) &#8800; P(%s)&times;P(%s)</b>" %(self.attrX, self.attrY, self.attrX, self.attrY)
-        CanvasText(self.canvas, "", xOff + sqareSize / 2, 20, Qt.AlignCenter, html_text= name)
-        CanvasText(self.canvas, "N = " + str(len(data)), xOff + sqareSize / 2, 38, Qt.AlignCenter, bold = 0)
-
-        ######################
-        # compute chi-square
-        chisquare = 0.0
-        for i in range(len(valsX)):
-            for j in range(len(valsY)):
-                ((xAttr, xVal), (yAttr, yVal), actual, sum_) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
-                expected = float(xVal*yVal)/float(sum_)
-                if expected == 0: continue
-                pearson2 = (actual - expected)*(actual - expected) / expected
-                chisquare += pearson2
-
-        ######################
-        # draw rectangles
-        currX = xOff
+        curr_x = x_off
         max_xlabel_h = 0
-        normX, normY = sum(valsX), sum(valsY)
         self.areas = []
-        for i in range(len(valsX)):
-            if valsX[i] == 0: continue
-            currY = yOff
-            width = int(float(sqareSize * valsX[i])/float(normX))
+        for x, (px, xval_name) in enumerate(zip(chi.probs_x, disc_x.values)):
+            if px == 0:
+                continue
+            width = square_size * px
+            curr_y = y_off
+            for y in range(len(chi.probs_y) - 1, -1, -1):  # bottom-up order
+                py = chi.probs_y[y]
+                yval_name = disc_y.values[y]
+                if py == 0:
+                    continue
+                height = square_size * py
 
-            for j in range(len(valsY)-1, -1, -1):   # this way we sort y values correctly
-                ((xAttr, xVal), (yAttr, yVal), actual, sum_) = probs['%s-%s' %(data.domain[self.attrX].values[i], data.domain[self.attrY].values[j])]
-                if valsY[j] == 0: continue
-                height = int(float(sqareSize * valsY[j])/float(normY))
-
-                # create rectangle
                 selected = len(self.areas) in self.selection
                 rect = CanvasRectangle(
-                    self.canvas, currX+2, currY+2, width-4, height-4, z = -10,
-                    onclick=self.select_area)
-                rect.value_pair = i, j
+                    self.canvas, curr_x + 2, curr_y + 2, width - 4, height - 4,
+                    z=-10, onclick=self.select_area)
+                rect.value_pair = x, y
                 self.areas.append(rect)
-                self.addRectIndependencePearson(rect, currX+2, currY+2, width-4, height-4, (xAttr, xVal), (yAttr, yVal), actual, sum_,
-                    width=1 + 3 * selected,  # Ugly! This is needed since
-                    # resize redraws the graph! When this is handled by resizing
-                    # just the viewer, update_selection will take care of this
-                    )
+                self.show_pearson(rect, chi.residuals[y, x], 3 * selected)
 
-                expected = float(xVal*yVal)/float(sum_)
-                pearson = (actual - expected) / sqrt(expected)
-                tooltipText = """<b>X Attribute: %s</b><br>Value: <b>%s</b><br>Number of instances (p(x)): <b>%d (%.2f%%)</b><hr>
-                                <b>Y Attribute: %s</b><br>Value: <b>%s</b><br>Number of instances (p(y)): <b>%d (%.2f%%)</b><hr>
-                                <b>Number Of Instances (Probabilities):</b><br>Expected (p(x)p(y)): <b>%.1f (%.2f%%)</b><br>Actual (p(x,y)): <b>%d (%.2f%%)</b>
-                                <hr><b>Statistics:</b><br>Chi-square: <b>%.2f</b><br>Standardized Pearson residual: <b>%.2f</b>""" %(self.attrX, getHtmlCompatibleString(xAttr), xVal, 100.0*float(xVal)/float(sum_), self.attrY, getHtmlCompatibleString(yAttr), yVal, 100.0*float(yVal)/float(sum_), expected, 100.0*float(xVal*yVal)/float(sum_*sum_), actual, 100.0*float(actual)/float(sum_), chisquare, pearson )
-                rect.setToolTip(tooltipText)
+                def _addeq(attr_name, txt):
+                    if self.data.domain[attr_name] is ddomain[attr_name]:
+                        return "="
+                    return " " if txt[0] in "<≥" else " in "
 
-                currY += height
-                if currX == xOff:
-                    CanvasText(self.canvas, "", xOff, currY - height / 2, Qt.AlignRight | Qt.AlignVCenter, html_text= getHtmlCompatibleString(data.domain[self.attrY].values[j]))
+                tooltip_text = """
+                    <b>{attrX}{xeq}{xval_name}</b>: {obs_x}/{n} ({prob_x:.0f} %)
+                    <br/>
+                    <b>{attrY}{yeq}{yval_name}</b>: {obs_y}/{n} ({prob_y:.0f} %)
+                    <hr/>
+                    <b>combination of values: </b><br/>
+                       &nbsp;&nbsp;&nbsp;expected {exp:.2f} ({p_exp:.0f} %)<br/>
+                       &nbsp;&nbsp;&nbsp;observed {obs:.2f} ({p_obs:.0f} %)
+                    """.format(
+                    n=int(n),
+                    attrX=to_html(attr_x),
+                    xeq=_addeq(attr_x, xval_name),
+                    xval_name=to_html(xval_name),
+                    obs_x=int(chi.probs_x[x] * n),
+                    prob_x=100 * chi.probs_x[x],
+                    attrY=to_html(attr_y),
+                    yeq=_addeq(attr_y, yval_name),
+                    yval_name=to_html(yval_name),
+                    obs_y=int(chi.probs_y[y] * n),
+                    prob_y=100 * chi.probs_y[y],
+                    exp=chi.expected[y, x],
+                    p_exp=100 * chi.expected[y, x] / n,
+                    obs=int(chi.observed[y, x]),
+                    p_obs=100 * chi.observed[y, x] / n)
+                rect.setToolTip(tooltip_text)
 
-            xl = CanvasText(self.canvas, "", currX + width / 2, yOff + sqareSize, Qt.AlignHCenter | Qt.AlignTop, html_text= getHtmlCompatibleString(data.domain[self.attrX].values[i]))
+                if not x:
+                    text(yval_name, x_off, curr_y + height / 2,
+                         Qt.AlignRight | Qt.AlignVCenter)
+                curr_y += height
+
+            xl = text(xval_name, curr_x + width / 2, y_off + square_size,
+                      Qt.AlignHCenter | Qt.AlignTop)
             max_xlabel_h = max(int(xl.boundingRect().height()), max_xlabel_h)
+            curr_x += width
 
-            currX += width
+        text(attr_y, 0, y_off + square_size / 2, Qt.AlignLeft | Qt.AlignVCenter,
+             bold=True, vertical=True)
+        text(attr_x, x_off + square_size / 2,
+             y_off + square_size + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop,
+             bold=True)
 
-        # show attribute names
-        CanvasText(self.canvas, self.attrY, 0, yOff + sqareSize / 2, Qt.AlignLeft | Qt.AlignVCenter, bold = 1, vertical=True)
-        CanvasText(self.canvas, self.attrX, xOff + sqareSize / 2, yOff + sqareSize + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop, bold = 1)
-
-
-    ######################################################################
-    ## show deviations from attribute independence with standardized pearson residuals
-    def addRectIndependencePearson(self, rect, x, y, w, h, xAttr_xVal, yAttr_yVal, actual, sum, width):
-        xAttr, xVal = xAttr_xVal
-        yAttr, yVal = yAttr_yVal
-        expected = float(xVal*yVal)/float(sum)
-        pearson = (actual - expected) / sqrt(expected)
-
-        if pearson > 0:     # if there are more examples that we would expect under the null hypothesis
-            intPearson = floor(pearson)
-            pen = QPen(QColor(0,0,255), width); rect.setPen(pen)
-            b = 255
-            r = g = 255 - intPearson*20
-            r = g = max(r, 55)  #
-        elif pearson < 0:
-            intPearson = ceil(pearson)
-            pen = QPen(QColor(255,0,0), width)
-            rect.setPen(pen)
-            r = 255
-            b = g = 255 + intPearson*20
-            b = g = max(b, 55)
-        else:
-            pen = QPen(QColor(255,255,255), width)
-            r = g = b = 255         # white
-        color = QColor(r,g,b)
-        brush = QBrush(color)
-        rect.setBrush(brush)
-
-        if pearson > 0:
-            pearson = min(pearson, 10)
-            kvoc = 1 - 0.08 * pearson       #  if pearson in [0..10] --> kvoc in [1..0.2]
-        else:
-            pearson = max(pearson, -10)
-            kvoc = 1 - 0.4*pearson
-
-        pen.setWidth(1)
-        self.addLines(x,y,w,h, kvoc, pen)
-
-
-    ##################################################
-    # add lines
-    def addLines(self, x, y, w, h, diff, pen):
+    def show_pearson(self, rect, pearson, pen_width):
+        r = rect.rect()
+        x, y, w, h = r.x(), r.y(), r.width(), r.height()
         if w == 0 or h == 0:
             return
 
-        dist = 20 * diff  # original distance between two lines in pixels
-        temp = dist
-        canvas = self.canvas
-        while temp < w:
-            r = QGraphicsLineItem(temp + x, y, temp + x, y + h, None)
-            canvas.addItem(r)
-            r.setPen(pen)
-            temp += dist
+        r = g = b = 255
+        if pearson > 0:
+            r = g = max(255 - 20 * pearson, 55)
+        elif pearson < 0:
+            b = g = max(255 + 20 * pearson, 55)
+        rect.setBrush(QBrush(QColor(r, g, b)))
+        pen = QPen(QColor(255 * (r == 255), 255 * (g == 255), 255 * (b == 255)),
+                   pen_width)
+        rect.setPen(pen)
+        if pearson > 0:
+            pearson = min(pearson, 10)
+            dist = 20 - 1.6 * pearson
+        else:
+            pearson = max(pearson, -10)
+            dist = 20 - 8 * pearson
+        pen.setWidth(1)
 
-        temp = dist
-        while temp < h:
-            r = QGraphicsLineItem(x, y + temp, x + w, y + temp, None)
-            canvas.addItem(r)
+        def _offseted_line(ax, ay):
+            r = QGraphicsLineItem(x + ax, y + ay, x + (ax or w), y + (ay or h))
+            self.canvas.addItem(r)
             r.setPen(pen)
-            temp += dist
+
+        ax = dist
+        while ax < w:
+            _offseted_line(ax, 0)
+            ax += dist
+
+        ay = dist
+        while ay < h:
+            _offseted_line(0, ay)
+            ay += dist
 
     def closeEvent(self, ce):
         QDialog.closeEvent(self, ce)
