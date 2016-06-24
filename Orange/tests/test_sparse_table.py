@@ -17,12 +17,16 @@ class InterfaceTest(tabletests.InterfaceTest):
         )
 
     def test_append_rows(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             super().test_append_rows()
 
     def test_insert_rows(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             super().test_insert_rows()
+
+    def test_insert_view(self):
+        with self.assertRaises(Exception):
+            super().test_insert_view()
 
     def test_delete_rows(self):
         with self.assertRaises(ValueError):

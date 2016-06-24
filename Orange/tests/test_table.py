@@ -604,9 +604,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d[-1], d[10])
 
         x = d[:50]
-        with self.assertRaises(ValueError):
-            x.append(d[50])
-
         x.ensure_copy()
         x.append(d[50])
         self.assertEqual(x[50], d[50])
@@ -1946,7 +1943,7 @@ class InterfaceTest(unittest.TestCase):
 
     class_vars = (
         data.ContinuousVariable(name="Continuous Class"),
-        data.DiscreteVariable(name="Discrete Class")
+        data.DiscreteVariable(name="Discrete Class", values=["m", "f"])
     )
 
     feature_data = (
@@ -2026,6 +2023,15 @@ class InterfaceTest(unittest.TestCase):
         self.assertEqual(list(self.table[0]), new_row)
         for row, expected in zip(self.table[1:], self.data):
             self.assertEqual(tuple(row), expected)
+
+    def test_insert_view(self):
+        new_row = [1] * len(self.data[0])
+        tab = self.table[:2]
+        self.assertFalse(tab.is_copy())
+        tab.insert(0, new_row)
+        tab = data.Table.from_numpy(self.table.domain, self.table)
+        self.assertFalse(tab.X.flags.c_contiguous)
+        tab.insert(0, new_row)
 
     def test_delete_rows(self):
         for i in range(self.nrows):

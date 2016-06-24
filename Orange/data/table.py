@@ -796,6 +796,7 @@ class Table(MutableSequence, Storage):
             row += len(self)
         if row < 0 or row > len(self):
             raise IndexError("Index out of range")
+        self.ensure_copy()  # ensure that numpy arrays are single-segment for resize
         self._resize_all(len(self) + 1)
         if row < len(self):
             self.X[row + 1:] = self.X[row:-1]
