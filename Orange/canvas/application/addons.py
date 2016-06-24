@@ -15,6 +15,7 @@ from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
 from email.parser import HeaderParser
+import urllib.request
 
 import pkg_resources
 
@@ -701,6 +702,20 @@ def unique(iterable):
     return (el for el in iterable if not observed(el))
 
 
+def _env_with_proxies():
+    """
+    Return system environment with proxies obtained from urllib so that
+    they can be used with pip.
+    """
+    proxies = urllib.request.getproxies()
+    env = dict(os.environ)
+    if "http" in proxies:
+        env["HTTP_PROXY"] = proxies["http"]
+    if "https" in proxies:
+        env["HTTPS_PROXY"] = proxies["https"]
+    return env
+
+
 Install, Upgrade, Uninstall = 1, 2, 3
 
 
@@ -740,7 +755,7 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True)
+            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -755,7 +770,7 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True)
+            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -766,7 +781,7 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True)
+            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -778,7 +793,7 @@ class Installer(QObject):
             self.setStatusMessage("Uninstalling {}".format(dist.project_name))
 
             cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
-            process = python_process(cmd, bufsize=-1, universal_newlines=True)
+            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
             retcode, output = self.__subprocessrun(process)
 
             if self.__user_install:
