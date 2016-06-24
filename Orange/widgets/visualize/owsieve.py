@@ -7,7 +7,7 @@ from scipy import stats
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
     QGraphicsScene, QColor, QPen, QBrush, QTableView, QStandardItemModel,
-    QStandardItem, QDialog, QSizePolicy, QGraphicsLineItem)
+    QStandardItem, QSizePolicy, QGraphicsLineItem)
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -110,7 +110,10 @@ class OWSieveDiagram(OWWidget):
             self.attrs[:] = []
         else:
             if any(attr.is_continuous for attr in data.domain):
-                self.discrete_data = Discretize(method=EqualFreq(n=4))(data)
+                discretizer = Discretize(
+                    method=EqualFreq(n=4),
+                    discretize_classes=True, discretize_metas=True)
+                self.discrete_data = discretizer(data)
             else:
                 self.discrete_data = self.data
             self.attrs[:] = [
