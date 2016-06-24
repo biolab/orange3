@@ -5,9 +5,9 @@ import numpy as np
 from scipy import stats
 
 from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush, QTableView,
-                         QStandardItemModel, QStandardItem,
-                         QDialog, QApplication, QSizePolicy, QGraphicsLineItem)
+from PyQt4.QtGui import (
+    QGraphicsScene, QColor, QPen, QBrush, QTableView, QStandardItemModel,
+    QStandardItem, QDialog, QSizePolicy, QGraphicsLineItem)
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -24,10 +24,13 @@ from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
 class OWSieveDiagram(OWWidget):
+    """
+    A two-way contingency table providing information on the relation
+    between the observed and expected frequencies of a combination of feature
+    values
+    """
+
     name = "Sieve Diagram"
-    description = "A two-way contingency table providing information on the " \
-                  "relation between the observed and expected frequencies " \
-                  "of a combination of feature values under the assumption of independence."
     icon = "icons/SieveDiagram.svg"
     priority = 4200
 
@@ -45,6 +48,7 @@ class OWSieveDiagram(OWWidget):
     selection = ContextSetting(set())
 
     def __init__(self):
+        # pylint: disable=missing-docstring
         super().__init__()
 
         self.data = self.discrete_data = None
@@ -55,27 +59,22 @@ class OWSieveDiagram(OWWidget):
         self.attr_box = gui.hBox(self.mainArea)
         model = VariableListModel()
         model.wrap(self.attrs)
-        self.attrXCombo = gui.comboBox(
-            self.attr_box, self, value="attrX", contentsLength=12,
-            callback=self.change_attr, sendSelectedValue=True, valueType=str)
-        self.attrXCombo.setModel(model)
-        gui.widgetLabel(self.attr_box, "\u2715").\
-            setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.attrYCombo = gui.comboBox(
-            self.attr_box, self, value="attrY", contentsLength=12,
-            callback=self.change_attr, sendSelectedValue=True, valueType=str)
-        self.attrYCombo.setModel(model)
+        combo_args = dict(
+            widget=self.attr_box, master=self, contentsLength=12,
+            callback=self.change_attr, sendSelectedValue=True, valueType=str,
+            model=model)
+        fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.attrXCombo = gui.comboBox(value="attrX", **combo_args)
+        gui.widgetLabel(self.attr_box, "\u2715", sizePolicy=fixed_size)
+        self.attrYCombo = gui.comboBox(value="attrY", **combo_args)
         self.vizrank = self.VizRank(self)
         self.vizrank_button = gui.button(
-            self.attr_box, self, "Score Combinations",
-            callback=self.vizrank.reshow,
-            tooltip="Find projections with good class separation",
-            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
-        self.vizrank_button.setEnabled(False)
+            self.attr_box, self, "Score Combinations", sizePolicy=fixed_size,
+            callback=self.vizrank.reshow, enabled=False)
 
         self.canvas = QGraphicsScene()
-        self.canvasView = ViewWithPress(self.canvas, self.mainArea,
-                                        handler=self.reset_selection)
+        self.canvasView = ViewWithPress(
+            self.canvas, self.mainArea, handler=self.reset_selection)
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -85,15 +84,28 @@ class OWSieveDiagram(OWWidget):
         box.layout().addWidget(self.report_button)
 
     def sizeHint(self):
+        # pylint: disable=missing-docstring
         return QSize(450, 550)
 
     def set_data(self, data):
-        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
+        """
+        Discretize continuous attributes, and put all attributes and discrete
+        metas into self.attrs, which is used as a model for combos.
+
+        Select the first two attributes unless context overrides this.
+        Method `resolve_shown_attributes` is called to use the attributes from
+        the input, if it exists and matches the attributes in the data.
+
+        Remove selection; again let the context override this.
+        Initialize the vizrank dialog, but don't show it.
+        """
+        if isinstance(data, SqlTable) and data.approx_len() > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
 
         self.closeContext()
         self.data = data
         self.areas = []
+        self.selection = []
         if self.data is None:
             self.attrs[:] = []
         else:
@@ -114,76 +126,94 @@ class OWSieveDiagram(OWWidget):
             self.areas = self.selection = None
         self.openContext(self.data)
         self.resolve_shown_attributes()
+        self.update_graph()
         self.update_selection()
-        self.vizrank._initialize()
+
+        self.vizrank.initialize()
         self.vizrank_button.setEnabled(
-            self.data is not None and
-            len(self.data) > 1 and
+            self.data is not None and len(self.data) > 1 and
             len(self.data.domain.attributes) > 1)
 
     def change_attr(self, attributes=None):
+        """Reset the selection, update graph. Set the attributes, if given."""
         if attributes is not None:
             self.attrX, self.attrY = attributes
         self.selection = set()
-        self.updateGraph()
+        self.update_graph()
         self.update_selection()
 
-    def set_input_features(self, attrList):
-        self.input_features = attrList
+    def set_input_features(self, attr_list):
+        """Store the attributes from the input and call
+        `resolve_shown_attributes`"""
+        self.input_features = attr_list
         self.resolve_shown_attributes()
         self.update_selection()
 
     def resolve_shown_attributes(self):
+        """Use the attributes from the input signal if the signal is present
+        and at least two attributes appear in the domain. If there are
+        multiple, use the first two. Combos are disabled if inputs are used."""
         self.warning(1)
         self.attr_box.setEnabled(True)
-        if self.input_features:  # non-None and non-empty!
-            features = [f for f in self.input_features if f in self.attrs]
-            if not features:
-                self.warning(1, "Features from the input signal "
-                                "are not present in the data")
-            else:
-                old_attrs = self.attrX, self.attrY
-                self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]
-                self.attr_box.setEnabled(False)
-                if (self.attrX, self.attrY) != old_attrs:
-                    self.selection = set()
-        # else: do nothing; keep current features, even if input with the
-        # features just changed to None
-        self.updateGraph()
+        if not self.input_features:  # None or empty
+            return
+        features = [f for f in self.input_features if f in self.attrs]
+        if not features:
+            self.warning(1, "Features from the input signal "
+                            "are not present in the data")
+            return
+        old_attrs = self.attrX, self.attrY
+        self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]
+        self.attr_box.setEnabled(False)
+        if (self.attrX, self.attrY) != old_attrs:
+            self.selection = set()
+            self.update_graph()
 
-    def resizeEvent(self, e):
-        OWWidget.resizeEvent(self,e)
-        self.updateGraph()
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_graph()
 
-    def showEvent(self, ev):
-        OWWidget.showEvent(self, ev)
-        self.updateGraph()
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.update_graph()
+
+    def closeEvent(self, event):
+        self.vizrank.close()
+        super().closeEvent(event)
+
+    def hideEvent(self, event):
+        self.vizrank.hide()
+        super().hideEvent(event)
 
     def reset_selection(self):
         self.selection = set()
         self.update_selection()
 
-    def select_area(self, area, ev):
-        if ev.button() != Qt.LeftButton:
+    def select_area(self, area, event):
+        """Add or remove the clicked area from the selection"""
+        if event.button() != Qt.LeftButton:
             return
         index = self.areas.index(area)
-        if ev.modifiers() & Qt.ControlModifier:
+        if event.modifiers() & Qt.ControlModifier:
             self.selection ^= {index}
         else:
             self.selection = {index}
         self.update_selection()
 
     def update_selection(self):
+        """Update the graph (pen width) to show the current selection.
+        Filter and output the data.
+        """
         if self.areas is None or not self.selection:
             self.send("Selection", None)
             return
 
-        filters = []
+        filts = []
         for i, area in enumerate(self.areas):
             if i in self.selection:
                 width = 4
                 val_x, val_y = area.value_pair
-                filters.append(
+                filts.append(
                     filter.Values([
                         filter.FilterDiscrete(self.attrX, [val_x]),
                         filter.FilterDiscrete(self.attrY, [val_y])
@@ -193,11 +223,11 @@ class OWSieveDiagram(OWWidget):
             pen = area.pen()
             pen.setWidth(width)
             area.setPen(pen)
-        if len(filters) == 1:
-            filters = filters[0]
+        if len(filts) == 1:
+            filts = filts[0]
         else:
-            filters = filter.Values(filters, conjunction=False)
-        selection = filters(self.discrete_data)
+            filts = filter.Values(filts, conjunction=False)
+        selection = filts(self.discrete_data)
         if self.discrete_data is not self.data:
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
@@ -205,6 +235,8 @@ class OWSieveDiagram(OWWidget):
         self.send("Selection", selection)
 
     class ChiSqStats:
+        """Compute and store statistics needed to show a plot for the given
+        pair of attributes. The class is also used for ranking."""
         def __init__(self, data, attr1, attr2):
             self.observed = get_contingency(data, attr1, attr2)
             self.n = np.sum(self.observed)
@@ -218,13 +250,100 @@ class OWSieveDiagram(OWWidget):
             self.p = stats.distributions.chi2.sf(
                 self.chisq, (len(self.probs_x) - 1) * (len(self.probs_y) - 1))
 
-    def updateGraph(self, *args):
+    def update_graph(self):
+        # Function uses weird names like r, g, b, but it does it with utmost
+        # caution, hence
+        # pylint: disable=invalid-name
+        """Update the graph."""
+
         def text(txt, *args, **kwargs):
             return CanvasText(self.canvas, "", html_text=to_html(txt),
                               *args, **kwargs)
 
         def width(txt):
             return text(txt, 0, 0, show=False).boundingRect().width()
+
+        def show_pearson(rect, pearson, pen_width):
+            """Color the given rectangle according to its corresponding
+            standardized Pearson residual"""
+            r = rect.rect()
+            x, y, w, h = r.x(), r.y(), r.width(), r.height()
+            if w == 0 or h == 0:
+                return
+
+            r = b = 255
+            if pearson > 0:
+                r = g = max(255 - 20 * pearson, 55)
+            elif pearson < 0:
+                b = g = max(255 + 20 * pearson, 55)
+            else:
+                r = g = b = 224
+            rect.setBrush(QBrush(QColor(r, g, b)))
+            pen_color = QColor(255 * (r == 255), 255 * (g == 255),
+                               255 * (b == 255))
+            pen = QPen(pen_color, pen_width)
+            rect.setPen(pen)
+            if pearson > 0:
+                pearson = min(pearson, 10)
+                dist = 20 - 1.6 * pearson
+            else:
+                pearson = max(pearson, -10)
+                dist = 20 - 8 * pearson
+            pen.setWidth(1)
+
+            def _offseted_line(ax, ay):
+                r = QGraphicsLineItem(x + ax, y + ay, x + (ax or w),
+                                      y + (ay or h))
+                self.canvas.addItem(r)
+                r.setPen(pen)
+
+            ax = dist
+            while ax < w:
+                _offseted_line(ax, 0)
+                ax += dist
+
+            ay = dist
+            while ay < h:
+                _offseted_line(0, ay)
+                ay += dist
+
+        def make_tooltip():
+            """Create the tooltip. The function uses local variables from
+            the enclosing scope."""
+            # pylint: disable=undefined-loop-variable
+            def _oper(attr_name, txt):
+                if self.data.domain[attr_name] is ddomain[attr_name]:
+                    return "="
+                return " " if txt[0] in "<≥" else " in "
+
+            def _fmt(val):
+                return str(int(val)) if val % 1 == 0 \
+                    else "{:.2f}".format(val)
+
+            return (
+                "<b>{attrX}{xeq}{xval_name}</b>: {obs_x}/{n} ({p_x:.0f} %)".
+                format(attrX=to_html(attr_x),
+                       xeq=_oper(attr_x, xval_name),
+                       xval_name=to_html(xval_name),
+                       obs_x=_fmt(chi.probs_x[x] * n),
+                       n=int(n),
+                       p_x=100 * chi.probs_x[x]) +
+                "<br/>" +
+                "<b>{attrY}{yeq}{yval_name}</b>: {obs_y}/{n} ({p_y:.0f} %)".
+                format(attrY=to_html(attr_y),
+                       yeq=_oper(attr_y, yval_name),
+                       yval_name=to_html(yval_name),
+                       obs_y=_fmt(chi.probs_y[y] * n),
+                       n=int(n),
+                       p_y=100 * chi.probs_y[y]) +
+                "<hr/>" +
+                """<b>combination of values: </b><br/>
+                   &nbsp;&nbsp;&nbsp;expected {exp} ({p_exp:.0f} %)<br/>
+                   &nbsp;&nbsp;&nbsp;observed {obs} ({p_obs:.0f} %)""".
+                format(exp=_fmt(chi.expected[y, x]),
+                       p_exp=100 * chi.expected[y, x] / n,
+                       obs=_fmt(chi.observed[y, x]),
+                       p_obs=100 * chi.observed[y, x] / n))
 
         for item in self.canvas.items():
             self.canvas.removeItem(item)
@@ -254,6 +373,7 @@ class OWSieveDiagram(OWWidget):
             if px == 0:
                 continue
             width = square_size * px
+
             curr_y = y_off
             for y in range(len(chi.probs_y) - 1, -1, -1):  # bottom-up order
                 py = chi.probs_y[y]
@@ -268,40 +388,10 @@ class OWSieveDiagram(OWWidget):
                     z=-10, onclick=self.select_area)
                 rect.value_pair = x, y
                 self.areas.append(rect)
-                self.show_pearson(rect, chi.residuals[y, x], 3 * selected)
+                show_pearson(rect, chi.residuals[y, x], 3 * selected)
+                rect.setToolTip(make_tooltip())
 
-                def _addeq(attr_name, txt):
-                    if self.data.domain[attr_name] is ddomain[attr_name]:
-                        return "="
-                    return " " if txt[0] in "<≥" else " in "
-
-                tooltip_text = """
-                    <b>{attrX}{xeq}{xval_name}</b>: {obs_x}/{n} ({prob_x:.0f} %)
-                    <br/>
-                    <b>{attrY}{yeq}{yval_name}</b>: {obs_y}/{n} ({prob_y:.0f} %)
-                    <hr/>
-                    <b>combination of values: </b><br/>
-                       &nbsp;&nbsp;&nbsp;expected {exp:.2f} ({p_exp:.0f} %)<br/>
-                       &nbsp;&nbsp;&nbsp;observed {obs:.2f} ({p_obs:.0f} %)
-                    """.format(
-                    n=int(n),
-                    attrX=to_html(attr_x),
-                    xeq=_addeq(attr_x, xval_name),
-                    xval_name=to_html(xval_name),
-                    obs_x=int(chi.probs_x[x] * n),
-                    prob_x=100 * chi.probs_x[x],
-                    attrY=to_html(attr_y),
-                    yeq=_addeq(attr_y, yval_name),
-                    yval_name=to_html(yval_name),
-                    obs_y=int(chi.probs_y[y] * n),
-                    prob_y=100 * chi.probs_y[y],
-                    exp=chi.expected[y, x],
-                    p_exp=100 * chi.expected[y, x] / n,
-                    obs=int(chi.observed[y, x]),
-                    p_obs=100 * chi.observed[y, x] / n)
-                rect.setToolTip(tooltip_text)
-
-                if not x:
+                if x == 0:
                     text(yval_name, x_off, curr_y + height / 2,
                          Qt.AlignRight | Qt.AlignVCenter)
                 curr_y += height
@@ -317,47 +407,6 @@ class OWSieveDiagram(OWWidget):
              y_off + square_size + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop,
              bold=True)
 
-    def show_pearson(self, rect, pearson, pen_width):
-        r = rect.rect()
-        x, y, w, h = r.x(), r.y(), r.width(), r.height()
-        if w == 0 or h == 0:
-            return
-
-        r = g = b = 255
-        if pearson > 0:
-            r = g = max(255 - 20 * pearson, 55)
-        elif pearson < 0:
-            b = g = max(255 + 20 * pearson, 55)
-        rect.setBrush(QBrush(QColor(r, g, b)))
-        pen = QPen(QColor(255 * (r == 255), 255 * (g == 255), 255 * (b == 255)),
-                   pen_width)
-        rect.setPen(pen)
-        if pearson > 0:
-            pearson = min(pearson, 10)
-            dist = 20 - 1.6 * pearson
-        else:
-            pearson = max(pearson, -10)
-            dist = 20 - 8 * pearson
-        pen.setWidth(1)
-
-        def _offseted_line(ax, ay):
-            r = QGraphicsLineItem(x + ax, y + ay, x + (ax or w), y + (ay or h))
-            self.canvas.addItem(r)
-            r.setPen(pen)
-
-        ax = dist
-        while ax < w:
-            _offseted_line(ax, 0)
-            ax += dist
-
-        ay = dist
-        while ay < h:
-            _offseted_line(0, ay)
-            ay += dist
-
-    def closeEvent(self, ce):
-        QDialog.closeEvent(self, ce)
-
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attrX, self.attrY)
@@ -366,15 +415,19 @@ class OWSieveDiagram(OWWidget):
         self.report_plot()
 
     class VizRank(OWWidget):
+        """VizRank dialog"""
         name = "Rank projections (Sieve)"
         want_control_area = False
 
         def __init__(self, parent_widget):
+            # pylint: disable=missing-docstring
             super().__init__()
             self.parent_widget = parent_widget
             self.running = False
             self.progress = None
             self.i = self.j = 0
+            self.pause = False
+            self.scores = []
 
             self.projectionTable = QTableView()
             self.mainArea.layout().addWidget(self.projectionTable)
@@ -390,9 +443,14 @@ class OWSieveDiagram(OWWidget):
             self.button = gui.button(self.mainArea, self, "Start evaluation",
                                      callback=self.toggle, default=True)
             self.resize(320, 512)
-            self._initialize()
+            self.initialize()
 
-        def _initialize(self):
+        def initialize(self):
+            """Reset the dialog
+
+            The class peeks into the widget's data and does some checks.
+            This needs to be fixes ... some day. VizRank dialogues need to be
+            unified - pulled out from individual classes."""
             self.running = False
             self.projectionTableModel.clear()
             self.projectionTable.setColumnWidth(0, 120)
@@ -429,6 +487,7 @@ class OWSieveDiagram(OWWidget):
             self.parent_widget.change_attr(attributes=(a1, a2))
 
         def toggle(self):
+            """Start or pause the computation"""
             self.running ^= 1
             if self.running:
                 self.button.setText("Pause")
@@ -438,12 +497,14 @@ class OWSieveDiagram(OWWidget):
                 self.button.setEnabled(False)
 
         def stop(self, i, j):
+            """Stop (pause) the computation"""
             self.i, self.j = i, j
             if not self.projectionTable.selectedIndexes():
                 self.projectionTable.selectRow(0)
             self.button.setEnabled(True)
 
         def run(self):
+            """Compute and show scores"""
             widget = self.parent_widget
             attrs = widget.attrs
             if not self.progress:
@@ -453,7 +514,7 @@ class OWSieveDiagram(OWWidget):
                     if not self.running:
                         self.stop(i, j)
                         return
-                    score = widget.ChiSqStats(widget.discrete_data, i, j).p
+                    score = -widget.ChiSqStats(widget.discrete_data, i, j).p
                     pos = bisect_left(self.scores, score)
                     self.projectionTableModel.insertRow(
                         len(self.scores) - pos,
@@ -468,9 +529,10 @@ class OWSieveDiagram(OWWidget):
             self.button.setEnabled(False)
 
 
-# test widget appearance
-if __name__ == "__main__":
+def main():
+    # pylint: disable=missing-docstring
     import sys
+    from PyQt4.QtGui import QApplication
     a = QApplication(sys.argv)
     ow = OWSieveDiagram()
     ow.show()
@@ -478,3 +540,6 @@ if __name__ == "__main__":
     ow.set_data(data)
     a.exec_()
     ow.saveSettings()
+
+if __name__ == "__main__":
+    main()
