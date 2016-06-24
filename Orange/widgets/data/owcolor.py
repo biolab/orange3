@@ -1,6 +1,10 @@
-from PyQt4.QtCore import Qt, QAbstractTableModel
+"""
+Widget for assigning colors to variables
+"""
+
+from PyQt4.QtCore import Qt, QAbstractTableModel, QSize
 from PyQt4.QtGui import QStyledItemDelegate, QColor, QHeaderView, QFont, \
-    QColorDialog, QTableView, qRgb, QImage
+    QColorDialog, QTableView, qRgb, QImage, QBrush, QApplication
 import numpy as np
 
 import Orange
@@ -12,7 +16,9 @@ ColorRole = next(gui.OrangeUserRole)
 
 
 class HorizontalGridDelegate(QStyledItemDelegate):
+    """Delegate that draws a horizontal grid."""
     def paint(self, painter, option, index):
+        # pylint: disable=missing-docstring
         painter.save()
         painter.setPen(QColor(212, 212, 212))
         painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
@@ -22,6 +28,10 @@ class HorizontalGridDelegate(QStyledItemDelegate):
 
 # noinspection PyMethodOverriding
 class ColorTableModel(QAbstractTableModel):
+    """Base color model for discrete and continuous attributes. The model
+    handles the first column; other columns are handled in the derived classes
+    """
+
     def __init__(self):
         QAbstractTableModel.__init__(self)
         self.variables = []
@@ -48,6 +58,7 @@ class ColorTableModel(QAbstractTableModel):
         return len(self.variables)
 
     def data(self, index, role=Qt.DisplayRole):
+        # pylint: disable=missing-docstring
         # Only valid for the first column
         row = index.row()
         if role == Qt.DisplayRole or role == Qt.EditRole:
@@ -60,6 +71,7 @@ class ColorTableModel(QAbstractTableModel):
             return Qt.AlignRight | Qt.AlignVCenter
 
     def setData(self, index, value, role):
+        # pylint: disable=missing-docstring
         # Only valid for the first column
         if role == Qt.EditRole:
             self.variables[index.row()].name = value
@@ -70,11 +82,17 @@ class ColorTableModel(QAbstractTableModel):
 
 
 class DiscColorTableModel(ColorTableModel):
+    """A model that stores the colors corresponding to values of discrete
+    variables. Colors are shown as decorations."""
+
+    # The class only overloads the methods from the base class
+    # pylint: disable=missing-docstring
     def n_columns(self):
         return bool(self.variables) and \
                1 + max(len(var.values) for var in self.variables)
 
     def data(self, index, role=Qt.DisplayRole):
+        # pylint: disable=too-many-return-statements
         row, col = index.row(), index.column()
         if col == 0:
             return ColorTableModel.data(self, index, role)
@@ -85,7 +103,7 @@ class DiscColorTableModel(ColorTableModel):
             return var.values[col - 1]
         try:
             color = var.colors[col - 1]
-        except:
+        except (AttributeError, IndexError):
             return
         if role == Qt.DecorationRole:
             return QColor(*color)
@@ -110,33 +128,50 @@ class DiscColorTableModel(ColorTableModel):
 
 
 class ContColorTableModel(ColorTableModel):
+    """A model that stores the colors corresponding to values of discrete
+    variables. Colors are shown as decorations."""
+
+    # The class only overloads the methods from the base class, except
+    # copy_to_all that is documented
+    # pylint: disable=missing-docstring
     @staticmethod
     def n_columns():
-        return 2
+        return 3
 
     def data(self, index, role=Qt.DisplayRole):
-        row, col = index.row(), index.column()
-        if col == 0:
+        def _column0():
             return ColorTableModel.data(self, index, role)
-        if col > 1:
-            return
+
+        def _column1():
+            if role == Qt.DecorationRole:
+                continuous_palette = ContinuousPaletteGenerator(*var.colors)
+                line = continuous_palette.getRGB(np.arange(0, 1, 1 / 256))
+                data = np.arange(0, 256, dtype=np.int8). \
+                    reshape((1, 256)). \
+                    repeat(16, 0)
+                img = QImage(data, 256, 16, QImage.Format_Indexed8)
+                img.setColorCount(256)
+                img.setColorTable([qRgb(*x) for x in line])
+                img.data = data
+                return img
+            if role == Qt.ToolTipRole:
+                return "{} - {}".format(self._encode_color(var.colors[0]),
+                                        self._encode_color(var.colors[1]))
+            if role == ColorRole:
+                return var.colors
+
+        def _column2():
+            if role == Qt.SizeHintRole:
+                return QSize(100, 1)
+            if role == Qt.ForegroundRole:
+                return QBrush(Qt.blue)
+            if row == self.mouse_row and role == Qt.DisplayRole:
+                return "Copy to all"
+
+        row, col = index.row(), index.column()
         var = self.variables[row]
-        if role == Qt.DecorationRole:
-            continuous_palette = ContinuousPaletteGenerator(*var.colors)
-            line = continuous_palette.getRGB(np.arange(0, 1, 1 / 256))
-            data = np.arange(0, 256, dtype=np.int8).\
-                reshape((1, 256)).\
-                repeat(16, 0)
-            img = QImage(data, 256, 16, QImage.Format_Indexed8)
-            img.setColorCount(256)
-            img.setColorTable([qRgb(*x) for x in line])
-            img.data = data
-            return img
-        if role == Qt.ToolTipRole:
-            return "{} - {}".format(self._encode_color(var.colors[0]),
-                                    self._encode_color(var.colors[1]))
-        if role == ColorRole:
-            return var.colors
+        if 0 <= col <= 2:
+            return [_column0, _column1, _column2][col]()
 
     # noinspection PyMethodOverriding
     def setData(self, index, value, role):
@@ -150,8 +185,18 @@ class ContColorTableModel(ColorTableModel):
         self.dataChanged.emit(index, index)
         return True
 
+    def copy_to_all(self, index):
+        colors = self.variables[index.row()].colors
+        for row in range(self.n_rows()):
+            self.variables[row].colors = colors
+        self.dataChanged.emit(self.index(0, 1), self.index(self.n_rows(), 1))
+
+
 
 class ColorTable(QTableView):
+    """The base table view for discrete and continuous attributes."""
+
+    # pylint: disable=missing-docstring
     def __init__(self, model):
         QTableView.__init__(self)
         self.horizontalHeader().hide()
@@ -161,16 +206,20 @@ class ColorTable(QTableView):
         self.setItemDelegate(HorizontalGridDelegate())
         self.setModel(model)
 
-    def mouseReleaseEvent(self, ev):
-        index = self.indexAt(ev.pos())
+    def mouseReleaseEvent(self, event):
+        index = self.indexAt(event.pos())
         if not index.isValid():
             return
         rect = self.visualRect(index)
-        self.handle_click(index, ev.pos().x() - rect.x())
+        self.handle_click(index, event.pos().x() - rect.x())
 
 
 class DiscreteTable(ColorTable):
+    """Table view for discrete variables"""
+
     def handle_click(self, index, x_offset):
+        """Handle click events for the first column (call the inherited
+        edit method) and the second (call method for changing the palette)"""
         if self.model().data(index, Qt.EditRole) is None:
             return
         if index.column() == 0 or x_offset > 24:
@@ -179,6 +228,7 @@ class DiscreteTable(ColorTable):
             self.change_color(index)
 
     def change_color(self, index):
+        """Invoke palette editor and set the color"""
         color = self.model().data(index, ColorRole)
         if color is None:
             return
@@ -189,17 +239,38 @@ class DiscreteTable(ColorTable):
 
 
 class ContinuousTable(ColorTable):
+    """Table view for continuous variables"""
+
     def __init__(self, master, model):
         ColorTable.__init__(self, model)
         self.master = master
+        self.viewport().setMouseTracking(True)
+        self.model().mouse_row = None
+
+    def mouseMoveEvent(self, event):
+        """Store the hovered row index in the model, trigger viewport update"""
+        pos = event.pos()
+        ind = self.indexAt(pos)
+        self.model().mouse_row = ind.row()
+        super().mouseMoveEvent(event)
+        self.viewport().update()
+
+    def leaveEvent(self, _):
+        """Remove the stored the hovered row index, trigger viewport update"""
+        self.model().mouse_row = None
+        self.viewport().update()
 
     def handle_click(self, index, _):
+        """Call the specific methods for handling clicks for each column"""
         if index.column() == 0:
             self.edit(index)
-        else:
+        elif index.column() == 1:
             self.change_color(index)
+        elif index.column() == 2:
+            self.model().copy_to_all(index)
 
     def change_color(self, index):
+        """Invoke palette editor and set the color"""
         from_c, to_c, black = self.model().data(index, ColorRole)
         master = self.master
         dlg = ColorPaletteDlg(master)
@@ -217,6 +288,8 @@ class ContinuousTable(ColorTable):
 
 
 class OWColor(widget.OWWidget):
+    """Widget for assigning color palettes to variable"""
+
     name = "Color"
     description = "Set color legend for variables."
     icon = "icons/Colors.svg"
@@ -236,7 +309,7 @@ class OWColor(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.data = None
-        self.orig_domain = None
+        self.orig_domain = self.domain = None
         self.disc_colors = []
         self.cont_colors = []
 
@@ -260,30 +333,31 @@ class OWColor(widget.OWWidget):
         box.layout().insertSpacing(0, 20)
         box.layout().insertWidget(0, self.report_button)
 
+    def _create_proxies(self, variables):
+        part_vars = []
+        for var in variables:
+            if var.is_discrete or var.is_continuous:
+                var = var.make_proxy()
+                if var.is_discrete:
+                    var.values = var.values[:]
+                    self.disc_colors.append(var)
+                else:
+                    self.cont_colors.append(var)
+            part_vars.append(var)
+        return part_vars
+
     def set_data(self, data):
+        """Handle data input signal"""
         self.closeContext()
         self.disc_colors = []
         self.cont_colors = []
         if data is None:
             self.data = self.domain = None
         else:
-            def create_part(variables):
-                vars = []
-                for i, var in enumerate(variables):
-                    if var.is_discrete or var.is_continuous:
-                        var = var.make_proxy()
-                        if var.is_discrete:
-                            var.values = var.values[:]
-                            self.disc_colors.append(var)
-                        else:
-                            self.cont_colors.append(var)
-                    vars.append(var)
-                return vars
-
             domain = self.orig_domain = data.domain
-            domain = Orange.data.Domain(create_part(domain.attributes),
-                                        create_part(domain.class_vars),
-                                        create_part(domain.metas))
+            domain = Orange.data.Domain(self._create_proxies(domain.attributes),
+                                        self._create_proxies(domain.class_vars),
+                                        self._create_proxies(domain.metas))
             self.openContext(data)
             self.data = Orange.data.Table(domain, data)
             self.data.domain = domain
@@ -323,7 +397,8 @@ class OWColor(widget.OWWidget):
         self.send("Data", self.data)
 
     def send_report(self):
-        def report_variables(variables, orig_variables):
+        """Send report"""
+        def _report_variables(variables, orig_variables):
             from Orange.canvas.report import colored_square as square
 
             def was(n, o):
@@ -369,11 +444,11 @@ class OWColor(widget.OWWidget):
         domain = self.data.domain
         orig_domain = self.orig_domain
         sections = (
-            (name, report_variables(vars, ovars))
+            (name, _report_variables(vars, ovars))
             for name, vars, ovars in (
                 ("Features", domain.attributes, orig_domain.attributes),
                 ("Outcome" + "s" * (len(domain.class_vars) > 1),
-                    domain.class_vars, orig_domain.class_vars),
+                 domain.class_vars, orig_domain.class_vars),
                 ("Meta attributes", domain.metas, orig_domain.metas)))
         table = "".join("<tr><th>{}</th></tr>{}".format(name, rows)
                         for name, rows in sections if rows)
@@ -382,10 +457,9 @@ class OWColor(widget.OWWidget):
 
 
 if __name__ == "__main__":
-    from PyQt4 import QtGui
-    a = QtGui.QApplication([])
-    ow = OWColor()
-    ow.set_data(Orange.data.Table("heart_disease.tab"))
-    ow.show()
+    a = QApplication([])
+    WIDGET = OWColor()
+    WIDGET.set_data(Orange.data.Table("heart_disease.tab"))
+    WIDGET.show()
     a.exec_()
-    ow.saveSettings()
+    WIDGET.saveSettings()
