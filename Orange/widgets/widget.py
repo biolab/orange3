@@ -18,6 +18,7 @@ from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
 from Orange.widgets.gui import ControlledAttributesDict, notify_changed
+from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from .utils.overlay import MessageOverlayWidget
@@ -198,6 +199,9 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         sc = QShortcut(QKeySequence(Qt.ShiftModifier | Qt.Key_F1), self)
         sc.activated.connect(self.__quicktip)
 
+        sc = QShortcut(QKeySequence.Copy, self)
+        sc.activated.connect(self.copy_to_clipboard)
+
         return self
 
     def __init__(self, *args, **kwargs):
@@ -315,6 +319,12 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         if graph_obj is None:
             return
         saveplot.save_plot(graph_obj, self.graph_writers)
+
+    def copy_to_clipboard(self):
+        graph_obj = getdeepattr(self, self.graph_name, None)
+        if graph_obj is None:
+            return
+        ClipboardFormat.write_image(None, graph_obj)
 
     def __restoreWidgetGeometry(self):
 
