@@ -475,6 +475,7 @@ class PyListModel(QAbstractListModel):
             start, stop, step = _as_contiguous_range(s, len(self))
             self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
+            s = operator.index(s)
             s = len(self) + s if s < 0 else s
             self.beginRemoveRows(QModelIndex(), s, s)
         del self._list[s]
@@ -497,6 +498,7 @@ class PyListModel(QAbstractListModel):
                 self._other_data[idx][Qt.AccessibleDescriptionRole] = 'separator'
             self.endInsertRows()
         else:
+            s = operator.index(s)
             s = len(self) + s if s < 0 else s
             self._list[s] = value
             self._other_data[s] = _store()
