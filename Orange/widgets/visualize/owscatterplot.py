@@ -102,8 +102,8 @@ class OWScatterPlot(OWWidget):
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
         self.vizrank_button = gui.button(
-            vizrank_box, self, "Rank Projections", callback=self.vizrank.reshow,
-            tooltip="Find projections with good class separation")
+            vizrank_box, self, "Score Plots", callback=self.vizrank.reshow,
+            tooltip="Find plots with good class separation")
         self.vizrank_button.setEnabled(False)
         gui.separator(box)
 
@@ -144,11 +144,15 @@ class OWScatterPlot(OWWidget):
 
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
-        gui.checkBox(box, self, value='graph.tooltip_shows_all',
-                     label='Show all data on mouse hover')
+        gui.checkBox(
+            box, self, value='graph.tooltip_shows_all',
+            label='Show all data on mouse hover')
         self.cb_class_density = gui.checkBox(
             box, self, value='graph.class_density', label='Show class density',
             callback=self.update_density)
+        gui.checkBox(
+            box, self, 'graph.label_only_selected',
+            'Label only selected points', callback=self.graph.update_labels)
 
         self.zoom_select_toolbar = g.zoom_select_toolbar(
             gui.vBox(self.controlArea, "Zoom/Select"), nomargin=True,
