@@ -490,8 +490,8 @@ class PyListModel(QAbstractListModel):
                 value = list(value)
             separators = [start + i for i, v in enumerate(value) if v is self.Separator]
             self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
-            self._list[s] = value
-            self._other_data[s] = (_store() for _ in value)
+            self._list[start:start] = value
+            self._other_data[start:start] = (_store() for _ in value)
             for idx in separators:
                 self._other_data[idx]['flags'] = Qt.NoItemFlags
                 self._other_data[idx][Qt.AccessibleDescriptionRole] = 'separator'
