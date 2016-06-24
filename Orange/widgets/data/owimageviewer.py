@@ -3,6 +3,7 @@ Image Viewer Widget
 -------------------
 
 """
+import sys
 import os
 import weakref
 import logging
@@ -628,6 +629,7 @@ class OWImageViewer(widget.OWWidget):
 
     def onDeleteWidget(self):
         self._cancelAllFutures()
+        self.clear()
 
     def eventFilter(self, receiver, event):
         if receiver is self.sceneView and event.type() == QEvent.Resize \
@@ -734,17 +736,24 @@ class ImageLoader(QObject):
         return future
 
 
-def main():
+def main(argv=sys.argv):
     import sip
 
-    app = QApplication([])
+    app = QApplication(argv)
+    argv = app.arguments()
     w = OWImageViewer()
     w.show()
     w.raise_()
-    data = Orange.data.Table('zoo-with-images')
+
+    if len(argv) > 1:
+        data = Orange.data.Table(argv[1])
+    else:
+        data = Orange.data.Table('zoo-with-images')
+
     w.setData(data)
     rval = app.exec_()
     w.saveSettings()
+    w.onDeleteWidget()
     sip.delete(w)
     app.processEvents()
     return rval
