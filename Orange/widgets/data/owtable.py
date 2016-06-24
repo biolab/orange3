@@ -9,6 +9,7 @@ from collections import OrderedDict, namedtuple
 from math import isnan
 
 import numpy
+from scipy.sparse import issparse
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -826,6 +827,9 @@ class OWDataTable(widget.OWWidget):
                     return [allvars[c] for c, r in columns if r == role]
 
                 attrs = select_vars(TableModel.Attribute)
+                if attrs and issparse(table.X):
+                    # for sparse data you can only select all attributes
+                    attrs = table.domain.attributes
                 class_vars = select_vars(TableModel.ClassVar)
                 metas = select_vars(TableModel.Meta)
                 domain = Orange.data.Domain(attrs, class_vars, metas)
