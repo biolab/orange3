@@ -5,7 +5,8 @@ Change Log
 ------------
 * ...
 
-
+[3.3.6] - 2016-06-01
+--------------------
 ##### Enhancements
 * Automatically discretize continuous variables in Sieve (#1372)
 * Nicer reporting of tabular data (e.g. Confusion Matrix) (#1309)
