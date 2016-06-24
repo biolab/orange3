@@ -174,6 +174,47 @@ class TestDiscretizer(TestCase):
         self.assertEqual(len(table.domain.attributes),
                          len(new_table.domain.attributes))
 
+    def test_discretize_class(self):
+        table = data.Table('iris')
+        domain = table.domain
+        regr_domain = data.Domain(domain.attributes[:3],
+                                  [domain.attributes[3], domain.class_var])
+        table = data.Table.from_table(regr_domain, table)
+
+        discretize = Discretize(remove_const=False)
+        new_table = discretize(table)
+        self.assertIs(new_table.domain.class_vars[0],
+                      new_table.domain.class_vars[0])
+        self.assertIs(new_table.domain.class_vars[1],
+                      new_table.domain.class_vars[1])
+
+        discretize = Discretize(remove_const=False, discretize_classes=True)
+        new_table = discretize(table)
+        self.assertIsInstance(new_table.domain.class_vars[0], DiscreteVariable)
+        self.assertIs(new_table.domain.class_vars[1],
+                      new_table.domain.class_vars[1])
+
+    def test_discretize_metas(self):
+        table = data.Table('iris')
+        domain = table.domain
+        regr_domain = data.Domain(domain.attributes[:3],
+                                  [],
+                                  [domain.attributes[3], domain.class_var])
+        table = data.Table.from_table(regr_domain, table)
+
+        discretize = Discretize(remove_const=False)
+        new_table = discretize(table)
+        self.assertIs(new_table.domain.metas[0],
+                      new_table.domain.metas[0])
+        self.assertIs(new_table.domain.metas[1],
+                      new_table.domain.metas[1])
+
+        discretize = Discretize(remove_const=False, discretize_metas=True)
+        new_table = discretize(table)
+        self.assertIsInstance(new_table.domain.metas[0], DiscreteVariable)
+        self.assertIs(new_table.domain.metas[1],
+                      new_table.domain.metas[1])
+
 
 # noinspection PyPep8Naming
 class TestDiscretizeTable(TestCase):
