@@ -815,7 +815,7 @@ class OWDataTable(widget.OWWidget):
 
             if len(colsel) < len(domain) + len(domain.metas):
                 # only a subset of the columns is selected
-                allvars = domain.variables + domain.metas
+                allvars = domain.class_vars + domain.metas + domain.attributes
                 columns = [(c, model.headerData(c, Qt.Horizontal,
                                                 TableModel.DomainRole))
                            for c in colsel]
