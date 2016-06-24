@@ -1,12 +1,12 @@
 from itertools import chain
-from math import sqrt, floor, ceil
+from bisect import bisect_left
 
 import numpy as np
 from scipy import stats
 
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush, QTableView,
-                         QStandardItemModel,
+                         QStandardItemModel, QStandardItem,
                          QDialog, QApplication, QSizePolicy, QGraphicsLineItem)
 
 from Orange.data import Table, filter
@@ -19,7 +19,7 @@ from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString as to_html
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (
-    CanvasText, CanvasRectangle, ViewWithPress, get_conditional_distribution)
+    CanvasText, CanvasRectangle, ViewWithPress)
 from Orange.widgets.widget import OWWidget, Default, AttributeList
 
 
@@ -65,10 +65,17 @@ class OWSieveDiagram(OWWidget):
             self.attr_box, self, value="attrY", contentsLength=12,
             callback=self.change_attr, sendSelectedValue=True, valueType=str)
         self.attrYCombo.setModel(model)
+        self.vizrank = self.VizRank(self)
+        self.vizrank_button = gui.button(
+            self.attr_box, self, "Score Combinations",
+            callback=self.vizrank.reshow,
+            tooltip="Find projections with good class separation",
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
+        self.vizrank_button.setEnabled(False)
 
         self.canvas = QGraphicsScene()
         self.canvasView = ViewWithPress(self.canvas, self.mainArea,
-                                         handler=self.reset_selection)
+                                        handler=self.reset_selection)
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -108,8 +115,15 @@ class OWSieveDiagram(OWWidget):
         self.openContext(self.data)
         self.resolve_shown_attributes()
         self.update_selection()
+        self.vizrank._initialize()
+        self.vizrank_button.setEnabled(
+            self.data is not None and
+            len(self.data) > 1 and
+            len(self.data.domain.attributes) > 1)
 
-    def change_attr(self):
+    def change_attr(self, attributes=None):
+        if attributes is not None:
+            self.attrX, self.attrY = attributes
         self.selection = set()
         self.updateGraph()
         self.update_selection()
@@ -192,14 +206,10 @@ class OWSieveDiagram(OWWidget):
 
     class ChiSqStats:
         def __init__(self, data, attr1, attr2):
-            data = data[:, [attr1, attr2]]
             self.observed = get_contingency(data, attr1, attr2)
             self.n = np.sum(self.observed)
             self.probs_x = self.observed.sum(axis=0) / self.n
             self.probs_y = self.observed.sum(axis=1) / self.n
-            print(self.observed)
-            print(self.probs_x)
-            print(self.probs_y)
             self.expected = np.outer(self.probs_y, self.probs_x) * self.n
             self.residuals = \
                 (self.observed - self.expected) / np.sqrt(self.expected)
@@ -355,12 +365,114 @@ class OWSieveDiagram(OWWidget):
     def send_report(self):
         self.report_plot()
 
+    class VizRank(OWWidget):
+        name = "Rank projections (Sieve)"
+        want_control_area = False
+
+        def __init__(self, parent_widget):
+            super().__init__()
+            self.parent_widget = parent_widget
+            self.running = False
+            self.progress = None
+            self.i = self.j = 0
+
+            self.projectionTable = QTableView()
+            self.mainArea.layout().addWidget(self.projectionTable)
+            self.projectionTable.setSelectionBehavior(QTableView.SelectRows)
+            self.projectionTable.setSelectionMode(QTableView.SingleSelection)
+            self.projectionTable.setSortingEnabled(True)
+            self.projectionTableModel = QStandardItemModel(self)
+            self.projectionTable.setModel(self.projectionTableModel)
+            self.projectionTable.selectionModel().selectionChanged.connect(
+                self.on_selection_changed)
+            self.projectionTable.horizontalHeader().hide()
+
+            self.button = gui.button(self.mainArea, self, "Start evaluation",
+                                     callback=self.toggle, default=True)
+            self.resize(320, 512)
+            self._initialize()
+
+        def _initialize(self):
+            self.running = False
+            self.projectionTableModel.clear()
+            self.projectionTable.setColumnWidth(0, 120)
+            self.projectionTable.setColumnWidth(1, 120)
+            self.button.setText("Start evaluation")
+            self.button.setEnabled(False)
+            self.pause = False
+            self.scores = []
+            self.i = self.j = 0
+            if self.progress:
+                self.progress.finish()
+            self.progress = None
+
+            self.information(0)
+            if self.parent_widget.data:
+                if not self.parent_widget.data.domain.class_var:
+                    self.information(
+                        0, "Data with a class variable is required.")
+                    return
+                if len(self.parent_widget.data.domain.attributes) < 2:
+                    self.information(
+                        0, 'At least 2 features are needed.')
+                    return
+                if len(self.parent_widget.data) < 2:
+                    self.information(
+                        0, 'At least 2 instances are needed.')
+                    return
+                self.button.setEnabled(True)
+
+        def on_selection_changed(self, selected, deselected):
+            """Called when the ranks view selection changes."""
+            a1 = selected.indexes()[0].data()
+            a2 = selected.indexes()[1].data()
+            self.parent_widget.change_attr(attributes=(a1, a2))
+
+        def toggle(self):
+            self.running ^= 1
+            if self.running:
+                self.button.setText("Pause")
+                self.run()
+            else:
+                self.button.setText("Continue")
+                self.button.setEnabled(False)
+
+        def stop(self, i, j):
+            self.i, self.j = i, j
+            if not self.projectionTable.selectedIndexes():
+                self.projectionTable.selectRow(0)
+            self.button.setEnabled(True)
+
+        def run(self):
+            widget = self.parent_widget
+            attrs = widget.attrs
+            if not self.progress:
+                self.progress = gui.ProgressBar(self, len(attrs))
+            for i in range(self.i, len(attrs)):
+                for j in range(self.j, i):
+                    if not self.running:
+                        self.stop(i, j)
+                        return
+                    score = widget.ChiSqStats(widget.discrete_data, i, j).p
+                    pos = bisect_left(self.scores, score)
+                    self.projectionTableModel.insertRow(
+                        len(self.scores) - pos,
+                        [QStandardItem(widget.attrs[i].name),
+                         QStandardItem(widget.attrs[j].name)])
+                    self.scores.insert(pos, score)
+                self.progress.advance()
+            self.progress.finish()
+            if not self.projectionTable.selectedIndexes():
+                self.projectionTable.selectRow(0)
+            self.button.setText("Finished")
+            self.button.setEnabled(False)
+
 
 # test widget appearance
 if __name__ == "__main__":
     import sys
-    a=QApplication(sys.argv)
-    ow=OWSieveDiagram()
+    a = QApplication(sys.argv)
+    ow = OWSieveDiagram()
     ow.show()
     data = Table(r"zoo.tab")
     ow.set_data(data)
