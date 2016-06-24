@@ -16,6 +16,7 @@ from xml.sax.saxutils import escape
 from distutils import version
 from email.parser import HeaderParser
 import urllib.request
+import xmlrpc.client
 
 import pkg_resources
 
@@ -630,14 +631,26 @@ class AddonManagerDialog(QDialog):
         self.accept()
 
 
+class SafeUrllibTransport(xmlrpc.client.Transport):
+    """Urllib for HTTPS connections that automatically handles proxies."""
+
+    def single_request(self, host, handler, request_body, verbose=False):
+        req = urllib.request.Request('https://%s%s' % (host, handler), request_body)
+        req.add_header('User-agent', self.user_agent)
+        req.add_header('Content-Type', 'text/xml')
+        self.verbose = verbose
+        opener = urllib.request.build_opener()
+        return self.parse_response(opener.open(req))
+
+
 def list_pypi_addons():
     """
     List add-ons available on pypi.
     """
     from ..config import ADDON_PYPI_SEARCH_SPEC
-    import xmlrpc.client
+
     pypi = xmlrpc.client.ServerProxy(
-        "https://pypi.python.org/pypi",
+        "https://pypi.python.org/pypi/",
         transport=xmlrpc.client.SafeTransport()
     )
     addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
