@@ -7,6 +7,8 @@ from PyQt4.QtGui import (QGraphicsScene, QColor, QPen, QBrush,
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
@@ -41,7 +43,8 @@ class OWSieveDiagram(OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.data = None
+        self.data = self.discrete_data = None
+        self.areas = None
         self.input_features = None
         self.attrs = []
 
@@ -83,22 +86,22 @@ class OWSieveDiagram(OWWidget):
         if self.data is None:
             self.attrs[:] = []
         else:
+            if any(attr.is_continuous for attr in data.domain):
+                self.discrete_data = Discretize(method=EqualFreq(n=4))(data)
+            else:
+                self.discrete_data = self.data
             self.attrs[:] = [
-                var for var in chain(self.data.domain,
-                                     self.data.domain.metas)
-                if var.is_discrete
+                var for var in chain(
+                    self.discrete_data.domain,
+                    (var for var in self.data.domain.metas if var.is_discrete))
             ]
         if self.attrs:
             self.attrX = self.attrs[0].name
             self.attrY = self.attrs[len(self.attrs) > 1].name
         else:
             self.attrX = self.attrY = None
+            self.areas = self.selection = None
         self.openContext(self.data)
-
-        self.information(0, "")
-        if data and any(attr.is_continuous for attr in data.domain):
-            self.information(0, "Data contains continuous variables. "
-                                "Discretize the data to use them.")
         self.resolve_shown_attributes()
         self.update_selection()
 
@@ -176,7 +179,12 @@ class OWSieveDiagram(OWWidget):
             filters = filters[0]
         else:
             filters = filter.Values(filters, conjunction=False)
-        self.send("Selection", filters(self.data))
+        selection = filters(self.discrete_data)
+        if self.discrete_data is not self.data:
+            idset = set(selection.ids)
+            sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
+            selection = self.data[sel_idx]
+        self.send("Selection", selection)
 
     # -----------------------------------------------------------------------
     # Everything from here on is ancient and has been changed only according
@@ -188,7 +196,7 @@ class OWSieveDiagram(OWWidget):
         if self.data is None or len(self.data) == 0 or \
                 self.attrX is None or self.attrY is None:
             return
-        data = self.data[:, [self.attrX, self.attrY]]
+        data = self.discrete_data[:, [self.attrX, self.attrY]]
         valsX = []
         valsY = []
         contX = get_contingency(data, self.attrX, self.attrX)
