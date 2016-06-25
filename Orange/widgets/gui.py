@@ -14,7 +14,7 @@ import pkg_resources
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from PyQt4.QtGui import QCursor, QApplication, QTableView, QHeaderView, \
-    QStyledItemDelegate, QSizePolicy
+    QStyledItemDelegate, QSizePolicy, QColor
 
 # Some Orange widgets might expect this here
 from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
@@ -1074,8 +1074,8 @@ def button(widget, master, label, callback=None, width=None, height=None,
         activated on pressing Return.
     :type autoDefault: bool
     :param buttonType: the button type (default: `QPushButton`)
-    :type buttonType: PyQt4.QtGui.QAbstractButton
-    :rtype: PyQt4.QtGui.QAbstractButton
+    :type buttonType: PyQt4.QtGui.QPushButton
+    :rtype: PyQt4.QtGui.QPushButton
     """
     button = buttonType(widget)
     if label:
@@ -3094,6 +3094,15 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
         if not isinstance(bar_brush, (QtGui.QColor, QtGui.QBrush)):
             bar_brush = self.color
         return QtGui.QBrush(bar_brush)
+
+
+class HorizontalGridDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.setPen(QColor(212, 212, 212))
+        painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+        painter.restore()
+        QStyledItemDelegate.paint(self, painter, option, index)
 
 
 class VerticalLabel(QtGui.QLabel):

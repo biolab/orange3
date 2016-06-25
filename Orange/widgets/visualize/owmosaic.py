@@ -6,19 +6,22 @@ from operator import mul
 
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
-    QGraphicsRectItem, QGraphicsView, QColor, QGraphicsScene, QPainter, QPen,
-    QGraphicsTextItem, QBrush, QGraphicsLineItem)
+    QColor, QGraphicsScene, QPainter, QPen,
+    QGraphicsLineItem)
+
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
+from Orange.preprocess import Discretize
+from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.distribution import get_distribution
 from Orange.widgets import gui
 from Orange.widgets.settings import (
     Setting, DomainContextHandler, ContextSetting)
-from Orange.widgets.utils import getHtmlCompatibleString
+from Orange.widgets.utils import to_html
 from Orange.widgets.utils.scaling import get_variable_values_sorted
+from Orange.widgets.visualize.utils import (
+    CanvasText, CanvasRectangle, ViewWithPress)
 from Orange.widgets.widget import OWWidget, Default
-from Orange.preprocess import Discretize
-from Orange.preprocess.discretize import EqualFreq
 
 
 class OWMosaicDisplay(OWWidget):
@@ -306,7 +309,7 @@ class OWMosaicDisplay(OWWidget):
                 start = i * edge + whole * float(sum(counts[:i]) / total)
                 end = i * edge + whole * float(sum(counts[:i + 1]) / total)
                 val = values[i]
-                htmlval = getHtmlCompatibleString(val)
+                htmlval = to_html(val)
                 if attr_vals != "":
                     newattrvals = attr_vals + "-" + val
                 else:
@@ -738,97 +741,6 @@ def get_conditional_distribution(data, attrs):
                 cond_dist['-'.join(vals)] = len(filtdata)
                 dist[vals[-1]] += len(filtdata)
     return cond_dist, dist
-
-
-class CanvasText(QGraphicsTextItem):
-    def __init__(self, canvas, text="", x=0, y=0,
-                 alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
-                 html_text=None, tooltip=None, show=1, vertical=False):
-        QGraphicsTextItem.__init__(self, text, None)
-
-        if font:
-            self.setFont(font)
-        if bold:
-            font = self.font()
-            font.setBold(bold)
-            self.setFont(font)
-        if html_text:
-            self.setHtml(html_text)
-
-        self.alignment = alignment
-        self.vertical = vertical
-        if vertical:
-            self.setRotation(-90)
-
-        self.setPos(x, y)
-        self.x, self.y = x, y
-        self.setZValue(z)
-        if tooltip:
-            self.setToolTip(tooltip)
-        if show:
-            self.show()
-        else:
-            self.hide()
-
-        if canvas is not None:
-            canvas.addItem(self)
-
-    def setPos(self, x, y):
-        self.x, self.y = x, y
-        rect = QGraphicsTextItem.boundingRect(self)
-        if self.vertical:
-            h, w = rect.height(), rect.width()
-            rect.setWidth(h)
-            rect.setHeight(-w)
-        if int(self.alignment & Qt.AlignRight):
-            x -= rect.width()
-        elif int(self.alignment & Qt.AlignHCenter):
-            x -= rect.width() / 2.
-        if int(self.alignment & Qt.AlignBottom):
-            y -= rect.height()
-        elif int(self.alignment & Qt.AlignVCenter):
-            y -= rect.height() / 2.
-        QGraphicsTextItem.setPos(self, x, y)
-
-
-class CanvasRectangle(QGraphicsRectItem):
-    def __init__(self, canvas, x=0, y=0, width=0, height=0,
-                 pen_color=QColor(128, 128, 128), brush_color=None, pen_width=1,
-                 z=0, pen_style=Qt.SolidLine, pen=None, tooltip=None, show=1,
-                 onclick=None):
-        super().__init__(x, y, width, height, None)
-        self.onclick = onclick
-        if brush_color:
-            self.setBrush(QBrush(brush_color))
-        if pen:
-            self.setPen(pen)
-        else:
-            self.setPen(QPen(QBrush(pen_color), pen_width, pen_style))
-        self.setZValue(z)
-        if tooltip:
-            self.setToolTip(tooltip)
-        if show:
-            self.show()
-        else:
-            self.hide()
-
-        if canvas is not None:
-            canvas.addItem(self)
-
-    def mousePressEvent(self, ev):
-        if self.onclick:
-            self.onclick(self, ev)
-
-
-class ViewWithPress(QGraphicsView):
-    def __init__(self, *args, **kwargs):
-        self.handler = kwargs.pop("handler")
-        super().__init__(*args)
-
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
-        if not ev.isAccepted():
-            self.handler()
 
 
 # test widget appearance

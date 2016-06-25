@@ -567,8 +567,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scaled_data is None or not len(self.scaled_data):
             self.valid_data = None
         else:
-            index_x = self.attribute_name_index[attr_x]
-            index_y = self.attribute_name_index[attr_y]
+            index_x = self.data_domain.index(attr_x)
+            index_y = self.data_domain.index(attr_y)
             self.valid_data = self.get_valid_list([index_x, index_y],
                                                   also_class_if_exists=False)
             if not np.any(self.valid_data):
@@ -676,7 +676,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         size_index = -1
         attr_size = self.attr_size
         if attr_size != "" and attr_size != "(Same size)":
-            size_index = self.attribute_name_index[attr_size]
+            size_index = self.data_domain.index(attr_size)
         return size_index
 
     def compute_sizes(self):
@@ -710,7 +710,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color_index = -1
         attr_color = self.attr_color
         if attr_color != "" and attr_color != "(Same color)":
-            color_index = self.attribute_name_index[attr_color]
+            color_index = self.data_domain.index(attr_color)
             color_var = self.data_domain[attr_color]
             colors = color_var.colors
             if color_var.is_discrete:
@@ -868,7 +868,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if attr_shape and attr_shape != "(Same shape)" and \
                 len(self.data_domain[attr_shape].values) <= \
                 len(self.CurveSymbols):
-            shape_index = self.attribute_name_index[attr_shape]
+            shape_index = self.data_domain.index(attr_shape)
         return shape_index
 
     def compute_symbols(self):

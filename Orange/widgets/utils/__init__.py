@@ -31,5 +31,9 @@ def getdeepattr(obj, attr, *arg, **kwarg):
             return kwarg["default"]
         raise
 
-def getHtmlCompatibleString(strVal):
-    return strVal.replace("<=", "&#8804;").replace(">=","&#8805;").replace("<", "&#60;").replace(">","&#62;").replace("=\\=", "&#8800;")
+
+def to_html(str):
+    return str.replace("<=", "&#8804;").replace(">=", "&#8805;").\
+        replace("<", "&#60;").replace(">", "&#62;").replace("=\\=", "&#8800;")
+
+getHtmlCompatibleString = to_html
