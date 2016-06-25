@@ -17,6 +17,7 @@ from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import getHtmlCompatibleString as to_html
+from Orange.widgets.data.owcolor import HorizontalGridDelegate
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.owmosaic import (
     CanvasText, CanvasRectangle, ViewWithPress)
@@ -249,7 +250,7 @@ class OWSieveDiagram(OWWidget):
             self.residuals = \
                 (self.observed - self.expected) / np.sqrt(self.expected)
             self.chisqs = self.residuals ** 2
-            self.chisq = np.sum(self.chisqs)
+            self.chisq = float(np.sum(self.chisqs))
             self.p = stats.distributions.chi2.sf(
                 self.chisq, (len(self.probs_x) - 1) * (len(self.probs_y) - 1))
 
@@ -265,6 +266,9 @@ class OWSieveDiagram(OWWidget):
 
         def width(txt):
             return text(txt, 0, 0, show=False).boundingRect().width()
+
+        def fmt(val):
+            return str(int(val)) if val % 1 == 0 else "{:.2f}".format(val)
 
         def show_pearson(rect, pearson, pen_width):
             """Color the given rectangle according to its corresponding
@@ -319,16 +323,12 @@ class OWSieveDiagram(OWWidget):
                     return "="
                 return " " if txt[0] in "<≥" else " in "
 
-            def _fmt(val):
-                return str(int(val)) if val % 1 == 0 \
-                    else "{:.2f}".format(val)
-
             return (
                 "<b>{attrX}{xeq}{xval_name}</b>: {obs_x}/{n} ({p_x:.0f} %)".
                 format(attrX=to_html(attr_x),
                        xeq=_oper(attr_x, xval_name),
                        xval_name=to_html(xval_name),
-                       obs_x=_fmt(chi.probs_x[x] * n),
+                       obs_x=fmt(chi.probs_x[x] * n),
                        n=int(n),
                        p_x=100 * chi.probs_x[x]) +
                 "<br/>" +
@@ -336,16 +336,16 @@ class OWSieveDiagram(OWWidget):
                 format(attrY=to_html(attr_y),
                        yeq=_oper(attr_y, yval_name),
                        yval_name=to_html(yval_name),
-                       obs_y=_fmt(chi.probs_y[y] * n),
+                       obs_y=fmt(chi.probs_y[y] * n),
                        n=int(n),
                        p_y=100 * chi.probs_y[y]) +
                 "<hr/>" +
                 """<b>combination of values: </b><br/>
                    &nbsp;&nbsp;&nbsp;expected {exp} ({p_exp:.0f} %)<br/>
                    &nbsp;&nbsp;&nbsp;observed {obs} ({p_obs:.0f} %)""".
-                format(exp=_fmt(chi.expected[y, x]),
+                format(exp=fmt(chi.expected[y, x]),
                        p_exp=100 * chi.expected[y, x] / n,
-                       obs=_fmt(chi.observed[y, x]),
+                       obs=fmt(chi.observed[y, x]),
                        p_obs=100 * chi.observed[y, x] / n))
 
         for item in self.canvas.items():
@@ -404,11 +404,15 @@ class OWSieveDiagram(OWWidget):
             max_xlabel_h = max(int(xl.boundingRect().height()), max_xlabel_h)
             curr_x += width
 
-        text(attr_y, 0, y_off + square_size / 2, Qt.AlignLeft | Qt.AlignVCenter,
-             bold=True, vertical=True)
-        text(attr_x, x_off + square_size / 2,
-             y_off + square_size + max_xlabel_h, Qt.AlignHCenter | Qt.AlignTop,
-             bold=True)
+        bottom = y_off + square_size + max_xlabel_h
+        text(attr_y, 0, y_off + square_size / 2,
+             Qt.AlignLeft | Qt.AlignVCenter, bold=True, vertical=True)
+        text(attr_x, x_off + square_size / 2, bottom,
+             Qt.AlignHCenter | Qt.AlignTop, bold=True)
+        xl = text("χ²={:.2f}, p={:.3f}".format(chi.chisq, chi.p),
+                  0, bottom)
+        # Assume similar height for both lines
+        text("N = " + fmt(chi.n), 0, bottom -xl.boundingRect().height())
 
     def get_widget_name_extension(self):
         if self.data is not None:
@@ -432,16 +436,18 @@ class OWSieveDiagram(OWWidget):
             self.pause = False
             self.scores = []
 
-            self.projectionTable = QTableView()
-            self.mainArea.layout().addWidget(self.projectionTable)
-            self.projectionTable.setSelectionBehavior(QTableView.SelectRows)
-            self.projectionTable.setSelectionMode(QTableView.SingleSelection)
-            self.projectionTable.setSortingEnabled(True)
-            self.projectionTableModel = QStandardItemModel(self)
-            self.projectionTable.setModel(self.projectionTableModel)
-            self.projectionTable.selectionModel().selectionChanged.connect(
+            self.rank_model = QStandardItemModel(self)
+            self.rank_table = view = QTableView(
+                selectionBehavior=QTableView.SelectRows,
+                selectionMode=QTableView.SingleSelection,
+                showGrid=False)
+            view.setItemDelegate(HorizontalGridDelegate())
+            view.setModel(self.rank_model)
+            view.selectionModel().selectionChanged.connect(
                 self.on_selection_changed)
-            self.projectionTable.horizontalHeader().hide()
+            view.horizontalHeader().setStretchLastSection(True)
+            view.horizontalHeader().hide()
+            self.mainArea.layout().addWidget(view)
 
             self.button = gui.button(self.mainArea, self, "Start evaluation",
                                      callback=self.toggle, default=True)
@@ -455,9 +461,9 @@ class OWSieveDiagram(OWWidget):
             This needs to be fixes ... some day. VizRank dialogues need to be
             unified - pulled out from individual classes."""
             self.running = False
-            self.projectionTableModel.clear()
-            self.projectionTable.setColumnWidth(0, 120)
-            self.projectionTable.setColumnWidth(1, 120)
+            self.rank_model.clear()
+            self.rank_table.setColumnWidth(0, 120)
+            self.rank_table.setColumnWidth(1, 120)
             self.button.setText("Start evaluation")
             self.button.setEnabled(False)
             self.pause = False
@@ -502,8 +508,8 @@ class OWSieveDiagram(OWWidget):
         def stop(self, i, j):
             """Stop (pause) the computation"""
             self.i, self.j = i, j
-            if not self.projectionTable.selectedIndexes():
-                self.projectionTable.selectRow(0)
+            if not self.rank_table.selectedIndexes():
+                self.rank_table.selectRow(0)
             self.button.setEnabled(True)
 
         def run(self):
@@ -517,17 +523,17 @@ class OWSieveDiagram(OWWidget):
                     if not self.running:
                         self.stop(i, j)
                         return
-                    score = -widget.ChiSqStats(widget.discrete_data, i, j).p
+                    score = widget.ChiSqStats(widget.discrete_data, i, j).p
                     pos = bisect_left(self.scores, score)
-                    self.projectionTableModel.insertRow(
-                        len(self.scores) - pos,
+                    self.rank_model.insertRow(
+                        pos,
                         [QStandardItem(widget.attrs[i].name),
                          QStandardItem(widget.attrs[j].name)])
                     self.scores.insert(pos, score)
                 self.progress.advance()
             self.progress.finish()
-            if not self.projectionTable.selectedIndexes():
-                self.projectionTable.selectRow(0)
+            if not self.rank_table.selectedIndexes():
+                self.rank_table.selectRow(0)
             self.button.setText("Finished")
             self.button.setEnabled(False)
 
