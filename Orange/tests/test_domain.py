@@ -125,49 +125,6 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(d.class_vars, (race, ))
         self.assertEqual(d.metas, metas)
 
-    def test_from_numpy_names(self):
-        for n_cols, name in [(5, "Feature {}"),
-                             (99, "Feature {:02}"),
-                             (100, "Feature {:03}")]:
-            d = Domain.from_numpy(np.zeros((1, n_cols)))
-            self.assertTrue(d.anonymous)
-            self.assertEqual([var.name for var in d.attributes],
-                             [name.format(i) for i in range(1, n_cols+1)])
-
-        d = Domain.from_numpy(np.zeros((1, 1)))
-        self.assertTrue(d.anonymous)
-        self.assertEqual(d.attributes[0].name, "Feature")
-
-        d = Domain.from_numpy(np.zeros((1, 3)), np.zeros((1, 1)),
-                              np.zeros((1, 100)))
-        self.assertTrue(d.anonymous)
-        self.assertEqual([var.name for var in d.attributes],
-                         ["Feature {}".format(i) for i in range(1, 4)])
-        self.assertEqual(d.class_var.name, "Target")
-        self.assertEqual([var.name for var in d.metas],
-                         ["Meta {:03}".format(i) for i in range(1, 101)])
-
-    def test_from_numpy_dimensions(self):
-        for dimension in [[5], [5, 1]]:
-            d = Domain.from_numpy(np.zeros((1, 1)), np.zeros(dimension))
-            self.assertTrue(d.anonymous)
-            self.assertEqual(len(d.class_vars), 1)
-
-        self.assertRaises(ValueError, Domain.from_numpy, np.zeros(2))
-        self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2, 2)))
-        self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2)), np.zeros((2, 2, 2)))
-
-    def test_from_numpy_values(self):
-        for aran_min, aran_max, vartype in [(1, 3, ContinuousVariable),
-                                            (0, 2, DiscreteVariable),
-                                            (18, 23, ContinuousVariable)]:
-            n_rows, n_cols, = aran_max - aran_min, 1
-            d = Domain.from_numpy(np.zeros((1, 1)), np.arange(aran_min, aran_max).reshape(n_rows, n_cols))
-            self.assertTrue(d.anonymous)
-            self.assertIsInstance(d.class_var, vartype)
-            if isinstance(vartype, DiscreteVariable):
-                self.assertEqual(d.class_var.values, ["v{}".format(i) for i in range(1, 3)])
-
     def test_wrong_vartypes(self):
         attributes = (age, gender, income)
         for args in ((attributes, ssn),

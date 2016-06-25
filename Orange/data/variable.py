@@ -271,6 +271,10 @@ class Variable(str, metaclass=VariableMeta):
     """
     Unknown = ValueUnknown
 
+    def __new__(cls, name="", *args, **kwargs):
+        # compatibility with str
+        return super().__new__(cls, name)
+
     def __init__(self, name="", compute_value=None):
         """
         Construct a variable descriptor.
@@ -306,7 +310,7 @@ class Variable(str, metaclass=VariableMeta):
         If comparing with a string, compare names. Otherwise,
         two variables are equivalent if the originate from the same master.
         """
-        if isinstance(other, str):
+        if isinstance(other, str) and not isinstance(other, Variable):
             return self.name == other
         else:
             return hasattr(other, "master") and self.master is other.master

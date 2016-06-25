@@ -30,26 +30,9 @@ def get_sample_datasets_dir():
 dataset_dirs = ['', get_sample_datasets_dir()]
 
 
-class Role:
-    """
-    An enum of variable roles, provided for static convenience and a parser.
-    """
-    # enum values
-    x, y, meta = "x", "y", "meta"
-
-    # parsing map, also aliases
-    _mappings = {"data": x, "target": y, x: x, y: y, meta: meta}
-
-    @staticmethod
-    def from_string(role_string):
-        role_string = role_string.strip("s ")  # simple plurality, whitespace
-        return Role._mappings.get(role_string)
-
-
 # noinspection PyPep8Naming
 class Table(pd.DataFrame):
-    _WEIGHTS_COLUMN = ContinuousVariable("__weights__")
-    _WEIGHTS_COLUMN.is_weight = True
+    _WEIGHTS_COLUMN = "__weights__"
 
     # a counter for indexing rows, important for deterministically selecting rows
     # and keeping pandas indices sane
@@ -60,11 +43,9 @@ class Table(pd.DataFrame):
 
     # custom properties, preserved through pandas manipulations
     _metadata = ['name',
+                 'domain',
                  'attributes',
-                 '__file__',
-                 '_columns_X',
-                 '_columns_Y',
-                 '_columns_meta']
+                 '__file__']
 
     @staticmethod
     def pandas_constructor_proxy(new_data, *args, **kwargs):
@@ -97,38 +78,25 @@ class Table(pd.DataFrame):
     def _constructor_expanddim(self):
         return TablePanel
 
-    @property
-    def domain(self):
-        # TODO: probably return a Domain object constructed from columns
-        return self.columns
-
-    def filter_roles(self, roles):
-        """
-        Return a new Table which includes columns with specified roles.
-        Columns are in the same order as in the current table.
-        """
-        if isinstance(roles, str):
-            roles = [roles]
-        roles = [Role.from_string(r) for r in roles]
-        cols = []
-        cols += [c for c in self.columns if c in self._columns_X] if Role.x in roles else []
-        cols += [c for c in self.columns if c in self._columns_Y] if Role.y in roles else []
-        cols += [c for c in self.columns if c in self._columns_meta] if Role.meta in roles else []
-        return self[cols]
-
     def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
         """
-        Exports a numpy matrix. The order is always X, Y, meta.
-        The columns are in the same order as in Table.columns.
+        Exports a numpy matrix. The order is always X, Y, meta. Always 2D.
+        The columns are in the same order as in Table.domain._.
         If writable == False (default), the numpy writable flag is set to false.
             This means write operations on this array will loudly fail. 
         """
-        # TODO: only return numeric values here, need to transform
-        roles = []
-        roles += [Role.x] if X else []
-        roles += [Role.y] if Y else []
-        roles += [Role.meta] if meta else []
-        res = self.filter_roles(roles).values
+        cols = []
+        cols += self.domain.attributes if X else []
+        cols += self.domain.class_vars if Y else []
+        cols += self.domain.metas if meta else []
+
+        # preallocate result, we fill it in-place
+        # we need a more general dtype for metas (strings),
+        # otherwise assignment fails later
+        res = np.zeros((len(self), len(cols)), dtype=object if meta else None)
+        # effectively a double for loop, see if this is a bottleneck later
+        for i, col in enumerate(cols):
+            res[:, i] = self[col].apply(col.to_val).values
         res.setflags(write=writable)
         return res
 
@@ -136,7 +104,7 @@ class Table(pd.DataFrame):
     def X(self):
         """
         Return a read-only numpy matrix of X.
-        The columns are in the same order as the X columns in Table.columns.
+        The columns are in the same order as the columns in Table.domain.attributes.
         """
         return self._to_numpy(X=True)
 
@@ -144,15 +112,17 @@ class Table(pd.DataFrame):
     def Y(self):
         """
         Return a read-only numpy matrix of Y.
-        The columns are in the same order as the Y columns in Table.columns.
+        If there is only one column, a one-dimensional array is returned. Otherwise 2D.
+        The columns are in the same order as the columns in Table.domain.class_vars.
         """
-        return self._to_numpy(Y=True)
+        res = self._to_numpy(Y=True)
+        return res[:, 0] if res.shape[1] == 1 else res
 
     @property
     def metas(self):
         """
         Return a read-only numpy matrix of metas.
-        The columns are in the same order as the meta columns in Table.columns.
+        The columns are in the same order as the columns in Table.domain.metas.
         """
         return self._to_numpy(meta=True)
 
@@ -166,28 +136,6 @@ class Table(pd.DataFrame):
     def W(self):
         return self.weights
 
-    def set_role(self, column_names, column_roles):
-        """
-        Sets the role a column (or multiple columns) takes in this table.
-        """
-        if isinstance(column_names, str):
-            column_names = [column_names]
-        if isinstance(column_roles, str):
-            column_roles = [column_roles]
-        for n, rstr in zip(column_names, column_roles):
-            r = Role.from_string(rstr)
-            self._columns_X.discard(n)
-            self._columns_Y.discard(n)
-            self._columns_meta.discard(n)
-            if r == Role.x:
-                self._columns_X.add(n)
-            elif r == Role.y:
-                self._columns_Y.add(n)
-            elif r == Role.meta:
-                self._columns_meta.add(n)
-            else:
-                raise ValueError("{} is not a valid role name".format(rstr))
-
     def set_weights(self, weight):
         """
         Set the weights for the instances in this table.
@@ -196,6 +144,7 @@ class Table(pd.DataFrame):
             but only if those values are all numbers and are not NA/NaN.
         If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
         """
+        # TODO: handle NAs
         if isinstance(weight, Number):
             self[Table._WEIGHTS_COLUMN] = weight
         elif isinstance(weight, str):
@@ -221,7 +170,7 @@ class Table(pd.DataFrame):
         """
         # if we called the constructor without arguments or
         # if we only called this with pandas DataFrame kwargs (not args),
-        # create an empty Table, the kwargs will be passed through to init
+        # create an empty Table, the kwargs will be passed through to init (for pandas)
         if not args and (not kwargs
                          or not set(kwargs.keys()).difference(["data", "index", "columns", "dtype", "copy"])):
             return super().__new__(cls)
@@ -253,6 +202,16 @@ class Table(pd.DataFrame):
 
     def __init__(self, *args, **kwargs):
         # see the comment in __new__ for the rationale here
+        # also, another tidbit is that pandas has some internals that need to be set up
+        # and expects its arguments to be set appropriately
+        # because we override the constructor arguments in a completely incompatible way,
+        # we need to pass ourselves as the data object if we have already set things up
+        # previously by e.g. creating an empty Table via the __new__ hack in from_X
+        # functions, then filling up with columns.
+        # to check for this, we check for domain existence because tables without domains
+        # can't really be used in Orange in any meaningful way
+        if hasattr(self, 'domain'):
+            kwargs['data'] = self
         super(Table, self).__init__(**kwargs)
 
         # all weights initialized to 1 (see the weight functions for details)
@@ -260,18 +219,30 @@ class Table(pd.DataFrame):
         self.attributes = kwargs.get("attributes", {})
         self.__file__ = kwargs.get("__file__")
 
-        # used for differentiating columns into x/y/meta, as a pandas property
-        self._columns_X = set()
-        self._columns_Y = set()
-        self._columns_meta = set()
+        # we need to filter the domain to only include the columns present in the table
+        # but we still need to allow constructing an empty table (with no domain)
+        # also, we only set the domain if it has changed (==number of variables),
+        # so in those cases, id(domain_before) == id(domain_after)
+        if hasattr(self, 'domain'):
+            new_domain = Domain(
+                [c for c in self.domain.attributes if c in self.columns],
+                [c for c in self.domain.class_vars if c in self.columns],
+                [c for c in self.domain.metas if c in self.columns]
+            )
+            if len(new_domain.variables) + len(new_domain.metas) != \
+               len(self.domain.variables) + len(self.domain.metas):
+                self.domain = new_domain
+        else:
+            self.domain = None
 
-        # must be after self._columns declarations
-        self[Table._WEIGHTS_COLUMN] = 1
+        # only set the weights if they aren't set already
+        if Table._WEIGHTS_COLUMN not in self.columns:
+            self[Table._WEIGHTS_COLUMN] = 1
 
     @classmethod
     def from_domain(cls, domain):
         """
-        Construct a new `Table` with the given number of rows for the given domain.
+        Construct a new `Table` for the given domain.
 
         :param domain: domain for the `Table`
         :type domain: Orange.data.Domain
@@ -279,9 +250,7 @@ class Table(pd.DataFrame):
         :rtype: Orange.data.Table
         """
         res = cls(columns=domain.attributes + domain.class_vars + domain.metas)
-        res.set_role(domain.attributes or [], Role.x)
-        res.set_role(domain.class_vars or [], Role.y)
-        res.set_role(domain.metas or [], Role.meta)
+        res.domain = domain
         return res
 
     @classmethod
@@ -316,31 +285,14 @@ class Table(pd.DataFrame):
 
             res = cls()
             conversion = target_domain.get_conversion(source_table.domain)
-            for conv, targ in zip(conversion.attributes, target_domain.attributes):
-                if isinstance(conv, Number):
-                    col = source_table[source_table.domain.attributes[conv]]
-                else:
-                    col = conv(source_table)  # compute value
-                res[targ] = col
-                res.set_role(targ, Role.x)
 
-            for conv, targ in zip(conversion.class_vars, target_domain.class_vars):
-                if isinstance(conv, Number):
-                    # index follows attribute index
-                    col = source_table[source_table.domain.class_vars[conv - len(conversion.attributes)]]
+            for conversion, target_column in zip(chain(conversion.variables, conversion.metas),
+                                                 chain(target_domain.variables, target_domain.metas)):
+                if isinstance(conversion, Number):
+                    res[target_column.name] = source_table[source_table.domain[conversion]]
                 else:
-                    col = conv(source_table)
-                res[targ] = col
-                res.set_role(targ, Role.y)
-
-            for conv, targ in zip(conversion.metas, target_domain.metas):
-                if isinstance(conv, Number):
-                    # index is negative, starts at -1
-                    col = source_table[source_table.domain.metas[-(conv + 1)]]
-                else:
-                    col = conv(source_table)
-                res[targ] = col
-                res.set_role(targ, Role.meta)
+                    res[target_column.name] = conversion(source_table)
+            res.domain = target_domain
 
             res.set_weights(source_table.weights)
             res.index = source_table.index  # keep previous index
@@ -369,7 +321,78 @@ class Table(pd.DataFrame):
         return source.iloc[row_indices].copy()
 
     @classmethod
-    def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
+    def _from_data_inferred(cls, X_or_data, Y=None, meta=None, infer_roles=True):
+        """
+        Create a Table and infer its domain.
+
+        X_or_data, Y and meta can be instances of Table, DataFrame,
+        np.ndarray or a list of rows.
+
+        If X_or_data is the sole argument and infer_roles == True,
+        we will try to infer the column role (x/y/meta) from the data.
+        If infer_roles = False or Y or meta are given, column roles will be
+        set to what its container argument represents.
+
+        This only does shallow inference on data types. Example:
+        if given a numpy matrix of dtype object (e.g. mixed numbers and strings),
+        pandas will interpret all columns as objects, and so will we.
+
+        Return a new Table with the inferred domain.
+        Where possible, column names are preserved form the input, otherwise they are named
+        "Feature <n>", "Class <n>", "Target <n>" or "Meta <n>".
+        The domain is marked as anonymous.
+        """
+        role_vars = {'x': [], 'y': [], 'meta': []}
+        res = cls()
+
+        # used for data inference, shape checks, consolidated access
+        X_df = pd.DataFrame(data=X_or_data)
+        Y_df = pd.DataFrame(data=Y)
+        meta_df = pd.DataFrame(data=meta)
+
+        def _compute_name(colname, r):
+            if isinstance(colname, Integral):
+                # choose a new name, we don't want numbers
+                if r == 'x':
+                    return "Feature {}".format(len(role_vars['x']) + 1)
+                elif r == 'y' and isinstance(var, ContinuousVariable):
+                    return "Target {}".format(len(role_vars['y']) + 1)
+                elif r == 'y' and isinstance(var, DiscreteVariable):
+                    return "Class {}".format(len(role_vars['y']) + 1)
+                else:
+                    return "Meta {}".format(len(role_vars['meta']) + 1)
+            else:
+                return colname
+
+        # override, because the user wishes to specify roles manually
+        if Y is not None or meta is not None:
+            infer_roles = False
+
+        # process every input segment with its intended role
+        for df, initial_role in zip((X_df, Y_df, meta_df), ('x', 'y', 'meta')):
+            # choose whether to force a role or allow inference
+            role = initial_role if not infer_roles else None
+            for column_name, column, uniq in ((c, df[c], df[c].unique()) for c in df.columns):
+                # if there are at most 3 different values of any kind, they are discrete
+                if len(uniq) <= 3:
+                    role = role or 'x'
+                    var = DiscreteVariable(_compute_name(column_name, role), values=sorted(uniq))
+                # all other all-number columns are continuous features
+                elif np.issubdtype(column.dtype, np.number):
+                    role = role or 'x'
+                    var = ContinuousVariable(_compute_name(column_name, role))
+                # all others (including those we can't determine) are string metas
+                else:
+                    role = role or 'meta'
+                    var = StringVariable(_compute_name(column_name, role))
+                res[var.name] = column
+                role_vars[role].append(var)
+        res.domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
+        res.domain.anonymous = True
+        return res
+
+    @classmethod
+    def from_numpy(cls, domain, X, Y=None, metas=None, weights=None):
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -384,44 +407,39 @@ class Table(pd.DataFrame):
         :type Y: np.array
         :param metas: array with meta attributes
         :type metas: np.array
-        :param W: array with weights
-        :type W: np.array
+        :param weights: array with weights
+        :type weights: np.array
         :return:
         """
-        if domain is None:
-            domain = Domain.from_numpy(X, Y, metas)
-
-        if Y is None:
-            if sp.issparse(X):
-                Y = np.empty((X.shape[0], 0), object)
+        def correct_shape(what):
+            if what is None or len(what.shape) == 2:
+                return what
             else:
-                Y = X[:, len(domain.attributes):]
-                X = X[:, :len(domain.attributes)]
-        if metas is None:
-            metas = np.empty((X.shape[0], 0), object)
+                return np.atleast_2d(what).T
 
-        if X.shape[1] != len(domain.attributes):
-            raise ValueError(
-                "Invalid number of variable columns ({} != {})".format(
-                    X.shape[1], len(domain.attributes))
-            )
-        if Y.shape[1] != len(domain.class_vars):
-            raise ValueError(
-                "Invalid number of class columns ({} != {})".format(
-                    Y.shape[1], len(domain.class_vars))
-            )
-        if metas.shape[1] != len(domain.metas):
-            raise ValueError(
-                "Invalid number of meta attribute columns ({} != {})".format(
-                    metas.shape[1], len(domain.metas))
-            )
-        if not X.shape[0] == Y.shape[0] == metas.shape[0]:
-            raise ValueError("Parts of data contain different numbers of rows.")
+        if domain is None:
+            res = cls._from_data_inferred(X, Y, metas)
+            if weights is not None:
+                res.set_weights(weights)
+            return res
 
-        res = cls(data=np.hstack([m for m in (X, Y, metas) if m is not None]),
-                  columns=domain.attributes + domain.class_vars + domain.metas)
-        if W is not None:
-            res.set_weights(W)
+        # ensure correct shapes (but not sizes) so we can iterate
+        X = correct_shape(X)
+        Y = correct_shape(Y)
+        metas = correct_shape(metas)
+
+        res = cls()
+        for role_array, variables in zip((X, Y, metas),
+                                         (domain.attributes, domain.class_vars, domain.metas)):
+            if role_array is None:
+                if variables:
+                    raise ValueError("Variable and column count mismatch. ")
+                continue
+            if role_array.shape[1] != len(variables):
+                raise ValueError("Variable and column count mismatch. ")
+            for column, variable in zip(role_array.T, variables):
+                res[variable.name] = column
+        res.domain = domain
         return res
 
     @classmethod
@@ -437,20 +455,30 @@ class Table(pd.DataFrame):
             if len(r) != row_width:
                 raise ValueError("Inconsistent number of columns.")
 
-        res = cls(data=rows, columns=domain.attributes + domain.class_vars + domain.metas)
+        res = cls(data=rows,
+                  columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
+        res.domain = domain
         if weights is not None:
             res.set_weights(weights)
         return res
 
     @classmethod
-    def _new_id(cls, num=1):
+    def from_dataframe(cls, df):
+        """
+        Convert a pandas.DataFrame object to a Table.
+        This infers column variable types and roles.
+        """
+        return cls._from_data_inferred(df)
+
+    @classmethod
+    def _new_id(cls, num=1, force_list=False):
         """
         Generate new globally unique numbers.
         Generate a single number or a list of them, if specified.
         """
         with cls._next_instance_lock:
             out = np.arange(cls._next_instance_id, cls._next_instance_id + num)
-            return out[0] if num == 1 else out
+            return out[0] if num == 1 and not force_list else out
 
     def save(self, filename):
         # TODO: change, will likely need to modify FileFormat.writers
@@ -509,58 +537,6 @@ class Table(pd.DataFrame):
             data = cls(data)
         return data
 
-    def __setitem__(self, key, value):
-        # we only override this for certain types:
-        #  - Variables
-        #  - plain strings (their Variable is constructed on the fly)
-        # if the column is already in the table, we aren't adding new columns
-        # otherwise we pass this along to the parent
-        if not (isinstance(key, Variable) or isinstance(key, str)) or key in self.columns:
-            return super(Table, self).__setitem__(key, value)
-
-        # assertion: the column is new from here on
-        # the if ordering is important here, since Variable extends str
-        force_meta = False
-        if isinstance(key, Variable):
-            # the variable already exists, don't argue
-            var = key
-        else:  # plain string
-            # we need to construct a new variable (in order of precedence)
-            #  - all numerics and all elements \in {0, 1}: discrete
-            #  - all numerics: continuous
-            #  - all strings and all distinct: string, meta
-            #  - any string: discrete
-            #  - otherwise: error, can't determine type
-
-            proc_val = value  # for easier type checking even when broadcasting
-            if not isinstance(proc_val, Sequence) or isinstance(proc_val, str):
-                proc_val = [value]
-            proc_val = np.array(proc_val)  # for type checking later
-
-            if np.issubdtype(proc_val.dtype, np.number) and set(proc_val) == {0, 1}:
-                var = DiscreteVariable(key)
-                var.add_value(0)
-                var.add_value(1)
-            elif np.issubdtype(proc_val.dtype, np.number):
-                var = ContinuousVariable(key)
-            elif np.issubdtype(proc_val.dtype, 'U') and len(set(proc_val)) == len(proc_val):
-                var = StringVariable(key)
-                force_meta = True
-            elif np.issubdtype(proc_val.dtype, 'U'):
-                var = DiscreteVariable(key)
-                for v in sorted(set(proc_val)):
-                    var.add_value(v)
-            else:
-                raise ValueError("Cannot automatically determine variable type. ")
-
-        super(Table, self).insert(len(self.columns), var, value)  # manually super to avoid deprecation warning
-        # default behaviour is to include this in X, except when meta is set
-        # we can't reasonably separate X and Y here
-        if force_meta:
-            self._columns_meta.add(var)
-        else:
-            self._columns_X.add(var)
-
     # TODO: update str and repr
     def __str__(self):
         # return "[" + ",\n ".join(str(ex) for ex in self)
@@ -578,30 +554,25 @@ class Table(pd.DataFrame):
         """Remove all rows from the table in-place."""
         self.drop(self.index, inplace=True)
 
-    def append(self, row):
+    def append(self, other, ignore_index=False, verify_integrity=False):
         """
-        Append a new row to the table.
-        row can either be a single value (broadcast),
-        a list-like of values or a TableSeries (a single row slice).
+        Append a new row to the table, returning a new Table.
+        row can be a list-like of a single row, TableSeries (a single row slice) or a Table.
         """
-        new_ix = Table._new_id()
-        self.loc[new_ix] = row
+        # handle all indexing (this needs to be different in Table) in concatenate
+        # the pandas contract is not in-place anyway.
+        if not isinstance(other, pd.DataFrame):
+            other = pd.DataFrame(data={col: val for col, val in zip(self.columns, other)})
+        other.index = Table._new_id(len(other), force_list=True)
+        return Table.concatenate([self, other], axis=0, reindex=False, rowstack=True)
 
-    @deprecated('Use t.append() for adding new rows. This inserts a new column. ')
+    @deprecated('Use Table.append() for adding new rows. This inserts a new column. ')
     def insert(self, *args, **kwargs):
         super(Table, self).insert(*args, **kwargs)
 
-    # TODO: deprecate this?
+    @deprecated("Table.append(...)")
     def extend(self, rows, weight=1):
-        """
-        Extend the table with the given rows.
-        rows can be either a list of rows or a descendant of DataFrame.
-        """
-        if not isinstance(rows, pd.DataFrame):
-            rows = Table(rows)
-        if Table._WEIGHTS_COLUMN not in rows:
-            rows[Table._WEIGHTS_COLUMN] = weight
-        return Table.concatenate([self, rows], axis=1, rowstack=True)
+        return self.append(rows)
 
     @staticmethod
     def concatenate(tables, axis=1, reindex=True, colstack=True, rowstack=False):
@@ -683,21 +654,26 @@ class Table(pd.DataFrame):
         Compute the table density:
          - for sparse tables, return the reported density.
          - for dense tables, return the ratio of null values (pandas interpretation of null).
-        :return:
         """
         if isinstance(self, pd.SparseDataFrame):
             return super(Table, self).density
         else:
             return 1 - self.isnull().sum().sum() / self.size
 
+    def is_sparse(self):
+        return isinstance(self, pd.SparseDataFrame)
+
+    def is_dense(self):
+        return not self.is_sparse()
+
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
         # manual access to columns because dumping to a numpy array (with self.X) is slower
-        return self.filter_roles(Role.x).isnull().any().any() or self.has_missing_class()
+        return self[self.domain.attributes].isnull().any().any() or self.has_missing_class()
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
-        return self.filter_roles(Role.y).isnull().any().any()
+        return self[self.domain.class_vars].isnull().any().any()
 
     @deprecated
     def checksum(self, include_metas=True):

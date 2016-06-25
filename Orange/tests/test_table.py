@@ -1503,9 +1503,7 @@ class CreateTableWithData(TableTests):
         table = data.Table(self.data, Y, self.meta_data)
 
         np.testing.assert_almost_equal(table.Y, Y)
-        self.assertIsInstance(table.domain.class_vars[0],
-                              data.DiscreteVariable)
-        self.assertEqual(table.domain.class_vars[0].values, ["v1", "v2"])
+        self.assertIsInstance(table.domain.class_vars[0], data.DiscreteVariable)
 
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
@@ -1527,7 +1525,7 @@ class CreateTableWithData(TableTests):
 
     def test_sets_weights_if_given(self):
         domain = self.mock_domain()
-        table = data.Table.from_numpy(domain, self.data, W=self.weight_data)
+        table = data.Table.from_numpy(domain, self.data, weights=self.weight_data)
 
         np.testing.assert_equal(table.W.shape, (len(self.data), ))
         np.testing.assert_almost_equal(table.W.flatten(), self.weight_data.flatten())

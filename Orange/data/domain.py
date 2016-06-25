@@ -4,8 +4,11 @@ from itertools import chain
 from numbers import Integral
 
 import weakref
+
+from util import deprecated
 from .variable import *
 import numpy as np
+from pandas import DataFrame
 
 
 class DomainConversion:
@@ -130,69 +133,6 @@ class Domain:
         self.anonymous = False
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
-
-    # noinspection PyPep8Naming
-    @classmethod
-    def from_numpy(cls, X, Y=None, metas=None):
-        """
-        Create a domain corresponding to the given numpy arrays. This method
-        is usually invoked from :meth:`Orange.data.Table.from_numpy`.
-
-        All attributes are assumed to be continuous and are named
-        "Feature <n>". Target variables are discrete if the only two values
-        are 0 and 1; otherwise they are continuous. Discrete
-        targets are named "Class <n>" and continuous are named "Target <n>".
-        Domain is marked as :attr:`anonymous`, so data from any other domain of
-        the same shape can be converted into this one and vice-versa.
-
-        :param `numpy.ndarray` X: 2-dimensional array with data
-        :param Y: 1- of 2- dimensional data for target
-        :type Y: `numpy.ndarray` or None
-        :param `numpy.ndarray` metas: meta attributes
-        :type metas: `numpy.ndarray` or None
-        :return: a new domain
-        :rtype: :class:`Domain`
-        """
-        def get_places(max_index):
-            return 0 if max_index == 1 else int(log(max_index, 10)) + 1
-
-        def get_name(base, index, places):
-            return base if not places \
-                else "{} {:0{}}".format(base, index + 1, places)
-
-        if X.ndim != 2:
-            raise ValueError('X must be a 2-dimensional array')
-        n_attrs = X.shape[1]
-        places = get_places(n_attrs)
-        attr_vars = [ContinuousVariable(name=get_name("Feature", a, places))
-                     for a in range(n_attrs)]
-        class_vars = []
-        if Y is not None:
-            if Y.ndim == 1:
-                Y = Y.reshape(len(Y), 1)
-            elif Y.ndim != 2:
-                raise ValueError('Y has invalid shape')
-            n_classes = Y.shape[1]
-            places = get_places(n_classes)
-            for i, values in enumerate(Y.T):
-                if set(values) == {0, 1}:
-                    name = get_name('Class', i, places)
-                    values = ['v1', 'v2']
-                    class_vars.append(DiscreteVariable(name, values))
-                else:
-                    name = get_name('Target', i + 1, places)
-                    class_vars.append(ContinuousVariable(name))
-        if metas is not None:
-            n_metas = metas.shape[1]
-            places = get_places(n_metas)
-            meta_vars = [StringVariable(get_name("Meta", m, places))
-                         for m in range(n_metas)]
-        else:
-            meta_vars = []
-
-        domain = cls(attr_vars, class_vars, meta_vars)
-        domain.anonymous = True
-        return domain
 
     @property
     def variables(self):
