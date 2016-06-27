@@ -289,7 +289,7 @@ class TestTimeVariable(VariableTest):
     TESTS = [
         # in str, UTC timestamp, out str (in UTC)
         ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.010000+0200'),
-        ('2015-10-12T14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.010000+0200'),
+        ('2015-10-12T14:13:11.81+0200', 1444651991.81, '2015-10-12 14:13:11.810000+0200'),
         ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
         ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
         ('20151012T141311+0200', 1444651991, '2015-10-12 14:13:11+0200'),
@@ -311,13 +311,15 @@ class TestTimeVariable(VariableTest):
         ('1970-01-01 00:00:00', 0, '1970-01-01 00:00:00'),
         ('1969-12-31 23:59:59', -1, '1969-12-31 23:59:59'),
         ('1900-01-01', -2208988800, '1900-01-01'),
+        ('nan', np.nan, '?'),
     ]
 
     def test_parse_repr(self):
         for datestr, timestamp, outstr in self.TESTS:
             var = TimeVariable('time')
             ts = var.parse(datestr)
-            self.assertEqual(ts, timestamp, msg=datestr)
+            if not np.isnan(ts):
+                self.assertEqual(ts, timestamp, msg=datestr)
             self.assertEqual(var.repr_val(ts), outstr, msg=datestr)
 
     def test_parse_utc(self):
