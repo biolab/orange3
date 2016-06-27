@@ -351,6 +351,16 @@ class OWImageViewer(widget.OWWidget):
         self.allAttrs = []
         self.stringAttrs = []
 
+        self.thumbnailWidget = None
+        self.sceneLayout = None
+        self.selectedIndices = []
+
+        #: List of _ImageItems
+        self.items = []
+
+        self._errcount = 0
+        self._successcount = 0
+
         self.info = gui.widgetLabel(
             gui.vBox(self.controlArea, "Info"),
             "Waiting for input.\n"
@@ -399,16 +409,6 @@ class OWImageViewer(widget.OWWidget):
             self.onSelectionRectPointChanged, Qt.QueuedConnection
         )
         self.resize(800, 600)
-
-        self.thumbnailWidget = None
-        self.sceneLayout = None
-        self.selectedIndices = []
-
-        #: List of _ImageItems
-        self.items = []
-
-        self._errcount = 0
-        self._successcount = 0
 
         self.loader = ImageLoader(self)
 
@@ -513,11 +513,7 @@ class OWImageViewer(widget.OWWidget):
             self.sceneLayout = layout
 
         if self.sceneLayout:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
-            self.sceneLayout.activate()
+            self._updateGeometryConstraints()
 
     def urlFromValue(self, value):
         variable = value.variable
@@ -567,15 +563,7 @@ class OWImageViewer(widget.OWWidget):
         for item in self.thumbnailItems():
             item.setThumbnailSize(size)
 
-        if self.thumbnailWidget:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
-
-        if self.sceneLayout:
-            self.sceneLayout.activate()
+        self._updateGeometryConstraints()
 
     def updateTitles(self):
         titleAttr = self.allAttrs[self.titleAttr]
@@ -635,6 +623,17 @@ class OWImageViewer(widget.OWWidget):
     def _updateSceneRect(self):
         self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
+    def _updateGeometryConstraints(self):
+        # Update the thumbnail grid widget's width constraint (derived from
+        # the viewport's width
+        if self.thumbnailWidget is not None:
+            width = (self.sceneView.width() -
+                     self.sceneView.verticalScrollBar().width())
+            width = width - 2
+            self.thumbnailWidget.reflow(width)
+            self.thumbnailWidget.setPreferredWidth(width)
+            self.thumbnailWidget.layout().activate()
+
     def onDeleteWidget(self):
         self._cancelAllFutures()
         self.clear()
@@ -642,18 +641,14 @@ class OWImageViewer(widget.OWWidget):
     def eventFilter(self, receiver, event):
         if receiver is self.sceneView and event.type() == QEvent.Resize \
                 and self.thumbnailWidget:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
+            self._updateGeometryConstraints()
 
         return super(OWImageViewer, self).eventFilter(receiver, event)
 
 
 class ImageLoader(QObject):
     #: A weakref to a QNetworkAccessManager used for image retrieval.
-    #: (we can only have only one QNetworkDiskCache opened on the same
+    #: (we can only have one QNetworkDiskCache opened on the same
     #: directory)
     _NETMANAGER_REF = None
 
