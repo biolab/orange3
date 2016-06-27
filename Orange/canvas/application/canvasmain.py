@@ -443,6 +443,14 @@ class CanvasMainWindow(QMainWindow):
                     shortcut=QKeySequence.Quit,
                     )
 
+        self.script_export = \
+            QAction(self.tr("Export as Script"), self,
+                    objectName="action-script-export",
+                    toolTip=self.tr("Export workflow as Python script."),
+                    triggered=self.export_script,
+                    #shortcut=QKeySequence.Export
+                    )
+
         self.welcome_action = \
             QAction(self.tr("Welcome"), self,
                     objectName="welcome-action",
@@ -617,6 +625,7 @@ class CanvasMainWindow(QMainWindow):
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
         file_menu.addSeparator()
+        file_menu.addAction(self.script_export)
         file_menu.addAction(self.show_properties_action)
         file_menu.addAction(self.quit_action)
 
@@ -1308,6 +1317,47 @@ class CanvasMainWindow(QMainWindow):
                 parent=self
             )
             return False
+
+    def export_script(self):
+        """
+        Exports a Python script that replicates
+        the actions of the current workflow
+
+        """
+        document = self.current_document()
+        curr_scheme = document.scheme()
+        title = curr_scheme.title or "untitled"
+
+        if document.path():
+            start_dir = document.path()
+        else:
+            if self.last_scheme_dir is not None:
+                start_dir = self.last_scheme_dir
+            else:
+                start_dir = QDesktopServices.storageLocation(
+                    QDesktopServices.DocumentsLocation
+                )
+
+            start_dir = os.path.join(str(start_dir), title + ".py")
+
+        filename = QFileDialog.getSaveFileName(
+            self, self.tr("Save Python Script"),
+            start_dir, self.tr("Python Script (*.py)")
+        )
+
+        if filename:
+            if not self.check_can_save(document, filename):
+                return QDialog.Rejected
+
+            self.last_scheme_dir = os.path.dirname(filename)
+
+            if self.export_script_to(curr_scheme, filename):
+                return QFileDialog.Accepted
+
+        return QFileDialog.Rejected
+
+    def export_script_to(self, curr_scheme, filename):
+        return True
 
     def get_started(self, *args):
         """Show getting started video
