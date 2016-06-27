@@ -906,6 +906,101 @@ def indent(element, level=0, indent="\t"):
     return indent_(element, level, True)
 
 
+def scheme_to_python(scheme, out_file):
+    """
+    Generate a Python script that replicates the actions of the workflow
+    and allows for manual editing of the scheme at a level lower than is
+    possible using the Orange GUI.
+
+    """
+    topo_sorted = scheme_toposort(scheme)
+    # Create python script
+    script = "Placeholder\n"
+    out_file.write(script)
+
+
+def scheme_toposort(scheme):
+    """
+    Generates a topographically sorted of nodes to be processed.  This
+    provides a linear method by which the entire scheme can be evaluated and
+    exported to a static Python script.  Disconnected nodes with no
+    connections are ignored.
+
+    """
+    adjs = []
+    for link in scheme.links:
+        adjs.append((link.source_node, link.sink_node,))
+    viable_nodes = []
+    for adj in adjs:
+        if adj[0] not in viable_nodes:
+            viable_nodes.append(adj[0])
+        if adj[1] not in viable_nodes:
+            viable_nodes.append(adj[1])
+
+    # Parent nodes are nodes with no inputs
+    def get_parent_nodes(links):
+        parents = []
+        for node in viable_nodes:
+            parent = True
+            for adj in adjs:
+                if adj[1] == node:
+                    parent = False
+                    break
+            if parent:
+                parents.append(node)
+        return parents
+
+    def get_links_from(parent_node):
+        matches = []
+        for adj in adjs:
+            if adj[0] == parent_node:
+                matches.append(adj)
+        return matches
+
+    def get_links_to(child_node):
+        matches = []
+        for adj in adjs:
+            if adj[1] == child_node:
+                matches.append(adj)
+        return matches
+
+    def iter_satisfied(satisfied_nodes, sorted_scheme=[]):
+        """
+        Iterates over a DAG one level at a time, adding all reqirements
+        in the order they are required.  The newly fulfilled nodes from
+        the previous level are used as the parent nodes for the next.
+
+        """
+        newly_satisfied = [] # partially satisfied nodes
+        while len(satisfied_nodes) > 0:
+            parent_node = satisfied_nodes.pop()
+            if parent_node not in sorted_scheme:
+                sorted_scheme.append(parent_node)
+            child_links = get_links_from(parent_node)
+            for child_link in child_links:
+                satisfied = True
+                req_links = get_links_to(child_link[1])
+                for req in req_links:
+                    if req[0] not in sorted_scheme:
+                        satisfied = False
+                        break
+                # If all parents are already calculated
+                if satisfied:
+                    newly_satisfied.append(child_link[1])
+                    if child_link[1] not in sorted_scheme:
+                        sorted_scheme.append(child_link[1])
+                else:
+                    pass # Not all parents are calculated yet
+        if len(newly_satisfied) > 0:
+            return iter_satisfied(newly_satisfied, sorted_scheme=sorted_scheme)
+        else:
+            return sorted_scheme
+
+    parent_nodes = get_parent_nodes(scheme.links)
+    ordered_scheme = iter_satisfied(parent_nodes)
+    return ordered_scheme
+
+
 def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
     """
     Serialize `obj` using `format` ('json' or 'literal') and return its

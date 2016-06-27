@@ -628,6 +628,19 @@ class Scheme(QObject):
         readwrite.scheme_to_ows_stream(self, stream, pretty,
                                        pickle_fallback=pickle_fallback)
 
+    def export_script(self, stream):
+        """
+        Save the scheme as an executable Python file.  The DAG
+        is converted into an ordered linear execute path that is
+        evaluated in order and output to file.
+
+        """
+        if isinstance(stream, str):
+            out_file = open(stream, "w")
+
+        self.sync_node_properties()
+        readwrite.scheme_to_python(self, out_file)
+
     def load_from(self, stream):
         """
         Load the scheme from xml formated stream.

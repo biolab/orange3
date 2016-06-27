@@ -1357,6 +1357,7 @@ class CanvasMainWindow(QMainWindow):
         return QFileDialog.Rejected
 
     def export_script_to(self, curr_scheme, filename):
+        curr_scheme.export_script(filename)
         return True
 
     def get_started(self, *args):
