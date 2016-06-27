@@ -44,6 +44,7 @@ class GraphicsPixmapWidget(QGraphicsWidget):
         self.setCacheMode(QGraphicsItem.ItemCoordinateCache)
         self._pixmap = pixmap
         self._pixmapSize = QSizeF()
+        self._keepAspect = True
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def setPixmap(self, pixmap):
@@ -54,30 +55,29 @@ class GraphicsPixmapWidget(QGraphicsWidget):
     def pixmap(self):
         return QPixmap(self._pixmap)
 
-    def setPixmapSize(self, size):
-        if self._pixmapSize != size:
-            self._pixmapSize = QSizeF(size)
-            self.updateGeometry()
-
-    def pixmapSize(self):
-        if self._pixmapSize.isValid():
-            return QSizeF(self._pixmapSize)
-        else:
-            return QSizeF(self._pixmap.size())
-
     def sizeHint(self, which, constraint=QSizeF()):
         if which == Qt.PreferredSize:
-            return self.pixmapSize()
+            return QSizeF(self._pixmap.size())
         else:
             return QGraphicsWidget.sizeHint(self, which, constraint)
+
+    def setKeepAspectRatio(self, keep):
+        if self._keepAspect != keep:
+            self._keepAspect = bool(keep)
+            self.update()
+
+    def keepAspectRatio(self):
+        return self._keepAspect
 
     def paint(self, painter, option, widget=0):
         if self._pixmap.isNull():
             return
 
         rect = self.contentsRect()
-
-        pixsize = self.pixmapSize()
+        pixsize = QSizeF(self._pixmap.size())
+        aspectmode = (Qt.KeepAspectRatio if self._keepAspect
+                      else Qt.IgnoreAspectRatio)
+        pixsize.scale(rect.size(), aspectmode)
         pixrect = QRectF(QPointF(0, 0), pixsize)
         pixrect.moveCenter(rect.center())
 
@@ -133,13 +133,13 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
 
         layout.addItem(self.pixmapWidget)
         layout.addItem(self.labelWidget)
-
+        layout.addStretch()
         layout.setAlignment(self.pixmapWidget, Qt.AlignCenter)
         layout.setAlignment(self.labelWidget, Qt.AlignHCenter | Qt.AlignBottom)
+
         self.setLayout(layout)
 
-        self.setSizePolicy(QSizePolicy.MinimumExpanding,
-                           QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setTitle(title)
@@ -179,18 +179,14 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
             painter.save()
             painter.setPen(QPen(QColor(125, 162, 206, 192)))
             painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
-            painter.drawRoundedRect(QRectF(contents.topLeft(),
-                self.geometry().size()), 3, 3)
+            painter.drawRoundedRect(
+                QRectF(contents.topLeft(), self.geometry().size()), 3, 3)
             painter.restore()
 
     def _updatePixmapSize(self):
-        pixmap = self.pixmap()
-        if not pixmap.isNull() and self._size.isValid():
-            pixsize = QSizeF(self.pixmap().size())
-            pixsize.scale(self._size, Qt.KeepAspectRatio)
-        else:
-            pixsize = QSizeF()
-        self.pixmapWidget.setPixmapSize(pixsize)
+        pixsize = QSizeF(self._size)
+        self.pixmapWidget.setMinimumSize(pixsize)
+        self.pixmapWidget.setMaximumSize(pixsize)
 
 
 class ThumbnailWidget(QGraphicsWidget):
@@ -206,6 +202,16 @@ class ThumbnailWidget(QGraphicsWidget):
     def setGeometry(self, geom):
         super(ThumbnailWidget, self).setGeometry(geom)
         self.reflow(self.size().width())
+
+    def event(self, event):
+        if event.type() == QEvent.LayoutRequest:
+            sh = self.effectiveSizeHint(Qt.PreferredSize)
+            self.resize(sh)
+            self.layout().activate()
+            event.accept()
+            return True
+        else:
+            return super().event(event)
 
     def reflow(self, width):
         if not self.layout():
@@ -231,6 +237,8 @@ class ThumbnailWidget(QGraphicsWidget):
 
         for i, item in enumerate(items):
             layout.addItem(item, i // ncol, i % ncol)
+
+        layout.invalidate()
 
     def items(self):
         layout = self.layout()
