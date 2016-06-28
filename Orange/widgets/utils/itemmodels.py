@@ -20,7 +20,7 @@ from PyQt4.QtGui import (
 
 import numpy
 
-from Orange.data import Variable, Storage
+from Orange.data import Variable, Table
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -792,7 +792,7 @@ class TableModel(QAbstractTableModel):
             return str(instance[var])
 
         def make_basket_formater(vars, density, role):
-            formater = (format_sparse if density == Storage.SPARSE
+            formater = (format_sparse if density == Table.SPARSE
                         else format_sparse_bool)
             if role == TableModel.Attribute:
                 getter = operator.attrgetter("sparse_x")
@@ -816,7 +816,7 @@ class TableModel(QAbstractTableModel):
 
         columns = []
 
-        if self.Y_density != Storage.DENSE:
+        if self.Y_density != Table.DENSE:
             coldesc = make_basket(domain.class_vars, self.Y_density,
                                   TableModel.ClassVar)
             columns.append(coldesc)
@@ -824,7 +824,7 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.ClassVar)
                         for var in domain.class_vars]
 
-        if self.M_density != Storage.DENSE:
+        if self.M_density != Table.DENSE:
             coldesc = make_basket(domain.metas, self.M_density,
                                   TableModel.Meta)
             columns.append(coldesc)
@@ -832,7 +832,7 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.Meta)
                         for var in domain.metas]
 
-        if self.X_density != Storage.DENSE:
+        if self.X_density != Table.DENSE:
             coldesc = make_basket(domain.attributes, self.X_density,
                                   TableModel.Attribute)
             columns.append(coldesc)

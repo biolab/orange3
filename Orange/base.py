@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 import scipy
 
-from Orange.data import Table, Storage, Value
+from Orange.data import Table, Value
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -95,7 +95,7 @@ class Model:
             return self.predict_storage(table)
 
     def predict_storage(self, data):
-        if isinstance(data, Storage):
+        if isinstance(data, Table):
             return self.predict(data.X)
         raise TypeError("Unrecognized argument (instance of '{}')"
                         .format(type(data).__name__))

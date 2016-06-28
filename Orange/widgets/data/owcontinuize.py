@@ -303,7 +303,7 @@ def _ensure_dist(var, data_or_dist):
         if not var.is_continuous:
             raise TypeError
         return data_or_dist
-    elif isinstance(data_or_dist, Orange.data.Storage):
+    elif isinstance(data_or_dist, Orange.data.Table):
         return distribution.get_distribution(data_or_dist, var)
     else:
         raise ValueError("Need a distribution or data.")

@@ -14,7 +14,6 @@ import pandas as pd
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
 from Orange.util import flatten
 from Orange.data import Domain, Variable, StringVariable, ContinuousVariable, DiscreteVariable
-from Orange.data.storage import Storage
 from Orange.util import flatten, deprecated
 from . import _contingency
 from . import _valuecount
@@ -31,6 +30,9 @@ dataset_dirs = ['', get_sample_datasets_dir()]
 
 # noinspection PyPep8Naming
 class Table(pd.DataFrame):
+    # these were previously in Storage
+    MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
+
     _WEIGHTS_COLUMN = "__weights__"
 
     # a counter for indexing rows, important for deterministically selecting rows

@@ -1,7 +1,7 @@
 import numpy as np
 
 from Orange.classification import Learner, Model
-from Orange.data import Storage
+from Orange.data import Table
 from Orange.statistics import contingency
 from Orange.preprocess import Discretize
 
@@ -24,8 +24,8 @@ class NaiveBayesLearner(Learner):
     preprocessors = [Discretize()]
 
     def fit_storage(self, table):
-        if not isinstance(table, Storage):
-            raise TypeError("Data is not a subclass of Orange.data.Storage.")
+        if not isinstance(table, Table):
+            raise TypeError("Data is not a subclass of Orange.data.Table.")
         if not all(var.is_discrete
                    for var in table.domain.variables):
             raise NotImplementedError("Only discrete variables are supported.")

@@ -32,10 +32,10 @@ def _get_variable(dat, variable, expected_type=None, expected_name=""):
 
 class Discrete(np.ndarray):
     def __new__(cls, dat, variable=None, unknowns=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, data.Table):
             if unknowns is not None:
                 raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                    "incompatible arguments (data table and 'unknowns'")
             return cls.from_data(dat, variable)
 
         if variable is not None:
@@ -179,10 +179,10 @@ class Discrete(np.ndarray):
 
 class Continuous(np.ndarray):
     def __new__(cls, dat, variable=None, unknowns=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, data.Table):
             if unknowns is not None:
                 raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                    "incompatible arguments (data table and 'unknowns'")
             return cls.from_data(variable, dat)
         if isinstance(dat, int):
             self = super().__new__(cls, (2, dat))

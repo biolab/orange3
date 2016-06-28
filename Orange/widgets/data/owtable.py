@@ -20,7 +20,6 @@ from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
 import Orange.data
-from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
@@ -920,13 +919,13 @@ def table_summary(table):
             array = numpy.atleast_2d(array)
             nans = sum([dist.nans for dist in col_dist])
             non_nans = sum([dist.non_nans for dist in col_dist])
-            if density == Storage.DENSE:
+            if density == Table.DENSE:
                 return DenseArray(nans, non_nans, col_dist)
-            elif density == Storage.SPARSE:
+            elif density == Table.SPARSE:
                 return SparseArray(nans, non_nans, col_dist)
-            elif density == Storage.SPARSE_BOOL:
+            elif density == Table.SPARSE_BOOL:
                 return SparseBoolArray(nans, non_nans, col_dist)
-            elif density == Storage.MISSING:
+            elif density == Table.MISSING:
                 return NotAvailable()
             else:
                 assert False

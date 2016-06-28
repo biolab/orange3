@@ -1,4 +1,4 @@
-from Orange.data import Variable, Storage
+from Orange.data import Variable, Table
 
 def _get_variable(variable, dat):
     if isinstance(variable, Variable):
@@ -17,7 +17,7 @@ def _get_variable(variable, dat):
 
 class BasicStats:
     def __init__(self, dat=None, variable=None):
-        if isinstance(dat, Storage):
+        if isinstance(dat, Table):
             self.from_data(dat, variable)
         elif dat is None:
             self.min = float("inf")

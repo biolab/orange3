@@ -32,7 +32,7 @@ class Preprocess:
 
     def __new__(cls, data=None, *args, **kwargs):
         self = super().__new__(cls)
-        if isinstance(data, Orange.data.Storage):
+        if isinstance(data, Orange.data.Table):
             self.__init__(*args, **kwargs)
             return self(data)
         else:

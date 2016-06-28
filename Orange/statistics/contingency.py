@@ -34,10 +34,10 @@ def create_discrete(cls, *args):
 
 class Discrete(np.ndarray):
     def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None, unknown_rows=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, data.Table):
             if unknowns is not None:
                 raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                    "incompatible arguments (data table and 'unknowns'")
             return cls.from_data(dat, col_variable, row_variable)
 
         if row_variable is not None:
@@ -163,10 +163,10 @@ class Discrete(np.ndarray):
 class Continuous:
     def __init__(self, dat=None, col_variable=None, row_variable=None,
                  unknowns=None, unknown_rows=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, data.Table):
             if unknowns is not None:
                 raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                    "incompatible arguments (data table and 'unknowns'")
             return self.from_data(dat, col_variable, row_variable)
 
         if row_variable is not None:
