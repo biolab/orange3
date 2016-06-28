@@ -8,6 +8,9 @@ class CodeGenerator(object):
     the actions carried out in the widget statically.
 
     """
+    def __call__(self):
+        return self
+
     def gen_preamble(self):
         """
         A list of expressions to be tacked on the the top of the
@@ -44,3 +47,18 @@ class CodeGenerator(object):
         body_string = inspect.getsourcelines(self.gen_body)
 
         return (preamble_string, declar_string, body_string,)
+
+    def set_preamble_gen(self, gen):
+        self.gen_preamble = gen
+
+    def set_header_gen(self, gen):
+        self.gen_declarations = gen
+
+    def set_body_gen(self, gen):
+        self.gen_body = gen
+
+    @classmethod
+    def set_gens(cls, _preamble_gen, _header_gen, _body_gen):
+        cls.gen_preamble = _preamble_gen
+        cls.gen_declarations = _preamble_gen
+        cls.gen_body = _body_gen

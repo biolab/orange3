@@ -1,4 +1,5 @@
 import os
+import ast
 from itertools import chain, count
 from warnings import catch_warnings
 
@@ -200,6 +201,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.apply_button.setFixedWidth(170)
         self.editor_model.dataChanged.connect(self.apply_button.show)
 
+        self.set_code_gens()
+
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
@@ -274,6 +277,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.send("Data", data)
         self.editor_model.set_domain(data.domain)
         self.data = data
+
+    def set_code_gens(self):
+        def body_gen():
+            a = "test"
+
+        self.code_gen.set_body_gen(body_gen)
 
     def _get_reader(self):
         """

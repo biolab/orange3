@@ -177,7 +177,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
 
         self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
 
-        self.code_gen = CodeGenerator
+        self.code_gen = CodeGenerator()
 
         self.__blocking = False
 
