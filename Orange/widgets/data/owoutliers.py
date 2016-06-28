@@ -180,8 +180,9 @@ class OWOutliers(widget.OWWidget):
             new_metas = list(self.data.domain.metas) + \
                         [ContinuousVariable(name="Mahalanobis")]
             self.new_domain = Domain(attrs, classes, new_metas)
-            self.new_data = Table(self.new_domain, self.data)
-            self.new_data.metas = np.hstack((self.data.metas, mahal))
+            self.new_data = self.data.copy()
+            self.new_data["Mahalanobis"] = mahal
+            self.new_data.domain = self.new_domain
         else:
             self.new_domain = self.data.domain
             self.new_data = self.data

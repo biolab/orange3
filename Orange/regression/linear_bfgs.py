@@ -4,6 +4,7 @@ from scipy.optimize import fmin_l_bfgs_b
 from Orange.regression import Learner, Model
 from Orange.preprocess import (RemoveNaNClasses, Normalize, Continuize,
                                Impute, RemoveNaNColumns)
+from data import Domain
 
 __all__ = ["LinearRegressionLearner"]
 
@@ -44,8 +45,9 @@ class LinearRegressionLearner(Learner):
         from Orange.data import Table
         from Orange.regression.linear_bfgs import LinearRegressionLearner
 
-        data = Table('housing')
-        data.X = np.hstack((data.X, np.ones((data.X.shape[0], 1)))) # append ones
+        d = Orange.data.Table('housing')
+        d.domain = Domain(d.domain.attributes + ["newcol"], d.domain.class_vars, d.domain.metas)
+        d["newcol"] = 1  # append ones
         m = LinearRegressionLearner(lambda_=1.0)
         c = m(data) # fit
         print(c(data)) # predict
@@ -118,8 +120,9 @@ if __name__ == '__main__':
         return grad
 
     d = Orange.data.Table('housing')
-    d.X = np.hstack((d.X, np.ones((d.X.shape[0], 1))))
-    d.shuffle()
+    d.domain = Domain(d.domain.attributes + ["newcol"], d.domain.class_vars, d.domain.metas)
+    d["newcol"] = 1
+    d = d.shuffle()
 
 #    m = LinearRegressionLearner(lambda_=1.0)
 #    print(m(d)(d))

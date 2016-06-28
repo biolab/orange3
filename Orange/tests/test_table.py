@@ -499,17 +499,17 @@ class TableTestCase(unittest.TestCase):
 
     def test_total_weight(self):
         d = data.Table("zoo")
-        self.assertEqual(d.total_weight(), len(d))
+        self.assertEqual(d.weights.sum(), len(d))
 
         d.set_weights(0)
-        d[0].weight = 0.1
-        d[10].weight = 0.2
-        d[-1].weight = 0.3
-        self.assertAlmostEqual(d.total_weight(), 0.6)
+        d.iloc[0].set_weights(0.1)
+        d.iloc[10].set_weights(0.2)
+        d.iloc[-1].set_weights(0.2)
+        self.assertAlmostEqual(d.weights.sum(), 0.6)
         del d[10]
-        self.assertAlmostEqual(d.total_weight(), 0.4)
+        self.assertAlmostEqual(d.weights.sum(), 0.4)
         d.clear()
-        self.assertAlmostEqual(d.total_weight(), 0)
+        self.assertAlmostEqual(d.weights.sum(), 0)
 
     def test_has_missing(self):
         d = data.Table("zoo")
@@ -533,19 +533,19 @@ class TableTestCase(unittest.TestCase):
         crc = d.checksum()
         names = set(str(x["name"]) for x in d)
 
-        d.shuffle()
+        d = d.shuffle()
         self.assertNotEqual(crc, d.checksum())
         self.assertSetEqual(names, set(str(x["name"]) for x in d))
         crc2 = d.checksum()
 
         x = d[2:10]
         crcx = x.checksum()
-        d.shuffle()
+        d = d.shuffle()
         self.assertNotEqual(crc2, d.checksum())
         self.assertEqual(crcx, x.checksum())
 
         crc2 = d.checksum()
-        x.shuffle()
+        x = x.shuffle()
         self.assertNotEqual(crcx, x.checksum())
         self.assertEqual(crc2, d.checksum())
 
@@ -594,7 +594,7 @@ class TableTestCase(unittest.TestCase):
 
     def test_append2(self):
         d = data.Table("iris")
-        d.shuffle()
+        d = d.shuffle()
         l1 = len(d)
         d.append([1, 2, 3, 4, 0])
         self.assertEqual(len(d), l1 + 1)
@@ -605,16 +605,19 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d[-1], d[10])
 
         x = d[:50]
-        x.ensure_copy()
+        with self.assertRaises(ValueError):
+            x.append(d[50])
+
+        x = x.copy()
         x.append(d[50])
         self.assertEqual(x[50], d[50])
 
     def test_extend(self):
         d = data.Table("iris")
-        d.shuffle()
+        d = d.shuffle()
 
         x = d[:5]
-        x.ensure_copy()
+        x = x.copy()
         d.extend(x)
         for i in range(5):
             self.assertEqual(d[i], d[-5 + i])
@@ -624,7 +627,7 @@ class TableTestCase(unittest.TestCase):
             d.extend(x)
 
         y = d[:2, 1]
-        x.ensure_copy()
+        x = x.copy()
         x.extend(y)
         np.testing.assert_almost_equal(x[-2:, 1].X, y.X)
         self.assertEqual(np.isnan(x).sum(), 8)
@@ -826,354 +829,6 @@ class TableTestCase(unittest.TestCase):
 
         with self.assertRaises(IndexError):
             table[0, -5] = 5
-
-    def test_filter_is_defined(self):
-        d = data.Table("iris")
-        d[1, 4] = Unknown
-        self.assertTrue(isnan(d[1, 4]))
-        d[140, 0] = Unknown
-        e = filter.IsDefined()(d)
-        self.assertEqual(len(e), len(d) - 2)
-        self.assertEqual(e[0], d[0])
-        self.assertEqual(e[1], d[2])
-        self.assertEqual(e[147], d[149])
-        self.assertTrue(d.has_missing())
-        self.assertFalse(e.has_missing())
-
-    def test_filter_has_class(self):
-        d = data.Table("iris")
-        d[1, 4] = Unknown
-        self.assertTrue(isnan(d[1, 4]))
-        d[140, 0] = Unknown
-        e = filter.HasClass()(d)
-        self.assertEqual(len(e), len(d) - 1)
-        self.assertEqual(e[0], d[0])
-        self.assertEqual(e[1], d[2])
-        self.assertEqual(e[148], d[149])
-        self.assertTrue(d.has_missing())
-        self.assertTrue(e.has_missing())
-        self.assertFalse(e.has_missing_class())
-
-    def test_filter_random(self):
-        d = data.Table("iris")
-        e = filter.Random(50)(d)
-        self.assertEqual(len(e), 50)
-        e = filter.Random(50, negate=True)(d)
-        self.assertEqual(len(e), 100)
-        for i in range(5):
-            e = filter.Random(0.2)(d)
-            self.assertEqual(len(e), 30)
-            bc = np.bincount(np.array(e.Y[:], dtype=int))
-            if min(bc) > 7:
-                break
-        else:
-            self.fail("Filter returns too uneven distributions")
-
-    def test_filter_values_nested(self):
-        d = data.Table("iris")
-        f1 = filter.FilterContinuous(d.columns.sepal_length,
-                                     filter.FilterContinuous.Between,
-                                     min=4.5, max=5.0)
-        f2 = filter.FilterContinuous(d.columns.sepal_width,
-                                     filter.FilterContinuous.Between,
-                                     min=3.1, max=3.4)
-        f3 = filter.FilterDiscrete(d.columns.iris, [0, 1])
-        f = filter.Values([filter.Values([f1, f2], conjunction=False), f3])
-        self.assertEqual(41, len(f(d)))
-
-    def test_filter_value_continuous(self):
-        d = data.Table("iris")
-        col = d.X[:, 2]
-
-        v = d.columns
-        f = filter.FilterContinuous(v.petal_length,
-                                    filter.FilterContinuous.Between,
-                                    min=4.5, max=5.1)
-
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] >= 4.5))
-        self.assertTrue(np.all(x.X[:, 2] <= 5.1))
-        self.assertEqual(sum((col >= 4.5) * (col <= 5.1)), len(x))
-
-        f.ref = 5.1
-        f.oper = filter.FilterContinuous.Equal
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f.oper = filter.FilterContinuous.NotEqual
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] != 5.1))
-        self.assertEqual(sum(col != 5.1), len(x))
-
-        f.oper = filter.FilterContinuous.Less
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] < 5.1))
-        self.assertEqual(sum(col < 5.1), len(x))
-
-        f.oper = filter.FilterContinuous.LessEqual
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] <= 5.1))
-        self.assertEqual(sum(col <= 5.1), len(x))
-
-        f.oper = filter.FilterContinuous.Greater
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] > 5.1))
-        self.assertEqual(sum(col > 5.1), len(x))
-
-        f.oper = filter.FilterContinuous.GreaterEqual
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] >= 5.1))
-        self.assertEqual(sum(col >= 5.1), len(x))
-
-        f.oper = filter.FilterContinuous.Outside
-        f.ref, f.max = 4.5, 5.1
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue(e[2] < 4.5 or e[2] > 5.1)
-        self.assertEqual(sum((col < 4.5) + (col > 5.1)), len(x))
-
-        f.oper = filter.FilterContinuous.IsDefined
-        f.ref = f.max = None
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), len(d))
-
-        d[:30, v.petal_length] = Unknown
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), len(d) - 30)
-
-    def test_filter_value_continuous_args(self):
-        d = data.Table("iris")
-        col = d.X[:, 2]
-        v = d.columns
-
-        f = filter.FilterContinuous(v.petal_length,
-                                    filter.FilterContinuous.Equal, ref=5.1)
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f = filter.FilterContinuous(2,
-                                    filter.FilterContinuous.Equal, ref=5.1)
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f = filter.FilterContinuous("petal length",
-                                    filter.FilterContinuous.Equal, ref=5.1)
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f = filter.FilterContinuous("sepal length",
-                                    filter.FilterContinuous.Equal, ref=5.1)
-        f.column = 2
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f = filter.FilterContinuous("sepal length",
-                                    filter.FilterContinuous.Equal, ref=5.1)
-        f.column = v.petal_length
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f = filter.FilterContinuous(v.petal_length,
-                                    filter.FilterContinuous.Equal, ref=18)
-        f.ref = 5.1
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-        f = filter.FilterContinuous(v.petal_length,
-                                    filter.FilterContinuous.Equal, ref=18)
-        f.ref = 5.1
-        x = filter.Values([f])(d)
-        self.assertTrue(np.all(x.X[:, 2] == 5.1))
-        self.assertEqual(sum(col == 5.1), len(x))
-
-    def test_valueFilter_discrete(self):
-        d = data.Table("zoo")
-
-        f = filter.FilterDiscrete(d.domain.class_var, values=[2, 3, 4])
-        for e in filter.Values([f])(d):
-            self.assertTrue(e.get_class() in [2, 3, 4])
-
-        f.values = ["mammal"]
-        for e in filter.Values([f])(d):
-            self.assertEqual(e.get_class(), "mammal")
-
-        f = filter.FilterDiscrete(d.domain.class_var, values=[2, "mammal"])
-        for e in filter.Values([f])(d):
-            self.assertTrue(e.get_class() in [2, "mammal"])
-
-        f = filter.FilterDiscrete(d.domain.class_var, values=[2, "martian"])
-        self.assertRaises(ValueError, d._filter_values, f)
-
-        f = filter.FilterDiscrete(d.domain.class_var, values=[2, data.Table])
-        self.assertRaises(TypeError, d._filter_values, f)
-
-        v = d.columns
-        f = filter.FilterDiscrete(v.hair, values=None)
-        self.assertEqual(len(filter.Values([f])(d)), len(d))
-
-        d[:5, v.hair] = Unknown
-        self.assertEqual(len(filter.Values([f])(d)), len(d) - 5)
-
-    def test_valueFilter_string_is_defined(self):
-        d = data.Table("test9.tab")
-        f = filter.FilterString(-5, filter.FilterString.IsDefined)
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), 7)
-
-    def test_valueFilter_string_case_sens(self):
-        d = data.Table("zoo")
-        col = d[:, "name"].metas[:, 0]
-
-        f = filter.FilterString("name",
-                                filter.FilterString.Equal, "girl")
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), 1)
-        self.assertEqual(x[0, "name"], "girl")
-        self.assertTrue(np.all(x.metas == "girl"))
-
-        f.oper = f.NotEqual
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), len(d) - 1)
-        self.assertTrue(np.all(x[:, "name"] != "girl"))
-
-        f.oper = f.Less
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col < "girl"))
-        self.assertTrue(np.all(x.metas < "girl"))
-
-        f.oper = f.LessEqual
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col <= "girl"))
-        self.assertTrue(np.all(x.metas <= "girl"))
-
-        f.oper = f.Greater
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col > "girl"))
-        self.assertTrue(np.all(x.metas > "girl"))
-
-        f.oper = f.GreaterEqual
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col >= "girl"))
-        self.assertTrue(np.all(x.metas >= "girl"))
-
-        f.oper = f.Between
-        f.max = "lion"
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum((col >= "girl") * (col <= "lion")))
-        self.assertTrue(np.all(x.metas >= "girl"))
-        self.assertTrue(np.all(x.metas <= "lion"))
-
-        f.oper = f.Outside
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col < "girl") + sum(col > "lion"))
-        self.assertTrue(np.all((x.metas < "girl") + (x.metas > "lion")))
-
-        f.oper = f.Contains
-        f.ref = "ea"
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue("ea" in e["name"])
-        self.assertEqual(len(x), len([e for e in col if "ea" in e]))
-
-        f.oper = f.StartsWith
-        f.ref = "sea"
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue(str(e["name"]).startswith("sea"))
-        self.assertEqual(len(x), len([e for e in col if e.startswith("sea")]))
-
-        f.oper = f.EndsWith
-        f.ref = "ion"
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue(str(e["name"]).endswith("ion"))
-        self.assertEqual(len(x), len([e for e in col if e.endswith("ion")]))
-
-    def test_valueFilter_string_case_insens(self):
-        d = data.Table("zoo")
-        d[d[:, "name"].metas[:, 0] == "girl", "name"] = "GIrl"
-
-        col = d[:, "name"].metas[:, 0]
-
-        f = filter.FilterString("name",
-                                filter.FilterString.Equal, "giRL")
-        f.case_sensitive = False
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), 1)
-        self.assertEqual(x[0, "name"], "GIrl")
-        self.assertTrue(np.all(x.metas == "GIrl"))
-
-        f.oper = f.NotEqual
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), len(d) - 1)
-        self.assertTrue(np.all(x[:, "name"] != "GIrl"))
-
-        f.oper = f.Less
-        f.ref = "CHiCKEN"
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col < "chicken") - 1)  # girl!
-        self.assertTrue(np.all(x.metas < "chicken"))
-
-        f.oper = f.LessEqual
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col <= "chicken") - 1)
-        self.assertTrue(np.all(x.metas <= "chicken"))
-
-        f.oper = f.Greater
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col > "chicken") + 1)
-        for e in x:
-            self.assertGreater(str(e["name"]).lower(), "chicken")
-
-        f.oper = f.GreaterEqual
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col >= "chicken") + 1)
-        for e in x:
-            self.assertGreaterEqual(str(e["name"]).lower(), "chicken")
-
-        f.oper = f.Between
-        f.max = "liOn"
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum((col >= "chicken") * (col <= "lion")) + 1)
-        for e in x:
-            self.assertTrue("chicken" <= str(e["name"]).lower() <= "lion")
-
-        f.oper = f.Outside
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), sum(col < "chicken") + sum(col > "lion") - 1)
-        self.assertTrue(np.all((x.metas < "chicken") + (x.metas > "lion")))
-
-        f.oper = f.Contains
-        f.ref = "iR"
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue("ir" in str(e["name"]).lower())
-        self.assertEqual(len(x), len([e for e in col if "ir" in e]) + 1)
-
-        f.oper = f.StartsWith
-        f.ref = "GI"
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue(str(e["name"]).lower().startswith("gi"))
-        self.assertEqual(len(x),
-                         len([e for e in col if e.lower().startswith("gi")]))
-
-        f.oper = f.EndsWith
-        f.ref = "ion"
-        x = filter.Values([f])(d)
-        for e in x:
-            self.assertTrue(str(e["name"]).endswith("ion"))
-            self.assertTrue(str(e["name"]).endswith("ion"))
-        self.assertEqual(len(x), len([e for e in col if e.endswith("ion")]))
-
-    def test_valueFilter_regex(self):
-        d = data.Table("zoo")
-        f = filter.FilterRegex(d.domain['name'], '^c...$')
-        x = filter.Values([f])(d)
-        self.assertEqual(len(x), 7)
 
     def test_table_dtypes(self):
         table = data.Table("iris")

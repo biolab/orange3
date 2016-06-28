@@ -42,17 +42,17 @@ class TestFSS(unittest.TestCase):
             s(self.wine)
 
     def test_discrete_scores_on_continuous_features(self):
-        c = self.iris.columns
+        t = self.iris
         for method in (Gini, Chi2):
             d1 = SelectBestFeatures(method=method)(self.iris)
             expected = \
-                (c.petal_length, c.petal_width, c.sepal_length, c.sepal_width)
+                (t.petal_length, t.petal_width, t.sepal_length, t.sepal_width)
             self.assertSequenceEqual(d1.domain.attributes, expected)
 
             scores = method(d1)
             self.assertEqual(len(scores), 4)
 
-            score = method(d1, c.petal_length)
+            score = method(d1, t.petal_length)
             self.assertIsInstance(score, float)
 
     def test_continuous_scores_on_discrete_features(self):

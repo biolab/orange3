@@ -62,10 +62,9 @@ class FeatureScoringTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.randint(4, size=(nrows, ncols))
         y = 10 + (-3*X[:, 1] + X[:, 3]) // 2
-        domain = Domain.from_numpy(X, y)
-        domain = Domain(domain.attributes,
-                        DiscreteVariable('c', values=np.unique(y)))
-        table = Table(domain, X, y)
+        table = Table(X, y)
+        table.domain = Domain(table.domain.attributes,
+                              DiscreteVariable('c', values=np.unique(y)))
         data = preprocess.Discretize()(table)
         scorer = Chi2()
         sc = [scorer(data, a) for a in range(ncols)]
@@ -75,10 +74,9 @@ class FeatureScoringTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
         y = 4 + (-3*X[:, 1] + X[:, 3]) // 2
-        domain = Domain.from_numpy(X, y)
-        domain = Domain(domain.attributes,
-                        DiscreteVariable('c', values=np.unique(y)))
-        data = Table(domain, X, y)
+        data = Table(X, y)
+        data.domain = Domain(data.domain.attributes,
+                             DiscreteVariable('c', values=np.unique(y)))
         scorer = ANOVA()
         sc = [scorer(data, a) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
@@ -113,7 +111,7 @@ class FeatureScoringTest(unittest.TestCase):
     def test_rrelieff(self):
         X = np.random.random((100, 5))
         y = ((X[:, 0] > .5) ^ (X[:, 1] < .5) - 1).astype(float)
-        xor = Table.from_numpy(Domain.from_numpy(X, y), X, y)
+        xor = Table.from_numpy(X, y)
 
         scorer = RReliefF()
         weights = scorer(xor, None)

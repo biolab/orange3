@@ -350,7 +350,6 @@ class Randomize(Preprocess):
             Randomized data table.
         """
         new_data = Table(data)
-        new_data.ensure_copy()
 
         if self.rand_type == Randomize.RandomizeClasses:
             self.randomize(new_data.Y)

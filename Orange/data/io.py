@@ -578,7 +578,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @staticmethod
     def header_names(data):
-        return ['weights'] * data.has_weights() + \
+        return ['weights'] + \
                [v.name for v in chain(data.domain.attributes,
                                       data.domain.class_vars,
                                       data.domain.metas)]
@@ -591,14 +591,14 @@ class FileFormat(metaclass=FileFormatMeta):
             elif var.is_discrete:
                 return Flags.join(var.values) if var.ordered else var.TYPE_HEADERS[0]
             raise NotImplementedError
-        return ['continuous'] * data.has_weights() + \
+        return ['continuous'] + \
                [_vartype(v) for v in chain(data.domain.attributes,
                                            data.domain.class_vars,
                                            data.domain.metas)]
 
     @staticmethod
     def header_flags(data):
-        return list(chain(['weight'] * data.has_weights(),
+        return list(chain(['weight'],
                           (Flags.join([flag], *('{}={}'.format(*a)
                                                 for a in sorted(var.attributes.items())))
                            for flag, var in chain(zip(repeat(''),  data.domain.attributes),
@@ -615,7 +615,7 @@ class FileFormat(metaclass=FileFormatMeta):
     @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
-        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+        vars = list(chain((ContinuousVariable('_w'),),
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))

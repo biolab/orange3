@@ -748,7 +748,7 @@ class Table(pd.DataFrame):
         if compute_variance:
             raise NotImplementedError("computation of variance is "
                                       "not implemented yet")
-        W = self.W if self.has_weights() else None
+        W = self.weights
         rr = []
         stats = []
         if not columns:
@@ -792,18 +792,15 @@ class Table(pd.DataFrame):
         def _get_matrix(M, cachedM, col):
             nonlocal single_column
             if not sp.issparse(M):
-                return M[:, col], self.W if self.has_weights() else None, None
+                return M[:, col], self.weights
             if cachedM is None:
                 if single_column:
                     warn("computing distributions on sparse data "
                          "for a single column is inefficient")
                 cachedM = sp.csc_matrix(self.X)
             data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col + 1]]
-            if self.has_weights():
-                weights = self.W[
-                    cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col + 1]]]
-            else:
-                weights = None
+            weights = self.weights[
+                cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col + 1]]]
             return data, weights, cachedM
 
         if columns is None:
@@ -899,7 +896,7 @@ class Table(pd.DataFrame):
         else:
             row_data = self._Y[:, row_indi - n_atts]
 
-        W = self.W if self.has_weights() else None
+        W = self.weights
         nan_inds = None
 
         col_desc = [self.domain[var] for var in col_vars]

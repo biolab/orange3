@@ -52,7 +52,7 @@ class Learner:
         if type(self).fit is Learner.fit:
             model = self.fit_storage(data)
         else:
-            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+            X, Y, W = data.X, data.Y, data.weights
             model = self.fit(X, Y, W)
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass

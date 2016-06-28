@@ -68,19 +68,11 @@ class Discrete(np.ndarray):
             self = super().__new__(cls, len(variable.values))
             self[:] = np.zeros(len(variable.values))
             self.unknowns = 0
-            if data.has_weights():
-                for val, w in zip(data[:, variable], data.W):
-                    if not math.isnan(val):
-                        self[val] += w
-                    else:
-                        self.unknowns += w
-            else:
-                for inst in data:
-                    val = inst[variable]
-                    if val == val:
-                        self[val] += 1
-                    else:
-                        self.unknowns += 1
+            for val, w in zip(data[:, variable], data.W):
+                if not math.isnan(val):
+                    self[val] += w
+                else:
+                    self.unknowns += w
         self.variable = variable
         return self
 
@@ -214,15 +206,11 @@ class Continuous(np.ndarray):
         except NotImplementedError:
             col = data[:, variable]
             dtype = col.dtype
-            if data.has_weights():
-                if not "float" in dtype.name and "float" in col.dtype.name:
-                    dtype = col.dtype.name
-                dist = np.empty((2, len(col)), dtype=dtype)
-                dist[0, :] = col
-                dist[1, :] = data.W
-            else:
-                dist = np.ones((2, len(col)), dtype=dtype)
-                dist[0, :] = col
+            if not "float" in dtype.name and "float" in col.dtype.name:
+                dtype = col.dtype.name
+            dist = np.empty((2, len(col)), dtype=dtype)
+            dist[0, :] = col
+            dist[1, :] = data.W
             dist.sort(axis=0)
             dist = np.array(_orange.valuecount(dist))
             unknowns = len(col) - dist.shape[1]

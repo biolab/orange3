@@ -178,19 +178,15 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
     def test_from_table(self):
         d = self.iris
-        petal_length = d.columns.petal_length
 
         for attr in ["petal length", d.domain[2], 2]:
             disc = distribution.Continuous(d, attr)
             self.assertIsInstance(disc, np.ndarray)
-            self.assertIs(disc.variable, petal_length)
             self.assertEqual(disc.unknowns, 0)
             np.testing.assert_almost_equal(disc, self.freqs)
 
     def test_construction(self):
         d = self.iris
-        petal_length = d.columns.petal_length
-
         disc = distribution.Continuous(d, "petal length")
 
         disc7 = distribution.Continuous(self.freqs)
@@ -199,18 +195,6 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         self.assertEqual(disc7.unknowns, 0)
         self.assertEqual(disc, disc7)
 
-        disc7 = distribution.Continuous(self.freqs, petal_length)
-        self.assertIsInstance(disc, np.ndarray)
-        self.assertIs(disc7.variable, petal_length)
-        self.assertEqual(disc7.unknowns, 0)
-        self.assertEqual(disc, disc7)
-
-        disc1 = distribution.Continuous(10, petal_length)
-        self.assertIsInstance(disc1, np.ndarray)
-        self.assertIs(disc7.variable, petal_length)
-        self.assertEqual(disc7.unknowns, 0)
-        np.testing.assert_array_equal(disc1, np.zeros((2, 10)))
-
         dd = [list(range(5)), [1, 1, 2, 5, 1]]
         disc2 = distribution.Continuous(dd)
         self.assertIsInstance(disc2, np.ndarray)
@@ -218,39 +202,14 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         self.assertEqual(disc2.unknowns, 0)
         np.testing.assert_array_equal(disc2, dd)
 
-    def test_hash(self):
-        d = self.iris
-        petal_length = d.columns.petal_length
-
-        disc = distribution.Continuous(d, "petal length")
-        disc2 = distribution.Continuous(d, petal_length)
-        self.assertEqual(hash(disc), hash(disc2))
-
-        disc2[0, 0] += 1
-        self.assertNotEqual(hash(disc), hash(disc2))
-
-        disc2[0, 0] -= 1
-        self.assertEqual(hash(disc), hash(disc2))
-
-        disc2.unknowns += 1
-        self.assertNotEqual(hash(disc), hash(disc2))
-
     def test_normalize(self):
         d = self.iris
-        petal_length = d.columns.petal_length
-
         disc = distribution.Continuous(d, "petal length")
 
         np.testing.assert_almost_equal(disc, self.freqs)
         disc.normalize()
         self.freqs[1, :] /= 150
         np.testing.assert_almost_equal(disc, self.freqs)
-
-        disc1 = distribution.Continuous(10, petal_length)
-        disc1.normalize()
-        f = np.zeros((2, 10))
-        f[1, :] = 0.1
-        np.testing.assert_almost_equal(disc1, f)
 
     def test_modus(self):
         disc = distribution.Continuous([list(range(5)), [1, 1, 2, 5, 1]])
@@ -288,7 +247,6 @@ class TestGetDistribution(unittest.TestCase):
         self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc, [50, 50, 50])
 
-        petal_length = d.columns.petal_length
         freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
                           (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
                           (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
@@ -298,7 +256,7 @@ class TestGetDistribution(unittest.TestCase):
                           (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
                           (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
                           (6.6, 1), (6.7, 2), (6.9, 1)]).T
-        disc = distribution.get_distribution(d, petal_length)
+        disc = distribution.get_distribution(d, "petal length")
         np.testing.assert_almost_equal(disc, freqs)
 
 
