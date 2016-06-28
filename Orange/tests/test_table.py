@@ -290,26 +290,6 @@ class TableTestCase(unittest.TestCase):
             d[np.int_(0)] = [3.15, 2, "f"]
             almost_equal_list(d[0].values(), [3.15, 2, "f"])
 
-            with self.assertRaises(ValueError):
-                d[0] = ["3.14", "1"]
-
-            with self.assertRaises(ValueError):
-                d[np.int_(0)] = ["3.14", "1"]
-
-            ex = data.Instance(d.domain, ["3.16", "1", "f"])
-            d[0] = ex
-            almost_equal_list(d[0].values(), [3.16, "1", "f"])
-
-            ex = data.Instance(d.domain, ["3.16", 2, "t"])
-            d[np.int_(0)] = ex
-            almost_equal_list(d[0].values(), [3.16, 2, "t"])
-
-            ex = data.Instance(d.domain, ["3.16", "1", "f"])
-            ex["e"] = "mmmapp"
-            d[0] = ex
-            almost_equal_list(d[0].values(), [3.16, "1", "f"])
-            self.assertEqual(d[0, "e"], "mmmapp")
-
     def test_slice(self):
         import warnings
 
@@ -599,10 +579,6 @@ class TableTestCase(unittest.TestCase):
         d.append([1, 2, 3, 4, 0])
         self.assertEqual(len(d), l1 + 1)
         self.assertEqual(d[-1], [1, 2, 3, 4, 0])
-
-        x = data.Instance(d[10])
-        d.append(x)
-        self.assertEqual(d[-1], d[10])
 
         x = d[:50]
         with self.assertRaises(ValueError):

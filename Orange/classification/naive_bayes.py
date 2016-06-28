@@ -1,7 +1,7 @@
 import numpy as np
 
 from Orange.classification import Learner, Model
-from Orange.data import Instance, Storage
+from Orange.data import Storage
 from Orange.statistics import contingency
 from Orange.preprocess import Discretize
 
@@ -43,8 +43,6 @@ class NaiveBayesModel(Model):
         self.class_freq = class_freq
 
     def predict_storage(self, data):
-        if isinstance(data, Instance):
-            data = [data]
         n_cls = len(self.class_freq)
         class_prob = (self.class_freq + 1) / (np.sum(self.class_freq) + n_cls)
         if len(data.domain.attributes) == 0:

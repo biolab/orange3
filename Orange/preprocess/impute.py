@@ -147,20 +147,13 @@ class ReplaceUnknownsModel:
         self.model = model
 
     def __call__(self, data):
-        if isinstance(data, Orange.data.Instance):
-            column = numpy.array([float(data[self.variable])])
-        else:
-            column = numpy.array(data.get_column_view(self.variable)[0],
-                                 copy=True)
+        column = numpy.array(data.get_column_view(self.variable)[0], copy=True)
 
         mask = numpy.isnan(column)
         if not numpy.any(mask):
             return column
 
-        if isinstance(data, Orange.data.Instance):
-            predicted = self.model(data)
-        else:
-            predicted = self.model(data[mask])
+        predicted = self.model(data[mask])
         column[mask] = predicted
         return column
 

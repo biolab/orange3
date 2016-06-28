@@ -9,7 +9,7 @@ import numpy as np
 
 from Orange.preprocess import discretize, Discretize
 from Orange import data
-from Orange.data import Table, Instance, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 
 # noinspection PyPep8Naming
@@ -154,9 +154,9 @@ class TestDiscretizer(TestCase):
     def test_transform(self):
         table = data.Table('iris')
         table2 = Discretize(table)
-        ins = data.Instance(table2.domain, table[0])
-        table3 = data.Table(table2.domain, table[:10])
-        self.assertEqual(ins, table3[0])
+        ins = Table(table2.domain, table.iloc[0])
+        table3 = data.Table(table2.domain, table.iloc[:10])
+        self.assertEqual(ins, table3.iloc[0])
 
     def test_remove_constant(self):
         table = data.Table('iris')
@@ -296,11 +296,3 @@ class TestDiscretizeTable(TestCase):
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertIs(dom[2], table.domain[2])
         self.assertIs(dom.class_var, table.domain.class_var)
-
-
-class TestInstanceConversion(TestCase):
-    def test_single_instance(self):
-        iris = Table("iris")
-        inst = Instance(iris.domain, [5.2, 3.8, 1.4, 0.5, "Iris-virginica"])
-        d_iris = Discretize(iris)
-        Instance(d_iris.domain, inst)

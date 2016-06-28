@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.data import Instance, Table
+from Orange.data import Table
 
 
 class Transformation:
@@ -21,7 +21,6 @@ class Transformation:
         Return transformed column from the data by extracting the column view
         from the data and passing it to the `transform` method.
         """
-        inst = isinstance(data, Instance)
         if self._last_domain != data.domain:
             try:
                 self.attr_index = data.domain.index(self.variable)
@@ -33,13 +32,9 @@ class Transformation:
             self._last_domain = data.domain
         if self.attr_index is None:
             data = self.variable.compute_value(data)
-        elif inst:
-            data = np.array([float(data[self.attr_index])])
         else:
             data = data.get_column_view(self.attr_index)[0]
         transformed = self.transform(data)
-        if inst and isinstance(transformed, np.ndarray) and transformed.shape:
-            transformed = transformed[0]
         return transformed
 
     def transform(self, c):

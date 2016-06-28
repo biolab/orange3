@@ -18,7 +18,6 @@ from Orange.data.storage import Storage
 from Orange.util import flatten, deprecated
 from . import _contingency
 from . import _valuecount
-from .instance import *
 
 
 def get_sample_datasets_dir():

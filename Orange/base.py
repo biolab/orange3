@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 import scipy
 
-from Orange.data import Table, Storage, Instance, Value
+from Orange.data import Table, Storage, Value
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -36,11 +36,7 @@ class Learner:
     def __call__(self, data):
         if not self.check_learner_adequacy(data.domain):
             raise ValueError(self.learner_adequacy_err_msg)
-
         origdomain = data.domain
-
-        if isinstance(data, Instance):
-            data = Table(data.domain, [data])
         data = self.preprocess(data)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
@@ -101,8 +97,6 @@ class Model:
     def predict_storage(self, data):
         if isinstance(data, Storage):
             return self.predict(data.X)
-        elif isinstance(data, Instance):
-            return self.predict(np.atleast_2d(data.x))
         raise TypeError("Unrecognized argument (instance of '{}')"
                         .format(type(data).__name__))
 
@@ -117,11 +111,6 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Instance):
-            if data.domain != self.domain:
-                data = Instance(self.domain, data)
-            data = Table(data.domain, [data])
-            prediction = self.predict_storage(data)
         elif isinstance(data, Table):
             if data.domain != self.domain:
                 data = data.from_table(self.domain, data)
@@ -168,6 +157,9 @@ class Model:
         # Return what we need to
         if ret == Model.Probs:
             return probs
+
+        # TODO: transform this usage of Instance
+
         if isinstance(data, Instance) and not multitarget:
             value = Value(self.domain.class_var, value[0])
         if ret == Model.Value:

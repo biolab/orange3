@@ -1,5 +1,5 @@
 import sklearn.cluster as skl_cluster
-from Orange.data import Table, DiscreteVariable, Domain, Instance
+from Orange.data import Table, DiscreteVariable, Domain
 from Orange.projection import SklProjector, Projection
 from numpy import atleast_2d, ndarray, where
 
@@ -41,10 +41,3 @@ class DBSCANModel(Projection):
             c = DiscreteVariable(name='Core sample index', values=vals)
             domain = Domain([c])
             return Table(domain, y.reshape(len(y), 1))
-
-        elif isinstance(data, Instance):
-            if data.domain is not self.pre_domain:
-                data = Instance(self.pre_domain, data)
-            # Instances-by-Instance classification is not defined;
-            raise Exception("Core sample assignment is not supported "
-                            "for single instances.")

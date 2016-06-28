@@ -25,8 +25,6 @@ def _orange_to_numpy(x):
     """Convert :class:`Orange.data.Table` to :class:`numpy.ndarray`."""
     if isinstance(x, data.Table):
         return x.X
-    elif isinstance(x, data.Instance):
-        return np.atleast_2d(x.x)
     elif isinstance(x, np.ndarray):
         return np.atleast_2d(x)
     else:

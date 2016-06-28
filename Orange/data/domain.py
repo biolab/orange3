@@ -271,9 +271,11 @@ class Domain:
         :param inst: The data instance to be converted
         :return: The data instance in this domain
         """
-        from .instance import Instance
 
         if isinstance(inst, Instance):
+
+            # TODO: transform this to work with Tables
+
             if inst.domain == self:
                 return inst._x, inst._y, inst._metas
             c = self.get_conversion(inst.domain)

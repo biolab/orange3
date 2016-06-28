@@ -28,9 +28,9 @@ class DistMatrix(np.ndarray):
         :param data: Distance matrix
         :type data: numpy array
         :param row_items: Items in matrix rows
-        :type row_items: `Orange.data.Table` or `Orange.data.Instance`
+        :type row_items: `Orange.data.Table`
         :param col_items: Items in matrix columns
-        :type col_items: `Orange.data.Table` or `Orange.data.Instance`
+        :type col_items: `Orange.data.Table`
         :param axis: The axis along which the distances are calculated
         :type axis: int
 
