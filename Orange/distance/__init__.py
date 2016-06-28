@@ -22,7 +22,7 @@ def _preprocess(table):
 
 
 def _orange_to_numpy(x):
-    """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance` to :class:`numpy.ndarray`."""
+    """Convert :class:`Orange.data.Table` to :class:`numpy.ndarray`."""
     if isinstance(x, data.Table):
         return x.X
     elif isinstance(x, data.Instance):
@@ -37,10 +37,10 @@ class Distance:
     def __call__(self, e1, e2=None, axis=1, impute=False):
         """
         :param e1: input data instances, we calculate distances between all pairs
-        :type e1: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :type e1: :class:`Orange.data.Table` or :class:`numpy.ndarray`
         :param e2: optional second argument for data instances
            if provided, distances between each pair, where first item is from e1 and second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :type e2: :class:`Orange.data.Table` or :class:`numpy.ndarray`
         :param axis: if axis=1 we calculate distances between rows,
            if axis=0 we calculate distances between columns
         :type axis: int
@@ -73,7 +73,7 @@ class SklDistance(Distance):
             if x2 is not None:
                 x2 = x2.T
         dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+        if isinstance(e1, data.Table):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
@@ -119,7 +119,7 @@ class SpearmanDistance(Distance):
             dist = np.array([[dist]])
         elif isinstance(dist, np.ndarray):
             dist = dist[:slc, slc:]
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+        if isinstance(e1, data.Table):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
@@ -161,7 +161,7 @@ class PearsonDistance(Distance):
             dist = (1. - np.abs(rho)) / 2.
         else:
             dist = (1. - rho) / 2.
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+        if isinstance(e1, data.Table):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)

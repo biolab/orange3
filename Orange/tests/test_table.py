@@ -2071,32 +2071,6 @@ class InterfaceTest(unittest.TestCase):
         self.assertIsInstance(data_url, _ExtendedTable)
 
 
-class TestRowInstance(unittest.TestCase):
-    def test_assignment(self):
-        table = data.Table("zoo")
-        inst = table[2]
-        self.assertIsInstance(inst, data.RowInstance)
-
-        inst[1] = 0
-        self.assertEqual(table[2, 1], 0)
-        inst[1] = 1
-        self.assertEqual(table[2, 1], 1)
-
-        inst.set_class("mammal")
-        self.assertEqual(table[2, len(table.domain.attributes)], "mammal")
-        inst.set_class("fish")
-        self.assertEqual(table[2, len(table.domain.attributes)], "fish")
-
-        inst[-1] = "Foo"
-        self.assertEqual(table[2, -1], "Foo")
-
-    def test_iteration_with_assignment(self):
-        table = data.Table("iris")
-        for i, row in enumerate(table):
-            row[0] = i
-        np.testing.assert_array_equal(table.X[:, 0], np.arange(len(table)))
-
-
 class TestPandasInteraction(unittest.TestCase):
     def setUp(self):
         # test assertions: a must bot have weight set here
