@@ -4,7 +4,6 @@ import time
 import os
 import warnings
 import types
-import inspect
 from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, pyqtProperty,\
@@ -22,6 +21,7 @@ from Orange.widgets.gui import ControlledAttributesDict, notify_changed
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from .utils.overlay import MessageOverlayWidget
+from .utils.codegen import CodeGenerator
 
 
 def _asmappingproxy(mapping):
@@ -176,6 +176,8 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
         self.startTime = time.time()    # used in progressbar
 
         self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
+
+        self.code_gen = CodeGenerator
 
         self.__blocking = False
 
@@ -722,51 +724,6 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
             OWWidget.defaultKeyActions[int(e.modifiers()), e.key()](self)
         else:
             QDialog.keyPressEvent(self, e)
-
-    class code_gen(object):
-        """
-        This is the default version of the function that replicates the
-        results of the output of the widget.  It is used with the Python
-        script exportation pipeline to generate a static script to accomplish
-        the actions carried out in the widget statically.
-
-        """
-        def gen_preamble(self):
-            """
-            A list of expressions to be tacked on the the top of the
-            script; duplicate expressions will be ignored.
-
-            """
-            pass
-
-        def gen_declarations(self):
-            """
-            Variable name conversions to be inserted before the start
-            of the main module code
-
-            """
-            pass
-
-        def gen_body(self):
-            """
-            A function that returns the code to generate the output of
-            the widget in a static way.
-
-            """
-            pass
-
-        def generate(self):
-            """
-            Returns
-            -------
-            (preamble_string, declar_string, body_string,)
-
-            """
-            preamble_string = inspect.getsourcelines(self.gen_preamble)
-            declar_string = inspect.getsourcelines(self.gen_declarations)
-            body_string = inspect.getsourcelines(self.gen_body)
-
-            return (preamble_string, declar_string, body_string,)
 
     def information(self, id=0, text=None):
         """
