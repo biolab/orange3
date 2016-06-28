@@ -1,19 +1,18 @@
-import operator
 import os
 import zlib
-from collections import Iterable, Sequence, Sized
-from functools import reduce
+from collections import Sequence
 from threading import Lock
 from warnings import warn
-from numbers import Number
+from numbers import Number, Integral
 
+from itertools import chain
 import bottleneck as bn
 from scipy import sparse as sp
+import numpy as np
 import pandas as pd
 
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from Orange.util import flatten
-from Orange.data import Domain, Variable, StringVariable, ContinuousVariable, DiscreteVariable
+from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable
 from Orange.util import flatten, deprecated
 from . import _contingency
 from . import _valuecount
@@ -52,6 +51,7 @@ class Table(pd.DataFrame):
     def pandas_constructor_proxy(new_data, *args, **kwargs):
         """
         A proxy constructor, needed because we override __new__.
+        Thist (should be) called only from pandas internals, with a single argument - the data.
         Example: when selecting a subset of a Table, pandas calls _constructor (or similar)
                  to get the class which has to be constructed. In our case this is Table, but
                  because __new__ is complicated--calls different factories depending on
@@ -61,7 +61,7 @@ class Table(pd.DataFrame):
         """
         # TODO: just for testing, remove afterwards
         # we expect only one argument
-        if args or kwargs:
+        if len(args) != 1 or kwargs:
             for _ in range(10):
                 print("UNEXPECTED PANDAS BEHAVIOUR")
         return Table(data=new_data)
