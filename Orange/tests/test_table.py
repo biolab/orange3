@@ -10,6 +10,7 @@ import random
 from unittest.mock import Mock, MagicMock, patch
 from scipy.sparse import csr_matrix, issparse
 import numpy as np
+import pandas as pd
 
 from Orange import data
 from Orange.data import Variable
@@ -2095,6 +2096,47 @@ class TestRowInstance(unittest.TestCase):
             row[0] = i
         np.testing.assert_array_equal(table.X[:, 0], np.arange(len(table)))
 
+
+class TestPandasInteraction(unittest.TestCase):
+    def setUp(self):
+        # test assertions: a must bot have weight set here
+        self.a = data.Table([[1, 2, 3], [3, 4, 5]])
+        self.b = data.Table([[1, 2], [3, 4], [5, 6]])
+        self.b.set_weights(np.random.random(len(self.b)))
+
+    def test_unique_index_across_tables(self):
+        self.assertEqual(len(self.a) + len(self.b), len(set(self.a.index).union(set(self.b.index))))
+
+    def test_unique_index_from_empty_table(self):
+        c = data.Table()
+        c["foo"] = [1, 2, 3, 4, 5]
+        self.assertEqual(len(self.a) + len(self.b) + len(c),
+                         len(set(self.a.index).union(set(self.b.index)).union(set(c.index))))
+
+    def test_default_weights_from_constructed_table(self):
+        np.testing.assert_array_equal(np.repeat(1, len(self.a)), self.a.weights)
+
+    def test_default_weights_from_empty_table(self):
+        c = data.Table()
+        c["foo"] = [1, 2]
+        np.testing.assert_array_equal(np.repeat(1, len(c)), c.weights)
+
+    def test_weights_transfer_on_multi_column_subset(self):
+        subset = self.b[self.b.columns[1:]]
+        np.testing.assert_array_equal(self.b.weights, subset.weights)
+
+    def test_weights_transfer_on_multi_column_subset_single(self):
+        subset = self.b[[self.b.columns[1]]]
+        np.testing.assert_array_equal(self.b.weights, subset.weights)
+
+    def test_weights_transfer_on_empty_column_subset(self):
+        subset = self.b[[]]
+        np.testing.assert_array_equal(self.b.weights, subset.weights)
+
+    def test_weights_dont_transfer_on_explicit_single_column_subset(self):
+        subset = self.b[self.b.columns[1]]
+        self.assertTrue(not isinstance(subset, pd.DataFrame))
+        self.assertTrue(not hasattr(subset, 'weights'))
 
 if __name__ == "__main__":
     unittest.main()

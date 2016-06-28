@@ -153,7 +153,7 @@ class Table(pd.DataFrame):
             if self[weight].isnull().any() and np.issubdtype(self[weight].dtype, Number):
                 raise ValueError("All values in the target column must be valid numbers.")
             self[Table._WEIGHTS_COLUMN] = self[weight]
-        elif isinstance(weight, Sequence):
+        elif isinstance(weight, (Sequence, np.ndarray)):  # np.ndarray is not a Sequence
             if len(weight) != len(self):
                 raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
             self[Table._WEIGHTS_COLUMN] = weight
@@ -237,7 +237,7 @@ class Table(pd.DataFrame):
 
         # only set the weights if they aren't set already
         if Table._WEIGHTS_COLUMN not in self.columns:
-            self[Table._WEIGHTS_COLUMN] = 1
+            self.set_weights(1)
 
     @classmethod
     def from_domain(cls, domain):
@@ -478,6 +478,7 @@ class Table(pd.DataFrame):
         """
         with cls._next_instance_lock:
             out = np.arange(cls._next_instance_id, cls._next_instance_id + num)
+            cls._next_instance_id += num
             return out[0] if num == 1 and not force_list else out
 
     def save(self, filename):
@@ -536,6 +537,29 @@ class Table(pd.DataFrame):
         if cls != data.__class__:
             data = cls(data)
         return data
+
+    def __getitem__(self, item):
+        # if selecting a column subset, we need to transfer weights so they don't just disappear
+        # only do this for multiple column selection, which returns a DataFrame by contract
+        if isinstance(item, (Sequence, pd.Index)) and not isinstance(item, str) \
+                and all(isinstance(i, str) for i in item) \
+                and Table._WEIGHTS_COLUMN not in item:
+            item = list(item) + [Table._WEIGHTS_COLUMN]
+        return super(Table, self).__getitem__(item)
+
+    def __setitem__(self, key, value):
+        # if the table has an empty index and we're inserting a new row,
+        # the index would be created by pandas automatically.
+        # we want to maintain unique indices, so we override the index manually.
+        # we also need to set default weights, lest they be NA
+        new_index_and_weights = len(self.index) == 0
+
+        super(Table, self).__setitem__(key, value)
+        if new_index_and_weights:
+            new_id = Table._new_id(len(self))
+            self.index = new_id
+            # super call because we'd otherwise recurse back into this
+            super(Table, self).__setitem__(Table._WEIGHTS_COLUMN, 1)
 
     # TODO: update str and repr
     def __str__(self):
