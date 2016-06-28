@@ -9,6 +9,7 @@ from PyQt4.QtCore import QObject
 from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import pyqtProperty as Property
 
+
 class UserMessage(object):
     """
     A user message that should be displayed in a scheme view.

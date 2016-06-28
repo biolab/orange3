@@ -5,7 +5,6 @@ Scheme save/load routines.
 import base64
 import sys
 import warnings
-from pprint import pprint
 
 from xml.etree.ElementTree import TreeBuilder, Element, ElementTree, parse
 
