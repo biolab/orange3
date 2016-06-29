@@ -1,14 +1,33 @@
 import inspect
 
-def indent(level, line):
+def indent(level, line): # TODO: Detect existing whitespace of first line and intelligently indent
     """ Indents line 4*level spaces """
-    return (level * " ") + line
+    return ((4*level) * " ") + line
 
 def lines_for(in_str):
     return in_str.split("\n")
 
 def str_for(in_lines):
     return in_lines.join("\n")
+
+def gen_declaration(declarName, declarValue, iscode=False):
+    """ Convertes a name + value into a variable declaration """
+    good_types = [int, float, tuple]
+    if type(declarValue) in good_types:
+        declaration = declarName + " = "
+        declaration += str(declarValue)
+        return declaration + "\n"
+    elif type(declarValue) == str:
+        declaration = declarName + " = "
+        if not(iscode):
+            declaration += "\""
+        declaration += declarValue
+        if not(iscode):
+            declaration += "\""
+        return declaration + "\n"
+    else:
+        print("Unable to declare " + declarName + " of " + str(type(declarValue)))
+        return False
 
 class CodeGenerator(object):
     """
@@ -22,11 +41,13 @@ class CodeGenerator(object):
         self.imports = []
         self.externs = []
         self.inits = {}
+        self.code_inits = []
         self.attrs = {}
         self.body = []
         self.inputs = {}
         self.outputs = {}
         self.null_lines = []
+        self.replacements = []
 
     def set_widget(self, widget):
         """
@@ -64,6 +85,7 @@ class CodeGenerator(object):
             self.attrs[name] = value
 
         if "var" in kwargs:
+            print(kwargs)
             self.attrs[kwargs["name"]] = kwargs["var"]
         else:
             if type(kwargs["name"]) == list:
@@ -74,14 +96,15 @@ class CodeGenerator(object):
                 widget_attr = getattr(self.orig_widget, kwargs["name"])
                 self.attrs[name] = value
 
-    def add_init(self, name, value):
-        """ Adds a declaration to the __init__ of the generated class """
-
-
-
     def add_extern(self, extern):
         """ Adds a function not inside of class """
         self.externs.append(extern)
+
+    def add_init(self, name, value, iscode=False):
+        """ Adds a declaration to the __init__ of the generated class """
+        self.inits[name] = value
+        if iscode:
+            self.code_inits.append(name)
 
     def add_input(self, input_name, input_val):
         """ Adds a named input to the list of inputs for the widget. """
@@ -102,6 +125,11 @@ class CodeGenerator(object):
         else:
             self.null_lines.append(nullstr)
 
+    def repl_maps(self, replacements):
+        """ replaces instances of a string in generated code """
+        for repl in replacements:
+            self.replacements.append(repl)
+
     def generate(self):
         """
         Creates a piece of code representative of this class.  The
@@ -114,6 +142,8 @@ class CodeGenerator(object):
 
         """
         preamble = ""
+
+        # Imports generation
         for dependency in self.imports:
             try:
                 preamble += "from " + dependency.__module__
@@ -121,24 +151,48 @@ class CodeGenerator(object):
             except:
                 pass
 
+        # External function generation
         body = ""
         for extern in self.externs:
             body += inspect.getsource(extern) + "\n"
         body += "\n"
 
+        # Class generation
         body += "class " + self.name + "():\n"
+
+        # __init__ generation
+        body += indent(1, "__init__(self):\n")
+        if len(self.inits) == 0:
+            body += indent(2, "pass")
+        for initName, initValue in self.inits.items():
+            iscode = initName in self.code_inits
+            declaration = gen_declaration(initName, initValue, iscode=iscode)
+            if declaration:
+                body += indent(2, "self." + declaration)
+        body += "\n"
+
+        # class attributes generation
         for attrName, attrValue in self.attrs.items():
             print("Generating source for " + attrName)
+            # If it's a code-based object, insert code
             try:
                 lines = lines_for(inspect.getsource(attrValue))
                 for line in lines:
-                    body += indent(1, line) + "\n"
+                    body += indent(0, line) + "\n"
                 body += "\n"
+            # Non-code object
             except:
-                print("failed!")
+                declaration = gen_declaration(attrName, attrValue)
+                if declaration:
+                    body += indent(0, declaration)
+                else:
+                    print("Unable to add attribute " + attrName)
+        body += "\n"
 
         # TODO: Body gen
 
         # TODO: Null lines
+
+        # TODO: Replacements
 
         return preamble, body

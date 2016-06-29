@@ -17,6 +17,7 @@ from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.utils.codegen import indent
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -287,13 +288,28 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # Add imported external dependencies
         gen.add_import([os, FileFormat, UrlReader])
 
+        # Declarations inserted into __init__(self)
+        gen.add_init("LOCAL_FILE", 0)
+        gen.add_init("source", "Setting(self.LOCAL_FILE)", iscode=True)
+        gen.add_init("recent_paths", "Setting([\n" +
+            indent(3, "RecentPath(\"\", \"sample-datasets\", \"iris.tab\"),\n") +
+            indent(3, "RecentPath(\"\", \"sample-datasets\", \"titanic.tab\"),\n") +
+            indent(3, "RecentPath(\"\", \"sample-datasets\", \"housing.tab\"),\n") +
+            indent(2, "])"), iscode=True)
+        gen.add_init("url_text", self.url_combo.currentText())
+        gen.add_init("sheet_text", self.sheet_combo.currentText())
+
         # Copy attributes from widget to code generator
-        gen.add_attr(name=["load_data", "_get_reader", "source",
-            "recent_paths", "LOCAL_FILE", "select_sheet",
-            "sheet_combo"])
+        gen.add_attr(name=["load_data", "_get_reader", "select_sheet"])
 
         # Remove lines that contain strings in output
         gen.null_ln(["_update_sheet_combo", "editor_model.set_domain"])
+
+        # Replaces instances of arg1 with arg2 in generated source code
+        gen.repl_maps([
+            ("url_combo.currentText()", "url_text"),
+            ("sheet_combo.currentText()", "sheet_text"),
+        ])
 
         # Add variable not part of function to the output
         gen.add_extern(add_origin)
