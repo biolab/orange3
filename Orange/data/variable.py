@@ -307,13 +307,18 @@ class Variable(str, metaclass=VariableMeta):
 
     def __eq__(self, other):
         """
-        If comparing with a string, compare names. Otherwise,
-        two variables are equivalent if the originate from the same master.
+        If comparing two variables, compare masters if at least one master
+        is set (otherwise compare names).  When comparing strings, compare names,
+        otherwise, they are not equal.
         """
-        if isinstance(other, str) and not isinstance(other, Variable):
-            return self.name == other
+        if isinstance(other, Variable):
+            return self.name == other.name or (self.master is other.master and self.master is not None)
         else:
-            return hasattr(other, "master") and self.master is other.master
+            return self.name == other
+
+    def __ne__(self, other):
+        """Variable extends str, so we have to set this to use our implementation of __eq__."""
+        return not self.__eq__(other)
 
     def __hash__(self):
         return super().__hash__()

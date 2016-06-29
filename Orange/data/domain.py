@@ -208,7 +208,6 @@ class Domain:
         Return the index of the given variable or meta attribute, represented
         with an instance of :class:`Variable`, `int` or `str`.
         """
-
         try:
             return self._indices[var]
         except KeyError:

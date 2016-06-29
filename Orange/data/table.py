@@ -10,6 +10,7 @@ import bottleneck as bn
 from scipy import sparse as sp
 import numpy as np
 import pandas as pd
+import pandas.core.internals
 
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
 from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable
@@ -47,29 +48,10 @@ class Table(pd.DataFrame):
                  'attributes',
                  '__file__']
 
-    @staticmethod
-    def pandas_constructor_proxy(new_data, *args, **kwargs):
-        """
-        A proxy constructor, needed because we override __new__.
-        Thist (should be) called only from pandas internals, with a single argument - the data.
-        Example: when selecting a subset of a Table, pandas calls _constructor (or similar)
-                 to get the class which has to be constructed. In our case this is Table, but
-                 because __new__ is complicated--calls different factories depending on
-                 the arguments passed. Because we can't handle this behaviour (it's pandas internal),
-                 we proxy a constructor with this callable to allow pandas internals
-                 to still work.
-        """
-        # TODO: just for testing, remove afterwards
-        # we expect only one argument
-        if len(args) != 1 or kwargs:
-            for _ in range(10):
-                print("UNEXPECTED PANDAS BEHAVIOUR")
-        return Table(data=new_data)
-
     @property
     def _constructor(self):
         """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
-        return Table.pandas_constructor_proxy
+        return Table
 
     @property
     def _constructor_sliced(self):
@@ -182,6 +164,14 @@ class Table(pd.DataFrame):
         if not args:
             raise TypeError("Table takes at least 1 positional argument (0 given))")
 
+        # workaround for Orange's annoying __new__ override incompatibility
+        # with proper pandas subclassing, where slicing creates new Tables, but
+        # doesn't have the same arg/kwarg interface as pandas
+        # this should cover all use-cases where pandas constructs an object,
+        # even when other kwargs are passed
+        if isinstance(args[0], pd.core.internals.BlockManager):
+            return cls(data=args[0], *args[1:], **kwargs)
+
         if isinstance(args[0], str):
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
@@ -224,7 +214,7 @@ class Table(pd.DataFrame):
         # but we still need to allow constructing an empty table (with no domain)
         # also, we only set the domain if it has changed (==number of variables),
         # so in those cases, id(domain_before) == id(domain_after)
-        if hasattr(self, 'domain'):
+        if hasattr(self, 'domain') and self.domain is not None:
             new_domain = Domain(
                 [c for c in self.domain.attributes if c in self.columns],
                 [c for c in self.domain.class_vars if c in self.columns],
@@ -255,7 +245,7 @@ class Table(pd.DataFrame):
         return res
 
     @classmethod
-    def from_table(cls, target_domain, source_table, row_indices=...):
+    def from_table(cls, target_domain, source_table, row_indices=slice(None)):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -291,6 +281,7 @@ class Table(pd.DataFrame):
                                                  chain(target_domain.variables, target_domain.metas)):
                 if isinstance(conversion, Number):
                     res[target_column.name] = source_table[source_table.domain[conversion]]
+                    pass
                 else:
                     res[target_column.name] = conversion(source_table)
             res.domain = target_domain
@@ -319,7 +310,10 @@ class Table(pd.DataFrame):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        return source.iloc[row_indices].copy()
+        # don't just plain copy here: in case of subclasses of Table, a plain table is passed
+        # through the constructor and from_table to here, and expects to be converted
+        # into a proper subclass type
+        return cls(data=source.iloc[row_indices])
 
     @classmethod
     def _from_data_inferred(cls, X_or_data, Y=None, meta=None, infer_roles=True):
@@ -555,7 +549,16 @@ class Table(pd.DataFrame):
         # we also need to set default weights, lest they be NA
         new_index_and_weights = len(self.index) == 0
 
+        # PANDAS CONTRACT BREAKAGE:
+        # the pandas default behaviour when adding a new column as a Series is that
+        # the indexes are inner-joined: only the elements at the indices that exist
+        # in the current table are actually set, other elements are NA
+        # for easier handling of Orange behaviour, we effectively ignore the index
+        # on the series to just merge the column into the table
+        if isinstance(value, pd.Series) and not new_index_and_weights:
+            value.index = self.index
         super(Table, self).__setitem__(key, value)
+
         if new_index_and_weights:
             new_id = Table._new_id(len(self))
             self.index = new_id
@@ -587,9 +590,12 @@ class Table(pd.DataFrame):
         # handle all indexing (this needs to be different in Table) in concatenate
         # the pandas contract is not in-place anyway.
         if not isinstance(other, pd.DataFrame):
-            other = pd.DataFrame(data={col: val for col, val in zip(self.columns, other)})
+            other = pd.DataFrame(data={col: val for col, val in
+                                       zip([c for c in self.columns if c != Table._WEIGHTS_COLUMN], other)}, index=[0])
         other.index = Table._new_id(len(other), force_list=True)
-        return Table.concatenate([self, other], axis=0, reindex=False, rowstack=True)
+        if Table._WEIGHTS_COLUMN not in other.columns:
+            other[Table._WEIGHTS_COLUMN] = 1
+        return Table.concatenate([self, other], axis=0, reindex=False)
 
     @deprecated('Use Table.append() for adding new rows. This inserts a new column. ')
     def insert(self, *args, **kwargs):
@@ -981,13 +987,11 @@ class TableSeries(pd.Series):
     """
     @property
     def _constructor(self):
-        """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
         return TableSeries
 
     @property
     def _constructor_expanddim(self):
-        """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
-        return Table.pandas_constructor_proxy
+        return Table
 
 
 class TablePanel(pd.Panel):
@@ -1000,4 +1004,4 @@ class TablePanel(pd.Panel):
 
     @property
     def _constructor_sliced(self):
-        return Table.pandas_constructor_proxy
+        return Table

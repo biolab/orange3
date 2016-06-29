@@ -32,6 +32,11 @@ def assert_array_nanequal(*args, **kwargs):
     return np.testing.utils.assert_array_compare(naneq, *args, **kwargs)
 
 
+def cols_wo_weights(table):
+    # semantic beautification for this filter
+    return [c for c in table.columns if c != data.Table._WEIGHTS_COLUMN]
+
+
 class TableTestCase(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
@@ -56,6 +61,23 @@ class TableTestCase(unittest.TestCase):
 
         d = data.Table("test2.tab")
         self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
+
+    def test_can_read_iris(self):
+        t = data.Table('iris')
+        self.assertEqual(4, len(t.domain.attributes))
+        self.assertEqual(1, len(t.domain.class_vars))
+        self.assertEqual(0, len(t.domain.metas))
+        self.assertTrue(all(v.is_continuous for v in t.domain.attributes))
+        self.assertTrue(all(v.is_discrete for v in t.domain.class_vars))
+        self.assertEqual({'Iris-setosa', 'Iris-versicolor', 'Iris-virginica'},
+                         set(t["iris"].unique()))
+        self.assertEqual(150, len(t))
+        self.assertEqual(6, t.columns.length)  # 5 + weights
+        self.assertEqual({'sepal length', 'sepal width', 'petal length', 'petal width', 'iris'},
+                         set(c for c in t.columns if c != data.Table._WEIGHTS_COLUMN))
+        self.assertEqual(3.2, t['sepal width'].iloc[2])
+        self.assertEqual(0.2, t['petal width'].iloc[21])
+        self.assertTrue((t.weights == 1).all())
 
     def test_indexing(self):
         import warnings
@@ -974,43 +996,6 @@ class CreateTableWithDomain(TableTests):
 
         self.assertEqual(table.domain, domain)
 
-    def test_creates_zero_filled_rows_in_X_if_domain_contains_attributes(self):
-        domain = self.mock_domain()
-        table = data.Table.from_domain(domain, self.nrows)
-
-        self.assertEqual(table.X.shape, (self.nrows, len(domain.attributes)))
-        self.assertFalse(table.X.any())
-
-    def test_creates_zero_filled_rows_in_Y_if_domain_contains_class_vars(self):
-        domain = self.mock_domain(with_classes=True)
-        table = data.Table.from_domain(domain, self.nrows)
-
-        if len(domain.class_vars) != 1:
-            self.assertEqual(table.Y.shape,
-                             (self.nrows, len(domain.class_vars)))
-        else:
-            self.assertEqual(table.Y.shape, (self.nrows,))
-        self.assertFalse(table.Y.any())
-
-    def test_creates_zero_filled_rows_in_metas_if_domain_contains_metas(self):
-        domain = self.mock_domain(with_metas=True)
-        table = data.Table.from_domain(domain, self.nrows)
-
-        self.assertEqual(table.metas.shape, (self.nrows, len(domain.metas)))
-        self.assertFalse(table.metas.any())
-
-    def test_creates_weights_if_weights_are_true(self):
-        domain = self.mock_domain()
-        table = data.Table.from_domain(domain, self.nrows, True)
-
-        self.assertEqual(table.W.shape, (self.nrows, ))
-
-    def test_does_not_create_weights_if_weights_are_false(self):
-        domain = self.mock_domain()
-        table = data.Table.from_domain(domain, self.nrows, False)
-
-        self.assertEqual(table.W.shape, (self.nrows, 0))
-
     @patch("Orange.data.table.Table.from_domain")
     def test_calling_new_with_domain_calls_new_from_domain(
             self, new_from_domain):
@@ -1089,7 +1074,7 @@ class CreateTableWithData(TableTests):
 
     def test_creates_a_table_from_list_of_instances(self):
         table = data.Table('iris')
-        new_table = data.Table(table.domain, [d for d in table])
+        new_table = data.Table(table.domain, [d for d in table.itertuples(index=False)])
         self.assertIs(table.domain, new_table.domain)
         np.testing.assert_almost_equal(table.X, new_table.X)
         np.testing.assert_almost_equal(table.Y, new_table.Y)
@@ -1294,7 +1279,7 @@ class CreateTableWithDomainAndTable(TableTests):
 
     def test_can_copy_table(self):
         new_table = data.Table.from_table(self.domain, self.table)
-        self.assert_table_with_filter_matches(new_table, self.table)
+        self.assertTrue(new_table.equals(self.table))
 
     def test_can_filter_rows_with_list(self):
         for indices in ([0], [1, 5, 6, 7]):
@@ -1310,36 +1295,19 @@ class CreateTableWithDomainAndTable(TableTests):
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=slice_)
 
-    def test_can_use_attributes_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
-        order = [random.randrange(a) for _ in self.domain.attributes]
-        new_attributes = [self.domain.attributes[i] for i in order]
-        new_domain = self.create_domain(
-            new_attributes, new_attributes, new_attributes)
-        new_table = data.Table.from_table(new_domain, self.table)
+    def test_can_change_attribute_roles(self):
+        x = self.table.domain.attributes[:3]
+        y = self.table.domain.attributes[3:5]
+        meta = self.table.domain.attributes[5:]
+        new_domain = data.Domain(x, y, meta)
+        new_table = data.Table(new_domain, self.table)
 
-        self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
-
-    def test_can_use_class_vars_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
-        order = [random.randrange(a, a + c) for _ in self.domain.class_vars]
-        new_classes = [self.domain.class_vars[i - a] for i in order]
-        new_domain = self.create_domain(new_classes, new_classes, new_classes)
-        new_table = data.Table.from_table(new_domain, self.table)
-
-        self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
-
-    def test_can_use_metas_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
-        order = [random.randrange(-m + 1, 0) for _ in self.domain.metas]
-        new_metas = [self.domain.metas[::-1][i] for i in order]
-        new_domain = self.create_domain(new_metas, new_metas, new_metas)
-        new_table = data.Table.from_table(new_domain, self.table)
-
-        self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
+        self.assertEqual(new_table.X.shape[1], len(x))
+        self.assertEqual(new_table.Y.shape[1], len(y))
+        self.assertEqual(new_table.metas.shape[1], len(meta))
+        self.assertAlmostEqual(new_table.X.sum(), self.table[x].values.sum() - self.table.weights.sum())
+        self.assertAlmostEqual(new_table.Y.sum(), self.table[y].values.sum() - self.table.weights.sum())
+        self.assertAlmostEqual(new_table.metas.sum(), self.table[meta].values.sum() - self.table.weights.sum())
 
     def test_can_use_combination_of_all_as_new_columns(self):
         a, c, m = column_sizes(self.table)
@@ -1467,61 +1435,24 @@ class TableIndexingTests(TableTests):
             [self.attributes, self.class_vars, self.metas],
             [self.attributes + self.class_vars + self.metas])
 
-        # TODO: indexing with [[0,1], [0,1]] produces weird results
-        # TODO: what should be the results of table[1, :]
-
     def test_can_select_a_single_value(self):
-        for r in self.rows:
-            for c in self.columns:
-                value = self.table[r, c]
-                self.assertAlmostEqual(
-                    value, self.magic_table[r, self.domain.index(c)])
-
-                value = self.table[r][c]
-                self.assertAlmostEqual(
-                    value, self.magic_table[r, self.domain.index(c)])
+        for i, attr in enumerate(self.table.domain.attributes):
+            for j in range(len(self.table)):
+                self.assertAlmostEqual(self.table[attr].iloc[j], self.data[j, i])
 
     def test_can_select_a_single_row(self):
         for r in self.rows:
-            row = self.table[r]
+            row = self.table.iloc[r][cols_wo_weights(self.table)]
             new_row = np.hstack(
                 (self.data[r, :],
-                 self.class_data[r, None]))
+                 self.class_data[r, None],
+                 self.meta_data[r, :]))
             np.testing.assert_almost_equal(
                 np.array(list(row)), new_row)
 
-
     def test_can_select_a_subset_of_rows_and_columns(self):
-        for r in self.rows:
-            for c in self.multiple_columns:
-                table = self.table[r, c]
-
-                attr, cls, metas = split_columns(c, self.table)
-                X = self.table.X[[r], attr]
-                if X.ndim == 1:
-                    X = X.reshape(-1, len(table.domain.attributes))
-                np.testing.assert_almost_equal(table.X, X)
-                Y = self.table.Y[:, None][[r], cls]
-                if len(Y.shape) == 1 or Y.shape[1] == 1:
-                    Y = Y.flatten()
-                np.testing.assert_almost_equal(table.Y, Y)
-                metas_ = self.table.metas[[r], metas]
-                if metas_.ndim == 1:
-                    metas_ = metas_.reshape(-1, len(table.domain.metas))
-                np.testing.assert_almost_equal(table.metas, metas_)
-
-        for r in self.multiple_rows:
-            for c in chain(self.columns, self.multiple_rows):
-                table = self.table[r, c]
-
-                attr, cls, metas = split_columns(c, self.table)
-                np.testing.assert_almost_equal(table.X, self.table.X[r, attr])
-                Y = self.table.Y[:, None][r, cls]
-                if len(Y.shape) > 1 and Y.shape[1] == 1:
-                    Y = Y.flatten()
-                np.testing.assert_almost_equal(table.Y, Y)
-                np.testing.assert_almost_equal(table.metas,
-                                               self.table.metas[r, metas])
+        subset = self.table[self.table.domain.attributes[2:4]].iloc[3:7].values[:, :-1]  # last column are weights
+        np.testing.assert_almost_equal(subset, self.data[3:7, 2:4])
 
 
 class TableElementAssignmentTest(TableTests):
@@ -1620,15 +1551,15 @@ class InterfaceTest(unittest.TestCase):
 
     def test_row_len(self):
         for i in range(self.nrows):
-            self.assertEqual(len(self.table[i]), len(self.data[i]))
+            self.assertEqual(len(self.table.iloc[i]), len(self.data[i]) + 1)  # +1 for weights
 
     def test_iteration(self):
-        for row, expected_data in zip(self.table, self.data):
-            self.assertEqual(tuple(row), expected_data)
+        for (idx, row), expected_data in zip(self.table.iterrows(), self.data):
+            self.assertEqual(tuple(row[cols_wo_weights(self.table)]), expected_data)
 
     def test_row_indexing(self):
         for i in range(self.nrows):
-            self.assertEqual(tuple(self.table[i]), self.data[i])
+            self.assertEqual(tuple(self.table.iloc[i][cols_wo_weights(self.table)]), self.data[i])
 
     def test_row_slicing(self):
         t = self.table[1:]
@@ -1636,36 +1567,29 @@ class InterfaceTest(unittest.TestCase):
 
     def test_value_indexing(self):
         for i in range(self.nrows):
-            for j in range(len(self.table[i])):
-                self.assertEqual(self.table[i, j], self.data[i][j])
+            for j, c in enumerate(cols_wo_weights(self.table)):
+                self.assertEqual(self.table.iloc[i][c], self.data[i][j])
 
     def test_row_assignment(self):
         new_value = 2.
         for i in range(self.nrows):
-            new_row = [new_value] * len(self.data[i])
-            self.table[i] = np.array(new_row)
-            self.assertEqual(list(self.table[i]), new_row)
+            new_row = [new_value] * len(self.data[i]) + [1]  # additional item: weight
+            self.table.iloc[i] = np.array(new_row)
+            self.assertEqual(list(self.table.iloc[i]), new_row)
 
     def test_value_assignment(self):
         new_value = 0.
         for i in range(self.nrows):
-            for j in range(len(self.table[i])):
-                self.table[i, j] = new_value
-                self.assertEqual(self.table[i, j], new_value)
+            for j in range(len(self.table.iloc[i])):
+                self.table.iloc[i, j] = new_value
+                self.assertEqual(self.table.iloc[i, j], new_value)
 
     def test_append_rows(self):
         new_value = 2
         new_row = [new_value] * len(self.data[0])
-        self.table.append(new_row)
-        self.assertEqual(list(self.table[-1]), new_row)
-
-    def test_insert_rows(self):
-        new_value = 2
-        new_row = [new_value] * len(self.data[0])
-        self.table.insert(0, new_row)
-        self.assertEqual(list(self.table[0]), new_row)
-        for row, expected in zip(self.table[1:], self.data):
-            self.assertEqual(tuple(row), expected)
+        newt = self.table.append(new_row)
+        a = newt.iloc[-1]
+        self.assertEqual(list(newt.iloc[-1][cols_wo_weights(newt)]), new_row)
 
     def test_insert_view(self):
         new_row = [1] * len(self.data[0])
@@ -1678,21 +1602,39 @@ class InterfaceTest(unittest.TestCase):
 
     def test_delete_rows(self):
         for i in range(self.nrows):
-            del self.table[0]
+            self.table = self.table.iloc[1:]
             for j in range(len(self.table)):
-                self.assertEqual(tuple(self.table[j]), self.data[i + j + 1])
+                self.assertEqual(tuple(self.table.iloc[j][cols_wo_weights(self.table)]), self.data[i + j + 1])
 
     def test_clear(self):
         self.table.clear()
         self.assertEqual(len(self.table), 0)
-        for i in self.table:
+        for i in self.table.iterrows():
             self.fail("Table should not contain any rows.")
 
     def test_subclasses(self):
         from pathlib import Path
 
+        # also TablePanel, but we don't need that here
+        # see pandas' subclassing docs and our impl for more info
+
+        class _ExtendedSeries(data.TableSeries):
+            @property
+            def _constructor(self):
+                return _ExtendedSeries
+
+            @property
+            def _constructor_expanddim(self):
+                return _ExtendedTable
+
         class _ExtendedTable(data.Table):
-            pass
+            @property
+            def _constructor(self):
+                return _ExtendedTable
+
+            @property
+            def _constructor_sliced(self):
+                return _ExtendedSeries
 
         data_file = _ExtendedTable('iris')
         data_url = _ExtendedTable.from_url(
