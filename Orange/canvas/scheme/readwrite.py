@@ -933,17 +933,13 @@ def scheme_to_python(scheme, out_file):
     script = ""
 
     for widget in sorted_widgets:
-        code_generator = widget.code_gen()
-        code_segments = code_generator.generate()
+        code_segments = widget.code_gen.generate()
         # Imports and other code to go at the top of the script
         if code_segments[0]:
             preamble += str(code_segments[0])
-        # Variable declarations and widget init
+        # Widget core code and processing functions
         if code_segments[1]:
             script += str(code_segments[1]) + "\n"
-        # Widget core code and processing functions
-        if code_segments[2]:
-            script += str(code_segments[2]) + "\n"
 
     out_file.write(preamble + script)
 

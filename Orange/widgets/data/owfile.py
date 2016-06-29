@@ -201,14 +201,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.apply_button.setFixedWidth(170)
         self.editor_model.dataChanged.connect(self.apply_button.show)
 
-        self.set_code_gens()
-
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
         QtCore.QTimer.singleShot(0, self.load_data)
 
         self.setAcceptDrops(True)
+
+        self.init_code_gen()
 
     def sizeHint(self):
         return QtCore.QSize(600, 550)
@@ -278,11 +278,28 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.editor_model.set_domain(data.domain)
         self.data = data
 
-    def set_code_gens(self):
-        def body_gen():
-            a = "test"
+    def init_code_gen(self):
+        gen = self.code_gen
 
-        self.code_gen.set_body_gen(body_gen)
+        # Send reference to the widget to the generator
+        gen.set_widget(self)
+
+        # Add imported external dependencies
+        gen.add_import([os, FileFormat, UrlReader])
+
+        # Copy attributes from widget to code generator
+        gen.add_attr(name=["load_data", "_get_reader", "source",
+            "recent_paths", "LOCAL_FILE", "select_sheet",
+            "sheet_combo"])
+
+        # Remove lines that contain strings in output
+        gen.null_ln(["_update_sheet_combo", "editor_model.set_domain"])
+
+        # Add variable not part of function to the output
+        gen.add_extern(add_origin)
+
+        # Add main function that produces output
+        gen.add_body(self.load_data)
 
     def _get_reader(self):
         """

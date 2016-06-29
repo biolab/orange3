@@ -1,64 +1,144 @@
 import inspect
 
+def indent(level, line):
+    """ Indents line 4*level spaces """
+    return (level * " ") + line
+
+def lines_for(in_str):
+    return in_str.split("\n")
+
+def str_for(in_lines):
+    return in_lines.join("\n")
+
 class CodeGenerator(object):
     """
-    This is the default version of the function that replicates the
-    results of the output of a widget.  It is used with the Python
-    script exportation pipeline to generate a static script to accomplish
-    the actions carried out in the widget statically.
+    Framework to generate static Python code that performs
+    the core functionality of a widget.
 
     """
-    def __call__(self):
-        return self
+    def __init__(self):
+        self.name = "unnamed_widget"
+        self.orig_widget = None
+        self.imports = []
+        self.externs = []
+        self.inits = {}
+        self.attrs = {}
+        self.body = []
+        self.inputs = {}
+        self.outputs = {}
+        self.null_lines = []
 
-    def gen_preamble(self):
+    def set_widget(self, widget):
         """
-        A list of expressions to be tacked on the the top of the
-        script; duplicate expressions will be ignored.
-
-        """
-        pass
-
-    def gen_declarations(self):
-        """
-        Variable name conversions to be inserted before the start
-        of the main module code
-
-        """
-        pass
-
-    def gen_body(self):
-        """
-        A function that returns the code to generate the output of
-        the widget in a static way.
+        Provides a copy of the original widget for internal use
+        by the code generator.
 
         """
-        pass
+        self.orig_widget = widget
+
+    def add_import(self, extern):
+        """
+        Adds an import for the supplied exernal variable to the start of
+        the exported script.
+
+        """
+        if type(extern) == list:
+            for elem in extern:
+                self.imports.append(extern)
+        else:
+            self.imports.append(extern)
+
+    def add_attr(self, **kwargs):
+        """
+        Adds an attribute to the code generator object.  If just
+        name= is supplied, will assume it's an attribute of the widget.
+        If name= and var= are suppplied, will use value of var.
+        name= can also supply a list
+
+        """
+        def _add_attr(widget, name, **kwargs):
+            if "value" not in kwargs:
+                value = getattr(self.orig_widget, name)
+            else:
+                value = kwargs["value"]
+            self.attrs[name] = value
+
+        if "var" in kwargs:
+            self.attrs[kwargs["name"]] = kwargs["var"]
+        else:
+            if type(kwargs["name"]) == list:
+                for name in kwargs["name"]:
+                    widget_attr = getattr(self.orig_widget, name)
+                    self.attrs[name] = widget_attr
+            else:
+                widget_attr = getattr(self.orig_widget, kwargs["name"])
+                self.attrs[name] = value
+
+    def add_init(self, name, value):
+        """ Adds a declaration to the __init__ of the generated class """
+
+
+
+    def add_extern(self, extern):
+        """ Adds a function not inside of class """
+        self.externs.append(extern)
+
+    def add_input(self, input_name, input_val):
+        """ Adds a named input to the list of inputs for the widget. """
+        self.inputs[input_name] = input_val
+
+    def add_body(self, body_func):
+        """ Adds a function to the body of the generated code """
+        self.body.append(body_func)
+
+    def send(self, channel, data):
+        """ Sets output """
+        self.outputs[channel] = data
+
+    def null_ln(self, nullstr):
+        """ Removes every line that contains `nullstr` in output """
+        if type(nullstr) == list:
+            self.null_lines.extend(nullstr)
+        else:
+            self.null_lines.append(nullstr)
 
     def generate(self):
         """
+        Creates a piece of code representative of this class.  The
+        code will get input from the defined named inputs and
+        set its outputs to the result.
+
         Returns
         -------
-        (preamble_string, declar_string, body_string,)
+        (preamble_lines, body_code,)
 
         """
-        preamble_string = inspect.getsourcelines(self.gen_preamble)
-        declar_string = inspect.getsourcelines(self.gen_declarations)
-        body_string = inspect.getsourcelines(self.gen_body)
+        preamble = ""
+        for dependency in self.imports:
+            try:
+                preamble += "from " + dependency.__module__
+                preamble += " import " + dependency.__name__ + "\n"
+            except:
+                pass
 
-        return (preamble_string, declar_string, body_string,)
+        body = ""
+        for extern in self.externs:
+            body += inspect.getsource(extern) + "\n"
+        body += "\n"
 
-    def set_preamble_gen(self, gen):
-        self.gen_preamble = gen
+        body += "class " + self.name + "():\n"
+        for attrName, attrValue in self.attrs.items():
+            print("Generating source for " + attrName)
+            try:
+                lines = lines_for(inspect.getsource(attrValue))
+                for line in lines:
+                    body += indent(1, line) + "\n"
+                body += "\n"
+            except:
+                print("failed!")
 
-    def set_header_gen(self, gen):
-        self.gen_declarations = gen
+        # TODO: Body gen
 
-    def set_body_gen(self, gen):
-        self.gen_body = gen
+        # TODO: Null lines
 
-    @classmethod
-    def set_gens(cls, _preamble_gen, _header_gen, _body_gen):
-        cls.gen_preamble = _preamble_gen
-        cls.gen_declarations = _preamble_gen
-        cls.gen_body = _body_gen
+        return preamble, body
