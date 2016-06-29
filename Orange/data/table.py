@@ -345,43 +345,22 @@ class Table(pd.DataFrame):
         Y_df = pd.DataFrame(data=Y)
         meta_df = pd.DataFrame(data=meta)
 
-        def _compute_name(colname, r):
-            if isinstance(colname, Integral):
-                # choose a new name, we don't want numbers
-                if r == 'x':
-                    return "Feature {}".format(len(role_vars['x']) + 1)
-                elif r == 'y' and isinstance(var, ContinuousVariable):
-                    return "Target {}".format(len(role_vars['y']) + 1)
-                elif r == 'y' and isinstance(var, DiscreteVariable):
-                    return "Class {}".format(len(role_vars['y']) + 1)
-                else:
-                    return "Meta {}".format(len(role_vars['meta']) + 1)
-            else:
-                return colname
-
         # override, because the user wishes to specify roles manually
         if Y is not None or meta is not None:
             infer_roles = False
 
         # process every input segment with its intended role
         for df, initial_role in zip((X_df, Y_df, meta_df), ('x', 'y', 'meta')):
-            # choose whether to force a role or allow inference
-            role = initial_role if not infer_roles else None
-            for column_name, column, uniq in ((c, df[c], df[c].unique()) for c in df.columns):
-                # if there are at most 3 different values of any kind, they are discrete
-                if len(uniq) <= 3:
-                    role = role or 'x'
-                    var = DiscreteVariable(_compute_name(column_name, role), values=sorted(uniq))
-                # all other all-number columns are continuous features
-                elif np.issubdtype(column.dtype, np.number):
-                    role = role or 'x'
-                    var = ContinuousVariable(_compute_name(column_name, role))
-                # all others (including those we can't determine) are string metas
+            for column_name, column in ((c, df[c]) for c in df.columns):
+                t, r = Domain.infer_type_role(column, initial_role if not infer_roles else None)
+                name = Domain.infer_name(t, r, column_name,
+                                         role_vars['x'], role_vars['y'], role_vars['meta'])
+                if t is DiscreteVariable:
+                    var = t(name, values=sorted(column.unique()))
                 else:
-                    role = role or 'meta'
-                    var = StringVariable(_compute_name(column_name, role))
+                    var = t(name)
                 res[var.name] = column
-                role_vars[role].append(var)
+                role_vars[r].append(var)
         res.domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
         res.domain.anonymous = True
         return res
@@ -458,12 +437,22 @@ class Table(pd.DataFrame):
         return res
 
     @classmethod
-    def from_dataframe(cls, df):
+    def from_dataframe(cls, df, domain=None, reindex=False, weights=None):
         """
         Convert a pandas.DataFrame object to a Table.
-        This infers column variable types and roles.
+        This can infer infers column variable types and roles, reindex and set weights.
         """
-        return cls._from_data_inferred(df)
+        if domain is None:
+            result = cls._from_data_inferred(df)
+        else:
+            result = cls(data=df)
+            result.domain = domain
+
+        if reindex:
+            result.index = cls._new_id(len(result))
+        if weights is not None:
+            result.set_weights(weights)
+        return result
 
     @classmethod
     def _new_id(cls, num=1, force_list=False):

@@ -72,11 +72,11 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual({'Iris-setosa', 'Iris-versicolor', 'Iris-virginica'},
                          set(t["iris"].unique()))
         self.assertEqual(150, len(t))
-        self.assertEqual(6, t.columns.length)  # 5 + weights
+        self.assertEqual(6, len(t.columns))  # 5 + weights
         self.assertEqual({'sepal length', 'sepal width', 'petal length', 'petal width', 'iris'},
                          set(c for c in t.columns if c != data.Table._WEIGHTS_COLUMN))
         self.assertEqual(3.2, t['sepal width'].iloc[2])
-        self.assertEqual(0.2, t['petal width'].iloc[21])
+        self.assertEqual(0.2, t['petal width'].iloc[22])
         self.assertTrue((t.weights == 1).all())
 
     def test_indexing(self):

@@ -364,3 +364,46 @@ class Domain:
 
     def __hash__(self):
         return hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
+
+    @classmethod
+    def infer_type_role(cls, column, force_role=None):
+        """
+        Infer a variable type and the column role for the given column (pd.Series).
+        Return a tuple of (type, role), where type is one of the subclasses of Variable
+        and role is one of {'x', 'y', 'meta'}.
+        """
+        # if there are at most 3 different values of any kind, they are discrete
+        if len(column.unique()) <= 3:
+            return DiscreteVariable, (force_role or 'x')
+        # all other all-number columns are continuous features
+        elif np.issubdtype(column.dtype, np.number):
+            return ContinuousVariable, (force_role or 'x')
+        # all others (including those we can't determine) are string metas
+        else:
+            return StringVariable, (force_role or 'meta')
+
+    @classmethod
+    def infer_name(cls, column_type, column_role, force_name=None,
+                   existing_attrs=(), existing_classes=(), existing_metas=()):
+        """
+        Infers a name for the given column type and role, taking into account
+        existing variables and an existing name, if passed.
+
+        if force_name is None or a number, a new name is generated, otherwise
+        the existing name is returned.
+
+        existing_X is a list of existing variables of the type.
+        """
+        if not force_name or isinstance(force_name, Integral) \
+                or (isinstance(force_name, str) and force_name.isdigit()):
+            # choose a new name, we don't want numbers
+            if column_role == 'x':
+                return "Feature {}".format(len(existing_attrs) + 1)
+            elif column_role == 'y' and column_type is ContinuousVariable:
+                return "Target {}".format(len(existing_classes) + 1)
+            elif column_role == 'y' and column_type is DiscreteVariable:
+                return "Class {}".format(len(existing_classes) + 1)
+            else:
+                return "Meta {}".format(len(existing_metas) + 1)
+        else:
+            return force_name
