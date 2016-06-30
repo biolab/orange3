@@ -51,6 +51,7 @@ class GraphicsPixmapWidget(QGraphicsWidget):
         if self._pixmap != pixmap:
             self._pixmap = QPixmap(pixmap)
             self.updateGeometry()
+            self.update()
 
     def pixmap(self):
         return QPixmap(self._pixmap)
