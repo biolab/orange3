@@ -38,7 +38,7 @@ class CodeGenerator(object):
     def __init__(self):
         self.name = "unnamed_widget"
         self.orig_widget = None
-        self.imports = []
+        self.imports = set()
         self.externs = []
         self.inits = {}
         self.code_inits = []
@@ -64,8 +64,7 @@ class CodeGenerator(object):
 
         """
         if type(extern) == list:
-            for elem in extern:
-                self.imports.append(extern)
+            self.imports |= set(extern)
         else:
             self.imports.append(extern)
 
@@ -141,18 +140,20 @@ class CodeGenerator(object):
         (preamble_lines, body_code,)
 
         """
-        preamble = ""
+        preamble = set()
+        body = ""
 
         # Imports generation
         for dependency in self.imports:
             try:
-                preamble += "from " + dependency.__module__
-                preamble += " import " + dependency.__name__ + "\n"
+                importString = "from " + dependency.__module__
+                preamble.add(importString +
+                    " import " + dependency.__name__)
             except:
-                pass
+                preamble.add("import " + dependency.__name__)
+        body += "\n"
 
         # External function generation
-        body = ""
         for extern in self.externs:
             body += inspect.getsource(extern) + "\n"
         body += "\n"
@@ -163,6 +164,7 @@ class CodeGenerator(object):
         # __init__ generation
         body += indent(1, "__init__(self):\n")
         if len(self.inits) == 0:
+            body += indent(2, "# No code generator defined for this widget")
             body += indent(2, "pass")
         for initName, initValue in self.inits.items():
             iscode = initName in self.code_inits
