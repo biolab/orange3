@@ -638,11 +638,11 @@ class BasketReader(FileFormat):
 class ExcelReader(FileFormat):
     """Reader for excel files"""
     EXTENSIONS = ('.xls', '.xlsx')
-    DESCRIPTION = 'Mircosoft Excel spreadsheet'
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
 
     def __init__(self, filename):
         super().__init__(filename)
-
+        # still need to open this to get a list of sheets
         from xlrd import open_workbook
         self.workbook = open_workbook(self.filename)
 
@@ -651,28 +651,29 @@ class ExcelReader(FileFormat):
     def sheets(self):
         return self.workbook.sheet_names()
 
-    def read(self):
-        import xlrd
-        wb = xlrd.open_workbook(self.filename, on_demand=True)
-        if self.sheet:
-            ss = wb.sheet_by_name(self.sheet)
-        else:
-            ss = wb.sheet_by_index(0)
+    def read_header(self):
+        # we can't read just the header, we must read the entire file
+        # pandas also doesn't automatically recognize the area the data is in
+        # and starts reading from the top left: we need to specify the area manually
         try:
-            first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
-            first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
-            row_len = ss.row_len(first_row)
-            cells = filter(any,
-                           [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
-                             for col in range(first_col, row_len)]
-                            for row in range(first_row, ss.nrows)])
-            table = self.data_table(cells)
-            table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
-            if self.sheet:
-                table.name = '-'.join((table.name, self.sheet))
-        except Exception:
+            shet = self.workbook.sheet_by_name(self.sheet) if self.sheet else self.workbook.sheet_by_index(0)
+            self.first_row_idx = next(i for i in range(shet.nrows) if any(shet.row_values(i)))
+            self.first_col_idx = next(i for i in range(shet.ncols) if shet.cell_value(self.first_row_idx, i))
+            self.last_col_idx = shet.row_len(self.first_row_idx)
+        except Exception as e:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
-        return table
+
+        raw_data = pd.read_excel(self.workbook, sheetname=self.sheet or 0,
+                                 header=None, index_col=None, engine='xlrd', skiprows=self.first_row_idx,
+                                 parse_cols=range(self.first_col_idx, self.last_col_idx))
+        return raw_data.iloc[:3]
+
+    def read_contents(self, skiprows):
+        # reading again so pandas correctly determines data types of columns (without the header)
+        raw_data = pd.read_excel(self.workbook, sheetname=self.sheet or 0,
+                                 header=None, index_col=None, engine='xlrd', skiprows=self.first_row_idx + skiprows,
+                                 parse_cols=range(self.first_col_idx, self.last_col_idx))
+        return raw_data
 
 
 class DotReader(FileFormat):

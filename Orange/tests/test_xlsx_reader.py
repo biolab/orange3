@@ -53,19 +53,16 @@ class TestExcelHeader1(unittest.TestCase):
     def test_no_flags(self):
         table = read_file("header_1_no_flags.xlsx")
         domain = table.domain
-        self.assertEqual(len(domain.metas), 0)
-        self.assertEqual(len(domain.attributes), 4)
-        self.assertIsInstance(domain[0], DiscreteVariable)
-        self.assertIsInstance(domain[1], ContinuousVariable)
-        self.assertIsInstance(domain[2], DiscreteVariable)
-        self.assertIsInstance(domain[3], ContinuousVariable)
-        for i, var in enumerate(domain):
-            self.assertEqual(var.name, chr(97 + i))
-        self.assertEqual(domain[0].values, ["green", "red"])
+        self.assertEqual(len(domain.metas), 1)
+        self.assertEqual(len(domain.attributes), 3)
+        self.assertIsInstance(domain.attributes[0], ContinuousVariable)
+        self.assertIsInstance(domain.attributes[1], ContinuousVariable)
+        self.assertIsInstance(domain.attributes[2], ContinuousVariable)
+        self.assertIsInstance(domain.metas[0], StringVariable)
         np.testing.assert_almost_equal(table.X,
-                                       np.array([[1, 0.5, 0, 21],
-                                                 [1, 0.1, 0, 123],
-                                                 [0, 0, np.nan, 0]]))
+                                       np.array([[0.5, 0, 21],
+                                                 [0.1, 0, 123],
+                                                 [0, np.nan, 0]]))
         np.testing.assert_equal(table.Y, np.array([]).reshape(3, 0))
 
     def test_flags(self):
