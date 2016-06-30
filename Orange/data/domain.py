@@ -372,8 +372,9 @@ class Domain:
         Return a tuple of (type, role), where type is one of the subclasses of Variable
         and role is one of {'x', 'y', 'meta'}.
         """
-        # if there are at most 3 different values of any kind, they are discrete
-        if len(column.unique()) <= 3:
+        # if there are at most 3 different values of any kind, they are discrete,
+        # but there have to be at least 6 values in total
+        if len(column.unique()) <= 3 and len(column) >= 6:
             return DiscreteVariable, (force_role or 'x')
         # all other all-number columns are continuous features
         elif np.issubdtype(column.dtype, np.number):

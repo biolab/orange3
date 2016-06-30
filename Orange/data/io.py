@@ -400,6 +400,7 @@ class FileFormat(metaclass=FileFormatMeta):
                 HEADER1_FLAG_SEP = '#'
                 ft_combo, names = zip(*[i.split(HEADER1_FLAG_SEP, 1) if HEADER1_FLAG_SEP in i else ('', i)
                                         for i in header_df.iloc[0].fillna('')])
+                names = list(names)
                 types = [''.join(filter(str.isupper, flag)).lower() for flag in ft_combo]
                 flags = [Flags.join(filter(str.islower, flag)) for flag in ft_combo]
                 contents = self.read_contents(skiprows=1)
@@ -444,12 +445,16 @@ class FileFormat(metaclass=FileFormatMeta):
                     col_type = DiscreteVariable
                 elif _RE_DISCRETE_LIST.match(typef):
                     col_type = DiscreteVariable
-                    col_type_kwargs.update(values=Flags.split(flag))
+                    col_type_kwargs.update(values=Flags.split(typef), ordered=True)
                 else:
                     # infer from data
                     # if the initial role was x (not specified), allow this to modify it
                     col_type, col_role = Domain.infer_type_role(contents[col_idx],
                                                                 force_role=col_role if col_role != 'x' else None)
+
+                # for discrete variables that haven't specified their values in the header
+                if col_type is DiscreteVariable and 'values' not in col_type_kwargs:
+                    col_type_kwargs.update(values=sorted(contents[col_idx].unique()))
 
                 # use an existing variable if available, otherwise get a brand new one
                 # with a brand new name
@@ -459,9 +464,15 @@ class FileFormat(metaclass=FileFormatMeta):
                     var = col_type.make(new_name, **col_type_kwargs)
                 else:
                     var = col_type(new_name, **col_type_kwargs)
+                # also store any attributes in the third row (beside the role declaration)
+                var.attributes.update(flag.attributes)
 
                 role_vars[col_role].append(var)
-                result[var.name] = contents[col_idx]
+                # strip whitespace from string/string-like columns (np.object_ in pandas)
+                if np.issubdtype(contents[col_idx], np.object_):
+                    result[var.name] = contents[col_idx].str.strip()
+                else:
+                    result[var.name] = contents[col_idx]
 
             domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
             result = Table.from_dataframe(result, domain, reindex=True, weights=weight_column)
@@ -517,19 +528,12 @@ class FileFormat(metaclass=FileFormatMeta):
     @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
-        vars = list(chain((ContinuousVariable('_w'),),
+        vars = list(chain((ContinuousVariable(Table._WEIGHTS_COLUMN),),
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))
-        for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                       data.X,
-                       data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                       data.metas):
-            write(['' if isinstance(val, Number) and isnan(val) else
-                   var.values[int(val)] if var.is_discrete else
-                   var.repr_val(val) if isinstance(var, TimeVariable) else
-                   val
-                   for var, val in zip(vars, flatten(row))])
+        for idx, row in data[vars].iterrows():
+            write(list(row))
 
 
 class CSVReader(FileFormat):
@@ -549,11 +553,22 @@ class CSVReader(FileFormat):
     def read_contents(self, skiprows):
         # sniff the separator for efficiency (inferring with pandas forces the python engine)
         sniffer = csv.Sniffer()
-        with open(self.filename, encoding='utf-8') as f:
-            dialect = sniffer.sniff(f.read(2048))
+        try:
+            if hasattr(self.filename, 'read'):  # if a file-like object is passed
+                self.filename.seek(0)
+                sample = self.filename.read(2048)
+                self.filename.seek(0)
+                delimiter = sniffer.sniff(sample).delimiter
+            else:
+                with open(self.filename, encoding='utf-8') as f:
+                    delimiter = sniffer.sniff(f.read(2048)).delimiter
+        except csv.Error:
+            # sometimes sniffing fails, fall back to tab
+            # (pandas won't solve this as it uses the same internally)
+            delimiter = "\t"
 
         return pd.read_table(self.filename,
-                             sep=dialect.delimiter, header=None, index_col=False, skipinitialspace=True,
+                             sep=delimiter, header=None, index_col=False, skipinitialspace=True,
                              skip_blank_lines=True, infer_datetime_format=True,
                              compression='infer', skiprows=skiprows)
 

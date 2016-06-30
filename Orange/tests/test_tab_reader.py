@@ -85,10 +85,10 @@ class TestTabReader(unittest.TestCase):
 
     def test_read_data_oneline_header(self):
         samplefile = """\
-        data1\tdata2\tdata3
-        0.1\t0.2\t0.3
-        1.1\t1.2\t1.5
-        """
+data1\tdata2\tdata3
+0.1\t0.2\t0.3
+1.1\t1.2\t1.5
+"""
         file = io.StringIO(samplefile)
         table = read_tab_file(file)
 
@@ -98,9 +98,9 @@ class TestTabReader(unittest.TestCase):
 
     def test_read_data_no_header(self):
         samplefile = """\
-        0.1\t0.2\t0.3
-        1.1\t1.2\t1.5
-        """
+0.1\t0.2\t0.3
+1.1\t1.2\t1.5
+"""
         file = io.StringIO(samplefile)
         table = read_tab_file(file)
 

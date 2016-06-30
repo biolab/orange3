@@ -140,8 +140,11 @@ class Table(pd.DataFrame):
             if len(weight) != len(self):
                 raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
             self[Table._WEIGHTS_COLUMN] = weight
+        elif isinstance(weight, pd.Series):
+            # drop everything but the values to uncomplicate things
+            self[Table._WEIGHTS_COLUMN] = list(weight)
         else:
-            raise TypeError("Expected one of [Number, str, Sequence].")
+            raise TypeError("Expected one of [Number, str, Sequence, Series].")
 
     def __new__(cls, *args, **kwargs):
         """
@@ -206,9 +209,9 @@ class Table(pd.DataFrame):
         super(Table, self).__init__(**kwargs)
 
         # all weights initialized to 1 (see the weight functions for details)
-        self.name = kwargs.get("name", "untitled")
-        self.attributes = kwargs.get("attributes", {})
-        self.__file__ = kwargs.get("__file__")
+        self.name = getattr(self, 'name', kwargs.get("name", "untitled"))
+        self.attributes = getattr(self, 'attributes', kwargs.get("attributes", {}))
+        self.__file__ = getattr(self, '__file__', kwargs.get("__file__"))
 
         # we need to filter the domain to only include the columns present in the table
         # but we still need to allow constructing an empty table (with no domain)
@@ -449,7 +452,7 @@ class Table(pd.DataFrame):
             result.domain = domain
 
         if reindex:
-            result.index = cls._new_id(len(result))
+            result.index = cls._new_id(len(result), force_list=True)
         if weights is not None:
             result.set_weights(weights)
         return result
@@ -507,9 +510,7 @@ class Table(pd.DataFrame):
         if cls != data.__class__:
             data = cls(data)
 
-        # no need to call _init_ids as fuctions from .io already
-        # construct a table with .ids
-
+        data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         data.__file__ = absolute_filename
         return data
 
