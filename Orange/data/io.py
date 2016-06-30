@@ -25,8 +25,8 @@ import pandas as pd
 from chardet.universaldetector import UniversalDetector
 
 from Orange.data import (
-    _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
-    DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
+    _io, Table, Domain, Variable, DiscreteVariable,
+    StringVariable, ContinuousVariable, TimeVariable,
 )
 from Orange.util import Registry, flatten, namegen
 
@@ -454,7 +454,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
                 # for discrete variables that haven't specified their values in the header
                 if col_type is DiscreteVariable and 'values' not in col_type_kwargs:
-                    col_type_kwargs.update(values=sorted(contents[col_idx].unique()))
+                    col_type_kwargs.update(values=DiscreteVariable.generate_unique_values(contents[col_idx]))
 
                 # use an existing variable if available, otherwise get a brand new one
                 # with a brand new name

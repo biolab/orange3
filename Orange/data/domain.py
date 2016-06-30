@@ -366,6 +366,56 @@ class Domain:
         return hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
 
     @classmethod
+    def _is_discrete_column(cls, column, discrete_max_values=3):
+        """
+        Determine whether a column can be considered as a DiscreteVariable.
+        """
+        if not len(column):
+            return None
+        # If the first few values are, or can be converted to, floats,
+        # the type is numeric
+        try:
+            isinstance(next(iter(column)), Number) or \
+            [float(v) for _, v in zip(range(min(3, len(column))), column)]
+        except ValueError:
+            is_numeric = False
+            max_values = int(round(len(column) ** .7))
+        else:
+            is_numeric = True
+            max_values = discrete_max_values
+
+        # If more than max values => not discrete
+        unique = column.unique()
+        if len(unique) > max_values:
+            return False
+
+        # Strip NaN from unique
+        unique = {i for i in unique
+                  if (not i in Variable.MISSING_VALUES and
+                      not (isinstance(i, Number) and np.isnan(i)))}
+
+        # All NaNs => indeterminate
+        if not unique:
+            return False
+
+        # Strings with |values| < max_unique
+        if not is_numeric:
+            return unique
+
+        # Handle numbers
+        try:
+            unique_float = set(map(float, unique))
+        except ValueError:
+            # Converting all the values to floats resulted in an error.
+            # Since the values have enough unique values, they are probably
+            # string values and discrete.
+            return unique
+
+        # If only values are {0, 1} or {1, 2} (or a subset of those sets) => discrete
+        return (not (unique_float - {0, 1}) or
+                not (unique_float - {1, 2})) and unique
+
+    @classmethod
     def infer_type_role(cls, column, force_role=None):
         """
         Infer a variable type and the column role for the given column (pd.Series).
@@ -374,7 +424,7 @@ class Domain:
         """
         # if there are at most 3 different values of any kind, they are discrete,
         # but there have to be at least 6 values in total
-        if len(column.unique()) <= 3 and len(column) >= 6:
+        if Domain._is_discrete_column(column):
             return DiscreteVariable, (force_role or 'x')
         # all other all-number columns are continuous features
         elif np.issubdtype(column.dtype, np.number):

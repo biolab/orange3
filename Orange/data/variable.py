@@ -15,70 +15,12 @@ from Orange.util import Registry, color_to_hex, hex_to_color
 
 # For storing unknowns
 Unknown = ValueUnknown = float("nan")
-# For checking for unknowns
-MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
-
-DISCRETE_MAX_VALUES = 3  # == 2 + nan
 
 
 def make_variable(cls, compute_value, *args):
     if compute_value is not None:
         return cls(*args, compute_value=compute_value)
     return cls.make(*args)
-
-
-def is_discrete_values(values):
-    """
-    Return set of uniques if `values` is an iterable of discrete values
-    else False if non-discrete, or None if indeterminate.
-
-    Note
-    ----
-    Assumes consistent type of items of `values`.
-    """
-    if not len(values): return None
-    # If the first few values are, or can be converted to, floats,
-    # the type is numeric
-    try:
-        isinstance(next(iter(values)), Number) or \
-        [float(v) for _, v in zip(range(min(3, len(values))), values)]
-    except ValueError:
-        is_numeric = False
-        max_values = int(round(len(values)**.7))
-    else:
-        is_numeric = True
-        max_values = DISCRETE_MAX_VALUES
-
-    # If more than max values => not discrete
-    unique = set()
-    for i in values:
-        unique.add(i)
-        if len(unique) > max_values:
-            return False
-
-    # Strip NaN from unique
-    unique = {i for i in unique
-              if (not i in MISSING_VALUES and
-                  not (isinstance(i, Number) and np.isnan(i)))}
-
-    # All NaNs => indeterminate
-    if not unique: return None
-
-    # Strings with |values| < max_unique
-    if not is_numeric:
-        return unique
-
-    # Handle numbers
-    try: unique_float = set(map(float, unique))
-    except ValueError:
-        # Converting all the values to floats resulted in an error.
-        # Since the values have enough unique values, they are probably
-        # string values and discrete.
-        return unique
-
-    # If only values are {0, 1} or {1, 2} (or a subset of those sets) => discrete
-    return (not (unique_float - {0, 1}) or
-            not (unique_float - {1, 2})) and unique
 
 
 class Value(float):
@@ -270,6 +212,7 @@ class Variable(str, metaclass=VariableMeta):
         is not a copy, it is its own master.
     """
     Unknown = ValueUnknown
+    MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
 
     def __new__(cls, name="", *args, **kwargs):
         # compatibility with str
@@ -282,7 +225,7 @@ class Variable(str, metaclass=VariableMeta):
         super().__init__()
         self.name = name
         self._compute_value = compute_value
-        self.unknown_str = MISSING_VALUES
+        self.unknown_str = Variable.MISSING_VALUES
         self.source_variable = None
         self.attributes = {}
         self.master = self
@@ -566,7 +509,6 @@ class DiscreteVariable(Variable):
     TYPE_HEADERS = ('discrete', 'd')
 
     _all_vars = collections.defaultdict(list)
-    presorted_values = []
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1, compute_value=None):
         """ Construct a discrete variable descriptor with the given values. """
@@ -631,10 +573,14 @@ class DiscreteVariable(Variable):
         if s is None:
             return ValueUnknown
 
-        if isinstance(s, Integral):
-            return s
-        if isinstance(s, Real):
-            return s if isnan(s) else floor(s + 0.25)
+        if isinstance(s, (Integral, Real)):
+            if isnan(s):
+                return s
+            elif s in self.values:
+                return self.values.index(s)
+            else:
+                # find the nearest instance
+                np.argmin([np.abs(v - s) if isinstance(v, Number) else np.inf for v in self.values])
         if s in self.unknown_str:
             return ValueUnknown
         if not isinstance(s, str):
@@ -699,7 +645,7 @@ class DiscreteVariable(Variable):
 
         If a compatible variable is find, it is returned, with missing values
         appended to the end of the list. If there is no explicit order, the
-        values are ordered using :obj:`ordered_values`. Otherwise, it
+        values are ordered using sorted. Otherwise, it
         constructs and returns a new variable descriptor.
 
         :param name: the name of the variable
@@ -720,7 +666,10 @@ class DiscreteVariable(Variable):
             return var
         if not ordered:
             base_value_rep = base_value != -1 and values[base_value]
-            values = cls.ordered_values(values)
+            try:
+                values = sorted(values, key=float)
+            except ValueError:
+                values = sorted(values)
             if base_value != -1:
                 base_value = values.index(base_value_rep)
         return cls(name, values, ordered, base_value)
@@ -748,7 +697,10 @@ class DiscreteVariable(Variable):
         if existing is None:
             return None
         if not ordered:
-            values = cls.ordered_values(values)
+            try:
+                values = sorted(values, key=float)
+            except ValueError:
+                values = sorted(values)
         for var in existing:
             if (var.ordered != ordered or
                     var.base_value != -1
@@ -783,26 +735,21 @@ class DiscreteVariable(Variable):
             var.base_value = var.values.index(base_rep)
         return var
 
-    @staticmethod
-    def ordered_values(values):
-        """
-        Return a sorted list of values. If there exists a prescribed order for
-        such set of values, it is returned. Otherwise, values are sorted
-        alphabetically.
-        """
-        for presorted in DiscreteVariable.presorted_values:
-            if values == set(presorted):
-                return presorted
-        try:
-            return sorted(values, key=float)
-        except ValueError:
-            return sorted(values)
-
     def copy(self, compute_value=None):
         var = DiscreteVariable(self.name, self.values, self.ordered,
                                self.base_value, compute_value)
         var.attributes = dict(self.attributes)
         return var
+
+    @classmethod
+    def generate_unique_values(cls, column):
+        """
+        Generate a sorted set of unique values from a pandas column,
+        taking into account values we consider missing (Variable.MISSING_VALUES).
+        """
+        # comparing np.nan doesn't always work, use the appropriate mechanism
+        raw = column[~column.isnull()].unique()
+        return sorted([v for v in raw if v not in Variable.MISSING_VALUES])
 
 
 class StringVariable(Variable):
@@ -951,7 +898,7 @@ class TimeVariable(ContinuousVariable):
 
         If timezone is unspecified, local time is assumed.
         """
-        if datestr in MISSING_VALUES:
+        if datestr in Variable.MISSING_VALUES:
             return Unknown
         datestr = datestr.strip().rstrip('Z')
 

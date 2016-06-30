@@ -359,7 +359,7 @@ class Table(pd.DataFrame):
                 name = Domain.infer_name(t, r, column_name,
                                          role_vars['x'], role_vars['y'], role_vars['meta'])
                 if t is DiscreteVariable:
-                    var = t(name, values=sorted(column.unique()))
+                    var = t(name, values=DiscreteVariable.generate_unique_values(column))
                 else:
                     var = t(name)
                 res[var.name] = column
