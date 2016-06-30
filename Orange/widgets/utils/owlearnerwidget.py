@@ -186,6 +186,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                 self.error(self.DATA_ERROR_ID,
                            "Data contains a single target value. "
                            "There is nothing to learn.")
+            elif self.data.X.size == 0:
+                self.error(self.DATA_ERROR_ID,
+                           "Data has no features to learn from.")
             else:
                 self.valid_data = True
         return self.valid_data
