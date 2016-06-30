@@ -13,7 +13,7 @@ import pandas as pd
 import pandas.core.internals
 
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable
+from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable, Variable
 from Orange.util import flatten, deprecated
 from . import _contingency
 from . import _valuecount
@@ -294,6 +294,9 @@ class Table(pd.DataFrame):
             res = res.iloc[row_indices]
 
             cls.conversion_cache[(id(target_domain), id(source_table))] = res
+
+            # transform any values we believe are null into actual null values
+            res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
             return res
         finally:
             if new_cache:
@@ -347,6 +350,11 @@ class Table(pd.DataFrame):
         X_df = pd.DataFrame(data=X_or_data)
         Y_df = pd.DataFrame(data=Y)
         meta_df = pd.DataFrame(data=meta)
+
+        # transform any values we believe are null into actual null values
+        X_df.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        Y_df.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        meta_df.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
 
         # override, because the user wishes to specify roles manually
         if Y is not None or meta is not None:
@@ -417,6 +425,10 @@ class Table(pd.DataFrame):
             for column, variable in zip(role_array.T, variables):
                 res[variable.name] = column
         res.domain = domain
+
+        # transform any values we believe are null into actual null values
+        res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+
         return res
 
     @classmethod
@@ -435,6 +447,10 @@ class Table(pd.DataFrame):
         res = cls(data=rows,
                   columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
         res.domain = domain
+
+        # transform any values we believe are null into actual null values
+        res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+
         if weights is not None:
             res.set_weights(weights)
         return res
@@ -450,6 +466,9 @@ class Table(pd.DataFrame):
         else:
             result = cls(data=df)
             result.domain = domain
+
+        # transform any values we believe are null into actual null values
+        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
 
         if reindex:
             result.index = cls._new_id(len(result), force_list=True)
