@@ -1,4 +1,5 @@
 from bisect import bisect_left
+from operator import attrgetter
 
 from PyQt4.QtCore import Qt, pyqtSignal as Signal, QSize
 from PyQt4.QtGui import (
@@ -188,7 +189,7 @@ class VizRankDialog(QDialog, ProgressBarMixin):
                         pos, self.row_for_state(score, state))
                     self.scores.insert(pos, score)
                 progress.advance()
-                self._select_first_if_none()
+            self._select_first_if_none()
             self.button.setText("Finished")
             self.button.setEnabled(False)
 
@@ -199,6 +200,7 @@ class VizRankDialog(QDialog, ProgressBarMixin):
             self.button.setText("Pause")
             self.run()
         else:
+            self._select_first_if_none()
             self.button.setText("Continue")
 
 
@@ -250,11 +252,12 @@ class VizRankDialogAttrPair(VizRankDialog):
         for i in range(si, len(self.attrs)):
             for j in range(sj, i):
                 yield i, j
+            sj = 0
 
     def row_for_state(self, score, state):
         items = []
-        for x in state:
-            attr = self.attrs[x]
+        attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
+        for attr in attrs:
             item = QStandardItem(attr.name)
             item.setData(attr, self._AttrRole)
             items.append(item)
