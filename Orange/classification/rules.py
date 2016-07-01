@@ -1,14 +1,13 @@
 import operator
 from copy import copy
-from hashlib import sha1
 from abc import ABCMeta, abstractmethod
-
+from hashlib import sha1
+import bottlechest as bn
 import numpy as np
 from scipy.stats import chisqprob
 import Orange
 from Orange.classification import Learner, Model
-
-__all__ = ["CN2Learner", "CN2UnorderedLearner"]
+from Orange.preprocess import Impute
 
 
 def argmaxrnd(a, random_seed=None):
@@ -45,10 +44,11 @@ def argmaxrnd(a, random_seed=None):
     if a.ndim > 2:
         raise ValueError("argmaxrnd only accepts arrays of up to 2 dim")
 
+    def f(x):
+        return random.choice((x == bn.nanmax(x)).nonzero()[0])
+
     random = (np.random if random_seed is None
               else np.random.RandomState(random_seed))
-
-    def f(x): return random.choice((x == np.nanmax(x)).nonzero()[0])
     return f(a) if a.ndim == 1 else np.apply_along_axis(f, axis=1, arr=a)
 
 
@@ -280,7 +280,7 @@ class BeamSearchAlgorithm(SearchAlgorithm):
     Remember the best rule found thus far and monitor a fixed number of
     alternatives (the beam).
     """
-    def __init__(self, beam_width=5):
+    def __init__(self, beam_width=10):
         self.beam_width = beam_width
 
     def select_candidates(self, rules):
@@ -355,6 +355,9 @@ class TopDownSearchStrategy(SearchStrategy):
     possible rules is searched by repeatedly specialising candidate
     rules.
     """
+    def __init__(self, discretise_continuous=False):
+        self.discretise_continuous = discretise_continuous
+
     def initialise_rule(self, X, Y, target_class, base_rules, domain,
                         prior_class_dist, quality_evaluator,
                         complexity_evaluator, significance_validator,
@@ -397,8 +400,11 @@ class TopDownSearchStrategy(SearchStrategy):
                     possible_selectors.extend([s1, s2])
             elif attribute.is_continuous:  # TODO: component based
                 column = np.unique(column)
-                dividers = np.array_split(column, min(10, column.shape[0]))
-                dividers = [np.median(smh) for smh in dividers]
+                if not self.discretise_continuous:
+                    dividers = column
+                else:
+                    dividers = np.array_split(column, min(10, column.shape[0]))
+                    dividers = [np.median(smh) for smh in dividers]
                 for val in dividers:
                     s1 = Selector(column=i, op="<=", value=val)
                     s2 = Selector(column=i, op=">=", value=val)
@@ -408,12 +414,12 @@ class TopDownSearchStrategy(SearchStrategy):
                               smh not in candidate_rule.selectors]
 
         new_rules = []
-        (target_class, selectors, domain, prior_class_dist,
+        (target_class, candidate_rule_selectors, domain, prior_class_dist,
          quality_evaluator, complexity_evaluator, significance_validator,
          general_validator) = candidate_rule.seed()
 
         for curr_selector in possible_selectors:
-            copied_selectors = copy(selectors)
+            copied_selectors = copy(candidate_rule_selectors)
             copied_selectors.append(curr_selector)
 
             new_rule = Rule(selectors=copied_selectors,
@@ -656,9 +662,10 @@ class RuleFinder:
         best_rule : Rule
             Highest quality rule discovered.
         """
-        def rcmp(rule): return rule.quality, rule.complexity
-        prior_class_dist = get_dist(Y, domain)
+        def rcmp(rule):
+            return rule.quality, rule.complexity
 
+        prior_class_dist = get_dist(Y, domain)
         rules = self.search_strategy.initialise_rule(
             X, Y, target_class, base_rules, domain, prior_class_dist,
             self.quality_evaluator, self.complexity_evaluator,
@@ -684,7 +691,7 @@ class RuleFinder:
         return best_rule
 
 
-class RuleLearner(Learner):
+class RuleLearner(Learner, metaclass=ABCMeta):
     """
     A base rule induction learner. Returns a rule classifier if called
     with data.
@@ -706,7 +713,8 @@ class RuleLearner(Learner):
     .. [1] "Separate-and-Conquer Rule Learning", Johannes Fürnkranz,
            Artificial Intelligence Review 13, 3-54, 1999
     """
-    __metaclass__ = ABCMeta
+    name = "testing"
+    preprocessors = [Impute()]
 
     def __init__(self, preprocessors=None, base_rules=None):
         """
@@ -734,14 +742,14 @@ class RuleLearner(Learner):
         rule_list = []
         while not self.data_stopping(X, Y, target_class):
             new_rule = self.rule_finder(X, Y, target_class, base_rules, domain)
-            if self.rule_stopping(X, Y, new_rule):
+            if self.rule_stopping(new_rule):
                 break
             X, Y = self.cover_and_remove(X, Y, new_rule)
             rule_list.append(new_rule)
         return rule_list
 
     @staticmethod
-    def rule_stopping(X, Y, new_rule):
+    def rule_stopping(new_rule, alpha=1.0):
         return False
 
     @staticmethod
@@ -756,13 +764,11 @@ class RuleLearner(Learner):
         return X[examples_to_keep], Y[examples_to_keep]
 
 
-class RuleClassifier(Model):
+class RuleClassifier(Model, metaclass=ABCMeta):
     """
     A rule induction classifier. Instances are classified following
     either an unordered set of rules or a decision list.
     """
-    __metaclass__ = ABCMeta
-
     def __init__(self, domain=None, rule_list=None):
         super().__init__(domain)
         self.domain = domain
@@ -793,6 +799,7 @@ class CN2Learner(RuleLearner):
     .. [1] "The CN2 Induction Algorithm", Peter Clark and Tim Niblett,
            Machine Learning Journal, 3 (4), pp261-283, (1989)
     """
+    name = 'CN2 inducer'
 
     def __init__(self, preprocessors=None, base_rules=None):
         super().__init__(preprocessors, base_rules)
@@ -849,9 +856,10 @@ class CN2UnorderedLearner(RuleLearner):
            Clark and Robin Boswell, Machine Learning - Proceedings of
            the 5th European Conference (EWSL-91), pp151-163, 1991
     """
+    name = 'CN2Unordered inducer'
+
     def __init__(self, preprocessors=None, base_rules=None):
         super().__init__(preprocessors, base_rules)
-        self.rule_finder.search_algorithm.beam_width = 10
         self.rule_finder.quality_evaluator = LaplaceAccuracyEvaluator()
 
     def fit(self, X, Y, W=None):
@@ -916,10 +924,6 @@ class CN2UnorderedClassifier(RuleClassifier):
 
 def main():
     data = Orange.data.Table('titanic')
-    row_defined = ~np.isnan(data.X).any(axis=1)
-    data.Y = data.Y[row_defined]
-    data.X = data.X[row_defined]
-
     learner = CN2Learner()
     classifier = learner(data)
     for rule in classifier.rule_list:
@@ -927,12 +931,15 @@ def main():
 
     print()
 
+    data = Orange.data.Table('iris')
     learner = CN2UnorderedLearner()
+    learner.rule_finder.general_validator.max_rule_length = 5
+    learner.rule_finder.general_validator.minimum_covered_examples = 1
+    learner.rule_finder.search_algorithm.beam_width = 10
+    # learner.rule_finder.search_strategy.discretise_continuous = True
     classifier = learner(data)
     for rule in classifier.rule_list:
-        print(rule, rule.curr_class_dist.tolist())
+        print(rule, rule.curr_class_dist.tolist(), rule.quality)
 
 if __name__ == "__main__":
     main()
-
-# WEIGHTS tok casa dokler pokrijes primere = 5
