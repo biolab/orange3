@@ -25,7 +25,8 @@ class TestKMeans(unittest.TestCase):
                         max_iter=10,
                         random_state=42,
                         tol=0.001,
-                        init='random')
+                        init='random',
+                        compute_silhouette_score=True)
         c = kmeans(self.iris)
 
     def test_predict_single_instance(self):

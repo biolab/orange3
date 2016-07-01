@@ -614,7 +614,7 @@ class OWWidget(QDialog, Report, metaclass=WidgetMetaClass):
                 text = "{}:{:02}:{:02}".format(hrs, mins, secs)
             else:
                 text = "{}:{}:{:02}".format(hrs, mins, secs)
-            self.setWindowTitle("{} ({:.2f}% complete, remaining time: {})"
+            self.setWindowTitle("{} ({:d}%, ETA: {})"
                                 .format(self.captionTitle, value, text))
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")

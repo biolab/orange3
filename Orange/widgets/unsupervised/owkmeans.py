@@ -218,7 +218,8 @@ class OWKMeans(widget.OWWidget):
             k_to = min(self.k_to, len(self.data))
             kmeans = KMeans(
                 init=['random', 'k-means++'][self.smart_init],
-                n_init=self.n_init, max_iter=self.max_iterations)
+                n_init=self.n_init, max_iter=self.max_iterations,
+                compute_silhouette_score=self.scoring == self.SILHOUETTE)
             with self.progressBar(k_to - self.k_from + 1) as progress:
                 for k in range(self.k_from, k_to + 1):
                     progress.advance()
@@ -264,7 +265,7 @@ class OWKMeans(widget.OWWidget):
         best_run = scores.index(best_score)
         score_span = (best_score - worst_score) or 1
         max_score = max(scores)
-        nplaces = min(5, int(abs(math.log(max(max_score, 1e-10)))) + 2)
+        nplaces = min(5, np.floor(abs(math.log(max(max_score, 1e-10)))) + 2)
         fmt = "{{:.{}f}}".format(nplaces)
         model = self.table_model
         model.setRowCount(len(k_scores))
@@ -278,7 +279,8 @@ class OWKMeans(widget.OWWidget):
             item = model.item(i, 1)
             if item is None:
                 item = QStandardItem()
-            item.setData(fmt.format(score), Qt.DisplayRole)
+            item.setData(fmt.format(score) if not np.isnan(score) else 'out-of-memory error',
+                         Qt.DisplayRole)
             bar_ratio = 0.95 * (score - worst_score) / score_span
             item.setData(bar_ratio, gui.TableBarItem.BarRole)
             model.setItem(i, 1, item)
