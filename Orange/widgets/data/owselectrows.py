@@ -319,7 +319,7 @@ class OWSelectRows(widget.OWWidget):
         self.update_info(data, self.data_in_variables, "In: ")
         for attr, cond_type, cond_value in self.conditions:
             attrs = [a.name for a in
-                     data.domain.variables + data.domain.metas]
+                     filter_visible(chain(data.domain.variables, data.domain.metas))]
             if attr in attrs:
                 self.add_row(attrs.index(attr), cond_type, cond_value)
         self.unconditional_commit()
