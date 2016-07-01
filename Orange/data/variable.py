@@ -258,7 +258,7 @@ class Variable(str, metaclass=VariableMeta):
         otherwise, they are not equal.
         """
         if isinstance(other, Variable):
-            return self.name == other.name or (self.master is other.master and self.master is not None)
+            return self.master is other.master and self.master is not None
         else:
             return self.name == other
 

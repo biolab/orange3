@@ -129,12 +129,9 @@ class TestDiscreteVariable(VariableTest):
         values = ["F", "M"]
         var = DiscreteVariable(name="Feature 0", values=values)
 
-        self.assertEqual(var.to_val(0), 0)
         self.assertEqual(var.to_val("F"), 0)
-        self.assertEqual(var.to_val(0.), 0)
         self.assertTrue(math.isnan(var.to_val("?")))
 
-        # TODO: with self.assertRaises(ValueError): var.to_val(2)
         with self.assertRaises(ValueError):
             var.to_val("G")
 
@@ -194,7 +191,7 @@ class TestDiscreteVariable(VariableTest):
     def test_val_from_str(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertTrue(math.isnan(var.to_val(None)))
-        self.assertEqual(var.to_val(1), 1)
+        self.assertEqual(var.to_val("M"), 1)
 
     def test_repr(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
