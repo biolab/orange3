@@ -47,7 +47,8 @@ class OWLogisticRegression(OWBaseLearner):
         gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
         gui.hSlider(box2, self, "C_index",
                     minValue=0, maxValue=len(self.C_s) - 1,
-                    callback=self.set_c, createLabel=False)
+                    callback=lambda: (self.set_c(), self.settings_changed()),
+                    createLabel=False)
         gui.widgetLabel(box2, "Strong").setStyleSheet("margin-top:6px")
         box2 = gui.hBox(box)
         box2.layout().setAlignment(Qt.AlignCenter)
@@ -58,7 +59,6 @@ class OWLogisticRegression(OWBaseLearner):
         self.C = self.C_s[self.C_index]
         fmt = "C={}" if self.C >= 1 else "C={:.3f}"
         self.c_label.setText(fmt.format(self.C))
-        self.settings_changed()
 
     def create_learner(self):
         penalty = ["l1", "l2"][self.penalty_type]
