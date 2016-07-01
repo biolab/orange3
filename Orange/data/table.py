@@ -982,7 +982,8 @@ class Table(MutableSequence, Storage):
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
-        return bn.anynan(self.X) or bn.anynan(self._Y)
+        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)   # do not check for sparse X
+        return missing_x or bn.anynan(self._Y)
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
