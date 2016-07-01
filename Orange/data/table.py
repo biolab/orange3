@@ -13,7 +13,7 @@ import pandas as pd
 import pandas.core.internals
 
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable, Variable
+from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable, Variable, TimeVariable
 from Orange.util import flatten, deprecated
 from . import _contingency
 from . import _valuecount
@@ -76,12 +76,12 @@ class Table(pd.DataFrame):
         # preallocate result, we fill it in-place
         # we need a more general dtype for metas (strings),
         # otherwise assignment fails later
-        res = np.zeros((len(self), len(cols)), dtype=object if meta else None)
+        result = np.zeros((len(self), len(cols)), dtype=object if meta else None)
         # effectively a double for loop, see if this is a bottleneck later
         for i, col in enumerate(cols):
-            res[:, i] = self[col].apply(col.to_val).values
-        res.setflags(write=writable)
-        return res
+            result[:, i] = self[col].apply(col.to_val).values
+        result.setflags(write=writable)
+        return result
 
     @property
     def X(self):
@@ -98,8 +98,8 @@ class Table(pd.DataFrame):
         If there is only one column, a one-dimensional array is returned. Otherwise 2D.
         The columns are in the same order as the columns in Table.domain.class_vars.
         """
-        res = self._to_numpy(Y=True)
-        return res[:, 0] if res.shape[1] == 1 else res
+        result = self._to_numpy(Y=True)
+        return result[:, 0] if result.shape[1] == 1 else result
 
     @property
     def metas(self):
@@ -242,9 +242,9 @@ class Table(pd.DataFrame):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        res = cls(columns=domain.attributes + domain.class_vars + domain.metas)
-        res.domain = domain
-        return res
+        result = cls(columns=domain.attributes + domain.class_vars + domain.metas)
+        result.domain = domain
+        return result
 
     @classmethod
     def from_table(cls, target_domain, source_table, row_indices=slice(None)):
@@ -276,29 +276,30 @@ class Table(pd.DataFrame):
             if target_domain == source_table.domain:
                 return cls.from_table_rows(source_table, row_indices)
 
-            res = cls()
+            result = cls()
             conversion = target_domain.get_conversion(source_table.domain)
 
             for conversion, target_column in zip(chain(conversion.variables, conversion.metas),
                                                  chain(target_domain.variables, target_domain.metas)):
                 if isinstance(conversion, Number):
-                    res[target_column.name] = source_table[source_table.domain[conversion]]
+                    result[target_column.name] = source_table[source_table.domain[conversion]]
                     pass
                 else:
-                    res[target_column.name] = conversion(source_table)
-            res.domain = target_domain
+                    result[target_column.name] = conversion(source_table)
+            result.domain = target_domain
 
-            res.set_weights(source_table.weights)
-            res.index = source_table.index  # keep previous index
-            res = res.iloc[row_indices]
+            result.set_weights(source_table.weights)
+            result.index = source_table.index  # keep previous index
+            result = result.iloc[row_indices]
 
-            cls.conversion_cache[(id(target_domain), id(source_table))] = res
+            cls.conversion_cache[(id(target_domain), id(source_table))] = result
 
             # transform any values we believe are null into actual null values
-            res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
-            res._transform_discrete_into_categorical()
+            result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+            result._transform_discrete_into_categorical()
+            result._transform_timevariable_into_datetime()
 
-            return res
+            return result
         finally:
             if new_cache:
                 cls.conversion_cache = None
@@ -345,7 +346,7 @@ class Table(pd.DataFrame):
         The domain is marked as anonymous.
         """
         role_vars = {'x': [], 'y': [], 'meta': []}
-        res = cls()
+        result = cls()
 
         # used for data inference, shape checks, consolidated access
         X_df = pd.DataFrame(data=X_or_data)
@@ -371,12 +372,13 @@ class Table(pd.DataFrame):
                     var = t(name, values=DiscreteVariable.generate_unique_values(column))
                 else:
                     var = t(name)
-                res[var.name] = column
+                result[var.name] = column
                 role_vars[r].append(var)
-        res.domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
-        res.domain.anonymous = True
-        res._transform_discrete_into_categorical()
-        return res
+        result.domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
+        result.domain.anonymous = True
+        result._transform_discrete_into_categorical()
+        result._transform_timevariable_into_datetime()
+        return result
 
     @classmethod
     def from_numpy(cls, domain, X, Y=None, metas=None, weights=None):
@@ -405,17 +407,17 @@ class Table(pd.DataFrame):
                 return np.atleast_2d(what).T
 
         if domain is None:
-            res = cls._from_data_inferred(X, Y, metas)
+            result = cls._from_data_inferred(X, Y, metas)
             if weights is not None:
-                res.set_weights(weights)
-            return res
+                result.set_weights(weights)
+            return result
 
         # ensure correct shapes (but not sizes) so we can iterate
         X = correct_shape(X)
         Y = correct_shape(Y)
         metas = correct_shape(metas)
 
-        res = cls()
+        result = cls()
         for role_array, variables in zip((X, Y, metas),
                                          (domain.attributes, domain.class_vars, domain.metas)):
             if role_array is None:
@@ -425,13 +427,15 @@ class Table(pd.DataFrame):
             if role_array.shape[1] != len(variables):
                 raise ValueError("Variable and column count mismatch. ")
             for column, variable in zip(role_array.T, variables):
-                res[variable.name] = column
-        res.domain = domain
+                result[variable.name] = column
+        result.domain = domain
 
         # transform any values we believe are null into actual null values
-        res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
-        res._transform_discrete_into_categorical()
-        return res
+        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        result._transform_discrete_into_categorical()
+        result._transform_timevariable_into_datetime()
+
+        return result
 
     @classmethod
     def from_list(cls, domain, rows, weights=None):
@@ -446,16 +450,18 @@ class Table(pd.DataFrame):
             if len(r) != row_width:
                 raise ValueError("Inconsistent number of columns.")
 
-        res = cls(data=rows,
-                  columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
-        res.domain = domain
+        result = cls(data=rows,
+                     columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
+        result.domain = domain
 
         # transform any values we believe are null into actual null values
-        res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        result._transform_discrete_into_categorical()
+        result._transform_timevariable_into_datetime()
 
         if weights is not None:
-            res.set_weights(weights)
-        return res
+            result.set_weights(weights)
+        return result
 
     @classmethod
     def from_dataframe(cls, df, domain=None, reindex=False, weights=None):
@@ -472,6 +478,7 @@ class Table(pd.DataFrame):
         # transform any values we believe are null into actual null values
         result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
         result._transform_discrete_into_categorical()
+        result._transform_timevariable_into_datetime()
 
         if reindex:
             result.index = cls._new_id(len(result), force_list=True)
@@ -498,6 +505,11 @@ class Table(pd.DataFrame):
         for var in chain(self.domain.variables, self.domain.metas):
             if var is DiscreteVariable:
                 self[var.name] = pd.Categorical(self[var.name], categories=var.values, ordered=var.ordered)
+
+    def _transform_timevariable_into_datetime(self):
+        for var in chain(self.domain.variables, self.domain.metas):
+            if isinstance(var, TimeVariable):
+                self[var.name] = var.column_to_datetime(self[var.name])
 
     def save(self, filename):
         # TODO: change, will likely need to modify FileFormat.writers
@@ -657,11 +669,11 @@ class Table(pd.DataFrame):
                     new = t.copy()
                     new.columns = tables[0].columns
                     newtables.append(new)
-                res = pd.concat(newtables, axis=0, ignore_index=True)
+                result = pd.concat(newtables, axis=0, ignore_index=True)
             else:
-                res = pd.concat(tables, axis=0, ignore_index=True)
-            new_index = Table._new_id(len(res))
-            res.index = new_index
+                result = pd.concat(tables, axis=0, ignore_index=True)
+            new_index = Table._new_id(len(result))
+            result.index = new_index
         elif axis == CONCAT_COLS:
             # check for same name
             columns = flatten([v.name for v in [t.columns for t in tables] if v.name != Table._WEIGHTS_COLUMN])
@@ -672,24 +684,24 @@ class Table(pd.DataFrame):
                 if len(set(len(t) for t in tables)) != 1:
                     raise ValueError("Cannot colstack tables with differing numbers of rows. ")
                 # reset index temporarily because this joins by index by default
-                res = pd.concat([t.reset_index(drop=True) for t in tables], axis=1, join_axes=[tables[0].index])
+                result = pd.concat([t.reset_index(drop=True) for t in tables], axis=1, join_axes=[tables[0].index])
             else:
-                res = pd.concat(tables, axis=1)
+                result = pd.concat(tables, axis=1)
 
             # fix multiple weight columns
-            weight_columns = res[Table._WEIGHTS_COLUMN]
+            weight_columns = result[Table._WEIGHTS_COLUMN]
             for i in range(1, len(weight_columns.columns)):
                 weight_columns.fillna([weight_columns[[i]]], axis=1, inplace=True)
-            res = res.drop(Table._WEIGHTS_COLUMN, axis=0)
-            res[Table._WEIGHTS_COLUMN] = weight_columns[[0]]
+            result = result.drop(Table._WEIGHTS_COLUMN, axis=0)
+            result[Table._WEIGHTS_COLUMN] = weight_columns[[0]]
 
             if reindex:
-                new_index = Table._new_id(len(res))
-                res.index = new_index
+                new_index = Table._new_id(len(result))
+                result.index = new_index
         else:
             raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
-        res._transfer_properties(tables[0])  # pd.concat does not do this by itself
-        return res
+        result._transfer_properties(tables[0])  # pd.concat does not do this by itself
+        return result
 
     def _transfer_properties(self, from_table):
         """

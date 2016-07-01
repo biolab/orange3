@@ -434,7 +434,7 @@ class FileFormat(metaclass=FileFormatMeta):
                 else:
                     col_role = 'x'
 
-                # determine column type
+                # determine column type from header
                 if typef in StringVariable.TYPE_HEADERS:
                     col_type = StringVariable
                 elif typef in ContinuousVariable.TYPE_HEADERS:
@@ -547,7 +547,7 @@ class CSVReader(FileFormat):
     def read_header(self):
         return pd.read_table(self.filename,
                              sep=None, header=None, index_col=False, skipinitialspace=True,
-                             skip_blank_lines=True, infer_datetime_format=True,
+                             skip_blank_lines=True, parse_dates=False,
                              compression='infer', engine='python', nrows=3)
 
     def read_contents(self, skiprows):
@@ -567,9 +567,11 @@ class CSVReader(FileFormat):
             # (pandas won't solve this as it uses the same internally)
             delimiter = "\t"
 
+        # don't parse dates, we want more control over timezones
+        # see TimeVariable.column_to_datetime
         return pd.read_table(self.filename,
                              sep=delimiter, header=None, index_col=False, skipinitialspace=True,
-                             skip_blank_lines=True, infer_datetime_format=True,
+                             skip_blank_lines=True, parse_dates=False,
                              compression='infer', skiprows=skiprows)
 
     def read(self):

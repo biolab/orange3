@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from io import StringIO
 
 import numpy as np
+import pandas as pd
+import pytz
 
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
@@ -286,74 +288,68 @@ class TestStringVariable(VariableTest):
 
 @variabletest(TimeVariable)
 class TestTimeVariable(VariableTest):
+    TODAY_TIMESTAMP = pytz.utc.localize(datetime.combine(datetime.now(), datetime.min.time())).timestamp()
+    TODAY_STRING = str(date.today())
+
     TESTS = [
         # in str, UTC timestamp, out str (in UTC)
-        ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.010000+0200'),
-        ('2015-10-12T14:13:11.81+0200', 1444651991.81, '2015-10-12 14:13:11.810000+0200'),
-        ('2015-10-12 14:13:11.81', 1444659191.81, '2015-10-12 14:13:11.810000'),
-        ('2015-10-12T14:13:11.81', 1444659191.81, '2015-10-12 14:13:11.810000'),
-        ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
-        ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+0200'),
-        ('20151012T141311+0200', 1444651991, '2015-10-12 14:13:11+0200'),
-        ('20151012141311+0200', 1444651991, '2015-10-12 14:13:11+0200'),
+        ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.010000+02:00'),
+        ('2015-10-12T14:13:11.81+0200', 1444651991.81, '2015-10-12 14:13:11.010000+02:00'),
+        ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
+        ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
+        ('20151012T141311+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
+        ('20151012141311+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
         ('2015-10-12 14:13:11', 1444659191, '2015-10-12 14:13:11'),
         ('2015-10-12T14:13:11', 1444659191, '2015-10-12 14:13:11'),
         ('2015-10-12 14:13', 1444659180, '2015-10-12 14:13:00'),
         ('20151012T141311', 1444659191, '2015-10-12 14:13:11'),
         ('20151012141311', 1444659191, '2015-10-12 14:13:11'),
-        ('2015-10-12', 1444608000, '2015-10-12'),
-        ('20151012', 1444608000, '2015-10-12'),
-        ('2015-285', 1444608000, '2015-10-12'),
-        ('2015-10', 1443657600, '2015-10-01'),
-        ('2015', 1420070400, '2015-01-01'),
-        ('01:01:01.01', 3661.01, '01:01:01.010000'),
-        ('010101.01', 3661.01, '01:01:01.010000'),
-        ('01:01:01', 3661, '01:01:01'),
-        ('01:01', 3660, '01:01:00'),
+        ('2015-10-12', 1444608000, '2015-10-12 00:00:00'),
+        ('20151012', 1444608000, '2015-10-12 00:00:00'),
+        ('2015-10', 1443657600, '2015-10-01 00:00:00'),
+        ('2015', 1420070400, '2015-01-01 00:00:00'),
+        ('01:01:01.01', TODAY_TIMESTAMP + 3661.01, TODAY_STRING + ' 01:01:01.010000'),
+        ('01:01:01', TODAY_TIMESTAMP + 3661, TODAY_STRING + ' 01:01:01'),
+        ('01:01', TODAY_TIMESTAMP + 3660, TODAY_STRING + ' 01:01:00'),
         ('1970-01-01 00:00:00', 0, '1970-01-01 00:00:00'),
         ('1969-12-31 23:59:59', -1, '1969-12-31 23:59:59'),
-        ('1900-01-01', -2208988800, '1900-01-01'),
+        ('1900-01-01', -2208988800, '1900-01-01 00:00:00'),
         ('nan', np.nan, '?'),
         ('1444651991.81', 1444651991.81, '2015-10-12 12:13:11.810000'),
         (1444651991.81, 1444651991.81, '2015-10-12 12:13:11.810000'),
     ]
 
+    def test_looks_like(self):
+        self.assertTrue(TimeVariable.column_looks_like_time(pd.Series([a for a, _, _ in self.TESTS])))
+
     def test_parse_repr(self):
         for datestr, timestamp, outstr in self.TESTS:
             var = TimeVariable('time')
-            ts = var.to_val(datestr)  # calls parse for strings
-            if not np.isnan(ts):
-                self.assertEqual(ts, timestamp, msg=datestr)
-            self.assertEqual(var.repr_val(ts), outstr, msg=datestr)
+            ts = var.column_to_datetime(pd.Series(datestr))
+            if not np.isnan(ts[0]):
+                self.assertEqual(ts[0], timestamp, msg=datestr)
+            self.assertEqual(var.repr_val(ts[0]), outstr, msg=datestr)
 
     def test_parse_utc(self):
         var = TimeVariable('time')
-        datestr, offset = '2015-10-18 22:48:20', '+0200'
-        ts1 = var.parse(datestr + offset)
-        self.assertEqual(var.repr_val(ts1), datestr + offset)
+        datestr, offset = '2015-10-18 22:48:20', '+02:00'
+        ts1 = var.column_to_datetime(pd.Series(datestr + offset))
+        self.assertEqual(var.repr_val(ts1[0]), datestr + offset)
         # Once a value is without a TZ, all the values lose it
-        ts2 = var.parse(datestr)
-        self.assertEqual(var.repr_val(ts2), datestr)
-        self.assertEqual(var.repr_val(ts1), '2015-10-18 20:48:20')
+        ts2 = var.column_to_datetime(pd.Series(datestr))
+        self.assertEqual(var.repr_val(ts2[0]), datestr)
+        self.assertEqual(var.repr_val(ts1[0]), '2015-10-18 20:48:20')
 
     def test_parse_timestamp(self):
         var = TimeVariable("time")
-        datestr = str(datetime(2016, 6, 14, 23, 8, tzinfo=timezone.utc).timestamp())
-        ts1 = var.parse(datestr)
-        self.assertEqual(var.repr_val(ts1), '2016-06-14 23:08:00')
+        datestr = datetime(2016, 6, 14, 23, 8, tzinfo=timezone.utc).timestamp()
+        ts1 = var.column_to_datetime(pd.Series(datestr))
+        self.assertEqual(var.repr_val(ts1[0]), '2016-06-14 23:08:00')
 
     def test_parse_invalid(self):
         var = TimeVariable('var')
         with self.assertRaises(ValueError):
-            var.parse('123')
-
-    def test_have_date(self):
-        var = TimeVariable('time')
-        ts = var.parse('1937-08-02')  # parse date
-        self.assertEqual(var.repr_val(ts), '1937-08-02')
-        ts = var.parse('16:20')  # parse time
-        # observe have datetime
-        self.assertEqual(var.repr_val(ts), '1970-01-01 16:20:00')
+            var.column_to_datetime(pd.Series('123'))
 
     def test_readwrite_timevariable(self):
         output_csv = StringIO()
@@ -370,15 +366,18 @@ time,continuous
 
         table = CSVReader(input_csv).read()
         self.assertIsInstance(table.domain['Date'], TimeVariable)
-        self.assertEqual(table[0, 'Date'], '1920-12-12')
+        self.assertEqual(table.domain['Date'].repr_val(table['Date'].iloc[0]), '1920-12-12 00:00:00')
         # Dates before 1970 are negative
-        self.assertTrue(all(inst['Date'] < 0 for inst in table))
+        self.assertTrue((table['Date'] < '1970-01-01').all())
+        self.assertTrue(all(table.domain['Date'].to_val(inst['Date']) < 0 for idx, inst in table.iterrows()))
 
         CSVReader.write_file(output_csv, table)
-        self.assertEqual(input_csv.getvalue().splitlines(),
-                         output_csv.getvalue().splitlines())
 
-
+        # csv can't sniff because of too many : in the output, replace those parts
+        output_csv = StringIO(output_csv.getvalue().replace(" 00:00:00+00:00", ""))
+        reread = CSVReader(output_csv).read()
+        reread.index = [0, 1, 2]  # override for comparison purposes
+        self.assertTrue(reread.equals(table))
 
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",

@@ -422,9 +422,14 @@ class Domain:
         Return a tuple of (type, role), where type is one of the subclasses of Variable
         and role is one of {'x', 'y', 'meta'}.
         """
+        # if the column looks like it has times, this has precedence
+        # also allow for pandas to parse dates before us (such as when reading a file)
+        if np.issubdtype(column.dtype, np.datetime64) \
+                or TimeVariable.column_looks_like_time(column):
+            return TimeVariable, (force_role or 'x')
         # if there are at most 3 different values of any kind, they are discrete,
         # but there have to be at least 6 values in total
-        if Domain._is_discrete_column(column):
+        elif Domain._is_discrete_column(column):
             return DiscreteVariable, (force_role or 'x')
         # all other all-number columns are continuous features
         elif np.issubdtype(column.dtype, np.number):
@@ -451,6 +456,7 @@ class Domain:
             if column_role == 'x':
                 return "Feature {}".format(len(existing_attrs) + 1)
             elif column_role == 'y' and column_type is ContinuousVariable:
+                # TimeVariable is ContinuousVariable
                 return "Target {}".format(len(existing_classes) + 1)
             elif column_role == 'y' and column_type is DiscreteVariable:
                 return "Class {}".format(len(existing_classes) + 1)

@@ -2,8 +2,11 @@ import re
 from numbers import Number, Real, Integral
 from math import isnan, floor, sqrt
 import numpy as np
+import pandas as pd
 from pickle import PickleError
 import copy
+import dateutil
+import pytz
 
 import collections
 from datetime import datetime, timedelta, timezone
@@ -804,44 +807,8 @@ class TimeVariable(ContinuousVariable):
     If time is specified wihout an UTC offset, localtime is assumed.
     """
     TYPE_HEADERS = ('time', 't')
-    UNIX_EPOCH = datetime(1970, 1, 1)
-    _ISO_FORMATS = [
-        # have_date, have_time, format_str
-        # in order of decreased probability
-        (1, 1, '%Y-%m-%d %H:%M:%S%z'),
-        (1, 1, '%Y-%m-%d %H:%M:%S'),
-        (1, 1, '%Y-%m-%d %H:%M'),
-        (1, 1, '%Y-%m-%dT%H:%M:%S%z'),
-        (1, 1, '%Y-%m-%dT%H:%M:%S'),
 
-        (1, 0, '%Y-%m-%d'),
-
-        (1, 1, '%Y-%m-%d %H:%M:%S.%f'),
-        (1, 1, '%Y-%m-%dT%H:%M:%S.%f'),
-        (1, 1, '%Y-%m-%d %H:%M:%S.%f%z'),
-        (1, 1, '%Y-%m-%dT%H:%M:%S.%f%z'),
-
-        (1, 1, '%Y%m%dT%H%M%S%z'),
-        (1, 1, '%Y%m%d%H%M%S%z'),
-
-        (0, 1, '%H:%M:%S.%f'),
-        (0, 1, '%H:%M:%S'),
-        (0, 1, '%H:%M'),
-
-        # These parse as continuous features (plain numbers)
-        (1, 1, '%Y%m%dT%H%M%S'),
-        (1, 1, '%Y%m%d%H%M%S'),
-        (1, 0, '%Y%m%d'),
-        (1, 0, '%Y%j'),
-        (1, 0, '%Y'),
-        (0, 1, '%H%M%S.%f'),
-
-        # BUG: In Python as in C, %j doesn't necessitate 0-padding,
-        # so these two lines must be in this order
-        (1, 0, '%Y-%m'),
-        (1, 0, '%Y-%j'),
-    ]
-    # The regex that matches all above formats
+    # The regex that matches most ISO formats
     REGEX = (r'^('
              '\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
              '\d{1,4}\d{2}\d{2}(T?\d{2}\d{2}\d{2}([+-]\d{4})?)?|'
@@ -851,114 +818,68 @@ class TimeVariable(ContinuousVariable):
              ')$')
     _matches_iso_format = re.compile(REGEX).match
 
-    # UTC offset and associated timezone. If parsed datetime values provide an
-    # offset, it is used for display. If not all values have the same offset,
-    # +0000 (=UTC) timezone is used and utc_offset is set to False.
-    utc_offset = None
-    timezone = timezone.utc
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.have_date = 0
-        self.have_time = 0
+        # None if no timezone, pytz object if any timezone
+        self.timezone = None
 
     @staticmethod
-    def _tzre_sub(s, _subtz=re.compile(r'([+-])(\d\d):(\d\d)$').sub):
-        # Replace +ZZ:ZZ with ISO-compatible +ZZZZ, or strip +0000
-        return s[:-6] if s.endswith(('+00:00', '-00:00')) else _subtz(r'\1\2\3', s)
+    def column_looks_like_time(column):
+        """
+        Determine whether a column looks like it should be a TimeVariable.
+        """
+        # all values must be strings (otherwise integers under 10e5 would be years)
+        # and be able to be parsed with python's datetime module
+        return all(isinstance(val, str) and TimeVariable._matches_iso_format(val)
+                   for val in column)
+
+    @classmethod
+    def _detect_timezone(cls, date_string):
+        # detect a timezone from the first date, but only if we don't have one yet
+        tzinfo = dateutil.parser.parse(date_string).tzinfo
+        if tzinfo is None:
+            return None
+        else:
+            offset = tzinfo.utcoffset(0)
+            # for the common case where there is no offset, use UTC explicitly
+            if offset == timedelta(0):
+                return pytz.utc
+            else:
+                now = datetime.now(pytz.utc)
+                appropriate_timezones = [tz for tz in pytz.all_timezones
+                                         if now.astimezone(pytz.timezone(tz)).utcoffset() == offset]
+                return appropriate_timezones[0] if appropriate_timezones else None
+
+    def column_to_datetime(self, column):
+        """
+        Convert a column to a pandas datetime column.
+        Takes note of the source timezone to display it correctly later.
+        """
+        for val in column:
+            self.timezone = TimeVariable._detect_timezone(val) if not np.issubdtype(column.dtype, np.number) else None
+            # if any value doesn't have a timezone, permanently strip display timezones for the column
+            if self.timezone is None:
+                break
+
+        # if the columns are integers (timestamps), use different logic
+        # than when we are dealing with strings
+        if 'format' not in self.attributes and np.issubdtype(column.dtype, np.number):
+            # timestamps are seconds
+            kwargs = {'unit': 's'}
+        else:
+            # allow the variable to specify a format (overrides integers)
+            kwargs = {'format': self.attributes.get('format')}
+
+        # utc=True: make timezone aware
+        # .values: return a DatetimeIndex so we can actually localize to UTC
+        return pd.to_datetime(column.values, errors='raise', exact=True, utc=True,
+                              infer_datetime_format=True, **kwargs)
 
     def repr_val(self, val):
-        if isnan(val):
-            return '?'
-        seconds = int(val)
-        microseconds = int(round((val - seconds) * 1e6))
-        if val < 0:
-            date = datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=seconds)
-        else:
-            date = datetime.fromtimestamp(seconds, tz=self.timezone)
-        date = str(date.replace(microsecond=microseconds))
-        if self.have_date and not self.have_time:
-            date = date.split()[0]
-        elif not self.have_date and self.have_time:
-            date = date.split()[1]
-        date = self._tzre_sub(date)
-        return date
+        return str(val.tz_convert(self.timezone or None))
 
     str_val = repr_val
 
-    def parse(self, datestr):
-        """
-        Return `datestr`, a datetime provided in one of ISO 8601 formats,
-        parsed as a real number. Value 0 marks the Unix epoch, positive values
-        are the dates after it, negative before.
-
-        If date is unspecified, epoch date is assumed.
-
-        If time is unspecified, 00:00:00.0 is assumed.
-
-        If timezone is unspecified, local time is assumed.
-        """
-        if datestr in Variable.MISSING_VALUES:
-            return Unknown
-        datestr = datestr.strip().rstrip('Z')
-
-        ERROR = ValueError("Invalid datetime format '{}'. "
-                           "Only ISO 8601 supported.".format(datestr))
-        if not self._matches_iso_format(datestr):
-            try:
-                # If it is a number, assume it is a unix timestamp
-                return float(datestr)
-            except ValueError:
-                raise ERROR
-
-        for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
-            try:
-                dt = datetime.strptime(datestr, fmt)
-            except ValueError:
-                continue
-            else:
-                # Pop this most-recently-used format to front
-                if 0 < i < len(self._ISO_FORMATS) - 2:
-                    self._ISO_FORMATS[i], self._ISO_FORMATS[0] = \
-                        self._ISO_FORMATS[0], self._ISO_FORMATS[i]
-
-                self.have_date |= have_date
-                self.have_time |= have_time
-                if not have_date:
-                    dt = dt.replace(self.UNIX_EPOCH.year,
-                                    self.UNIX_EPOCH.month,
-                                    self.UNIX_EPOCH.day)
-                break
-        else:
-            raise ERROR
-
-        # Remember UTC offset. If not all parsed values share the same offset,
-        # remember none of it.
-        offset = dt.utcoffset()
-        if self.utc_offset is not False:
-            if offset and self.utc_offset is None:
-                self.utc_offset = offset
-                self.timezone = timezone(offset)
-            elif self.utc_offset != offset:
-                self.utc_offset = False
-                self.timezone = timezone.utc
-
-        # Convert time to UTC timezone. In dates without timezone,
-        # localtime is assumed. See also:
-        # https://docs.python.org/3.4/library/datetime.html#datetime.datetime.timestamp
-        if dt.tzinfo: dt -= dt.utcoffset()
-        dt = dt.replace(tzinfo=timezone.utc)
-
-        # Unix epoch is the origin, older dates are negative
-        try: return dt.timestamp()
-        except OverflowError:
-            return -(self.UNIX_EPOCH - dt).total_seconds()
-
     def to_val(self, s):
-        """
-        Convert a value, given as an instance of an arbitrary type, to a float.
-        """
-        if isinstance(s, str):
-            return self.parse(s)
-        else:
-            return super().to_val(s)
+        # unix float seconds
+        return s.timestamp()
