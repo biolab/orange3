@@ -309,7 +309,8 @@ class WidgetDescription(object):
         qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
         long_description = (
             widget_class.long_description or
-            widget_class.__doc__).strip()
+            widget_class.__doc__ or
+            "").strip()
         description = (
             widget_class.description or
             long_description and long_description.split("\n\n")[0]).strip()
