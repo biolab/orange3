@@ -133,16 +133,17 @@ class OWSql(widget.OWWidget):
 
     def error(self, id=0, text=""):
         super().error(id, text)
+        err_style = 'QLineEdit {border: 2px solid red;}'
         if 'server' in text or 'host' in text:
-            self.servertext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+            self.servertext.setStyleSheet(err_style)
         else:
             self.servertext.setStyleSheet('')
         if 'role' in text:
-            self.usernametext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+            self.usernametext.setStyleSheet(err_style)
         else:
             self.usernametext.setStyleSheet('')
         if 'database' in text:
-            self.databasetext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+            self.databasetext.setStyleSheet(err_style)
         else:
             self.databasetext.setStyleSheet('')
 
