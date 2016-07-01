@@ -296,6 +296,8 @@ class Table(pd.DataFrame):
 
             # transform any values we believe are null into actual null values
             res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+            res._transform_discrete_into_categorical()
+
             return res
         finally:
             if new_cache:
@@ -373,6 +375,7 @@ class Table(pd.DataFrame):
                 role_vars[r].append(var)
         res.domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
         res.domain.anonymous = True
+        res._transform_discrete_into_categorical()
         return res
 
     @classmethod
@@ -427,7 +430,7 @@ class Table(pd.DataFrame):
 
         # transform any values we believe are null into actual null values
         res.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
-
+        res._transform_discrete_into_categorical()
         return res
 
     @classmethod
@@ -468,6 +471,7 @@ class Table(pd.DataFrame):
 
         # transform any values we believe are null into actual null values
         result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        result._transform_discrete_into_categorical()
 
         if reindex:
             result.index = cls._new_id(len(result), force_list=True)
@@ -485,6 +489,15 @@ class Table(pd.DataFrame):
             out = np.arange(cls._next_instance_id, cls._next_instance_id + num)
             cls._next_instance_id += num
             return out[0] if num == 1 and not force_list else out
+
+    def _transform_discrete_into_categorical(self):
+        """
+        Transform discrete variables into pandas' categorical.
+        This must be done after replacing null values because those aren't values.
+        """
+        for var in chain(self.domain.variables, self.domain.metas):
+            if var is DiscreteVariable:
+                self[var.name] = pd.Categorical(self[var.name], categories=var.values, ordered=var.ordered)
 
     def save(self, filename):
         # TODO: change, will likely need to modify FileFormat.writers

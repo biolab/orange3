@@ -16,6 +16,7 @@ from Orange import data
 from Orange.data import Variable
 from Orange.data import Unknown
 from Orange.tests import test_dirname
+from data.variable import DiscreteVariable
 
 
 @np.vectorize
@@ -905,6 +906,11 @@ class TableTests(unittest.TestCase):
         domain = data.Domain(attr_vars, class_vars, meta_vars)
         return domain
 
+    def assert_discretes_are_categoricals(self, table):
+        for v in chain(table.domain.variables, table.domain.metas):
+            if isinstance(v, DiscreteVariable):
+                self.assertIsInstance(table[v.name].dtype, pd.types.dtypes.CategoricalDtype)
+
 
 class CreateEmptyTable(TableTests):
     def test_calling_new_with_no_parameters_constructs_a_new_instance(self):
@@ -993,8 +999,8 @@ class CreateTableWithDomain(TableTests):
     def test_creates_an_empty_table_with_given_domain(self):
         domain = self.mock_domain()
         table = data.Table.from_domain(domain)
-
         self.assertEqual(table.domain, domain)
+        self.assert_discretes_are_categoricals(table)
 
     @patch("Orange.data.table.Table.from_domain")
     def test_calling_new_with_domain_calls_new_from_domain(
@@ -1011,16 +1017,19 @@ class CreateTableWithData(TableTests):
         table = data.Table(np.array(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
+        self.assert_discretes_are_categoricals(table)
 
         # from list
         table = data.Table(list(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
+        self.assert_discretes_are_categoricals(table)
 
         # from tuple
         table = data.Table(tuple(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
+        self.assert_discretes_are_categoricals(table)
 
     def test_creates_a_table_from_domain_and_list(self):
         domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
@@ -1031,6 +1040,7 @@ class CreateTableWithData(TableTests):
                                     ["m", 3, "a"],
                                     ["?", "?", "c"]])
         self.assertIs(table.domain, domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
@@ -1044,6 +1054,7 @@ class CreateTableWithData(TableTests):
                                     ["m", 3, "a"],
                                     ["?", "?", "c"]], [1, 2, 3, 4])
         self.assertIs(table.domain, domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
@@ -1062,6 +1073,7 @@ class CreateTableWithData(TableTests):
                                     ["m", 3, "a", "Z", 3, "bb"],
                                     ["?", "?", "c", "X", 1, "aa"]])
         self.assertIs(table.domain, domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
@@ -1076,6 +1088,7 @@ class CreateTableWithData(TableTests):
         table = data.Table('iris')
         new_table = data.Table(table.domain, [d for d in table.itertuples(index=False)])
         self.assertIs(table.domain, new_table.domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, new_table.X)
         np.testing.assert_almost_equal(table.Y, new_table.Y)
         np.testing.assert_almost_equal(table.W, new_table.W)
@@ -1086,6 +1099,7 @@ class CreateTableWithData(TableTests):
         table = data.Table('zoo')
         new_table = data.Table(table.domain, [d for d in table])
         self.assertIs(table.domain, new_table.domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, new_table.X)
         np.testing.assert_almost_equal(table.Y, new_table.Y)
         np.testing.assert_almost_equal(table.W, new_table.W)
@@ -1097,6 +1111,7 @@ class CreateTableWithData(TableTests):
 
         table = data.Table(domain, self.data)
         self.assertIsInstance(table.domain, data.Domain)
+        self.assert_discretes_are_categoricals(table)
         self.assertEqual(table.domain, domain)
         np.testing.assert_almost_equal(table.X, self.data)
 
@@ -1104,6 +1119,7 @@ class CreateTableWithData(TableTests):
         table = data.Table(self.data, self.class_data)
 
         self.assertIsInstance(table.domain, data.Domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, self.data)
         np.testing.assert_almost_equal(table.Y, self.class_data)
 
@@ -1111,6 +1127,7 @@ class CreateTableWithData(TableTests):
         table = data.Table(self.data, self.class_data, self.meta_data)
 
         self.assertIsInstance(table.domain, data.Domain)
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, self.data)
         np.testing.assert_almost_equal(table.Y, self.class_data)
         np.testing.assert_almost_equal(table.metas, self.meta_data)
@@ -1127,29 +1144,34 @@ class CreateTableWithData(TableTests):
         table = data.Table.from_numpy(domain, self.data)
 
         self.assertEqual(table.domain, domain)
+        self.assert_discretes_are_categoricals(table)
 
     def test_sets_Y_if_given(self):
         domain = self.mock_domain(with_classes=True)
         table = data.Table.from_numpy(domain, self.data, self.class_data)
 
         np.testing.assert_almost_equal(table.Y, self.class_data)
+        self.assert_discretes_are_categoricals(table)
 
     def test_sets_metas_if_given(self):
         domain = self.mock_domain(with_metas=True)
         table = data.Table.from_numpy(domain, self.data, metas=self.meta_data)
 
         np.testing.assert_almost_equal(table.metas, self.meta_data)
+        self.assert_discretes_are_categoricals(table)
 
     def test_sets_weights_if_given(self):
         domain = self.mock_domain()
         table = data.Table.from_numpy(domain, self.data, weights=self.weight_data)
 
         np.testing.assert_equal(table.W.shape, (len(self.data), ))
+        self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.W.flatten(), self.weight_data.flatten())
 
     def test_splits_X_and_Y_if_given_in_same_array(self):
         joined_data = np.column_stack((self.data, self.class_data))
         domain = self.mock_domain(with_classes=True)
+        self.assert_discretes_are_categoricals(table)
         table = data.Table.from_numpy(domain, joined_data)
 
         np.testing.assert_almost_equal(table.X, self.data)
@@ -1162,6 +1184,7 @@ class CreateTableWithData(TableTests):
         self.assertEqual(table.Y.shape, (self.nrows, len(domain.class_vars)))
         self.assertEqual(table.metas.shape, (self.nrows, len(domain.metas)))
         self.assertEqual(table.W.shape, (self.nrows, 0))
+        self.assert_discretes_are_categoricals(table)
 
     def test_raises_error_if_columns_in_domain_and_data_do_not_match(self):
         domain = self.mock_domain(with_classes=True, with_metas=True)
@@ -1230,23 +1253,29 @@ class CreateTableWithData(TableTests):
         nullcol = np.empty((self.nrows, 0))
         domain = self.create_domain(self.attributes)
         table = data.Table(domain, self.data)
+        self.assert_discretes_are_categoricals(table)
 
         table_1 = data.Table.from_numpy(
             domain, table.X, table.Y, table.metas, table.W)
         assert_equal(table, table_1)
+        self.assert_discretes_are_categoricals(table_1)
 
         domain = self.create_domain(classes=self.class_vars)
         table = data.Table(domain, nullcol, self.class_data)
+        self.assert_discretes_are_categoricals(table)
 
         table_1 = data.Table.from_numpy(
             domain, table.X, table.Y, table.metas, table.W)
+        self.assert_discretes_are_categoricals(table_1)
         assert_equal(table, table_1)
 
         domain = self.create_domain(metas=self.metas)
         table = data.Table(domain, nullcol, nullcol, self.meta_data)
+        self.assert_discretes_are_categoricals(table)
 
         table_1 = data.Table.from_numpy(
             domain, table.X, table.Y, table.metas, table.W)
+        self.assert_discretes_are_categoricals(table_1)
         assert_equal(table, table_1)
 
 
@@ -1274,6 +1303,7 @@ class CreateTableWithDomainAndTable(TableTests):
         new_table = data.Table.from_table(self.table.domain, self.table)
 
         self.assertIsInstance(new_table, data.Table)
+        self.assert_discretes_are_categoricals(table)
         self.assertIsNot(self.table, new_table)
         self.assertEqual(new_table.domain, self.domain)
 
@@ -1301,6 +1331,7 @@ class CreateTableWithDomainAndTable(TableTests):
         meta = self.table.domain.attributes[5:]
         new_domain = data.Domain(x, y, meta)
         new_table = data.Table(new_domain, self.table)
+        self.assert_discretes_are_categoricals(new_table)
 
         self.assertEqual(new_table.X.shape[1], len(x))
         self.assertEqual(new_table.Y.shape[1], len(y))
