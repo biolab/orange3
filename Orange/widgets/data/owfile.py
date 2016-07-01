@@ -209,8 +209,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.setAcceptDrops(True)
 
-        self.init_code_gen()
-
     def sizeHint(self):
         return QtCore.QSize(600, 550)
 
@@ -280,42 +278,49 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.data = data
 
     def init_code_gen(self):
-        gen = self.code_gen
+        gen = self.code_gen()
 
         # Send reference to the widget to the generator
         gen.set_widget(self)
 
         # Add imported external dependencies
-        gen.add_import([os, FileFormat, UrlReader])
+        gen.add_import([os, FileFormat, UrlReader, Setting, RecentPath,
+            catch_warnings, DomainEditor, ContextSetting])
 
         # Declarations inserted into __init__(self)
-        gen.add_init("LOCAL_FILE", 0)
+        gen.add_init("last_path", self.last_path())
         gen.add_init("source", "Setting(self.LOCAL_FILE)", iscode=True)
-        gen.add_init("recent_paths", "Setting([\n" +
-            indent(3, "RecentPath(\"\", \"sample-datasets\", \"iris.tab\"),\n") +
-            indent(3, "RecentPath(\"\", \"sample-datasets\", \"titanic.tab\"),\n") +
-            indent(3, "RecentPath(\"\", \"sample-datasets\", \"housing.tab\"),\n") +
-            indent(2, "])"), iscode=True)
+        # gen.add_init("recent_paths", "Setting([\n" +
+        #     indent(3, "RecentPath(\"\", \"sample-datasets\", \"iris.tab\"),\n") +
+        #     indent(3, "RecentPath(\"\", \"sample-datasets\", \"titanic.tab\"),\n") +
+        #     indent(3, "RecentPath(\"\", \"sample-datasets\", \"housing.tab\"),\n") +
+        #     indent(2, "])"), iscode=True)
         gen.add_init("url_text", self.url_combo.currentText())
         gen.add_init("sheet_text", self.sheet_combo.currentText())
 
         # Copy attributes from widget to code generator
-        gen.add_attr(name=["load_data", "_get_reader", "select_sheet"])
+        gen.add_attr(name=["_get_reader", "LOCAL_FILE", "URL",
+            "_describe"])
 
         # Remove lines that contain strings in output
-        gen.null_ln(["_update_sheet_combo", "editor_model.set_domain"])
+        gen.null_ln(["_update_sheet_combo", "editor_model.set_domain",
+            "self.warning(", "if warnings else", ".editor_model.reset()",
+            "recent_paths", "add_origin"])
 
         # Replaces instances of arg1 with arg2 in generated source code
-        gen.repl_maps([
+        gen.add_repl_map([
             ("url_combo.currentText()", "url_text"),
             ("sheet_combo.currentText()", "sheet_text"),
+            ("last_path()", "last_path")
         ])
 
         # Add variable not part of function to the output
-        gen.add_extern(add_origin)
+        #gen.add_extern(add_origin)
 
         # Add main function that produces output
-        gen.add_body(self.load_data)
+        gen.set_main_func(self.load_data)
+
+        return gen
 
     def _get_reader(self):
         """
