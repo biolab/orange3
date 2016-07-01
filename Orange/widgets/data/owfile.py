@@ -270,7 +270,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.info.setText(self._describe(data))
 
-        add_origin(data, self.loaded_file)
+        add_origin(data, self.loaded_file or self.last_path())
         self.send("Data", data)
         self.editor_model.set_domain(data.domain)
         self.data = data
