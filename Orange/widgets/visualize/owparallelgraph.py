@@ -100,7 +100,8 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.alpha_value_2 = TRANSPARENT
 
         self.attributes = attributes
-        self.attribute_indices = [self.attribute_name_index[name] for name in self.attributes]
+        self.attribute_indices = [self.data_domain.index(name)
+                                  for name in self.attributes]
         self.valid_data = self.get_valid_list(self.attribute_indices)
 
         self.visualized_mid_labels = mid_labels

@@ -4,7 +4,7 @@ from PyQt4.QtGui import QTableView, QSizePolicy
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable
 from Orange.widgets import gui
-from Orange.widgets.data.owcolor import HorizontalGridDelegate
+from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils.itemmodels import TableModel
 
 

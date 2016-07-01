@@ -80,9 +80,12 @@ class Discretize(Preprocess):
         during discretization.
     """
 
-    def __init__(self, method=None, remove_const=True):
+    def __init__(self, method=None, remove_const=True,
+                 discretize_classes=False, discretize_metas=False):
         self.method = method
         self.remove_const = remove_const
+        self.discretize_classes = discretize_classes
+        self.discretize_metas = discretize_metas
 
     def __call__(self, data):
         """
@@ -106,11 +109,17 @@ class Discretize(Preprocess):
             else:
                 return var
 
+        def discretized(vars, do_discretize):
+            if do_discretize:
+                vars = (transform(var) for var in vars)
+                vars = [var for var in vars if var is not None]
+            return vars
+
         method = self.method or discretize.EqualFreq()
-        attributes = [transform(var) for var in data.domain.attributes]
-        attributes = [var for var in attributes if var is not None]
         domain = Orange.data.Domain(
-            attributes, data.domain.class_vars, data.domain.metas)
+            discretized(data.domain.attributes, True),
+            discretized(data.domain.class_vars, self.discretize_classes),
+            discretized(data.domain.metas, self.discretize_metas))
         return data.from_table(domain, data)
 
 
