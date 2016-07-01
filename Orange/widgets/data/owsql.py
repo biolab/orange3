@@ -15,6 +15,7 @@ from Orange.canvas import report
 
 
 MAX_DL_LIMIT = 1000000
+EXTENSIONS = ('tsm_system_time', 'quantile')
 
 
 class OWSql(widget.OWWidget):
@@ -132,19 +133,19 @@ class OWSql(widget.OWWidget):
 
     def error(self, id=0, text=""):
         super().error(id, text)
+        err_style = 'QLineEdit {border: 2px solid red;}'
         if 'server' in text or 'host' in text:
-            self.servertext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+            self.servertext.setStyleSheet(err_style)
         else:
             self.servertext.setStyleSheet('')
         if 'role' in text:
-            self.usernametext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+            self.usernametext.setStyleSheet(err_style)
         else:
             self.usernametext.setStyleSheet('')
         if 'database' in text:
-            self.databasetext.setStyleSheet('QLineEdit {border: 2px solid red;}')
+            self.databasetext.setStyleSheet(err_style)
         else:
             self.databasetext.setStyleSheet('')
-
 
     def connect(self):
         hostport = self.servertext.text().split(':')
@@ -173,9 +174,9 @@ class OWSql(widget.OWWidget):
             self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 
-
     def refresh_tables(self):
         self.tablecombo.clear()
+        self.error(1)
         if self._connection is None:
             self.data_desc_table = None
             return
@@ -215,7 +216,25 @@ class OWSql(widget.OWWidget):
             self.database_desc["Table"] = "(None)"
             self.table = None
 
+    def create_extensions(self):
+        missing = []
+        for ext in EXTENSIONS:
+            try:
+                cur = self._connection.cursor()
+                cur.execute("CREATE EXTENSION IF NOT EXISTS " + ext)
+            except psycopg2.OperationalError:
+                missing.append(ext)
+            finally:
+                self._connection.commit()
+        if missing:
+            self.error(1, 'Database missing extension{}: {}'.format(
+                's' if len(missing) > 1 else '',
+                ', '.join(missing)))
+        else:
+            self.error(1)
+
     def open_table(self):
+        self.create_extensions()
         table = self.get_table()
         self.data_desc_table = table
         self.send("Data", table)
