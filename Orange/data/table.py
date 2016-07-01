@@ -128,7 +128,9 @@ class Table(pd.DataFrame):
         If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
         """
         if isinstance(weight, Number):
-            self[Table._WEIGHTS_COLUMN] = weight if not np.isnan(weight) else 1
+            if np.isnan(weight):
+                raise ValueError("Weights cannot be nan. ")
+            self[Table._WEIGHTS_COLUMN] = weight
         elif isinstance(weight, str):
             if weight not in self.columns:
                 raise ValueError("{} is not a column.".format(weight))
@@ -141,7 +143,9 @@ class Table(pd.DataFrame):
             self[Table._WEIGHTS_COLUMN] = weight
         elif isinstance(weight, pd.Series):
             # drop everything but the values to uncomplicate things
-            self[Table._WEIGHTS_COLUMN] = list(weight.fillna(value=weight.median()))
+            if weight.isnull().any():
+                raise ValueError("Weights cannot be nan. ")
+            self[Table._WEIGHTS_COLUMN] = weight.values
         else:
             raise TypeError("Expected one of [Number, str, Sequence, Series].")
 

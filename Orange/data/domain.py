@@ -369,6 +369,7 @@ class Domain:
     def _is_discrete_column(cls, column, discrete_max_values=3):
         """
         Determine whether a column can be considered as a DiscreteVariable.
+        The default value for discrete_max_value is 3 for 2 + nan.
         """
         if not len(column):
             return None

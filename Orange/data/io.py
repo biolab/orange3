@@ -561,7 +561,7 @@ class CSVReader(FileFormat):
                 delimiter = sniffer.sniff(sample).delimiter
             else:
                 with open(self.filename, encoding='utf-8') as f:
-                    delimiter = sniffer.sniff(f.read(2048)).delimiter
+                    delimiter = sniffer.sniff(f.read(4096)).delimiter
         except csv.Error:
             # sometimes sniffing fails, fall back to tab
             # (pandas won't solve this as it uses the same internally)
