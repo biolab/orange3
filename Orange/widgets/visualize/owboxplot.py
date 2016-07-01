@@ -397,8 +397,7 @@ class OWBoxPlot(widget.OWWidget):
 
         for row, box in enumerate(self.boxes):
             y = (-len(self.boxes) + row) * 40 + 10
-            self.box_scene.addItem(box)
-            box.setPos(0, y)
+
             label = self.attr_labels[row]
             b = label.boundingRect()
             label.setPos(-b.width() - 10, y - b.height() / 2)
@@ -414,15 +413,17 @@ class OWBoxPlot(widget.OWWidget):
                 self.box_scene.addItem(label)
 
             if selected_attribute != selected_grouping:
-                attr = self.attributes[self.attributes_select[0]][0]
-                selected_attr = self.dataset.domain[attr]
-                for label_text, bar_part in zip(selected_attr.values,
-                                                box.childItems()):
-                    label = QtGui.QGraphicsSimpleTextItem(label_text)
+                for text_item, bar_part in zip(box.childItems()[1::2],
+                                               box.childItems()[::2]):
+                    label = QtGui.QGraphicsSimpleTextItem(
+                        text_item.toPlainText())
                     label.setPos(bar_part.boundingRect().x(),
                                  y - label.boundingRect().height() - 8)
                     self.box_scene.addItem(label)
-
+            for text_item in box.childItems()[1::2]:
+                box.removeFromGroup(text_item)
+            self.box_scene.addItem(box)
+            box.setPos(0, y)
         self.box_scene.setSceneRect(-self.label_width - 5,
                                    -30 - len(self.boxes) * 40,
                                    self.scene_width, len(self.boxes * 40) + 90)
@@ -719,6 +720,8 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
             rect.setToolTip(tooltip)
+            text = QtGui.QGraphicsTextItem(attr.values[i])
+            box.addToGroup(text)
             cum += v
         return box
 
