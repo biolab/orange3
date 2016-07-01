@@ -235,14 +235,13 @@ class CodeGenerator(object):
             # line deletion
             for match in self.null_lines:
                 if match in line:
+                    # Replace line with deleting placeholder to
+                    # preserve indexes during iteration
                     body_lines[i] = "#***TODEL***"
             # line replacement
             for match in self.replacements:
                 if match[0] in line:
                     body_lines[i] = line.replace(match[0], match[1])
         body = str_for(body_lines)
-
-        # Temporary execution script
-        body += "iii = File0()\niii.get_output()\nprint(iii.outputs)"
 
         return preamble, body.replace("#***TODEL***\n", "")

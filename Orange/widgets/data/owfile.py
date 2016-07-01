@@ -289,18 +289,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         # Declarations inserted into __init__(self)
         gen.add_init("last_path", self.last_path())
-        gen.add_init("source", "Setting(self.LOCAL_FILE)", iscode=True)
-        # gen.add_init("recent_paths", "Setting([\n" +
-        #     indent(3, "RecentPath(\"\", \"sample-datasets\", \"iris.tab\"),\n") +
-        #     indent(3, "RecentPath(\"\", \"sample-datasets\", \"titanic.tab\"),\n") +
-        #     indent(3, "RecentPath(\"\", \"sample-datasets\", \"housing.tab\"),\n") +
-        #     indent(2, "])"), iscode=True)
         gen.add_init("url_text", self.url_combo.currentText())
         gen.add_init("sheet_text", self.sheet_combo.currentText())
 
         # Copy attributes from widget to code generator
         gen.add_attr(name=["_get_reader", "LOCAL_FILE", "URL",
-            "_describe"])
+            "_describe", "source"])
 
         # Remove lines that contain strings in output
         gen.null_ln(["_update_sheet_combo", "editor_model.set_domain",
@@ -313,9 +307,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             ("sheet_combo.currentText()", "sheet_text"),
             ("last_path()", "last_path")
         ])
-
-        # Add variable not part of function to the output
-        #gen.add_extern(add_origin)
 
         # Add main function that produces output
         gen.set_main_func(self.load_data)
