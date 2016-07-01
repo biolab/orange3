@@ -271,6 +271,9 @@ class WidgetDescription(object):
 
     @classmethod
     def from_module(cls, module):
+        # False positive for widget_class: undefined var is prevented by
+        # raising exception in else after the for
+        # pylint: disable=undefined-loop-variable
         """
         Get the widget description from a module.
 
@@ -304,6 +307,12 @@ class WidgetDescription(object):
             raise WidgetSpecificationError
 
         qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
+        long_description = (
+            widget_class.long_description or
+            widget_class.__doc__).strip()
+        description = (
+            widget_class.description or
+            long_description and long_description.split("\n\n")[0]).strip()
 
         inputs = [input_channel_from_args(input_) for input_ in
                   widget_class.inputs]
@@ -322,8 +331,8 @@ class WidgetDescription(object):
             id=widget_class.id or module_name,
             category=widget_class.category or default_cat_name,
             version=widget_class.version,
-            description=widget_class.description,
-            long_description=widget_class.long_description,
+            description=description,
+            long_description=long_description,
             qualified_name=qualified_name,
             package=module.__package__,
             inputs=inputs,

@@ -288,12 +288,15 @@ class ContinuousTable(ColorTable):
 
 
 class OWColor(widget.OWWidget):
-    """Widget for assigning color palettes to variable"""
+    """
+    Set color legend for variables
+
+    Widget for defining specific color palettes for discrete and continuous
+    features
+    """
 
     name = "Color"
-    description = "Set color legend for variables."
     icon = "icons/Colors.svg"
-
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Data", Orange.data.Table)]
 
