@@ -3,6 +3,7 @@ Classification (``classification``)
 ###################################
 
 .. automodule:: Orange.classification
+.. automodule:: Orange.classification.rules
 
 
 .. index:: logistic regression
@@ -169,3 +170,13 @@ Elliptic Envelope
 
 .. autoclass:: EllipticEnvelopeLearner
    :members:
+
+
+.. index:: Rule induction
+   pair: classification; rules
+
+Rule Induction
+--------------
+.. autoclass:: Rule
+.. autoclass:: CN2Learner
+.. autoclass:: CN2UnorderedLearner

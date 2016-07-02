@@ -136,3 +136,63 @@ Logistic regression wins in area under ROC curve::
              tree knn  logreg
     Accuracy 0.79 0.47 0.78
     AUC      0.68 0.56 0.70
+
+
+Rule induction
+--------------
+
+To induce rules from examples, separate and conquer strategy is applied.
+In essence, learning instances are covered and removed following a
+chosen rule. The process is repeated while learning instances remain.
+To evaluate found hypotheses and to choose the best rule in each
+iteration, search heuristics are used. Primarily, rule class
+distribution is the decisive determinant.
+
+Classic CN2
++++++++++++
+
+Classic CN2 inducer (:any:`CN2Learner`) that constructs a list of
+ordered rules. To evaluate found hypotheses, entropy measure is used.
+Returns a :any:`CN2Classifier` if called with data.
+
+The code below loads the *titanic* data set (three discrete attributes
+and discrete class) and fits the learner. The classifier is
+then applied to a few data instances.
+
+    >>> import Orange
+    >>> data = Orange.data.Table('titanic')
+    >>> cn2_learner = Orange.classification.CN2Learner()
+    >>> cn2_classifier = cn2_learner(data)
+    >>> cn2_classifier(data[173:178])
+    array([0, 0, 1, 1, 1])
+
+Unordered CN2
++++++++++++++
+
+Unordered CN2 inducer (:any:`CN2UnorderedLearner`) that constructs a set
+of unordered rules. To evaluate found hypotheses, Laplace accuracy
+measure is used. Returns a :any:`CN2UnorderedClassifier` if called with
+data.
+
+Similarly to before, the following code snippet loads a data set. To
+constrain the search space and to speed-up the algorithm, maximum rule
+length and the search algorithm's beam width are set by accessing the
+'rule_finder' component. The classifier is constructed and applied to a
+few data instances.
+
+    >>> import Orange
+    >>> data = Orange.data.Table('titanic')
+    >>> cn2u_learner = Orange.classification.CN2UnorderedLearner()
+    >>> cn2u_learner.rule_finder.general_validator.max_rule_length = 2
+    >>> cn2u_learner.rule_finder.search_algorithm.beam_width = 5
+    >>> cn2u_classifier = cn2u_learner(data)
+    >>> cn2u_classifier(data[173:178])
+    array([0, 0, 1, 1, 1])
+
+Printing a :any:`Rule` is easy:
+
+    >>> for rule in cn2u_classifier.rule_list[:3]:
+    >>>     print(rule, rule.curr_class_dist.tolist())
+    IF sex!=female AND status==second THEN survived=no  [154, 25]
+    IF sex!=female AND status==third THEN survived=no  [422, 88]
+    IF status==crew AND sex!=female THEN survived=no  [670, 192]
