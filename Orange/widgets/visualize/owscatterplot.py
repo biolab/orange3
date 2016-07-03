@@ -88,6 +88,9 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 
 class OWScatterPlot(OWWidget):
+    """Scatterplot visualization with explorative analysis and intelligent
+    data visualization enhancements."""
+
     name = 'Scatter Plot'
     description = "Interactive scatter plot visualization with " \
                   "intelligent data visualization enhancements."
@@ -162,7 +165,7 @@ class OWScatterPlot(OWWidget):
         gui.separator(box)
 
         gui.valueSlider(
-            box, self, value='graph.jitter_size',  label='Jittering: ',
+            box, self, value='graph.jitter_size', label='Jittering: ',
             values=self.jitter_sizes, callback=self.reset_graph_data,
             labelFormat=lambda x:
             "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
@@ -194,8 +197,6 @@ class OWScatterPlot(OWWidget):
             **common_options)
 
         g = self.graph.gui
-        box2 = g.point_properties_box(self.controlArea, box)
-
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(
@@ -500,12 +501,12 @@ class OWScatterPlot(OWWidget):
             disc_attr = domain[self.attr_x].is_discrete or \
                         domain[self.attr_y].is_discrete
         caption = report.render_items_vert((
-             ("Color", self.combo_value(self.cb_attr_color)),
-             ("Label", self.combo_value(self.cb_attr_label)),
-             ("Shape", self.combo_value(self.cb_attr_shape)),
-             ("Size", self.combo_value(self.cb_attr_size)),
-             ("Jittering", (self.graph.jitter_continuous or disc_attr) and
-              self.graph.jitter_size)))
+            ("Color", self.combo_value(self.cb_attr_color)),
+            ("Label", self.combo_value(self.cb_attr_label)),
+            ("Shape", self.combo_value(self.cb_attr_shape)),
+            ("Size", self.combo_value(self.cb_attr_size)),
+            ("Jittering", (self.graph.jitter_continuous or disc_attr) and
+             self.graph.jitter_size)))
         self.report_plot()
         if caption:
             self.report_caption(caption)

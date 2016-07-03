@@ -1,3 +1,7 @@
+"""
+Utility classes for visualization widgets
+"""
+
 from bisect import bisect_left
 from operator import attrgetter
 
@@ -327,9 +331,28 @@ class VizRankDialogAttrPair(VizRankDialog):
 
 
 class CanvasText(QGraphicsTextItem):
-    def __init__(self, canvas, text="", x=0, y=0,
-                 alignment=Qt.AlignLeft | Qt.AlignTop, bold=0, font=None, z=0,
-                 html_text=None, tooltip=None, show=1, vertical=False):
+    """QGraphicsTextItem with more convenient constructor
+
+       Args:
+           scene (QGraphicsScene): scene into which the text is placed
+           text (str): text; see also argument `html_text` (default: `""`)
+           x (int): x-coordinate (default: 0)
+           y (int): y-coordinate (default: 0)
+           alignment (Qt.Alignment): text alignment
+               (default: Qt.AlignLeft | Qt.AlignTop)
+           bold (bool): if `True`, font is set to bold (default: `False`)
+           font (QFont): text font
+           z (int): text layer
+           html_text (str): text as html; if present (default is `None`),
+               it overrides the `text` argument
+           tooltip (str): text tooltip
+           show (bool): if `False`, the text is hidden (default: `True`)
+           vertical (bool): if `True`, the text is rotated by 90 degrees
+               (default: `False`)
+    """
+    def __init__(self, scene, text="", x=0, y=0,
+                 alignment=Qt.AlignLeft | Qt.AlignTop, bold=False, font=None,
+                 z=0, html_text=None, tooltip=None, show=True, vertical=False):
         QGraphicsTextItem.__init__(self, text, None)
 
         if font:
@@ -356,10 +379,11 @@ class CanvasText(QGraphicsTextItem):
         else:
             self.hide()
 
-        if canvas is not None:
-            canvas.addItem(self)
+        if scene is not None:
+            scene.addItem(self)
 
     def setPos(self, x, y):
+        """setPos with adjustment for alignment"""
         self.x, self.y = x, y
         rect = QGraphicsTextItem.boundingRect(self)
         if self.vertical:
@@ -378,9 +402,30 @@ class CanvasText(QGraphicsTextItem):
 
 
 class CanvasRectangle(QGraphicsRectItem):
-    def __init__(self, canvas, x=0, y=0, width=0, height=0,
+    """QGraphicsRectItem with more convenient constructor
+
+    Args:
+        scene (QGraphicsScene): scene into which the rectangle is placed
+        x (int): x-coordinate (default: 0)
+        y (int): y-coordinate (default: 0)
+        width (int): rectangle's width (default: 0)
+        height (int): rectangle's height (default: 0)
+        z (int): z-layer
+        pen (QPen): pen for the border; if present, it overrides the separate
+            arguments for color, width and style
+        pen_color (QColor or QPen): the (color of) the pen
+            (default: `QColor(128, 128, 128)`)
+        pen_width (int): pen width
+        pen_style (PenStyle): pen style (default: `Qt.SolidLine`)
+        brush_color (QColor): the color for the interior (default: same as pen)
+        tooltip (str): tooltip
+        show (bool): if `False`, the text is hidden (default: `True`)
+        onclick (callable): callback for mouse click event
+    """
+
+    def __init__(self, scene, x=0, y=0, width=0, height=0,
                  pen_color=QColor(128, 128, 128), brush_color=None, pen_width=1,
-                 z=0, pen_style=Qt.SolidLine, pen=None, tooltip=None, show=1,
+                 z=0, pen_style=Qt.SolidLine, pen=None, tooltip=None, show=True,
                  onclick=None):
         super().__init__(x, y, width, height, None)
         self.onclick = onclick
@@ -398,22 +443,25 @@ class CanvasRectangle(QGraphicsRectItem):
         else:
             self.hide()
 
-        if canvas is not None:
-            canvas.addItem(self)
+        if scene is not None:
+            scene.addItem(self)
 
-    def mousePressEvent(self, ev):
+    def mousePressEvent(self, event):
         if self.onclick:
-            self.onclick(self, ev)
+            self.onclick(self, event)
 
 
 class ViewWithPress(QGraphicsView):
+    """QGraphicsView with a callback for mouse press event. The callback
+    is given as keyword argument `handler`.
+    """
     def __init__(self, *args, **kwargs):
         self.handler = kwargs.pop("handler")
         super().__init__(*args)
 
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
-        if not ev.isAccepted():
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        if not event.isAccepted():
             self.handler()
 
 
