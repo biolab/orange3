@@ -67,8 +67,8 @@ class OWDistances(widget.OWWidget):
             self.metrics_combo.addItem(m.name)
 
     def commit(self):
-        self.warning(1)
-        self.error(1)
+        self.warning()
+        self.error()
 
         data = distances = None
         if self.data is not None:
@@ -77,20 +77,20 @@ class OWDistances(widget.OWWidget):
                 metric.fit(self.data, axis=1-self.axis)
 
             if not any(a.is_continuous for a in self.data.domain.attributes):
-                self.error(1, "No continuous features")
+                self.error("No continuous features")
                 data = None
             elif any(a.is_discrete for a in self.data.domain.attributes) or \
                     (not issparse(self.data.X) and numpy.any(numpy.isnan(self.data.X))):
                 data = distance._preprocess(self.data)
                 if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
-                    self.warning(1, "Ignoring discrete features")
+                    self.warning("Ignoring discrete features")
             else:
                 data = self.data
 
         if data is not None:
             shape = (len(data), len(data.domain.attributes))
             if numpy.product(shape) == 0:
-                self.error(1, "Empty data (shape == {})".format(shape))
+                self.error("Empty data (shape == {})".format(shape))
             else:
                 distances = metric(data, data, 1 - self.axis, impute=True)
 
