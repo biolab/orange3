@@ -7,7 +7,25 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.widgets.utils.itemmodels import \
-    PyTableModel, PyListModel, DomainModel
+    PyTableModel, PyListModel, DomainModel, _argsort
+
+
+class TestArgsort(TestCase):
+    def test_argsort(self):
+        self.assertEqual(_argsort("dacb"), [1, 3, 2, 0])
+        self.assertEqual(_argsort("dacb", reverse=True), [0, 2, 3, 1])
+        self.assertEqual(_argsort([3, -1, 0, 2], key=abs), [2, 1, 3, 0])
+        self.assertEqual(
+            _argsort([3, -1, 0, 2], key=abs, reverse=True), [0, 3, 1, 2])
+        self.assertEqual(
+            _argsort([3, -1, 0, 2],
+                     cmp=lambda x, y: (abs(x) > abs(y)) - (abs(x) < abs(y))),
+            [2, 1, 3, 0])
+        self.assertEqual(
+            _argsort([3, -1, 0, 2],
+                     cmp=lambda x, y: (abs(x) > abs(y)) - (abs(x) < abs(y)),
+                     reverse=True),
+            [0, 3, 1, 2])
 
 
 class TestPyTableModel(TestCase):

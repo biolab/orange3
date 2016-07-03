@@ -32,13 +32,15 @@ class _store(dict):
 
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
+    indices = range(len(seq))
     if key is not None:
-        return sorted(enumerate(seq), key=lambda pair: key(pair[1]), reverse=reverse)
+        return sorted(indices, key=lambda i: key(seq[i]), reverse=reverse)
     elif cmp is not None:
         from functools import cmp_to_key
-        return sorted(enumerate(seq), key=cmp_to_key(lambda a, b: cmp(a[1], b[1])), reverse=reverse)
+        return sorted(indices, key=cmp_to_key(lambda a, b: cmp(seq[a], seq[b])),
+                      reverse=reverse)
     else:
-        return sorted(enumerate(seq), key=operator.itemgetter(1), reverse=reverse)
+        return sorted(indices, key=lambda i: seq[i], reverse=reverse)
 
 
 @contextmanager
@@ -517,7 +519,7 @@ class PyListModel(QAbstractListModel):
         indices = _argsort(self._list, *args, **kwargs)
         lst = [self._list[i] for i in indices]
         other = [self._other_data[i] for i in indices]
-        for i, new_l, new_o in enumerate(zip(lst, other)):
+        for i, (new_l, new_o) in enumerate(zip(lst, other)):
             self._list[i] = new_l
             self._other_data[i] = new_o
         self.dataChanged.emit(self.index(0), self.index(len(self) - 1))
