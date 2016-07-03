@@ -154,14 +154,10 @@ class OWScatterPlot(OWWidget):
                                       callback=self.update_attr,
                                       **common_options)
 
-        self.vizrank = ScatterPlotVizRank(self)
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
-        self.vizrank_button_tooltip = "Find informative projections"
-        self.vizrank_button = gui.button(
-            vizrank_box, self, "Score Plots", callback=self.vizrank.reshow,
-            tooltip=self.vizrank_button_tooltip, enabled=False)
-        self.vizrank.pairSelected.connect(self.set_attr)
+        self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
+            vizrank_box, self, "Find Informative Projections", self.set_attr)
 
         gui.separator(box)
 
@@ -316,7 +312,7 @@ class OWScatterPlot(OWWidget):
             self.vizrank_button.setToolTip(
                 "Data with a class variable is required.")
         else:
-            self.vizrank_button.setToolTip(self.vizrank_button_tooltip)
+            self.vizrank_button.setToolTip("")
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
@@ -491,14 +487,6 @@ class OWScatterPlot(OWWidget):
     def commit(self):
         self.send_data()
         self.send_features()
-
-    def closeEvent(self, ce):
-        self.vizrank.close()
-        super().closeEvent(ce)
-
-    def hideEvent(self, he):
-        self.vizrank.hide()
-        super().hideEvent(he)
 
     def get_widget_name_extension(self):
         if self.data is not None:

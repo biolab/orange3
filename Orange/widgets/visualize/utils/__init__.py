@@ -20,19 +20,27 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     Base class for VizRank dialogs, providing a GUI with a table and a button,
     and the skeleton for managing the evaluation of visualizations.
 
-    Derived classes need to provide generators of combinations (e.g. pairs
-    of attribtutes) and the scoring function. The widget stores the current
-    upon pause, and restores it upon continuation.
+    Derived classes must provide methods
+
+    - `iterate_states` for generating combinations (e.g. pairs of attritutes),
+    - `compute_score(state)` for computing the score of a combination,
+    - `row_for_state(state)` that returns a list of items inserted into the
+       table for the given state.
+
+    and, optionally,
+
+    - `state_count` that returns the number of combinations (used for progress
+       bar)
+    - `on_selection_changed` that handles event triggered when the user selects
+      a table row. The method should emit signal
+      `VizRankDialog.selectionChanged(object)`.
 
     The class provides a table and a button. A widget constructs a single
-    instance of this dialog in its `__init__`, like (in Sieve):
+    instance of this dialog in its `__init__`, like (in Sieve) by using a
+    convenience method :obj:`add_vizrank`::
 
-        self.vizrank = SieveRank(self)
-        self.vizrank_button = gui.button(
-            box, self, "Score Combinations", callback=self.vizrank.reshow)
-
-    The widget (the argument `self`) above is stored in `VizRankDialog`'s
-    attribute `master` since derived classes will need to interact with is.
+        self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
+            box, self, "Score Combinations", self.set_attr)
 
     When the widget receives new data, it must call the VizRankDialog's
     method :obj:`VizRankDialog.initialize()` to clear the GUI and reset the
@@ -62,6 +70,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     progressBarValueChanged = Signal(float)
     messageActivated = Signal(Msg)
     messageDeactivated = Signal(Msg)
+    selectionChanged = Signal(object)
 
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
@@ -93,6 +102,49 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         self.button = gui.button(
             self, self, "Start", callback=self.toggle, default=True)
+
+    @classmethod
+    def add_vizrank(cls, widget, master, button_label, set_attr_callback):
+        """
+        Equip the widget with VizRank button and dialog, and monkey patch the
+        widget's `closeEvent` and `hideEvent` to close/hide the vizrank, too.
+
+        Args:
+            widget (QWidget): the widget into whose layout to insert the button
+            master (Orange.widgets.widget.OWWidget): the master widget
+            button_label: the label for the button
+            set_attr_callback: the callback for setting the projection chosen
+                in the vizrank
+
+        Returns:
+            tuple with Vizrank dialog instance and push button
+        """
+        # Monkey patching could be avoided by mixing-in the class (not
+        # necessarily a good idea since we can make a mess of multiple
+        # defined/derived closeEvent and hideEvent methods). Furthermore,
+        # per-class patching would be better than per-instance, but we don't
+        # want to mess with meta-classes either.
+
+        vizrank = cls(master)
+        button = gui.button(
+            widget, master, button_label, callback=vizrank.reshow,
+            enabled=False)
+        vizrank.selectionChanged.connect(lambda args: set_attr_callback(*args))
+
+        master_close_event = master.closeEvent
+        master_hide_event = master.hideEvent
+
+        def closeEvent(event):
+            vizrank.close()
+            master_close_event(event)
+
+        def hideEvent(event):
+            vizrank.hide()
+            master_hide_event(event)
+
+        master.closeEvent = closeEvent
+        master.hideEvent = hideEvent
+        return vizrank, button
 
     def reshow(self):
         """Put the widget on top of all windows
@@ -221,12 +273,11 @@ class VizRankDialogAttrPair(VizRankDialog):
 
     The state is a pair of indices into `self.attrs`.
 
-    When the user selects a pair, the dialog emits signal
-    `pairSelected(Variable, Variable)`.
+    When the user selects a pair, the dialog emits signal `selectionChanged`
+    with a tuple of variables as parameter.
     """
 
     pairSelected = Signal(Variable, Variable)
-
     _AttrRole = next(gui.OrangeUserRole)
 
     class Information(VizRankDialog.Information):
@@ -252,7 +303,7 @@ class VizRankDialogAttrPair(VizRankDialog):
 
     def on_selection_changed(self, selected, deselected):
         attrs = [selected.indexes()[i].data(self._AttrRole) for i in (0, 1)]
-        self.pairSelected.emit(*attrs)
+        self.selectionChanged.emit(attrs)
 
     def state_count(self):
         n_attrs = len(self.attrs)

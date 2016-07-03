@@ -92,11 +92,9 @@ class OWSieveDiagram(OWWidget):
         self.attrXCombo = gui.comboBox(value="attrX", **combo_args)
         gui.widgetLabel(self.attr_box, "\u2715", sizePolicy=fixed_size)
         self.attrYCombo = gui.comboBox(value="attrY", **combo_args)
-        self.vizrank = SieveRank(self)
-        self.vizrank_button = gui.button(
-            self.attr_box, self, "Score Combinations", sizePolicy=fixed_size,
-            callback=self.vizrank.reshow, enabled=False)
-        self.vizrank.pairSelected.connect(self.set_attr)
+        self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
+            self.attr_box, self, "Score Combinations", self.set_attr)
+        self.vizrank_button.setSizePolicy(*fixed_size)
 
         self.canvas = QGraphicsScene()
         self.canvasView = ViewWithPress(
@@ -119,14 +117,6 @@ class OWSieveDiagram(OWWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.update_graph()
-
-    def closeEvent(self, event):
-        self.vizrank.close()
-        super().closeEvent(event)
-
-    def hideEvent(self, event):
-        self.vizrank.hide()
-        super().hideEvent(event)
 
     def set_data(self, data):
         """
