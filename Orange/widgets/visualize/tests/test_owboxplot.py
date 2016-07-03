@@ -8,13 +8,15 @@ from Orange.widgets.visualize.owboxplot import OWBoxPlot
 from Orange.widgets.tests.base import WidgetTest
 
 
-class TestOWBoxPlot(WidgetTest):
+class OWBoxPlotTests(WidgetTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.iris = Table("iris")
         cls.zoo = Table("zoo")
         cls.housing = Table("housing")
+        cls.titanic = Table("titanic")
+        cls.heart = Table("heart_disease")
 
     def setUp(self):
         self.widget = self.create_widget(OWBoxPlot)
@@ -58,3 +60,43 @@ class TestOWBoxPlot(WidgetTest):
         data.domain.class_var = ContinuousVariable("cls")
         data.X[:, 0] = np.nan
         self.send_signal("Data", data)
+
+    def test_apply_sorting(self):
+        controls = self.widget.controlledAttributes
+        group_list = controls["group_var"][0].control
+        order_check = controls["order_by_importance"][0].control
+        attributes = self.widget.attrs
+
+        def select_group(i):
+            group_selection = group_list.selectionModel()
+            group_selection.setCurrentIndex(
+                group_list.model().index(i),
+                group_selection.ClearAndSelect)
+
+        data = self.titanic
+        self.send_signal("Data", data)
+
+        select_group(0)
+        self.assertFalse(order_check.isEnabled())
+        select_group(1)
+        self.assertTrue(order_check.isEnabled())
+
+        order_check.setChecked(False)
+        self.assertEqual(tuple(attributes), data.domain.variables)
+        order_check.setChecked(True)
+        self.assertEqual([x.name for x in attributes],
+                         ['sex', 'survived', 'age', 'status'])
+        select_group(4)
+        self.assertEqual([x.name for x in attributes],
+                         ['sex', 'status', 'age', 'survived'])
+
+        data = self.heart
+        self.send_signal("Data", data)
+        select_group(len(group_list.model()) - 1)
+        order_check.setChecked(True)
+        self.assertEqual([x.name for x in attributes],
+                         ['thal', 'major vessels colored', 'chest pain',
+                          'ST by exercise', 'max HR', 'exerc ind ang',
+                          'slope peak exc ST', 'gender', 'age', 'rest SBP',
+                          'rest ECG', 'cholesterol',
+                          'fasting blood sugar > 120', 'diameter narrowing'])
