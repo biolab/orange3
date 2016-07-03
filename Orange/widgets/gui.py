@@ -12,9 +12,9 @@ from types import LambdaType
 import pkg_resources
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, pyqtSignal as Signal
+from PyQt4.QtCore import Qt, pyqtSignal as Signal, QSize
 from PyQt4.QtGui import QCursor, QApplication, QTableView, QHeaderView, \
-    QStyledItemDelegate, QSizePolicy, QColor
+    QStyledItemDelegate, QSizePolicy, QColor, QListView
 
 # Some Orange widgets might expect this here
 from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
@@ -1196,6 +1196,36 @@ def attributeItem(var):
     :rtype: tuple with PyQt4.QtGui.QIcon and str
     """
     return attributeIconDict[var], var.name
+
+
+class ListViewWithSizeHint(QListView):
+    def __init__(self, *args, preferred_size=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if isinstance(preferred_size, tuple):
+            preferred_size = QSize(*preferred_size)
+        self.preferred_size = preferred_size
+
+    def sizeHint(self):
+        return self.preferred_size or super().sizeHint()
+
+
+def listView(widget, master, value=None, model=None, box=None, callback=None,
+             sizeHint=None, **misc):
+    if box:
+        bg = vBox(widget, box, addToLayout=False)
+    else:
+        bg = widget
+    view = ListViewWithSizeHint(preferred_size=sizeHint)
+    view.setModel(model)
+    view.selectionModel().selectionChanged.connect(callback)
+    if value is not None:
+        connectControl(master, value, callback,
+                       view.selectionModel().selectionChanged,
+                       CallFrontListView(view),
+                       CallBackListView(model, master, value))
+    misc.setdefault('addSpace', True)
+    miscellanea(view, bg, widget, **misc)
+    return view
 
 
 def listBox(widget, master, value=None, labels=None, box=None, callback=None,
@@ -2443,6 +2473,23 @@ class FunctionCallback:
                 self.func(**kwds)
 
 
+class CallBackListView(ControlledCallback):
+    def __init__(self, model, widget, attribute):
+        super().__init__(widget, attribute)
+        self.model = model
+
+    # triggered by selectionModel().selectionChanged()
+    def __call__(self, newSelection, _):
+        # This must be imported locally to avoid circular imports
+        from Orange.widgets.utils.itemmodels import PyListModel
+        indexes = newSelection.indexes()
+        if indexes:
+            value = newSelection.indexes()[0].row()
+            if isinstance(self.model, PyListModel):
+                value = self.model[value]
+            self.acyclic_setattr(value)
+
+
 class CallBackListBox:
     def __init__(self, control, widget):
         self.control = control
@@ -2605,6 +2652,25 @@ class CallFrontRadioButtons(ControlledCallFront):
         if value < 0 or value >= len(self.control.buttons):
             value = 0
         self.control.buttons[value].setChecked(1)
+
+
+class CallFrontListView(ControlledCallFront):
+    def action(self, value):
+        model = self.control.model()
+        if not isinstance(value, int):
+            if isinstance(value, str):
+                search_role = Qt.DisplayRole
+            elif isinstance(value, Variable):
+                search_role = TableVariable
+            else:
+                search_role = Qt.DisplayRole
+                value = str(value)
+            for i in range(model.rowCount()):
+                if model.data(model.index(i), search_role) == value:
+                    value = i
+                    break
+        sel_model = self.control.selectionModel()
+        sel_model.select(model.index(value), sel_model.ClearAndSelect)
 
 
 class CallFrontListBox(ControlledCallFront):
