@@ -2,6 +2,8 @@ import sys
 import os
 import types
 from functools import reduce
+import itertools
+from warnings import warn
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, QSettings, QUrl
 from PyQt4.QtGui import QDialog, QPixmap, QVBoxLayout, QSizePolicy, \
@@ -10,6 +12,7 @@ from PyQt4.QtGui import QDialog, QPixmap, QVBoxLayout, QSizePolicy, \
     QWidget, QPushButton
 
 from Orange.data import FileFormat
+from Orange.util import OrangeWarning
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
@@ -580,7 +583,18 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         else:
             QDialog.keyPressEvent(self, e)
 
-    def information(self, id=0, text=None):
+    class __StatusId(int):
+        pass
+
+    DefaultId = __StatusId(0)
+    __status_count = itertools.count(1)
+
+    @classmethod
+    def status_id(cls):
+        return cls.__StatusId(next(cls.__status_count))
+
+
+    def information(self, id=DefaultId, text=None):
         """
         Set/clear a widget information message (for `id`).
 
@@ -590,7 +604,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         """
         self._set_state("Info", id, text)
 
-    def warning(self, id=0, text=""):
+    def warning(self, id=DefaultId, text=""):
         """
         Set/clear a widget warning message (for `id`).
 
@@ -600,7 +614,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         """
         self._set_state("Warning", id, text)
 
-    def error(self, id=0, text=""):
+    def error(self, id=DefaultId, text=""):
         """
         Set/clear a widget error message (for `id`).
 
@@ -611,16 +625,22 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         self._set_state("Error", id, text)
 
     def _set_state(self, state_type, id, text):
+        def _check_id(val):
+            if not isinstance(val, self.__StatusId):
+                warn("Integer status ids are deprecated", OrangeWarning)
         changed = 0
         if isinstance(id, list):
             for val in id:
+                _check_id(val)
                 if val in self.widgetState[state_type]:
                     self.widgetState[state_type].pop(val)
                     changed = 1
         else:
             if isinstance(id, str):
                 text = id
-                id = 0
+                id = self.DefaultId
+            else:
+                _check_id(id)
             if not text:
                 if id in self.widgetState[state_type]:
                     self.widgetState[state_type].pop(id)
