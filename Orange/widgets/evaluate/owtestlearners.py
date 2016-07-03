@@ -24,7 +24,7 @@ from Orange.evaluation import scoring, Results
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
-
+from Orange.widgets.widget import OWWidget, Msg
 
 Input = namedtuple(
     "Input",
@@ -125,7 +125,7 @@ def raise_(exc):
 Try.register = lambda cls: raise_(TypeError())
 
 
-class OWTestLearners(widget.OWWidget):
+class OWTestLearners(OWWidget):
     name = "Test & Score"
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
@@ -165,6 +165,24 @@ class OWTestLearners(widget.OWWidget):
 
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
+
+    class Error(OWWidget.Error):
+        class_required = Msg("Train data input requires a class variable")
+        class_required_test = Msg("Test data input requires a class variable")
+        too_many_folds = Msg("Number of folds exceeds the data size")
+        class_inconsistent = Msg("Test and train data sets "
+                                 "have different classes")
+
+    class Warning(OWWidget.Warning):
+        missing_data = Msg()
+        test_data_missing = Msg("Missing separate test data input")
+        scores_not_computed = Msg("Some scores could not be computed")
+        test_data_unused = Msg("Test data is present but unused. "
+                               "Select 'Test on test data' to use it.")
+
+    class Information(OWWidget.Information):
+        data_sampled = Msg("Train data has been sampled")
+        test_data_sampled = Msg("Test data has been sampled")
 
     def __init__(self):
         super().__init__()
@@ -255,28 +273,29 @@ class OWTestLearners(widget.OWWidget):
         """
         Set the input training dataset.
         """
-        self.error(0)
-        self.information(0)
+        self.Information.data_sampled.clear()
         if data and not data.domain.class_var:
-            self.error(0, "Train data input requires a class variable")
+            self.Error.class_required()
             data = None
+        else:
+            self.Error.class_required.clear()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
-                self.information(0, "Train data has been sampled")
+                self.Information.data_sampled()
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
-        self.warning(4)
-        self.train_data_missing_vals = data is not None and \
-                                       np.isnan(data.Y).any()
+        self.Warning.missing_data.clear()
+        self.train_data_missing_vals = \
+            data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
-            self.warning(4, self._get_missing_data_warning(
-                self.train_data_missing_vals, self.test_data_missing_vals
-            ))
+            self.Warning.missing_data(
+                self._get_missing_data_warning(
+                    self.train_data_missing_vals, self.test_data_missing_vals))
             if data:
                 data = RemoveNaNClasses(data)
 
@@ -291,29 +310,30 @@ class OWTestLearners(widget.OWWidget):
         """
         Set the input separate testing dataset.
         """
-        self.error(1)
-        self.information(1)
+        self.Information.test_data_sampled.clear()
         if data and not data.domain.class_var:
-            self.error(1, "Test data input requires a class variable")
+            self.Error.class_required()
             data = None
+        else:
+            self.Error.class_required_test.clear()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
-                self.information(1, "Test data has been sampled")
+                self.Information.test_data_sampled()
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
-        self.warning(4)
+        self.Warning.missing_data.clear()
         self.test_data_missing_vals = data is not None and \
                                       np.isnan(data.Y).any()
 
         if self.train_data_missing_vals or self.test_data_missing_vals:
-            self.warning(4, self._get_missing_data_warning(
-                self.train_data_missing_vals, self.test_data_missing_vals
-            ))
+            self.Warning.missing_data(
+                self._get_missing_data_warning(
+                    self.train_data_missing_vals, self.test_data_missing_vals))
             if data:
                 data = RemoveNaNClasses(data)
 
@@ -353,8 +373,12 @@ class OWTestLearners(widget.OWWidget):
         """
         Run/evaluate the learners.
         """
-        self.warning([1, 2])
-        self.error([2, 4])
+        self.Warning.test_data_unused.clear()
+        self.Warning.test_data_missing.clear()
+        self.Warning.general.clear()
+        self.Error.class_inconsistent.clear()
+        self.Error.too_many_folds.clear()
+        self.Error.general.clear()
         if self.data is None:
             return
 
@@ -362,11 +386,10 @@ class OWTestLearners(widget.OWWidget):
 
         if self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
-                self.warning(2, "Missing separate test data input")
+                self.Warning.test_data_missing()
                 return
             elif self.test_data.domain.class_var != class_var:
-                self.error(2, ("Inconsistent class variable between test " +
-                               "and train data sets"))
+                self.Error.class_inconsistent()
                 return
 
         # items in need of an update
@@ -378,8 +401,7 @@ class OWTestLearners(widget.OWWidget):
 
         if self.test_data is not None and \
                 self.resampling != OWTestLearners.TestOnTest:
-            self.warning(1, "Test data is present but unused. "
-                            "Select 'Test on test data' to use it.")
+            self.Warning.test_data_unused()
 
         rstate = 42
         def update_progress(finished):
@@ -397,14 +419,14 @@ class OWTestLearners(widget.OWWidget):
                 folds = self.NFolds[self.n_folds]
                 if self.resampling == OWTestLearners.KFold:
                     if len(self.data) < folds:
-                        self.error(4, "Number of folds exceeds the data size")
+                        self.Error.too_many_folds()
                         return
                     warnings = []
                     results = Orange.evaluation.CrossValidation(
                         self.data, learners, k=folds,
                         random_state=rstate, warnings=warnings, **common_args)
                     if warnings:
-                        self.warning(2, warnings[0])
+                        self.Warning.general(warnings[0])
                 elif self.resampling == OWTestLearners.LeaveOneOut:
                     results = Orange.evaluation.LeaveOneOut(
                         self.data, learners, **common_args)
@@ -425,9 +447,11 @@ class OWTestLearners(widget.OWWidget):
                 else:
                     assert False
             except (RuntimeError, ValueError) as e:
-                self.error(2, str(e))
+                self.Error.general(str(e))
                 self.setStatusMessage("")
                 return
+            else:
+                self.Error.general.clear()
 
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
         for learner, result in zip(learners, results.split_by_model()):
@@ -528,15 +552,8 @@ class OWTestLearners(widget.OWWidget):
 
             model.appendRow(row)
 
-        if errors:
-            self.error(3, "\n".join(errors))
-        else:
-            self.error(3)
-
-        if has_missing_scores:
-            self.warning(3, "Some scores could not be computed")
-        else:
-            self.warning(3)
+        self.Error.general("\n".join(errors), show=bool(errors))
+        self.Warning.scores_not_computed(show=has_missing_scores)
 
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)

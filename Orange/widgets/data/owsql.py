@@ -10,7 +10,7 @@ from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.widget import OutputSignal
+from Orange.widgets.widget import OutputSignal, Msg
 from Orange.canvas import report
 
 
@@ -49,6 +49,9 @@ class OWSql(widget.OWWidget):
 
     materialize = Setting(False)
     materialize_table_name = Setting("")
+
+    class Information(widget.OWWidget.Information):
+        data_sampled = Msg("Data description was generated from a sample.")
 
     def __init__(self):
         super().__init__()
@@ -302,14 +305,13 @@ class OWSql(widget.OWWidget):
             elif confirm.clickedButton() == sample_button:
                 sample = True
 
-        self.information(1)
+        self.Information.clear()
         if self.guess_values:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             if sample:
                 s = table.sample_time(1)
                 domain = s.get_domain(guess_values=True)
-                self.information(
-                    1, "Domain was generated from a sample of the table.")
+                self.Information.data_sampled()
             else:
                 domain = table.get_domain(guess_values=True)
             QApplication.restoreOverrideCursor()

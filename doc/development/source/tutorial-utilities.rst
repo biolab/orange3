@@ -92,38 +92,83 @@ displayed in the top row of the widget and also indicated in the schema.
 
 .. image:: images/warningmessage.png
 
-Messages, warning and errors are issued by methods
+Simple messages
+...............
+
+If the widget only issues a single error, warning and/or information at a time,
+it can do so by calling `self.error(text, shown=True)`,
+`self.warning(text, shown=True)` or `self.information(text, shown=True)`.
+Multiple messages - but just one of each kind - can be present at the same
+time::
+
+    self.warning("Discrete features are ignored.")
+    self.error("Fitting failed due to missing data.")
+
+At this point, the widget has a warning and an error message.
+
+    self.error("Fitting failed due to weird data.")
+
+This replaces the old error message, but the warning remains.
+
+The message is removed by setting an empty message, e.g. `self.error()`.
+To remove all messages, call `self.clear_messages()`.
+
+If the argument `shown` is set to `False`, the message is removed::
+
+    self.error("No suitable features", shown=not self.suitable_features)
+
+"Not showing" a message in this way also remove any existing messages.
+
+Multiple messages
+.................
+
+Widget that issue multiple independent messages that can appear simultaneously,
+need to declare them within local classes within the widget class, and derive
+them from the corresponding `OWWidget` classes for a particular kind of a
+message. For instance, a widget class can contain the following classes::
+
+    class Error(OWWidget.Error):
+        no_continuous_features = Msg("No continuous features")
+
+    class Warning(OWWidget.Error):
+        empty_data = Msg("Comtrongling does not work on meta data")
+        no_scissors_run = Msg("Do not run with scissors")
+        ignoring_discrete = Msg("Ignoring {n} discrete features: {}")
+
+Within the widget, errors are raised via calls like::
+
+    self.Error.no_continuous_features()
+    self.Warning.no_scissors_run()
+
+As for the simpler messages, the `shown` argument can be added::
+
+    self.Warning.no_scissors_run(shown=self.scissors_are_available)
+
+If the message includes formatting, the call must include the necessary data
+for the `format` method::
+
+    self.Warning.ignoring_discrete(", ".join(attrs), n=len(attr))
+
+Message is cleared by::
+
+    self.Warning.ignoring_discrete.clear()
+
+Multiple messages can be removed as in the simpler schema, with::
+
+    self.Warning.clear()
+
+or::
+
+    self.clear_messages()
+
+Messages of both kinds - those from messages classes and those issued by,
+for instance, `self.error` - can coexist. Note, though, that methods for
+removing all messages of certain type (e.g. `self.Error.clear()`) or all
+messags (`self.clear_message()`) apply to all messages of this type.
+
+**Note**: handling multiple messages through ids, that is, using
 `self.information(id, text)`, `self.warning(id, text)` and
-`self.error(id, text)`, respectively. A warning like the one above is
-issued by ::
-
-    self.warning(42, "Data contains continuous variables. "
-                 "Discretize the data to use them.")
-
-and removed by ::
-
-    self.warning(42)
-
-A widget can have multiple such messages at the same time. They are
-distinguished by different id's, like `42` above. The id numbers are
-arbitrary and are assigned by the programmer. They need to be unique
-for a widget.
-
-Multiple error messages can be removed by calling the function with a
-list of id's, `self.warning([1, 13, 42])`.
-
-Since most widgets have only a single error message, the id can be omitted
-(in which case it defaults to 0). In this case, ::
-
-    self.warning("Data contains continuous variables. "
-                 "Discretize the data to use them.")
-
-issues the warning, and ::
-
-    self.warning()
-
-removes it.
-
+`self.error(id, text)` is deprecated and will be removed in the future.
 
 Tips
 ----

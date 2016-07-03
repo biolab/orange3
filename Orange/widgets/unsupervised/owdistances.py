@@ -7,6 +7,7 @@ import Orange.misc
 from Orange import distance
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Msg
 
 METRICS = [
     distance.Euclidean,
@@ -35,6 +36,13 @@ class OWDistances(widget.OWWidget):
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
+
+    class Error(widget.OWWidget.Error):
+        no_continuous_features = Msg("No continuous features")
+        empty_data = Msg("Empty data (shape = {})")
+
+    class Warning(widget.OWWidget.Warning):
+        ignoring_discrete = Msg("Ignoring discrete features")
 
     def __init__(self):
         super().__init__()
@@ -96,26 +104,27 @@ class OWDistances(widget.OWWidget):
         if data is not None and issparse(data.X) and \
                 not metric.supports_sparse:
             data = None
+        self.clear_messages()
 
         if data is not None:
             if isinstance(metric, distance.MahalanobisDistance):
                 metric.fit(self.data, axis=1-self.axis)
 
             if not any(a.is_continuous for a in self.data.domain.attributes):
-                self.error(1, "No continuous features")
+                self.Error.no_continuous_features()
                 data = None
             elif any(a.is_discrete for a in self.data.domain.attributes) or \
                     (not issparse(self.data.X) and numpy.any(numpy.isnan(self.data.X))):
                 data = distance._preprocess(self.data)
                 if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
-                    self.warning(1, "Ignoring discrete features")
+                    self.Warning.ignoring_discrete()
             else:
                 data = self.data
 
         if data is not None:
             shape = (len(data), len(data.domain.attributes))
             if numpy.product(shape) == 0:
-                self.error(1, "Empty data (shape == {})".format(shape))
+                self.Error.empty_data(shape)
             else:
                 distances = metric(data, data, 1 - self.axis, impute=True)
 

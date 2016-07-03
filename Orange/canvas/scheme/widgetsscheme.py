@@ -369,7 +369,8 @@ class WidgetManager(QObject):
         node.title_changed.connect(widget.setCaption)
 
         # Widget's info/warning/error messages.
-        widget.widgetStateChanged.connect(self.__on_widget_state_changed)
+        widget.messageActivated.connect(self.__on_widget_state_changed)
+        widget.messageDeactivated.connect(self.__on_widget_state_changed)
 
         # Widget's statusTip
         node.set_status_message(widget.statusMessage())
@@ -480,34 +481,22 @@ class WidgetManager(QObject):
         """
         Initialize the tracked info/warning/error message state.
         """
-        for message_type, state in widget.widgetState.items():
-            for message_id, message_value in state.items():
-                message = user_message_from_state(
-                    widget, message_type, message_id, message_value)
-
+        for message_group in widget.message_groups:
+            message = user_message_from_state(message_group)
+            if message:
                 node.set_state_message(message)
 
-    def __on_widget_state_changed(self, message_type, message_id,
-                                  message_value):
+    def __on_widget_state_changed(self, msg):
         """
         The OWBaseWidget info/warning/error state has changed.
-
-        message_type is one of "Info", "Warning" or "Error" string depending
-        of which method (information, warning, error) was called. message_id
-        is the first int argument if supplied, and message_value the message
-        text.
-
         """
-        widget = self.sender()
+        widget = msg.group.widget
         try:
             node = self.node_for_widget(widget)
         except KeyError:
             pass
         else:
-            message = user_message_from_state(
-                widget, str(message_type), message_id, message_value)
-
-            node.set_state_message(message)
+            self.__initialize_widget_state(node, widget)
 
     def __on_processing_state_changed(self, state):
         """
@@ -592,27 +581,13 @@ class WidgetManager(QObject):
             widget.workflowEnvChanged(key, newvalue, oldvalue)
 
 
-def user_message_from_state(widget, message_type, message_id, message_value):
-    message_type = str(message_type)
-    if message_type == "Info":
-        contents = widget.widgetStateToHtml(True, False, False)
-        level = UserMessage.Info
-    elif message_type == "Warning":
-        contents = widget.widgetStateToHtml(False, True, False)
-        level = UserMessage.Warning
-    elif message_type == "Error":
-        contents = widget.widgetStateToHtml(False, False, True)
-        level = UserMessage.Error
-    else:
-        raise ValueError("Invalid message_type: %r" % message_type)
-
-    if not contents:
-        contents = None
-
-    message = UserMessage(contents, severity=level,
-                          message_id=message_type,
-                          data={"content-type": "text/html"})
-    return message
+def user_message_from_state(message_group):
+    return UserMessage(
+        severity=message_group.severity,
+        message_id=message_group,
+        contents="<br/>".join(msg.formatted
+                              for msg in message_group.active.values()) or None,
+        data={"content-type": "text/html"})
 
 
 class WidgetsSignalManager(SignalManager):
