@@ -113,6 +113,12 @@ echo "Installing/updating setuptools and pip"
 echo "======================================"
 "$PIP" install 'setuptools==18.*' 'pip==7.*'
 
+echo "Installing Bottlechest"
+echo "======================"
+"$PIP" install --find-links http://orange.biolab.si/download/files/wheelhouse/ \
+               --use-wheel --trusted-host orange.biolab.si \
+               Bottlechest
+
 echo "Installing orangeqt"
 echo "==================="
 FDIR=$TEMPLATE/Contents/Frameworks
