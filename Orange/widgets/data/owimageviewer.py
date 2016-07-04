@@ -951,8 +951,9 @@ class OWImageViewer(widget.OWWidget):
 
         if data is not None:
             domain = data.domain
-            self.allAttrs = domain.variables + domain.metas
-            self.stringAttrs = [a for a in self.allAttrs if a.is_string]
+            self.allAttrs = (domain.class_vars + domain.metas +
+                             domain.attributes)
+            self.stringAttrs = [a for a in domain.metas if a.is_string]
 
             self.stringAttrs = sorted(
                 self.stringAttrs,
