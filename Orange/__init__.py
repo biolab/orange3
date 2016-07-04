@@ -1,5 +1,9 @@
 from .misc.lazy_module import _LazyModule
 from .misc.datasets import _DatasetInfo
+
+# bottlechest patches bottleneck
+from .misc import bottlechest  # pylint: disable=unused-import
+
 from .version import \
     short_version as __version__, git_revision as __git_version__
 

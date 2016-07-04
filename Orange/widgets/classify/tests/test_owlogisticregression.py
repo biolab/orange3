@@ -1,6 +1,6 @@
 import unittest
 
-import bottlechest as bn
+import bottleneck as bn
 
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner

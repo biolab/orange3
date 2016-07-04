@@ -13,7 +13,7 @@ from urllib.parse import urlparse, unquote as urlunquote
 from urllib.request import urlopen
 from urllib.error import URLError
 
-import bottlechest as bn
+import bottleneck as bn
 from scipy import sparse as sp
 
 from .instance import *
@@ -935,12 +935,7 @@ class Table(MutableSequence, Storage):
         if data is None:
             return Storage.Missing
         if data is not None and sp.issparse(data):
-            try:
-                if bn.bincount(data.data, 1)[0][0] == 0:
-                    return Storage.SPARSE_BOOL
-            except ValueError as e:
-                pass
-            return Storage.SPARSE
+            return Storage.SPARSE_BOOL if (data.data == 1).all() else Storage.SPARSE
         else:
             return Storage.DENSE
 

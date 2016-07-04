@@ -2,12 +2,12 @@ import inspect
 
 import numpy as np
 import scipy
-import bottlechest as bn
 
 from Orange.data import Table, Storage, Instance, Value
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.util import one_hot
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -157,11 +157,9 @@ class Model:
                                for c in self.domain.class_vars)
                 probs = np.zeros(value.shape + (max_card,), float)
                 for i, cvar in enumerate(self.domain.class_vars):
-                    probs[:, i, :], _ = bn.bincount(np.atleast_2d(value[:, i]),
-                                                    max_card - 1)
+                    probs[:, i, :] = one_hot(value[:, i])
             else:
-                probs, _ = bn.bincount(np.atleast_2d(value),
-                                       len(self.domain.class_var.values) - 1)
+                probs = one_hot(value)
             if ret == Model.ValueProbs:
                 return value, probs
             else:
