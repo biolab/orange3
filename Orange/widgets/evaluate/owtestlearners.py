@@ -166,6 +166,21 @@ class OWTestLearners(widget.OWWidget):
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
+    ERR_CLASS_REQUIRED = widget.OWWidget.status_id()
+    ERR_CLASS_REQUIRED_IN_TEST = widget.OWWidget.status_id()
+    ERR_CLASS_INCONSISTENT = widget.OWWidget.status_id()
+    ERR_TOO_MANY_FOLDS = widget.OWWidget.status_id()
+    ERR_GENERAL = widget.OWWidget.status_id()
+
+    WARN_MISSING_DATA = widget.OWWidget.status_id()
+    WARN_TEST_DATA_MISSING = widget.OWWidget.status_id()
+    WARN_TEST_DATA_UNUSED = widget.OWWidget.status_id()
+    WARN_SCORES_NOT_COMPUTED = widget.OWWidget.status_id()
+    WARN_GENERAL = widget.OWWidget.status_id()
+
+    INF_DATA_SAMPLED = widget.OWWidget.status_id()
+    INF_TEST_DATA_SAMPLED = widget.OWWidget.status_id()
+
     def __init__(self):
         super().__init__()
 
@@ -258,28 +273,31 @@ class OWTestLearners(widget.OWWidget):
         """
         Set the input training dataset.
         """
-        self.error(0)
-        self.information(0)
+        self.error(self.ERR_CLASS_REQUIRED)
+        self.information(self.INF_DATA_SAMPLED)
         if data and not data.domain.class_var:
-            self.error(0, "Train data input requires a class variable")
+            self.error(self.ERR_CLASS_REQUIRED,
+                       "Train data input requires a class variable")
             data = None
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
-                self.information(0, "Train data has been sampled")
+                self.information(self.INF_DATA_SAMPLED,
+                                 "Train data has been sampled")
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
-        self.warning(4)
+        self.warning(self.WARN_MISSING_DATA)
         self.train_data_missing_vals = data is not None and \
                                        np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
-            self.warning(4, self._get_missing_data_warning(
-                self.train_data_missing_vals, self.test_data_missing_vals
-            ))
+            self.warning(
+                self.WARN_MISSING_DATA,
+                self._get_missing_data_warning(
+                    self.train_data_missing_vals, self.test_data_missing_vals))
             if data:
                 data = RemoveNaNClasses(data)
 
@@ -294,29 +312,32 @@ class OWTestLearners(widget.OWWidget):
         """
         Set the input separate testing dataset.
         """
-        self.error(1)
-        self.information(1)
+        self.error(self.ERR_CLASS_REQUIRED_IN_TEST)
+        self.information(self.INF_TEST_DATA_SAMPLED)
         if data and not data.domain.class_var:
-            self.error(1, "Test data input requires a class variable")
+            self.error(self.ERR_CLASS_REQUIRED_IN_TEST,
+                       "Test data input requires a class variable")
             data = None
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
-                self.information(1, "Test data has been sampled")
+                self.information(self.INF_TEST_DATA_SAMPLED,
+                                 "Test data has been sampled")
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
-        self.warning(4)
+        self.warning(self.WARN_MISSING_DATA)
         self.test_data_missing_vals = data is not None and \
                                       np.isnan(data.Y).any()
 
         if self.train_data_missing_vals or self.test_data_missing_vals:
-            self.warning(4, self._get_missing_data_warning(
-                self.train_data_missing_vals, self.test_data_missing_vals
-            ))
+            self.warning(
+                self.WARN_MISSING_DATA,
+                self._get_missing_data_warning(
+                    self.train_data_missing_vals, self.test_data_missing_vals))
             if data:
                 data = RemoveNaNClasses(data)
 
@@ -356,8 +377,8 @@ class OWTestLearners(widget.OWWidget):
         """
         Run/evaluate the learners.
         """
-        self.warning([1, 2])
-        self.error([2, 4])
+        self.warning([self.WARN_TEST_DATA_UNUSED, self.WARN_TEST_DATA_MISSING])
+        self.error([self.ERR_CLASS_INCONSISTENT, self.ERR_TOO_MANY_FOLDS])
         if self.data is None:
             return
 
@@ -365,11 +386,13 @@ class OWTestLearners(widget.OWWidget):
 
         if self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
-                self.warning(2, "Missing separate test data input")
+                self.warning(self.WARN_TEST_DATA_MISSING,
+                             "Missing separate test data input")
                 return
             elif self.test_data.domain.class_var != class_var:
-                self.error(2, ("Inconsistent class variable between test " +
-                               "and train data sets"))
+                self.error(self.ERR_CLASS_INCONSISTENT,
+                           "Inconsistent class variable between test "
+                           "and train data sets")
                 return
 
         # items in need of an update
@@ -381,8 +404,9 @@ class OWTestLearners(widget.OWWidget):
 
         if self.test_data is not None and \
                 self.resampling != OWTestLearners.TestOnTest:
-            self.warning(1, "Test data is present but unused. "
-                            "Select 'Test on test data' to use it.")
+            self.warning(self.WARN_TEST_DATA_UNUSED,
+                         "Test data is present but unused. "
+                         "Select 'Test on test data' to use it.")
 
         rstate = 42
         def update_progress(finished):
@@ -398,14 +422,15 @@ class OWTestLearners(widget.OWWidget):
                 folds = self.NFolds[self.n_folds]
                 if self.resampling == OWTestLearners.KFold:
                     if len(self.data) < folds:
-                        self.error(4, "Number of folds exceeds the data size")
+                        self.error(self.ERR_TOO_MANY_FOLDS,
+                                   "Number of folds exceeds the data size")
                         return
                     warnings = []
                     results = Orange.evaluation.CrossValidation(
                         self.data, learners, k=folds,
                         random_state=rstate, warnings=warnings, **common_args)
                     if warnings:
-                        self.warning(2, warnings[0])
+                        self.warning(self.WARN_GENERAL, warnings[0])
                 elif self.resampling == OWTestLearners.LeaveOneOut:
                     results = Orange.evaluation.LeaveOneOut(
                         self.data, learners, **common_args)
@@ -426,7 +451,7 @@ class OWTestLearners(widget.OWWidget):
                 else:
                     assert False
             except (RuntimeError, ValueError) as e:
-                self.error(2, str(e))
+                self.error(self.ERR_CLASS_INCONSISTENT, str(e))
                 self.setStatusMessage("")
                 return
 
@@ -530,14 +555,15 @@ class OWTestLearners(widget.OWWidget):
             model.appendRow(row)
 
         if errors:
-            self.error(3, "\n".join(errors))
+            self.error(self.ERR_GENERAL, "\n".join(errors))
         else:
-            self.error(3)
+            self.error(self.ERR_GENERAL)
 
         if has_missing_scores:
-            self.warning(3, "Some scores could not be computed")
+            self.warning(self.WARN_SCORES_NOT_COMPUTED,
+                         "Some scores could not be computed")
         else:
-            self.warning(3)
+            self.warning(self.WARN_SCORES_NOT_COMPUTED)
 
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)

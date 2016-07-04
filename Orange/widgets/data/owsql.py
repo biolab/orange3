@@ -302,14 +302,14 @@ class OWSql(widget.OWWidget):
             elif confirm.clickedButton() == sample_button:
                 sample = True
 
-        self.information(1)
+        self.information()
         if self.guess_values:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             if sample:
                 s = table.sample_time(1)
                 domain = s.get_domain(guess_values=True)
                 self.information(
-                    1, "Domain was generated from a sample of the table.")
+                    "Domain was generated from a sample of the table.")
             else:
                 domain = table.get_domain(guess_values=True)
             QApplication.restoreOverrideCursor()
