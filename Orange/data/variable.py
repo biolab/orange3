@@ -768,7 +768,7 @@ class StringVariable(Variable):
         Return the value as a string. If it is already a string, the same
         object is returned.
         """
-        if s is None:
+        if s is None or (isinstance(s, Number) and np.isnan(s)):
             return ""
         if isinstance(s, str):
             return s

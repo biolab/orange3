@@ -74,7 +74,7 @@ class Table(pd.DataFrame):
         cols += self.domain.metas if meta else []
 
         # preallocate result, we fill it in-place
-        # we need a more general dtype for metas (strings),
+        # we need a more general dtype for metas (commonly strings),
         # otherwise assignment fails later
         result = np.zeros((len(self), len(cols)), dtype=object if meta else None)
         # effectively a double for loop, see if this is a bottleneck later
@@ -325,7 +325,9 @@ class Table(pd.DataFrame):
         # don't just plain copy here: in case of subclasses of Table, a plain table is passed
         # through the constructor and from_table to here, and expects to be converted
         # into a proper subclass type
-        return cls(data=source.iloc[row_indices])
+        result = cls(data=source.iloc[row_indices])
+        result._transfer_properties(source, transfer_domain=True)  # because we manually copy data, not the whole table
+        return result
 
     @classmethod
     def _from_data_inferred(cls, X_or_data, Y=None, meta=None, infer_roles=True):
@@ -433,6 +435,8 @@ class Table(pd.DataFrame):
             for column, variable in zip(role_array.T, variables):
                 result[variable.name] = column
         result.domain = domain
+        if weights is not None:
+            result.set_weights(weights)
 
         # transform any values we believe are null into actual null values
         result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
@@ -507,7 +511,7 @@ class Table(pd.DataFrame):
         This must be done after replacing null values because those aren't values.
         """
         for var in chain(self.domain.variables, self.domain.metas):
-            if var is DiscreteVariable:
+            if isinstance(var, DiscreteVariable):
                 self[var.name] = pd.Categorical(self[var.name], categories=var.values, ordered=var.ordered)
 
     def _transform_timevariable_into_datetime(self):
@@ -516,7 +520,6 @@ class Table(pd.DataFrame):
                 self[var.name] = var.column_to_datetime(self[var.name])
 
     def save(self, filename):
-        # TODO: change, will likely need to modify FileFormat.writers
         """
         Save a data table to a file. The path can be absolute or relative.
 
@@ -537,7 +540,6 @@ class Table(pd.DataFrame):
 
     @classmethod
     def from_file(cls, filename):
-        # TODO: change, will likely need to modify FileFormat.readers
         """
         Read a data table from a file. The path can be absolute or relative.
 
@@ -624,15 +626,30 @@ class Table(pd.DataFrame):
         Append a new row to the table, returning a new Table.
         row can be a list-like of a single row, TableSeries (a single row slice) or a Table.
         """
-        # handle all indexing (this needs to be different in Table) in concatenate
-        # the pandas contract is not in-place anyway.
         if not isinstance(other, pd.DataFrame):
-            other = pd.DataFrame(data={col: val for col, val in
-                                       zip([c for c in self.columns if c != Table._WEIGHTS_COLUMN], other)}, index=[0])
+            other = pd.DataFrame(data=[other],
+                                 columns=[c for c in self.columns if c != Table._WEIGHTS_COLUMN],
+                                 index=[0])
         other.index = Table._new_id(len(other), force_list=True)
         if Table._WEIGHTS_COLUMN not in other.columns:
             other[Table._WEIGHTS_COLUMN] = 1
-        return Table.concatenate([self, other], axis=0, reindex=False)
+
+        # coerce incompatibilities: this happens when appending a list
+        #  - category dtypes must match, coerce them
+        for i, column in enumerate(self.columns):
+            if self.dtypes[i].name == 'category':
+                new_cats = [v for v in set(other[column]) if v not in self[column].cat.categories and v not in Variable.MISSING_VALUES]
+                self[column] = self[column].cat.add_categories(new_cats)
+                self.domain[column].values += new_cats
+                other[column] = other[column].astype('category',
+                                                     categories=self[column].cat.categories,
+                                                     ordered=self[column].cat.ordered)
+        result = super(Table, self).append(other)
+        # transform any values we believe are null into actual null values
+        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        # append doesn't transfer properties for some reason
+        result._transfer_properties(self)
+        return Table.from_dataframe(result, self.domain)
 
     @deprecated('Use Table.append() for adding new rows. This inserts a new column. ')
     def insert(self, *args, **kwargs):
@@ -667,20 +684,22 @@ class Table(pd.DataFrame):
                 if len(set(len(t.columns) for t in tables)) != 1:
                     raise ValueError("Cannot rowstack with differing numbers of columns.")
                 # rename non-first columns to be the same as first (only way to stack)
-                # this ia a bit convoluted because we can't chain renames
+                # this is a bit convoluted because we can't chain renames
                 newtables = [tables[0]]
                 for t in tables[1:]:
                     new = t.copy()
                     new.columns = tables[0].columns
                     newtables.append(new)
-                result = pd.concat(newtables, axis=0, ignore_index=True)
+                result = pd.concat(newtables, axis=0)
             else:
-                result = pd.concat(tables, axis=0, ignore_index=True)
+                result = pd.concat(tables, axis=0)
             new_index = Table._new_id(len(result))
+            new_domain = tables[0].domain
             result.index = new_index
         elif axis == CONCAT_COLS:
+
             # check for same name
-            columns = flatten([v.name for v in [t.columns for t in tables] if v.name != Table._WEIGHTS_COLUMN])
+            columns = [v for v in flatten([list(t.columns) for t in tables]) if v != Table._WEIGHTS_COLUMN]
             if len(set(columns)) != len(columns):
                 raise ValueError("Cannot concatenate domains with same names.")
             if colstack:
@@ -692,12 +711,17 @@ class Table(pd.DataFrame):
             else:
                 result = pd.concat(tables, axis=1)
 
-            # fix multiple weight columns
+            # merge domains
+            new_domain = Domain(
+                list(flatten(t.domain.attributes for t in tables)),
+                list(flatten(t.domain.class_vars for t in tables)),
+                list(flatten(t.domain.metas for t in tables))
+            )
+
+            # fix multiple weight columns: keep the first one
             weight_columns = result[Table._WEIGHTS_COLUMN]
-            for i in range(1, len(weight_columns.columns)):
-                weight_columns.fillna([weight_columns[[i]]], axis=1, inplace=True)
-            result = result.drop(Table._WEIGHTS_COLUMN, axis=0)
-            result[Table._WEIGHTS_COLUMN] = weight_columns[[0]]
+            result = result.drop(Table._WEIGHTS_COLUMN, axis=1)
+            result[Table._WEIGHTS_COLUMN] = weight_columns.iloc[:, 0]
 
             if reindex:
                 new_index = Table._new_id(len(result))
@@ -705,16 +729,16 @@ class Table(pd.DataFrame):
         else:
             raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
         result._transfer_properties(tables[0])  # pd.concat does not do this by itself
-        return result
+        return Table.from_dataframe(result, new_domain)
 
-    def _transfer_properties(self, from_table):
+    def _transfer_properties(self, from_table, transfer_domain=False):
         """
         Transfer properties (such as the name) to this table.
         This should normally not be used, but it is used when these properties
         are not automatically transferred on manipulation, in particular when using pd.concat.
         """
         for name in self._metadata:
-            if hasattr(from_table, name):
+            if hasattr(from_table, name) and (transfer_domain or name != "domain"):
                 setattr(self, name, getattr(from_table, name))
 
     def density(self):

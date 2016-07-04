@@ -405,6 +405,10 @@ class FileFormat(metaclass=FileFormatMeta):
                 flags = [Flags.join(filter(str.islower, flag)) for flag in ft_combo]
                 contents = self.read_contents(skiprows=1)
 
+            # we may have no data, so construct an empty df to satisfy later needs
+            if contents is None:
+                contents = pd.DataFrame(data=np.empty((0, len(header_df.columns))), columns=header_df.columns)
+
             # data may be longer than the headers, extend headers with empty values
             names.extend([''] * (len(contents.columns) - len(names)))
             types.extend([''] * (len(contents.columns) - len(types)))
@@ -569,10 +573,14 @@ class CSVReader(FileFormat):
 
         # don't parse dates, we want more control over timezones
         # see TimeVariable.column_to_datetime
-        return pd.read_table(self.filename,
-                             sep=delimiter, header=None, index_col=False, skipinitialspace=True,
-                             skip_blank_lines=True, parse_dates=False,
-                             compression='infer', skiprows=skiprows)
+        try:
+            return pd.read_table(self.filename,
+                                 sep=delimiter, header=None, index_col=False, skipinitialspace=True,
+                                 skip_blank_lines=True, parse_dates=False,
+                                 compression='infer', skiprows=skiprows)
+        except pd.io.common.EmptyDataError:
+            # if there is only the header, signal no data
+            return None
 
     def read(self):
         """Apart from reading the table, this sets metadata. """
