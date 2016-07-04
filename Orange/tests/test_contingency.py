@@ -163,7 +163,7 @@ class TestDiscrete(unittest.TestCase):
     def test_sparse(self):
         d = self._construct_sparse()
         cont = contingency.Discrete(d, 5)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
         np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
@@ -193,7 +193,7 @@ class TestDiscrete(unittest.TestCase):
         d = self._construct_sparse()
         cont = contingency.get_contingency(d, 5)
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
         np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
@@ -218,7 +218,7 @@ class TestDiscrete(unittest.TestCase):
 
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
         np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
@@ -240,7 +240,7 @@ class TestDiscrete(unittest.TestCase):
         self.assertEqual(len(conts), 10)
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
         np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
