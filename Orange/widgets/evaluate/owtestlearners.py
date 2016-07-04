@@ -390,9 +390,7 @@ class OWTestLearners(widget.OWWidget):
         common_args = dict(
             store_data=True,
             preprocessor=self.preprocessor,
-            callback=update_progress,
-            n_jobs=-1,
-        )
+            callback=update_progress)
         self.setStatusMessage("Running")
 
         with self.progressBar():
