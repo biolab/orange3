@@ -5,7 +5,7 @@ Preprocess
 """
 import numpy as np
 import sklearn.preprocessing as skl_preprocessing
-import bottlechest
+import bottleneck as bn
 
 import Orange.data
 from Orange.data import Table
@@ -198,8 +198,8 @@ class RemoveConstant(Preprocess):
         data : an input data set
         """
 
-        oks = bottlechest.nanmin(data.X, axis=0) != \
-              bottlechest.nanmax(data.X, axis=0)
+        oks = bn.nanmin(data.X, axis=0) != \
+              bn.nanmax(data.X, axis=0)
         atts = [data.domain.attributes[i] for i, ok in enumerate(oks) if ok]
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
