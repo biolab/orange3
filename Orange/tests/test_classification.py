@@ -264,7 +264,9 @@ class LearnerAccessibility(unittest.TestCase):
                 continue
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if issubclass(class_, Learner) and 'base' not in class_.__module__:
+                if (issubclass(class_, Learner) and
+                        not name.startswith('_') and
+                        'base' not in class_.__module__):
                     yield class_
 
     def test_all_learners_accessible_in_Orange_classification_namespace(self):
