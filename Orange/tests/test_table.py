@@ -1043,15 +1043,6 @@ class InterfaceTest(unittest.TestCase):
         a = newt.iloc[-1]
         self.assertEqual(list(newt.iloc[-1][cols_wo_weights(newt)]), new_row)
 
-    def test_insert_view(self):
-        new_row = [1] * len(self.data[0])
-        tab = self.table[:2]
-        self.assertFalse(tab.is_copy())
-        tab.insert(0, new_row)
-        tab = data.Table.from_numpy(self.table.domain, self.table)
-        self.assertFalse(tab.X.flags.c_contiguous)
-        tab.insert(0, new_row)
-
     def test_delete_rows(self):
         for i in range(self.nrows):
             self.table = self.table.iloc[1:]
