@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pandas.core.internals
 
-from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
+from Orange.statistics.util import bincount, countnans, contingency
 from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable, Variable, TimeVariable
 from Orange.util import flatten, deprecated
 from . import _contingency
@@ -157,26 +157,35 @@ class Table(pd.DataFrame):
         Also passes through pandas.DataFrame constructor keyword arguments.
         Do not pass positional arguments through to pandas.
         """
-        # if we called the constructor without arguments or
-        # if we only called this with pandas DataFrame kwargs (not args),
-        # create an empty Table, the kwargs will be passed through to init (for pandas)
-        if not args and (not kwargs
-                         or not set(kwargs.keys()).difference(["data", "index", "columns", "dtype", "copy"])):
+        # is pandas is calling this as part of its transformations, pass it through
+        known_pandas_kwargs = {"data", "index", "columns", "dtype", "copy"}
+        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(known_pandas_kwargs)) == 0
+
+        ##### START PANDAS SUBCLASS COMPATIBILITY SECTION #####
+        # this compatibility hack must exist because we override __new__ in a way incompatible
+        # with pandas' subclassing scheme---hacks are needed for compatibility, read on
+
+        # if we called the constructor without arguments, create empty
+        # all possible pandas kwargs will be passed to __init__, where
+        # pandas will be able to process them
+        if not args and (not kwargs or all_kwargs_are_pandas):
             return super().__new__(cls)
+
+        # pandas can call this constructor (through Table._constructor) internally
+        # when doing transformations: its signatures are either a BlockManager as the sole arg,
+        # or a ndarray as the sole arg, accompanied by at least one kwarg
+        # this serves the purpose of transforming the first arg into its matching kwarg,
+        # which will then be processed by the if clause a couple of lines above this
+        if len(args) == 1 and (isinstance(args[0], pd.core.internals.BlockManager)
+                               or (isinstance(args[0], np.ndarray) and len(kwargs) != 0 and all_kwargs_are_pandas)):
+            return cls(data=args[0], **kwargs)
+        ##### END PANDAS SUBCLASS COMPATIBILITY SECTION #####
 
         if 'filename' in kwargs:
             args = [kwargs.pop('filename')]
 
         if not args:
             raise TypeError("Table takes at least 1 positional argument (0 given))")
-
-        # workaround for Orange's annoying __new__ override incompatibility
-        # with proper pandas subclassing, where slicing creates new Tables, but
-        # doesn't have the same arg/kwarg interface as pandas
-        # this should cover all use-cases where pandas constructs an object,
-        # even when other kwargs are passed
-        if isinstance(args[0], pd.core.internals.BlockManager):
-            return cls(data=args[0], *args[1:], **kwargs)
 
         if isinstance(args[0], str):
             if args[0].startswith('https://') or args[0].startswith('http://'):
@@ -752,6 +761,18 @@ class Table(pd.DataFrame):
         else:
             return 1 - self.isnull().sum().sum() / self.size
 
+    def X_density(self):
+        return Table.DENSE
+
+    def Y_density(self):
+        return Table.DENSE
+
+    def metas_density(self):
+        return Table.DENSE
+
+    def approx_len(self):
+        return len(self)
+
     def is_sparse(self):
         return isinstance(self, pd.SparseDataFrame)
 
@@ -804,44 +825,34 @@ class Table(pd.DataFrame):
             col = self[self.columns[index]]
         return col.values, isinstance(col, pd.SparseSeries)
 
-    # TODO: move this to statistics.py and use pandas instead if this code
-    def _compute_basic_stats(self, columns=None,
-                             include_metas=False, compute_variance=False):
+    def _compute_basic_stats(self, columns=None, include_metas=False):
         """
         Compute basic stats for each of the columns.
 
+        This is a legacy method and should be avoided and/or replaced where possible.
+
         :param columns: columns to calculate stats for. None = all of them
-        :return: tuple(min, max, mean, 0, #nans, #non-nans)
+        :return: A np.ndarray of (min, max, mean, var, #nans, #non-nans) rows for each column.
         """
-        if compute_variance:
-            raise NotImplementedError("computation of variance is "
-                                      "not implemented yet")
-        W = self.weights
-        rr = []
-        stats = []
-        if not columns:
-            if self.domain.attributes:
-                rr.append(fast_stats(self.X, W))
-            if self.domain.class_vars:
-                rr.append(fast_stats(self._Y, W))
-            if include_metas and self.domain.metas:
-                rr.append(fast_stats(self.metas, W))
-            if len(rr):
-                stats = np.vstack(tuple(rr))
-        else:
-            columns = [self.domain.index(c) for c in columns]
-            nattrs = len(self.domain.attributes)
-            Xs = any(0 <= c < nattrs for c in columns) and fast_stats(self.X, W)
-            Ys = any(c >= nattrs for c in columns) and fast_stats(self._Y, W)
-            ms = any(c < 0 for c in columns) and fast_stats(self.metas, W)
-            for column in columns:
-                if 0 <= column < nattrs:
-                    stats.append(Xs[column, :])
-                elif column >= nattrs:
-                    stats.append(Ys[column - nattrs, :])
-                else:
-                    stats.append(ms[-1 - column])
-        return stats
+        selected_columns = columns
+        if columns is None:
+            selected_columns = []
+            selected_columns += self.domain.attributes
+            selected_columns += self.domain.class_vars
+            if include_metas:
+                selected_columns += self.domain.metas
+
+        subset_df = self[selected_columns]
+        mins = subset_df.min(axis=0)
+        maxes = subset_df.max(axis=0)
+        means = subset_df.mean(axis=0)
+        varc = subset_df.var(axis=0)
+        nans = subset_df.isnull().sum(axis=0)
+        nonnans = subset_df.count(axis=0) - nans
+
+        return pd.DataFrame([
+            mins, maxes, means, varc, nans, nonnans
+        ]).values.T
 
     # TODO: move this to distributions.py and use pandas instead if this code
     def _compute_distributions(self, columns=None):

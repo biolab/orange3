@@ -1,5 +1,6 @@
 from Orange.data import Variable, Table
 
+
 def _get_variable(variable, dat):
     if isinstance(variable, Variable):
         datvar = getattr(dat, "variable", None)
@@ -24,20 +25,18 @@ class BasicStats:
             self.max = float("-inf")
             self.mean = self.var = self.nans = self.non_nans = 0
         else:
-            self.min, self.max, self.mean, self.var, self.nans, self.non_nans \
-                = dat
+            self.min, self.max, self.mean, self.var, self.nans, self.non_nans = dat
 
     def from_data(self, data, variable):
         variable = _get_variable(variable, data)
         stats = data._compute_basic_stats([variable])
-        self.min, self.max, self.mean, self.var, self.nans, self.non_nans \
-            = stats[0]
+        self.min, self.max, self.mean, self.var, self.nans, self.non_nans = stats[0]
+
 
 class DomainBasicStats:
     def __init__(self, data, include_metas=False):
         self.domain = data.domain
-        self.stats = [BasicStats(s) for s in
-                      data._compute_basic_stats(include_metas=include_metas)]
+        self.stats = [BasicStats(s) for s in data._compute_basic_stats(include_metas=include_metas)]
 
     def __getitem__(self, index):
         """

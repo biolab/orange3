@@ -3,7 +3,6 @@
 import unittest
 
 from Orange.data import Table
-from Orange.statistics.util import stats
 from Orange.classification import LogisticRegressionLearner
 from Orange.widgets.classify.owlogisticregression import (create_coef_table,
                                                           OWLogisticRegression)
@@ -17,7 +16,6 @@ class LogisticRegressionTest(unittest.TestCase):
         learn = LogisticRegressionLearner()
         classifier = learn(data)
         coef_table = create_coef_table(classifier)
-        self.assertEqual(1, len(stats(coef_table.metas, None)))
         self.assertEqual(len(coef_table), len(classifier.domain.attributes) + 1)
         self.assertEqual(len(coef_table[0]), 1)
 
@@ -26,7 +24,6 @@ class LogisticRegressionTest(unittest.TestCase):
         learn = LogisticRegressionLearner()
         classifier = learn(data)
         coef_table = create_coef_table(classifier)
-        self.assertEqual(1, len(stats(coef_table.metas, None)))
         self.assertEqual(len(coef_table), len(classifier.domain.attributes) + 1)
         self.assertEqual(len(coef_table[0]),
                          len(classifier.domain.class_var.values))

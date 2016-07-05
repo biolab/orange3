@@ -5,7 +5,6 @@ from numbers import Integral
 
 import weakref
 
-from util import deprecated
 from .variable import *
 import numpy as np
 from pandas import DataFrame
