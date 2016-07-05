@@ -47,7 +47,8 @@ class OWAdaBoostClassification(OWBaseLearner):
         return self.LEARNER(
             base_estimator=self.base_estimator,
             n_estimators=self.n_estimators,
-            preprocessors=self.preprocessors
+            preprocessors=self.preprocessors,
+            algorithm=self.losses[self.algorithm]
         )
 
     def set_base_learner(self, model):
