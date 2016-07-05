@@ -20,6 +20,10 @@ from .. import domain, variable, table, instance, \
 from Orange.data.sql import filter as sql_filter
 
 
+class instance:
+    class Instance:
+        pass
+
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
 DEFAULT_SAMPLE_TIME = 1

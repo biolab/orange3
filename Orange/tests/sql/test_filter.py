@@ -3,7 +3,7 @@
 
 import unittest
 from Orange.data.sql.table import SqlTable, SqlRowInstance
-from Orange.data import filter, domain
+from Orange.data import domain
 
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
 
