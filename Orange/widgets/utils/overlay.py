@@ -104,6 +104,7 @@ class OverlayWidget(QWidget):
 
     def __layout(self):
         # position itself over `widget`
+        # pylint: disable=too-many-branches
         widget = self.__widget
         if widget is None:
             return
@@ -111,17 +112,26 @@ class OverlayWidget(QWidget):
         alignment = self.__alignment
         policy = self.sizePolicy()
 
-        if widget.isWindow():
-            bounds = widget.geometry()
+        if widget.window() is self.window() and not self.isWindow():
+            if widget.isWindow():
+                bounds = widget.rect()
+            else:
+                bounds = QRect(widget.mapTo(widget.window(), QPoint(0, 0)),
+                               widget.size())
+            tl = self.parent().mapFrom(widget.window(), bounds.topLeft())
+            bounds = QRect(tl, widget.size())
         else:
+            if widget.isWindow():
+                bounds = widget.geometry()
+            else:
+                bounds = QRect(widget.mapToGlobal(QPoint(0, 0)),
+                               widget.size())
 
-            bounds = QRect(widget.mapToGlobal(QPoint(0, 0)),
-                           widget.size())
-        if self.isWindow():
-            bounds = bounds
-        else:
-            bounds = QRect(self.parent().mapFromGlobal(bounds.topLeft()),
-                           bounds.size())
+            if self.isWindow():
+                bounds = bounds
+            else:
+                bounds = QRect(self.parent().mapFromGlobal(bounds.topLeft()),
+                               bounds.size())
 
         sh = self.sizeHint()
         minsh = self.minimumSizeHint()
