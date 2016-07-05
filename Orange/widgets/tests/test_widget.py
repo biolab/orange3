@@ -1,5 +1,6 @@
-import unittest
-from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, OWComponent
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, OWComponent
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget
 
@@ -9,7 +10,7 @@ class DummyComponent(OWComponent):
 
 
 class MyWidget(OWWidget):
-    def __init__(self, depth=1):
+    def __init__(self):
         super().__init__()
 
         self.field = 42

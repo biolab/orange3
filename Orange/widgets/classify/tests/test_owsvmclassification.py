@@ -1,17 +1,20 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from PyQt4 import QtGui
+
 from Orange.data import Table
 from Orange.widgets.classify.owsvmclassification import OWSVMClassification
 from Orange.widgets.tests.base import WidgetTest
-from PyQt4 import QtGui
 
 
 class TestOWSVMClassification(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWSVMClassification)
         self.widget.spin_boxes = self.widget.findChildren(QtGui.QDoubleSpinBox)
-        self.widget.spin_boxes.append(self.widget.findChildren(QtGui.QSpinBox)[0])  # for max iter spin
-        self.widget.max_iter_check_box = self.widget.findChildren(QtGui.QCheckBox)[0]  # for max iter checkbox
+        # max iter spin
+        self.widget.spin_boxes.append(self.widget.findChildren(QtGui.QSpinBox)[0])
+        # max iter checkbox
+        self.widget.max_iter_check_box = self.widget.findChildren(QtGui.QCheckBox)[0]
         self.spin_boxes = self.widget.spin_boxes
         self.event_data = None
 
@@ -34,7 +37,8 @@ class TestOWSVMClassification(WidgetTest):
                                   (2, [True, False, False]),
                                   (3, [True, True, False])):
             if self.widget.kernel_box.buttons[button_pos].isChecked():
-                self.assertEqual([not self.spin_boxes[i].box.isHidden() for i in range(2, 5)], value)
+                self.assertEqual([not self.spin_boxes[i].box.isHidden() for i in range(2, 5)],
+                                 value)
                 break
 
     def test_kernel_display(self):
@@ -76,16 +80,6 @@ class TestOWSVMClassification(WidgetTest):
         self.widget.set_data(Table("iris")[:100])
         self.widget.apply()
         self.assertEqual(len(self.widget.data), 100)
-
-    def test_output_signal_classifier(self):
-        """ Check if we have classifier on output """
-        output_classifier = False
-        for signal in self.widget.outputs:
-            if signal.name == "Classifier":
-                output_classifier = True
-                break
-        self.assertEqual(output_classifier, True)
-        self.assertEqual(self.widget.learner, None)
 
     def test_output_signal_learner(self):
         """ Check if we have on output learner """

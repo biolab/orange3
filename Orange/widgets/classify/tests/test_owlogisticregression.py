@@ -1,6 +1,6 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
 import unittest
-
-import bottleneck as bn
 
 from Orange.data import Table
 from Orange.statistics.util import stats
