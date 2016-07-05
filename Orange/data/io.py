@@ -549,9 +549,12 @@ class CSVReader(FileFormat):
     PRIORITY = 20
 
     def read_header(self):
+        # restrict to cls.delimiters, this also stabilizes some weird behaviour
+        # when there is not a lot of data to infer the delimiter
+        # don't skip blank lines on case of an empty third header line
         return pd.read_table(self.filename,
-                             sep=None, header=None, index_col=False, skipinitialspace=True,
-                             skip_blank_lines=True, parse_dates=False,
+                             sep=self.DELIMITERS, header=None, index_col=False, skipinitialspace=True,
+                             skip_blank_lines=False, parse_dates=False,
                              compression='infer', engine='python', nrows=3)
 
     def read_contents(self, skiprows):
@@ -574,6 +577,8 @@ class CSVReader(FileFormat):
         # don't parse dates, we want more control over timezones
         # see TimeVariable.column_to_datetime
         try:
+            # fix the sniffed delimiter,
+            # skip blank lines here, we're not interested in them
             return pd.read_table(self.filename,
                                  sep=delimiter, header=None, index_col=False, skipinitialspace=True,
                                  skip_blank_lines=True, parse_dates=False,

@@ -361,7 +361,11 @@ time,continuous
         for stream in (output_csv, input_csv):
             stream.close = lambda: None  # HACK: Prevent closing of streams
 
+        # hack so this small file can read successfully
+        tmp = CSVReader.DELIMITERS
+        CSVReader.DELIMITERS = ','
         table = CSVReader(input_csv).read()
+        CSVReader.DELIMITERS = tmp
         self.assertIsInstance(table.domain['Date'], TimeVariable)
         self.assertEqual(table.domain['Date'].repr_val(table['Date'].iloc[0]), '1920-12-12 00:00:00')
         # Dates before 1970 are negative
@@ -372,7 +376,9 @@ time,continuous
 
         # csv can't sniff because of too many : in the output, replace those parts
         output_csv = StringIO(output_csv.getvalue().replace(" 00:00:00+00:00", ""))
+        CSVReader.DELIMITERS = ','
         reread = CSVReader(output_csv).read()
+        CSVReader.DELIMITERS = tmp
         reread.index = [0, 1, 2]  # override for comparison purposes
         self.assertTrue(reread.equals(table))
 

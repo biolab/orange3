@@ -113,13 +113,15 @@ data1\tdata2\tdata3
         file1 = io.StringIO("\n".join("xd dbac"))
         t1 = read_tab_file(file1)
 
-        self.assertSequenceEqual(t1.domain['x'].values, 'abcd')
+        self.assertTrue(len(t1.domain.variables), 1)
+        self.assertSequenceEqual(t1.domain.attributes[0].values, 'abcd')
         np.testing.assert_almost_equal(t1.X.ravel(), [3, 1, 0, 2])
 
         file2 = io.StringIO("\n".join("xd hgacb"))
         t2 = read_tab_file(file2)
 
-        self.assertSequenceEqual(t2.domain['x'].values, 'abcdgh')
+        self.assertTrue(len(t2.domain.variables), 1)
+        self.assertSequenceEqual(t2.domain.attributes[0].values, 'abcdgh')
         np.testing.assert_almost_equal(t2.X.ravel(), [5, 4, 0, 2, 1])
 
     def test_dataset_with_weird_names_and_column_attributes(self):
