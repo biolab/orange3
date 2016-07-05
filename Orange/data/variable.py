@@ -830,7 +830,8 @@ class TimeVariable(ContinuousVariable):
         """
         # all values must be strings (otherwise integers under 10e5 would be years)
         # and be able to be parsed with python's datetime module
-        return all(isinstance(val, str) and TimeVariable._matches_iso_format(val)
+        return all((isinstance(val, str) and TimeVariable._matches_iso_format(val))
+                   or val in Variable.MISSING_VALUES
                    for val in column)
 
     @classmethod
@@ -856,6 +857,9 @@ class TimeVariable(ContinuousVariable):
         Takes note of the source timezone to display it correctly later.
         """
         for val in column:
+            # handle missing values like they don't exist
+            if val in Variable.MISSING_VALUES or (isinstance(val, Number) and np.isnan(val)):
+                continue
             self.timezone = TimeVariable._detect_timezone(val) if not np.issubdtype(column.dtype, np.number) else None
             # if any value doesn't have a timezone, permanently strip display timezones for the column
             if self.timezone is None:
@@ -876,7 +880,7 @@ class TimeVariable(ContinuousVariable):
                               infer_datetime_format=True, **kwargs)
 
     def repr_val(self, val):
-        return str(val.tz_convert(self.timezone or None))
+        return str(val.tz_convert(self.timezone)) if val is not pd.NaT else "?"
 
     str_val = repr_val
 

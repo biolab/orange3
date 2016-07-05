@@ -6,7 +6,7 @@ import math
 import unittest
 import pickle
 import pkgutil
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 from io import StringIO
 
@@ -291,7 +291,7 @@ class TestTimeVariable(VariableTest):
     TESTS = [
         # in str, UTC timestamp, out str (in UTC)
         ('2015-10-12 14:13:11.01+0200', 1444651991.01, '2015-10-12 14:13:11.010000+02:00'),
-        ('2015-10-12T14:13:11.81+0200', 1444651991.81, '2015-10-12 14:13:11.010000+02:00'),
+        ('2015-10-12T14:13:11.81+0200', 1444651991.81, '2015-10-12 14:13:11.810000+02:00'),
         ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
         ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
         ('20151012T141311+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
@@ -323,8 +323,8 @@ class TestTimeVariable(VariableTest):
         for datestr, timestamp, outstr in self.TESTS:
             var = TimeVariable('time')
             ts = var.column_to_datetime(pd.Series(datestr))
-            if not np.isnan(ts[0]):
-                self.assertEqual(ts[0], timestamp, msg=datestr)
+            if ts[0] is not pd.NaT:
+                self.assertEqual(var.to_val(ts[0]), timestamp, msg=datestr)
             self.assertEqual(var.repr_val(ts[0]), outstr, msg=datestr)
 
     def test_parse_utc(self):
