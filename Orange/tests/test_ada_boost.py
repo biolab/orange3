@@ -29,7 +29,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         tree_estimator = TreeLearner()
         stump = SklAdaBoostLearner(base_estimator=stump_estimator)
         tree = SklAdaBoostLearner(base_estimator=tree_estimator)
-        results = CrossValidation(self.iris, [stump, tree], k=3)
+        results = CrossValidation(self.iris, [stump, tree], k=4)
         ca = CA(results)
         self.assertLess(ca[0], ca[1])
 
