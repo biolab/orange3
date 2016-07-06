@@ -277,38 +277,26 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.data = data
 
     def init_code_gen(self):
+        def run():
+            data = Table(dataPath)
+
         gen = self.code_gen()
 
         # Send reference to the widget to the generator
         gen.set_widget(self)
 
-        # Add main function that produces output
-        gen.set_main_func(self.load_data)
+        # Sets the main function that's executed to produce output
+        gen.set_main(run)
 
         # Add imported external dependencies
-        gen.add_import([os, FileFormat, UrlReader, Setting, RecentPath,
-            catch_warnings, DomainEditor, ContextSetting])
+        gen.add_import([Table])
 
         # Declarations inserted into __init__(self)
-        gen.add_init("last_path", self.last_path())
-        gen.add_init("url_text", self.url_combo.currentText())
-        gen.add_init("sheet_text", self.sheet_combo.currentText())
-
-        # Copy attributes from widget to code generator
-        gen.add_attr(name=["_get_reader", "LOCAL_FILE", "URL",
-            "_describe", "source"])
-
-        # Remove lines that contain strings in output
-        gen.null_ln(["_update_sheet_combo", "editor_model.set_domain",
-            "self.warning(", "if warnings else", ".editor_model.reset()",
-            "recent_paths", "add_origin"])
-
-        # Replaces instances of arg1 with arg2 in generated source code
-        gen.add_repl_map([
-            ("url_combo.currentText()", "url_text"),
-            ("sheet_combo.currentText()", "sheet_text"),
-            ("last_path()", "last_path")
-        ])
+        if self.url_combo.currentText() != "":
+            dataPath = self.url_combo.currentText()
+        else:
+            dataPath = self.last_path()
+        gen.add_init("dataPath", dataPath)
 
         return gen
 

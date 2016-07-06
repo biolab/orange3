@@ -1,7 +1,9 @@
 import inspect
 
-def indent(level, line): # TODO: Detect existing whitespace of first line and intelligently indent
+def indent(level, line, strip=False):
     """ Indents line 4*level spaces """
+    if strip:
+        line = line.lstrip()
     return ((4*level) * " ") + line
 
 def lines_for(in_str):
@@ -29,7 +31,7 @@ def gen_declaration(declarName, declarValue, iscode=False):
         print("Unable to declare " + declarName + " of " + str(type(declarValue)))
         return False
 
-def trim_declaration(code):
+def strip_declaration(code):
     """
     Takes a snipped of Python code for a function and snips off
     all lines through e.g. `def foo():`
@@ -63,7 +65,6 @@ class CodeGenerator(object):
         self.code_inits = []
         self.attrs = {}
         self.main_func = None
-        self.inputs = {}
         self.outputs = {}
         self.null_lines = []
         self.replacements = []
@@ -89,11 +90,11 @@ class CodeGenerator(object):
 
     def add_init(self, name, value, scrape=False, iscode=False):
         """
-        Adds a declaration to the __init__ of the generated class
-        if scrape=True, the first lines that contain name in the __init__
-        section of the source code will be read in until the same level of
-        indent is returned to.
-        if iscode=True, `value` will be inserted literally into the output
+        Sets a variable equal to a value in the code segment for a widget.
+        When scrape=True, all matching lines from the source code starting from
+        `name` and ending when the indent returns to the same level as the start
+        line are inserted into the output.
+        When iscode=True, `value` is treated like code and inserted directly.
 
         """
         def get_indent(line):
@@ -101,7 +102,7 @@ class CodeGenerator(object):
 
         if iscode:
             self.code_inits.append(name)
-        else if scrape:
+        elif scrape:
             res = []
             source = inspect.getsourcelines(widget.__init__)
             for i, line in enumerate(source):
@@ -119,8 +120,8 @@ class CodeGenerator(object):
             value = "\n".join(reverse(res))
         self.inits = [(name, value,)] + self.inits
 
-    def set_main_func(self, func):
-        """ Adds a function to the body of the generated code """
+    def set_main(self, func):
+        """ Sets the main funciton that's executed to produce output """
         self.main_func = func
 
     def add_attr(self, **kwargs):
@@ -150,12 +151,8 @@ class CodeGenerator(object):
                 self.attrs[name] = value
 
     def add_extern(self, extern):
-        """ Adds a function not inside of class """
+        """ Adds a function to the output code """
         self.externs.append(extern)
-
-    def add_input(self, input_name, input_val):
-        """ Adds a named input to the list of inputs for the widget. """
-        self.inputs[input_name] = input_val
 
     ###Template functions for copying into output###
     def send(self, channel, data):
@@ -210,29 +207,22 @@ class CodeGenerator(object):
             body += inspect.getsource(extern) + "\n"
         body += "\n"
 
-        # Class generation
-        body += "class " + self.name + "():\n"
+        # Main code block generation
+        body += "#\n#" + self.name + "\n#\n"
 
-        # __init__ generation
-        body += indent(1, "def __init__(self):\n")
-        # Manually construct outputs dict
-        body += indent(2, "self.outputs = {}\n")
-        if len(self.inits) == 0:
-            body += indent(2, "# No code generator defined for this widget\n")
-            body += indent(2, "pass")
+        # initial declarations
         for init_pair in reversed(self.inits):
             initName, initValue = init_pair
             iscode = initName in self.code_inits
             declaration = gen_declaration(initName, initValue, iscode=iscode)
             if declaration:
-                body += indent(2, "self." + declaration)
-        body += "\n"
+                body += declaration
 
         # Create send() method
-        body += inspect.getsource(self.send) + "\n"
+        #body += inspect.getsource(self.send) + "\n"
 
         # Create custom info object.setText() that print()s
-        body += inspect.getsource(self.info) + "\n"
+        #body += inspect.getsource(self.info) + "\n"
 
         # class attributes generation
         for attrName, attrValue in self.attrs.items():
@@ -240,8 +230,7 @@ class CodeGenerator(object):
             try:
                 lines = lines_for(inspect.getsource(attrValue))
                 for line in lines:
-                    body += indent(0, line) + "\n"
-                body += "\n"
+                    body += line + "\n"
             # Non-code object
             except:
                 declaration = gen_declaration(attrName, attrValue)
@@ -249,12 +238,9 @@ class CodeGenerator(object):
                     body += indent(1, declaration)
                 else:
                     print("Unable to add attribute " + attrName)
-        body += "\n"
 
-        main_code = inspect.getsource(self.main_func)
-        main_code = trim_declaration(main_code)
-        body += indent(1, "def get_output(self):\n")
-        body += main_code + "\n"
+        # main function
+        body += indent(0, strip_declaration(inspect.getsource(self.main_func)), strip=True)
 
         body_lines = lines_for(body)
         for i, line in enumerate(body_lines):
