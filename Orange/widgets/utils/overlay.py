@@ -17,7 +17,7 @@ from AnyQt.QtWidgets import (
     QStyleOptionButton, QStylePainter, QFocusFrame, QWidget, QStyleOption
 )
 from AnyQt.QtGui import QIcon, QPixmap, QPainter
-from AnyQt.QtCore import Qt, QSize, QRect, QPoint, QEvent, QTimer
+from AnyQt.QtCore import Qt, QSize, QRect, QPoint, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
@@ -606,51 +606,3 @@ class MessageOverlayWidget(OverlayWidget):
     @proxydoc(MessageWidget.button)
     def button(self, standardButton):
         return self.__msgwidget.button(standardButton)
-
-
-import unittest
-
-
-class TestOverlay(unittest.TestCase):
-    def setUp(self):
-        from AnyQt.QtWidgets import QApplication
-        app = QApplication.instance()
-        if app is None:
-            app = QApplication([])
-        self.app = app
-
-    def _exec(self, timeout):
-        QTimer.singleShot(timeout, self.app.quit)
-        return self.app.exec_()
-
-    def tearDown(self):
-        del self.app
-
-    def test_overlay(self):
-        container = QWidget()
-        overlay = MessageOverlayWidget(parent=container)
-        overlay.setWidget(container)
-        overlay.setIcon(QStyle.SP_MessageBoxInformation)
-        container.show()
-        container.raise_()
-        self._exec(500)
-        self.assertTrue(overlay.isVisible())
-
-        overlay.setText("Hello world! It's so nice here")
-        self._exec(500)
-        button_ok = overlay.addButton(MessageOverlayWidget.Ok)
-        button_close = overlay.addButton(MessageOverlayWidget.Close)
-        button_help = overlay.addButton(MessageOverlayWidget.Help)
-
-        self.assertTrue(all([button_ok, button_close, button_help]))
-        self.assertIs(overlay.button(MessageOverlayWidget.Ok), button_ok)
-        self.assertIs(overlay.button(MessageOverlayWidget.Close), button_close)
-        self.assertIs(overlay.button(MessageOverlayWidget.Help), button_help)
-
-        button = overlay.addButton("Click Me!",
-                                   MessageOverlayWidget.AcceptRole)
-        self.assertIsNot(button, None)
-        self.assertTrue(overlay.buttonRole(button),
-                        MessageOverlayWidget.AcceptRole)
-
-        self._exec(10000)
