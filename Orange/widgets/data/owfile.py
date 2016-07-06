@@ -285,9 +285,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # Send reference to the widget to the generator
         gen.set_widget(self)
 
-        # Sets the main function that's executed to produce output
-        gen.set_main(run)
-
         # Add imported external dependencies
         gen.add_import([Table])
 
@@ -297,6 +294,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             dataPath = self.last_path()
         gen.add_init("dataPath", dataPath)
+
+        # Sets the main function that's executed to produce output
+        gen.set_main(run)
+
+        # Add declaration after main code body
+        gen.add_output("data", "data", iscode=True)
 
         return gen
 

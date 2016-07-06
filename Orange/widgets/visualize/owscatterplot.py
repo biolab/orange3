@@ -366,6 +366,24 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_size = ""
         self.graph.attr_label = ""
 
+    def init_code_gen(self):
+        def pre():
+            qapp = QApplication([])
+
+        def run():
+            ow = OWScatterPlot()
+            ow.set_data(input_data)
+            ow.handleNewSignals()
+            ow.show()
+
+        gen = self.code_gen()
+        gen.set_widget(self)
+        gen.add_import([QApplication, OWScatterPlot])
+        gen.add_preamble(pre)
+        gen.set_main(run)
+
+        return gen
+
     def update_attr(self, attributes=None):
         self.update_graph(attributes=attributes)
         self.cb_class_density.setEnabled(self.graph.can_draw_density())

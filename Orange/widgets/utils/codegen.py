@@ -60,10 +60,14 @@ class CodeGenerator(object):
         self.name = "unnamed_widget"
         self.orig_widget = None
         self.imports = set()
+        self.preambles = []
         self.externs = []
         self.inits = []
         self.code_inits = []
         self.attrs = {}
+        self.attrs_code = []
+        self.inputs = []
+        self.outputs = []
         self.main_func = None
         self.outputs = {}
         self.null_lines = []
@@ -87,6 +91,10 @@ class CodeGenerator(object):
             self.imports |= set(extern)
         else:
             self.imports.append(extern)
+
+    def add_preamble(self, func):
+        """ Inserts code within func before all widget code """
+        self.preambles.append(inspect.getsource(func))
 
     def add_init(self, name, value, scrape=False, iscode=False):
         """
@@ -126,21 +134,16 @@ class CodeGenerator(object):
 
     def add_attr(self, **kwargs):
         """
-        Adds an attribute to the code generator object.  If just
-        name= is supplied, will assume it's an attribute of the widget.
-        If name= and var= are suppplied, will use value of var.
-        name= can also supply a list
+        Adds a declaration to the code generator object after the main
+        function.  If just name= is supplied, will assume it's an
+        attribute of the widget. If name= and var= are suppplied,
+        will use value of var.  name= can also supply a list
 
         """
-        def _add_attr(widget, name, **kwargs):
-            if "value" not in kwargs:
-                value = getattr(self.orig_widget, name)
-            else:
-                value = kwargs["value"]
-            self.attrs[name] = value
-
         if "var" in kwargs:
             self.attrs[kwargs["name"]] = kwargs["var"]
+            if "iscode" in kwargs and kwargs["iscode"]:
+                self.attrs_code.append(kwargs["name"])
         else:
             if type(kwargs["name"]) == list:
                 for name in kwargs["name"]:
@@ -150,18 +153,16 @@ class CodeGenerator(object):
                 widget_attr = getattr(self.orig_widget, kwargs["name"])
                 self.attrs[name] = value
 
+    def add_input(self, name, source):
+        self.inputs.append((name, source,))
+
+    def add_output(self, channel, value, iscode=False):
+        """ Adds an output statement with the given channel """
+        self.outputs[channel] = (value, iscode,)
+
     def add_extern(self, extern):
         """ Adds a function to the output code """
         self.externs.append(extern)
-
-    ###Template functions for copying into output###
-    def send(self, channel, data):
-        """ Sets output """
-        self.outputs[channel] = data
-
-    class info():
-        def setText(data):
-            print(data)
 
     def null_ln(self, nullstr):
         """ Removes every line that contains `nullstr` in output """
@@ -172,8 +173,11 @@ class CodeGenerator(object):
 
     def add_repl_map(self, replacements):
         """ replaces instances of a string in generated code """
-        for repl in replacements:
-            self.replacements.append(repl)
+        if type(replacements) == list:
+            for repl in replacements:
+                self.replacements.append(repl)
+        else:
+            self.replacements.append(replacements)
 
     def set_name(self, name):
         self.name = name
@@ -218,13 +222,22 @@ class CodeGenerator(object):
             if declaration:
                 body += declaration
 
-        # Create send() method
-        #body += inspect.getsource(self.send) + "\n"
+        # input declaration
+        for inpt in self.inputs:
+            body += "input_" + inpt[1] + " = "
+            body += inpt[0].lower() + "_"
+            body += inpt[1] + "\n"
 
-        # Create custom info object.setText() that print()s
-        #body += inspect.getsource(self.info) + "\n"
+        # main function
+        main_lines = inspect.getsourcelines(self.main_func)[0]
+        for i, line in enumerate(main_lines):
+            if "def" not in line:
+                # Strip excess indentation
+                main_lines[i] = line[12:]
+        main_code = "".join(main_lines)
+        body += strip_declaration(main_code)
 
-        # class attributes generation
+        # attributes generation
         for attrName, attrValue in self.attrs.items():
             # If it's a code-based object, insert code
             try:
@@ -233,14 +246,16 @@ class CodeGenerator(object):
                     body += line + "\n"
             # Non-code object
             except:
-                declaration = gen_declaration(attrName, attrValue)
+                declaration = gen_declaration(attrName, attrValue, iscode=attrName in self.attrs_code)
                 if declaration:
-                    body += indent(1, declaration)
+                    body += declaration
                 else:
                     print("Unable to add attribute " + attrName)
 
-        # main function
-        body += indent(0, strip_declaration(inspect.getsource(self.main_func)), strip=True)
+        # output generation
+        for name, value in self.outputs.items():
+            declaration = gen_declaration(self.name + "_" + name, value[0], iscode=value[1])
+            body += declaration
 
         body_lines = lines_for(body)
         for i, line in enumerate(body_lines):
