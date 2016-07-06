@@ -2,7 +2,7 @@
 Overlay Message Widget
 ----------------------
 
-A Widget to display a temporary dismissable message over another widget.
+A Widget to display a temporary dismissible message over another widget.
 
 """
 
@@ -101,6 +101,11 @@ class OverlayWidget(QWidget):
         opt.initFrom(self)
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, painter, self)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Force immediate re-layout on show
+        self.__layout()
 
     def __layout(self):
         # position itself over `widget`
@@ -469,7 +474,7 @@ class MessageWidget(QWidget):
         """
         Return the ButtonRole for button
 
-        :type button: QAbsstractButton
+        :type button: QAbstractButton
         """
         for slot in self.__buttons:
             if slot.button is button:
