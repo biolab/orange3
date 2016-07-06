@@ -296,7 +296,7 @@ def tooltip_helper(desc):
     tooltip = []
     tooltip.append("<b>{name}</b>".format(name=escape(desc.name)))
 
-    if desc.project_name and desc.project_name != "Orange":
+    if desc.project_name:
         tooltip[0] += " (from {0})".format(desc.project_name)
 
     if desc.description:
