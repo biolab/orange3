@@ -255,6 +255,19 @@ class OWScatterPlot(OWWidget):
             and len(self.data.domain.attributes) > 1 and len(self.data) > 1)
         self.openContext(self.data)
 
+    def init_code_gen(self):
+        gen = self.code_gen()
+        gen.set_widget(self)
+        gen.set_main_function(self.set_data)
+        gen.add_import([SqlTable, Table, gui])
+        gen.add_init("data_metas_X", None)
+        gen.add_attr(name=["init_attr_values"])
+        gen.null_ln(["__timer", "sampling", "auto_sample", "closeContext"])
+        gen.add_repl_map([
+            ("self.information", "print")
+        ])
+        return gen
+
     def add_data(self, time=0.4):
         if self.data and len(self.data) > 2000:
             return self.__timer.stop()

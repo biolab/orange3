@@ -87,10 +87,36 @@ class CodeGenerator(object):
         else:
             self.imports.append(extern)
 
-    def add_init(self, name, value, iscode=False):
-        """ Adds a declaration to the __init__ of the generated class """
+    def add_init(self, name, value, scrape=False, iscode=False):
+        """
+        Adds a declaration to the __init__ of the generated class
+        if scrape=True, the first lines that contain name in the __init__
+        section of the source code will be read in until the same level of
+        indent is returned to.
+        if iscode=True, `value` will be inserted literally into the output
+
+        """
+        def get_indent(line):
+            return len(line) - len(line.lstrip())
+
         if iscode:
             self.code_inits.append(name)
+        else if scrape:
+            res = []
+            source = inspect.getsourcelines(widget.__init__)
+            for i, line in enumerate(source):
+                if name in line:
+                    ix = i
+                    break
+            startline = source[ix]
+            res.append(startline)
+            ix += 1
+            while get_indent(source[ix]) > get_indent(startline):
+                line = source[ix]
+                res.append(line)
+                indent = get_indent(line)
+                ix += 1
+            value = "\n".join(reverse(res))
         self.inits = [(name, value,)] + self.inits
 
     def set_main_func(self, func):

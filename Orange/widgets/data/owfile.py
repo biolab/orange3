@@ -1,5 +1,4 @@
 import os
-import ast
 from itertools import chain, count
 from warnings import catch_warnings
 
@@ -283,6 +282,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # Send reference to the widget to the generator
         gen.set_widget(self)
 
+        # Add main function that produces output
+        gen.set_main_func(self.load_data)
+
         # Add imported external dependencies
         gen.add_import([os, FileFormat, UrlReader, Setting, RecentPath,
             catch_warnings, DomainEditor, ContextSetting])
@@ -307,9 +309,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             ("sheet_combo.currentText()", "sheet_text"),
             ("last_path()", "last_path")
         ])
-
-        # Add main function that produces output
-        gen.set_main_func(self.load_data)
 
         return gen
 
