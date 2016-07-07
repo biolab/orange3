@@ -279,7 +279,6 @@ class TreeNode(GraphicsNode):
         :return: split condition to reach a particular node.
         """
         if self.i > 0:
-            attribute = self.domain.attributes[self.attribute()]
             parent_attr = self.domain.attributes[self.parent.attribute()]
             parent_attr_cv = parent_attr.compute_value
             is_left_child = self.tree.children_left[self.parent.i] == self.i
@@ -292,7 +291,7 @@ class TreeNode(GraphicsNode):
             else:
                 thresh = self.tree.threshold[self.parent.i]
                 return "%s %s" % ([">", "≤"][is_left_child],
-                                  attribute.str_val(thresh))
+                                  parent_attr.str_val(thresh))
         else:
             return ""
 
