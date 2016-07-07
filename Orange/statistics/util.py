@@ -23,12 +23,12 @@ def bincount(X, max_val=None, weights=None, minlength=None):
         if weights is not None:
             weights = weights[nonnan]
     else:
-        nans = 0 if X.ndim == 1 else np.zeros(X.shape[1])
+        nans = 0. if X.ndim == 1 else np.zeros(X.shape[1], dtype=float)
     if minlength is None and max_val is not None:
         minlength = max_val + 1
     return (np.bincount(X.astype(np.int32, copy=False),
                         weights=weights,
-                        minlength=minlength),
+                        minlength=minlength).astype(float),
             nans)
 
 
