@@ -1226,6 +1226,9 @@ class OWPaintData(widget.OWWidget):
         self.commit()
 
     def commit(self):
+        if len(self.data) == 0:
+            self.send("Data", None)
+            return
         if self.hasAttr2:
             X, Y = self.data[:, :2], self.data[:, 2]
             attrs = (Orange.data.ContinuousVariable(self.attr1),
