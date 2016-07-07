@@ -65,6 +65,26 @@ class OWClassificationTree(OWBaseLearner):
             ("maximum depth {}".format(self.max_depth), self.limit_depth)) if c) or "None"
         return items
 
+    def init_code_gen(self):
+        def run():
+            ow = OWClassificationTree()
+            ow.set_data(input_data)
+            try:
+                ow.set_preprocessor(input_preprocessor)
+            except:
+                pass
+            ow.learner = ow.create_learner()
+            ow.update_learner()
+            ow.update_model()
+
+        gen = self.code_gen()
+        gen.set_widget(self)
+        gen.add_import([OWClassificationTree])
+        gen.set_main(run)
+        gen.add_output("Learner", "ow.learner", iscode=True)
+        gen.add_output("classifier", "ow.model", iscode=True)
+        return gen
+
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication

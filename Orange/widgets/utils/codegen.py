@@ -6,6 +6,22 @@ def indent(level, line, strip=False):
         line = line.lstrip()
     return ((4*level) * " ") + line
 
+def zerodent(lines, n):
+    """
+    Removes n characters from the beginning of every line execpt
+    lines containing "def".
+
+    """
+    for i, line in enumerate(lines):
+        if "def" not in line:
+            # Strip excess indentation
+            lines[i] = line[n:]
+    return lines
+
+def unindent(level, line):
+    """ Unindents line 4*level spaces """
+    return line[level:]
+
 def lines_for(in_str):
     return in_str.split("\n")
 
@@ -151,7 +167,7 @@ class CodeGenerator(object):
                     self.attrs[name] = widget_attr
             else:
                 widget_attr = getattr(self.orig_widget, kwargs["name"])
-                self.attrs[name] = value
+                self.attrs[kwargs["name"]] = widget_attr
 
     def add_input(self, name, source):
         self.inputs.append((name, source,))
@@ -198,17 +214,23 @@ class CodeGenerator(object):
 
         # Imports generation
         for dependency in self.imports:
+            # Try importing it as a function/submodule
             try:
                 importString = "from " + dependency.__module__
                 preamble.add(importString +
                     " import " + dependency.__name__)
             except:
+                # Import it as a module
                 preamble.add("import " + dependency.__name__)
         body += "\n"
 
         # External function generation
         for extern in self.externs:
-            body += inspect.getsource(extern) + "\n"
+            body_lines = inspect.getsourcelines(extern)[0]
+            _indent = len(body_lines[0]) - len(body_lines[0].lstrip())
+            for line in body_lines:
+                body += unindent(_indent, line)
+            body += "\n"
         body += "\n"
 
         # Main code block generation
@@ -230,10 +252,7 @@ class CodeGenerator(object):
 
         # main function
         main_lines = inspect.getsourcelines(self.main_func)[0]
-        for i, line in enumerate(main_lines):
-            if "def" not in line:
-                # Strip excess indentation
-                main_lines[i] = line[12:]
+        main_lines = zerodent(main_lines, 12)
         main_code = "".join(main_lines)
         body += strip_declaration(main_code)
 
@@ -243,7 +262,7 @@ class CodeGenerator(object):
             try:
                 lines = lines_for(inspect.getsource(attrValue))
                 for line in lines:
-                    body += line + "\n"
+                    body += unindent(4, line) + "\n"
             # Non-code object
             except:
                 declaration = gen_declaration(attrName, attrValue, iscode=attrName in self.attrs_code)

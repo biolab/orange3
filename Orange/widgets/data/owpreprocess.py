@@ -1917,6 +1917,36 @@ class OWPreprocess(widget.OWWidget):
         d["preprocessors"] = preprocessors
         return d
 
+    def init_code_gen(self):
+        def pre():
+            qapp = QApplication([])
+
+        def run():
+            ow = OWPreprocess()
+            ow.set_data(input_data)
+            preprocessor = ow.buildpreproc()
+            if input_data is not None:
+                try:
+                    data = preprocessor(input_data)
+                except ValueError as e:
+                    print("Error preprocessing data.")
+            else:
+                data = None
+            ow.set_data(None)
+            ow.handleNewSignals()
+            ow.saveSettings()
+            ow.onDeleteWidget()
+
+        gen = self.code_gen()
+        gen.set_widget(self)
+        gen.add_import([QApplication, OWPreprocess])
+        gen.add_preamble(pre)
+        gen.set_main(run)
+        gen.add_output("preprocessor", "preprocessor", iscode=True)
+        gen.add_output("preprocessed_data", "data", iscode=True)
+
+        return gen
+
     def set_model(self, ppmodel):
         if self.preprocessormodel:
             self.preprocessormodel.dataChanged.disconnect(self.__on_modelchanged)

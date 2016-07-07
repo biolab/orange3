@@ -1052,7 +1052,7 @@ def scheme_to_python(scheme, out_file):
     import_list = sorted(list(import_set))
     for import_line in import_list:
         pre_text += import_line + "\n"
-    pre_ext += "\n"
+    pre_text += "\n"
 
     # Add all unique preambles
     for preamble in preambles:

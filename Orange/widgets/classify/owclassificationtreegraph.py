@@ -109,6 +109,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.scene.update()
         self.send("Data", None)
 
+
     def walkcreate(self, tree, node_id, parent=None):
         node = self.NODE(tree, self.domain, parent, i=node_id)
         self.scene.addItem(node)
@@ -472,6 +473,38 @@ class OWClassificationTreeGraph(OWTreeGraph):
                                    QSizePolicy.Fixed))
         self.display_box.layout().addRow("Target class: ", self.target_combo)
         gui.rubber(self.controlArea)
+
+    def init_code_gen(self):
+        def pre():
+            qapp = QApplication([])
+
+        def pre2():
+            from sklearn.tree._tree import TREE_LEAF
+
+        def run():
+            ow = OWClassificationTreeGraph()
+            ow.handleNewSignals()
+            ow.ctree(input_classifier)
+            ow.show()
+            qapp.exec()
+            update_selection(ow)
+            ow.handleNewSignals()
+            ow.saveSettings()
+            ow.onDeleteWidget()
+
+        gen = self.code_gen()
+        gen.set_widget(self)
+        gen.add_import([QApplication, OWClassificationTreeGraph, numpy])
+        gen.add_preamble(pre)
+        gen.add_preamble(pre2)
+        gen.set_main(run)
+        gen.add_extern(self.update_selection)
+        gen.add_extern(_leaf_indices)
+        gen.add_extern(_subnode_range)
+        gen.null_ln("send(")
+        gen.add_repl_map(("self", "ow"))
+        gen.add_output("data", "data", iscode=True)
+        return gen
 
     def ctree(self, model=None):
         super().ctree(model)

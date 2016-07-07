@@ -373,8 +373,18 @@ class OWScatterPlot(OWWidget):
         def run():
             ow = OWScatterPlot()
             ow.set_data(input_data)
+            try:
+                ow.set_subset_data(input_data_subset)
+            except:
+                pass
             ow.handleNewSignals()
             ow.show()
+            qapp.exec()
+            ow.set_data(None)
+            ow.set_subset_data(None)
+            ow.handleNewSignals()
+            ow.saveSettings()
+            ow.onDeleteWidget()
 
         gen = self.code_gen()
         gen.set_widget(self)
