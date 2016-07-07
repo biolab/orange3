@@ -266,3 +266,26 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         """Indicates whether this learner supports weighted instances.
         """
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
+
+
+class Tree:
+    """Interface for tree based models.
+
+    Defines members needed for drawing of the tree.
+    """
+
+    #: Domain of data the tree was built from
+    domain = None
+
+    #: Data the tree was built from (Optional)
+    instances = None
+
+    @property
+    def tree(self):
+        """Return underlying tree representation
+
+        Returns
+        -------
+        sklearn.tree._tree.Tree
+        """
+        raise NotImplementedError()

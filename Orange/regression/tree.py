@@ -1,12 +1,16 @@
 import sklearn.tree as skl_tree
+
+from Orange.base import Tree
 from Orange.regression import SklLearner, SklModel
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 
 __all__ = ["TreeRegressionLearner"]
 
 
-class TreeRegressor(SklModel):
-    pass
+class TreeRegressor(SklModel, Tree):
+    @property
+    def tree(self):
+        return self.skl_model.tree_
 
 
 class TreeRegressionLearner(SklLearner):
