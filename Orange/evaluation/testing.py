@@ -385,7 +385,13 @@ class Results:
             signalling callback with percent"""
             for percent in np.linspace(.0, .99, n_steps + 1)[1:]:
                 queue.get()
-                self._callback(percent)
+                try:
+                    self._callback(percent)
+                except Exception:
+                    # Callback may error for whatever reason (e.g. PEBKAC)
+                    # In that case, rather gracefully continue computation
+                    # instead of failing
+                    pass
 
         results = []
         with joblib.Parallel(n_jobs=n_jobs, backend=mp_ctx) as parallel:
