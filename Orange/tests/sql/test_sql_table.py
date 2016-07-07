@@ -2,12 +2,13 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import unittest.mock
 
 import numpy as np
 from numpy.testing import assert_almost_equal
 
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
-    StringVariable, Table, Domain
+    StringVariable, TimeVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.discretize import EqualWidth
 from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
@@ -373,10 +374,10 @@ class TestSqlTable(PostgresTest):
         conn, table_name = self.create_sql_table(table, ['date'])
 
         sql_table = SqlTable(conn, table_name, inspect_values=False)
-        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
-        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
 
     def test_double_precision(self):
         table = np.arange(25).reshape((-1, 1))

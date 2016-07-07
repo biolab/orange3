@@ -986,3 +986,12 @@ class TimeVariable(ContinuousVariable):
         try: return dt.timestamp()
         except OverflowError:
             return -(self.UNIX_EPOCH - dt).total_seconds()
+
+    def to_val(self, s):
+        """
+        Convert a value, given as an instance of an arbitrary type, to a float.
+        """
+        if isinstance(s, str):
+            return self.parse(s)
+        else:
+            return super().to_val(s)
