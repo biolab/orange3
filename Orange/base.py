@@ -289,3 +289,17 @@ class Tree:
         sklearn.tree._tree.Tree
         """
         raise NotImplementedError()
+
+
+class RandomForest:
+    """Interface for random forest models
+    """
+
+    @property
+    def trees(self):
+        """Return a list of Trees in the forest
+
+        Returns
+        -------
+        List[Tree]
+        """

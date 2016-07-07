@@ -9,11 +9,12 @@ from Orange.classification import RandomForestLearner
 from Orange.regression import RandomForestRegressionLearner
 from Orange.tests import test_filename
 
+
 class RandomForestTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.house = Table('housing')
+        cls.housing = Table('housing')
 
     def test_RandomForest(self):
         forest = RandomForestLearner()
@@ -43,28 +44,28 @@ class RandomForestTest(unittest.TestCase):
 
     def test_RandomForestRegression(self):
         forest = RandomForestRegressionLearner()
-        results = CrossValidation(self.house, [forest], k=10)
+        results = CrossValidation(self.housing, [forest], k=10)
         _ = RMSE(results)
 
     def test_predict_single_instance_reg(self):
         forest = RandomForestRegressionLearner()
-        model = forest(self.house)
-        for ins in self.house:
+        model = forest(self.housing)
+        for ins in self.housing:
             pred = model(ins)
             self.assertGreater(pred, 0)
 
     def test_predict_table_reg(self):
         forest = RandomForestRegressionLearner()
-        model = forest(self.house)
-        pred = model(self.house)
-        self.assertEqual(len(self.house), len(pred))
+        model = forest(self.housing)
+        pred = model(self.housing)
+        self.assertEqual(len(self.housing), len(pred))
         self.assertGreater(all(pred), 0)
 
     def test_predict_numpy_reg(self):
         forest = RandomForestRegressionLearner()
-        model = forest(self.house)
-        pred = model(self.house.X)
-        self.assertEqual(len(self.house), len(pred))
+        model = forest(self.housing)
+        pred = model(self.housing.X)
+        self.assertEqual(len(self.housing), len(pred))
         self.assertGreater(all(pred), 0)
 
     def test_classification_scorer(self):
@@ -78,9 +79,9 @@ class RandomForestTest(unittest.TestCase):
 
     def test_regression_scorer(self):
         learner = RandomForestRegressionLearner()
-        scores = learner.score_data(self.house)
+        scores = learner.score_data(self.housing)
         self.assertEqual(['LSTAT', 'RM'],
-                         sorted([self.house.domain.attributes[i].name
+                         sorted([self.housing.domain.attributes[i].name
                                  for i in np.argsort(scores[0])[-2:]]))
 
     def test_scorer_feature(self):
@@ -92,3 +93,19 @@ class RandomForestTest(unittest.TestCase):
             np.random.seed(42)
             score = learner.score_data(data, attr)
             np.testing.assert_array_almost_equal(score, scores[:, i])
+
+    def test_get_classification_trees(self):
+        n = 5
+        forest = RandomForestLearner(n_estimators=n)
+        model = forest(self.iris)
+        self.assertEqual(len(model.trees), n)
+        tree = model.trees[0]
+        self.assertEqual(tree(self.iris[0]), 0)
+
+    def test_get_regression_trees(self):
+        n = 5
+        forest = RandomForestRegressionLearner(n_estimators=n)
+        model = forest(self.housing)
+        self.assertEqual(len(model.trees), n)
+        tree = model.trees[0]
+        tree(self.housing[0])
