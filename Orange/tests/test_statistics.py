@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, stats
 
@@ -32,3 +33,11 @@ class TestUtil(unittest.TestCase):
         X[1, 1] = np.nan
         np.testing.assert_equal(stats(X), [[0, 2, 1, 0, 0, 2],
                                            [1, 1, 1, 0, 1, 1]])
+
+    def test_stats_sparse(self):
+        X = csr_matrix(np.identity(5))
+        np.testing.assert_equal(stats(X), [[0, 1, .2, 0, 4, 1],
+                                           [0, 1, .2, 0, 4, 1],
+                                           [0, 1, .2, 0, 4, 1],
+                                           [0, 1, .2, 0, 4, 1],
+                                           [0, 1, .2, 0, 4, 1]])
