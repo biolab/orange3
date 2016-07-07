@@ -163,12 +163,36 @@ def stats(X, weights=None, compute_variance=False):
     if weights is not None:
         X = X * weights
     is_numeric = np.issubdtype(X.dtype, np.number)
-    nans = (np.isnan(X) if is_numeric else ~X.astype(bool)).sum(axis=0)
-    variance = np.nanvar(X, axis=0) if compute_variance and is_numeric else np.zeros(X.shape[1])
-    return np.column_stack((
-        np.nanmin(X, axis=0) if is_numeric else np.tile(np.inf, X.shape[1]),
-        np.nanmax(X, axis=0) if is_numeric else np.tile(-np.inf, X.shape[1]),
-        np.nanmean(X, axis=0) if is_numeric else np.zeros(X.shape[1]),
-        variance,
-        nans,
-        X.shape[0] - nans))
+    is_sparse = issparse(X)
+
+    if is_numeric and not is_sparse:
+        nans = np.isnan(X).sum(axis=0)
+        return np.column_stack((
+            np.nanmin(X, axis=0),
+            np.nanmax(X, axis=0),
+            np.nanmean(X, axis=0),
+            np.nanvar(X, axis=0) if compute_variance else np.zeros(X.shape[1]),
+            nans,
+            X.shape[0] - nans))
+    elif is_sparse:
+        if compute_variance:
+            raise NotImplementedError
+
+        non_zero = np.bincount(X.nonzero()[1])
+        X = X.tocsc()
+        return np.column_stack((
+            X.min(axis=0).toarray().ravel(),
+            X.max(axis=0).toarray().ravel(),
+            np.asarray(X.mean(axis=0)).ravel(),
+            np.zeros(X.shape[1]),      # variance not supported
+            X.shape[1] - non_zero,
+            non_zero))
+    else:
+        nans = ~X.astype(bool).sum(axis=0)
+        return np.column_stack((
+            np.tile(np.inf, X.shape[1]),
+            np.tile(-np.inf, X.shape[1]),
+            np.zeros(X.shape[1]),
+            np.zeros(X.shape[1]),
+            nans,
+            X.shape[0] - nans))
