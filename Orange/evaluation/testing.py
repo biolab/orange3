@@ -1,11 +1,46 @@
+import sys
+import multiprocessing as mp
+from threading import Thread
+from collections import namedtuple
+import pickle
+import warnings
+
 import numpy as np
 
+import joblib
 import sklearn.cross_validation as skl_cross_validation
 
+from Orange.util import OrangeWarning
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "ShuffleSplit", "TestOnTestData", "sample"]
+
+_MpResults = namedtuple('_MpResults', ('fold_i', 'learner_i', 'model',
+                                       'failed', 'n_values', 'values', 'probs'))
+
+
+def _identity(x):
+    return x
+
+
+def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
+               store_models, mp_queue):
+    predicted, probs, model, failed = None, None, None, False
+    try:
+        if len(train_data) == 0 or len(test_data) == 0:
+            raise RuntimeError('Test fold is empty')
+        model = learner(train_data)
+        if train_data.domain.has_discrete_class:
+            predicted, probs = model(test_data, model.ValueProbs)
+        elif train_data.domain.has_continuous_class:
+            predicted = model(test_data, model.Value)
+    # Different models can fail at any time raising any exception
+    except Exception as ex:  # pylint: disable=broad-except
+        failed = ex
+    mp_queue.put("dummy text; use for printing when debugging")
+    return _MpResults(fold_i, learner_i, store_models and model,
+                      failed, len(test_data), predicted, probs)
 
 
 class Results:
@@ -50,7 +85,7 @@ class Results:
                  store_data=False, store_models=False,
                  domain=None, actual=None, row_indices=None,
                  predicted=None, probabilities=None,
-                 preprocessor=None, callback=None):
+                 preprocessor=None, callback=None, n_jobs=1):
         """
         Construct an instance with default values: `None` for :obj:`data` and
         :obj:`models`.
@@ -85,19 +120,23 @@ class Results:
         :param callback: Function for reporting back the progress as a value
             between 0 and 1
         :type callback: callable
+        :param n_jobs: The number of processes to parallelize the evaluation
+            on. -1 to parallelize on all but one CPUs. 1 for no
+            parallelization.
+        :type n_jobs: int
         """
         self.store_data = store_data
         self.store_models = store_models
         self.dtype = np.float32
+        self.n_jobs = max(1, joblib.cpu_count() - 1 if n_jobs < 0 else n_jobs)
 
         self.models = None
         self.folds = None
         self.indices = None
 
         self.row_indices = row_indices
-        self.preprocessor = preprocessor
-        self.callback = callback
-
+        self.preprocessor = preprocessor or _identity
+        self._callback = callback or _identity
         self.learners = learners
         if learners:
             nmethods = len(learners)
@@ -165,31 +204,18 @@ class Results:
             self.probabilities = \
                 np.empty((nmethods, nrows, nclasses), dtype=np.float32)
 
-    def prepare_prediction_arrays(self, data):
-        """Initialize `predicted` and `probabilities` (only for discrete classes)
-        arrays to store fitting results.
-        """
+    def _prepare_arrays(self, data):
+        """Initialize some mandatory arrays for results"""
         nmethods = len(self.learners)
         self.nrows = len(self.row_indices)
+        if self.store_models:
+            self.models = np.tile(None, (len(self.indices), nmethods))
+        # Initialize `predicted` and `probabilities` (only for discrete classes)
         self.predicted = np.empty((nmethods, self.nrows), dtype=self.dtype)
-
         if data.domain.has_discrete_class:
             nclasses = len(data.domain.class_var.values)
             self.probabilities = np.empty((nmethods, self.nrows, nclasses),
                                           dtype=np.float32)
-
-    def train_if_succ(self, learner_index, learner, data):
-        if self.failed[learner_index]:
-            return False
-        try:
-            return learner(data)
-        except Exception as ex:
-            self.failed[learner_index] = ex
-            return False
-
-    def call_callback(self, progress):
-        if self.callback:
-            self.callback(progress)
 
     def get_fold(self, fold):
         results = Results()
@@ -289,40 +315,117 @@ class Results:
         test_data = test_data or train_data
         self.setup_indices(train_data, test_data)
         self.prepare_arrays(test_data)
-        self.prepare_prediction_arrays(test_data)
+        self._prepare_arrays(test_data)
 
         n_callbacks = len(self.learners) * len(self.indices)
-        if self.store_models:
-            self.models = np.tile(None, (len(self.indices), len(self.learners)))
+        n_jobs = max(1, min(self.n_jobs, n_callbacks))
 
-        for idx, (train_indices, test_indices) in enumerate(self.indices):
-            train_fold = train_data[train_indices]
-            test_fold = test_data[test_indices]
+        def _is_picklable(obj):
+            try:
+                return bool(pickle.dumps(obj))
+            except (AttributeError, TypeError, pickle.PicklingError):
+                return False
 
-            if self.preprocessor is not None:
-                train_fold = self.preprocessor(train_fold)
+        if n_jobs > 1 and not all(_is_picklable(learner) for learner in self.learners):
+            n_jobs = 1
+            warnings.warn("Not all arguments (learners) are picklable. "
+                          "Setting n_jobs=1", OrangeWarning)
 
-            for k, learner in enumerate(self.learners):
-                model = self.train_if_succ(k, learner, train_fold)
-                self.call_callback((len(self.learners) * idx + k) / n_callbacks)
-                if not model:
-                    continue
+        if n_jobs > 1 and mp.current_process().daemon:
+            n_jobs = 1
+            warnings.warn("Worker subprocesses cannot spawn new worker "
+                          "subprocesses (e.g. parameter tuning with internal "
+                          "cross-validation). Setting n_jobs=1", OrangeWarning)
 
-                if self.store_models:
-                    self.models[idx][k] = model
+        # Workaround for NumPy locking on Macintosh.
+        # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
+        mp_ctx = mp.get_context(
+            'forkserver' if sys.platform == 'darwin' and n_jobs > 1 else None)
 
-                result_slice = self.folds[idx]
-                if train_data.domain.has_discrete_class:
-                    values, probs = model(test_fold, model.ValueProbs)
-                    self.predicted[k][result_slice] = values
-                    self.probabilities[k][result_slice, :] = probs
-                elif train_data.domain.has_continuous_class:
-                    values = model(test_fold, model.Value)
-                    self.predicted[k][result_slice] = values
-                else:
-                    raise ValueError("Unknown table's target type")
+        try:
+            # Use context-adapted Queue or just the regular Queue if no
+            # multiprocessing (otherwise it shits itself at least on Windos)
+            mp_queue = mp_ctx.Manager().Queue() if n_jobs > 1 else mp.Queue()
+        except (EOFError, RuntimeError):
+            raise RuntimeError('''
 
-        self.call_callback(1)
+        Can't run multiprocessing code without a __main__ guard.
+
+        Multiprocessing strategies 'forkserver' (used by Orange's evaluation
+        methods by default on Mac OS X) and 'spawn' (default on Windos)
+        require the main code entry point be guarded with:
+
+            if __name__ == '__main__':
+                import multiprocessing as mp
+                mp.freeze_support()  # Needed only on Windos
+                ...  # Rest of your code
+                ...  # See: https://docs.python.org/3/library/__main__.html
+
+        Otherwise, as the module is re-imported in another process, infinite
+        recursion ensues.
+
+        Guard your executed code with above Python idiom, or pass n_jobs=1
+        to evaluation methods, i.e. {}(..., n_jobs=1).
+            '''.format(self.__class__.__name__)) from None
+
+        data_splits = (
+            (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
+            for fold_i, (train_i, test_i) in enumerate(self.indices))
+
+        args_iter = (
+            (fold_i, train_data, test_data, learner_i, learner,
+             self.store_models, mp_queue)
+            # NOTE: If this nested for loop doesn't work, try
+            # itertools.product
+            for (fold_i, train_data, test_data) in data_splits
+            for (learner_i, learner) in enumerate(self.learners))
+
+        def _callback_percent(n_steps, queue):
+            """Block until one of the subprocesses completes, before
+            signalling callback with percent"""
+            for percent in np.linspace(.0, .99, n_steps + 1)[1:]:
+                queue.get()
+                try:
+                    self._callback(percent)
+                except Exception:
+                    # Callback may error for whatever reason (e.g. PEBKAC)
+                    # In that case, rather gracefully continue computation
+                    # instead of failing
+                    pass
+
+        results = []
+        with joblib.Parallel(n_jobs=n_jobs, backend=mp_ctx) as parallel:
+            tasks = (joblib.delayed(_mp_worker)(*args) for args in args_iter)
+            # Start the tasks from another thread ...
+            thread = Thread(target=lambda: results.append(parallel(tasks)))
+            thread.start()
+            # ... so that we can update the GUI (callback) from the main thread
+            _callback_percent(n_callbacks, mp_queue)
+            thread.join()
+
+        results = sorted(results[0])
+
+        ptr, prev_fold_i, prev_n_values = 0, 0, 0
+        for res in results:
+            if res.fold_i != prev_fold_i:
+                ptr += prev_n_values
+                prev_fold_i = res.fold_i
+            result_slice = slice(ptr, ptr + res.n_values)
+            prev_n_values = res.n_values
+
+            if res.failed:
+                self.failed[res.learner_i] = res.failed
+                continue
+
+            if self.store_models:
+                self.models[res.fold_i][res.learner_i] = res.model
+
+            self.predicted[res.learner_i][result_slice] = res.values
+            if train_data.domain.has_discrete_class:
+                self.probabilities[res.learner_i][result_slice, :] = res.probs
+
+        self._callback(1)
+        return self
 
     def prepare_arrays(self, test_data):
         """Initialize arrays that will be used by `fit` method.
@@ -338,7 +441,6 @@ class Results:
 
         self.row_indices = np.concatenate(row_indices, axis=0)
         self.actual = test_data[self.row_indices].Y.ravel()
-        self.predicted = np.empty((len(self.learners), len(self.row_indices)))
 
     def setup_indices(self, train_data, test_data):
         """Initializes `self.indices` with iterable objects with slices
@@ -391,7 +493,8 @@ class CrossValidation(Results):
 
     """
     def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, warnings=None):
+                 store_models=False, preprocessor=None, callback=None, warnings=None,
+                 n_jobs=-1):
         self.k = k
         self.stratified = stratified
         self.random_state = random_state
@@ -402,7 +505,7 @@ class CrossValidation(Results):
 
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         self.indices = None
@@ -424,16 +527,16 @@ class LeaveOneOut(Results):
     score_by_folds = False
 
     def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None):
+                 preprocessor=None, callback=None, n_jobs=-1):
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         self.indices = skl_cross_validation.LeaveOneOut(len(test_data))
 
     def prepare_arrays(self, test_data):
-        # speed up version of super().prepare_arrays(data)
+        # sped up version of super().prepare_arrays(data)
         self.row_indices = np.arange(len(test_data))
         self.folds = self.row_indices
         self.actual = test_data.Y.flatten()
@@ -442,7 +545,7 @@ class LeaveOneOut(Results):
 class ShuffleSplit(Results):
     def __init__(self, data, learners, n_resamples=10, train_size=None,
                  test_size=0.1, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None):
+                 store_models=False, preprocessor=None, callback=None, n_jobs=-1):
         self.n_resamples = n_resamples
         self.train_size = train_size
         self.test_size = test_size
@@ -451,7 +554,7 @@ class ShuffleSplit(Results):
 
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         if self.stratified and test_data.domain.has_discrete_class:
@@ -471,11 +574,11 @@ class TestOnTestData(Results):
     Test on a separate test data set.
     """
     def __init__(self, train_data, test_data, learners, store_data=False,
-                 store_models=False, preprocessor=None, callback=None):
+                 store_models=False, preprocessor=None, callback=None, n_jobs=-1):
         super().__init__(test_data, train_data=train_data, learners=learners,
                          store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
-                         callback=callback)
+                         callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
         self.indices = ((Ellipsis, Ellipsis),)
@@ -492,14 +595,14 @@ class TestOnTrainingData(TestOnTestData):
     """
 
     def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None):
+                 preprocessor=None, callback=None, n_jobs=-1):
 
         if preprocessor is not None:
             data = preprocessor(data)
 
         super().__init__(train_data=data, test_data=data, learners=learners,
                          store_data=store_data, store_models=store_models,
-                         preprocessor=None, callback=callback)
+                         preprocessor=None, callback=callback, n_jobs=n_jobs)
         self.preprocessor = preprocessor
 
 
