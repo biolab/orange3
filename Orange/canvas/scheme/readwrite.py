@@ -1037,7 +1037,8 @@ def scheme_to_python(scheme, out_file):
         # Add inputs
         for link in matched_links:
             source_name = widget_names[sorted_nodes.index(link.source_node)]
-            gen.add_input(source_name, link.sink_channel.name.lower().replace(" ", "_"))
+            gen.add_input(source_name, link.source_channel.name.lower().replace(" ", "_"),
+                link.sink_channel.name.lower().replace(" ", "_"))
         # Run code generator
         code_segments = gen.generate()
         # Imports and other code to go at the top of the script

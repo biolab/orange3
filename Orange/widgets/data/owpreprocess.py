@@ -1923,6 +1923,8 @@ class OWPreprocess(widget.OWWidget):
 
         def run():
             ow = OWPreprocess()
+            ow.storedsettings = {"preprocessors": preprocs, "name": ""}
+            ow._initialize()
             ow.set_data(input_data)
             preprocessor = ow.buildpreproc()
             if input_data is not None:
@@ -1941,6 +1943,10 @@ class OWPreprocess(widget.OWWidget):
         gen.set_widget(self)
         gen.add_import([QApplication, OWPreprocess])
         gen.add_preamble(pre)
+        preprocs = self.storedsettings["preprocessors"]
+        gen.add_init("preprocs", "[None] * " + str(len(preprocs)), iscode=True)
+        for i, preproc in enumerate(preprocs):
+            gen.add_init("preprocs[" + str(i) + "]", str(preproc), iscode=True)
         gen.set_main(run)
         gen.add_output("preprocessor", "preprocessor", iscode=True)
         gen.add_output("preprocessed_data", "data", iscode=True)

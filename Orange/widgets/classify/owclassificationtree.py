@@ -67,7 +67,6 @@ class OWClassificationTree(OWBaseLearner):
 
     def init_code_gen(self):
         def run():
-            ow = OWClassificationTree()
             ow.set_data(input_data)
             try:
                 ow.set_preprocessor(input_preprocessor)
@@ -80,6 +79,14 @@ class OWClassificationTree(OWBaseLearner):
         gen = self.code_gen()
         gen.set_widget(self)
         gen.add_import([OWClassificationTree])
+        gen.add_init("ow", "OWClassificationTree()", iscode=True)
+        gen.add_init("ow.attribute_score", self.attribute_score)
+        gen.add_init("ow.limit_min_leaf", self.limit_min_leaf)
+        gen.add_init("ow.min_leaf", self.min_leaf)
+        gen.add_init("ow.limit_min_internal", self.limit_min_internal)
+        gen.add_init("ow.min_internal", self.min_internal)
+        gen.add_init("ow.limit_depth", self.limit_depth)
+        gen.add_init("ow.max_depth", self.max_depth)
         gen.set_main(run)
         gen.add_output("Learner", "ow.learner", iscode=True)
         gen.add_output("classifier", "ow.model", iscode=True)

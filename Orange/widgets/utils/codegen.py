@@ -169,8 +169,8 @@ class CodeGenerator(object):
                 widget_attr = getattr(self.orig_widget, kwargs["name"])
                 self.attrs[kwargs["name"]] = widget_attr
 
-    def add_input(self, name, source):
-        self.inputs.append((name, source,))
+    def add_input(self, source_node, source_channel, sink_channel):
+        self.inputs.append((source_node, source_channel, sink_channel))
 
     def add_output(self, channel, value, iscode=False):
         """ Adds an output statement with the given channel """
@@ -246,7 +246,7 @@ class CodeGenerator(object):
 
         # input declaration
         for inpt in self.inputs:
-            body += "input_" + inpt[1] + " = "
+            body += "input_" + inpt[2] + " = "
             body += inpt[0].lower() + "_"
             body += inpt[1] + "\n"
 

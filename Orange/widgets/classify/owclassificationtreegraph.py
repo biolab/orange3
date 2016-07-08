@@ -484,7 +484,7 @@ class OWClassificationTreeGraph(OWTreeGraph):
         def run():
             ow = OWClassificationTreeGraph()
             ow.handleNewSignals()
-            ow.ctree(input_classifier)
+            ow.ctree(input_classification_tree)
             ow.show()
             qapp.exec()
             update_selection(ow)
