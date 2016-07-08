@@ -503,6 +503,23 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
+    def test_other(self):
+        table = np.array(['bcd4d9c0-361e-bad4-7ceb-0d171cdec981',
+                          '544b7ddc-d861-0201-81c8-9f7ad0bbf531',
+                          'b35a10f7-7901-f313-ec16-5ad9778040a6',
+                          'b267c4be-4a26-60b5-e664-737a90a40e93']
+                         ).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['uuid'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        filters = filter.Values([filter.FilterString(-1, 0, 'foo')])
+        self.assertEqual(len(filters(sql_table)), 0)
+
     def test_recovers_connection_after_sql_error(self):
         import psycopg2
 
