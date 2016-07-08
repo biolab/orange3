@@ -266,7 +266,7 @@ class OWKMeans(widget.OWWidget):
         score_span = (best_score - worst_score) or 1
         max_score = max(scores)
         nplaces = min(5, np.floor(abs(math.log(max(max_score, 1e-10)))) + 2)
-        fmt = "{{:.{}f}}".format(nplaces)
+        fmt = "{{:.{}f}}".format(int(nplaces))
         model = self.table_model
         model.setRowCount(len(k_scores))
         for i, (k, score) in enumerate(k_scores):
