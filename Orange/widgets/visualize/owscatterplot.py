@@ -447,12 +447,19 @@ class OWScatterPlot(OWWidget):
             selected = unselected = self.data
         elif self.data is not None:
             selection = self.graph.get_selection()
+            if len(selection) == 0:
+                self.send("Selected Data", None)
+                self.send("Other Data", self.data)
+                return
             selected = self.data[selection]
             unselection = np.full(len(self.data), True, dtype=bool)
             unselection[selection] = False
             unselected = self.data[unselection]
         self.send("Selected Data", selected)
-        self.send("Other Data", unselected)
+        if len(unselected) == 0:
+            self.send("Other Data", None)
+        else:
+            self.send("Other Data", unselected)
 
     def send_features(self):
         features = None
