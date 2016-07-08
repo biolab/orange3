@@ -110,11 +110,9 @@ class SqlTable(table.Table):
                 else:
                     var.to_sql = ToSql("({})::double precision".format(
                         self.quote_identifier(field_name)))
-            elif var.is_discrete:
+            else:  # discrete or string
                 var.to_sql = ToSql("({})::text".format(
                     self.quote_identifier(field_name)))
-            else:
-                var.to_sql = ToSql(self.quote_identifier(field_name))
 
         attrs, class_vars, metas = [], [], []
         for field_name, type_code, *rest in fields:
