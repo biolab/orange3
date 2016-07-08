@@ -347,7 +347,9 @@ class Results:
             # multiprocessing (otherwise it shits itself at least on Windos)
             mp_queue = mp_ctx.Manager().Queue() if n_jobs > 1 else mp.Queue()
         except (EOFError, RuntimeError):
-            raise RuntimeError('''
+            mp_queue = mp.Queue()
+            n_jobs = 1
+            warnings.warn('''
 
         Can't run multiprocessing code without a __main__ guard.
 
@@ -365,8 +367,8 @@ class Results:
         recursion ensues.
 
         Guard your executed code with above Python idiom, or pass n_jobs=1
-        to evaluation methods, i.e. {}(..., n_jobs=1).
-            '''.format(self.__class__.__name__)) from None
+        to evaluation methods, i.e. {}(..., n_jobs=1). Setting n_jobs to 1.
+            '''.format(self.__class__.__name__), OrangeWarning)
 
         data_splits = (
             (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
