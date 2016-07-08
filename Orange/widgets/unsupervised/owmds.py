@@ -154,10 +154,17 @@ class OWMDS(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.matrix = None
-        self.data = None
+        #: Input dissimilarity matrix
+        self.matrix = None  # type: Optional[Orange.misc.DistMatrix]
+        #: Effective data used for plot styling/annotations. Can be from the
+        #: input signal (`self.signal_data`) or the input matrix
+        #: (`self.matrix.data`)
+        self.data = None  # type: Optional[Orange.data.Table]
+        #: Input subset data table
         self.subset_data = None  # type: Optional[Orange.data.Table]
-        self.matrix_data = None
+        #: Data table from the `self.matrix.row_items` (if present)
+        self.matrix_data = None  # type: Optional[Orange.data.Table]
+        #: Input data table
         self.signal_data = None
 
         self._pen_data = None
@@ -465,7 +472,6 @@ class OWMDS(widget.OWWidget):
             self.color_value = attr
             self.shape_value = attr
         else:
-            # initialize the graph state from data
             domain = self.data.domain
             all_vars = list(filter_visible(domain.variables + domain.metas))
             cd_vars = [var for var in all_vars if var.is_primitive()]
@@ -1356,9 +1362,8 @@ class mdsplotutils(plotutils):
 
 def main_test(argv=sys.argv):
     import gc
-    argv = list(argv)
-    app = QtGui.QApplication(argv)
-
+    app = QtGui.QApplication(list(argv))
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:
