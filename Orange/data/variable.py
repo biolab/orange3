@@ -852,6 +852,8 @@ class TimeVariable(ContinuousVariable):
 
         (1, 0, '%Y-%m-%d'),
 
+        (1, 1, '%Y-%m-%d %H:%M:%S.%f'),
+        (1, 1, '%Y-%m-%dT%H:%M:%S.%f'),
         (1, 1, '%Y-%m-%d %H:%M:%S.%f%z'),
         (1, 1, '%Y-%m-%dT%H:%M:%S.%f%z'),
 

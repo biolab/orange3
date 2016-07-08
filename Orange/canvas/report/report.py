@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict, Iterable
 from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
-from PyQt4.QtGui import QGraphicsScene, QAbstractItemView, QColor
+from PyQt4.QtGui import QGraphicsScene, QTableView, QColor
 
 from Orange.util import try_
 from Orange.widgets.io import PngFormat
@@ -286,7 +286,7 @@ class Report:
             ) for rowi, row in enumerate(data))
 
         self.report_name(name)
-        if isinstance(table, QAbstractItemView):
+        if isinstance(table, QTableView):
             body = report_abstract_model(table.model(), table)
         elif isinstance(table, QAbstractItemModel):
             body = report_abstract_model(table)
