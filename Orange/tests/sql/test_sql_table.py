@@ -368,10 +368,60 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-    def test_date(self):
+    def test_time_date(self):
         table = np.array(['2014-04-12', '2014-04-13', '2014-04-14',
                           '2014-04-15', '2014-04-16']).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['date'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_time(self):
+        table = np.array(['17:39:51', '11:51:48.46', '05:20:21.492149',
+                          '21:47:06', '04:47:35.8']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['time'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_timetz(self):
+        table = np.array(['17:39:51+0200', '11:51:48.46+01', '05:20:21.4921',
+                          '21:47:06-0600', '04:47:35.8+0330']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['timetz'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_timestamp(self):
+        table = np.array(['2014-07-15 17:39:51.348149',
+                          '2008-10-05 11:51:48.468149',
+                          '2008-11-03 05:20:21.492149',
+                          '2015-01-02 21:47:06.228149',
+                          '2016-04-16 04:47:35.892149']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['timestamp'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_timestamptz(self):
+        table = np.array(['2014-07-15 17:39:51.348149+0200',
+                          '2008-10-05 11:51:48.468149+02',
+                          '2008-11-03 05:20:21.492149+01',
+                          '2015-01-02 21:47:06.228149+0100',
+                          '2016-04-16 04:47:35.892149+0330']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['timestamptz'])
 
         sql_table = SqlTable(conn, table_name, inspect_values=False)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
