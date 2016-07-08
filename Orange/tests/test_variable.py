@@ -312,12 +312,14 @@ class TestTimeVariable(VariableTest):
         ('1969-12-31 23:59:59', -1, '1969-12-31 23:59:59'),
         ('1900-01-01', -2208988800, '1900-01-01'),
         ('nan', np.nan, '?'),
+        ('1444651991.81', 1444651991.81, '2015-10-12 12:13:11.810000'),
+        (1444651991.81, 1444651991.81, '2015-10-12 12:13:11.810000'),
     ]
 
     def test_parse_repr(self):
         for datestr, timestamp, outstr in self.TESTS:
             var = TimeVariable('time')
-            ts = var.parse(datestr)
+            ts = var.to_val(datestr)  # calls parse for strings
             if not np.isnan(ts):
                 self.assertEqual(ts, timestamp, msg=datestr)
             self.assertEqual(var.repr_val(ts), outstr, msg=datestr)
