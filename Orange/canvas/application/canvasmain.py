@@ -64,9 +64,9 @@ log = logging.getLogger(__name__)
 BASE_LINK = "http://orange.biolab.si/"
 
 LINKS = \
-    {"start-using": BASE_LINK + "start-using/",
-     "tutorial": BASE_LINK + "tutorial/",
-     "reference": BASE_LINK + "docs/"
+    {"get-started": BASE_LINK + "start-using/",
+     "examples": BASE_LINK + "tutorial/",
+     "youtube": "https://www.youtube.com/watch?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1"
      }
 
 
@@ -455,23 +455,23 @@ class CanvasMainWindow(QMainWindow):
                     objectName="get-started-action",
                     toolTip=self.tr("View a 'Get Started' introduction."),
                     triggered=self.get_started,
-                    icon=canvas_icons("Get Started.svg")
+                    icon=canvas_icons("Documentation.svg")
                     )
 
         self.tutorials_action = \
             QAction(self.tr("Tutorials"), self,
-                    objectName="tutorial-action",
-                    toolTip=self.tr("Browse tutorials."),
-                    triggered=self.tutorial_scheme,
-                    icon=canvas_icons("Tutorials.svg")
+                    objectName="tutorials-action",
+                    toolTip=self.tr("View YouTube tutorials."),
+                    triggered=self.tutorials,
+                    icon=canvas_icons("YouTube.svg")
                     )
 
-        self.documentation_action = \
-            QAction(self.tr("Documentation"), self,
-                    objectName="documentation-action",
-                    toolTip=self.tr("View reference documentation."),
-                    triggered=self.documentation,
-                    icon=canvas_icons("Documentation.svg")
+        self.examples_action = \
+            QAction(self.tr("Examples"), self,
+                    objectName="tutorial-action",
+                    toolTip=self.tr("Browse example workflows."),
+                    triggered=self.tutorial_scheme,
+                    icon=canvas_icons("Tutorials.svg")
                     )
 
         self.about_action = \
@@ -693,7 +693,7 @@ class CanvasMainWindow(QMainWindow):
         self.help_menu.addAction(self.about_action)
         self.help_menu.addAction(self.welcome_action)
         self.help_menu.addAction(self.tutorials_action)
-        self.help_menu.addAction(self.documentation_action)
+        self.help_menu.addAction(self.examples_action)
         menu_bar.addMenu(self.help_menu)
 
         self.setMenuBar(menu_bar)
@@ -1310,21 +1310,21 @@ class CanvasMainWindow(QMainWindow):
             return False
 
     def get_started(self, *args):
-        """Show getting started video
+        """Show getting started documentation
         """
-        url = QUrl(LINKS["start-using"])
+        url = QUrl(LINKS["get-started"])
         QDesktopServices.openUrl(url)
 
-    def tutorial(self, *args):
-        """Show tutorial.
+    def examples(self, *args):
+        """Show example workflows.
         """
-        url = QUrl(LINKS["tutorial"])
+        url = QUrl(LINKS["examples"])
         QDesktopServices.openUrl(url)
 
-    def documentation(self, *args):
-        """Show reference documentation.
+    def tutorials(self, *args):
+        """Show YouTube tutorials.
         """
-        url = QUrl(LINKS["reference"])
+        url = QUrl(LINKS["youtube"])
         QDesktopServices.openUrl(url)
 
     def recent_scheme(self, *args):
@@ -1450,15 +1450,15 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         tutorials_action = \
-            QAction(self.tr("Tutorial"), dialog,
-                    objectName="welcome-tutorial-action",
-                    toolTip=self.tr("Browse tutorial workflows."),
-                    triggered=tutorial,
-                    icon=canvas_icons("Tutorials.svg")
+            QAction(self.tr("Tutorials"), self,
+                    objectName="tutorials-action",
+                    toolTip=self.tr("View YoutTube tutorials."),
+                    triggered=self.tutorials,
+                    icon=canvas_icons("YouTube.svg")
                     )
 
-        bottom_row = [self.get_started_action, tutorials_action,
-                      self.documentation_action]
+        bottom_row = [tutorials_action, self.examples_action,
+                      self.get_started_action]
 
         self.new_action.triggered.connect(dialog.accept)
         top_row = [new_action, open_action, recent_action]
