@@ -1,12 +1,10 @@
 """
-Orange Canvas Tutorial schemes
+Examples of Orange workflows
 
 """
 import os
-import io
 import logging
 import types
-import collections
 from itertools import chain
 
 import pkg_resources
@@ -15,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 def list_schemes(package):
-    """Return a list of scheme tutorials.
+    """Return a list of example workflows.
     """
     resources = pkg_resources.resource_listdir(package.__name__, ".")
     resources = list(filter(is_ows, resources))
@@ -32,55 +30,58 @@ def default_entry_point():
     return ep
 
 
-def tutorial_entry_points():
-    """Return an iterator over all tutorials.
+def workflow_entry_points():
+    """Return an iterator over all example workflows.
     """
     default = default_entry_point()
     return chain([default],
-                 pkg_resources.iter_entry_points("orange.widgets.tutorials"))
+                 pkg_resources.iter_entry_points("orange.widgets.tutorials"),
+                 pkg_resources.iter_entry_points("orange.widgets.workflows"))
 
 
-def tutorials():
-    """Return all known tutorials.
+def example_workflows():
+    """Return all known example workflows.
     """
-    all_tutorials = []
-    for ep in tutorial_entry_points():
-        tutorials = None
+    all_workflows = []
+    for ep in workflow_entry_points():
+        workflows = None
         try:
-            tutorials = ep.load()
+            workflows = ep.load()
         except pkg_resources.DistributionNotFound as ex:
-            log.warning("Could not load tutorials from %r (%r)",
+            log.warning("Could not load workflows from %r (%r)",
                         ep.dist, ex)
             continue
         except ImportError:
-            log.error("Could not load tutorials from %r",
+            log.error("Could not load workflows from %r",
                       ep.dist, exc_info=True)
             continue
         except Exception:
-            log.error("Could not load tutorials from %r",
+            log.error("Could not load workflows from %r",
                       ep.dist, exc_info=True)
             continue
 
-        if isinstance(tutorials, types.ModuleType):
-            package = tutorials
-            tutorials = list_schemes(tutorials)
-            tutorials = [Tutorial(t, package, ep.dist) for t in tutorials]
-        elif isinstance(tutorials, (types.FunctionType, types.MethodType)):
+        if isinstance(workflows, types.ModuleType):
+            package = workflows
+            workflows = list_schemes(workflows)
+            workflows = [ExampleWorkflow(wf, package, ep.dist)
+                         for wf in workflows]
+        elif isinstance(workflows, (types.FunctionType, types.MethodType)):
             try:
-                tutorials = tutorials()
+                workflows = example_workflows()
             except Exception as ex:
                 log.error("A callable entry point (%r) raised an "
                           "unexpected error.",
                           ex, exc_info=True)
                 continue
-            tutorials = [Tutorial(t, package=None, distribution=ep.dist)]
+            workflows = [ExampleWorkflow(wf, package=None, distribution=ep.dist)
+                         for wf in workflows]
 
-        all_tutorials.extend(tutorials)
+        all_workflows.extend(workflows)
 
-    return all_tutorials
+    return all_workflows
 
 
-class Tutorial(object):
+class ExampleWorkflow(object):
     def __init__(self, resource, package=None, distribution=None):
         self.resource = resource
         self.package = package
@@ -101,7 +102,7 @@ class Tutorial(object):
         raise ValueError("cannot resolve resource to an absolute name")
 
     def stream(self):
-        """Return the tutorial file as an open stream.
+        """Return the workflow file as an open stream.
         """
         if self.package is not None:
             return pkg_resources.resource_stream(self.package.__name__,
