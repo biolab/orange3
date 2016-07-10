@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="Most of visualizations in Orange are interactive. Like Scatter Plot. Double click its icon to open the plot and by click-and-drag select few data instances (points in the plot). Selected data will automatically propagate to Data Table. Double click its widget to check which data was selected. Change selection and observe the change in the Data Table. This works best if both widgets are open." title="Interactive Visualizations" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(102.0, 206.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Scatter Plot" position="(267.0, 205.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
+		<node id="2" name="Data Table" position="(412.0, 205.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Selected Data" source_node_id="1" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(28.0, 22.0, 150.0, 96.0)">This File widget is set to read the Iris data set. Double click on the icon to change the input data file and observe how this workflow works for some other data set.</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(224.0, 24.0, 150.0, 83.0)">Double click on the Scatter Plot icon to visualize the data. Then select the data subset by selecting the points from the scatter plot.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(412.0, 55.0, 150.0, 48.0)">Data Table widget shows the data subset selected in the Scatter Plot.</text>
+		<arrow end="(99.00000000000003, 175.0)" fill="#C1272D" id="3" start="(98.00000000000003, 118.0)" />
+		<arrow end="(270.0, 170.00000000000003)" fill="#C1272D" id="4" start="(271.0, 114.00000000000003)" />
+		<arrow end="(417.0, 173.0)" fill="#C1272D" id="5" start="(465.0, 112.00000000000001)" />
+		<text font-family="Helvetica" font-size="12" id="6" rect="(146.0, 300.0, 301.0, 72.0)">Try to connect some other widget to the output of the Scatter Plot. Say, a Box Plot widget (toolbox, Visualize pane). Box Plot will display distributions of the data subset selected in the Scatter Plot.</text>
+		<arrow end="(302.0, 221.0)" fill="#39B54A" id="7" start="(335.0, 294.0)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAMAAAB1cmxxAVgAAAAAcQJYCwAAAHNoZWV0X25hbWVzcQN9cQRYEwAAAHNhdmVkV2lk
+Z2V0R2VvbWV0cnlxBWNzaXAKX3VucGlja2xlX3R5cGUKcQZYDAAAAFB5UXQ0LlF0Q29yZXEHWAoA
+AABRQnl0ZUFycmF5cQhDLgHZ0MsAAQAAAAAD/wAAAlwAAAXwAAADLQAAA/8AAAJyAAAF8AAAAy0A
+AAAAAABxCYVxCodxC1JxDFgGAAAAc291cmNlcQ1LAFgMAAAAcmVjZW50X3BhdGhzcQ5dcQ9jT3Jh
+bmdlLndpZGdldHMudXRpbHMuZmlsZWRpYWxvZ3MKUmVjZW50UGF0aApxECmBcRF9cRIoWAUAAAB0
+aXRsZXETaAJYBwAAAHJlbHBhdGhxFFgIAAAAaXJpcy50YWJxFVgFAAAAc2hlZXRxFmgCWAYAAABw
+cmVmaXhxF1gPAAAAc2FtcGxlLWRhdGFzZXRzcRhYBwAAAGFic3BhdGhxGVg4AAAAL1VzZXJzL2Js
+YXovRHJvcGJveC9kZXYvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWJxGnViYVgQAAAA
+Y29udGV4dF9zZXR0aW5nc3EbXXEcWAsAAAByZWNlbnRfdXJsc3EdXXEedS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWAUAAABncmFwaHEBfXECKFgLAAAAYWxwaGFfdmFsdWVxA0uAWAkAAABzaG93X2dyaWRx
+BIlYDQAAAGNsYXNzX2RlbnNpdHlxBYlYCwAAAHNob3dfbGVnZW5kcQaIWBMAAABsYWJlbF9vbmx5
+X3NlbGVjdGVkcQeJWAsAAABqaXR0ZXJfc2l6ZXEISwpYEQAAAHRvb2x0aXBfc2hvd3NfYWxscQmJ
+WAsAAABwb2ludF93aWR0aHEKSwpYEQAAAGppdHRlcl9jb250aW51b3VzcQuJdVgTAAAAYXV0b19z
+ZW5kX3NlbGVjdGlvbnEMiFgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXENQy4B2dDLAAEAAAAAA60A
+AAGsAAAGbAAABHsAAAOtAAABwgAABmwAAAR7AAAAAAAAcQ5YEQAAAHRvb2xiYXJfc2VsZWN0aW9u
+cQ9LAFgQAAAAY29udGV4dF9zZXR0aW5nc3EQXXERY09yYW5nZS53aWRnZXRzLnNldHRpbmdzCkNv
+bnRleHQKcRIpgXETfXEUKFgGAAAAdmFsdWVzcRV9cRYoaAF9cRcoaANLgEr+////hnEYaASJSv7/
+//+GcRlYCgAAAGF0dHJfY29sb3JxGlgEAAAAaXJpc3EbSwGGcRxYCQAAAGF0dHJfc2l6ZXEdWAAA
+AABxHkr+////hnEfaAWJSv7///+GcSBoCksKSv7///+GcSFYCgAAAGF0dHJfbGFiZWxxImgeSv7/
+//+GcSNoCYlK/v///4ZxJGgLiUr+////hnElaAaISv7///+GcSZoB4lK/v///4ZxJ2gISwpK/v//
+/4ZxKFgKAAAAYXR0cl9zaGFwZXEpaB5K/v///4ZxKnVoDIhK/v///4ZxK2gNaA5K/v///4ZxLFgG
+AAAAYXR0cl94cS1YDAAAAHNlcGFsIGxlbmd0aHEuSwKGcS9YCwAAAGF1dG9fc2FtcGxlcTCISv7/
+//+GcTFYBgAAAGF0dHJfeXEyWAsAAABzZXBhbCB3aWR0aHEzSwKGcTRoD0sASv7///+GcTV1WA4A
+AABvcmRlcmVkX2RvbWFpbnE2XXE3KFgMAAAAc2VwYWwgbGVuZ3RocThLAoZxOVgLAAAAc2VwYWwg
+d2lkdGhxOksChnE7WAwAAABwZXRhbCBsZW5ndGhxPEsChnE9WAsAAABwZXRhbCB3aWR0aHE+SwKG
+cT9oG0sBhnFAZVgKAAAAYXR0cmlidXRlc3FBfXFCKGg4SwJoPksCaBtLAWg6SwJoPEsCdVgFAAAA
+bWV0YXNxQ31xRFgEAAAAdGltZXFFR0HV4Ji9b1OxdWJhaDCIdS4=
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWBIAAABzaG93X2Rpc3RyaWJ1dGlvbnNxAYlYCwAAAGF1dG9fY29tbWl0cQKIWAsAAABz
+ZWxlY3Rfcm93c3EDiFgOAAAAZGlzdF9jb2xvcl9SR0JxBChL3EvcS9xL/3RxBVgTAAAAc2F2ZWRX
+aWRnZXRHZW9tZXRyeXEGTlgOAAAAY29sb3JfYnlfY2xhc3NxB4hYEAAAAGNvbnRleHRfc2V0dGlu
+Z3NxCF1xCWNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0CnEKKYFxC31xDChYBgAAAHZh
+bHVlc3ENfXEOKGgBiUr+////hnEPaAKISv7///+GcRBoA4hK/v///4ZxEWgEaAVK/v///4ZxEmgG
+Tkr+////hnETWA0AAABzZWxlY3RlZF9jb2xzcRRdcRVoB4hK/v///4ZxFlgNAAAAc2VsZWN0ZWRf
+cm93c3EXXXEYWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxGYhK/v///4ZxGnVYDgAAAG9yZGVy
+ZWRfZG9tYWlucRtdcRwoWAwAAABzZXBhbCBsZW5ndGhxHUsChnEeWAsAAABzZXBhbCB3aWR0aHEf
+SwKGcSBYDAAAAHBldGFsIGxlbmd0aHEhSwKGcSJYCwAAAHBldGFsIHdpZHRocSNLAoZxJFgEAAAA
+aXJpc3ElSwGGcSZlWAoAAABhdHRyaWJ1dGVzcSd9cSgoaB1LAmgjSwJoJV1xKShYCwAAAElyaXMt
+c2V0b3NhcSpYDwAAAElyaXMtdmVyc2ljb2xvcnErWA4AAABJcmlzLXZpcmdpbmljYXEsZWgfSwJo
+IUsCdVgFAAAAbWV0YXNxLX1xLlgEAAAAdGltZXEvR0HV4JkQsyKadWJhaBmIdS4=
+</properties>
+	</node_properties>
+</scheme>
