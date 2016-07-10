@@ -471,7 +471,7 @@ class CanvasMainWindow(QMainWindow):
                     objectName="tutorial-action",
                     toolTip=self.tr("Browse example workflows."),
                     triggered=self.tutorial_scheme,
-                    icon=canvas_icons("Tutorials.svg")
+                    icon=canvas_icons("Examples.svg")
                     )
 
         self.about_action = \
