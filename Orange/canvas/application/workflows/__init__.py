@@ -35,6 +35,7 @@ def workflow_entry_points():
     """
     default = default_entry_point()
     return chain([default],
+                 pkg_resources.iter_entry_points("orange.widgets.tutorials"),
                  pkg_resources.iter_entry_points("orange.widgets.workflows"))
 
 
