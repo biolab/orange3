@@ -55,7 +55,7 @@ from ..preview import previewdialog, previewmodel
 
 from .. import config
 
-from . import tutorials
+from . import workflows
 
 log = logging.getLogger(__name__)
 
@@ -1369,11 +1369,11 @@ class CanvasMainWindow(QMainWindow):
         the canvas and returns QDialog.Accepted.
 
         """
-        tutors = tutorials.tutorials()
+        tutors = workflows.example_workflows()
         items = [previewmodel.PreviewItem(path=t.abspath()) for t in tutors]
         model = previewmodel.PreviewModel(items=items)
         dialog = previewdialog.PreviewDialog(self)
-        title = self.tr("Tutorials")
+        title = self.tr("Example Workflows")
         dialog.setWindowTitle(title)
         template = ('<h3 style="font-size: 26px">\n'
                     #'<img height="26" src="canvas_icons:Tutorials.svg">\n'
@@ -1452,7 +1452,7 @@ class CanvasMainWindow(QMainWindow):
         tutorials_action = \
             QAction(self.tr("Tutorials"), self,
                     objectName="tutorials-action",
-                    toolTip=self.tr("View YoutTube tutorials."),
+                    toolTip=self.tr("View YouTube tutorials."),
                     triggered=self.tutorials,
                     icon=canvas_icons("YouTube.svg")
                     )
