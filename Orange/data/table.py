@@ -16,7 +16,6 @@ from Orange.statistics.util import bincount, countnans, contingency
 from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable, Variable, TimeVariable
 from Orange.util import flatten, deprecated
 from . import _contingency
-from . import _valuecount
 
 
 def get_sample_datasets_dir():
@@ -919,69 +918,35 @@ class Table(pd.DataFrame):
             mins, maxes, means, varc, nans, nonnans
         ]).values.T
 
-    # TODO: move this to distributions.py and use pandas instead if this code
     def _compute_distributions(self, columns=None):
         """
         Compute distribution of values for the given columns.
 
         :param columns: columns to calculate distributions for
-        :return: a list of distributions. Type of distribution depends on the
+        :return: a list of distribution tuples. Type of distribution depends on the
                  type of the column:
                    - for discrete, distribution is a 1d np.array containing the
                      occurrence counts for each of the values.
                    - for continuous, distribution is a 2d np.array with
                      distinct (ordered) values of the variable in the first row
                      and their counts in second.
+                 The second element of each tuple is the number of NA values of the column.
         """
-        def _get_matrix(M, cachedM, col):
-            nonlocal single_column
-            if not sp.issparse(M):
-                return M[:, col], self.weights
-            if cachedM is None:
-                if single_column:
-                    warn("computing distributions on sparse data "
-                         "for a single column is inefficient")
-                cachedM = sp.csc_matrix(self.X)
-            data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col + 1]]
-            weights = self.weights[
-                cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col + 1]]]
-            return data, weights, cachedM
-
         if columns is None:
-            columns = range(len(self.domain.variables))
-            single_column = False
-        else:
-            columns = [self.domain.index(var) for var in columns]
-            single_column = len(columns) == 1 and len(self.domain) > 1
+            columns = self.domain.attributes + self.domain.class_vars + self.domain.metas
         distributions = []
-        Xcsc = Ycsc = None
         for col in columns:
             var = self.domain[col]
-            if 0 <= col < self.X.shape[1]:
-                m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
-            elif col < 0:
-                m, W, Xcsc = _get_matrix(self.metas, Xcsc, col * (-1) - 1)
-            else:
-                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
             if var.is_discrete:
-                if W is not None:
-                    W = W.ravel()
-                dist, unknowns = bincount(m, len(var.values) - 1, W)
-            elif not len(m):
-                dist, unknowns = np.zeros((2, 0)), 0
-            else:
-                if W is not None:
-                    ranks = np.argsort(m)
-                    vals = np.vstack((m[ranks], W[ranks].flatten()))
-                    unknowns = countnans(m, W)
+                counts = self[col].value_counts(sort=False)
+                if var.ordered:
+                    distributions.append((np.array([counts.loc[val] for val in var.values]),
+                                          self[col].isnull().sum()))
                 else:
-                    vals = np.ones((2, m.shape[0]))
-                    vals[0, :] = m
-                    vals[0, :].sort()
-                    unknowns = countnans(m.astype(float))
-                dist = np.array(_valuecount.valuecount(vals))
-            distributions.append((dist, unknowns))
-
+                    distributions.append((counts.values, self[col].isnull().sum()))
+            else:
+                distributions.append((np.array(sorted(self[col].value_counts(sort=False).iteritems())).T,
+                                      self[col].isnull().sum()))
         return distributions
 
     # TODO: move this to contingency.py and use pandas instead if this code

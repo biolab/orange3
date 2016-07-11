@@ -1,7 +1,7 @@
 import random
 import zlib
 import math
-from numbers import Real
+from numbers import Real, Number
 import numpy as np
 from Orange import data
 
@@ -63,19 +63,20 @@ class Discrete(np.ndarray):
             dist, unknowns = data._compute_distributions([variable])[0]
             self = super().__new__(cls, len(dist))
             self[:] = dist
+            self.variable = variable
             self.unknowns = unknowns
         except NotImplementedError:
             self = super().__new__(cls, len(variable.values))
             self[:] = np.zeros(len(variable.values))
+            self.variable = variable
             self.unknowns = 0
-            for val, w in zip(data[:, variable], data.W):
-                if not math.isnan(val):
+            for val, w in zip(data.loc[:, variable], data.W):
+                if not isinstance(val, Number) or not math.isnan(val):
                     self[val] += w
                 else:
                     self.unknowns += w
         self.variable = variable
         return self
-
 
     def __eq__(self, other):
         return np.array_equal(self, other) and (
@@ -89,40 +90,33 @@ class Discrete(np.ndarray):
             index = self.variable.to_val(index)
         return super().__getitem__(index)
 
-
     def __setitem__(self, index, value):
         if isinstance(index, str):
             index = self.variable.to_val(index)
         super().__setitem__(index, value)
 
-
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
-
 
     def __add__(self, other):
         s = super().__add__(other)
         s.unknowns = self.unknowns + getattr(other, "unknowns", 0)
         return s
 
-
     def __iadd__(self, other):
         super().__iadd__(other)
         self.unknowns += getattr(other, "unknowns", 0)
         return self
-
 
     def __sub__(self, other):
         s = super().__sub__(other)
         s.unknowns = self.unknowns - getattr(other, "unknowns", 0)
         return s
 
-
     def __isub__(self, other):
         super().__isub__(other)
         self.unknowns -= getattr(other, "unknowns", 0)
         return self
-
 
     def __mul__(self, other):
         s = super().__mul__(other)
@@ -130,13 +124,11 @@ class Discrete(np.ndarray):
             s.unknowns = self.unknowns / other
         return s
 
-
     def __imul__(self, other):
         super().__imul__(other)
         if isinstance(other, Real):
             self.unknowns *= other
         return self
-
 
     def __div__(self, other):
         s = super().__mul__(other)
@@ -144,13 +136,11 @@ class Discrete(np.ndarray):
             s.unknowns = self.unknowns / other
         return s
 
-
     def __idiv__(self, other):
         super().__imul__(other)
         if isinstance(other, Real):
             self.unknowns /= other
         return self
-
 
     def normalize(self):
         t = np.sum(self)
@@ -160,10 +150,8 @@ class Discrete(np.ndarray):
         elif self.shape[0]:
             self[:] = 1 / self.shape[0]
 
-
     def modus(self):
-        return np.argmax(self)
-
+        return self.variable.values[np.argmax(self)]
 
     def random(self):
         v = random.random() * np.sum(self)
@@ -320,7 +308,7 @@ def get_distributions_for_columns(data, columns):
 
     """
     domain = data.domain
-    # Normailze the columns to int indices
+    # Normalize the columns to int indices
     columns = [col if isinstance(col, int) else domain.index(col)
                for col in columns]
     try:
