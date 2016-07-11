@@ -33,7 +33,7 @@ class Transformation:
         if self.attr_index is None:
             data = self.variable.compute_value(data)
         else:
-            data = data.get_column_view(self.attr_index)[0]
+            data = data[data.domain[self.attr_index]]
         transformed = self.transform(data)
         return transformed
 

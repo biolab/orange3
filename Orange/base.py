@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 import scipy
 
-from Orange.data import Table, Value
+from Orange.data import Table, TableSeries
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -111,9 +111,9 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Table):
+        elif isinstance(data, (Table, TableSeries)):
             if data.domain != self.domain:
-                data = data.from_table(self.domain, data)
+                data = Table.from_table(self.domain, data)
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
             if not isinstance(data[0], (list, tuple)):
@@ -158,10 +158,6 @@ class Model:
         if ret == Model.Probs:
             return probs
 
-        # TODO: transform this usage of Instance
-
-        if isinstance(data, Instance) and not multitarget:
-            value = Value(self.domain.class_var, value[0])
         if ret == Model.Value:
             return value
         else:  # ret == Model.ValueProbs

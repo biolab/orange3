@@ -1123,11 +1123,6 @@ class TestPandasInteraction(unittest.TestCase):
         subset = self.b[[]]
         np.testing.assert_array_equal(self.b.weights, subset.weights)
 
-    def test_weights_dont_transfer_on_explicit_single_column_subset(self):
-        subset = self.b[self.b.columns[1]]
-        self.assertTrue(not isinstance(subset, pd.DataFrame))
-        self.assertTrue(not hasattr(subset, 'weights'))
-
 if __name__ == "__main__":
     unittest.main()
 

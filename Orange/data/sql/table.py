@@ -15,7 +15,7 @@ import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
-from .. import domain, variable, table, instance, \
+from .. import domain, variable, table, \
     DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
 from Orange.data.sql import filter as sql_filter
 

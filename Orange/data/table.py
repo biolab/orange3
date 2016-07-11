@@ -30,6 +30,8 @@ dataset_dirs = ['', get_sample_datasets_dir()]
 
 # noinspection PyPep8Naming
 class Table(pd.DataFrame):
+    KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy"}
+
     # these were previously in Storage
     MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
 
@@ -55,7 +57,32 @@ class Table(pd.DataFrame):
 
     @property
     def _constructor_sliced(self):
-        return TableSeries
+        """
+        An ugly workaround for the fact that pandas doesn't transfer _metadata to Series objects.
+        Where this property should return a constructor callable, we instead return a
+        proxy function, which sets the necessary properties from _metadata using a closure
+        to ensure thread-safety.
+
+        This enables TableSeries to use .X/.Y/.metas because it has a Domain.
+        """
+        attrs = {k: getattr(self, k, None) for k in Table._metadata}
+
+        class _transferer:
+            # this is a class and not a function because sometimes, pandas
+            # wants _constructor_sliced.from_array
+            def from_array(self, *args, **kwargs):
+                return _transferer._attr_setter(TableSeries.from_array(*args, **kwargs))
+
+            def __call__(self, *args, **kwargs):
+                return _transferer._attr_setter(TableSeries(*args, **kwargs))
+
+            @staticmethod
+            def _attr_setter(target):
+                for k, v in attrs.items():
+                    setattr(target, k, v)
+                return target
+
+        return _transferer()
 
     @property
     def _constructor_expanddim(self):
@@ -113,7 +140,12 @@ class Table(pd.DataFrame):
     def weights(self):
         # TODO: do we switch to .weights and deprecate .W or keep .W?
         """Get the weights as a numpy array."""
-        return self[Table._WEIGHTS_COLUMN].values
+        val = self[Table._WEIGHTS_COLUMN]
+        if hasattr(val, 'values'):
+            return val.values
+        else:
+            # at least 1D when using this in TableSeries, which instead returns a 0D ndarray directly
+            return np.atleast_1d(val)
 
     @property
     def W(self):
@@ -146,6 +178,8 @@ class Table(pd.DataFrame):
             if weight.isnull().any():
                 raise ValueError("Weights cannot be nan. ")
             self[Table._WEIGHTS_COLUMN] = weight.values
+        elif isinstance(weight, pd.Categorical):
+            self[Table._WEIGHTS_COLUMN] = list(weight)
         else:
             raise TypeError("Expected one of [Number, str, Sequence, Series].")
 
@@ -158,8 +192,7 @@ class Table(pd.DataFrame):
         Do not pass positional arguments through to pandas.
         """
         # is pandas is calling this as part of its transformations, pass it through
-        known_pandas_kwargs = {"data", "index", "columns", "dtype", "copy"}
-        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(known_pandas_kwargs)) == 0
+        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(Table.KNOWN_PANDAS_KWARGS)) == 0
 
         ##### START PANDAS SUBCLASS COMPATIBILITY SECTION #####
         # this compatibility hack must exist because we override __new__ in a way incompatible
@@ -202,6 +235,8 @@ class Table(pd.DataFrame):
                 return cls.from_table(domain, *args)
             elif isinstance(args[0], list):
                 return cls.from_list(domain, *args)
+            elif isinstance(args[0], pd.DataFrame):
+                return cls.from_dataframe(args[0], domain=domain, **kwargs)
         else:
             domain = None
         return cls.from_numpy(domain, *args, **kwargs)
@@ -218,7 +253,11 @@ class Table(pd.DataFrame):
         # can't really be used in Orange in any meaningful way
         if hasattr(self, 'domain'):
             kwargs['data'] = self
-        super(Table, self).__init__(**kwargs)
+
+        # only pass through things known to pandas, e.g.
+        # Table(..., weights=1) passes weights to from_numpy, but would error
+        # when passing to pandas upstream
+        super(Table, self).__init__(**{k: v for k, v in kwargs.items() if k in Table.KNOWN_PANDAS_KWARGS})
 
         # all weights initialized to 1 (see the weight functions for details)
         self.name = getattr(self, 'name', kwargs.get("name", "untitled"))
@@ -278,6 +317,12 @@ class Table(pd.DataFrame):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        # if a series is passed, convert it to a frame
+        if isinstance(source_table, TableSeries):
+            d = source_table.domain
+            # to pandas df first to avoid adding a column/row of weights automatically
+            source_table = Table(source_table.domain, pd.DataFrame(source_table).transpose())
+
         new_cache = cls.conversion_cache is None
         try:
             if new_cache:
@@ -296,9 +341,11 @@ class Table(pd.DataFrame):
                                                  chain(target_domain.variables, target_domain.metas)):
                 if isinstance(conversion, Number):
                     result[target_column.name] = source_table[source_table.domain[conversion]]
-                    pass
                 else:
-                    result[target_column.name] = conversion(source_table)
+                    # when converting a single instance (row), this results in a single value
+                    # (and not e.g. a Series), so assigning to a table fails:
+                    # we ensure it's at least a 1D ndarray, and not a 0D ndarray
+                    result[target_column.name] = np.atleast_1d(conversion(source_table))
             result.domain = target_domain
 
             result.set_weights(source_table.weights)
@@ -449,6 +496,7 @@ class Table(pd.DataFrame):
 
         # transform any values we believe are null into actual null values
         result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        result._transform_discrete_values_to_descriptors()
         result._transform_discrete_into_categorical()
         result._transform_timevariable_into_datetime()
 
@@ -514,10 +562,27 @@ class Table(pd.DataFrame):
             cls._next_instance_id += num
             return out[0] if num == 1 and not force_list else out
 
+    def _transform_discrete_values_to_descriptors(self):
+        """
+        Transform discrete variables given in descriptor index form
+        into actual descriptors.
+        """
+        for var in chain(self.domain.variables, self.domain.metas):
+            if isinstance(var, DiscreteVariable):
+                # only transform the values if all of them appear to be integers and
+                # don't appear in the variable's values
+                # otherwise we're dealing with numeric discretes
+                is_values = self[var.name].apply(lambda v: isinstance(v, Number) and
+                                                           (isinstance(v, int) or v.is_integer()) and
+                                                           v not in var.values).all()
+                if is_values:
+                    self[var.name] = self[var.name].apply(lambda v: var.values[int(v)])
+
     def _transform_discrete_into_categorical(self):
         """
         Transform discrete variables into pandas' categorical.
-        This must be done after replacing null values because those aren't values.
+        This must be done after replacing null values because those aren't values,
+        and also after transforming discretes to descriptors.
         """
         for var in chain(self.domain.variables, self.domain.metas):
             if isinstance(var, DiscreteVariable):
@@ -608,7 +673,7 @@ class Table(pd.DataFrame):
         super(Table, self).__setitem__(key, value)
 
         if new_index_and_weights:
-            new_id = Table._new_id(len(self))
+            new_id = Table._new_id(len(self), force_list=True)
             self.index = new_id
             # super call because we'd otherwise recurse back into this
             super(Table, self).__setitem__(Table._WEIGHTS_COLUMN, 1)
@@ -1064,6 +1129,14 @@ class TableSeries(pd.Series):
     @property
     def _constructor_expanddim(self):
         return Table
+
+    # use the same functions as in Table for this
+    # WARNING: depends on TableSeries having a domain, which is ensured
+    # in Table._constructor_sliced
+    X = Table.X
+    Y = Table.Y
+    metas = Table.metas
+    weights = w = Table.weights
 
 
 class TablePanel(pd.Panel):

@@ -36,7 +36,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def test_predict_single_instance(self):
         learn = SklAdaBoostLearner()
         m = learn(self.iris)
-        ins = self.iris[0]
+        ins = self.iris.iloc[0]
         m(ins)
         _, _ = m(ins, m.ValueProbs)
 
@@ -73,7 +73,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def test_predict_single_instance_reg(self):
         learn = SklAdaBoostRegressionLearner()
         m = learn(self.housing)
-        ins = self.housing[0]
+        ins = self.housing.iloc[0]
         pred = m(ins)
         self.assertGreaterEqual(pred, 0)
 
