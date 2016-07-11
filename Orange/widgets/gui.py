@@ -2776,8 +2776,7 @@ class TableBarItem(QtGui.QItemDelegate):
         color = self.color
         if self.color_schema is not None and ratio is not None:
             class_ = index.data(TableClassValueRole)
-            if isinstance(class_, Orange.data.Value) and \
-                    class_.variable.is_discrete and \
+            if class_.variable.is_discrete and \
                     not math.isnan(class_):
                 color = self.color_schema[int(class_)]
 

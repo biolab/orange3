@@ -162,9 +162,7 @@ class Discrete(np.ndarray):
 
 
     def modus(self):
-        val = np.argmax(self)
-        return data.Value(self.variable,
-                          val) if self.variable is not None else val
+        return np.argmax(self)
 
 
     def random(self):
@@ -174,7 +172,7 @@ class Discrete(np.ndarray):
             s += e
             if s > v:
                 break
-        return data.Value(self.variable, i) if self.variable is not None else i
+        return i
 
 
 class Continuous(np.ndarray):

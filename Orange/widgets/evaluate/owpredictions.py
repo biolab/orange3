@@ -268,11 +268,6 @@ class OWPredictions(widget.OWWidget):
             results = []
             for p in slots:
                 values, prob = p.results
-                if p.predictor.domain.class_var.is_discrete:
-                    values = [
-                        Orange.data.Value(p.predictor.domain.class_var, v)
-                        for v in values
-                    ]
                 results.append((values, prob))
             results = list(zip(*(zip(*res) for res in results)))
 

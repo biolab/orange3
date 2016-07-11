@@ -15,7 +15,7 @@ import pandas as pd
 import pytz
 
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
-    StringVariable, TimeVariable, Unknown, Value
+    StringVariable, TimeVariable, Unknown
 from Orange.data.io import CSVReader
 from Orange.tests.base import create_pickling_tests
 
@@ -279,8 +279,6 @@ class TestStringVariable(VariableTest):
         a = StringVariable("a")
         self.assertEqual(a.to_val(None), "")
         self.assertEqual(a.str_val(""), "?")
-        self.assertEqual(a.str_val(Value(a, "")), "?")
-        self.assertEqual(a.repr_val(Value(a, "foo")), '"foo"')
 
 
 @variabletest(TimeVariable)
