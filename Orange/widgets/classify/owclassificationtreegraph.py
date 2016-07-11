@@ -482,9 +482,15 @@ class OWClassificationTreeGraph(OWTreeGraph):
             from sklearn.tree._tree import TREE_LEAF
 
         def run():
-            ow = OWClassificationTreeGraph()
             ow.handleNewSignals()
             ow.ctree(input_classification_tree)
+            # Update display with above settings
+            ow.toggle_zoom_slider()
+            ow.toggle_node_size()
+            ow.toggle_tree_depth()
+            ow.toggle_line_width()
+            ow.toggle_color()
+            # Display classification tree
             ow.show()
             qapp.exec()
             update_selection(ow)
@@ -497,6 +503,12 @@ class OWClassificationTreeGraph(OWTreeGraph):
         gen.add_import([QApplication, OWClassificationTreeGraph, numpy])
         gen.add_preamble(pre)
         gen.add_preamble(pre2)
+        gen.add_init("ow", "OWClassificationTreeGraph()", iscode=True)
+        gen.add_init("ow.zoom", self.zoom)
+        gen.add_init("ow.max_node_width", self.max_node_width)
+        gen.add_init("ow.max_tree_depth", self.max_tree_depth)
+        gen.add_init("ow.line_width_method", self.line_width_method)
+        gen.add_init("ow.target_class_index", self.target_class_index)
         gen.set_main(run)
         gen.add_extern(self.update_selection)
         gen.add_extern(_leaf_indices)

@@ -1918,35 +1918,20 @@ class OWPreprocess(widget.OWWidget):
         return d
 
     def init_code_gen(self):
-        def pre():
-            qapp = QApplication([])
-
         def run():
-            ow = OWPreprocess()
-            ow.storedsettings = {"preprocessors": preprocs, "name": ""}
-            ow._initialize()
-            ow.set_data(input_data)
-            preprocessor = ow.buildpreproc()
-            if input_data is not None:
-                try:
-                    data = preprocessor(input_data)
-                except ValueError as e:
-                    print("Error preprocessing data.")
-            else:
-                data = None
-            ow.set_data(None)
-            ow.handleNewSignals()
-            ow.saveSettings()
-            ow.onDeleteWidget()
+            preprocessor = PreprocessorList(plist)
+            data = preprocessor(input_data)
 
         gen = self.code_gen()
         gen.set_widget(self)
-        gen.add_import([QApplication, OWPreprocess])
-        gen.add_preamble(pre)
-        preprocs = self.storedsettings["preprocessors"]
-        gen.add_init("preprocs", "[None] * " + str(len(preprocs)), iscode=True)
-        for i, preproc in enumerate(preprocs):
-            gen.add_init("preprocs[" + str(i) + "]", str(preproc), iscode=True)
+        gen.add_import([preprocess.preprocess.PreprocessorList, OWPreprocess])
+        plist = self.storedsettings["preprocessors"]
+        gen.add_init("ow", "OWPreprocess()", iscode=True)
+        gen.add_init("plist", "[None] * " + str(len(plist)), iscode=True)
+        for i, preproc in enumerate(plist):
+            ppdef = "ow._qname2ppdef[\"" + preproc[0] + "\"]"
+            gen.add_init("plist[" + str(i) + "]",
+                ppdef + ".viewclass.createinstance(params=" + str(preproc[1]) + ")", iscode=True)
         gen.set_main(run)
         gen.add_output("preprocessor", "preprocessor", iscode=True)
         gen.add_output("preprocessed_data", "data", iscode=True)

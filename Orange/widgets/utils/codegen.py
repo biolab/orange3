@@ -243,6 +243,7 @@ class CodeGenerator(object):
             declaration = gen_declaration(initName, initValue, iscode=iscode)
             if declaration:
                 body += declaration
+        body += "\n"
 
         # input declaration
         for inpt in self.inputs:
