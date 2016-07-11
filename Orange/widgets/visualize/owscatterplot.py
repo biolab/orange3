@@ -86,8 +86,10 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 class OWScatterPlot(OWWidget):
     name = 'Scatter Plot'
-    description = 'Scatterplot visualization with explorative analysis and intelligent data visualization enhancements.'
+    description = "Interactive scatter plot visualization with " \
+                  "intelligent data visualization enhancements."
     icon = "icons/ScatterPlot.svg"
+    priority = 210
 
     inputs = [("Data", Table, "set_data", Default),
               ("Data Subset", Table, "set_subset_data"),
