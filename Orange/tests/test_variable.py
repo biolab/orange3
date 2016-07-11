@@ -310,12 +310,12 @@ class TestTimeVariable(VariableTest):
         ('1969-12-31 23:59:59', -1, '1969-12-31 23:59:59'),
         ('1900-01-01', -2208988800, '1900-01-01 00:00:00'),
         ('nan', np.nan, '?'),
-        ('1444651991.81', 1444651991.81, '2015-10-12 12:13:11.810000'),
         (1444651991.81, 1444651991.81, '2015-10-12 12:13:11.810000'),
     ]
 
     def test_looks_like(self):
-        self.assertTrue(TimeVariable.column_looks_like_time(pd.Series([a for a, _, _ in self.TESTS])))
+        # skip timestamps, we can't accurately determine them
+        self.assertTrue(TimeVariable.column_looks_like_time(pd.Series([a for a, _, _ in self.TESTS[:-1]])))
 
     def test_parse_repr(self):
         for datestr, timestamp, outstr in self.TESTS:

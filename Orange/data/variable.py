@@ -727,9 +727,10 @@ class TimeVariable(ContinuousVariable):
             # allow the variable to specify a format (overrides integers)
             kwargs = {'format': self.attributes.get('format')}
 
+        # .apply(str) because parsing a float discards the fractional part for some reason
         # utc=True: make timezone aware
         # .values: return a DatetimeIndex so we can actually localize to UTC
-        return pd.to_datetime(column.values, errors='raise', exact=True, utc=True,
+        return pd.to_datetime(column.apply(str).values, errors='raise', exact=True, utc=True,
                               infer_datetime_format=True, **kwargs)
 
     def repr_val(self, val):
