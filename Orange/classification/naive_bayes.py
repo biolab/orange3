@@ -47,14 +47,17 @@ class NaiveBayesModel(Model):
             data = [data]
         n_cls = len(self.class_freq)
         class_prob = (self.class_freq + 1) / (np.sum(self.class_freq) + n_cls)
-        log_cont_prob = [np.log(np.divide(np.array(c) + 1,
-                                          self.class_freq.reshape((n_cls, 1)) +
-                                          c.shape[1])) for c in self.cont]
-        probs = np.exp(np.array([np.sum(attr_prob[:, int(attr_val)]
-                                        for attr_val, attr_prob
-                                        in zip(ins, log_cont_prob)
-                                        if not np.isnan(attr_val))
-                                 for ins in data]) + np.log(class_prob))
+        if len(data.domain.attributes) == 0:
+            probs = np.tile(class_prob, (len(data), 1))
+        else:
+            log_cont_prob = [np.log(np.divide(np.array(c) + 1,
+                                              self.class_freq.reshape((n_cls, 1)) +
+                                              c.shape[1])) for c in self.cont]
+            probs = np.exp(np.array([np.sum(attr_prob[:, int(attr_val)]
+                                            for attr_val, attr_prob
+                                            in zip(ins, log_cont_prob)
+                                            if not np.isnan(attr_val))
+                                     for ins in data]) + np.log(class_prob))
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs
