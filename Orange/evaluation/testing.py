@@ -150,7 +150,7 @@ class Results:
             self.dtype = getattr(data.Y, 'dtype', self.dtype)
 
         if learners:
-            train_data = train_data or data
+            train_data = train_data if train_data is not None else data
             self.fit(train_data, data)
             return
 
@@ -594,11 +594,11 @@ class TestOnTestData(Results):
                          callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
-        self.indices = ((Ellipsis, Ellipsis),)
+        self.indices = ((slice(None), slice(None)),)
 
     def prepare_arrays(self, test_data):
         self.row_indices = np.arange(len(test_data))
-        self.folds = (Ellipsis, )
+        self.folds = (slice(None), )
         self.actual = test_data.Y.ravel()
 
 
