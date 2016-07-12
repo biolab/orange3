@@ -44,35 +44,35 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
 
         super().__init__(scene, **kwargs)
 
-    def resizeEvent(self, ev):
-        super().resizeEvent(ev)
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
         self.__needs_to_recalculate_initial = True
 
-    def wheelEvent(self, ev):
-        self.__handle_zoom(ev.delta())
-        super().wheelEvent(ev)
+    def wheelEvent(self, event):
+        self.__handle_zoom(event.delta())
+        super().wheelEvent(event)
 
-    def mousePressEvent(self, ev):
+    def mousePressEvent(self, event):
         # right click resets the zoom factor
-        if ev.button() == Qt.RightButton:
+        if event.button() == Qt.RightButton:
             self.reset_zoom()
-        super().mousePressEvent(ev)
+        super().mousePressEvent(event)
 
-    def keyPressEvent(self, ev):
-        if ev.key() == Qt.Key_Plus:
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Plus:
             self.__handle_zoom(1)
-        elif ev.key() == Qt.Key_Minus:
+        elif event.key() == Qt.Key_Minus:
             self.__handle_zoom(-1)
 
-        super().keyPressEvent(ev)
+        super().keyPressEvent(event)
 
     def __set_padding(self, padding):
         # Allow for multiple formats of padding for convenience
         if isinstance(padding, int):
-            padding = list(repeat(padding, 4))
+            padding = tuple(repeat(padding, 4))
         elif isinstance(padding, list) or isinstance(padding, tuple):
             if len(padding) == 2:
-                padding = (*padding, *padding)
+                padding = tuple(padding * 2)
         else:
             padding = 0, 0, 0, 0
 
@@ -99,8 +99,8 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
     def __zooming_out(direction):
         return direction < 0
 
-    def __zooming_in(self, ev):
-        return not self.__zooming_out(ev)
+    def __zooming_in(self, event):
+        return not self.__zooming_out(event)
 
     def __reset_zoomout_limit(self):
         self.__zoomout_limit_reached = False
@@ -166,15 +166,15 @@ class PannableGraphicsView(QtGui.QGraphicsView):
         super().__init__(*args, **kwargs)
         self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
 
-    def enterEvent(self, ev):
+    def enterEvent(self, event):
         self.viewport().setCursor(Qt.ArrowCursor)
-        super().enterEvent(ev)
+        super().enterEvent(event)
 
-    def mouseReleaseEvent(self, ev):
-        super().mouseReleaseEvent(ev)
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
         self.viewport().setCursor(Qt.ArrowCursor)
 
 
 class PreventDefaultWheelEvent(QtGui.QGraphicsView):
-    def wheelEvent(self, ev):
-        ev.accept()
+    def wheelEvent(self, event):
+        event.accept()

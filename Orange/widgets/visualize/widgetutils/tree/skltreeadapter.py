@@ -204,7 +204,7 @@ class SklTreeAdapter(TreeAdapter):
             l_node = find_largest_idx(self._tree.children_left[n])
             r_node = find_largest_idx(self._tree.children_right[n])
 
-            return l_node if l_node > r_node else r_node
+            return max(l_node, r_node)
 
         right = left = node
         if self._tree.children_left[left] == self.NO_CHILD:
@@ -286,7 +286,7 @@ class SklTreeAdapter(TreeAdapter):
 
             all_leaves = self.leaves(self.root)
 
-            indices = np.searchsorted(all_leaves, node_leaves, side='left')
+            indices = np.searchsorted(all_leaves, node_leaves)
             # all the leaf samples for each leaf
             leaf_samples = self.get_samples_in_leaves(dataset.X)
             # filter out the leaf samples array that are not selected

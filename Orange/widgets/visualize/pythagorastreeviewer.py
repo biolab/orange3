@@ -442,7 +442,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
         self.timer.setSingleShot(True)
 
-    def hoverEnterEvent(self, ev):
+    def hoverEnterEvent(self, event):
         self.timer.stop()
 
         def fnc(graphics_item):
@@ -466,7 +466,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
         self._propagate_z_values(self, fnc, other_fnc)
 
-    def hoverLeaveEvent(self, ev):
+    def hoverLeaveEvent(self, event):
 
         def fnc(graphics_item):
             # No need to set opacity in this branch since it was just selected

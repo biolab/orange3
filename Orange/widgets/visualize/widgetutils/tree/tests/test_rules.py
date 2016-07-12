@@ -42,8 +42,8 @@ class TestRules(unittest.TestCase):
         rule2 = ContinuousRule('Rule', False, 2)
         new_rule = rule1.merge_with(rule2)
         self.assertIsInstance(new_rule, IntervalRule)
-        self.assertEquals(new_rule.left_rule, rule1)
-        self.assertEquals(new_rule.right_rule, rule2)
+        self.assertEqual(new_rule.left_rule, rule1)
+        self.assertEqual(new_rule.right_rule, rule2)
 
     # INTERVAL RULES
     def test_merging_interval_rule_with_smaller_continuous_rule(self):
@@ -54,7 +54,7 @@ class TestRules(unittest.TestCase):
         rule2 = ContinuousRule('Rule', False, 2)
         new_rule = rule1.merge_with(rule2)
         self.assertIsInstance(new_rule, IntervalRule)
-        self.assertEquals(new_rule.right_rule.value, 2)
+        self.assertEqual(new_rule.right_rule.value, 2)
 
     def test_merging_interval_rule_with_larger_continuous_rule(self):
         """Merging `1 < x < 2` and `x < 3` should produce `1 < x < 2`."""
@@ -64,7 +64,7 @@ class TestRules(unittest.TestCase):
         rule2 = ContinuousRule('Rule', False, 3)
         new_rule = rule1.merge_with(rule2)
         self.assertIsInstance(new_rule, IntervalRule)
-        self.assertEquals(new_rule.left_rule.value, 1)
+        self.assertEqual(new_rule.left_rule.value, 1)
 
     def test_merging_interval_rule_with_larger_lt_continuous_rule(self):
         """Merging `0 < x < 3` and `x > 1` should produce `1 < x < 3`."""
@@ -74,7 +74,7 @@ class TestRules(unittest.TestCase):
         rule2 = ContinuousRule('Rule', True, 1)
         new_rule = rule1.merge_with(rule2)
         self.assertIsInstance(new_rule, IntervalRule)
-        self.assertEquals(new_rule.left_rule.value, 1)
+        self.assertEqual(new_rule.left_rule.value, 1)
 
     def test_merging_interval_rule_with_smaller_gt_continuous_rule(self):
         """Merging `0 < x < 3` and `x < 2` should produce `0 < x < 2`."""
@@ -84,7 +84,7 @@ class TestRules(unittest.TestCase):
         rule2 = ContinuousRule('Rule', False, 2)
         new_rule = rule1.merge_with(rule2)
         self.assertIsInstance(new_rule, IntervalRule)
-        self.assertEquals(new_rule.right_rule.value, 2)
+        self.assertEqual(new_rule.right_rule.value, 2)
 
     def test_merging_interval_rules_with_smaller_lt_component(self):
         """Merging `1 < x < 2` and `0 < x < 2` should produce `1 < x < 2`."""
@@ -95,8 +95,8 @@ class TestRules(unittest.TestCase):
                              ContinuousRule('Rule', True, 0),
                              ContinuousRule('Rule', False, 2))
         new_rule = rule1.merge_with(rule2)
-        self.assertEquals(new_rule.left_rule.value, 1)
-        self.assertEquals(new_rule.right_rule.value, 2)
+        self.assertEqual(new_rule.left_rule.value, 1)
+        self.assertEqual(new_rule.right_rule.value, 2)
 
     def test_merging_interval_rules_with_larger_lt_component(self):
         """Merging `0 < x < 4` and `1 < x < 4` should produce `1 < x < 4`."""
@@ -107,8 +107,8 @@ class TestRules(unittest.TestCase):
                              ContinuousRule('Rule', True, 1),
                              ContinuousRule('Rule', False, 4))
         new_rule = rule1.merge_with(rule2)
-        self.assertEquals(new_rule.left_rule.value, 1)
-        self.assertEquals(new_rule.right_rule.value, 4)
+        self.assertEqual(new_rule.left_rule.value, 1)
+        self.assertEqual(new_rule.right_rule.value, 4)
 
     def test_merging_interval_rules_generally(self):
         """Merging `0 < x < 4` and `2 < x < 6` should produce `2 < x < 4`."""
@@ -119,8 +119,8 @@ class TestRules(unittest.TestCase):
                              ContinuousRule('Rule', True, 2),
                              ContinuousRule('Rule', False, 6))
         new_rule = rule1.merge_with(rule2)
-        self.assertEquals(new_rule.left_rule.value, 2)
-        self.assertEquals(new_rule.right_rule.value, 4)
+        self.assertEqual(new_rule.left_rule.value, 2)
+        self.assertEqual(new_rule.right_rule.value, 4)
 
     # ALL RULES
     def test_merge_commutativity_on_continuous_rules(self):
@@ -139,19 +139,19 @@ class TestRules(unittest.TestCase):
                              ContinuousRule('Rule', False, 6))
         new_rule1 = rule1.merge_with(rule2)
         new_rule2 = rule2.merge_with(rule1)
-        self.assertEquals(new_rule1.left_rule.value,
-                          new_rule2.left_rule.value)
-        self.assertEquals(new_rule1.right_rule.value,
-                          new_rule2.right_rule.value)
+        self.assertEqual(new_rule1.left_rule.value,
+                         new_rule2.left_rule.value)
+        self.assertEqual(new_rule1.right_rule.value,
+                         new_rule2.right_rule.value)
 
-    def test_merge_keeps_sign_on_continuous_rules(self):
+    def test_merge_keeps_gt_on_continuous_rules(self):
         rule1 = ContinuousRule('Rule1', True, 1)
         rule2 = ContinuousRule('Rule1', True, 2)
         new_rule = rule1.merge_with(rule2)
-        self.assertEquals(new_rule.sign, True)
+        self.assertEqual(new_rule.gt, True)
 
     def test_merge_keeps_attr_name_on_continuous_rules(self):
         rule1 = ContinuousRule('Rule1', True, 1)
         rule2 = ContinuousRule('Rule1', True, 2)
         new_rule = rule1.merge_with(rule2)
-        self.assertEquals(new_rule.attr_name, 'Rule1')
+        self.assertEqual(new_rule.attr_name, 'Rule1')

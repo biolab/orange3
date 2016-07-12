@@ -294,10 +294,8 @@ class OWPythagorasTree(OWWidget):
 
     def _update_log_scale_slider(self):
         """On calc method combo box changed."""
-        if self.SIZE_CALCULATION[self.size_calc_idx][0] == 'Logarithmic':
-            self.log_scale_box.parent().setEnabled(True)
-        else:
-            self.log_scale_box.parent().setEnabled(False)
+        self.log_scale_box.parent().setEnabled(
+            self.SIZE_CALCULATION[self.size_calc_idx][0] == 'Logarithmic')
 
     # MODEL REMOVED CONTROL ELEMENTS CLEAR METHODS
     def _clear_info_box(self):
