@@ -159,7 +159,7 @@ class TestRules(unittest.TestCase):
         rule1 = ContinuousRule('Rule1', True, 1)
         rule2 = ContinuousRule('Rule1', True, 2)
         new_rule = rule1.merge_with(rule2)
-        self.assertEqual(new_rule.gt, True)
+        self.assertEqual(new_rule.greater, True)
 
     def test_merge_keeps_attr_name_on_continuous_rules(self):
         """Merging continuous rules should keep the name of the rule."""
