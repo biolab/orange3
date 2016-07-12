@@ -493,14 +493,11 @@ class OWClassificationTreeGraph(OWTreeGraph):
             # Display classification tree
             ow.show()
             qapp.exec()
-            update_selection(ow)
-            ow.handleNewSignals()
-            ow.saveSettings()
-            ow.onDeleteWidget()
+            ow.update_selection()
 
         gen = self.code_gen()
         gen.set_widget(self)
-        gen.add_import([QApplication, OWClassificationTreeGraph, numpy])
+        gen.add_import([QApplication, OWClassificationTreeGraph])
         gen.add_preamble(pre)
         gen.add_preamble(pre2)
         gen.add_init("ow", "OWClassificationTreeGraph()", iscode=True)
@@ -510,11 +507,6 @@ class OWClassificationTreeGraph(OWTreeGraph):
         gen.add_init("ow.line_width_method", self.line_width_method)
         gen.add_init("ow.target_class_index", self.target_class_index)
         gen.set_main(run)
-        gen.add_extern(self.update_selection)
-        gen.add_extern(_leaf_indices)
-        gen.add_extern(_subnode_range)
-        gen.null_ln("send(")
-        gen.add_repl_map(("self", "ow"))
         gen.add_output("data", "data", iscode=True)
         return gen
 

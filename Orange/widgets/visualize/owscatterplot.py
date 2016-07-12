@@ -370,6 +370,9 @@ class OWScatterPlot(OWWidget):
         def pre():
             qapp = QApplication([])
 
+        def pre2():
+            import numpy as np
+
         def run():
             ow = OWScatterPlot()
             ow.set_data(input_data)
@@ -380,17 +383,17 @@ class OWScatterPlot(OWWidget):
             ow.handleNewSignals()
             ow.show()
             qapp.exec()
-            ow.set_data(None)
-            ow.set_subset_data(None)
-            ow.handleNewSignals()
-            ow.saveSettings()
-            ow.onDeleteWidget()
 
         gen = self.code_gen()
         gen.set_widget(self)
-        gen.add_import([QApplication, OWScatterPlot])
+        gen.add_import([QApplication, OWScatterPlot, np])
         gen.add_preamble(pre)
+        gen.add_preamble(pre2)
         gen.set_main(run)
+        gen.add_output("selected_data",
+            "ow.data[ow.graph.get_selection()]", iscode=True)
+        gen.add_output("other_data",
+            "ow.data[np.full(len(ow.data), True, dtype=bool)]", iscode=True)
 
         return gen
 
