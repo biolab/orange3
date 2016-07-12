@@ -38,12 +38,9 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
     K = 10
 
     def check_preconditions(self):
-        if not super().check_preconditions():
+        if not super().check_preconditions() or \
+                not self.master.data.domain.class_var:
             return False
-        if not self.master.data.domain.class_var:
-            self.information(33, "Data with a class variable is required.")
-            return False
-        self.master.information(33)
         return True
 
     def iterate_states(self, initial_state):
@@ -149,9 +146,10 @@ class OWScatterPlot(OWWidget):
         self.vizrank = ScatterPlotVizRank(self)
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
+        self.vizrank_button_tooltip = "Find informative projections"
         self.vizrank_button = gui.button(
             vizrank_box, self, "Score Plots", callback=self.vizrank.reshow,
-            tooltip="Find informative projections", enabled=False)
+            tooltip=self.vizrank_button_tooltip, enabled=False)
         self.vizrank.pairSelected.connect(self.set_attr)
 
         gui.separator(box)
@@ -302,6 +300,12 @@ class OWScatterPlot(OWWidget):
         self.vizrank_button.setEnabled(
             self.data is not None and self.data.domain.class_var is not None
             and len(self.data.domain.attributes) > 1 and len(self.data) > 1)
+        if self.data is not None and self.data.domain.class_var is None \
+            and len(self.data.domain.attributes) > 1 and len(self.data) > 1:
+            self.vizrank_button.setToolTip(
+                "Data with a class variable is required.")
+        else:
+            self.vizrank_button.setToolTip(self.vizrank_button_tooltip)
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
