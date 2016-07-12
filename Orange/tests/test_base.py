@@ -3,7 +3,7 @@
 import unittest
 
 from Orange.base import SklLearner
-from Orange.classification import LogisticRegressionLearner
+from Orange.regression import LinearRegressionLearner
 
 
 class TestSklLearner(unittest.TestCase):
@@ -27,6 +27,6 @@ class TestSklLearner(unittest.TestCase):
         self.assertFalse(DummyLearner().supports_weights)
 
     def test_logreg(self):
-        self.assertTrue(LogisticRegressionLearner().supports_weights,
-                        "Either LogisticRegression no longer supports weighted tables"
+        self.assertTrue(LinearRegressionLearner().supports_weights,
+                        "Either LinearRegression no longer supports weighted tables "
                         "or SklLearner.supports_weights is out-of-date.")
