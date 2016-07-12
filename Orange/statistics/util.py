@@ -165,7 +165,7 @@ def stats(X, weights=None, compute_variance=False):
     is_numeric = np.issubdtype(X.dtype, np.number)
     is_sparse = issparse(X)
 
-    if is_numeric and not is_sparse:
+    if X.size and is_numeric and not is_sparse:
         nans = np.isnan(X).sum(axis=0)
         return np.column_stack((
             np.nanmin(X, axis=0),
@@ -188,7 +188,7 @@ def stats(X, weights=None, compute_variance=False):
             X.shape[1] - non_zero,
             non_zero))
     else:
-        nans = ~X.astype(bool).sum(axis=0)
+        nans = ~X.astype(bool).sum(axis=0) if X.size else np.zeros(X.shape[1])
         return np.column_stack((
             np.tile(np.inf, X.shape[1]),
             np.tile(-np.inf, X.shape[1]),

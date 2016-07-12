@@ -33,6 +33,10 @@ class TestUtil(unittest.TestCase):
         X[1, 1] = np.nan
         np.testing.assert_equal(stats(X), [[0, 2, 1, 0, 0, 2],
                                            [1, 1, 1, 0, 1, 1]])
+        # empty table should return ~like metas
+        X = X[:0]
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0],
+                                           [np.inf, -np.inf, 0, 0, 0, 0]])
 
     def test_stats_sparse(self):
         X = csr_matrix(np.identity(5))
