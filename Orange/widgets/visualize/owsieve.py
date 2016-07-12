@@ -58,7 +58,7 @@ class OWSieveDiagram(OWWidget):
     """
     name = "Sieve Diagram"
     icon = "icons/SieveDiagram.svg"
-    priority = 4200
+    priority = 310
 
     inputs = [("Data", Table, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
