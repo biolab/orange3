@@ -12,10 +12,8 @@ import numpy as np
 import pandas as pd
 import pandas.core.internals
 
-from Orange.statistics.util import bincount, countnans, contingency
 from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVariable, Variable, TimeVariable
 from Orange.util import flatten, deprecated
-from . import _contingency
 
 
 def get_sample_datasets_dir():
@@ -949,28 +947,36 @@ class Table(pd.DataFrame):
                                       self[col].isnull().sum()))
         return distributions
 
-    # TODO: move this to contingency.py and use pandas instead if this code
     def _compute_contingency(self, col_vars=None, row_var=None):
         """
         Compute contingency matrices for one or more discrete or
         continuous variables against the specified discrete variable.
 
-        The resulting list  contains a pair for each column variable.
-        The first element contains the contingencies and the second
-        elements gives the distribution of the row variables for instances
-        in which the value of the column variable is missing.
+        The result is a tuple of (list of contingencies, num missing row_var values).
+
+        The list of contingencies contains a pair for each column variable.
+        The first element contains the contingencies (this changes depending on the variable type; see below),
+        and the second element is a 1D numpy array, where each element is the count of missing
+        column variable elements for the respective row variable value.
 
         The format of contingencies returned depends on the variable type:
-
         - for discrete variables, it is a numpy array, where
-          element (i, j) contains count of rows with i-th value of the
-          row variable and j-th value of the column variable.
-
-        - for continuous variables, contingency is a list of two arrays,
+          element (i, j) contains the count of rows with the i-th value of the
+          row variable and the j-th value of the column variable.
+        - for continuous variables, the contingency is a list of two arrays,
           where the first array contains ordered distinct values of the
-          column_variable and the element (i,j) of the second array
+          column_variable and the element (i, j) of the second array
           contains count of rows with i-th value of the row variable
           and j-th value of the ordered column variable.
+
+        The final output structure looks like:
+        result (tuple)
+         |__contingencies (list of len(col_vars))
+         |   |__contingency, one of
+         |   |   |__2D np.array
+         |   |   |__tuple(sorted list of continuous values, 2D np.array)
+         |   |__1D np.array (missing column elements for each row value)
+         |__num missing row_var values (int)
 
         :param col_vars: variables whose values will correspond to columns of
             contingency matrices
@@ -980,107 +986,36 @@ class Table(pd.DataFrame):
             rows of contingency matrices
         :type row_var: int, variable name or :obj:`Orange.data.DiscreteVariable`
         """
-        n_atts = self.X.shape[1]
-
-        if col_vars is None:
-            col_vars = range(len(self.domain.variables))
-            single_column = False
-        else:
-            col_vars = [self.domain.index(var) for var in col_vars]
-            single_column = len(col_vars) == 1 and len(self.domain) > 1
         if row_var is None:
             row_var = self.domain.class_var
             if row_var is None:
-                raise ValueError("No row variable")
+                raise ValueError("No row variable. ")
+        if col_vars is None:
+            col_vars = self.domain.variables
 
-        row_desc = self.domain[row_var]
-        if not row_desc.is_discrete:
-            raise TypeError("Row variable must be discrete")
-        row_indi = self.domain.index(row_var)
-        n_rows = len(row_desc.values)
-        if 0 <= row_indi < n_atts:
-            row_data = self.X[:, row_indi]
-        elif row_indi < 0:
-            row_data = self.metas[:, -1 - row_indi]
-        else:
-            row_data = self._Y[:, row_indi - n_atts]
+        row_var = self.domain[row_var]
+        col_vars = [self.domain[v] for v in col_vars]
+        if not row_var.is_discrete:
+            raise TypeError("Row variable must be discrete. ")
+        if any(not (var.is_discrete or var.is_continuous) for var in col_vars):
+            raise ValueError("Contingency can be computed only for discrete and continuous values. ")
 
-        W = self.weights
-        nan_inds = None
-
-        col_desc = [self.domain[var] for var in col_vars]
-        col_indi = [self.domain.index(var) for var in col_vars]
-
-        if any(not (var.is_discrete or var.is_continuous)
-               for var in col_desc):
-            raise ValueError("contingency can be computed only for discrete "
-                             "and continuous values")
-
-        if row_data.dtype.kind != "f": #meta attributes can be stored as type object
-            row_data = row_data.astype(float)
-
-        unknown_rows = countnans(row_data)
-        if unknown_rows:
-            nan_inds = np.isnan(row_data)
-            row_data = row_data[~nan_inds]
-            if W:
-                W = W[~nan_inds]
-                unknown_rows = np.sum(W[nan_inds])
-
-        contingencies = [None] * len(col_desc)
-        for arr, f_cond, f_ind in (
-                (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
-                (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
-                (self.metas, lambda i: i < 0, lambda i: -1 - i)):
-
-            if nan_inds is not None:
-                arr = arr[~nan_inds]
-
-            arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
-
-            vars = [(e, f_ind(col_indi[e]), col_desc[e]) for e in arr_indi]
-            disc_vars = [v for v in vars if v[2].is_discrete]
-            if disc_vars:
-                if sp.issparse(arr):
-                    max_vals = max(len(v[2].values) for v in disc_vars)
-                    disc_indi = {i for _, i, _ in disc_vars}
-                    mask = [i in disc_indi for i in range(arr.shape[1])]
-                    conts, nans = contingency(arr, row_data, max_vals - 1,
-                                              n_rows - 1, W, mask)
-                    for col_i, arr_i, _ in disc_vars:
-                        contingencies[col_i] = (conts[arr_i], nans[arr_i])
-                else:
-                    for col_i, arr_i, var in disc_vars:
-                        contingencies[col_i] = contingency(
-                            arr[:, arr_i].astype(float),
-                            row_data, len(var.values) - 1, n_rows - 1, W)
-
-            cont_vars = [v for v in vars if v[2].is_continuous]
-            if cont_vars:
-
-                classes = row_data.astype(dtype=np.int8)
-                if W is not None:
-                    W = W.astype(dtype=np.float64)
-                if sp.issparse(arr):
-                    arr = sp.csc_matrix(arr)
-
-                for col_i, arr_i, _ in cont_vars:
-                    if sp.issparse(arr):
-                        col_data = arr.data[arr.indptr[arr_i]:
-                        arr.indptr[arr_i + 1]]
-                        rows = arr.indices[arr.indptr[arr_i]:
-                        arr.indptr[arr_i + 1]]
-                        W_ = None if W is None else W[rows]
-                        classes_ = classes[rows]
-                    else:
-                        col_data, W_, classes_ = arr[:, arr_i], W, classes
-
-                    col_data = col_data.astype(dtype=np.float64)
-                    U, C, unknown = _contingency.contingency_floatarray(
-                        col_data, classes_, n_rows, W_)
-                    contingencies[col_i] = ([U, C], unknown)
-
-        return contingencies, unknown_rows
+        # assertions at this point:
+        #  - row_var exists and is discrete
+        #  - col_vars is a list of continuous or discrete variables
+        contingencies = []
+        unknown_grouper = self.groupby(row_var)
+        for var in col_vars:
+            # we limit ourselves to counting the weights (we only need the count, NAs don't matter)
+            # so we get a slimmer result and hopefully faster processing
+            pivot = pd.pivot_table(self, values=Table._WEIGHTS_COLUMN, index=[row_var],
+                                   columns=[var], aggfunc=np.size).fillna(0)
+            unknowns = unknown_grouper[var].agg(lambda x: x.isnull().sum())
+            if var.is_discrete:
+                contingencies.append((pivot.values, unknowns.values))
+            else:
+                contingencies.append(((pivot.columns.values, pivot.values), unknowns.values))
+        return contingencies, self[row_var].isnull().sum()
 
 
 class TableSeries(pd.Series):

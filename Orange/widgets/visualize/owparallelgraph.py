@@ -388,7 +388,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         if self.domain_contingencies is None:
             self.domain_contingencies = dict(
                 zip([attr for attr in self.data_domain if attr.is_discrete],
-                    get_contingencies(self.raw_data, skipContinuous=True)))
+                    get_contingencies(self.raw_data, skip_continuous=True)))
             self.domain_contingencies[class_] = get_contingency(self.raw_data, class_, class_)
 
         max_count = max([contingency.max() for contingency in self.domain_contingencies.values()] or [1])

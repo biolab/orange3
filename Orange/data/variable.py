@@ -440,12 +440,11 @@ class DiscreteVariable(Variable):
                 return self.values.index(s)
             else:
                 # find the nearest instance
-                np.argmin([np.abs(v - s) if isinstance(v, Number) else np.inf for v in self.values])
+                return np.argmin([np.abs(v - s) if isinstance(v, Number) else np.inf for v in self.values])
         if s in self.unknown_str:
             return ValueUnknown
         if not isinstance(s, str):
-            raise TypeError('Cannot convert {} to value of "{}"'.format(
-                type(s).__name__, self.name))
+            raise TypeError('Cannot convert {} to value of "{}"'.format(type(s).__name__, self.name))
         return self.values.index(s)
 
     def add_value(self, s):
