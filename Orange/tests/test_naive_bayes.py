@@ -4,7 +4,7 @@
 import unittest
 
 from Orange.classification import NaiveBayesLearner
-from Orange.data import Table
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import CrossValidation, CA
 
 
@@ -35,3 +35,13 @@ class TestNaiveBayesLearner(unittest.TestCase):
         X = self.table.X[::20]
         self.model(X)
         vals, probs = self.model(X, self.model.ValueProbs)
+
+    def test_degenerate(self):
+        d = Domain((ContinuousVariable(name="A"), ContinuousVariable(name="B"), ContinuousVariable(name="C")),
+                    DiscreteVariable(name="CLASS", values=["M", "F"]))
+        t = Table(d, [[0,1,0,0], [0,1,0,1], [0,1,0,1]])
+        nb = NaiveBayesLearner()
+        model = nb(t)
+        self.assertEqual(model.domain.attributes, ())
+        self.assertEqual(model(t[0]), 1)
+        self.assertTrue(all(model(t) == 1))
