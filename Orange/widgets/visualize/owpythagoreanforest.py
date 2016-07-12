@@ -290,6 +290,7 @@ class OWPythagoreanForest(OWWidget):
         self.send('Tree', obj)
 
     def send_report(self):
+        """Send report."""
         self.report_plot()
 
     def _update_scene_rect(self):

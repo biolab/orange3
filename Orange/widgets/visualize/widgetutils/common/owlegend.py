@@ -92,15 +92,17 @@ class Anchorable(QtGui.QGraphicsWidget):
         actual offset from the top left corner of the item so positioning can
         be done correctly."""
         off_x, off_y = offset.x(), offset.y()
-        w, h = self.boundingRect().width(), self.boundingRect().height()
+        width = self.boundingRect().width()
+        height = self.boundingRect().height()
+
         if self.__corner_str == self.TOP_LEFT:
             return QtCore.QPoint(-off_x, -off_y)
         elif self.__corner_str == self.TOP_RIGHT:
-            return QtCore.QPoint(off_x + w, -off_y)
+            return QtCore.QPoint(off_x + width, -off_y)
         elif self.__corner_str == self.BOTTOM_RIGHT:
-            return QtCore.QPoint(off_x + w, off_y + h)
+            return QtCore.QPoint(off_x + width, off_y + height)
         elif self.__corner_str == self.BOTTOM_LEFT:
-            return QtCore.QPoint(-off_x, off_y + h)
+            return QtCore.QPoint(-off_x, off_y + height)
 
     def __get_closest_corner(self):
         view = self.__get_view()
@@ -110,9 +112,9 @@ class Anchorable(QtGui.QGraphicsWidget):
         legend_box = QtCore.QRect(pos, self.size().toSize())
         view_box = QtCore.QRect(QtCore.QPoint(0, 0), view.size())
 
-        def distance(t1, t2):
+        def distance(pt1, pt2):
             # 2d euclidean distance
-            return np.sqrt((t1.x() - t2.x()) ** 2 + (t1.y() - t2.y()) ** 2)
+            return np.sqrt((pt1.x() - pt2.x()) ** 2 + (pt1.y() - pt2.y()) ** 2)
 
         distances = [
             (distance(getattr(view_box, corner)(),

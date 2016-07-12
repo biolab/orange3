@@ -108,7 +108,7 @@ class OWPythagorasTree(OWWidget):
         # CONTROL AREA
         # Tree info area
         box_info = gui.widgetBox(self.controlArea, 'Tree Info')
-        self.info = gui.widgetLabel(box_info, label='')
+        self.info = gui.widgetLabel(box_info)
 
         # Display settings area
         box_display = gui.widgetBox(self.controlArea, 'Display Settings')
@@ -249,10 +249,12 @@ class OWPythagorasTree(OWWidget):
         self.ptree.set_depth_limit(self.depth_limit)
 
     def update_colors(self):
+        """When the target class / node coloring needs to be updated."""
         self.ptree.target_class_has_changed()
         self._tree_specific('_update_legend_colors')()
 
     def update_size_calc(self):
+        """When the tree size calculation is updated."""
         self._update_log_scale_slider()
         self.invalidate_tree()
 
@@ -265,6 +267,7 @@ class OWPythagorasTree(OWWidget):
             self._update_main_area()
 
     def update_tooltip_enabled(self):
+        """When the tooltip visibility is changed and need to be updated."""
         if self.tooltips_enabled:
             self.ptree.set_tooltip_func(
                 self._tree_specific('_get_tooltip')
@@ -274,6 +277,7 @@ class OWPythagorasTree(OWWidget):
         self.ptree.tooltip_has_changed()
 
     def update_show_legend(self):
+        """When the legend visibility needs to be updated."""
         self._update_legend_visibility()
 
     # MODEL CHANGED CONTROL ELEMENTS UPDATE METHODS
@@ -350,6 +354,7 @@ class OWPythagorasTree(OWWidget):
         self.send('Selected Data', data)
 
     def send_report(self):
+        """Send report."""
         self.report_plot()
 
     def _tree_specific(self, method):
@@ -449,12 +454,13 @@ class OWPythagorasTree(OWWidget):
         return '<p>' \
             + text \
             + '{}/{} samples ({:2.3f}%)'.format(
-                  int(samples), total, ratio * 100) \
+                int(samples), total, ratio * 100) \
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
-            + ('<br><br>' if len(rules) and not self.tree_adapter.is_leaf(
-               node.label) else '') \
+            + ('<br><br>'
+               if len(rules) and not self.tree_adapter.is_leaf(node.label)
+               else '') \
             + rules_str \
             + '</p>'
 
@@ -566,10 +572,10 @@ class OWPythagorasTree(OWWidget):
 
 
 class TreeGraphicsView(
-    PannableGraphicsView,
-    ZoomableGraphicsView,
-    AnchorableGraphicsView,
-    PreventDefaultWheelEvent
+        PannableGraphicsView,
+        ZoomableGraphicsView,
+        AnchorableGraphicsView,
+        PreventDefaultWheelEvent
 ):
     """QGraphicsView that contains all functionality we will use to display
     tree."""

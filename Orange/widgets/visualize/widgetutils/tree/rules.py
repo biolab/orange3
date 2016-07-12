@@ -1,4 +1,4 @@
-"""Rules for classification and regression trees.
+r"""Rules for classification and regression trees.
 
 Tree visualisations usually need to show the rules of nodes, these classes make
 merging these rules simple (otherwise you have repeating rules e.g. `age < 3`

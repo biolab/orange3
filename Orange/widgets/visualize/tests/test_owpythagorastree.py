@@ -9,6 +9,7 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
 )
 
 
+# pylint: disable=protected-access
 class TestPythagorasTree(unittest.TestCase):
     """Pythagorean tree testing, make sure calculating square positions works
     properly.
