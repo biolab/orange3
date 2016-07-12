@@ -13,8 +13,8 @@ from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWKMeans(widget.OWWidget):
-    name = "k-means"
-    description = "k-means clustering algorithm with silhouette-based " \
+    name = "k-Means"
+    description = "k-Means clustering algorithm with silhouette-based " \
                   "quality estimation."
     icon = "icons/KMeans.svg"
     priority = 2100
