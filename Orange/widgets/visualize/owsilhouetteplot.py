@@ -28,6 +28,7 @@ class OWSilhouettePlot(widget.OWWidget):
     description = "Silhouette Plot"
 
     icon = "icons/Silhouette.svg"
+    priority = 510
 
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
