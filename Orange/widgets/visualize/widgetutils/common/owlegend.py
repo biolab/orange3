@@ -1,12 +1,24 @@
-"""
-Legend classes to use with `QGraphicsScene` objects.
-"""
+"""Legend classes to use with `QGraphicsScene` objects."""
 import numpy as np
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 
 
 class Anchorable(QtGui.QGraphicsWidget):
+    """Anchorable base class.
+
+    Subclassing the `Anchorable` class will anchor the given
+    `QGraphicsWidget` to a position on the viewport. This does require you to
+    use the `AnchorableGraphicsView` class, it is made to be composable, so
+    that should not be a problem.
+
+    Notes
+    -----
+    .. note:: Subclassing this class will not make your widget movable, you
+        have to do that yourself. If you do make your widget movable, this will
+        handle any further positioning when the widget is moved.
+
+    """
 
     __corners = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']
     TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT = __corners
@@ -27,30 +39,30 @@ class Anchorable(QtGui.QGraphicsWidget):
         elif isinstance(offset, QtCore.QPoint):
             self.__offset = offset
 
-    def moveEvent(self, ev):
-        super().moveEvent(ev)
+    def moveEvent(self, event):
+        super().moveEvent(event)
         # This check is needed because simply resizing the window will cause
         # the item to move and trigger a `moveEvent` therefore we need to check
         # that the movement was done intentionally by the user using the mouse
         if QtGui.QApplication.mouseButtons() == Qt.LeftButton:
             self.recalculate_offset()
 
-    def resizeEvent(self, ev):
+    def resizeEvent(self, event):
         # When the item is first shown, we need to update its position
-        super().resizeEvent(ev)
+        super().resizeEvent(event)
         if not self.__has_been_drawn:
             self.__offset = self.__calculate_actual_offset(self.__offset)
             self.update_pos()
             self.__has_been_drawn = True
 
-    def showEvent(self, ev):
+    def showEvent(self, event):
         # When the item is first shown, we need to update its position
-        super().showEvent(ev)
+        super().showEvent(event)
         self.update_pos()
 
     def recalculate_offset(self):
-        # This is called whenever the item is being moved and needs to
-        # recalculate its offset
+        """This is called whenever the item is being moved and needs to
+        recalculate its offset."""
         view = self.__get_view()
         # Get the view box and position of legend relative to the view,
         # not the scene
@@ -63,9 +75,11 @@ class Anchorable(QtGui.QGraphicsWidget):
         self.__offset = viewbox_corner - pos
 
     def update_pos(self):
-        # This is called whenever something happened with the view that caused
-        # this item to move from its anchored position, so we have to adjust
-        # the position to maintain the effect of being anchored
+        """Update the widget position relative to the viewport.
+
+        This is called whenever something happened with the view that caused
+        this item to move from its anchored position, so we have to adjust the
+        position to maintain the effect of being anchored."""
         view = self.__get_view()
         if self.__corner_str and view is not None:
             box = self.__usable_viewbox()
@@ -125,45 +139,48 @@ class Anchorable(QtGui.QGraphicsWidget):
         view = self.__get_view()
 
         if view.horizontalScrollBar().isVisible():
-            h = view.horizontalScrollBar().size().height()
+            height = view.horizontalScrollBar().size().height()
         else:
-            h = 0
+            height = 0
 
         if view.verticalScrollBar().isVisible():
-            w = view.verticalScrollBar().size().width()
+            width = view.verticalScrollBar().size().width()
         else:
-            w = 0
+            width = 0
 
-        size = view.size() - QtCore.QSize(w, h)
+        size = view.size() - QtCore.QSize(width, height)
         return QtCore.QRect(QtCore.QPoint(0, 0), size)
 
 
 class AnchorableGraphicsView(QtGui.QGraphicsView):
+    """Subclass when wanting to use Anchorable items in your view."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Handle scroll bar hiding or showing
         self.horizontalScrollBar().valueChanged.connect(
             self.update_anchored_items)
         self.verticalScrollBar().valueChanged.connect(
             self.update_anchored_items)
 
-    def resizeEvent(self, ev):
-        super().resizeEvent(ev)
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
         self.update_anchored_items()
 
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
         self.update_anchored_items()
 
-    def wheelEvent(self, ev):
-        super().wheelEvent(ev)
+    def wheelEvent(self, event):
+        super().wheelEvent(event)
         self.update_anchored_items()
 
-    def mouseMoveEvent(self, ev):
-        super().mouseMoveEvent(ev)
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
         self.update_anchored_items()
 
     def update_anchored_items(self):
+        """Update all the items that subclass the `Anchorable` class."""
         for item in self.__anchorable_items():
             item.update_pos()
 
@@ -172,6 +189,9 @@ class AnchorableGraphicsView(QtGui.QGraphicsView):
 
 
 class ColorIndicator(QtGui.QGraphicsWidget):
+    """Base class for an item indicator.
+
+    Usually the little square or circle in the legend in front of the text."""
     pass
 
 
@@ -320,7 +340,7 @@ class LegendGradient(QtGui.QGraphicsWidget):
 
     Notes
     -----
-    .. Note:: While the gradient does support any number of colors, any more
+    .. note:: While the gradient does support any number of colors, any more
         than 3 is not very readable. This should not be a problem, since Orange
         only implements 2 or 3 colors.
 
@@ -348,11 +368,11 @@ class LegendGradient(QtGui.QGraphicsWidget):
 
         # Get the appropriate rectangle dimensions based on orientation
         if orientation == Qt.Vertical:
-            w, h = self.GRADIENT_WIDTH, self.GRADIENT_HEIGHT
+            width, height = self.GRADIENT_WIDTH, self.GRADIENT_HEIGHT
         elif orientation == Qt.Horizontal:
-            w, h = self.GRADIENT_HEIGHT, self.GRADIENT_WIDTH
+            width, height = self.GRADIENT_HEIGHT, self.GRADIENT_WIDTH
 
-        self.__rect_item = QtGui.QGraphicsRectItem(0, 0, w, h, self)
+        self.__rect_item = QtGui.QGraphicsRectItem(0, 0, width, height, self)
         self.__rect_item.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 0)))
         self.__rect_item.setBrush(QtGui.QBrush(self.__gradient))
 
@@ -418,12 +438,9 @@ class ContinuousLegendItem(QtGui.QGraphicsLinearLayout):
 class Legend(Anchorable):
     """Base legend class.
 
-    This class provides common attributes for any legend derivates:
+    This class provides common attributes for any legend subclasses:
       - Behaviour on `QGraphicsScene`
       - Appearance of legend
-
-    If you have access to the `domain` property, the `LegendBuilder` class
-    can be used to automatically build a legend for you.
 
     Parameters
     ----------
@@ -447,7 +464,7 @@ class Legend(Anchorable):
 
     Notes
     -----
-    .. Warning:: If the domain parameter is supplied, the items parameter will
+    .. warning:: If the domain parameter is supplied, the items parameter will
         be ignored.
 
     """
@@ -457,6 +474,7 @@ class Legend(Anchorable):
                  font=None, color_indicator_cls=LegendItemSquare, **kwargs):
         super().__init__(parent, **kwargs)
 
+        self._layout = None
         self.orientation = orientation
         self.bg_color = QtGui.QBrush(bg_color)
         self.color_indicator_cls = color_indicator_cls
@@ -510,7 +528,7 @@ class Legend(Anchorable):
             If the domain does not contain the correct type of class variable.
 
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def set_items(self, values):
         """Handle receiving an array of items.
@@ -523,7 +541,7 @@ class Legend(Anchorable):
         -------
 
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @staticmethod
     def _convert_to_color(obj):
@@ -587,7 +605,7 @@ class OWContinuousLegend(Legend):
     OWDiscreteLegend
 
     """
-    
+
     def __init__(self, *args, **kwargs):
         # Variables used in the `set_` methods must be set before calling super
         self.__range = kwargs.get('range', ())
@@ -637,6 +655,19 @@ class OWContinuousLegend(Legend):
 
 
 class OWBinnedContinuousLegend(Legend):
+    """Binned continuous legend in case you don't like gradients.
+
+    This is not implemented yet, but in case it ever needs to be, the stub is
+    available.
+
+    See Also
+    --------
+    Legend
+    OWDiscreteLegend
+    OWContinuousLegend
+
+    """
+
     def set_domain(self, domain):
         pass
 

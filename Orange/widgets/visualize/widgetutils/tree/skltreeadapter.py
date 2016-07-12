@@ -1,3 +1,4 @@
+"""Tree adapter class for sklearn trees."""
 from collections import OrderedDict
 
 import numpy as np

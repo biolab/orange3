@@ -1,3 +1,4 @@
+"""Pythagorean forest widget for visualizing random forests."""
 from math import log, sqrt
 
 import numpy as np
@@ -163,14 +164,17 @@ class OWPythagoreanForest(OWWidget):
 
     # CONTROL AREA CALLBACKS
     def max_depth_changed(self):
+        """When the max depth slider is changed."""
         for tree in self.ptrees:
             tree.set_depth_limit(self.depth_limit)
 
     def target_colors_changed(self):
+        """When the target class or coloring method is changed."""
         for tree in self.ptrees:
             tree.target_class_has_changed()
 
     def size_calc_changed(self):
+        """When the size calculation of the trees is changed."""
         if self.model is not None:
             self.forest_adapter = self._get_forest_adapter(self.model)
             self.grid.clear()
@@ -181,6 +185,7 @@ class OWPythagoreanForest(OWWidget):
             self.max_depth_changed()
 
     def zoom_changed(self):
+        """When we update the "Zoom" slider."""
         for item in self.grid_items:
             item.set_max_size(self._calculate_zoom(self.zoom))
 
@@ -385,10 +390,13 @@ class OWPythagoreanForest(OWWidget):
 
 
 class GridItem(SelectableGridItem, ZoomableGridItem):
+    """The grid item we will use in our grid."""
     pass
 
 
 class SklRandomForestAdapter:
+    """Take a `RandomForest` and wrap all the trees into the `TreeAdapter`
+    instances that Pythagorean trees use."""
     def __init__(self, model, domain, adjust_weight=lambda x: x):
         self._adapters = []
 
@@ -399,6 +407,7 @@ class SklRandomForestAdapter:
         self._adjust_weight = adjust_weight
 
     def get_trees(self):
+        """Get the tree adapters in the random forest."""
         if len(self._adapters) > 0:
             return self._adapters
         if len(self._trees) < 1:
@@ -412,4 +421,5 @@ class SklRandomForestAdapter:
 
     @property
     def domain(self):
+        """Get the domain."""
         return self._domain

@@ -1,3 +1,4 @@
+"""Base tree adapter class with common methods needed for visualisations."""
 from abc import ABCMeta, abstractmethod
 
 

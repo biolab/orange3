@@ -1,3 +1,16 @@
+"""Rules for classification and regression trees.
+
+Tree visualisations usually need to show the rules of nodes, these classes make
+merging these rules simple (otherwise you have repeating rules e.g. `age < 3`
+and `age < 2` which can be merged into `age < 2`.
+
+Subclasses of the `Rule` class should provide a nice interface to merge rules
+together through the `merge_with` method. Of course, this should not be forced
+where it doesn't make sense e.g. merging a discrete rule (e.g.
+:math:`x \in \{red, blue, green\}`) and a continuous rule (e.g.
+:math:`x \leq 5`).
+
+"""
 import warnings
 
 
@@ -25,7 +38,7 @@ class DiscreteRule(Rule):
     Parameters
     ----------
     attr_name : str
-    eq : bool
+    equals : bool
         Should indicate whether or not the rule equals the value or not.
     value : object
 
@@ -39,14 +52,14 @@ class DiscreteRule(Rule):
 
     Notes
     -----
-    .. Note:: Merging discrete rules is currently not implemented, the new rule
+    .. note:: Merging discrete rules is currently not implemented, the new rule
         is simply returned and a warning is issued.
 
     """
 
-    def __init__(self, attr_name, eq, value):
+    def __init__(self, attr_name, equals, value):
         self.attr_name = attr_name
-        self.eq = eq
+        self.equals = equals
         self.value = value
 
     def merge_with(self, rule):
@@ -57,7 +70,7 @@ class DiscreteRule(Rule):
 
     def __str__(self):
         return '{} {} {}'.format(
-            self.attr_name, '=' if self.eq else '≠', self.value)
+            self.attr_name, '=' if self.equals else '≠', self.value)
 
 
 class ContinuousRule(Rule):
@@ -66,7 +79,7 @@ class ContinuousRule(Rule):
     Parameters
     ----------
     attr_name : str
-    gt : bool
+    greater : bool
         Should indicate whether the variable must be greater than the value.
     value : int
     inclusive : bool, optional
@@ -83,14 +96,14 @@ class ContinuousRule(Rule):
 
     Notes
     -----
-    .. Note:: Continuous rules can currently only be merged with other
+    .. note:: Continuous rules can currently only be merged with other
         continuous rules.
 
     """
 
-    def __init__(self, attr_name, gt, value, inclusive=False):
+    def __init__(self, attr_name, greater, value, inclusive=False):
         self.attr_name = attr_name
-        self.gt = gt
+        self.greater = greater
         self.value = value
         self.inclusive = inclusive
 
@@ -99,23 +112,23 @@ class ContinuousRule(Rule):
             raise NotImplementedError('Continuous rules can currently only be '
                                       'merged with other continuous rules')
         # Handle when both have same sign
-        if self.gt == rule.gt:
+        if self.greater == rule.greater:
             # When both are GT
-            if self.gt is True:
+            if self.greater is True:
                 larger = max(self.value, rule.value)
-                return ContinuousRule(self.attr_name, self.gt, larger)
+                return ContinuousRule(self.attr_name, self.greater, larger)
             # When both are LT
             else:
                 smaller = self.value if self.value < rule.value else rule.value
-                return ContinuousRule(self.attr_name, self.gt, smaller)
+                return ContinuousRule(self.attr_name, self.greater, smaller)
         # When they have different signs we need to return an interval rule
         else:
-            lt_rule, gt_rule = (rule, self) if self.gt else (self, rule)
+            lt_rule, gt_rule = (rule, self) if self.greater else (self, rule)
             return IntervalRule(self.attr_name, gt_rule, lt_rule)
 
     def __str__(self):
         return '%s %s %.3f' % (
-            self.attr_name, '>' if self.gt else '≤', self.value)
+            self.attr_name, '>' if self.greater else '≤', self.value)
 
 
 class IntervalRule(Rule):
@@ -138,7 +151,7 @@ class IntervalRule(Rule):
 
     Notes
     -----
-    .. Note:: Currently, only cases which appear in classification and
+    .. note:: Currently, only cases which appear in classification and
         regression trees are implemented. An interval can not be made up of two
         parts (e.g. (-∞, -1) ∪ (1, ∞)).
 
@@ -160,7 +173,7 @@ class IntervalRule(Rule):
 
     def merge_with(self, rule):
         if isinstance(rule, ContinuousRule):
-            if rule.gt:
+            if rule.greater:
                 return IntervalRule(
                     self.attr_name, self.left_rule.merge_with(rule),
                     self.right_rule)

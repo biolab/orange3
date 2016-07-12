@@ -1,3 +1,4 @@
+"""Common caching methods, using `lru_cahce` sometimes has its downsides."""
 from functools import wraps, lru_cache
 import weakref
 

@@ -397,8 +397,7 @@ class OWPythagorasTree(OWWidget):
         else:
             items = (
                 (self.target_class_combo.itemText(self.target_class_index),
-                 self.color_palette[self.target_class_index - 1]
-                 ),
+                 self.color_palette[self.target_class_index - 1]),
                 ('other', QtGui.QColor('#ffffff'))
             )
             self.legend = OWDiscreteLegend(items=items, **self.LEGEND_OPTIONS)
@@ -450,12 +449,12 @@ class OWPythagorasTree(OWWidget):
         return '<p>' \
             + text \
             + '{}/{} samples ({:2.3f}%)'.format(
-                int(samples), total, ratio * 100) \
+                  int(samples), total, ratio * 100) \
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
-                if not self.tree_adapter.is_leaf(node.label) else '') \
+               if not self.tree_adapter.is_leaf(node.label) else '') \
             + ('<br><br>' if len(rules) and not self.tree_adapter.is_leaf(
-                node.label) else '') \
+               node.label) else '') \
             + rules_str \
             + '</p>'
 
@@ -556,12 +555,12 @@ class OWPythagorasTree(OWWidget):
         return '<p>Mean: {:2.3f}'.format(mean) \
             + '<br>Standard deviation: {:2.3f}'.format(std) \
             + '<br>{}/{} samples ({:2.3f}%)'.format(
-                int(samples), total, ratio * 100) \
+              int(samples), total, ratio * 100) \
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
-                if not self.tree_adapter.is_leaf(node.label) else '') \
+               if not self.tree_adapter.is_leaf(node.label) else '') \
             + ('<br><br>' if len(rules) and not self.tree_adapter.is_leaf(
-                node.label) else '') \
+               node.label) else '') \
             + rules_str \
             + '</p>'
 
@@ -572,10 +571,13 @@ class TreeGraphicsView(
     AnchorableGraphicsView,
     PreventDefaultWheelEvent
 ):
+    """QGraphicsView that contains all functionality we will use to display
+    tree."""
     pass
 
 
 class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
+    """QGraphicsScene that the tree uses."""
     pass
 
 

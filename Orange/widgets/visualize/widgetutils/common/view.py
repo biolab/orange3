@@ -1,3 +1,5 @@
+"""Common useful `QGraphicsView` classes that can be composed to achieve
+desired functionality."""
 from itertools import repeat
 
 import numpy as np
@@ -25,7 +27,10 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
 
     Notes
     -----
-      - This view will consume wheel scrolling and right mouse click events.
+    .. note:: This view will NOT consume the wheel event, so it would be wise
+        to use this component in conjuction with the `PreventDefaultWheelEvent`
+        in most cases.
+    .. note:: This view does however consume the right mouse click event.
 
     """
 
@@ -76,8 +81,8 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
         else:
             padding = 0, 0, 0, 0
 
-        l, t, r, b = padding
-        self.__padding = -l, -t, r, b
+        left, top, right, bottom = padding
+        self.__padding = -left, -top, right, bottom
 
     def __handle_zoom(self, direction):
         """Handle zoom event, direction is positive if zooming in, otherwise
@@ -106,6 +111,16 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
         self.__zoomout_limit_reached = False
 
     def set_central_widget(self, widget):
+        """Set the central widget in the view.
+
+        This means that the initial zoom will fit the central widget, and may
+        cut out any other widgets.
+
+        Parameters
+        ----------
+        widget : QGraphicsWidget
+
+        """
         self.__central_widget = widget
 
     def central_widget_rect(self):
@@ -176,5 +191,12 @@ class PannableGraphicsView(QtGui.QGraphicsView):
 
 
 class PreventDefaultWheelEvent(QtGui.QGraphicsView):
+    """Prevent the default wheel event.
+
+    The default wheel event pans the view around, if using the
+    `ZoomableGraphicsView`, this will prevent that behaviour.
+
+    """
+
     def wheelEvent(self, event):
         event.accept()

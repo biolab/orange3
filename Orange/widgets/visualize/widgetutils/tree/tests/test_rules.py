@@ -1,3 +1,4 @@
+"""Test rules for classification and regression trees."""
 import unittest
 
 from Orange.widgets.visualize.widgetutils.tree.rules import (
@@ -7,6 +8,13 @@ from Orange.widgets.visualize.widgetutils.tree.rules import (
 
 
 class TestRules(unittest.TestCase):
+    """Rules for classification and regression trees.
+
+    See Also
+    --------
+    Orange.widgets.visualize.widgetutils.tree.rules
+
+    """
     # CONTINUOUS RULES
     def test_merging_two_gt_continuous_rules(self):
         """Merging `x > 1` and `x > 2` should produce `x > 2`."""
@@ -124,6 +132,7 @@ class TestRules(unittest.TestCase):
 
     # ALL RULES
     def test_merge_commutativity_on_continuous_rules(self):
+        """Continuous rule merging should be commutative."""
         rule1 = ContinuousRule('Rule1', True, 1)
         rule2 = ContinuousRule('Rule1', True, 2)
         new_rule1 = rule1.merge_with(rule2)
@@ -131,6 +140,7 @@ class TestRules(unittest.TestCase):
         self.assertEqual(new_rule1.value, new_rule2.value)
 
     def test_merge_commutativity_on_interval_rules(self):
+        """Interval rule merging should be commutative."""
         rule1 = IntervalRule('Rule',
                              ContinuousRule('Rule', True, 0),
                              ContinuousRule('Rule', False, 4))
@@ -145,12 +155,14 @@ class TestRules(unittest.TestCase):
                          new_rule2.right_rule.value)
 
     def test_merge_keeps_gt_on_continuous_rules(self):
+        """Merging ccontinuous rules should keep GT property."""
         rule1 = ContinuousRule('Rule1', True, 1)
         rule2 = ContinuousRule('Rule1', True, 2)
         new_rule = rule1.merge_with(rule2)
         self.assertEqual(new_rule.gt, True)
 
     def test_merge_keeps_attr_name_on_continuous_rules(self):
+        """Merging continuous rules should keep the name of the rule."""
         rule1 = ContinuousRule('Rule1', True, 1)
         rule2 = ContinuousRule('Rule1', True, 2)
         new_rule = rule1.merge_with(rule2)

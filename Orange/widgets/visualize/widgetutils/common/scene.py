@@ -1,3 +1,4 @@
+"""Common QGraphicsScene components that can be composed when needed."""
 from PyQt4 import QtGui
 
 
@@ -9,8 +10,8 @@ class UpdateItemsOnSelectGraphicsScene(QtGui.QGraphicsScene):
 
     Notes
     -----
-    ..Note:: I suspect this is completely unncessary, but have not been able to
-        find a reasonable way to keep the selection logic inside the actual
+    .. note:: I suspect this is completely unncessary, but have not been able
+        to find a reasonable way to keep the selection logic inside the actual
         `QGraphicsItem` objects
 
     """

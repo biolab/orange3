@@ -21,8 +21,6 @@ from math import pi, sqrt, cos, sin, degrees
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 
-from Orange.widgets.visualize.widgetutils.tree.treeadapter import TreeAdapter
-
 # z index range, increase if needed
 Z_STEP = 5000000
 
@@ -38,6 +36,9 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
 
     Examples
     --------
+    >>> from Orange.widgets.visualize.widgetutils.tree.treeadapter import (
+    >>>     TreeAdapter
+    >>> )
     Pass tree through constructor.
     >>> tree_view = PythagorasTreeViewer(parent=scene, adapter=tree_adapter)
 
@@ -64,7 +65,7 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
 
     Notes
     -----
-    .. Note:: The class contains two clear methods: `clear` and `clear_tree`.
+    .. note:: The class contains two clear methods: `clear` and `clear_tree`.
         Each has  their own use.
         `clear_tree` will clear out the tree and remove any graphics items.
         `clear` will, on the other hand, clear everything, all settings
@@ -195,10 +196,12 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
         return 'Tooltip'
 
     def target_class_has_changed(self):
+        """When the target class has changed, perform appropriate updates."""
         self._update_node_colors()
         self._update_node_tooltips()
 
     def tooltip_has_changed(self):
+        """When the tooltip should change, perform appropriate updates."""
         self._update_node_tooltips()
 
     def _update_node_colors(self):
@@ -512,7 +515,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
             self._propagate_to_parents(parent, fnc, other_fnc)
 
     def selection_changed(self):
-        # Handle selection changed
+        """Handle selection changed."""
         self.any_selected = len(self.scene().selectedItems()) > 0
         if self.any_selected:
             if self.isSelected():
@@ -554,7 +557,7 @@ class TreeNode:
     parent : TreeNode or object
         The parent of the current node. In the case of root, an object
         containing the root label of the tree adapter should be passed.
-    children : tuple of TreeNode, optional
+    children : tuple of TreeNode, optional, default is empty tuple
         All the children that belong to this node.
 
     """

@@ -1,3 +1,9 @@
+"""Grid widget.
+
+Positions items into a grid. This has been tested with widgets that have their
+`boundingBox` and `sizeHint` methods properly defined.
+
+"""
 from itertools import zip_longest
 
 from PyQt4 import QtGui, QtCore
@@ -84,11 +90,14 @@ class SelectableGridItem(GridItem):
 class ZoomableGridItem(GridItem):
     """Makes a grid item "zoomable" through the `set_max_size` method.
 
+    "Zoomable" here means there is a `Zoom` slider through which the grid items
+    can be made larger and smaller in the grid.
+
     Notes
     -----
-    .. Note:: This grid item will override any bounding box or size hint
+    .. note:: This grid item will override any bounding box or size hint
         defined in the class hierarchy with its own.
-    .. Note:: This makes the grid item square.
+    .. note:: This makes the grid item square.
 
     Parameters
     ----------
