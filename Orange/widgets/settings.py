@@ -55,6 +55,9 @@ class Setting:
     # Settings are automatically persisted to disk
     packable = True
 
+    # Setting is only persisted to schema (default value does not change)
+    schema_only = False
+
     def __new__(cls, default, *args, **kwargs):
         """A misleading docstring for providing type hints for Settings
 
@@ -482,6 +485,9 @@ class SettingsHandler:
         widget : OWWidget
         """
         self.defaults = self.provider.pack(widget)
+        for name, setting in self.known_settings.items():
+            if setting.schema_only:
+                self.defaults.pop(name, None)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):
@@ -495,7 +501,9 @@ class SettingsHandler:
 
         """
         if name in self.known_settings:
-            self.known_settings[name].default = value
+            setting = self.known_settings[name]
+            if not setting.schema_only:
+                setting.default = value
 
     def reset_settings(self, instance):
         """Reset widget settings to defaults
