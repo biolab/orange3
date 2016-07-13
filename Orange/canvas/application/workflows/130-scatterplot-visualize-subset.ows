@@ -11,9 +11,9 @@
 		<link enabled="true" id="2" sink_channel="Data Subset" sink_node_id="1" source_channel="Selected Data" source_node_id="2" />
 	</links>
 	<annotations>
-		<text font-family="Helvetica" font-size="12" id="0" rect="(56.0, 340.0, 150.0, 60.0)">(1) Open the Data Table and select a data instances or a subset of instances (use shift key).</text>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(56.0, 340.0, 150.0, 60.0)">(1) Open the Data Table and select a data instance or a subset of instances (use shift key).</text>
 		<text font-family="Helvetica" font-size="12" id="1" rect="(384.0, 20.0, 150.0, 48.0)">(2) Open the Scatter Plot to observe the selected subset from Data Table.</text>
-		<text font-family="Helvetica" font-size="12" id="2" rect="(373.0, 285.0, 164.0, 60.0)">Double click on this channel to check that data from Data Table is indeed feed as a data subset.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(373.0, 285.0, 164.0, 60.0)">Double click on this channel to check that data from Data Table is indeed fed as a data subset.</text>
 		<arrow end="(199.99999999999994, 281.0)" fill="#C1272D" id="3" start="(124.99999999999996, 326.0)" />
 		<arrow end="(446.0, 123.0)" fill="#C1272D" id="4" start="(446.0, 68.0)" />
 		<arrow end="(341.0, 221.0)" fill="#39B54A" id="5" start="(405.0, 284.0)" />

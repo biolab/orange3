@@ -11,7 +11,7 @@
 		<text font-family="Helvetica" font-size="14" id="0" rect="(17.0, 21.0, 160.0, 55.0)">A File widget. Double click to open it and select the data set file.</text>
 		<text font-family="Helvetica" font-size="14" id="1" rect="(50.0, 229.0, 118.0, 40.0)">The output of the File widget.</text>
 		<text font-family="Helvetica" font-size="14" id="2" rect="(241.0, 227.0, 131.0, 41.0)">The input of the Data Table widget.</text>
-		<text font-family="Helvetica" font-size="14" id="3" rect="(138.0, 297.0, 150.0, 82.0)">The communication channel. This was passes the data set from the File widget to the Data Table.</text>
+		<text font-family="Helvetica" font-size="14" id="3" rect="(138.0, 297.0, 150.0, 82.0)">The communication channel. It passes the data set from the File widget to the Data Table.</text>
 		<text font-family="Helvetica" font-size="14" id="4" rect="(262.0, 21.0, 150.0, 68.0)">A Data Table widget. Double click the icon to see the data in a spreadsheet.</text>
 		<text font-family="Helvetica" font-size="14" id="5" rect="(415.0, 68.0, 150.0, 83.0)">The output of the Data Table to send out any data (rows) that are selected to the widget.</text>
 		<text font-family="Helvetica" font-size="14" id="6" rect="(489.0, 177.0, 216.0, 181.0)">This output is not used, hence dashed line. You can add another Data Table by clicking on its icon from the toolbox on the left, connect the ouput of Data Table to the input of new Data Table (1) and check if the selected data from Data Table is indeed sent to the downstream widget. This demo works best if both widgets are open, that is, their windows displayed.</text>
