@@ -30,7 +30,7 @@ def str_for(in_lines):
 
 def gen_declaration(declarName, declarValue, iscode=False):
     """ Convertes a name + value into a variable declaration """
-    good_types = [int, float, tuple]
+    good_types = [int, float, bool, tuple]
     if type(declarValue) in good_types:
         declaration = declarName + " = "
         declaration += str(declarValue)
@@ -72,7 +72,8 @@ class CodeGenerator(object):
     the core functionality of a widget.
 
     """
-    def __init__(self):
+    def __init__(self, loadsettings=False):
+        self.loadsettings = loadsettings
         self.name = "unnamed_widget"
         self.orig_widget = None
         self.imports = set()
@@ -244,6 +245,34 @@ class CodeGenerator(object):
             if declaration:
                 body += declaration
         body += "\n"
+
+        def format_constant(constant):
+            """
+            Converts a constant into a format that can ne inserted
+            into the output code.
+
+            """
+            if type(constant) in (float, int, tuple, bool,):
+                return str(constant)
+            elif(type(constant) == str):
+                return "\"" + constant + "\""
+            else:
+                raise TypeError("unparsableType")
+
+        # Creates a statement to load settings into a widget object
+        # Assumes a widget named `ow` has been initialized
+        bad_settings = ["auto_apply", "savedWidgetGeometry"]
+        if self.loadsettings:
+            settings = self.orig_widget.settingsHandler.pack_data(self.orig_widget)
+            body += "ow.settingsHandler.initialize(ow, data={\n"
+            for sName, sVal in settings.items():
+                if sName not in bad_settings:
+                    try:
+                        body += indent(1, "\"" + sName + "\": " +
+                                format_constant(sVal)) + ",\n"
+                    except: # Setting is of an unstringifiable type
+                        pass
+            body += "})\n\n"
 
         # input declaration
         for inpt in self.inputs:
