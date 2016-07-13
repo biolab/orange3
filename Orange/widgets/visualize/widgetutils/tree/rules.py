@@ -44,11 +44,11 @@ class DiscreteRule(Rule):
 
     Examples
     --------
-    Age = 30
-    >>> rule = DiscreteRule('age', True, 30)
+    >>> DiscreteRule('age', True, 30)
+    age = 30
 
-    Name ≠ John
-    >>> rule = DiscreteRule('name', False, 'John')
+    >>> DiscreteRule('name', False, 'John')
+    name ≠ John
 
     Notes
     -----
@@ -72,6 +72,8 @@ class DiscreteRule(Rule):
         return '{} {} {}'.format(
             self.attr_name, '=' if self.equals else '≠', self.value)
 
+    __repr__ = __str__
+
 
 class ContinuousRule(Rule):
     """Continuous rule class for handling numeric rules.
@@ -88,11 +90,11 @@ class ContinuousRule(Rule):
 
     Examples
     --------
-    x ≤ 30
-    >>> rule = ContinuousRule('age', False, 30, inclusive=True)
+    >>> ContinuousRule('age', False, 30, inclusive=True)
+    age ≤ 30.000
 
-    x > 30
-    >>> rule = ContinuousRule('age', True, 30)
+    >>> ContinuousRule('age', True, 30)
+    age > 30.000
 
     Notes
     -----
@@ -130,6 +132,8 @@ class ContinuousRule(Rule):
         return '%s %s %.3f' % (
             self.attr_name, '>' if self.greater else '≤', self.value)
 
+    __repr__ = __str__
+
 
 class IntervalRule(Rule):
     """Interval rule class for ranges of continuous values.
@@ -144,10 +148,10 @@ class IntervalRule(Rule):
 
     Examples
     --------
-    1 ≤ x < 3
-    >>> rule = IntervalRule('Rule',
-    >>>                     ContinuousRule('Rule', True, 1, inclusive=True),
-    >>>                     ContinuousRule('Rule', False, 3))
+    >>> IntervalRule('Rule',
+    >>>              ContinuousRule('Rule', True, 1, inclusive=True),
+    >>>              ContinuousRule('Rule', False, 3))
+    Rule ∈ [1.000, 3.000)
 
     Notes
     -----
@@ -189,8 +193,12 @@ class IntervalRule(Rule):
                 self.right_rule.merge_with(rule.right_rule))
 
     def __str__(self):
-        return '{} ∈ {}{:.3}, {:.3}{}'.format(
+        return '%s ∈ %s%.3f, %.3f%s' % (
             self.attr_name,
-            '[' if self.left_rule.inclusive else '(', self.left_rule.value,
-            self.right_rule.value, ']' if self.right_rule.inclusive else ')'
+            '[' if self.left_rule.inclusive else '(',
+            self.left_rule.value,
+            self.right_rule.value,
+            ']' if self.right_rule.inclusive else ')'
         )
+
+    __repr__ = __str__
