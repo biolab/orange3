@@ -920,18 +920,10 @@ def get_parent_nodes(links, viable_nodes, adjs):
     return parents
 
 def get_links_from(parent_node, adjs):
-    matches = []
-    for adj in adjs:
-        if adj[0] == parent_node:
-            matches.append(adj)
-    return matches
+    return [adj for adj in adjs if adj[0] == parent_node]
 
 def get_links_to(child_node, adjs):
-    matches = []
-    for adj in adjs:
-        if adj[1] == child_node:
-            matches.append(adj)
-    return matches
+    return [adj for adj in adjs if adj[1] == child_node]
 
 def scheme_toposort(scheme):
     """
@@ -944,6 +936,7 @@ def scheme_toposort(scheme):
     adjs = []
     for link in scheme.links:
         adjs.append((link.source_node, link.sink_node,))
+    adjs = [(link.source_node, link.sink_node,) for link in scheme.links]
     viable_nodes = []
     for adj in adjs:
         if adj[0] not in viable_nodes:
