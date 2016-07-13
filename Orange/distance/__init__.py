@@ -25,9 +25,7 @@ def _preprocess(table):
 
 
 def _orange_to_numpy(x):
-    """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance`
-    to :class:`numpy.ndarray`.
-    """
+    """Convert :class:`Orange.data.Table` to :class:`numpy.ndarray`."""
     if isinstance(x, data.Table):
         return x.X
     elif isinstance(x, data.Instance):
@@ -86,7 +84,7 @@ class SklDistance(Distance):
                 x2 = x2.T
         dist = skl_metrics.pairwise.pairwise_distances(
                 x1, x2, metric=self.metric)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+        if isinstance(e1, (data.Table, data.TableSeries)):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
@@ -237,7 +235,7 @@ class MahalanobisDistance(Distance):
                 x1, x2, metric='mahalanobis', VI=self.VI)
         if np.isnan(dist).any() and impute:
             dist = np.nan_to_num(dist)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+        if isinstance(e1, (data.Table, data.TableSeries)):
             dist = DistMatrix(dist, e1, e2, self.axis)
         else:
             dist = DistMatrix(dist)

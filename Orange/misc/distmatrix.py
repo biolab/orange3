@@ -97,12 +97,12 @@ class DistMatrix(np.ndarray):
             col_items = row_items
         obj = self[np.ix_(row_items, col_items)]
         if self.row_items is not None:
-            obj.row_items = self.row_items[row_items]
+            obj.row_items = self.row_items.iloc[row_items]
         if self.col_items is not None:
             if self.col_items is self.row_items and row_items is col_items:
                 obj.col_items = obj.row_items
             else:
-                obj.col_items = self.col_items[col_items]
+                obj.col_items = self.col_items.iloc[col_items]
         return obj
 
     @classmethod
@@ -212,8 +212,9 @@ class DistMatrix(np.ndarray):
 
     @staticmethod
     def _trivial_labels(items):
-        return items and \
+        return items is not None and \
                isinstance(items, Table) and \
+               not items.empty and \
                len(items.domain.metas) == 1 and \
                isinstance(items.domain.metas[0], StringVariable)
 
