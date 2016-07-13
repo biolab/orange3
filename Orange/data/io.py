@@ -366,12 +366,14 @@ class FileFormat(metaclass=FileFormatMeta):
         If this is not overridden, it uses FileFormat.read_header and FileFormat.read_contents
         to construct a Table from headers and data.
         """
-        def is_number(item):
+        def tryparse_int_float(item):
             try:
-                float(item)
+                return int(item)
             except ValueError:
-                return False
-            return True
+                try:
+                    return float(item)
+                except ValueError:
+                    return None
 
         # Second row items are type identifiers
         def header_test2(items):
@@ -391,7 +393,7 @@ class FileFormat(metaclass=FileFormatMeta):
         three_row_header = not is_small and header_test2([str(i) for i in header_df.iloc[1].fillna('')]) \
                            and header_test3([str(i) for i in header_df.iloc[2].fillna('')])
         # a one-row header has something that doesn't parse as a float in the first row
-        one_row_header = not all(is_number(i) for i in header_df.iloc[0])
+        one_row_header = not all(tryparse_int_float(i) is not None for i in header_df.iloc[0])
         if one_row_header or three_row_header:
             if three_row_header:
                 names, types, flags = [list(header_df.iloc[i].fillna('')) for i in range(3)]
@@ -449,7 +451,15 @@ class FileFormat(metaclass=FileFormatMeta):
                     col_type = DiscreteVariable
                 elif _RE_DISCRETE_LIST.match(typef):
                     col_type = DiscreteVariable
-                    col_type_kwargs.update(values=Flags.split(typef), ordered=True)
+                    # if possible, we want these to be numbers (as they will be in the table)
+                    # but only do this if every value is parsed to a number, otherwise elements
+                    # will be upcast to strings in the table and they won't actually be the same thing
+                    raws = Flags.split(typef)
+                    nums = [tryparse_int_float(a) for a in raws]
+                    all_parsed = all(num is not None for num in nums)
+                    col_type_kwargs.update(values=[num if num is not None and all_parsed else raw
+                                                   for raw, num in zip(raws, nums)],
+                                           ordered=True)
                 else:
                     # infer from data
                     # if the initial role was x (not specified), allow this to modify it
