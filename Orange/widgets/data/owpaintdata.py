@@ -897,6 +897,7 @@ class OWPaintData(widget.OWWidget):
         redo.setShortcut(QtGui.QKeySequence.Redo)
 
         self.addActions([undo, redo])
+        self.undo_stack.indexChanged.connect(lambda _: self.invalidate())
 
         gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
@@ -1108,7 +1109,6 @@ class OWPaintData(widget.OWWidget):
 
         if tool not in self.tools_cache:
             newtool = tool(self, self.plot)
-            newtool.editingFinished.connect(self.invalidate)
             self.tools_cache[tool] = newtool
             newtool.issueCommand.connect(self._add_command)
 
