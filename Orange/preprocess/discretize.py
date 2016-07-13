@@ -23,7 +23,11 @@ class Discretizer(Transformation):
 
     def transform(self, c):
         if c.size:
-            return np.where(np.isnan(c), np.NaN, self.digitize(c, self.points))
+            # insert interval descriptions directly (not their integer indices)
+            new_var = self.create_discretized_var(self.variable, self.points)
+            bin_descriptors = np.array(new_var.values)
+            bin_indices = self.digitize(c, self.points)
+            return c.where(c.isnull(), bin_descriptors[bin_indices])
         else:
             return np.array([], dtype=int)
 

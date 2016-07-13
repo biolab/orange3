@@ -155,6 +155,10 @@ class Impute(Preprocess):
 
 
 class SklImpute(Preprocess):
+    """
+    The SKL imputer works on continuous data only, therefore continuize must be
+    applied to all discrete attributes before it.
+    """
     __wraps__ = skl_preprocessing.Imputer
 
     def __init__(self, strategy='mean'):

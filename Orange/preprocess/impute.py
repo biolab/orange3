@@ -24,7 +24,7 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        return numpy.where(numpy.isnan(c), self.value, c)
+        return c.fillna(self.value)
 
 
 class BaseImputeMethod:
