@@ -774,12 +774,14 @@ class OWPaintData(widget.OWWidget):
     brushRadius = Setting(75)
     density = Setting(7)
 
+    data = Setting(None, schema_only=True)
+
     graph_name = "plot"
 
     def __init__(self):
         super().__init__()
 
-        self.data = self.input_data = None
+        self.input_data = None
         self.input_classes = []
         self.input_has_attr2 = True
         self.current_tool = None
@@ -799,12 +801,14 @@ class OWPaintData(widget.OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        self.data = np.zeros((0, 3))
+        if self.data is None:
+            self.data = np.zeros((0, 3))
         self.colors = colorpalette.ColorPaletteGenerator(
             len(colorpalette.DefaultRGBColors))
         self.tools_cache = {}
 
         self._init_ui()
+        self.commit()
 
     def _init_ui(self):
         namesBox = gui.vBox(self.controlArea, "Names")
