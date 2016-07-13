@@ -478,9 +478,6 @@ class OWClassificationTreeGraph(OWTreeGraph):
         def pre():
             qapp = QApplication([])
 
-        def pre2():
-            from sklearn.tree._tree import TREE_LEAF
-
         def run():
             ow.handleNewSignals()
             ow.ctree(input_classification_tree)
@@ -499,7 +496,6 @@ class OWClassificationTreeGraph(OWTreeGraph):
         gen.set_widget(self)
         gen.add_import([QApplication, OWClassificationTreeGraph])
         gen.add_preamble(pre)
-        gen.add_preamble(pre2)
         gen.add_init("ow", "OWClassificationTreeGraph()", iscode=True)
         gen.add_init("ow.zoom", self.zoom)
         gen.add_init("ow.max_node_width", self.max_node_width)
