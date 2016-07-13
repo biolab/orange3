@@ -53,6 +53,14 @@ class Identity(Transformation):
         return c
 
 
+class Ordinalize(Transformation):
+    """
+    Used for discrete variables; return the value as it appears in e.g. t.X.
+    """
+    def transform(self, c):
+        return c.apply(self.variable.to_val).astype(int)
+
+
 class Indicator(Transformation):
     """
     Return an indicator value that equals 1 if the variable has the specified
@@ -70,7 +78,7 @@ class Indicator(Transformation):
         self.value = value
 
     def transform(self, c):
-        return c == self.value
+        return (c == self.value) * 1
 
 
 class Indicator1(Transformation):
@@ -113,7 +121,13 @@ class Normalizer(Transformation):
         self.factor = factor
 
     def transform(self, c):
-        return (c - self.offset) * self.factor
+        # we need to map the values to their numerical representation,
+        # only then can we do numerical computations
+        # on c.apply(...), the categorical persists, but the categories
+        # automatically change (so we don't need to worry about that)
+        # we then need to use the integer dtype (because we got indices)
+        # to support mathematical operations
+        return (c.apply(self.variable.to_val).astype(int) - self.offset) * self.factor
 
 
 class Lookup(Transformation):

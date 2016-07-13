@@ -1,6 +1,6 @@
 from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
-from .transformation import Identity, Indicator, Indicator1, Normalizer
+from .transformation import Indicator, Indicator1, Normalizer, Ordinalize
 from .preprocess import Continuize
 
 __all__ = ["DomainContinuizer", "MultinomialTreatment"]
@@ -25,8 +25,8 @@ class DomainContinuizer:
                     len(var.values) > 2):
                 return []
             if treat == Continuize.AsOrdinal:
-                new_var = ContinuousVariable(var.name,
-                                             compute_value=Identity(var))
+                # we use ordinalize instead of identity because we want numbers, not labels
+                new_var = ContinuousVariable(var.name, compute_value=Ordinalize(var))
                 return [new_var]
             if treat == Continuize.AsNormalizedOrdinal:
                 n_values = max(1, len(var.values))
@@ -47,9 +47,8 @@ class DomainContinuizer:
             for i, val in enumerate(var.values):
                 if i == base:
                     continue
-                new_var = ContinuousVariable(
-                    "{}={}".format(var.name, val),
-                    compute_value=ind_class(var, i))
+                # use val directly in compute, as we compare labels directly in pandas
+                new_var = ContinuousVariable("{}={}".format(var.name, val), compute_value=ind_class(var, val))
                 new_vars.append(new_var)
             return new_vars
 
