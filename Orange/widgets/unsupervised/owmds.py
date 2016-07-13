@@ -154,10 +154,17 @@ class OWMDS(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.matrix = None
-        self.data = None
+        #: Input dissimilarity matrix
+        self.matrix = None  # type: Optional[Orange.misc.DistMatrix]
+        #: Effective data used for plot styling/annotations. Can be from the
+        #: input signal (`self.signal_data`) or the input matrix
+        #: (`self.matrix.data`)
+        self.data = None  # type: Optional[Orange.data.Table]
+        #: Input subset data table
         self.subset_data = None  # type: Optional[Orange.data.Table]
-        self.matrix_data = None
+        #: Data table from the `self.matrix.row_items` (if present)
+        self.matrix_data = None  # type: Optional[Orange.data.Table]
+        #: Input data table
         self.signal_data = None
 
         self._pen_data = None
@@ -371,6 +378,12 @@ class OWMDS(widget.OWWidget):
         ----------
         data : Optional[Orange.data.Table]
         """
+        if data is not None and len(data) < 2:
+            self.error(0, "Input data needs at least 2 rows")
+            data = None
+        else:
+            self.error(0)
+
         self.signal_data = data
 
         if self.matrix is not None and data is not None and len(self.matrix) == len(data):
@@ -389,6 +402,13 @@ class OWMDS(widget.OWWidget):
         ----------
         matrix : Optional[Orange.misc.DistMatrix]
         """
+
+        if matrix is not None and len(matrix) < 2:
+            self.error(1, "Input matrix must be at least 2x2")
+            matrix = None
+        else:
+            self.error(1)
+
         self.matrix = matrix
         if matrix is not None and matrix.row_items:
             self.matrix_data = matrix.row_items
@@ -452,7 +472,6 @@ class OWMDS(widget.OWWidget):
             self.color_value = attr
             self.shape_value = attr
         else:
-            # initialize the graph state from data
             domain = self.data.domain
             all_vars = list(filter_visible(domain.variables + domain.metas))
             cd_vars = [var for var in all_vars if var.is_primitive()]
@@ -483,30 +502,32 @@ class OWMDS(widget.OWWidget):
         self.data = None
         self._effective_matrix = None
         self.embedding = None
+        self.error([2, 3])
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
             return
 
         if self.signal_data and self.matrix is not None and len(self.signal_data) != len(self.matrix):
-            self.error(1, "Data and distances dimensions do not match.")
+            self.error(2, "Data and distances dimensions do not match.")
             self._update_plot()
             return
 
-        self.error(1)
-
-        if self.signal_data:
+        if self.signal_data is not None:
             self.data = self.signal_data
-        elif self.matrix_data:
+        elif self.matrix_data is not None:
             self.data = self.matrix_data
 
         if self.matrix is not None:
             self._effective_matrix = self.matrix
             if self.matrix.axis == 0 and self.data is self.matrix_data:
                 self.data = None
-        else:
+        elif self.data.domain.attributes:
             preprocessed_data = Orange.projection.MDS().preprocess(self.data)
             self._effective_matrix = Orange.distance.Euclidean(preprocessed_data)
+        else:
+            self.error(3, "Cannot compute distances from data with no attributes")
+            return
 
         self.update_controls()
         self.openContext(self.data)
@@ -1341,9 +1362,8 @@ class mdsplotutils(plotutils):
 
 def main_test(argv=sys.argv):
     import gc
-    argv = list(argv)
-    app = QtGui.QApplication(argv)
-
+    app = QtGui.QApplication(list(argv))
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:
