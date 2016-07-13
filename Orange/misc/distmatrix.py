@@ -97,12 +97,12 @@ class DistMatrix(np.ndarray):
             col_items = row_items
         obj = self[np.ix_(row_items, col_items)]
         if self.row_items is not None:
-            obj.row_items = self.row_items[row_items]
+            obj.row_items = self.row_items.iloc[row_items]
         if self.col_items is not None:
             if self.col_items is self.row_items and row_items is col_items:
                 obj.col_items = obj.row_items
             else:
-                obj.col_items = self.col_items[col_items]
+                obj.col_items = self.col_items.iloc[col_items]
         return obj
 
     @classmethod
@@ -212,7 +212,8 @@ class DistMatrix(np.ndarray):
 
     @staticmethod
     def _trivial_labels(items):
-        return items and \
+        return items is not None and \
+               not items.empty and \
                isinstance(items, Table) and \
                len(items.domain.metas) == 1 and \
                isinstance(items.domain.metas[0], StringVariable)
@@ -261,10 +262,10 @@ class DistMatrix(np.ndarray):
         with open(filename, "wt") as fle:
             fle.write(data + "\n")
             if col_labels is not None:
-                fle.write("\t".join(str(e.metas[0]) for e in col_labels) + "\n")
+                fle.write("\t".join(str(m[0]) for m in col_labels.metas) + "\n")
             for i, row in enumerate(self):
                 if row_labels is not None:
-                    fle.write(str(row_labels[i].metas[0]) + "\t")
+                    fle.write(str(row_labels.metas.T[0][i]) + "\t")
                 if symmetric:
                     fle.write("\t".join(map(str, row[:i + 1])) + "\n")
                 else:
