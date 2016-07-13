@@ -4,6 +4,7 @@ from Orange.classification import Learner, Model
 from Orange.data import Table
 from Orange.statistics import contingency
 from Orange.preprocess import Discretize
+from statistics import distribution
 
 __all__ = ["NaiveBayesLearner"]
 
@@ -31,8 +32,7 @@ class NaiveBayesLearner(Learner):
             raise NotImplementedError("Only discrete variables are supported.")
 
         cont = contingency.get_contingencies(table)
-        class_freq = np.array(np.diag(
-            contingency.get_contingency(table, table.domain.class_var)))
+        class_freq = np.array(distribution.class_distribution(table))
         return NaiveBayesModel(cont, class_freq, table.domain)
 
 
@@ -53,9 +53,9 @@ class NaiveBayesModel(Model):
                                               c.shape[1])) for c in self.cont]
             probs = np.exp(np.array([np.sum(attr_prob[:, int(attr_val)]
                                             for attr_val, attr_prob
-                                            in zip(ins, log_cont_prob)
+                                            in zip(row, log_cont_prob)
                                             if not np.isnan(attr_val))
-                                     for ins in data]) + np.log(class_prob))
+                                     for row in data.X]) + np.log(class_prob))
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs

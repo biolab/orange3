@@ -7,7 +7,6 @@ import weakref
 
 from .variable import *
 import numpy as np
-from pandas import DataFrame
 
 
 class DomainConversion:
@@ -269,24 +268,22 @@ class Domain:
         :param inst: The data instance to be converted
         :return: The data instance in this domain
         """
+        from Orange.data import TableSeries
 
-        if isinstance(inst, Instance):
-
-            # TODO: transform this to work with Tables
-
+        if isinstance(inst, TableSeries):
             if inst.domain == self:
-                return inst._x, inst._y, inst._metas
+                return inst.X, inst.Y, inst.metas
             c = self.get_conversion(inst.domain)
             l = len(inst.domain.attributes)
-            values = [(inst._x[i] if 0 <= i < l
-                       else inst._y[i - l] if i >= l
-                       else inst._metas[-i - 1])
+            values = [(inst.X[i] if 0 <= i < l
+                       else inst.Y[i - l] if i >= l
+                       else inst.metas[-i - 1])
                       if isinstance(i, int)
                       else (Unknown if not i else i(inst))
                       for i in c.variables]
-            metas = [(inst._x[i] if 0 <= i < l
-                      else inst._y[i - l] if i >= l
-                      else inst._metas[-i - 1])
+            metas = [(inst.X[i] if 0 <= i < l
+                      else inst.Y[i - l] if i >= l
+                      else inst.metas[-i - 1])
                      if isinstance(i, int)
                      else (Unknown if not i else i(inst))
                      for i in c.metas]

@@ -7,7 +7,7 @@ import unittest.mock
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
+from Orange.data import ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.discretize import EqualWidth

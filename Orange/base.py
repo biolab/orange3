@@ -242,7 +242,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
         Y = Y.reshape(-1)
-        if W is None or not self.supports_weights:
+        # don't use weights if they don't exist, they aren't supported, or are all identical
+        if W is None or not self.supports_weights or len(np.unique(W)) == 1:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 

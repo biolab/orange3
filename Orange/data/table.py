@@ -1,4 +1,5 @@
 import os
+import warnings
 import zlib
 from collections import Sequence
 from threading import Lock
@@ -97,13 +98,20 @@ class Table(pd.DataFrame):
         cols += self.domain.class_vars if Y else []
         cols += self.domain.metas if meta else []
 
+        # support using this in TableSeries, whose len gives the number of columns
+        n_rows = 1 if isinstance(self, TableSeries) else len(self)
+
         # preallocate result, we fill it in-place
         # we need a more general dtype for metas (commonly strings),
         # otherwise assignment fails later
-        result = np.zeros((len(self), len(cols)), dtype=object if meta else None)
+        result = np.zeros((n_rows, len(cols)), dtype=object if meta else None)
         # effectively a double for loop, see if this is a bottleneck later
         for i, col in enumerate(cols):
-            result[:, i] = self[col].apply(col.to_val).values
+            if isinstance(self, TableSeries):
+                # if this is used in TableSeries, we don't have a series but an element
+                result[:, i] = col.to_val(self[col])
+            else:
+                result[:, i] = self[col].apply(col.to_val).values
         result.setflags(write=writable)
         return result
 
@@ -512,6 +520,16 @@ class Table(pd.DataFrame):
             if len(r) != row_width:
                 raise ValueError("Inconsistent number of columns.")
 
+        # check row lengths
+        # allow not specifying the class variable (but only that): set it to nan in all rows
+        domain_columns = len(domain.variables) + len(domain.metas)
+        for r in rows:
+            if len(r) != domain_columns:
+                if len(r) == len(domain.attributes):
+                    r.extend([np.nan] * len(domain.class_vars))
+                else:
+                    raise ValueError("Data and domain column count mismatch. ")
+
         result = cls(data=rows,
                      columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
         result.domain = domain
@@ -850,6 +868,14 @@ class Table(pd.DataFrame):
         """Return `True` if there are any missing class values."""
         return self[self.domain.class_vars].isnull().any().any()
 
+    def iterrows(self):
+        """
+        An override to return TableSeries instead of Series (pandas doesn't do that by default).
+        """
+        gen = super().iterrows()
+        for item in gen:
+            yield (item[0], self._constructor_sliced(item[1]))
+
     @deprecated
     def checksum(self, include_metas=True):
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object
@@ -914,7 +940,7 @@ class Table(pd.DataFrame):
 
         return pd.DataFrame([
             mins, maxes, means, varc, nans, nonnans
-        ]).values.T
+        ]).drop(Table._WEIGHTS_COLUMN, axis=1).values.T
 
     def _compute_distributions(self, columns=None):
         """
@@ -991,7 +1017,7 @@ class Table(pd.DataFrame):
             if row_var is None:
                 raise ValueError("No row variable. ")
         if col_vars is None:
-            col_vars = self.domain.variables
+            col_vars = self.domain.attributes
 
         row_var = self.domain[row_var]
         col_vars = [self.domain[v] for v in col_vars]
@@ -1033,6 +1059,7 @@ class TableSeries(pd.Series):
     # use the same functions as in Table for this
     # WARNING: depends on TableSeries having a domain, which is ensured
     # in Table._constructor_sliced
+    _to_numpy = Table._to_numpy
     X = Table.X
     Y = Table.Y
     metas = Table.metas
