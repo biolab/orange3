@@ -912,15 +912,20 @@ class Table(MutableSequence, Storage):
 
     def ensure_copy(self):
         """
-        Ensure that the table owns its data; copy arrays when necessary
+        Ensure that the table owns its data; copy arrays when necessary.
         """
-        if self.X.base is not None:
+        def is_view(x):
+            # Sparse matrices don't have views like numpy arrays. Since indexing on
+            # them creates copies in constructor we can skip this check here.
+            return not sp.issparse(x) and x.base is not None
+
+        if is_view(self.X):
             self.X = self.X.copy()
-        if self._Y.base is not None:
+        if is_view(self._Y):
             self._Y = self._Y.copy()
-        if self.metas.base is not None:
+        if is_view(self.metas):
             self.metas = self.metas.copy()
-        if self.W.base is not None:
+        if is_view(self.W):
             self.W = self.W.copy()
 
     def copy(self):
