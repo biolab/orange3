@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="PCA transforms the data into a data set with uncorrelated variables, also called principal components. PCA widget displays a graph (scree diagram) showing a degree of explained variance by best principal components and allows to interactively set the number of components to be included in the output data set. In this workflow, we can observe the transformation in the Data Table and visualize the data using the constructed principal components in the Scatter Plot." title="Principal Component Analysis" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(59.0, 211.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="PCA" position="(225.0, 210.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owpca.OWPCA" title="PCA" version="" />
+		<node id="2" name="Scatter Plot" position="(409.0, 153.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
+		<node id="3" name="Data Table" position="(369.0, 266.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Transformed data" source_node_id="1" />
+		<link enabled="true" id="2" sink_channel="Data" sink_node_id="3" source_channel="Transformed data" source_node_id="1" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(152.0, 63.0, 150.0, 60.0)">Open to see the scree diagram and interactively select the number of components.</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(346.0, 9.0, 150.0, 72.0)">Choose two best principal components and check if the classes from the input data set are well separated.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(37.0, 302.0, 209.0, 58.0)">The File widget loads brown-selected, a data set from molecular biology with 79 features, 186 instances and 3 classes.</text>
+		<arrow end="(221.0, 177.0)" fill="#C1272D" id="3" start="(216.0, 126.0)" />
+		<arrow end="(412.0, 121.0)" fill="#C1272D" id="4" start="(426.0, 74.0)" />
+		<arrow end="(95.0, 242.0)" fill="#C1272D" id="5" start="(132.0, 298.0)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAMAAAB1cmxxAVgAAAAAcQJYDAAAAHJlY2VudF9wYXRoc3EDXXEEKGNPcmFuZ2Uud2lk
+Z2V0cy51dGlscy5maWxlZGlhbG9ncwpSZWNlbnRQYXRoCnEFKYFxBn1xByhYBQAAAHNoZWV0cQho
+AlgFAAAAdGl0bGVxCWgCWAcAAAByZWxwYXRocQpYEgAAAGJyb3duLXNlbGVjdGVkLnRhYnELWAcA
+AABhYnNwYXRocQxYQgAAAC9Vc2Vycy9ibGF6L0Ryb3Bib3gvZGV2L29yYW5nZTMvT3JhbmdlL2Rh
+dGFzZXRzL2Jyb3duLXNlbGVjdGVkLnRhYnENWAYAAABwcmVmaXhxDlgPAAAAc2FtcGxlLWRhdGFz
+ZXRzcQ91YmgFKYFxEH1xEShoCGgCaAloAmgKWAgAAABpcmlzLnRhYnESaAxYOAAAAC9Vc2Vycy9i
+bGF6L0Ryb3Bib3gvZGV2L29yYW5nZTMvT3JhbmdlL2RhdGFzZXRzL2lyaXMudGFicRNoDmgPdWJl
+WAYAAABzb3VyY2VxFEsAWAsAAABzaGVldF9uYW1lc3EVfXEWWAsAAAByZWNlbnRfdXJsc3EXXXEY
+WBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cRlDLgHZ0MsAAQAAAAAD/wAAAlwAAAXwAAAEQwAAA/8A
+AAJyAAAF8AAABEMAAAAAAABxGlgQAAAAY29udGV4dF9zZXR0aW5nc3EbXXEcdS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWAcAAABhZGRyZXNzcQFYAAAAAHECWAsAAABuY29tcG9uZW50c3EDSwJYBAAAAG1heHBx
+BEsUWBAAAAB2YXJpYW5jZV9jb3ZlcmVkcQVjbnVtcHkuY29yZS5tdWx0aWFycmF5CnNjYWxhcgpx
+BmNudW1weQpkdHlwZQpxB1gCAAAAZjhxCEsASwGHcQlScQooSwNYAQAAADxxC05OTkr/////Sv//
+//9LAHRxDGJDCHmb0rxOmEFAcQ2GcQ5ScQ9YCwAAAGF4aXNfbGFiZWxzcRBLClgLAAAAYXV0b191
+cGRhdGVxEYhYCQAAAG5vcm1hbGl6ZXESiFgKAAAAYmF0Y2hfc2l6ZXETS2RYEwAAAHNhdmVkV2lk
+Z2V0R2VvbWV0cnlxFE5YCwAAAGF1dG9fY29tbWl0cRWIdS4=
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWAsAAABhdXRvX3NhbXBsZXEBiFgRAAAAdG9vbGJhcl9zZWxlY3Rpb25xAksAWAUAAABn
+cmFwaHEDfXEEKFgNAAAAY2xhc3NfZGVuc2l0eXEFiFgLAAAAc2hvd19sZWdlbmRxBohYEQAAAHRv
+b2x0aXBfc2hvd3NfYWxscQeJWBEAAABqaXR0ZXJfY29udGludW91c3EIiFgLAAAAYWxwaGFfdmFs
+dWVxCUuAWAsAAABqaXR0ZXJfc2l6ZXEKSwFYCwAAAHBvaW50X3dpZHRocQtLClgTAAAAbGFiZWxf
+b25seV9zZWxlY3RlZHEMiVgJAAAAc2hvd19ncmlkcQ2JdVgTAAAAYXV0b19zZW5kX3NlbGVjdGlv
+bnEOiFgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEPQy4B2dDLAAEAAAAABKgAAADjAAAH3QAAA7IA
+AASoAAAA+QAAB90AAAOyAAAAAAAAcRBYEAAAAGNvbnRleHRfc2V0dGluZ3NxEV1xEmNPcmFuZ2Uu
+d2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0CnETKYFxFH1xFShYBQAAAG1ldGFzcRZ9cRdYBAAAAHRp
+bWVxGEdB1eCcEvjll1gKAAAAYXR0cmlidXRlc3EZfXEaKFgIAAAAZnVuY3Rpb25xG0sBWAMAAABQ
+QzFxHEsCWAMAAABQQzJxHUsCdVgOAAAAb3JkZXJlZF9kb21haW5xHl1xHyhoHEsChnEgaB1LAoZx
+IWgbSwGGcSJlWAYAAAB2YWx1ZXNxI31xJChoAYhK/v///4ZxJVgGAAAAYXR0cl94cSZYAwAAAFBD
+MXEnSwKGcShoAksASv7///+GcSloDohK/v///4ZxKmgDfXErKGgJS4BK/v///4ZxLFgKAAAAYXR0
+cl9jb2xvcnEtaBtLAYZxLmgHiUr+////hnEvWAoAAABhdHRyX3NoYXBlcTBYAAAAAHExSv7///+G
+cTJoBohK/v///4ZxM2gKSwFK/v///4ZxNGgMiUr+////hnE1aA2JSv7///+GcTZYCgAAAGF0dHJf
+bGFiZWxxN2gxSv7///+GcThYCQAAAGF0dHJfc2l6ZXE5aDFK/v///4ZxOmgIiEr+////hnE7aAtL
+Ckr+////hnE8aAWISv7///+GcT11aA9oEEr+////hnE+WAYAAABhdHRyX3lxP1gDAAAAUEMycUBL
+AoZxQXV1YmF1Lg==
+</properties>
+		<properties format="pickle" node_id="3">gAN9cQAoWA4AAABkaXN0X2NvbG9yX1JHQnEBKEvcS9xL3Ev/dHECWAsAAABzZWxlY3Rfcm93c3ED
+iFgLAAAAYXV0b19jb21taXRxBIhYDgAAAGNvbG9yX2J5X2NsYXNzcQWIWBMAAABzYXZlZFdpZGdl
+dEdlb21ldHJ5cQZDLgHZ0MsAAQAAAAADaAAAAbkAAAaHAAADwgAAA2gAAAHPAAAGhwAAA8IAAAAA
+AABxB1gVAAAAc2hvd19hdHRyaWJ1dGVfbGFiZWxzcQiIWBIAAABzaG93X2Rpc3RyaWJ1dGlvbnNx
+CYlYEAAAAGNvbnRleHRfc2V0dGluZ3NxCl1xC2NPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250
+ZXh0CnEMKYFxDX1xDihYBQAAAG1ldGFzcQ99cRBYBAAAAHRpbWVxEUdB1eCcFDIJHFgKAAAAYXR0
+cmlidXRlc3ESfXETKFgIAAAAZnVuY3Rpb25xFF1xFShYBwAAAFByb3RlYXNxFlgEAAAAUmVzcHEX
+WAQAAABSaWJvcRhlWAMAAABQQzFxGUsCWAMAAABQQzJxGksCdVgOAAAAb3JkZXJlZF9kb21haW5x
+G11xHChoGUsChnEdaBpLAoZxHmgUSwGGcR9lWAYAAAB2YWx1ZXNxIH1xIShoAWgCSv7///+GcSJo
+A4hK/v///4ZxI1gNAAAAc2VsZWN0ZWRfY29sc3EkXXElaASISv7///+GcSZoBYhK/v///4ZxJ2gG
+aAdK/v///4ZxKGgIiEr+////hnEpWA0AAABzZWxlY3RlZF9yb3dzcSpdcStoCYlK/v///4ZxLHV1
+YmF1Lg==
+</properties>
+	</node_properties>
+</scheme>

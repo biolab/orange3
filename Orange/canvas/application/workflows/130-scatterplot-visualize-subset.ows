@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="Some visualization widgets, like Scatter Plot and several data project widgets, can expose the data instances in the data subset. In this workflow, Scatter Plot visualize the data from the input data file, but also marks the data points that have been selected in the Data Table (selected rows).&#10;&#10;Again, this workflow works best if both Scatter Plot and Data Table are open." title="Visualization of Data Subsets" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(45.0, 155.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Scatter Plot" position="(446.0, 153.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
+		<node id="2" name="Data Table" position="(236.0, 262.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="2" sink_channel="Data Subset" sink_node_id="1" source_channel="Selected Data" source_node_id="2" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(56.0, 340.0, 150.0, 60.0)">(1) Open the Data Table and select a data instance or a subset of instances (use shift key).</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(384.0, 20.0, 150.0, 48.0)">(2) Open the Scatter Plot to observe the selected subset from Data Table.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(373.0, 285.0, 164.0, 60.0)">Double click on this channel to check that data from Data Table is indeed fed as a data subset.</text>
+		<arrow end="(199.99999999999994, 281.0)" fill="#C1272D" id="3" start="(124.99999999999996, 326.0)" />
+		<arrow end="(446.0, 123.0)" fill="#C1272D" id="4" start="(446.0, 68.0)" />
+		<arrow end="(341.0, 221.0)" fill="#39B54A" id="5" start="(405.0, 284.0)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAwAAAByZWNlbnRfcGF0aHNxAV1xAmNPcmFuZ2Uud2lkZ2V0cy51dGlscy5maWxlZGlh
+bG9ncwpSZWNlbnRQYXRoCnEDKYFxBH1xBShYBwAAAHJlbHBhdGhxBlgIAAAAaXJpcy50YWJxB1gF
+AAAAdGl0bGVxCFgAAAAAcQlYBQAAAHNoZWV0cQpoCVgGAAAAcHJlZml4cQtYDwAAAHNhbXBsZS1k
+YXRhc2V0c3EMWAcAAABhYnNwYXRocQ1YOAAAAC9Vc2Vycy9ibGF6L0Ryb3Bib3gvZGV2L29yYW5n
+ZTMvT3JhbmdlL2RhdGFzZXRzL2lyaXMudGFicQ51YmFYBgAAAHNvdXJjZXEPSwBYCwAAAHNoZWV0
+X25hbWVzcRB9cRFYCwAAAHJlY2VudF91cmxzcRJdcRNYAwAAAHVybHEUaAlYEwAAAHNhdmVkV2lk
+Z2V0R2VvbWV0cnlxFWNzaXAKX3VucGlja2xlX3R5cGUKcRZYDAAAAFB5UXQ0LlF0Q29yZXEXWAoA
+AABRQnl0ZUFycmF5cRhDLgHZ0MsAAQAAAAAD/wAAAlwAAAXwAAADLQAAA/8AAAJyAAAF8AAAAy0A
+AAAAAABxGYVxGodxG1JxHFgQAAAAY29udGV4dF9zZXR0aW5nc3EdXXEedS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWBMAAABhdXRvX3NlbmRfc2VsZWN0aW9ucQGIWBEAAAB0b29sYmFyX3NlbGVjdGlvbnEC
+SwBYEAAAAGNvbnRleHRfc2V0dGluZ3NxA11xBGNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250
+ZXh0CnEFKYFxBn1xByhYDgAAAG9yZGVyZWRfZG9tYWlucQhdcQkoWAwAAABzZXBhbCBsZW5ndGhx
+CksChnELWAsAAABzZXBhbCB3aWR0aHEMSwKGcQ1YDAAAAHBldGFsIGxlbmd0aHEOSwKGcQ9YCwAA
+AHBldGFsIHdpZHRocRBLAoZxEVgEAAAAaXJpc3ESSwGGcRNlWAUAAABtZXRhc3EUfXEVWAoAAABh
+dHRyaWJ1dGVzcRZ9cRcoaBBLAmgKSwJoEksBaA5LAmgMSwJ1WAYAAAB2YWx1ZXNxGH1xGShYBgAA
+AGF0dHJfeHEaWAwAAABzZXBhbCBsZW5ndGhxG0sChnEcaAGISv7///+GcR1YBgAAAGF0dHJfeXEe
+WAsAAABzZXBhbCB3aWR0aHEfSwKGcSBYBQAAAGdyYXBocSF9cSIoWAsAAABzaG93X2xlZ2VuZHEj
+iEr+////hnEkWAsAAABhbHBoYV92YWx1ZXElS4BK/v///4ZxJlgJAAAAc2hvd19ncmlkcSeJSv7/
+//+GcShYCwAAAHBvaW50X3dpZHRocSlLCkr+////hnEqWBEAAABqaXR0ZXJfY29udGludW91c3Er
+iUr+////hnEsWBMAAABsYWJlbF9vbmx5X3NlbGVjdGVkcS2JSv7///+GcS5YEQAAAHRvb2x0aXBf
+c2hvd3NfYWxscS+JSv7///+GcTBYCgAAAGF0dHJfbGFiZWxxMVgAAAAAcTJK/v///4ZxM1gNAAAA
+Y2xhc3NfZGVuc2l0eXE0iUr+////hnE1WAsAAABqaXR0ZXJfc2l6ZXE2SwpK/v///4ZxN1gKAAAA
+YXR0cl9jb2xvcnE4aBJLAYZxOVgJAAAAYXR0cl9zaXplcTpoMkr+////hnE7WAoAAABhdHRyX3No
+YXBlcTxoMkr+////hnE9dWgCSwBK/v///4ZxPlgLAAAAYXV0b19zYW1wbGVxP4hK/v///4ZxQFgT
+AAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXFBQy4B2dDLAAEAAAAAA60AAAGsAAAGbAAABHsAAAOtAAAB
+wgAABmwAAAR7AAAAAAAAcUJK/v///4ZxQ3VYBAAAAHRpbWVxREdB1eCaEehMG3ViYWghfXFFKGgj
+iGgviWg0iWgniWglS4BoNksKaClLCmgriWgtiXVoQWhCaD+IdS4=
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWA4AAABkaXN0X2NvbG9yX1JHQnEBKEvcS9xL3Ev/dHECWBAAAABjb250ZXh0X3NldHRp
+bmdzcQNdcQRjT3JhbmdlLndpZGdldHMuc2V0dGluZ3MKQ29udGV4dApxBSmBcQZ9cQcoWA4AAABv
+cmRlcmVkX2RvbWFpbnEIXXEJKFgMAAAAc2VwYWwgbGVuZ3RocQpLAoZxC1gLAAAAc2VwYWwgd2lk
+dGhxDEsChnENWAwAAABwZXRhbCBsZW5ndGhxDksChnEPWAsAAABwZXRhbCB3aWR0aHEQSwKGcRFY
+BAAAAGlyaXNxEksBhnETZVgFAAAAbWV0YXNxFH1xFVgKAAAAYXR0cmlidXRlc3EWfXEXKGgQSwJo
+CksCaBJdcRgoWAsAAABJcmlzLXNldG9zYXEZWA8AAABJcmlzLXZlcnNpY29sb3JxGlgOAAAASXJp
+cy12aXJnaW5pY2FxG2VoDksCaAxLAnVYBgAAAHZhbHVlc3EcfXEdKFgNAAAAc2VsZWN0ZWRfY29s
+c3EeXXEfaAFoAkr+////hnEgWA0AAABzZWxlY3RlZF9yb3dzcSFdcSJYDgAAAGNvbG9yX2J5X2Ns
+YXNzcSOISv7///+GcSRYCwAAAHNlbGVjdF9yb3dzcSWISv7///+GcSZYFQAAAHNob3dfYXR0cmli
+dXRlX2xhYmVsc3EniEr+////hnEoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cSlOSv7///+GcSpY
+CwAAAGF1dG9fY29tbWl0cSuISv7///+GcSxYEgAAAHNob3dfZGlzdHJpYnV0aW9uc3EtiUr+////
+hnEudVgEAAAAdGltZXEvR0HV4JoS8bbIdWJhaCOIaCWIaCeIaClOaCuIaC2JdS4=
+</properties>
+	</node_properties>
+</scheme>
