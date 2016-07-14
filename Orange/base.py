@@ -95,7 +95,7 @@ class Model:
             return self.predict_storage(table)
 
     def predict_storage(self, data):
-        if isinstance(data, Table):
+        if isinstance(data, (Table, TableSeries)):
             return self.predict(data.X)
         raise TypeError("Unrecognized argument (instance of '{}')"
                         .format(type(data).__name__))
