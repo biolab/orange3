@@ -592,7 +592,7 @@ class CSVReader(FileFormat):
             return pd.read_table(self.filename,
                                  sep=delimiter, header=None, index_col=False, skipinitialspace=True,
                                  skip_blank_lines=True, parse_dates=False,
-                                 compression='infer', skiprows=skiprows)
+                                 compression='infer', skiprows=skiprows, na_values=Variable.MISSING_VALUES)
         except pd.io.common.EmptyDataError:
             # if there is only the header, signal no data
             return None
