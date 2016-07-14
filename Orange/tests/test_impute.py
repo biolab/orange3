@@ -17,12 +17,13 @@ class TestReplaceUnknowns(unittest.TestCase):
     def test_replacement(self):
         a = np.arange(10, dtype=float)
         a[1] = a[5] = Unknown
-        ia = preprocess.ReplaceUnknowns(None).transform(a)
-        np.testing.assert_equal(ia, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9])
+        table = data.Table(None, a)
+        ia = preprocess.ReplaceUnknowns(None).transform(table[table.domain[0]])
+        np.testing.assert_equal(ia.values, [0, 0, 2, 3, 4, 0, 6, 7, 8, 9])
 
         a[1] = a[5] = Unknown
-        ia = preprocess.ReplaceUnknowns(None, value=42).transform(a)
-        np.testing.assert_equal(ia, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
+        ia = preprocess.ReplaceUnknowns(None, value=42).transform(table[table.domain[0]])
+        np.testing.assert_equal(ia.values, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
 
 
 class TestDropInstances(unittest.TestCase):
@@ -74,7 +75,7 @@ class TestAverage(unittest.TestCase):
         c2 = np.array(s).reshape((100, 1))
         x = np.hstack([c1, c2])
         domain = data.Domain([data.ContinuousVariable("a"),
-                              data.DiscreteVariable("b", values="ABC")],
+                              data.DiscreteVariable("b", values=[0, 1, 2])],
                              data.ContinuousVariable("c"),)
         table = Table(domain, x, c1)
         for col, computed_value in ((0, 0.5), (1, 2)):
@@ -92,9 +93,11 @@ class TestDefault(unittest.TestCase):
             [nan, nan, nan]
         ]
 
-        table = Table.from_numpy(None, np.array(X))
+        table = Table.from_numpy(data.Domain([data.ContinuousVariable("a"),
+                                              data.ContinuousVariable("b"),
+                                              data.ContinuousVariable("c")]), np.array(X))
         var1 = impute.Default(0.0)(table, 0)
-        self.assertTrue(np.all(np.isfinite(var1.compute_value(table))))
+        self.assertTrue(not var1.compute_value(table).isnull().any())
         self.assertTrue(all(var1.compute_value(table) == [1.0, 2.0, 0.0]))
 
         imputer = preprocess.Impute(method=impute.Default(42))
@@ -143,8 +146,8 @@ class TestAsValue(unittest.TestCase):
     def test_replacement(self):
         nan = np.nan
         X = [
-            [1.0, nan, 0.0],
-            [2.0, 1.0, 3.0],
+            [nan, nan, 0.0],
+            [nan, 1.0, 3.0],
             [nan, nan, nan]
         ]
         domain = data.Domain(
@@ -153,18 +156,19 @@ class TestAsValue(unittest.TestCase):
              data.ContinuousVariable("C"))
         )
         table = data.Table.from_numpy(domain, np.array(X))
+        # set here because of dtype constraints
+        table.loc[table.index[0], table.domain.attributes[0]] = "1"
+        table.loc[table.index[1], table.domain.attributes[0]] = "2"
 
         v1 = impute.AsValue()(table, domain[0])
-        self.assertTrue(np.all(np.isfinite(v1.compute_value(table))))
-        self.assertTrue(np.all(v1.compute_value(table) == [1., 2., 3.]))
-        self.assertEqual([v1.str_val(v) for v in v1.compute_value(table)],
+        self.assertTrue(not v1.compute_value(table).isnull().any())
+        self.assertEqual([str(v) for v in v1.compute_value(table)],
                          ["1", "2", "N/A"])
 
         v1, v2 = impute.AsValue()(table, domain[1])
-        self.assertTrue(np.all(np.isfinite(v1.compute_value(table))))
-        self.assertTrue(np.all(np.isfinite(v2.compute_value(table))))
-        self.assertTrue(np.all(v2.compute_value(table) == [0., 1., 0.]))
-        self.assertEqual([v2.str_val(v) for v in v2.compute_value(table)],
+        self.assertTrue(not v1.compute_value(table).isnull().any())
+        self.assertTrue(not v2.compute_value(table).isnull().any())
+        self.assertEqual([str(v) for v in v2.compute_value(table)],
                          ["undef", "def", "undef"])
 
         vars = reduce(lambda acc, v:
@@ -187,11 +191,10 @@ class TestModel(unittest.TestCase):
     def test_replacement(self):
         nan = np.nan
         X = [
-            [1.0, nan, 0.0],
-            [2.0, 1.0, 3.0],
+            [nan, nan, 0.0],
+            [nan, 1.0, 3.0],
             [nan, nan, nan]
         ]
-        unknowns = np.isnan(X)
 
         domain = data.Domain(
             (data.DiscreteVariable("A", values=["0", "1", "2"]),
@@ -199,11 +202,15 @@ class TestModel(unittest.TestCase):
              data.ContinuousVariable("C"))
         )
         table = data.Table.from_numpy(domain, np.array(X))
+        # set here because of dtype constraints
+        table.loc[table.index[0], table.domain.attributes[0]] = "1"
+        table.loc[table.index[1], table.domain.attributes[0]] = "2"
+        unknowns = np.isnan(table.X)
 
         v = impute.Model(MajorityLearner())(table, domain[0])
-        self.assertTrue(np.all(np.isfinite(v.compute_value(table))))
-        self.assertTrue(np.all(v.compute_value(table) == [1., 2., 1.]) or
-                        np.all(v.compute_value(table) == [1., 2., 2.]))
+        self.assertTrue(not v.compute_value(table).isnull().any())
+        self.assertTrue(np.all(v.compute_value(table) == ["1", "2", "1"]) or
+                        np.all(v.compute_value(table) == ["1", "2", "2"]))
         v = impute.Model(MeanLearner())(table, domain[1])
         self.assertTrue(np.all(np.isfinite(v.compute_value(table))))
         self.assertTrue(np.all(v.compute_value(table) == [1., 1., 1.]))
@@ -220,11 +227,11 @@ class TestModel(unittest.TestCase):
 
         col = Aimp(table)
         self.assertEqual(col.shape, (len(table),))
-        self.assertTrue(np.all(np.isfinite(col)))
+        self.assertTrue(not col.isnull().any())
 
-        v = Aimp(table[-1])
+        v = Aimp(table.iloc[[-1]])
         self.assertEqual(v.shape, (1,))
-        self.assertTrue(np.all(np.isfinite(v)))
+        self.assertTrue(not v.isnull().any())
 
     def test_copy(self):
         imputer = impute.Model(MajorityLearner())
@@ -260,11 +267,10 @@ class TestRandom(unittest.TestCase):
     def test_replacement(self):
         nan = np.nan
         X = [
-            [1.0, nan, 0.0],
-            [2.0, 1.0, 3.0],
+            [np.nan, nan, 0.0],
+            [np.nan, 1.0, 3.0],
             [nan, nan, nan]
         ]
-        unknowns = np.isnan(X)
 
         domain = data.Domain(
             (data.DiscreteVariable("A", values=["0", "1", "2"]),
@@ -272,10 +278,14 @@ class TestRandom(unittest.TestCase):
              data.ContinuousVariable("C"))
         )
         table = data.Table.from_numpy(domain, np.array(X))
+        # set here because of dtype constraints
+        table.loc[table.index[0], table.domain.attributes[0]] = "1"
+        table.loc[table.index[1], table.domain.attributes[0]] = "2"
+        unknowns = np.isnan(table.X)
 
         for i in range(0, 3):
             v = impute.Random()(table, domain[i])
-            self.assertTrue(np.all(np.isfinite(v.compute_value(table))))
+            self.assertTrue(not v.compute_value(table).isnull().any())
 
         imputer = preprocess.Impute(method=impute.Random())
         itable = imputer(table)
