@@ -31,7 +31,8 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
         return self.LEARNER(
             base_estimator=self.base_estimator,
             n_estimators=self.n_estimators,
-            preprocessors=self.preprocessors
+            preprocessors=self.preprocessors,
+            loss=self.losses[self.loss].lower()
         )
 
     def get_learner_parameters(self):

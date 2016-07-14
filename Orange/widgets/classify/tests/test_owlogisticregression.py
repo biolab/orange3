@@ -1,12 +1,12 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
 import unittest
-
-import bottleneck as bn
 
 from Orange.data import Table
 from Orange.statistics.util import stats
 from Orange.classification import LogisticRegressionLearner
 from Orange.widgets.classify.owlogisticregression import create_coef_table, OWLogisticRegression
-from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.tests.base import WidgetTest
 
 
 class LogisticRegressionTest(unittest.TestCase):
@@ -30,7 +30,7 @@ class LogisticRegressionTest(unittest.TestCase):
                          len(classifier.domain.class_var.values))
 
 
-class TestOWLogisticRegression(GuiTest):
+class TestOWLogisticRegression(WidgetTest):
     def test_data_before_apply(self):
-        widget = OWLogisticRegression()
+        widget = self.create_widget(OWLogisticRegression)
         widget.set_data(Table("iris"))

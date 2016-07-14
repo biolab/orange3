@@ -116,7 +116,8 @@ class OWReport(OWWidget):
         self.report_changed = False
 
         index_file = pkg_resources.resource_filename(__name__, "index.html")
-        self.report_html_template = open(index_file, "r").read()
+        with open(index_file, "r") as f:
+            self.report_html_template = f.read()
 
     def _setup_ui_(self):
         self.table_model = ReportItemModel(0, len(Column.__members__))

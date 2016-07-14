@@ -8,15 +8,18 @@ from PyQt4.QtGui import QDragEnterEvent, QDropEvent
 
 import Orange
 from Orange.widgets.data.owfile import OWFile
-from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.tests.base import WidgetTest
 
 TITANIC_URL = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
 
 
-class TestOWFile(GuiTest):
+class TestOWFile(WidgetTest):
+    # Attribute used to store event data so it does not get garbage
+    # collected before event is processed.
+    event_data = None
+
     def setUp(self):
-        self.widget = OWFile()
-        self.event_data = None
+        self.widget = self.create_widget(OWFile)
 
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(TITANIC_URL)
