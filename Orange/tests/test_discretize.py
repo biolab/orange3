@@ -18,7 +18,7 @@ class TestEqualFreq(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        table = data.Table(X)
+        table = data.Table(Domain([ContinuousVariable("X1")]), X)
         disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
@@ -47,7 +47,7 @@ class TestEqualWidth(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        table = data.Table(X)
+        table = data.Table(Domain([ContinuousVariable("X1")]), X)
         disc = discretize.EqualWidth(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
@@ -63,7 +63,7 @@ class TestEqualWidth(TestCase):
 
     def test_equalwidth_const_value(self):
         X = np.ones((100, 1))
-        table = data.Table(X)
+        table = data.Table(Domain([ContinuousVariable("X1")]), X)
         disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
@@ -76,7 +76,7 @@ class TestEntropyMDL(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        table = data.Table(X, X)
+        table = data.Table(Domain([ContinuousVariable("X1")], [DiscreteVariable("X1c", values=[0, 1])]), X, X)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
@@ -85,7 +85,7 @@ class TestEntropyMDL(TestCase):
     def test_entropy_with_two_values_useless(self):
         X = np.array([0] * 50 + [1] * 50).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 50 + [0] * 25)
-        table = data.Table(X, Y)
+        table = data.Table(Domain([ContinuousVariable("X1")], [DiscreteVariable("Y1", values=[0, 1])]), X, Y)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
@@ -149,18 +149,18 @@ class TestDiscretizer(TestCase):
         dvar = discretize.Discretizer.create_discretized_var(
             self.var, [1, 2, 3])
         X = np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5])
-        np.testing.assert_equal(dvar.compute_value.transform(X), np.floor(X))
+        np.testing.assert_equal(dvar.compute_value.transform(X), np.array(dvar.values)[np.floor(X).astype(int)])
 
     def test_transform(self):
         table = data.Table('iris')
         table2 = Discretize(table)
-        ins = Table(table2.domain, table.iloc[0])
+        ins = Table(table2.domain, table.iloc[[0]])
         table3 = data.Table(table2.domain, table.iloc[:10])
-        self.assertEqual(ins, table3.iloc[0])
+        self.assertTrue(ins.equals(table3.iloc[[0]]))
 
     def test_remove_constant(self):
         table = data.Table('iris')
-        table[:, 0] = 1
+        table.iloc[:, 0] = 1
         discretize = Discretize(remove_const=True)
         new_table = discretize(table)
         self.assertNotEqual(len(table.domain.attributes),
@@ -168,7 +168,7 @@ class TestDiscretizer(TestCase):
 
     def test_keep_constant(self):
         table = data.Table('iris')
-        table[:, 0] = 1
+        table.iloc[:, 0] = 1
         discretize = Discretize(remove_const=False)
         new_table = discretize(table)
         self.assertEqual(len(table.domain.attributes),
@@ -225,8 +225,11 @@ class TestDiscretizeTable(TestCase):
         X2 = np.arange(100).reshape((100, 1))
         X3 = np.ones((100, 1))
         X = np.hstack([X1, X2, X3])
-        cls.table_no_class = data.Table(X)
-        cls.table_class = data.Table(X, X1)
+        domain = Domain([ContinuousVariable('X1'),
+                         ContinuousVariable('X2'),
+                         ContinuousVariable('X3')])
+        cls.table_no_class = data.Table(domain, X)
+        cls.table_class = data.Table(Domain(domain.attributes, DiscreteVariable('X1c', values=[0, 1])), X, X1)
 
     def test_discretize_exclude_constant(self):
         dom = discretize.DomainDiscretizer(self.table_no_class)
@@ -264,7 +267,7 @@ class TestDiscretizeTable(TestCase):
     def test_fixed(self):
         dom = discretize.DomainDiscretizer(self.table_no_class,
                                            method=discretize.EqualWidth(n=2),
-                                           fixed={"Feature 2": [1, 11]})
+                                           fixed={"X2": [1, 11]})
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [6])
@@ -275,9 +278,9 @@ class TestDiscretizeTable(TestCase):
         X2 = np.arange(100).reshape((100, 1))
         X3 = np.ones((100, 1))
         X = np.hstack([X1, X2, X3])
-        domain = data.Domain([data.DiscreteVariable("a", values="MF"),
+        domain = data.Domain([data.DiscreteVariable("a", values=[0, 1]),
                               data.ContinuousVariable("b"),
-                              data.DiscreteVariable("c", values="AB")],
+                              data.DiscreteVariable("c", values=[0, 1])],
                              data.ContinuousVariable("d"))
         table = data.Table(domain, X, X1)
         dom = discretize.DomainDiscretizer(table)
@@ -286,10 +289,10 @@ class TestDiscretizeTable(TestCase):
         self.assertIs(dom[2], table.domain[2])
         self.assertIs(dom.class_var, table.domain.class_var)
 
-        domain = data.Domain([data.DiscreteVariable("a", values="MF"),
+        domain = data.Domain([data.DiscreteVariable("a", values=[0, 1]),
                               data.ContinuousVariable("b"),
-                              data.DiscreteVariable("c", values="AB")],
-                             data.DiscreteVariable("d"))
+                              data.DiscreteVariable("c", values=[0, 1])],
+                             data.DiscreteVariable("d", values=[0, 1]))
         table = data.Table(domain, X, X1)
         dom = discretize.DomainDiscretizer(table)
         self.assertIs(dom[0], table.domain[0])

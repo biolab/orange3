@@ -27,7 +27,8 @@ class Discretizer(Transformation):
             new_var = self.create_discretized_var(self.variable, self.points)
             bin_descriptors = np.array(new_var.values)
             bin_indices = self.digitize(c, self.points)
-            return c.where(c.isnull(), bin_descriptors[bin_indices])
+            mask = c.isnull() if hasattr(c, 'isnull') else np.isnan(c)
+            return np.where(mask, c, bin_descriptors[bin_indices])
         else:
             return np.array([], dtype=int)
 
@@ -152,8 +153,7 @@ class EqualWidth(Discretization):
                 stats = BasicStats(data, attribute)
                 points = self._split_eq_width(stats.min, stats.max)
             else:
-                values = data[:, attribute]
-                values = values.X if values.X.size else values.Y
+                values = [attribute.to_val(a) for a in data[attribute]]
                 min, max = np.nanmin(values), np.nanmax(values)
                 points = self._split_eq_width(min, max)
         return Discretizer.create_discretized_var(
@@ -195,8 +195,7 @@ class EntropyMDL(Discretization):
             points = (values[cut_ind] + values[cut_ind - 1]) / 2.
         else:
             points = []
-        return Discretizer.create_discretized_var(
-            data.domain[attribute], points)
+        return Discretizer.create_discretized_var(data.domain[attribute], points)
 
     @classmethod
     def _normalize(cls, X, axis=None, out=None):
