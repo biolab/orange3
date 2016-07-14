@@ -104,6 +104,9 @@ class Table(pd.DataFrame):
         # preallocate result, we fill it in-place
         # we need a more general dtype for metas (commonly strings),
         # otherwise assignment fails later
+        dtype = object if meta else \
+                int if all(c.is_discrete for c in cols) else \
+                None
         result = np.zeros((n_rows, len(cols)), dtype=object if meta else None)
         # effectively a double for loop, see if this is a bottleneck later
         for i, col in enumerate(cols):
@@ -585,11 +588,11 @@ class Table(pd.DataFrame):
         for var in chain(self.domain.variables, self.domain.metas):
             if isinstance(var, DiscreteVariable):
                 # only transform the values if all of them appear to be integers and
-                # don't appear in the variable's values
+                # could act as a variable value index
                 # otherwise we're dealing with numeric discretes
                 is_values = self[var.name].apply(lambda v: isinstance(v, Number) and
                                                            (isinstance(v, int) or v.is_integer()) and
-                                                           v not in var.values).all()
+                                                           v < len(var.values)).all()
                 if is_values:
                     self[var.name] = self[var.name].apply(lambda v: var.values[int(v)])
 
