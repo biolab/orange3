@@ -964,15 +964,15 @@ class Table(pd.DataFrame):
         distributions = []
         for col in columns:
             var = self.domain[col]
+            weighed_counts = self.groupby(col)[Table._WEIGHTS_COLUMN].sum()
             if var.is_discrete:
-                counts = self[col].value_counts(sort=False)
                 if var.ordered:
-                    distributions.append((np.array([counts.loc[val] for val in var.values]),
+                    distributions.append((np.array([weighed_counts.loc[val] for val in var.values]),
                                           self[col].isnull().sum()))
                 else:
-                    distributions.append((counts.values, self[col].isnull().sum()))
+                    distributions.append((weighed_counts.values, self[col].isnull().sum()))
             else:
-                distributions.append((np.array(sorted(self[col].value_counts(sort=False).iteritems())).T,
+                distributions.append((np.array(sorted(weighed_counts.iteritems())).T,
                                       self[col].isnull().sum()))
         return distributions
 
