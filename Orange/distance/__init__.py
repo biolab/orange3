@@ -1,5 +1,5 @@
 import numpy as np
-from scipy import stats
+from scipy import stats, sparse as sp
 import sklearn.metrics as skl_metrics
 
 from Orange import data
@@ -26,10 +26,8 @@ def _preprocess(table):
 
 def _orange_to_numpy(x):
     """Convert :class:`Orange.data.Table` to :class:`numpy.ndarray`."""
-    if isinstance(x, data.Table):
-        return x.X
-    elif isinstance(x, data.Instance):
-        return np.atleast_2d(x.x)
+    if isinstance(x, (data.Table, data.TableSeries)):
+        return x.X if sp.issparse(x.X) else np.atleast_2d(x.X)
     elif isinstance(x, np.ndarray):
         return np.atleast_2d(x)
     else:

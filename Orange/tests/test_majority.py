@@ -41,21 +41,21 @@ class TestMajorityLearner(unittest.TestCase):
         self.assertEqual(y2.all(), heavy_class)
 
     def test_empty(self):
-        clf = self.learn(self.iris[:0])
-        y = clf(self.iris[0], clf.Probs)
+        clf = self.learn(self.iris.iloc[:0])
+        y = clf(self.iris.iloc[0], clf.Probs)
         self.assertTrue(np.allclose(y, y.sum() / y.size))
 
     def test_missing(self):
         iris = Table('iris')
         learn = MajorityLearner()
-        for e in iris[: len(iris) // 2: 2]:
-            e.set_class("?")
+        for _, e in iris[: len(iris) // 2: 2].iterrows():
+            e[e.domain.class_var] = np.nan
         clf = learn(iris)
         y = clf(iris)
         self.assertTrue((y == 2).all())
 
-        for e in iris:
-            e.set_class("?")
+        for _, e in iris.iterrows():
+            e[e.domain.class_var] = np.nan
         clf = learn(iris)
         y = clf(iris)
         self.assertEqual(y.all(), 1)
@@ -70,13 +70,13 @@ class TestMajorityLearner(unittest.TestCase):
         train = np.ones((150,), dtype='bool')
         train[0] = False
         majority = MajorityLearner()(iris[train])
-        pred1 = majority(iris[0])
+        pred1 = majority(iris.iloc[0])
         self.assertIn(pred1, [1, 2])
 
         for i in range(1, 50):
             train[i] = train[50 + i] = train[100 + i] = False
             majority = MajorityLearner()(iris[train])
-            pred2 = majority(iris[0])
+            pred2 = majority(iris.iloc[0])
             self.assertIn(pred2, [1, 2])
             if pred1 != pred2:
                 break

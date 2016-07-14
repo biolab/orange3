@@ -5,7 +5,7 @@ import re
 import numpy as np
 import scipy
 
-from Orange.data import Table, Storage, Instance, Value
+from Orange.data import Table, Storage, Instance, TableSeries, Value
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
@@ -192,8 +192,8 @@ class Model(Reprable):
             return self.predict_storage(table)
 
     def predict_storage(self, data):
-        if isinstance(data, Storage):
-            return self.predict(data.X)
+        if isinstance(data, (Storage, Table, TableSeries)):
+            return self.predict(np.atleast_2d(data.X))
         elif isinstance(data, Instance):
             return self.predict(np.atleast_2d(data.x))
         raise TypeError("Unrecognized argument (instance of '{}')"
