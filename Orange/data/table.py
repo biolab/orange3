@@ -348,7 +348,8 @@ class Table(pd.DataFrame):
             for conversion, target_column in zip(chain(conversion.variables, conversion.metas),
                                                  chain(target_domain.variables, target_domain.metas)):
                 if isinstance(conversion, Number):
-                    result[target_column.name] = source_table[source_table.domain[conversion]]
+                    # mandatory copy
+                    result[target_column.name] = source_table[source_table.domain[conversion]].copy()
                 else:
                     # when converting a single instance (row), this results in a single value
                     # (and not e.g. a Series), so assigning to a table fails:
@@ -389,7 +390,7 @@ class Table(pd.DataFrame):
         # don't just plain copy here: in case of subclasses of Table, a plain table is passed
         # through the constructor and from_table to here, and expects to be converted
         # into a proper subclass type
-        result = cls(data=source.iloc[row_indices])
+        result = cls(data=source.iloc[row_indices]).copy()
         result._transfer_properties(source, transfer_domain=True)  # because we manually copy data, not the whole table
         return result
 
