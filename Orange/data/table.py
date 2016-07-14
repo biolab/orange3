@@ -965,15 +965,14 @@ class Table(pd.DataFrame):
         for col in columns:
             var = self.domain[col]
             weighed_counts = self.groupby(col)[Table._WEIGHTS_COLUMN].sum()
+            unknowns = self[col].isnull().sum()
             if var.is_discrete:
                 if var.ordered:
-                    distributions.append((np.array([weighed_counts.loc[val] for val in var.values]),
-                                          self[col].isnull().sum()))
+                    distributions.append((np.array([weighed_counts.loc[val] for val in var.values]), unknowns))
                 else:
-                    distributions.append((weighed_counts.values, self[col].isnull().sum()))
+                    distributions.append((weighed_counts.values, unknowns))
             else:
-                distributions.append((np.array(sorted(weighed_counts.iteritems())).T,
-                                      self[col].isnull().sum()))
+                distributions.append((np.array(sorted(weighed_counts.iteritems())).T, unknowns))
         return distributions
 
     def _compute_contingency(self, col_vars=None, row_var=None):

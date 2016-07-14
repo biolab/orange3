@@ -252,7 +252,6 @@ class Continuous(np.ndarray):
         return math.sqrt(self.variance())
 
 
-
 def class_distribution(data):
     if data.domain.class_var:
         return get_distribution(data, data.domain.class_var)

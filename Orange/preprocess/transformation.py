@@ -125,9 +125,9 @@ class Normalizer(Transformation):
         # only then can we do numerical computations
         # on c.apply(...), the categorical persists, but the categories
         # automatically change (so we don't need to worry about that)
-        # we then need to use the integer dtype (because we got indices)
+        # we then need to use a number dtype (because we got indices)
         # to support mathematical operations
-        return (c.apply(self.variable.to_val).astype(int) - self.offset) * self.factor
+        return (c.apply(self.variable.to_val).astype(float) - self.offset) * self.factor
 
 
 class Lookup(Transformation):
