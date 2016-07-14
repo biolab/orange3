@@ -527,6 +527,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def new_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
+        self.remove_legend()
 
         self.density_img = None
         self.scatterplot_item = None

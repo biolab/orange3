@@ -10,25 +10,38 @@ from Orange.widgets.visualize.owscatterplot import OWScatterPlot
 class TestOWScatterPlot(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWScatterPlot)
-        self.data = Table("iris")
+        self.iris = Table("iris")
 
     def test_set_data(self):
-        self.widget.set_data(self.data)
-        self.assertEqual(self.widget.data, self.data)
-        self.assertEqual(self.widget.subset_data, None)
+        # Connect iris to scatter plot
+        self.send_signal("Data", self.iris)
 
-    def test_subset_data(self):
-        self.widget.set_subset_data(self.data[:30])
-        self.assertEqual(len(self.widget.subset_data), 30)
-        self.assertEqual(self.widget.data, None)
-        np.testing.assert_array_equal(self.widget.subset_data, self.data[:30])
+        # First two attribute should be selected as x an y
+        self.assertEqual(self.widget.attr_x, self.iris.domain[0].name)
+        self.assertEqual(self.widget.attr_y, self.iris.domain[1].name)
 
-    def test_set_data_none(self):
-        self.widget.set_data(None)
-        self.assertEqual(self.widget.data, None)
-        self.assertEqual(self.widget.subset_data, None)
+        # Class var should be selected as color
+        self.assertEqual(self.widget.graph.attr_color,
+                         self.iris.domain.class_var.name)
 
-    def test_subset_data_none(self):
-        self.widget.set_subset_data(None)
-        self.assertEqual(self.widget.subset_data, None)
-        self.assertEqual(self.widget.data, None)
+        # Change which attributes are displayed
+        self.widget.attr_x = self.iris.domain[2].name
+        self.widget.attr_y = self.iris.domain[3].name
+
+        # Disconnect the data
+        self.send_signal("Data", None)
+
+        # removing data should have cleared attributes
+        self.assertEqual(self.widget.attr_x, None)
+        self.assertEqual(self.widget.attr_y, None)
+        self.assertEqual(self.widget.graph.attr_color, None)
+
+        # and remove the legend
+        self.assertEqual(self.widget.graph.legend, None)
+
+        # Connect iris again
+        # same attributes that were used last time should be selected
+        self.send_signal("Data", self.iris)
+
+        self.assertEqual(self.widget.attr_x, self.iris.domain[2].name)
+        self.assertEqual(self.widget.attr_y, self.iris.domain[3].name)

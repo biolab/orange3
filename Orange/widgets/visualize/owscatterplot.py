@@ -370,17 +370,21 @@ class OWScatterPlot(OWWidget):
 
     def init_attr_values(self):
         self.cb_attr_x.clear()
-        self.cb_attr_y.clear()
         self.attr_x = None
+        self.cb_attr_y.clear()
         self.attr_y = None
         self.cb_attr_color.clear()
         self.cb_attr_color.addItem("(Same color)")
+        self.graph.attr_color = None
         self.cb_attr_label.clear()
         self.cb_attr_label.addItem("(No labels)")
+        self.graph.attr_label = None
         self.cb_attr_shape.clear()
         self.cb_attr_shape.addItem("(Same shape)")
+        self.graph.attr_shape = None
         self.cb_attr_size.clear()
         self.cb_attr_size.addItem("(Same size)")
+        self.graph.attr_size = None
         if not self.data:
             return
 
@@ -462,7 +466,7 @@ class OWScatterPlot(OWWidget):
             unselection[selection] = False
             unselected = self.data[unselection]
         self.send("Selected Data", selected)
-        if len(unselected) == 0:
+        if unselected is None or len(unselected) == 0:
             self.send("Other Data", None)
         else:
             self.send("Other Data", unselected)
