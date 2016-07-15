@@ -86,7 +86,7 @@ class TestSimpleTreeLearner(unittest.TestCase):
         data = Orange.data.Table('iris')
         lrn = SimpleTreeCls()
         clf = lrn(data)
-        for ins in data[::20]:
+        for _, ins in data.iloc[::20].iterrows():
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
             self.assertEqual(sum(prob[0]), 1)

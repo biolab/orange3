@@ -5,14 +5,13 @@ import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange import preprocess
 from Orange.preprocess.score import InfoGain, GainRatio, Gini, Chi2, ANOVA,\
     UnivariateLinearRegression, ReliefF, FCBF, RReliefF
 
 
 class FeatureScoringTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.zoo = Table("zoo")  # disc. features, disc. class
@@ -40,7 +39,7 @@ class FeatureScoringTest(unittest.TestCase):
 
     def test_classless(self):
         classless = Table(Domain(self.zoo.domain.attributes),
-                          self.zoo[:, 0:-1])
+                          self.zoo.iloc[:, 0:-1])
         scorers = [Gini(), InfoGain(), GainRatio()]
         for scorer in scorers:
             with self.assertRaises(ValueError):
@@ -107,7 +106,7 @@ class FeatureScoringTest(unittest.TestCase):
         # some leeway for randomness in relieff random instance selection
         self.assertIn('marital-status', found)
         # Ensure it doesn't crash on missing target class values
-        old_monk.Y[0] = np.nan
+        old_monk.loc[old_monk.index[0], old_monk.domain.class_var] = np.nan
         weights = ReliefF()(old_monk, None)
 
     def test_rrelieff(self):
