@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
+from Orange.base import Tree
 from Orange.data import Table
-from Orange.classification.tree import TreeLearner
+from Orange.classification.tree import TreeLearner, OrangeTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -13,6 +14,8 @@ class OWClassificationTree(OWBaseLearner):
     description = "Classification tree algorithm with forward pruning."
     priority = 30
 
+    outputs = [("Classifier", Tree)]
+    # TODO: Common base class for tree learners
     LEARNER = TreeLearner
 
     attribute_score = Setting(0)
@@ -22,6 +25,7 @@ class OWClassificationTree(OWBaseLearner):
     min_internal = Setting(5)
     limit_depth = Setting(True)
     max_depth = Setting(100)
+    use_skl = Setting(False)
 
     scores = (("Entropy", "entropy"), ("Gini Index", "gini"))
 
@@ -42,16 +46,22 @@ class OWClassificationTree(OWBaseLearner):
         gui.spin(box, self, "max_depth", 1, 1000,
                  label="Limit the depth to: ", checked="limit_depth",
                  callback=self.settings_changed)
+        gui.checkBox(box, self, "use_skl", "Favour speed over readbility",
+                     callback=self.settings_changed)
 
     def create_learner(self):
-        return self.LEARNER(
-            criterion=self.scores[self.attribute_score][1],
+        common_args = dict(
             max_depth=self.max_depth if self.limit_depth else None,
-            min_samples_split=(self.min_internal if self.limit_min_internal
-                               else 2),
-            min_samples_leaf=(self.min_leaf if self.limit_min_leaf else 1),
-            preprocessors=self.preprocessors
-        )
+            min_samples_split=
+            self.min_internal if self.limit_min_internal else 2,
+            min_samples_leaf=self.min_leaf if self.limit_min_leaf else 1)
+
+        if self.use_skl:
+            return TreeLearner(criterion=self.scores[self.attribute_score][1],
+                               preprocessors=self.preprocessors,
+                               **common_args)
+        else:
+            return OrangeTreeLearner(**common_args)
 
     def get_learner_parameters(self):
         from Orange.canvas.report import plural_w
