@@ -584,6 +584,10 @@ class CSVReader(FileFormat):
             # (pandas won't solve this as it uses the same internally)
             delimiter = "\t"
 
+        # only allow a delimiter that is in the delimiters
+        if delimiter not in self.DELIMITERS:
+            delimiter = self.DELIMITERS[0]
+
         # don't parse dates, we want more control over timezones
         # see TimeVariable.column_to_datetime
         try:
