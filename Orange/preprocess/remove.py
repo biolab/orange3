@@ -3,7 +3,7 @@ import numpy as np
 
 from .preprocess import Preprocess
 from Orange.data import Domain, DiscreteVariable, Table
-from Orange.preprocess.transformation import Lookup
+from Orange.preprocess.transformation import Lookup as tLookup
 
 __all__ = ["Remove"]
 
@@ -272,7 +272,7 @@ def sort_var_values(var):
                             compute_value=Lookup(var, translation_table))
 
 
-class Lookup(Lookup):
+class Lookup(tLookup):
     def transform(self, column):
         column = np.array(column, dtype=np.float64)
         mask = np.isnan(column)
