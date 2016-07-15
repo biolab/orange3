@@ -1,9 +1,11 @@
 from collections import namedtuple
+from numbers import Number
+
 import numpy as np
 
 from .preprocess import Preprocess
 from Orange.data import Domain, DiscreteVariable, Table
-from Orange.preprocess.transformation import Lookup
+from Orange.preprocess.transformation import Lookup as tLookup
 
 __all__ = ["Remove"]
 
@@ -238,13 +240,13 @@ def remove_unused_values(var, data):
         return var
 
     used_values = [var.values[i] for i in unique]
-    translation_table = np.array([np.NaN] * len(var.values))
-    translation_table[unique] = range(len(used_values))
+    translation_table = np.array([np.NaN] * len(var.values), dtype=object)
+    translation_table[unique] = used_values
 
     base_value = -1
-    if 0 >= var.base_value < len(var.values):
+    if 0 <= var.base_value < len(var.values):
         base = translation_table[var.base_value]
-        if np.isfinite(base):
+        if not (isinstance(base, Number) and np.isfinite(base)) or not isinstance(base, Number):
             base_value = int(base)
 
     return DiscreteVariable("{}".format(var.name),
@@ -268,10 +270,10 @@ def sort_var_values(var):
                             compute_value=Lookup(var, translation_table))
 
 
-class Lookup(Lookup):
+class Lookup(tLookup):
     def transform(self, column):
-        column = np.array(column, dtype=np.float64)
-        mask = np.isnan(column)
+        mask = column.isnull().values
+        column = np.array([self.variable.to_val(v) for v in column])
         column_valid = np.where(mask, 0, column)
         values = self.lookup_table[np.array(column_valid, dtype=int)]
         return np.where(mask, np.nan, values)
