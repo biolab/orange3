@@ -108,3 +108,10 @@ class TestLinearRegressionLearner(unittest.TestCase):
             elastic_model = elastic(self.housing)
             d = np.sum(lasso_model.coefficients - elastic_model.coefficients)
             self.assertEqual(d, 0)
+
+    def test_linear_regression_repr(self):
+        learner = LinearRegressionLearner()
+        repr_text = repr(learner)
+        learner2 = eval(repr_text)
+
+        self.assertIsInstance(learner2, LinearRegressionLearner)
