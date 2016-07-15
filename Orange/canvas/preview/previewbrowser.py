@@ -41,6 +41,12 @@ PREVIEW_SIZE = (440, 295)
 
 
 class LinearIconView(QListView):
+    """
+    An list view (in QListView.IconMode) with no item wrapping.
+
+    Suitable for displaying large(ish) icons with text underneath single
+    horizontal line layout.
+    """
     def __init__(self, *args, **kwargs):
         QListView.__init__(self, *args, **kwargs)
 
@@ -58,13 +64,33 @@ class LinearIconView(QListView):
         self.setIconSize(QSize(120, 80))
 
     def sizeHint(self):
+        """
+        Reimplemented.
+
+        Provide sensible vertical size hint based on the view's contents.
+        """
         if not self.model().rowCount():
             return QSize(200, 140)
         else:
             scrollHint = self.horizontalScrollBar().sizeHint()
-            height = self.sizeHintForRow(0) + scrollHint.height()
+            # Sample the first 10 items for a size hint. The objective is to
+            # get a representative height due to the word wrapping
+            samplesize = min(10, self.model().rowCount())
+            contentheight = max(self.sizeHintForRow(i)
+                                for i in range(samplesize))
+            height = contentheight + scrollHint.height()
             _, top, _, bottom = self.getContentsMargins()
             return QSize(200, height + top + bottom + self.verticalOffset())
+
+    def updateGeometries(self):
+        """Reimplemented"""
+        QListView.updateGeometries(self)
+        self.updateGeometry()
+
+    def dataChanged(self, topLeft, bottomRight):
+        """Reimplemented"""
+        QListView.dataChanged(self, topLeft, bottomRight)
+        self.updateGeometry()
 
 
 class TextLabel(QWidget):
