@@ -1,7 +1,13 @@
 from itertools import chain
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt4.QtCore import (
+    Qt, pyqtProperty, pyqtSignal, QSize, QRectF, QPointF, QLineF, QTimer)
+from PyQt4.QtGui import (
+    QBrush, QPen, QColor, QStyle, QSizePolicy, QFormLayout,
+    QGraphicsEllipseItem, QGraphicsTextItem, QGraphicsItem, QGraphicsLineItem,
+    QPainter, QPainterPath, QTransform, QGraphicsView, QGraphicsScene
+)
+
 
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
@@ -81,21 +87,21 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
             self.update()
 
     def backgroundBrush(self):
-        brush = getattr(self, "_background_brush",
-                        getattr(self.scene(), "defaultItemBrush", Qt.NoBrush))
+        brush = getattr(self, "_background_brush")
+        if brush is None:
+            brush = getattr(self.scene(), "defaultItemBrush", Qt.NoBrush)
         return QBrush(brush)
 
     backgroundBrush = pyqtProperty(
         "QBrush", fget=backgroundBrush, fset=setBackgroundBrush,
         doc="Background brush")
 
-    def __init__(self, tree, parent, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         QGraphicsTextItem.__init__(self, *args)
         GraphNode.__init__(self, **kwargs)
         self._background_brush = None
         self._rect = None
 
-        self.tree = tree
         self.parent = parent
         font = self.font()
         font.setPointSize(10)
@@ -367,7 +373,7 @@ class OWTreeViewer2D(OWWidget):
         super().__init__()
         self.selected_node = None
         self.root_node = None
-        self.tree = None
+        self.model = None
 
         box = gui.vBox(
             self.controlArea, 'Tree', addSpace=20,
@@ -409,10 +415,17 @@ class OWTreeViewer2D(OWWidget):
                          callback=self.toggle_line_width, sizePolicy=policy))
         self.resize(800, 500)
 
+        self.scene = TreeGraphicsScene(self)
+        self.scene_view = TreeGraphicsView(self.scene)
+        self.scene_view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.mainArea.layout().addWidget(self.scene_view)
+        self.toggle_zoom_slider()
+        self.scene.selectionChanged.connect(self.update_selection)
+
     def send_report(self):
         from PyQt4.QtSvg import QSvgGenerator
 
-        if self.tree:
+        if self.model:
             self.reportSection("Tree")
             urlfn, filefn = self.getUniqueImageName(ext=".svg")
             svg = QSvgGenerator()
@@ -440,14 +453,15 @@ class OWTreeViewer2D(OWWidget):
         if self.root_node is None:
             return
 
-        root_instances = self.root_node.num_instances()
+        model = self.model
+        root_instances = model.num_instances(model.root)
         width = 3
         for edge in self.scene.edges():
-            num_inst = edge.node2.num_instances()
+            num_inst = model.num_instances(edge.node2.node_id)
             if self.line_width_method == 1:
                 width = 8 * num_inst / root_instances
             elif self.line_width_method == 2:
-                width = 8 * num_inst / edge.node1.num_instances()
+                width = 8 * num_inst / model.num_instances(edge.node1.node_id)
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 
@@ -460,7 +474,7 @@ class OWTreeViewer2D(OWWidget):
         self.nav_widget.setHidden(not self.nav_widget.isHidden())
 
     def activate_loaded_settings(self):
-        if not self.tree:
+        if not self.model:
             return
         self.rescale_tree()
         self.scene.fix_pos(self.root_node, 10, 10)

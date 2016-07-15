@@ -14,13 +14,13 @@ class RegressionTreeNode(TreeNode):
         """
         :return: Impurity in a particular node.
         """
-        return self.tree.impurity[self.i]
+        return self.root.impurity[self.i]
 
     def get_distribution(self):
         """
         :return: Average value in a particular node.
         """
-        return self.tree.value[self.node_id]
+        return self.root.value[self.node_id]
 
 
 class OWRegressionTreeGraph(OWTreeGraph):
