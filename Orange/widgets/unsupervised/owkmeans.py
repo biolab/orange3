@@ -39,7 +39,7 @@ class OWKMeans(widget.OWWidget):
 
     resizing_enabled = False
 
-    k = Setting(8)
+    k = Setting(3)
     k_from = Setting(2)
     k_to = Setting(8)
     optimize_k = Setting(False)
@@ -50,7 +50,7 @@ class OWKMeans(widget.OWWidget):
     append_cluster_ids = Setting(True)
     place_cluster_ids = Setting(OUTPUT_CLASS)
     output_name = Setting("Cluster")
-    auto_run = Setting(False)
+    auto_run = Setting(True)
 
     def __init__(self):
         super().__init__()
