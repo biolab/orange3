@@ -607,7 +607,9 @@ class CreateTableWithData(TableTests):
 
     def test_creates_a_table_from_list_of_instances(self):
         table = data.Table('iris')
-        new_table = data.Table(table.domain, [d for _, d in table.iterrows()])
+        # skip weights
+        new_table = data.Table(table.domain, [[v for i, v in enumerate(list(row)) if i != len(table.columns) - 1]
+                                              for _, row in table.iterrows()])
         self.assertIs(table.domain, new_table.domain)
         self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, new_table.X)
@@ -616,15 +618,14 @@ class CreateTableWithData(TableTests):
         self.assertEqual(table.domain, new_table.domain)
         np.testing.assert_array_equal(table.metas, new_table.metas)
 
-    def test_creates_a_table_from_list_of_instances_with_metas(self):
+    def test_creates_a_table_from_list_of_instances_metas(self):
         table = data.Table('zoo')
-        new_table = data.Table(table.domain, [d for _, d in table.iterrows()])
-        self.assertIs(table.domain, new_table.domain)
+        # skip weights
+        new_table = data.Table(data.Domain(attributes=[], metas=table.domain.metas), table.metas.tolist())
+        self.assertEqual(table.domain.metas, new_table.domain.metas)
         self.assert_discretes_are_categoricals(table)
-        np.testing.assert_almost_equal(table.X, new_table.X)
-        np.testing.assert_almost_equal(table.Y, new_table.Y)
-        np.testing.assert_almost_equal(table.W, new_table.W)
-        self.assertEqual(table.domain, new_table.domain)
+        self.assertEqual(new_table.X.size, 0)
+        self.assertEqual(new_table.Y.size, 0)
         np.testing.assert_array_equal(table.metas, new_table.metas)
 
     def test_creates_a_table_with_domain_and_given_X(self):
