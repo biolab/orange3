@@ -258,8 +258,13 @@ class SklLearner(Learner, metaclass=WrapperMeta):
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {}'.format(self.name, self.params)
+
+    def __repr__(self):
+        return '{}({})'.format(type(self).__name__,
+                               ", ".join("{}={}".format(k, v)
+                                         for k, v in self.params.items()))
 
     @property
     def supports_weights(self):
