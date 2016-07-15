@@ -14,12 +14,12 @@ from Orange.regression.tree import TreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
-from Orange.widgets.visualize.widgetutils.common.owgrid import (
+from Orange.widgets.visualize.utils.owgrid import (
     OWGrid,
     SelectableGridItem,
     ZoomableGridItem
 )
-from Orange.widgets.visualize.widgetutils.tree.skltreeadapter import \
+from Orange.widgets.visualize.utils.tree.skltreeadapter import \
     SklTreeAdapter
 from Orange.widgets.widget import OWWidget
 

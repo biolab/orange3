@@ -2,12 +2,11 @@
 from collections import OrderedDict
 
 import numpy as np
+from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 
 from Orange.misc.cache import memoize_method
-from Orange.widgets.visualize.widgetutils.tree.treeadapter import TreeAdapter
-
 from Orange.preprocess.transformation import Indicator
-from Orange.widgets.visualize.widgetutils.tree.rules import (
+from Orange.widgets.visualize.utils.tree.rules import (
     DiscreteRule,
     ContinuousRule
 )

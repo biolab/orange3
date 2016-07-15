@@ -36,7 +36,7 @@ class PythagorasTreeViewer(QtGui.QGraphicsWidget):
 
     Examples
     --------
-    >>> from Orange.widgets.visualize.widgetutils.tree.treeadapter import (
+    >>> from Orange.widgets.visualize.utils.tree.treeadapter import (
     >>>     TreeAdapter
     >>> )
     Pass tree through constructor.

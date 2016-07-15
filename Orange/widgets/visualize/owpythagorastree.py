@@ -19,15 +19,13 @@ kind of trees.
 from math import sqrt, log
 
 import numpy as np
-from Orange.widgets.visualize.widgetutils.common.scene import \
+from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
-from Orange.widgets.visualize.widgetutils.common.view import (
+from Orange.widgets.visualize.utils.view import (
     PannableGraphicsView,
     ZoomableGraphicsView,
     PreventDefaultWheelEvent
 )
-from Orange.widgets.visualize.widgetutils.tree.skltreeadapter import \
-    SklTreeAdapter
 from PyQt4 import QtGui
 
 from Orange.base import Tree
@@ -40,12 +38,14 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     SquareGraphicsItem
 )
-from Orange.widgets.visualize.widgetutils.common.owlegend import (
+from Orange.widgets.visualize.utils.owlegend import (
     AnchorableGraphicsView,
     Anchorable,
     OWDiscreteLegend,
     OWContinuousLegend
 )
+from Orange.widgets.visualize.utils.tree.skltreeadapter import \
+    SklTreeAdapter
 from Orange.widgets.widget import OWWidget
 
 

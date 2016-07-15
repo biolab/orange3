@@ -1,7 +1,7 @@
 """Test rules for classification and regression trees."""
 import unittest
 
-from Orange.widgets.visualize.widgetutils.tree.rules import (
+from Orange.widgets.visualize.utils.tree.rules import (
     ContinuousRule,
     IntervalRule,
 )
