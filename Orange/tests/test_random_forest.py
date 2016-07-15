@@ -26,7 +26,7 @@ class RandomForestTest(unittest.TestCase):
     def test_predict_single_instance(self):
         forest = RandomForestLearner()
         c = forest(self.iris)
-        for ins in self.iris:
+        for _, ins in self.iris.iterrows():
             c(ins)
             val, prob = c(ins, c.ValueProbs)
 
@@ -50,7 +50,7 @@ class RandomForestTest(unittest.TestCase):
     def test_predict_single_instance_reg(self):
         forest = RandomForestRegressionLearner()
         model = forest(self.housing)
-        for ins in self.housing:
+        for _, ins in self.housing.iterrows():
             pred = model(ins)
             self.assertGreater(pred, 0)
 
@@ -100,7 +100,7 @@ class RandomForestTest(unittest.TestCase):
         model = forest(self.iris)
         self.assertEqual(len(model.trees), n)
         tree = model.trees[0]
-        self.assertEqual(tree(self.iris[0]), 0)
+        self.assertEqual(tree(self.iris.iloc[0]), 0)
 
     def test_get_regression_trees(self):
         n = 5
@@ -108,4 +108,4 @@ class RandomForestTest(unittest.TestCase):
         model = forest(self.housing)
         self.assertEqual(len(model.trees), n)
         tree = model.trees[0]
-        tree(self.housing[0])
+        tree(self.housing.iloc[0])

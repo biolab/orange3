@@ -78,9 +78,9 @@ class TestRemoveNanClass(unittest.TestCase):
         self.assertTrue(not np.isnan(table.Y).any())
 
     def test_remove_nan_classes_multiclass(self):
-        domain = Domain([DiscreteVariable("a", values="01")],
-                        [DiscreteVariable("b", values="01"),
-                        DiscreteVariable("c", values="01")])
+        domain = Domain([DiscreteVariable("a", values=[0, 1])],
+                        [DiscreteVariable("b", values=[0, 1]),
+                        DiscreteVariable("c", values=[0, 1])])
         table = Table(domain, [[0, 1, np.nan],
                                [1, np.nan, 0],
                                [1, 0, 1],
