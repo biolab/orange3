@@ -61,7 +61,7 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Number of Clusters")
         layout = QGridLayout()
-        bg = gui.radioButtonsInBox(
+        self.n_clusters = bg = gui.radioButtonsInBox(
             box, self, "optimize_k", [], orientation=layout,
             callback=self.update)
         layout.addWidget(
@@ -132,7 +132,7 @@ class OWKMeans(widget.OWWidget):
                      callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
-        gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
+        self.apply_button = gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)
