@@ -105,6 +105,17 @@ class SGDRegressionLearner(LinearRegressionLearner):
 
 
 class PolynomialLearner(Learner):
+    """Generate polynomial features and learn a prediction model
+
+    Parameters
+    ----------
+    learner : LearnerRegression
+        learner to be fitted on the transformed features
+    degree : int
+        degree of used polynomial
+    preprocessors : List[Preprocessor]
+        preprocessors to be applied on the data before learning
+    """
     name = 'poly learner'
     preprocessors = [Continuize(),
                      RemoveNaNColumns(),
