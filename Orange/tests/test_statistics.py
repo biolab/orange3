@@ -53,3 +53,19 @@ class TestUtil(unittest.TestCase):
                                            [0, 1, 1/3, 0, 4, 1],
                                            [0, 0,   0, 0, 5, 0],
                                            [0, 0,   0, 0, 5, 0]])
+
+    def test_stats_weights(self):
+        X = np.arange(4).reshape(2, 2).astype(float)
+        weights = np.array([1, 3])
+        np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 0, 2],
+                                                    [1, 3, 2.5, 0, 0, 2]])
+
+        X = np.arange(4).reshape(2, 2).astype(object)
+        np.testing.assert_equal(stats(X, weights), stats(X))
+
+    def test_stats_weights_sparse(self):
+        X = np.arange(4).reshape(2, 2).astype(float)
+        X = csr_matrix(X)
+        weights = np.array([1, 3])
+        np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 1, 1],
+                                                    [1, 3, 2.5, 0, 0, 2]])
