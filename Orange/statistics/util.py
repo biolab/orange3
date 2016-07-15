@@ -178,7 +178,7 @@ def stats(X, weights=None, compute_variance=False):
         if compute_variance:
             raise NotImplementedError
 
-        non_zero = np.bincount(X.nonzero()[1])
+        non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
         X = X.tocsc()
         return np.column_stack((
             X.min(axis=0).toarray().ravel(),

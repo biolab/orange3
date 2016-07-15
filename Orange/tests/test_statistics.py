@@ -45,3 +45,11 @@ class TestUtil(unittest.TestCase):
                                            [0, 1, .2, 0, 4, 1],
                                            [0, 1, .2, 0, 4, 1],
                                            [0, 1, .2, 0, 4, 1]])
+
+        # assure last two columns have just zero elements
+        X = X[:3]
+        np.testing.assert_equal(stats(X), [[0, 1, 1/3, 0, 4, 1],
+                                           [0, 1, 1/3, 0, 4, 1],
+                                           [0, 1, 1/3, 0, 4, 1],
+                                           [0, 0,   0, 0, 5, 0],
+                                           [0, 0,   0, 0, 5, 0]])
