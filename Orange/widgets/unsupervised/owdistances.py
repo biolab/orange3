@@ -5,9 +5,9 @@ from scipy.sparse import issparse
 import Orange.data
 import Orange.misc
 from Orange import distance
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import OWWidget, Msg
 
 METRICS = [
     distance.Euclidean,
@@ -22,7 +22,7 @@ METRICS = [
 ]
 
 
-class OWDistances(widget.OWWidget):
+class OWDistances(OWWidget):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
@@ -37,11 +37,12 @@ class OWDistances(widget.OWWidget):
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
 
-    class Error(widget.OWWidget.Error):
+    class Error(OWWidget.Error):
         no_continuous_features = Msg("No continuous features")
+        sparse_data = Msg("Selected metric does not support sparse data")
         empty_data = Msg("Empty data (shape = {})")
 
-    class Warning(widget.OWWidget.Warning):
+    class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring discrete features")
 
     def __init__(self):
@@ -87,17 +88,11 @@ class OWDistances(widget.OWWidget):
     def _checksparse(self):
         # Check the current metric for input data compatibility and set/clear
         # appropriate informational GUI state
-        metric = METRICS[self.metric_idx]
-        data = self.data
-        if data is not None and issparse(data.X) and \
-                not metric.supports_sparse:
-            self.error(2, "Selected metric does not support sparse data")
-        else:
-            self.error(2)
+        self.Error.sparse_data(
+            shown=self.data is not None and issparse(self.data.X) and
+            not METRICS[self.metric_idx].supports_sparse)
 
     def commit(self):
-        self.warning(1)
-        self.error(1)
         metric = METRICS[self.metric_idx]
         distances = None
         data = self.data

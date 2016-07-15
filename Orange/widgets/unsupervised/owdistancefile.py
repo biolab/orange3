@@ -92,10 +92,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
     # Open a file, create data from it and send it over the data channel
     def open_file(self):
-        self.error()
-        self.warning()
-        self.information()
-
+        self.clear_messages()
         fn = self.last_path()
         if not fn:
             return

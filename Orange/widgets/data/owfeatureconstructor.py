@@ -20,12 +20,12 @@ from PyQt4.QtGui import QSizePolicy
 from PyQt4.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
 import Orange
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
-
+from Orange.widgets.widget import OWWidget, Msg
 
 FeatureDescriptor = \
     namedtuple("FeatureDescriptor", ["name", "expression"])
@@ -311,7 +311,7 @@ class FeatureConstructorSettingsHandler(DomainContextHandler):
         return True
 
 
-class OWFeatureConstructor(widget.OWWidget):
+class OWFeatureConstructor(OWWidget):
     name = "Feature Constructor"
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input data set."
@@ -330,6 +330,9 @@ class OWFeatureConstructor(widget.OWWidget):
         (DiscreteDescriptor, DiscreteFeatureEditor),
         (StringDescriptor, StringFeatureEditor)
     ]
+
+    class Error(OWWidget.Error):
+        more_values_needed = Msg("Discrete feature {} needs more values.")
 
     def __init__(self):
         super().__init__()
@@ -572,19 +575,16 @@ class OWFeatureConstructor(widget.OWWidget):
             metas=self.data.domain.metas + tuple(metas)
         )
 
-        self.error(0)
+        self.Error.clear()
         try:
             data = Orange.data.Table(new_domain, self.data)
         except Exception as err:
-            self.error(0, repr(err.args[0]))
+            self.error(err.args[0])
             return
-
-        self.error(1)
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
         if disc_attrs_not_ok:
-            self.error(1, 'Discrete variable %s needs more values.' %
-                       disc_attrs_not_ok)
+            self.Error.more_values_needed(disc_attrs_not_ok)
             return
 
         self.send("Data", data)

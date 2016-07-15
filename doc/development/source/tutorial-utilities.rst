@@ -130,7 +130,7 @@ message. For instance, a widget class can contain the following classes::
     class Error(OWWidget.Error):
         no_continuous_features = Msg("No continuous features")
 
-    class Warning(OWWidget.Error):
+    class Warning(OWWidget.Warning):
         empty_data = Msg("Comtrongling does not work on meta data")
         no_scissors_run = Msg("Do not run with scissors")
         ignoring_discrete = Msg("Ignoring {n} discrete features: {}")

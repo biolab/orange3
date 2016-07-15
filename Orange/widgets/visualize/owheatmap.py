@@ -456,8 +456,8 @@ class OWHeatMap(widget.OWWidget):
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
         discrete_ignored = Msg("{} discrete column{} ignored")
-        row_clust = Msg()
-        col_clust = Msg()
+        row_clust = Msg("{}")
+        col_clust = Msg("{}")
 
     def __init__(self):
         super().__init__()
@@ -662,8 +662,7 @@ class OWHeatMap(widget.OWWidget):
         """Set the input dataset to display."""
         self.closeContext()
         self.clear()
-        self.error(0)
-        self.Information.clear()
+        self.clear_messages()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
@@ -685,7 +684,7 @@ class OWHeatMap(widget.OWWidget):
                        data.domain.metas),
                 data)
             if not data.domain.attributes:
-                self.error(0, "No continuous feature columns")
+                self.error("No continuous feature columns")
                 input_data = data = None
             else:
                 self.Information.discrete_ignored(

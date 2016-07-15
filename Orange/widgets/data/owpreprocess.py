@@ -1989,11 +1989,11 @@ class OWPreprocess(widget.OWWidget):
         preprocessor = self.buildpreproc()
 
         if self.data is not None:
-            self.error(0)
+            self.error()
             try:
                 data = preprocessor(self.data)
             except ValueError as e:
-                self.error(0, str(e))
+                self.error(str(e))
                 return
         else:
             data = None

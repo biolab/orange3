@@ -21,6 +21,7 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
+from Orange.widgets.widget import Msg
 
 
 class OWSilhouettePlot(widget.OWWidget):
@@ -60,6 +61,9 @@ class OWSilhouettePlot(widget.OWWidget):
 
     graph_name = "scene"
     buttons_area_orientation = Qt.Vertical
+
+    class Error(widget.OWWidget.Error):
+        need_two_clusters = Msg("Need at least two non-empty clusters")
 
     def __init__(self):
         super().__init__()
@@ -167,8 +171,8 @@ class OWSilhouettePlot(widget.OWWidget):
             self._effective_data = Orange.distance._preprocess(data)
             self.openContext(Orange.data.Domain(candidatevars))
 
-        self.error(0, error_msg)
-        self.warning(0, warning_msg)
+        self.error(error_msg)
+        self.warning(warning_msg)
 
     def handleNewSignals(self):
         if self._effective_data is not None:
@@ -227,11 +231,11 @@ class OWSilhouettePlot(widget.OWWidget):
         labels = labels.astype(int)
         _, counts = numpy.unique(labels, return_counts=True)
         if numpy.count_nonzero(counts) >= 2:
-            self.error(1, "")
+            self.Error.need_two_clusters.clear()
             silhouette = sklearn.metrics.silhouette_samples(
                 self._matrix, labels, metric="precomputed")
         else:
-            self.error(1, "Need at least 2 clusters with non zero counts")
+            self.Error.need_two_clusters()
             labels = silhouette = None
 
         self._labels = labels

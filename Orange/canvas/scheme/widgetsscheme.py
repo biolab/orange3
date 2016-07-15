@@ -817,7 +817,7 @@ def mock_error_owwidget(node, message):
 
         def setErrorMessage(self, message):
             self.errorLabel.setText(message)
-            self.error(0, message)
+            self.error(message)
 
     widget = DummyOWWidget()
     widget._settings = node.properties

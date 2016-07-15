@@ -199,12 +199,16 @@ class OWKMeans(widget.OWWidget):
         self.updateOptimizationGui()
         self.update()
 
-    def check_data_size(self, n, msg_func):
+    def check_data_size(self, n, msg_group):
+        msg_group.add_message(
+            "not_enough_data",
+            "Too few ({}) unique data instances for {} clusters")
         if n > len(self.data):
-            msg_func("Too few unique data instances ({}) for {} clusters".
-                     format(len(self.data), n))
+            msg_group.not_enough_data(len(self.data), n)
             return False
-        return True
+        else:
+            msg_group.not_enough_data.clear()
+            return True
 
     def run_optimization(self):
         # Disabling is needed since this function is not reentrant
@@ -212,9 +216,9 @@ class OWKMeans(widget.OWWidget):
         try:
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
-            if not self.check_data_size(self.k_from, self.error):
+            if not self.check_data_size(self.k_from, self.Error):
                 return
-            self.check_data_size(self.k_to, self.warning)
+            self.check_data_size(self.k_to, self.Warning)
             k_to = min(self.k_to, len(self.data))
             kmeans = KMeans(
                 init=['random', 'k-means++'][self.smart_init],
@@ -231,7 +235,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def cluster(self):
-        if not self.check_data_size(self.k, self.error):
+        if not self.check_data_size(self.k, self.Error):
             return
         self.km = KMeans(
             n_clusters=self.k,
@@ -241,8 +245,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def run(self):
-        self.error()
-        self.warning()
+        self.clear_messages()
         if not self.data:
             return
         if self.optimize_k:

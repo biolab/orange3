@@ -174,7 +174,8 @@ class OWTestLearners(OWWidget):
                                  "have different classes")
 
     class Warning(OWWidget.Warning):
-        missing_data = Msg()
+        missing_data = \
+            Msg("Instances with unknown target values were removed from{}data")
         test_data_missing = Msg("Missing separate test data input")
         scores_not_computed = Msg("Some scores could not be computed")
         test_data_unused = Msg("Test data is present but unused. "
@@ -289,15 +290,14 @@ class OWTestLearners(OWWidget):
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
-        self.Warning.missing_data.clear()
         self.train_data_missing_vals = \
             data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
-            self.Warning.missing_data(
-                self._get_missing_data_warning(
-                    self.train_data_missing_vals, self.test_data_missing_vals))
+            self.Warning.missing_data(self._which_missing_data())
             if data:
                 data = RemoveNaNClasses(data)
+        else:
+            self.Warning.missing_data.clear()
 
         self.data = data
         self.closeContext()
@@ -326,25 +326,24 @@ class OWTestLearners(OWWidget):
                 data_sample.download_data(AUTO_DL_LIMIT, partial=True)
                 data = Table(data_sample)
 
-        self.Warning.missing_data.clear()
-        self.test_data_missing_vals = data is not None and \
-                                      np.isnan(data.Y).any()
-
+        self.test_data_missing_vals = \
+            data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
-            self.Warning.missing_data(
-                self._get_missing_data_warning(
-                    self.train_data_missing_vals, self.test_data_missing_vals))
+            self.Warning.missing_data(self._which_missing_data())
             if data:
                 data = RemoveNaNClasses(data)
+        else:
+            self.Warning.missing_data.clear()
 
         self.test_data = data
         if self.resampling == OWTestLearners.TestOnTest:
             self._invalidate()
 
-    def _get_missing_data_warning(self, train_missing, test_missing):
-        return "Instances with unknown target values were removed from{}data"\
-            .format(train_missing * test_missing * " "
-                    or train_missing * " train " or test_missing * " test ")
+    def _which_missing_data(self):
+        return {(True, True): " ",  # both, don't specify
+                (True, False): " train ",
+                (False, True): " test "}[(self.train_data_missing_vals,
+                                          self.test_data_missing_vals)]
 
     def set_preprocessor(self, preproc):
         """
@@ -375,10 +374,10 @@ class OWTestLearners(OWWidget):
         """
         self.Warning.test_data_unused.clear()
         self.Warning.test_data_missing.clear()
-        self.Warning.general.clear()
+        self.warning()
         self.Error.class_inconsistent.clear()
         self.Error.too_many_folds.clear()
-        self.Error.general.clear()
+        self.error()
         if self.data is None:
             return
 
@@ -426,7 +425,7 @@ class OWTestLearners(OWWidget):
                         self.data, learners, k=folds,
                         random_state=rstate, warnings=warnings, **common_args)
                     if warnings:
-                        self.Warning.general(warnings[0])
+                        self.warning(warnings[0])
                 elif self.resampling == OWTestLearners.LeaveOneOut:
                     results = Orange.evaluation.LeaveOneOut(
                         self.data, learners, **common_args)
@@ -447,11 +446,11 @@ class OWTestLearners(OWWidget):
                 else:
                     assert False
             except (RuntimeError, ValueError) as e:
-                self.Error.general(str(e))
+                self.error(str(e))
                 self.setStatusMessage("")
                 return
             else:
-                self.Error.general.clear()
+                self.error()
 
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
         for learner, result in zip(learners, results.split_by_model()):
@@ -552,8 +551,8 @@ class OWTestLearners(OWWidget):
 
             model.appendRow(row)
 
-        self.Error.general("\n".join(errors), show=bool(errors))
-        self.Warning.scores_not_computed(show=has_missing_scores)
+        self.error("\n".join(errors), shown=bool(errors))
+        self.Warning.scores_not_computed(shown=has_missing_scores)
 
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)

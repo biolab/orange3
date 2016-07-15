@@ -10,7 +10,9 @@ from PyQt4.QtGui import (
 from Orange.data import Variable
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
+from Orange.widgets.utils.messages import WidgetMessagesMixin
 from Orange.widgets.utils.progressbar import ProgressBarMixin
+from Orange.widgets.widget import Msg
 
 
 class VizRankDialog(QDialog, ProgressBarMixin):
@@ -204,7 +206,7 @@ class VizRankDialog(QDialog, ProgressBarMixin):
             self.button.setText("Continue")
 
 
-class VizRankDialogAttrPair(VizRankDialog):
+class VizRankDialogAttrPair(VizRankDialog, WidgetMessagesMixin):
     """
     VizRank dialog for pairs of attributes. The class provides most of the
     needed methods, except for `initialize` which is expected to store a
@@ -218,10 +220,17 @@ class VizRankDialogAttrPair(VizRankDialog):
     """
 
     pairSelected = Signal(Variable, Variable)
+    messageActivated = Signal(Msg)
+    messageDeactivated = Signal(Msg)
+
     _AttrRole = next(gui.OrangeUserRole)
 
     def __init__(self, master):
-        super().__init__(master)
+        VizRankDialog.__init__(self, master)
+        WidgetMessagesMixin.__init__(self)
+        self.insert_message_bar()
+        self.layout().insertWidget(0, self.message_bar)
+        self.resize(320, 512)
         self.attrs = []
 
     def sizeHint(self):
@@ -231,13 +240,13 @@ class VizRankDialogAttrPair(VizRankDialog):
 
     def check_preconditions(self):
         """Refuse ranking if there are less than two feature or instances."""
-        if self.master.data is None or \
-                len(self.master.data.domain.attributes) < 2 or \
-                len(self.master.data) < 2:
-            self.master.information(33, "There is nothing to rank.")
-            return False
-        self.master.information(33)
-        return True
+        self.master.Information.add_message(
+            "nothing_to_rank", "There is nothing to rank.")
+        can_rank = self.master.data is not None and \
+            len(self.master.data.domain.attributes) >= 2 and \
+            len(self.master.data) >= 2
+        self.master.Information.nothing_to_rank(shown=not can_rank)
+        return can_rank
 
     def on_selection_changed(self, selected, deselected):
         attrs = [selected.indexes()[i].data(self._AttrRole) for i in (0, 1)]

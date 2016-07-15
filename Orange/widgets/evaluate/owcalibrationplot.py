@@ -11,6 +11,7 @@ import pyqtgraph as pg
 
 import Orange
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.io import FileFormat
 from Orange.canvas import report
@@ -83,18 +84,8 @@ class OWCalibrationPlot(widget.OWWidget):
 
     def set_results(self, results):
         self.clear()
-        self.results = results
-
-        if results is not None:
-            if results.data is None:
-                self.error(0, "Evaluation results require"
-                              " information on test data")
-                results = None
-            elif not results.data.domain.has_discrete_class:
-                self.error(0, "Need discrete class variable")
-                results = None
-
-        if results is not None:
+        self.results = check_results_adequacy(results, self.Error)
+        if self.results is not None:
             self._initialize(results)
             self._replot()
 

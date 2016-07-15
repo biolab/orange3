@@ -21,6 +21,7 @@ from Orange.preprocess import score
 from Orange.canvas import report
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import OWWidget, Msg
 
 
 def table(shape, fill=None):
@@ -52,7 +53,7 @@ SCORES = [
 _DEFAULT_SELECTED = set(m.name for m in SCORES)
 
 
-class OWRank(widget.OWWidget):
+class OWRank(OWWidget):
     name = "Rank"
     description = "Rank and filter data features by their relevance."
     icon = "icons/Rank.svg"
@@ -73,6 +74,11 @@ class OWRank(widget.OWWidget):
 
     # Header state for discrete/continuous scores
     headerState = settings.Setting((None, None))
+
+    class Error(OWWidget.Error):
+        no_target_var = Msg("Data does not have a target variable")
+        invalid_type = Msg("Cannot handle target variable type {}")
+        inadequate_learner = Msg("{}")
 
     def __init__(self):
         super().__init__()
@@ -233,28 +239,26 @@ class OWRank(widget.OWWidget):
 
     @check_sql_input
     def setData(self, data):
-        self.information([0])
-        self.error([0, 100])
+        self.clear_messages()
         self.resetInternals()
 
         if data is not None and not data.domain.class_var:
             data = None
-            self.error(100, "Data does not have a target variable")
+            self.Error.no_target_var()
 
         self.data = data
         if self.data is not None:
-            attrs = self.data.domain.attributes
+            domain = self.data.domain
+            attrs = domain.attributes
             self.usefulAttributes = [attr for attr in attrs
                                      if attr.is_discrete or attr.is_continuous]
 
-            if self.data.domain.has_continuous_class:
+            if domain.has_continuous_class:
                 self.switchRanksMode(1)
-            elif self.data.domain.has_discrete_class:
+            elif domain.has_discrete_class:
                 self.switchRanksMode(0)
             else:
-                # String or other.
-                self.error(0, "Cannot handle class variable type %r" %
-                           type(self.data.domain.class_var).__name__)
+                self.Error.invalid_type(type(domain.class_var).__name__)
 
             if issparse(self.data.X):   # keep only measures supporting sparse data
                 self.measures = [m for m in self.measures
@@ -310,13 +314,9 @@ class OWRank(widget.OWWidget):
         if not self.data:
             return
         if self.data.has_missing():
-            self.information(0, "Missing values have been imputed.")
+            self.information("Missing values have been imputed.")
 
         measures = self.measures + [v for k, v in self.learners.items()]
-        # Invalidate all warnings
-        self.warning(range(max(len(self.discMeasures),
-                               len(self.contMeasures))))
-
         if measuresMask is None:
             # Update all selected measures
             measuresMask = [self.selectedMeasures.get(m.name)
@@ -325,7 +325,7 @@ class OWRank(widget.OWWidget):
                                            self.learners.items()]
 
         data = self.data
-        self.error(1)
+        self.Error.inadequate_learner.clear()
         learner_col = len(self.measures)
         labels = []
         for index, (meas, mask) in enumerate(zip(measures, measuresMask)):
@@ -346,7 +346,8 @@ class OWRank(widget.OWWidget):
                 learner = meas.score
                 if isinstance(learner, Learner) and \
                         not learner.check_learner_adequacy(self.data.domain):
-                    self.error(1, learner.learner_adequacy_err_msg)
+                    self.Error.inadequate_learner(
+                        learner.learner_adequacy_err_msg)
                 else:
                     scores = meas.score.score_data(data)
                     for i, row in enumerate(scores):

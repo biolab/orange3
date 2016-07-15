@@ -191,7 +191,7 @@ class OWPredictions(widget.OWWidget):
             self.class_var = predictor.domain.class_var
 
     def handleNewSignals(self):
-        self.error(0)
+        self.clear_messages()
         if self.data is not None:
             for inputid, pred in list(self.predictors.items()):
                 if pred.results is None or numpy.isnan(pred.results[0]).all():
@@ -200,7 +200,7 @@ class OWPredictions(widget.OWWidget):
                     except ValueError as err:
                         err_msg = '{}:\n'.format(pred.predictor.name) + \
                                   str(err)
-                        self.error(0, err_msg)
+                        self.error(err_msg)
                         n, m = len(self.data), 1
                         if self.data.domain.has_discrete_class:
                             m = len(self.data.domain.class_var.values)
@@ -228,11 +228,7 @@ class OWPredictions(widget.OWWidget):
         # Check for prediction target consistency
         target_vars = set([p.predictor.domain.class_var
                            for p in self.predictors.values()])
-
-        if len(target_vars) > 1:
-            self.warning(0, "Inconsistent class variables")
-        else:
-            self.warning(0)
+        self.warning("Mismatching class variables", shown=len(target_vars) > 1)
 
         # Update the Info box text.
         info = []

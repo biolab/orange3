@@ -11,10 +11,10 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, OWWidget
 
 
-class OWDataSampler(widget.OWWidget):
+class OWDataSampler(OWWidget):
     name = "Data Sampler"
     description = "Randomly draw a subset of data points " \
                   "from the input data set."
@@ -45,10 +45,10 @@ class OWDataSampler(widget.OWWidget):
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
 
-    class Error(widget.OWWidget.Error):
-        too_many_folds = Msg("Number of folds exceeds the data size")
+    class Error(OWWidget.Error):
+        too_many_folds = Msg("Number of folds exceeds data size")
         sample_larger_than_data = Msg("Sample must be smaller than data")
-        not_enough_to_stratify = Msg("Not enough data for stratified sampling")
+        not_enough_to_stratify = Msg("Data is too small to stratify")
 
     def __init__(self):
         super().__init__()

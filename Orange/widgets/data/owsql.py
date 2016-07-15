@@ -8,9 +8,9 @@ from PyQt4.QtGui import QApplication, QCursor, QMessageBox
 
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.widget import OutputSignal, Msg
+from Orange.widgets.widget import OWWidget, OutputSignal, Msg
 from Orange.canvas import report
 
 
@@ -18,7 +18,7 @@ MAX_DL_LIMIT = 1000000
 EXTENSIONS = ('tsm_system_time', 'quantile')
 
 
-class OWSql(widget.OWWidget):
+class OWSql(OWWidget):
     name = "SQL Table"
     id = "orange.widgets.data.sql"
     description = """
@@ -50,8 +50,12 @@ class OWSql(widget.OWWidget):
     materialize = Setting(False)
     materialize_table_name = Setting("")
 
-    class Information(widget.OWWidget.Information):
+    class Information(OWWidget.Information):
         data_sampled = Msg("Data description was generated from a sample.")
+
+    class Error(OWWidget.Error):
+        connection = Msg("{}")
+        missing_extension = Msg("Database is missing extension{}: {}")
 
     def __init__(self):
         super().__init__()
@@ -165,7 +169,7 @@ class OWSql(widget.OWWidget):
                 user=self.username,
                 password=self.password
             )
-            self.error(0)
+            self.Error.connection.clear()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
                 ("Database", self.database), ("User name", self.username)
@@ -173,13 +177,13 @@ class OWSql(widget.OWWidget):
             self.refresh_tables()
             self.select_table()
         except psycopg2.Error as err:
-            self.error(0, str(err).split('\n')[0])
+            self.Error.connection(str(err).split('\n')[0])
             self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 
     def refresh_tables(self):
         self.tablecombo.clear()
-        self.error(1)
+        self.Error.missing_extension.clear()
         if self._connection is None:
             self.data_desc_table = None
             return
@@ -229,12 +233,10 @@ class OWSql(widget.OWWidget):
                 missing.append(ext)
             finally:
                 self._connection.commit()
-        if missing:
-            self.error(1, 'Database missing extension{}: {}'.format(
-                's' if len(missing) > 1 else '',
-                ', '.join(missing)))
-        else:
-            self.error(1)
+        self.Error.missing_extension(
+            's' if len(missing) > 1 else '',
+            ', '.join(missing),
+            shown=missing)
 
     def open_table(self):
         self.create_extensions()
@@ -258,8 +260,8 @@ class OWSql(widget.OWWidget):
             self.sql = self.table = self.sqltext.toPlainText()
             if self.materialize:
                 if not self.materialize_table_name:
-                    self.error(
-                        0, "Specify a table name to materialize the query")
+                    self.Error.connection(
+                        "Specify a table name to materialize the query")
                     return
                 try:
                     cur = self._connection.cursor()
@@ -268,7 +270,7 @@ class OWSql(widget.OWWidget):
                     cur.execute("ANALYZE " + self.materialize_table_name)
                     self.table = self.materialize_table_name
                 except psycopg2.ProgrammingError as ex:
-                    self.error(0, str(ex))
+                    self.Error.connection(str(ex))
                     return
                 finally:
                     self._connection.commit()
@@ -282,10 +284,10 @@ class OWSql(widget.OWWidget):
                              self.table,
                              inspect_values=False)
         except psycopg2.ProgrammingError as ex:
-            self.error(0, str(ex))
+            self.Error.connection(str(ex))
             return
 
-        self.error(0)
+        self.Error.connection.clear()
 
 
         sample = False

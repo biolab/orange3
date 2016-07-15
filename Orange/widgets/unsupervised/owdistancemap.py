@@ -382,11 +382,11 @@ class OWDistanceMap(widget.OWWidget):
     def set_distances(self, matrix):
         self.closeContext()
         self.clear()
-        self.error(0)
+        self.error()
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
-                self.error(0, "Empty distance matrix.")
+                self.error("Empty distance matrix.")
                 matrix = None
 
         self.matrix = matrix
@@ -423,7 +423,7 @@ class OWDistanceMap(widget.OWWidget):
         else:
             item.setFlags(item.flags() | Qt.ItemIsEnabled)
 
-        self.information(1, msg)
+        self.information(msg)
 
     def set_items(self, items, axis=1):
         self.items = items

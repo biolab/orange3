@@ -216,7 +216,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         prev_sel_learner = self.selected_learner
         self.clear()
-        self.warning([0, 1])
+        self.warning()
         self.closeContext()
 
         data = None
@@ -224,8 +224,7 @@ class OWConfusionMatrix(widget.OWWidget):
             data = results.data
 
         if data is not None and not data.domain.has_discrete_class:
-            self.warning(
-                0, "Confusion Matrix cannot be used for regression results.")
+            self.warning("Confusion Matrix cannot show regression results.")
 
         self.results = results
         self.data = data
