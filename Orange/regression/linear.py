@@ -117,9 +117,7 @@ class PolynomialLearner(Learner):
         preprocessors to be applied on the data before learning
     """
     name = 'poly learner'
-    preprocessors = [Continuize(),
-                     RemoveNaNColumns(),
-                     SklImpute()]
+    preprocessors = SklLearner.preprocessors
 
     def __init__(self, learner=LinearRegressionLearner(), degree=2,
                  preprocessors=None):
