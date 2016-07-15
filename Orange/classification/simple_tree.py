@@ -93,9 +93,9 @@ class SimpleTreeLearner(Learner):
 
 class SimpleTreeModel(Model):
     def __init__(self, learner, data):
-        X = np.ascontiguousarray(data.X)
-        Y = np.ascontiguousarray(data.Y)
-        W = np.ascontiguousarray(data.W)
+        X = np.ascontiguousarray(data.X.astype(np.float64))
+        Y = np.ascontiguousarray(data.Y.astype(np.float64))
+        W = np.ascontiguousarray(data.W.astype(np.float64))
         self.num_attrs = X.shape[1]
         self.dom_attr = data.domain.attributes
         self.cls_vars = list(data.domain.class_vars)
@@ -157,7 +157,7 @@ class SimpleTreeModel(Model):
             learner.seed)
 
     def predict_storage(self, data):
-        X = np.ascontiguousarray(data.X)
+        X = np.ascontiguousarray(data.X.astype(np.float64))
         if self.type == Classification:
             p = np.zeros((X.shape[0], self.cls_vals))
             _tree.predict_classification(
