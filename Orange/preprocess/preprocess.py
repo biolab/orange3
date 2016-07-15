@@ -353,29 +353,26 @@ class Randomize(Preprocess):
         data : Orange.data.Table
             Randomized data table.
         """
-        new_data = Table(data)
-
-        if self.rand_type == Randomize.RandomizeClasses:
-            self.randomize(new_data.Y)
-        elif self.rand_type == Randomize.RandomizeAttributes:
-            self.randomize(new_data.X)
+        if self.rand_type == Randomize.RandomizeAttributes:
+            columns = data.domain.attributes
+        elif self.rand_type == Randomize.RandomizeClasses:
+            columns = data.domain.class_vars
         elif self.rand_type == Randomize.RandomizeMetas:
-            self.randomize(new_data.metas)
+            columns = data.domain.metas
         else:
             raise TypeError('Unsupported type')
 
-        return new_data
+        # the modified column index
+        new_data = data.copy()
+        new_index = np.random.permutation(new_data.index)
 
-    def randomize(self, table):
-        if len(table.shape) > 1:
-            for i in range(table.shape[1]):
-                np.random.shuffle(table[:,i])
-        else:
-            np.random.shuffle(table)
+        # reindex each column in the same way
+        for column in columns:
+            new_data[column] = new_data[column].reindex(new_index)  # no way to make inplace
+        return new_data
 
 
 class ProjectPCA(Preprocess):
-
     def __init__(self, n_components=None):
         self.n_components = n_components
 
@@ -385,7 +382,6 @@ class ProjectPCA(Preprocess):
 
 
 class ProjectCUR(Preprocess):
-
     def __init__(self, rank=3, max_error=1):
         self.rank = rank
         self.max_error = max_error

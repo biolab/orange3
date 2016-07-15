@@ -24,7 +24,6 @@ class TestRandomizer(unittest.TestCase):
         self.assertTrue((np.sort(data.Y, axis=0) == np.sort(
             data_rand.Y, axis=0)).all())
 
-
     def test_randomize_classes(self):
         data = self.zoo
         randomizer = Randomize(rand_type=Randomize.RandomizeClasses)
