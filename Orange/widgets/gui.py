@@ -672,11 +672,11 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param minv: minimal value
-    :type minv: int
+    :type minv: int or float
     :param maxv: maximal value
-    :type maxv: int
+    :type maxv: int or float
     :param step: step (default: 1)
-    :type step: int
+    :type step: int or float
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :param label: label that is put in above or to the left of the spin box
