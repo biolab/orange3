@@ -337,7 +337,7 @@ class Table(pd.DataFrame):
                 cls.conversion_cache = {}
             else:
                 cached = cls.conversion_cache.get((id(target_domain), id(source_table)))
-                if cached:
+                if cached is not None:
                     return cached
             if target_domain == source_table.domain:
                 return cls.from_table_rows(source_table, row_indices)
