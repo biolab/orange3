@@ -110,7 +110,8 @@ class PolynomialLearner(Learner):
                      RemoveNaNColumns(),
                      SklImpute()]
 
-    def __init__(self, learner, degree=1, preprocessors=None):
+    def __init__(self, learner=LinearRegressionLearner(), degree=2,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.degree = degree
         self.learner = learner
