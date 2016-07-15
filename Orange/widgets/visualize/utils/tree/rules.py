@@ -44,10 +44,10 @@ class DiscreteRule(Rule):
 
     Examples
     --------
-    >>> DiscreteRule('age', True, 30)
+    >>> print(DiscreteRule('age', True, 30))
     age = 30
 
-    >>> DiscreteRule('name', False, 'John')
+    >>> print(DiscreteRule('name', False, 'John'))
     name ≠ John
 
     Notes
@@ -72,7 +72,9 @@ class DiscreteRule(Rule):
         return '{} {} {}'.format(
             self.attr_name, '=' if self.equals else '≠', self.value)
 
-    __repr__ = __str__
+    def __repr__(self):
+        return "DiscreteRule(attr_name='%s', equals=%s, value=%s)" % (
+            self.attr_name, self.equals, self.value)
 
 
 class ContinuousRule(Rule):
@@ -90,10 +92,10 @@ class ContinuousRule(Rule):
 
     Examples
     --------
-    >>> ContinuousRule('age', False, 30, inclusive=True)
+    >>> print(ContinuousRule('age', False, 30, inclusive=True))
     age ≤ 30.000
 
-    >>> ContinuousRule('age', True, 30)
+    >>> print(ContinuousRule('age', True, 30))
     age > 30.000
 
     Notes
@@ -132,7 +134,10 @@ class ContinuousRule(Rule):
         return '%s %s %.3f' % (
             self.attr_name, '>' if self.greater else '≤', self.value)
 
-    __repr__ = __str__
+    def __repr__(self):
+        return "ContinuousRule(attr_name='%s', greater=%s, value=%s, " \
+               "inclusive=%s)" % (self.attr_name, self.greater, self.value,
+                                  self.inclusive)
 
 
 class IntervalRule(Rule):
@@ -148,9 +153,9 @@ class IntervalRule(Rule):
 
     Examples
     --------
-    >>> IntervalRule('Rule',
-    >>>              ContinuousRule('Rule', True, 1, inclusive=True),
-    >>>              ContinuousRule('Rule', False, 3))
+    >>> print(IntervalRule('Rule',
+    >>>                    ContinuousRule('Rule', True, 1, inclusive=True),
+    >>>                    ContinuousRule('Rule', False, 3)))
     Rule ∈ [1.000, 3.000)
 
     Notes
@@ -201,4 +206,6 @@ class IntervalRule(Rule):
             ']' if self.right_rule.inclusive else ')'
         )
 
-    __repr__ = __str__
+    def __repr__(self):
+        return "IntervalRule(attr_name='%s', left_rule=%s, right_rule=%s)" % (
+            self.attr_name, repr(self.left_rule), repr(self.right_rule))
