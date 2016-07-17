@@ -1,5 +1,6 @@
 #cython: embedsignature=True
 
+import numpy
 cimport numpy as np
 import cython
 
@@ -8,6 +9,8 @@ from libc.stdlib cimport calloc, free
 cdef extern from "math.h":
     double log(double x)
 
+cdef extern from "numpy/npy_math.h":
+    bint npy_isnan(double x)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -128,3 +131,31 @@ def find_binarization_entropy(np.ndarray[np.float64_t, ndim=2] cont,
                 best_mapping = mapping
     free(distr)
     return (class_entro - best_entro) / N / log(2), best_mapping
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,
+                        np.ndarray[np.int32_t, ndim=1] code,
+                        np.ndarray[np.float64_t, ndim=2] class_distrs,
+                        np.ndarray[np.float64_t, ndim=1] thresholds):
+    cdef int node_ptr, node_idx, i, val_idx
+    cdef np.float64_t val
+    cdef np.ndarray[np.float64_t, ndim=2] predictions = \
+        numpy.empty((X.shape[0], class_distrs.shape[1]), dtype=numpy.float64)
+
+    for i in range(X.shape[0]):
+        node_ptr = 0
+        while code[node_ptr]:
+            val = X[i, code[node_ptr + 2]]
+            if npy_isnan(val):
+                break
+            if code[node_ptr] == 3:
+                node_idx = code[node_ptr + 1]
+                val_idx = int(val > thresholds[node_idx])
+            else:
+                val_idx = int(val)
+            node_ptr = code[node_ptr + 3 + val_idx]
+        node_idx = code[node_ptr + 1]
+        predictions[i] = class_distrs[node_idx]
+    return predictions
