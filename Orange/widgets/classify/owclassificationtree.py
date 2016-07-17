@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from PyQt4.QtCore import Qt
+
 from Orange.base import Tree
 from Orange.data import Table
 from Orange.classification.tree import TreeLearner, OrangeTreeLearner
@@ -18,61 +20,56 @@ class OWClassificationTree(OWBaseLearner):
     # TODO: Common base class for tree learners
     LEARNER = TreeLearner
 
-    attribute_score = Setting(0)
     limit_min_leaf = Setting(True)
     min_leaf = Setting(2)
     limit_min_internal = Setting(True)
     min_internal = Setting(5)
     limit_depth = Setting(True)
     max_depth = Setting(100)
-    use_skl = Setting(False)
-
-    scores = (("Entropy", "entropy"), ("Gini Index", "gini"))
+    limit_majority = Setting(True)
+    sufficient_majority = Setting(95)
+    binary_trees = Setting(True)
 
     def add_main_layout(self):
-        gui.comboBox(self.controlArea, self, "attribute_score",
-                     box='Feature Selection',
-                     items=[name for name, _ in self.scores],
+        box = gui.vBox(self.controlArea, True)
+        # the checkbox is put into vBox for alignemnt with other checkboxes
+        gui.checkBox(gui.vBox(box), self, "binary_trees", "Induce binary tree",
                      callback=self.settings_changed)
-
-        box = gui.vBox(self.controlArea, 'Pruning')
-        gui.spin(box, self, "min_leaf", 1, 1000,
-                 label="Min. instances in leaves: ", checked="limit_min_leaf",
-                 callback=self.settings_changed)
-        gui.spin(box, self, "min_internal", 1, 1000,
-                 label="Stop splitting nodes with less instances than: ",
-                 checked="limit_min_internal",
-                 callback=self.settings_changed)
-        gui.spin(box, self, "max_depth", 1, 1000,
-                 label="Limit the depth to: ", checked="limit_depth",
-                 callback=self.settings_changed)
-        gui.checkBox(box, self, "use_skl", "Favour speed over readbility",
-                     callback=self.settings_changed)
+        for label, check, setting, fromv, tov in (
+                ("Min. number of instances in leaaves: ",
+                 "limit_min_leaf", "min_leaf", 1, 1000),
+                ("Do not split subsets smaller than: ",
+                 "limit_min_internal", "min_internal", 1, 1000),
+                ("Stop when majority reaches [%]: ",
+                 "limit_majority", "sufficient_majority", 51, 100),
+                ("Limit the maximal tree depth to: ",
+                 "limit_depth", "max_depth", 1, 1000)):
+            gui.spin(box, self, setting, fromv, tov, label=label, checked=check,
+                     alignment=Qt.AlignRight, callback=self.settings_changed)
 
     def create_learner(self):
-        common_args = dict(
-            max_depth=self.max_depth if self.limit_depth else None,
-            min_samples_split=
-            self.min_internal if self.limit_min_internal else 2,
-            min_samples_leaf=self.min_leaf if self.limit_min_leaf else 1)
-
-        if self.use_skl:
-            return TreeLearner(criterion=self.scores[self.attribute_score][1],
-                               preprocessors=self.preprocessors,
-                               **common_args)
-        else:
-            return OrangeTreeLearner(**common_args)
+        return OrangeTreeLearner(
+            max_depth=(None, self.max_depth)[self.limit_depth],
+            min_samples_split=(2, self.min_internal)[self.limit_min_internal],
+            min_samples_leaf=(1, self.min_leaf)[self.limit_min_leaf],
+            sufficient_majority=(1, self.sufficient_majority / 100
+                                 )[self.limit_majority],
+            binarize=self.binary_trees
+        )
 
     def get_learner_parameters(self):
         from Orange.canvas.report import plural_w
         items = OrderedDict()
-        items["Split selection"] = self.scores[self.attribute_score][0]
         items["Pruning"] = ", ".join(s for s, c in (
-            (plural_w("at least {number} instance{s} in leaves", self.min_leaf),
-             self.limit_min_leaf),
-            (plural_w("at least {number} instance{s} in internal nodes", self.min_internal),
-             self.limit_min_internal),
-            ("maximum depth {}".format(self.max_depth), self.limit_depth)) if c) or "None"
+            (plural_w("at least {number} instance{s} in leaves",
+                      self.min_leaf), self.limit_min_leaf),
+            (plural_w("at least {number} instance{s} in internal nodes",
+                      self.min_internal), self.limit_min_internal),
+            ("stop splitting when the majority class reaches {} %".
+             format(self.sufficient_majority), self.limit_majority),
+            ("maximum depth {}".format(self.max_depth), self.limit_depth)
+            ) if c) or "None"
+        items["Binary trees"] = ("No", "Yes")[self.binary_trees]
         return items
 
 if __name__ == "__main__":

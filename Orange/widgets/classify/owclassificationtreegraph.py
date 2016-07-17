@@ -115,18 +115,15 @@ class TreeNode(GraphicsNode):
         if self.parent:
             draw_text = self.model.split_condition(
                 self.node_id, self.parent.node_id)
-            if self.parent.x() > self.x():
-                x = 4
-            else:
+            if self.parent.x() > self.x():  # node is to the left
                 fm = QFontMetrics(font)
-                x = rect.width() - 4 - fm.width(draw_text)
+                x = rect.width() / 2 - fm.width(draw_text) - 4
+            else:
+                x = rect.width() / 2 + 4
             painter.drawText(QPointF(x, -self.line_descent - 1), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
-        if self.isSelected():
-            painter.setPen(QPen(QBrush(Qt.black), 2))
-        else:
-            painter.setPen(QPen(Qt.gray))
+        painter.setPen(QPen(Qt.black, 3 if self.isSelected() else 0))
         adjrect = rect.adjusted(-3, 0, 0, 0)
         if self.model.is_leaf(self.node_id):
             painter.drawRoundedRect(adjrect, 4, 4)
