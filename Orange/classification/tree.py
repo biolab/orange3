@@ -39,7 +39,7 @@ class Node:
 
     def descend(self, inst):
         """Return the child for the given data instance"""
-        return None
+        return np.nan
 
 
 class DiscreteNode(Node):
@@ -48,7 +48,7 @@ class DiscreteNode(Node):
         super().__init__(attr, attr_idx, class_distr)
 
     def descend(self, inst):
-        return self.children[inst[self.attr_idx]]
+        return int(inst[self.attr_idx])
 
     def describe_branch(self, i):
         return self.attr.values[i]
@@ -65,7 +65,8 @@ class DiscreteNodeMapping(Node):
         self.mapping = mapping
 
     def descend(self, inst):
-        return self.children[self.mapping[inst[self.attr_idx]]]
+        val = inst[self.attr_idx]
+        return np.nan if np.isnan(val) else self.mapping[int(val)]
 
     def describe_branch(self, i):
         values = [self.attr.values[j]
@@ -86,8 +87,9 @@ class NumericNode(Node):
         super().__init__(attr, attr_idx, class_distr)
         self.threshold = threshold
 
-    def predict(self, inst):
-        return self.children[inst[self.attr_idx] > self.threshold]
+    def descend(self, inst):
+        val = inst[self.attr_idx]
+        return np.nan if np.isnan(val) else val > self.threshold
 
     def describe_branch(self, i):
         return "{} {}".format(("≤", ">")[i], self.threshold)
@@ -103,6 +105,20 @@ class OrangeTreeModel(Model, Tree):
         super().__init__(data.domain)
         self.instances = data
         self._root = root
+
+    def predict(self, X):
+        n = len(X)
+        y = np.empty((n,))
+        for i in range(n):
+            x = X[i]
+            node = self._root
+            while True:
+                next = node.descend(x)
+                if np.isnan(next):
+                    break
+                node = node.children[next]
+            y[i] = node.class_distr.modus()
+        return y
 
     @property
     @lru_cache(10)
@@ -238,16 +254,17 @@ class OrangeTreeLearner(Learner):
                 return _score_disc()
             cont = contingency.Discrete(data, attr)
             attr_distr = np.sum(cont, axis=0)
-            class_distr = np.sum(cont, axis=1)  # Skip insts missing attr values
+            # Skip instances with missing value of the attribute
+            class_distr_no_miss = np.sum(cont, axis=1)
             best_score, best_mapping = find_binarization_entropy(
-                cont, class_distr, attr_distr, self.min_samples_leaf)
+                cont, class_distr_no_miss, attr_distr, self.min_samples_leaf)
             if best_score == 0:
                 return None, None, None
             best_score *= 1 - sum(cont.unknowns) / len(data)
             best_cut = np.array(
                 [int(x)
                  for x in reversed("{:>0{}b}".format(best_mapping, n_values))] +
-                [-1])
+                [-1], dtype=np.int16)
             col_x = data.X[:, attr_no].flatten()
             col_x[np.isnan(col_x)] = n_values
             return (best_score,
