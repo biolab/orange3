@@ -7,9 +7,7 @@ import bottleneck as bn
 import sklearn.tree as skl_tree
 from sklearn.tree._tree import TREE_LEAF
 
-from Orange.classification._tree_scorers import (
-    find_threshold_entropy, find_binarization_entropy)
-
+from Orange.classification import _tree_scorers
 from Orange.preprocess.transformation import Indicator
 from Orange.statistics import distribution, contingency
 
@@ -106,19 +104,48 @@ class OrangeTreeModel(Model, Tree):
         self.instances = data
         self._root = root
 
-    def predict(self, X):
+        self._class_distrs = self._thresholds = self._code = None
+        self._compile()
+
+    def predict_by_nodes(self, X):
+        """Prediction that does not use compiled trees; for demo only"""
         n = len(X)
         y = np.empty((n,))
         for i in range(n):
             x = X[i]
             node = self._root
             while True:
-                next = node.descend(x)
-                if np.isnan(next):
+                child_idx = node.descend(x)
+                if np.isnan(child_idx):
                     break
-                node = node.children[next]
+                node = node.children[child_idx]
             y[i] = node.class_distr.modus()
         return y
+
+    def predict_in_python(self, X):
+        """Prediction with compiled code, but in Python; for demo only"""
+        n = len(X)
+        y = np.empty((n, len(self._root.class_distr)))
+        for i in range(n):
+            x = X[i]
+            node_ptr = 0
+            while self._code[node_ptr]:
+                val = x[self._code[node_ptr + 2]]
+                if np.isnan(val):
+                    break
+                child_ptrs = self._code[node_ptr + 3:]
+                if self._code[node_ptr] == 3:
+                    node_idx = self._code[node_ptr + 1]
+                    node_ptr = child_ptrs[int(val > self._thresholds[node_idx])]
+                else:
+                    node_ptr = child_ptrs[int(val)]
+            node_idx = self._code[node_ptr + 1]
+            y[i, :] = self._class_distrs[node_idx]
+        return y
+
+    def predict(self, X):
+        return _tree_scorers.compute_predictions(
+            X, self._code, self._class_distrs, self._thresholds)
 
     @property
     @lru_cache(10)
@@ -187,6 +214,74 @@ class OrangeTreeModel(Model, Tree):
                 node.describe_branch(branch_no)))
             self.print_tree(child, level + 1)
 
+    def _compile(self):
+        def _get_dims(node):
+            nonlocal nnodes, codesize
+            nnodes += 1
+            codesize += 2  # node type + node index
+            if isinstance(node, DiscreteNodeMapping):
+                codesize += len(node.mapping)
+            if node.children:
+                codesize += 1 + len(node.children)  # attr index + children ptrs
+                for child in node.children:
+                    _get_dims(child)
+
+        NODE_TYPES = [Node, DiscreteNode, DiscreteNodeMapping, NumericNode]
+        def _compile_node(node):
+            # The node is compile into the following code (np.int32)
+            # [0] node type: index of type in NODE_TYPES)
+            # [1] node index: serves as index into class_distrs and thresholds
+            # If the node is not a leaf:
+            #     [2] attribute index
+            # This is followed by an array of indices of the code for children
+            # nodes. The length of this array is 2 for numeric attributes or
+            # **the number of attribute values** for discrete attributes
+            # This is different from the number of branches if discrete values
+            # are mapped to branches
+
+            # Thresholds and class distributions are stored in separate
+            # 1-d and 2-d array arrays of type np.float, indexed be node index
+            # The lengths of both equal the node count; we would gain (if
+            # anything) by not reserving space for unused threshold space
+            nonlocal code_ptr, node_idx
+            code_start = code_ptr
+            self._code[code_ptr] = NODE_TYPES.index(type(node))
+            self._code[code_ptr + 1] = node_idx
+            code_ptr += 2
+
+            self._class_distrs[node_idx, :] = node.class_distr
+            if isinstance(node, NumericNode):
+                self._thresholds[node_idx] = node.threshold
+            node_idx += 1
+
+            # pylint: disable=unidiomatic-typecheck
+            if type(node) == Node:
+                return code_start
+
+            self._code[code_ptr] = node.attr_idx
+            code_ptr += 1
+
+            jump_table_size = 2 if isinstance(node, NumericNode) \
+                else len(node.attr.values)
+            jump_table = self._code[code_ptr:code_ptr + jump_table_size]
+            code_ptr += jump_table_size
+            child_indices = [_compile_node(child) for child in node.children]
+            if isinstance(node, DiscreteNodeMapping):
+                jump_table[:] = np.array(child_indices)[node.mapping]
+            else:
+                jump_table[:] = child_indices
+
+            return code_start
+
+        nnodes = codesize = 0
+        _get_dims(self.root)
+        self._class_distrs = np.empty((nnodes, len(self.root.class_distr)))
+        self._thresholds = np.empty(nnodes)
+        self._code = np.empty(codesize, np.int32)
+
+        code_ptr = node_idx = 0
+        _compile_node(self.root)
+
 
 class OrangeTreeLearner(Learner):
     """
@@ -229,14 +324,16 @@ class OrangeTreeLearner(Learner):
             for efficiency reasons."""
             cont = contingency.Discrete(data, attr)
             attr_distr = np.sum(cont, axis=0)
-            class_distr = np.sum(cont, axis=1)  # Skip insts missing attr values
-            n = sum(class_distr)
+            # Skip instances with missing value of the attribute
+            class_distr_no_miss = np.sum(cont, axis=1)
+            n = sum(attr_distr)
             if np.min(attr_distr) < self.min_samples_leaf:
                 return None, None, None
             class_distr[class_distr <= 0] = 1
             cont[cont <= 0] = 1
             class_entr = \
-                n * np.log(n) - np.sum(class_distr * np.log(class_distr))
+                n * np.log(n) - \
+                np.sum(class_distr_no_miss * np.log(class_distr_no_miss))
             cont_entr = \
                 np.sum(attr_distr * np.log(attr_distr)) - \
                 np.sum(cont * np.log(cont))
@@ -256,9 +353,9 @@ class OrangeTreeLearner(Learner):
             attr_distr = np.sum(cont, axis=0)
             # Skip instances with missing value of the attribute
             class_distr_no_miss = np.sum(cont, axis=1)
-            best_score, best_mapping = find_binarization_entropy(
+            best_score, best_mapping = _tree_scorers.find_binarization_entropy(
                 cont, class_distr_no_miss, attr_distr, self.min_samples_leaf)
-            if best_score == 0:
+            if best_score <= 0:
                 return None, None, None
             best_score *= 1 - sum(cont.unknowns) / len(data)
             best_cut = np.array(
@@ -268,7 +365,7 @@ class OrangeTreeLearner(Learner):
             col_x = data.X[:, attr_no].flatten()
             col_x[np.isnan(col_x)] = n_values
             return (best_score,
-                    DiscreteNodeMapping(attr, attr_no, best_cut, class_distr),
+                    DiscreteNodeMapping(attr, attr_no, best_cut[:-1], class_distr),
                     best_cut[col_x.astype(int)])
 
         def _score_cont():
@@ -277,7 +374,7 @@ class OrangeTreeLearner(Learner):
             nans = np.sum(np.isnan(col_x))
             non_nans = len(col_x) - nans
             arginds = np.argsort(col_x)[:non_nans]
-            best_score, best_cut = find_threshold_entropy(
+            best_score, best_cut = _tree_scorers.find_threshold_entropy(
                 col_x, data.Y, arginds, len(class_distr), self.min_samples_leaf)
             if best_score == 0:
                 return None, None, None
@@ -514,6 +611,7 @@ class TreeClassifier(SklModel, Tree):
         else:
             indices = []
         if len(indices):
+            # pylint: disable=unsubscriptable-object
             return self.instances[indices]
 
 
