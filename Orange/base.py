@@ -90,7 +90,7 @@ class Model:
         self.domain = domain
 
     def predict(self, X):
-        if self.predict_storage == Model.predict_storage:
+        if type(self).predict_storage is Model.predict_storage:
             raise TypeError("Descendants of Model must overload method predict")
         else:
             Y = np.zeros((len(X), len(self.domain.class_vars)))
