@@ -1,7 +1,5 @@
 import unittest
-import pickle
-import sys
-from PyQt4.QtGui import QApplication, QFont, QBrush
+from PyQt4.QtGui import QFont, QBrush
 from PyQt4.QtCore import Qt
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
@@ -11,7 +9,7 @@ from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
 from Orange.canvas.report.owreport import OWReport
 from Orange.widgets import gui
-from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.classify.owclassificationtree import OWClassificationTree
 from Orange.widgets.classify.owclassificationtreegraph import OWClassificationTreeGraph
 from Orange.widgets.classify.owknn import OWKNNLearner
@@ -40,7 +38,6 @@ from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.data.owcolor import OWColor
 from Orange.widgets.data.owpreprocess import OWPreprocess
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
-from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.owtestlearners import OWTestLearners
@@ -68,26 +65,18 @@ from Orange.widgets.visualize.owsieve import OWSieveDiagram
 from Orange.widgets.visualize.owvenndiagram import OWVennDiagram
 
 
-class TestReport(GuiTest):
-    @unittest.skip('Segfaults. Or something.')
+class TestReport(WidgetTest):
     def test_report(self):
         count = 5
         for i in range(count):
             rep = OWReport.get_instance()
-            file = OWFile()
+            file = self.create_widget(OWFile)
             file.create_report_html()
             rep.make_report(file)
         self.assertEqual(rep.table_model.rowCount(), count)
 
-    @unittest.skip("Report extends OWWidget which is not picklable")
-    def test_report_pickle(self):
-        rep = OWReport().get_instance()
-        p = pickle.dumps(rep)
-        rep2 = pickle.loads(p)
-        self.assertEqual(type(rep), type(rep2))
-
     def test_report_table(self):
-        rep = OWReport().get_instance()
+        rep = OWReport.get_instance()
         model = PyTableModel([['x', 1, 2],
                               ['y', 2, 2]])
         model.setHorizontalHeaderLabels(['a', 'b', 'c'])
@@ -131,7 +120,7 @@ class TestReport(GuiTest):
 
 
 @unittest.skip('Segfaults. Dunno. @astaric says it might be something on the QWidget.')
-class TestReportWidgets(GuiTest):
+class TestReportWidgets(WidgetTest):
     clas_widgets = [OWClassificationTree, OWKNNLearner, OWLogisticRegression,
                     OWMajority, OWNaiveBayes, OWRandomForest,
                     OWSVMClassification]

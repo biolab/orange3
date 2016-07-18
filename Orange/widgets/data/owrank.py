@@ -9,6 +9,7 @@ Rank (score) features for prediction.
 from collections import namedtuple
 
 import numpy as np
+from scipy.sparse import issparse
 
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
@@ -254,6 +255,10 @@ class OWRank(widget.OWWidget):
                 # String or other.
                 self.error(0, "Cannot handle class variable type %r" %
                            type(self.data.domain.class_var).__name__)
+
+            if issparse(self.data.X):   # keep only measures supporting sparse data
+                self.measures = [m for m in self.measures
+                                 if m.score.supports_sparse_data]
 
             self.ranksModel.setRowCount(len(attrs))
             for i, a in enumerate(attrs):

@@ -218,7 +218,7 @@ class OWLinearProjection(widget.OWWidget):
     description = "A multi-axis projection of data onto " \
                   "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
-    priority = 2000
+    priority = 420
 
     inputs = [("Data", Table, "set_data", widget.Default),
               ("Data Subset", Table, "set_subset_data")]

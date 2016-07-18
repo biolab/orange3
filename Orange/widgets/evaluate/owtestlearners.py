@@ -8,7 +8,7 @@ import numpy as np
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
-    QTreeView, QStandardItemModel, QStandardItem, QHeaderView,
+    QStandardItemModel, QStandardItem, QHeaderView,
     QStyledItemDelegate
 )
 from PyQt4.QtCore import Qt, QSize
@@ -221,13 +221,10 @@ class OWTestLearners(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        self.view = QTreeView(
-            rootIsDecorated=False,
-            uniformRowHeights=True,
+        self.view = gui.TableView(
             wordWrap=True,
-            editTriggers=QTreeView.NoEditTriggers
         )
-        header = self.view.header()
+        header = self.view.horizontalHeader()
         header.setResizeMode(QHeaderView.ResizeToContents)
         header.setDefaultAlignment(Qt.AlignCenter)
         header.setStretchLastSection(False)
@@ -390,7 +387,9 @@ class OWTestLearners(widget.OWWidget):
         common_args = dict(
             store_data=True,
             preprocessor=self.preprocessor,
-            callback=update_progress)
+            callback=update_progress,
+            n_jobs=-1,
+        )
         self.setStatusMessage("Running")
 
         with self.progressBar():

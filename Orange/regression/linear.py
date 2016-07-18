@@ -105,12 +105,22 @@ class SGDRegressionLearner(LinearRegressionLearner):
 
 
 class PolynomialLearner(Learner):
-    name = 'poly learner'
-    preprocessors = [Continuize(),
-                     RemoveNaNColumns(),
-                     SklImpute()]
+    """Generate polynomial features and learn a prediction model
 
-    def __init__(self, learner, degree=1, preprocessors=None):
+    Parameters
+    ----------
+    learner : LearnerRegression
+        learner to be fitted on the transformed features
+    degree : int
+        degree of used polynomial
+    preprocessors : List[Preprocessor]
+        preprocessors to be applied on the data before learning
+    """
+    name = 'poly learner'
+    preprocessors = SklLearner.preprocessors
+
+    def __init__(self, learner=LinearRegressionLearner(), degree=2,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.degree = degree
         self.learner = learner

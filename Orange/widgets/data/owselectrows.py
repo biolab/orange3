@@ -319,7 +319,7 @@ class OWSelectRows(widget.OWWidget):
         self.update_info(data, self.data_in_variables, "In: ")
         for attr, cond_type, cond_value in self.conditions:
             attrs = [a.name for a in
-                     data.domain.variables + data.domain.metas]
+                     filter_visible(chain(data.domain.variables, data.domain.metas))]
             if attr in attrs:
                 self.add_row(attrs.index(attr), cond_type, cond_value)
         self.unconditional_commit()
@@ -352,17 +352,18 @@ class OWSelectRows(widget.OWWidget):
                 attr_index = domain.index(attr_name)
                 attr = domain[attr_index]
 
-                # Parse datetime strings into floats
-                if isinstance(attr, TimeVariable):
-                    try:
-                        values = [attr.parse(v) for v in values]
-                    except ValueError as e:
-                        self.error(21, e.args[0])
-                        return
-
                 if attr.is_continuous:
                     if any(not v for v in values):
                         continue
+
+                    # Parse datetime strings into floats
+                    if isinstance(attr, TimeVariable):
+                        try:
+                            values = [attr.parse(v) for v in values]
+                        except ValueError as e:
+                            self.error(21, e.args[0])
+                            return
+
                     filter = data_filter.FilterContinuous(
                         attr_index, oper, *[float(v) for v in values])
                 elif attr.is_string:

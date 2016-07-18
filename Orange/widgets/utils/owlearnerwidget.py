@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt4.QtCore import QTimer
+from PyQt4.QtCore import QTimer, Qt
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
@@ -186,6 +186,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                 self.error(self.DATA_ERROR_ID,
                            "Data contains a single target value. "
                            "There is nothing to learn.")
+            elif self.data.X.size == 0:
+                self.error(self.DATA_ERROR_ID,
+                           "Data has no features to learn from.")
             else:
                 self.valid_data = True
         return self.valid_data
@@ -222,7 +225,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def add_learner_name_widget(self):
         gui.lineEdit(self.controlArea, self, 'learner_name', box='Name',
-                     tooltip='The name will identify this model in other widgets')
+                     tooltip='The name will identify this model in other widgets',
+                     orientation=Qt.Horizontal,
+                     callback=lambda: self.apply())
 
     def add_bottom_buttons(self):
         box = gui.hBox(self.controlArea, True)

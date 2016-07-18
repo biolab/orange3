@@ -55,7 +55,6 @@ class ScaleData:
     def __init__(self):
         self.raw_data = None           # input data
         self.attribute_names = []    # list of attribute names from self.raw_data
-        self.attribute_name_index = {}  # dict with indices to attributes
         self.attribute_flip_info = {}   # dictionary with attrName: 0/1 attribute is flipped or not
 
         self.data_has_class = False
@@ -111,8 +110,6 @@ class ScaleData:
         len_data = data and len(data) or 0
 
         self.attribute_names = [attr.name for attr in full_data.domain]
-        self.attribute_name_index = dict([(full_data.domain[i].name, i)
-                                          for i in range(len(full_data.domain))])
         self.attribute_flip_info = {}
 
         self.data_domain = full_data.domain
@@ -122,7 +119,7 @@ class ScaleData:
 
         self.data_class_name = self.data_has_class and full_data.domain.class_var.name
         if self.data_has_class:
-            self.data_class_index = self.attribute_name_index[self.data_class_name]
+            self.data_class_index = self.data_domain.index(self.data_class_name)
         self.have_data = bool(self.raw_data and len(self.raw_data) > 0)
 
         self.domain_data_stat = getCached(full_data,
@@ -244,7 +241,7 @@ class ScaleData:
         if self.data_domain[attr_name].is_discrete:
             return 0
 
-        index = self.attribute_name_index[attr_name]
+        index = self.data_domain.index(attr_name)
         self.attribute_flip_info[attr_name] = 1 - self.attribute_flip_info.get(attr_name, 0)
         if self.data_domain[attr_name].is_continuous:
             self.attr_values[attr_name] = [-self.attr_values[attr_name][1], -self.attr_values[attr_name][0]]
@@ -307,8 +304,8 @@ class ScaleScatterPlotData(ScaleData):
         Create x-y projection of attributes in attrlist.
 
         """
-        xattr_index = self.attribute_name_index[xattr]
-        yattr_index = self.attribute_name_index[yattr]
+        xattr_index = self.data_domain.index(xattr)
+        yattr_index = self.data_domain.index(yattr)
         if filter_valid is True:
             filter_valid = self.get_valid_list([xattr_index, yattr_index])
         if isinstance(filter_valid, np.ndarray):
@@ -494,9 +491,9 @@ class ScaleScatterPlotData(ScaleData):
             for i in range(len(attribute_name_order)):
                 for j in range(i):
                     try:
-                        index = self.attribute_name_index
-                        attr1 = index[attribute_name_order[j]]
-                        attr2 = index[attribute_name_order[i]]
+                        index = self.data_domain.index
+                        attr1 = index(attribute_name_order[j])
+                        attr2 = index(attribute_name_order[i])
                         test_index += 1
                         if self.clusterOptimization.isOptimizationCanceled():
                             secs = time.time() - start_time

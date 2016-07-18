@@ -9,7 +9,6 @@ from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.io import FileFormat
 
 try:
     from orangecontrib import remote
@@ -125,6 +124,8 @@ class OWPCA(widget.OWWidget):
         axis.setLabel("Principal Components")
         axis = self.plot.getAxis("left")
         axis.setLabel("Proportion of variance")
+        self.plot_horlabels = []
+        self.plot_horlines = []
 
         self.plot.getViewBox().setMenuEnabled(False)
         self.plot.getViewBox().setMouseEnabled(False, False)
@@ -199,6 +200,8 @@ class OWPCA(widget.OWWidget):
         self._variance_ratio = None
         self._cumulative = None
         self._line = None
+        self.plot_horlabels = []
+        self.plot_horlines = []
         self.plot.clear()
 
     def get_model(self):
@@ -231,28 +234,48 @@ class OWPCA(widget.OWWidget):
                        antialias=True,
                        name="Cumulative Variance")
 
+        cutpos = self._nselected_components() - 1
         self._line = pg.InfiniteLine(
-            angle=90, pos=self._nselected_components() - 1, movable=True,
-            bounds=(0, p - 1)
-        )
+            angle=90, pos=cutpos, movable=True, bounds=(0, p - 1))
         self._line.setCursor(Qt.SizeHorCursor)
-        self._line.setPen(pg.mkPen(QColor(Qt.darkGray), width=5))
+        self._line.setPen(pg.mkPen(QColor(Qt.black), width=2))
         self._line.sigPositionChanged.connect(self._on_cut_changed)
-
         self.plot.addItem(self._line)
+
+        self.plot_horlines = (
+            pg.PlotCurveItem(pen=pg.mkPen(QColor(Qt.blue), style=Qt.DashLine)),
+            pg.PlotCurveItem(pen=pg.mkPen(QColor(Qt.blue), style=Qt.DashLine)))
+        self.plot_horlabels = (
+            pg.TextItem(color=QColor(Qt.black), anchor=(1, 0)),
+            pg.TextItem(color=QColor(Qt.black), anchor=(1, 1)))
+        for item in self.plot_horlabels + self.plot_horlines:
+            self.plot.addItem(item)
+        self._set_horline_pos()
+
         self.plot.setRange(xRange=(0.0, p - 1), yRange=(0.0, 1.0))
         self._update_axis()
 
+    def _set_horline_pos(self):
+        cutidx = self.ncomponents - 1
+        for line, label, curve in zip(self.plot_horlines, self.plot_horlabels,
+                                      (self._variance_ratio, self._cumulative)):
+            y = curve[cutidx]
+            line.setData([-1, cutidx], 2 * [y])
+            label.setPos(cutidx, y)
+            label.setPlainText("{:.3f}".format(y))
+
     def _on_cut_changed(self, line):
         # cut changed by means of a cut line over the scree plot.
-        value = line.value()
-        self._line.setValue(round(value))
+        value = int(round(line.value()))
+        self._line.setValue(value)
         current = self._nselected_components()
-        components = int(numpy.floor(value)) + 1
+        components = value + 1
 
         if not (self.ncomponents == 0 and
                 components == len(self._variance_ratio)):
             self.ncomponents = components
+
+        self._set_horline_pos()
 
         if self._pca is not None:
             self.variance_covered = self._cumulative[components - 1] * 100
@@ -284,8 +307,8 @@ class OWPCA(widget.OWWidget):
             return
 
         cut = numpy.searchsorted(self._cumulative,
-                                 self.variance_covered / 100.0)
-        self.ncomponents = cut + 1
+                                 self.variance_covered / 100.0) + 1
+        self.ncomponents = cut
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
         self._invalidate_selection()
@@ -384,5 +407,4 @@ def main():
     return rval
 
 if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+    main()

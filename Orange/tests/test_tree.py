@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 import sklearn.tree as skl_tree
-from sklearn.tree._tree import TREE_LEAF
+from sklearn.tree._tree import TREE_LEAF, Tree
 
 from Orange.data import Table
 from Orange.classification import TreeLearner
@@ -26,6 +26,18 @@ class TestTreeLearner(unittest.TestCase):
         model = learn(table)
         pred = model(table)
         self.assertTrue(np.all(table.Y.flatten() == pred))
+
+    def test_get_tree_classification(self):
+        table = Table('iris')
+        learn = TreeLearner()
+        clf = learn(table)
+        self.assertIsInstance(clf.tree, Tree)
+
+    def test_get_tree_regression(self):
+        table = Table('housing')
+        learn = TreeRegressionLearner()
+        clf = learn(table)
+        self.assertIsInstance(clf.tree, Tree)
 
 
 class TestDecisionTreeClassifier(unittest.TestCase):

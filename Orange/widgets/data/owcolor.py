@@ -1,29 +1,16 @@
-"""
-Widget for assigning colors to variables
-"""
-
-from PyQt4.QtCore import Qt, QAbstractTableModel, QSize
-from PyQt4.QtGui import QStyledItemDelegate, QColor, QHeaderView, QFont, \
-    QColorDialog, QTableView, qRgb, QImage, QBrush, QApplication
 import numpy as np
+from PyQt4.QtCore import Qt, QAbstractTableModel, QSize
+from PyQt4.QtGui import (
+    QColor, QHeaderView, QFont, QColorDialog, QTableView, qRgb, QImage,
+    QBrush)
 
 import Orange
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils.colorpalette import \
     ContinuousPaletteGenerator, ColorPaletteDlg
 
 ColorRole = next(gui.OrangeUserRole)
-
-
-class HorizontalGridDelegate(QStyledItemDelegate):
-    """Delegate that draws a horizontal grid."""
-    def paint(self, painter, option, index):
-        # pylint: disable=missing-docstring
-        painter.save()
-        painter.setPen(QColor(212, 212, 212))
-        painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
-        painter.restore()
-        QStyledItemDelegate.paint(self, painter, option, index)
 
 
 # noinspection PyMethodOverriding
@@ -288,12 +275,15 @@ class ContinuousTable(ColorTable):
 
 
 class OWColor(widget.OWWidget):
-    """Widget for assigning color palettes to variable"""
+    """
+    Set color legend for variables
+
+    Widget for defining specific color palettes for discrete and continuous
+    features
+    """
 
     name = "Color"
-    description = "Set color legend for variables."
     icon = "icons/Colors.svg"
-
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Data", Orange.data.Table)]
 

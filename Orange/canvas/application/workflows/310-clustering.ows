@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="The workflow clusters the data items in Iris data set by first estimating the distances between data instances. Distance matrix is passed to hierarchical clustering, which renders the dendrogram. Select different parts of the dendrogram to further analyze the corresponding data.&#10;&#10;Notice that hierarchical clustering can only handle small data sets, that is, those that contain only a small number of data instances. For larger data sets the distance matrix may get too big and may not fit in the memory. An alternative method that can consider such data sets is k-means clustering." title="Hierarchical Clustering" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(135.0, 135.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Distances" position="(242.0, 203.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistances.OWDistances" title="Distances" version="" />
+		<node id="2" name="Data Table" position="(268.0, 90.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="3" name="Distance Map" position="(412.0, 184.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistancemap.OWDistanceMap" title="Distance Map" version="" />
+		<node id="4" name="Hierarchical Clustering" position="(418.0, 307.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owhierarchicalclustering.OWHierarchicalClustering" title="Hierarchical Clustering" version="" />
+		<node id="5" name="Data Table" position="(583.0, 262.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table (1)" version="" />
+		<node id="6" name="Box Plot" position="(526.0, 390.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owboxplot.OWBoxPlot" title="Box Plot" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="2" sink_channel="Distances" sink_node_id="3" source_channel="Distances" source_node_id="1" />
+		<link enabled="true" id="3" sink_channel="Distances" sink_node_id="4" source_channel="Distances" source_node_id="1" />
+		<link enabled="true" id="4" sink_channel="Data" sink_node_id="5" source_channel="Selected Data" source_node_id="4" />
+		<link enabled="true" id="5" sink_channel="Data" sink_node_id="6" source_channel="Selected Data" source_node_id="4" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="14" id="0" rect="(18.0, 15.0, 150.0, 82.0)">Read the data. Try this schema with the "brown-selected" data (from data sets that come with Orange).</text>
+		<text font-family="Helvetica" font-size="14" id="1" rect="(402.0, 63.0, 150.0, 54.0)">Visualize the data distances in a heat map.</text>
+		<text font-family="Helvetica" font-size="14" id="2" rect="(597.0, 56.0, 214.0, 153.0)">Choose any part of the clustering dendrogram in Hierarchical Clustering. Then, observe the selected data in a data table, or in any other analysis widget. Open both Hierarchical Clustering and Data Table (1) widget to turn this schema into interactive data analysis.
+</text>
+		<text font-family="Helvetica" font-size="14" id="3" rect="(601.0, 330.0, 150.0, 96.0)">Any change in selection in hierarchical clustering will propagate to the Data Table and Box Plot widgets.</text>
+		<text font-family="Helvetica" font-size="14" id="4" rect="(253.0, 384.0, 150.0, 40.0)">Hierarchically cluster the data.</text>
+		<text font-family="Helvetica" font-size="14" id="5" rect="(81.0, 263.0, 150.0, 54.0)">Compute the distances between the data samples.</text>
+		<arrow end="(104.00000000000003, 133.0)" fill="#C1272D" id="6" start="(52.00000000000002, 100.0)" />
+		<arrow end="(421.0, 154.00000000000003)" fill="#C1272D" id="7" start="(454.0, 102.00000000000003)" />
+		<arrow end="(206.00000000000003, 226.0)" fill="#C1272D" id="8" start="(176.00000000000003, 274.0)" />
+		<arrow end="(379.0000000000001, 328.0)" fill="#C1272D" id="9" start="(335.0000000000001, 381.0)" />
+		<arrow end="(501.0, 325.99999999999994)" fill="#39B54A" id="10" start="(593.0, 363.99999999999994)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAsAAAByZWNlbnRfdXJsc3EBXXECWAsAAABzaGVldF9uYW1lc3EDfXEEWBAAAABjb250
+ZXh0X3NldHRpbmdzcQVdcQZYAwAAAHVybHEHWAAAAABxCFgGAAAAc291cmNlcQlLAFgMAAAAcmVj
+ZW50X3BhdGhzcQpdcQtjT3JhbmdlLndpZGdldHMudXRpbHMuZmlsZWRpYWxvZ3MKUmVjZW50UGF0
+aApxDCmBcQ19cQ4oWAUAAABzaGVldHEPaAhYBQAAAHRpdGxlcRBoCFgGAAAAcHJlZml4cRFYDwAA
+AHNhbXBsZS1kYXRhc2V0c3ESWAcAAABhYnNwYXRocRNYXgAAAC9Vc2Vycy9ibGF6Ly52aXJ0dWFs
+ZW52cy9vcmFuZ2UvbGliL3B5dGhvbjMuNS9zaXRlLXBhY2thZ2VzL09yYW5nZS9kYXRhc2V0cy9i
+cm93bi1zZWxlY3RlZC50YWJxFFgHAAAAcmVscGF0aHEVWBIAAABicm93bi1zZWxlY3RlZC50YWJx
+FnViYVgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEXQy4B2dDLAAEAAAAAAhMAAAE8AAADwgAAAjUA
+AAITAAABUgAAA8IAAAI1AAAAAAAAcRh1Lg==
+</properties>
+		<properties format="literal" node_id="1">{'autocommit': False, 'metric_idx': 0, 'axis': 0, 'savedWidgetGeometry': None}</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWA4AAABjb2xvcl9ieV9jbGFzc3EBiFgQAAAAY29udGV4dF9zZXR0aW5nc3ECXXEDY09y
+YW5nZS53aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcQQpgXEFfXEGKFgKAAAAYXR0cmlidXRlc3EH
+fXEIKFgIAAAAYWxwaGEgODRxCUsCWAcAAABFbHUgMzkwcQpLAlgHAAAARWx1IDM2MHELSwJYBgAA
+AGR0dCAzMHEMSwJYBwAAAEVsdSAzMzBxDUsCWAkAAABhbHBoYSAxMDVxDksCWAcAAABjb2xkIDQw
+cQ9LAlgGAAAAZHR0IDYwcRBLAlgHAAAAY29sZCAyMHERSwJYBgAAAEVsdSA2MHESSwJYBgAAAGRp
+YXUgZ3ETSwJYBQAAAHNwbyA1cRRLAlgGAAAAaGVhdCAwcRVLAlgHAAAARWx1IDE4MHEWSwJYBQAA
+AHNwbyAwcRdLAlgJAAAAY2RjMTUgMTEwcRhLAlgJAAAAY2RjMTUgMjMwcRlLAlgGAAAAY29sZCAw
+cRpLAlgHAAAAc3BvNSAxMXEbSwJYCAAAAGFscGhhIDI4cRxLAlgGAAAAZGlhdSBkcR1LAlgHAAAA
+RWx1IDEyMHEeSwJYCAAAAGNkYzE1IDMwcR9LAlgGAAAAZGlhdSBhcSBLAlgJAAAAY2RjMTUgMTcw
+cSFLAlgIAAAAYWxwaGEgMzVxIksCWAgAAABhbHBoYSAxNHEjSwJYBgAAAHNwbyAxMXEkSwJYCQAA
+AGNkYzE1IDE1MHElSwJYBwAAAGhlYXQgNDBxJksCWAYAAABkaWF1IGJxJ0sCWAgAAABhbHBoYSA2
+M3EoSwJYBwAAAEVsdSAxNTBxKUsCWAUAAABzcG8gMnEqSwJYBgAAAGRpYXUgZnErSwJYCAAAAGFs
+cGhhIDk4cSxLAlgKAAAAc3BvLSBlYXJseXEtSwJYCAAAAGNvbGQgMTYwcS5LAlgIAAAAYWxwaGEg
+MjFxL0sCWAYAAABFbHUgMzBxMEsCWAUAAABzcG8gN3ExSwJYCAAAAHNwby0gbWlkcTJLAlgIAAAA
+YWxwaGEgNzBxM0sCWAcAAABFbHUgMzAwcTRLAlgGAAAAZGlhdSBjcTVLAlgJAAAAY2RjMTUgMTMw
+cTZLAlgIAAAAYWxwaGEgNzdxN0sCWAcAAABFbHUgMjQwcThLAlgGAAAAZGlhdSBlcTlLAlgHAAAA
+aGVhdCAxMHE6SwJYBQAAAEVsdSAwcTtLAlgIAAAAYWxwaGEgNDlxPEsCWAkAAABjZGMxNSAyOTBx
+PUsCWAkAAABjZGMxNSAyNzBxPksCWAUAAABzcG8gOXE/SwJYCAAAAGNkYzE1IDcwcUBLAlgHAAAA
+YWxwaGEgMHFBSwJYCQAAAGFscGhhIDExMnFCSwJYCAAAAGZ1bmN0aW9ucUNdcUQoWAcAAABQcm90
+ZWFzcUVYBAAAAFJlc3BxRlgEAAAAUmlib3FHZVgJAAAAY2RjMTUgMjUwcUhLAlgGAAAAZHR0IDE1
+cUlLAlgHAAAAaGVhdCA4MHFKSwJYCAAAAGhlYXQgMTYwcUtLAlgHAAAAYWxwaGEgN3FMSwJYCAAA
+AGFscGhhIDkxcU1LAlgIAAAAY2RjMTUgNTBxTksCWAgAAABjZGMxNSAxMHFPSwJYBwAAAGhlYXQg
+MjBxUEsCWAcAAABkdHQgMTIwcVFLAlgGAAAARWx1IDkwcVJLAlgHAAAARWx1IDIxMHFTSwJYCAAA
+AGFscGhhIDU2cVRLAlgJAAAAY2RjMTUgMTkwcVVLAlgHAAAARWx1IDI3MHFWSwJYCQAAAGFscGhh
+IDExOXFXSwJYCQAAAGNkYzE1IDIxMHFYSwJYBgAAAHNwbzUgMnFZSwJYCAAAAGFscGhhIDQycVpL
+AlgIAAAAY2RjMTUgOTBxW0sCWAYAAABzcG81IDdxXEsCdVgFAAAAbWV0YXNxXX1xXlgGAAAAdmFs
+dWVzcV99cWAoWA4AAABjb2xvcl9ieV9jbGFzc3FhiEr+////hnFiWBMAAABzYXZlZFdpZGdldEdl
+b21ldHJ5cWNOSv7///+GcWRYDQAAAHNlbGVjdGVkX3Jvd3NxZV1xZlgLAAAAc2VsZWN0X3Jvd3Nx
+Z4hK/v///4ZxaFgVAAAAc2hvd19hdHRyaWJ1dGVfbGFiZWxzcWmISv7///+GcWpYDgAAAGRpc3Rf
+Y29sb3JfUkdCcWsoS9xL3EvcS/90cWxK/v///4ZxbVgNAAAAc2VsZWN0ZWRfY29sc3FuXXFvWAsA
+AABhdXRvX2NvbW1pdHFwiEr+////hnFxWBIAAABzaG93X2Rpc3RyaWJ1dGlvbnNxcolK/v///4Zx
+c3VYBAAAAHRpbWVxdEdB1eCVdgS1HFgOAAAAb3JkZXJlZF9kb21haW5xdV1xdihoQUsChnF3aExL
+AoZxeGgjSwKGcXloL0sChnF6aBxLAoZxe2giSwKGcXxoWksChnF9aDxLAoZxfmhUSwKGcX9oKEsC
+hnGAaDNLAoZxgWg3SwKGcYJoCUsChnGDaE1LAoZxhGgsSwKGcYVoDksChnGGaEJLAoZxh2hXSwKG
+cYhoO0sChnGJaDBLAoZximgSSwKGcYtoUksChnGMaB5LAoZxjWgpSwKGcY5oFksChnGPaFNLAoZx
+kGg4SwKGcZFoVksChnGSaDRLAoZxk2gNSwKGcZRoC0sChnGVaApLAoZxlmhPSwKGcZdoH0sChnGY
+aE5LAoZxmWhASwKGcZpoW0sChnGbaBhLAoZxnGg2SwKGcZ1oJUsChnGeaCFLAoZxn2hVSwKGcaBo
+WEsChnGhaBlLAoZxomhISwKGcaNoPksChnGkaD1LAoZxpWgXSwKGcaZoKksChnGnaBRLAoZxqGgx
+SwKGcaloP0sChnGqaCRLAoZxq2hZSwKGcaxoXEsChnGtaBtLAoZxrmgtSwKGca9oMksChnGwaBVL
+AoZxsWg6SwKGcbJoUEsChnGzaCZLAoZxtGhKSwKGcbVoS0sChnG2aElLAoZxt2gMSwKGcbhoEEsC
+hnG5aFFLAoZxumgaSwKGcbtoEUsChnG8aA9LAoZxvWguSwKGcb5oIEsChnG/aCdLAoZxwGg1SwKG
+ccFoHUsChnHCaDlLAoZxw2grSwKGccRoE0sChnHFaENLAYZxxmV1YmFYCwAAAHNlbGVjdF9yb3dz
+cceIWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxyIhYDgAAAGRpc3RfY29sb3JfUkdCcclobFgL
+AAAAYXV0b19jb21taXRxyohYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxy05YEgAAAHNob3dfZGlz
+dHJpYnV0aW9uc3HMiXUu
+</properties>
+		<properties format="pickle" node_id="3">gAN9cQAoWAcAAABzb3J0aW5ncQFLAFgQAAAAY29udGV4dF9zZXR0aW5nc3ECXXEDY09yYW5nZS53
+aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcQQpgXEFfXEGKFgKAAAAYXR0cmlidXRlc3EHKFgHAAAA
+YWxwaGEgMHEISwKGcQlYBwAAAGFscGhhIDdxCksChnELWAgAAABhbHBoYSAxNHEMSwKGcQ1YCAAA
+AGFscGhhIDIxcQ5LAoZxD1gIAAAAYWxwaGEgMjhxEEsChnERWAgAAABhbHBoYSAzNXESSwKGcRNY
+CAAAAGFscGhhIDQycRRLAoZxFVgIAAAAYWxwaGEgNDlxFksChnEXWAgAAABhbHBoYSA1NnEYSwKG
+cRlYCAAAAGFscGhhIDYzcRpLAoZxG1gIAAAAYWxwaGEgNzBxHEsChnEdWAgAAABhbHBoYSA3N3Ee
+SwKGcR9YCAAAAGFscGhhIDg0cSBLAoZxIVgIAAAAYWxwaGEgOTFxIksChnEjWAgAAABhbHBoYSA5
+OHEkSwKGcSVYCQAAAGFscGhhIDEwNXEmSwKGcSdYCQAAAGFscGhhIDExMnEoSwKGcSlYCQAAAGFs
+cGhhIDExOXEqSwKGcStYBQAAAEVsdSAwcSxLAoZxLVgGAAAARWx1IDMwcS5LAoZxL1gGAAAARWx1
+IDYwcTBLAoZxMVgGAAAARWx1IDkwcTJLAoZxM1gHAAAARWx1IDEyMHE0SwKGcTVYBwAAAEVsdSAx
+NTBxNksChnE3WAcAAABFbHUgMTgwcThLAoZxOVgHAAAARWx1IDIxMHE6SwKGcTtYBwAAAEVsdSAy
+NDBxPEsChnE9WAcAAABFbHUgMjcwcT5LAoZxP1gHAAAARWx1IDMwMHFASwKGcUFYBwAAAEVsdSAz
+MzBxQksChnFDWAcAAABFbHUgMzYwcURLAoZxRVgHAAAARWx1IDM5MHFGSwKGcUdYCAAAAGNkYzE1
+IDEwcUhLAoZxSVgIAAAAY2RjMTUgMzBxSksChnFLWAgAAABjZGMxNSA1MHFMSwKGcU1YCAAAAGNk
+YzE1IDcwcU5LAoZxT1gIAAAAY2RjMTUgOTBxUEsChnFRWAkAAABjZGMxNSAxMTBxUksChnFTWAkA
+AABjZGMxNSAxMzBxVEsChnFVWAkAAABjZGMxNSAxNTBxVksChnFXWAkAAABjZGMxNSAxNzBxWEsC
+hnFZWAkAAABjZGMxNSAxOTBxWksChnFbWAkAAABjZGMxNSAyMTBxXEsChnFdWAkAAABjZGMxNSAy
+MzBxXksChnFfWAkAAABjZGMxNSAyNTBxYEsChnFhWAkAAABjZGMxNSAyNzBxYksChnFjWAkAAABj
+ZGMxNSAyOTBxZEsChnFlWAUAAABzcG8gMHFmSwKGcWdYBQAAAHNwbyAycWhLAoZxaVgFAAAAc3Bv
+IDVxaksChnFrWAUAAABzcG8gN3FsSwKGcW1YBQAAAHNwbyA5cW5LAoZxb1gGAAAAc3BvIDExcXBL
+AoZxcVgGAAAAc3BvNSAycXJLAoZxc1gGAAAAc3BvNSA3cXRLAoZxdVgHAAAAc3BvNSAxMXF2SwKG
+cXdYCgAAAHNwby0gZWFybHlxeEsChnF5WAgAAABzcG8tIG1pZHF6SwKGcXtYBgAAAGhlYXQgMHF8
+SwKGcX1YBwAAAGhlYXQgMTBxfksChnF/WAcAAABoZWF0IDIwcYBLAoZxgVgHAAAAaGVhdCA0MHGC
+SwKGcYNYBwAAAGhlYXQgODBxhEsChnGFWAgAAABoZWF0IDE2MHGGSwKGcYdYBgAAAGR0dCAxNXGI
+SwKGcYlYBgAAAGR0dCAzMHGKSwKGcYtYBgAAAGR0dCA2MHGMSwKGcY1YBwAAAGR0dCAxMjBxjksC
+hnGPWAYAAABjb2xkIDBxkEsChnGRWAcAAABjb2xkIDIwcZJLAoZxk1gHAAAAY29sZCA0MHGUSwKG
+cZVYCAAAAGNvbGQgMTYwcZZLAoZxl1gGAAAAZGlhdSBhcZhLAoZxmVgGAAAAZGlhdSBicZpLAoZx
+m1gGAAAAZGlhdSBjcZxLAoZxnVgGAAAAZGlhdSBkcZ5LAoZxn1gGAAAAZGlhdSBlcaBLAoZxoVgG
+AAAAZGlhdSBmcaJLAoZxo1gGAAAAZGlhdSBncaRLAoZxpXRxplgKAAAAY2xhc3NfdmFyc3GnWAgA
+AABmdW5jdGlvbnGoSwGGcamFcapYBQAAAG1ldGFzcatYBAAAAGdlbmVxrEsDhnGthXGuWAYAAAB2
+YWx1ZXNxr31xsChYBwAAAHNvcnRpbmdxsUsASv7///+GcbJYCAAAAGNvbG9ybWFwcbNLEkr+////
+hnG0WAsAAABjb2xvcl9nYW1tYXG1RwAAAAAAAAAASv7///+GcbZYCgAAAGF1dG9jb21taXRxt4hK
+/v///4ZxuFgOAAAAYW5ub3RhdGlvbl9pZHhxuUsASv7///+GcbpYCQAAAGNvbG9yX2xvd3G7RwAA
+AAAAAAAASv7///+GcbxYCgAAAGNvbG9yX2hpZ2hxvUc/8AAAAAAAAEr+////hnG+WBMAAABzYXZl
+ZFdpZGdldEdlb21ldHJ5cb9OSv7///+GccB1WAQAAAB0aW1lccFHQdXglXYBJ4VYDgAAAG9yZGVy
+ZWRfZG9tYWluccJdccMoaAhLAoZxxGgKSwKGccVoDEsChnHGaA5LAoZxx2gQSwKGcchoEksChnHJ
+aBRLAoZxymgWSwKGcctoGEsChnHMaBpLAoZxzWgcSwKGcc5oHksChnHPaCBLAoZx0GgiSwKGcdFo
+JEsChnHSaCZLAoZx02goSwKGcdRoKksChnHVaCxLAoZx1mguSwKGcddoMEsChnHYaDJLAoZx2Wg0
+SwKGcdpoNksChnHbaDhLAoZx3Gg6SwKGcd1oPEsChnHeaD5LAoZx32hASwKGceBoQksChnHhaERL
+AoZx4mhGSwKGceNoSEsChnHkaEpLAoZx5WhMSwKGceZoTksChnHnaFBLAoZx6GhSSwKGceloVEsC
+hnHqaFZLAoZx62hYSwKGcexoWksChnHtaFxLAoZx7mheSwKGce9oYEsChnHwaGJLAoZx8WhkSwKG
+cfJoZksChnHzaGhLAoZx9GhqSwKGcfVobEsChnH2aG5LAoZx92hwSwKGcfhocksChnH5aHRLAoZx
++mh2SwKGcftoeEsChnH8aHpLAoZx/Wh8SwKGcf5ofksChnH/aIBLAoZyAAEAAGiCSwKGcgEBAABo
+hEsChnICAQAAaIZLAoZyAwEAAGiISwKGcgQBAABoiksChnIFAQAAaIxLAoZyBgEAAGiOSwKGcgcB
+AABokEsChnIIAQAAaJJLAoZyCQEAAGiUSwKGcgoBAABolksChnILAQAAaJhLAoZyDAEAAGiaSwKG
+cg0BAABonEsChnIOAQAAaJ5LAoZyDwEAAGigSwKGchABAABooksChnIRAQAAaKRLAoZyEgEAAGio
+SwGGchMBAABorEsDhnIUAQAAZXViYVgKAAAAYXV0b2NvbW1pdHIVAQAAiFgLAAAAY29sb3JfZ2Ft
+bWFyFgEAAEcAAAAAAAAAAFgJAAAAY29sb3JfbG93chcBAABHAAAAAAAAAABYCgAAAGNvbG9yX2hp
+Z2hyGAEAAEc/8AAAAAAAAFgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXIZAQAATlgIAAAAY29sb3Jt
+YXByGgEAAEsSdS4=
+</properties>
+		<properties format="literal" node_id="4">{'max_depth': 10, 'pruning': 0, 'linkage': 1, 'cluster_name': 'Cluster', 'autocommit': True, 'top_n': 3, 'zoom_factor': 0, 'savedWidgetGeometry': None, 'append_clusters': True, 'selection_method': 0, 'annotation_idx': 0, 'cluster_role': 2, 'cut_ratio': 75.0}</properties>
+		<properties format="literal" node_id="5">{'color_by_class': True, 'context_settings': [], 'select_rows': True, 'show_attribute_labels': True, 'dist_color_RGB': (220, 220, 220, 255), 'auto_commit': True, 'savedWidgetGeometry': None, 'show_distributions': False}</properties>
+		<properties format="literal" node_id="6">{'context_settings': [], 'stretched': True, 'stattest': 0, 'compare': 1, 'sig_threshold': 0.05, 'savedWidgetGeometry': None, 'show_annotations': True}</properties>
+	</node_properties>
+</scheme>

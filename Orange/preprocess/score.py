@@ -24,6 +24,7 @@ __all__ = ["Chi2",
 class Scorer:
     feature_type = None
     class_type = None
+    supports_sparse_data = None
     preprocessors = [
         RemoveNaNClasses()
     ]
@@ -62,6 +63,8 @@ class Scorer:
 
 
 class SklScorer(Scorer, metaclass=WrapperMeta):
+    supports_sparse_data = True
+
     preprocessors = Scorer.preprocessors + [
         Impute()
     ]
@@ -172,6 +175,7 @@ class ClassificationScorer(Scorer):
     """
     feature_type = DiscreteVariable
     class_type = DiscreteVariable
+    supports_sparse_data = True
     preprocessors = Scorer.preprocessors + [
         Discretize(remove_const=False)
     ]
@@ -302,6 +306,7 @@ class ReliefF(Scorer):
     """
     feature_type = Variable
     class_type = DiscreteVariable
+    supports_sparse_data = False
 
     def __init__(self, n_iterations=50, k_nearest=10):
         self.n_iterations = n_iterations
@@ -324,9 +329,11 @@ class ReliefF(Scorer):
             return weights[0]
         return weights
 
+
 class RReliefF(Scorer):
     feature_type = Variable
     class_type = ContinuousVariable
+    supports_sparse_data = False
 
     def __init__(self, n_iterations=50, k_nearest=50):
         self.n_iterations = n_iterations

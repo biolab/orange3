@@ -18,7 +18,7 @@ from PyQt4.QtGui import (
     QWidget, QPixmap, QStyleOption, QPainter
 )
 from PyQt4.QtCore import Qt, QSize, QRect, QPoint, QEvent, QTimer
-from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 class OverlayWidget(QWidget):
@@ -172,6 +172,7 @@ class OverlayWidget(QWidget):
         geom = QRect(QPoint(x, y), size)
         self.setGeometry(geom)
 
+    @Slot()
     def __on_destroyed(self):
         self.__widget = None
         if self.isVisible():

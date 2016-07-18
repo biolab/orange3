@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="The basic data mining units in Orange are called widgets. There are widgets for reading the data, preprocessing, visualization, clustering, classification and others. Widgets communicate through channels. Data mining workflow is thus a collection of widgets and communication channels.&#10;&#10;In this workflow, there is a File widget that reads the data. File widget communicates this data to Data Table widget that shows the data spreadsheet. Notice how the output of the file widget is connected to the input of the Data Table widget. In Orange, the outputs of the widgets are on the right, and the inputs on the left of the widget." title="File and Data Table" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(89.0, 157.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Data Table" position="(290.0, 157.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="14" id="0" rect="(17.0, 21.0, 160.0, 55.0)">A File widget. Double click to open it and select the data set file.</text>
+		<text font-family="Helvetica" font-size="14" id="1" rect="(50.0, 229.0, 118.0, 40.0)">The output of the File widget.</text>
+		<text font-family="Helvetica" font-size="14" id="2" rect="(241.0, 227.0, 131.0, 41.0)">The input of the Data Table widget.</text>
+		<text font-family="Helvetica" font-size="14" id="3" rect="(138.0, 297.0, 150.0, 82.0)">The communication channel. It passes the data set from the File widget to the Data Table.</text>
+		<text font-family="Helvetica" font-size="14" id="4" rect="(262.0, 21.0, 150.0, 68.0)">A Data Table widget. Double click the icon to see the data in a spreadsheet.</text>
+		<text font-family="Helvetica" font-size="14" id="5" rect="(415.0, 68.0, 150.0, 83.0)">The output of the Data Table to send out any data (rows) that are selected to the widget.</text>
+		<text font-family="Helvetica" font-size="14" id="6" rect="(489.0, 177.0, 216.0, 181.0)">This output is not used, hence dashed line. You can add another Data Table by clicking on its icon from the toolbox on the left, connect the ouput of Data Table to the input of new Data Table (1) and check if the selected data from Data Table is indeed sent to the downstream widget. This demo works best if both widgets are open, that is, their windows displayed.</text>
+		<arrow end="(88.00000000000004, 122.00000000000001)" fill="#C1272D" id="7" start="(89.00000000000004, 76.00000000000001)" />
+		<arrow end="(285.0, 129.0)" fill="#C1272D" id="8" start="(279.0, 86.00000000000001)" />
+		<arrow end="(117.0, 180.0)" fill="#C1272D" id="9" start="(140.0, 229.0)" />
+		<arrow end="(256.0, 171.0)" fill="#C1272D" id="10" start="(249.0, 224.0)" />
+		<arrow end="(194.99999999999997, 159.0)" fill="#C1272D" id="11" start="(195.99999999999997, 297.0)" />
+		<arrow end="(328.0, 166.99999999999997)" fill="#39B54A" id="12" start="(488.0, 197.99999999999997)" />
+		<arrow end="(327.0, 141.00000000000003)" fill="#C1272D" id="13" start="(414.0, 105.00000000000001)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAwAAAByZWNlbnRfcGF0aHNxAV1xAmNPcmFuZ2Uud2lkZ2V0cy51dGlscy5maWxlZGlh
+bG9ncwpSZWNlbnRQYXRoCnEDKYFxBH1xBShYBwAAAGFic3BhdGhxBlg4AAAAL1VzZXJzL2JsYXov
+RHJvcGJveC9kZXYvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWJxB1gGAAAAcHJlZml4
+cQhYDwAAAHNhbXBsZS1kYXRhc2V0c3EJWAUAAAB0aXRsZXEKWAAAAABxC1gHAAAAcmVscGF0aHEM
+WAgAAABpcmlzLnRhYnENWAUAAABzaGVldHEOaAt1YmFYAwAAAHVybHEPaAtYEwAAAHNhdmVkV2lk
+Z2V0R2VvbWV0cnlxEGNzaXAKX3VucGlja2xlX3R5cGUKcRFYDAAAAFB5UXQ0LlF0Q29yZXESWAoA
+AABRQnl0ZUFycmF5cRNDLgHZ0MsAAQAAAAAD/wAAAlwAAAXwAAADLQAAA/8AAAJyAAAF8AAAAy0A
+AAAAAABxFIVxFYdxFlJxF1gGAAAAc291cmNlcRhLAFgLAAAAc2hlZXRfbmFtZXNxGX1xGlgQAAAA
+Y29udGV4dF9zZXR0aW5nc3EbXXEcWAsAAAByZWNlbnRfdXJsc3EdXXEedS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWA4AAABjb2xvcl9ieV9jbGFzc3EBiFgLAAAAYXV0b19jb21taXRxAohYFQAAAHNob3df
+YXR0cmlidXRlX2xhYmVsc3EDiFgSAAAAc2hvd19kaXN0cmlidXRpb25zcQSJWBMAAABzYXZlZFdp
+ZGdldEdlb21ldHJ5cQVOWAsAAABzZWxlY3Rfcm93c3EGiFgQAAAAY29udGV4dF9zZXR0aW5nc3EH
+XXEIY09yYW5nZS53aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcQkpgXEKfXELKFgGAAAAdmFsdWVz
+cQx9cQ0oWA4AAABjb2xvcl9ieV9jbGFzc3EOiEr+////hnEPWAsAAABhdXRvX2NvbW1pdHEQiEr+
+////hnERWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxEohK/v///4ZxE1gNAAAAc2VsZWN0ZWRf
+cm93c3EUXXEVWBIAAABzaG93X2Rpc3RyaWJ1dGlvbnNxFolK/v///4ZxF1gTAAAAc2F2ZWRXaWRn
+ZXRHZW9tZXRyeXEYTkr+////hnEZWAsAAABzZWxlY3Rfcm93c3EaiEr+////hnEbWA0AAABzZWxl
+Y3RlZF9jb2xzcRxdcR1YDgAAAGRpc3RfY29sb3JfUkdCcR4oS9xL3EvcS/90cR9K/v///4ZxIHVY
+BQAAAG1ldGFzcSF9cSJYDgAAAG9yZGVyZWRfZG9tYWlucSNdcSQoWAwAAABzZXBhbCBsZW5ndGhx
+JUsChnEmWAsAAABzZXBhbCB3aWR0aHEnSwKGcShYDAAAAHBldGFsIGxlbmd0aHEpSwKGcSpYCwAA
+AHBldGFsIHdpZHRocStLAoZxLFgEAAAAaXJpc3EtSwGGcS5lWAoAAABhdHRyaWJ1dGVzcS99cTAo
+aCtLAmglSwJoKUsCaC1dcTEoWAsAAABJcmlzLXNldG9zYXEyWA8AAABJcmlzLXZlcnNpY29sb3Jx
+M1gOAAAASXJpcy12aXJnaW5pY2FxNGVoJ0sCdVgEAAAAdGltZXE1R0HV4Jg76IVmdWJhWA4AAABk
+aXN0X2NvbG9yX1JHQnE2aB91Lg==
+</properties>
+	</node_properties>
+</scheme>

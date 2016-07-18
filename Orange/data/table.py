@@ -13,9 +13,10 @@ from urllib.parse import urlparse, unquote as urlunquote
 from urllib.request import urlopen
 from urllib.error import URLError
 
-import bottlechest as bn
+import bottleneck as bn
 from scipy import sparse as sp
 
+from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
 from .instance import *
 from Orange.util import flatten
 from Orange.data import Domain, Variable, StringVariable
@@ -911,15 +912,20 @@ class Table(MutableSequence, Storage):
 
     def ensure_copy(self):
         """
-        Ensure that the table owns its data; copy arrays when necessary
+        Ensure that the table owns its data; copy arrays when necessary.
         """
-        if self.X.base is not None:
+        def is_view(x):
+            # Sparse matrices don't have views like numpy arrays. Since indexing on
+            # them creates copies in constructor we can skip this check here.
+            return not sp.issparse(x) and x.base is not None
+
+        if is_view(self.X):
             self.X = self.X.copy()
-        if self._Y.base is not None:
+        if is_view(self._Y):
             self._Y = self._Y.copy()
-        if self.metas.base is not None:
+        if is_view(self.metas):
             self.metas = self.metas.copy()
-        if self.W.base is not None:
+        if is_view(self.W):
             self.W = self.W.copy()
 
     def copy(self):
@@ -935,12 +941,7 @@ class Table(MutableSequence, Storage):
         if data is None:
             return Storage.Missing
         if data is not None and sp.issparse(data):
-            try:
-                if bn.bincount(data.data, 1)[0][0] == 0:
-                    return Storage.SPARSE_BOOL
-            except ValueError as e:
-                pass
-            return Storage.SPARSE
+            return Storage.SPARSE_BOOL if (data.data == 1).all() else Storage.SPARSE
         else:
             return Storage.DENSE
 
@@ -982,7 +983,8 @@ class Table(MutableSequence, Storage):
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
-        return bn.anynan(self.X) or bn.anynan(self._Y)
+        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)   # do not check for sparse X
+        return missing_x or bn.anynan(self._Y)
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
@@ -1211,19 +1213,19 @@ class Table(MutableSequence, Storage):
         stats = []
         if not columns:
             if self.domain.attributes:
-                rr.append(bn.stats(self.X, W))
+                rr.append(fast_stats(self.X, W))
             if self.domain.class_vars:
-                rr.append(bn.stats(self._Y, W))
+                rr.append(fast_stats(self._Y, W))
             if include_metas and self.domain.metas:
-                rr.append(bn.stats(self.metas, W))
+                rr.append(fast_stats(self.metas, W))
             if len(rr):
                 stats = np.vstack(tuple(rr))
         else:
             columns = [self.domain.index(c) for c in columns]
             nattrs = len(self.domain.attributes)
-            Xs = any(0 <= c < nattrs for c in columns) and bn.stats(self.X, W)
-            Ys = any(c >= nattrs for c in columns) and bn.stats(self._Y, W)
-            ms = any(c < 0 for c in columns) and bn.stats(self.metas, W)
+            Xs = any(0 <= c < nattrs for c in columns) and fast_stats(self.X, W)
+            Ys = any(c >= nattrs for c in columns) and fast_stats(self._Y, W)
+            ms = any(c < 0 for c in columns) and fast_stats(self.metas, W)
             for column in columns:
                 if 0 <= column < nattrs:
                     stats.append(Xs[column, :])
@@ -1270,19 +1272,19 @@ class Table(MutableSequence, Storage):
             if var.is_discrete:
                 if W is not None:
                     W = W.ravel()
-                dist, unknowns = bn.bincount(m, len(var.values) - 1, W)
+                dist, unknowns = bincount(m, len(var.values) - 1, W)
             elif not len(m):
                 dist, unknowns = np.zeros((2, 0)), 0
             else:
                 if W is not None:
                     ranks = np.argsort(m)
                     vals = np.vstack((m[ranks], W[ranks].flatten()))
-                    unknowns = bn.countnans(m, W)
+                    unknowns = countnans(m, W)
                 else:
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     vals[0, :].sort()
-                    unknowns = bn.countnans(m.astype(float))
+                    unknowns = countnans(m.astype(float))
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))
 
@@ -1328,7 +1330,7 @@ class Table(MutableSequence, Storage):
         if row_data.dtype.kind != "f": #meta attributes can be stored as type object
             row_data = row_data.astype(float)
 
-        unknown_rows = bn.countnans(row_data)
+        unknown_rows = countnans(row_data)
         if unknown_rows:
             nan_inds = np.isnan(row_data)
             row_data = row_data[~nan_inds]
@@ -1354,13 +1356,13 @@ class Table(MutableSequence, Storage):
                     max_vals = max(len(v[2].values) for v in disc_vars)
                     disc_indi = {i for _, i, _ in disc_vars}
                     mask = [i in disc_indi for i in range(arr.shape[1])]
-                    conts, nans = bn.contingency(arr, row_data, max_vals - 1,
-                                                 n_rows - 1, W, mask)
+                    conts, nans = contingency(arr, row_data, max_vals - 1,
+                                              n_rows - 1, W, mask)
                     for col_i, arr_i, _ in disc_vars:
                         contingencies[col_i] = (conts[arr_i], nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
-                        contingencies[col_i] = bn.contingency(
+                        contingencies[col_i] = contingency(
                             arr[:, arr_i].astype(float),
                             row_data, len(var.values) - 1, n_rows - 1, W)
 

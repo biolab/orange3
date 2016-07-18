@@ -2,12 +2,12 @@ import inspect
 
 import numpy as np
 import scipy
-import bottlechest as bn
 
 from Orange.data import Table, Storage, Instance, Value
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.data.util import one_hot
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -157,11 +157,9 @@ class Model:
                                for c in self.domain.class_vars)
                 probs = np.zeros(value.shape + (max_card,), float)
                 for i, cvar in enumerate(self.domain.class_vars):
-                    probs[:, i, :], _ = bn.bincount(np.atleast_2d(value[:, i]),
-                                                    max_card - 1)
+                    probs[:, i, :] = one_hot(value[:, i])
             else:
-                probs, _ = bn.bincount(np.atleast_2d(value),
-                                       len(self.domain.class_var.values) - 1)
+                probs = one_hot(value)
             if ret == Model.ValueProbs:
                 return value, probs
             else:
@@ -212,10 +210,11 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     _params = {}
 
     name = 'skl learner'
-    preprocessors = [RemoveNaNClasses(),
-                     Continuize(),
-                     RemoveNaNColumns(),
-                     SklImpute()]
+    preprocessors = default_preprocessors = [
+                    RemoveNaNClasses(),
+                    Continuize(),
+                    RemoveNaNColumns(),
+                    SklImpute()]
 
     @property
     def params(self):
@@ -260,11 +259,56 @@ class SklLearner(Learner, metaclass=WrapperMeta):
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {}'.format(self.name, self.params)
+
+    def __repr__(self):
+        return '{}({}{})'.format(type(self).__name__,
+                               ", ".join("{}={}".format(k, v)
+                                         for k, v in self.params.items()),
+                                ", preprocessors={}".format(repr(self.preprocessors)) if \
+                                        self.preprocessors is not None and self.preprocessors\
+                                        != self.default_preprocessors else "")
 
     @property
     def supports_weights(self):
         """Indicates whether this learner supports weighted instances.
         """
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
+
+
+class Tree:
+    """Interface for tree based models.
+
+    Defines members needed for drawing of the tree.
+    """
+
+    #: Domain of data the tree was built from
+    domain = None
+
+    #: Data the tree was built from (Optional)
+    instances = None
+
+    @property
+    def tree(self):
+        """Return underlying tree representation
+
+        Returns
+        -------
+        sklearn.tree._tree.Tree
+        """
+        raise NotImplementedError()
+
+
+class RandomForest:
+    """Interface for random forest models
+    """
+
+    @property
+    def trees(self):
+        """Return a list of Trees in the forest
+
+        Returns
+        -------
+        List[Tree]
+        """

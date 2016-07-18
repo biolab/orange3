@@ -1,5 +1,6 @@
 from PyQt4 import QtGui, QtCore, QtSvg
-from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QWidget
+from PyQt4.QtCore import QMimeData
+from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QWidget, QApplication
 
 from Orange.data.io import FileFormat
 
@@ -98,6 +99,23 @@ class PngFormat(ImgFormat):
     def _export(exporter, filename):
         buffer = exporter.export(toBytes=True)
         buffer.save(filename, "png")
+
+
+class ClipboardFormat(PngFormat):
+    EXTENSIONS = ()
+    DESCRIPTION = 'System Clipboard'
+    PRIORITY = 50
+
+    @staticmethod
+    def _save_buffer(buffer, _):
+        QApplication.clipboard().setPixmap(buffer)
+
+    @staticmethod
+    def _export(exporter, _):
+        buffer = exporter.export(toBytes=True)
+        mimedata = QMimeData()
+        mimedata.setData("image/png", buffer)
+        QApplication.clipboard().setMimeData(mimedata)
 
 
 class SvgFormat(ImgFormat):

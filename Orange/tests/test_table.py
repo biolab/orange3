@@ -649,6 +649,19 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(np.all(t.Y == copy.Y))
         self.assertFalse(np.all(t.metas == copy.metas))
 
+    def test_copy_sparse(self):
+        t = data.Table('iris')
+        t.X = csr_matrix(t.X)
+        copy = t.copy()
+
+        self.assertEqual((t.X != copy.X).nnz, 0)      # sparse matrices match by content
+        np.testing.assert_equal(t.Y, copy.Y)
+        np.testing.assert_equal(t.metas, copy.metas)
+
+        self.assertNotEqual(id(t.X), id(copy.X))
+        self.assertNotEqual(id(t._Y), id(copy._Y))
+        self.assertNotEqual(id(t.metas), id(copy.metas))
+
     def test_concatenate(self):
         d1 = data.Domain([data.ContinuousVariable('a1')])
         t1 = data.Table.from_numpy(d1, [[1],

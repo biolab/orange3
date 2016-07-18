@@ -14,7 +14,7 @@ import pkg_resources
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt, pyqtSignal as Signal
 from PyQt4.QtGui import QCursor, QApplication, QTableView, QHeaderView, \
-    QStyledItemDelegate
+    QStyledItemDelegate, QSizePolicy, QColor
 
 # Some Orange widgets might expect this here
 from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
@@ -234,7 +234,10 @@ def miscellanea(control, box, parent,
     :type sizePolicy: PyQt4.QtQui.QSizePolicy
     """
     for prop, val in kwargs.items():
-        getattr(control, "set" + prop[0].upper() + prop[1:])(val)
+        if prop == "sizePolicy":
+            control.setSizePolicy(QSizePolicy(*val))
+        else:
+            getattr(control, "set" + prop[0].upper() + prop[1:])(val)
     if disabled:
         # if disabled==False, do nothing; it can be already disabled
         control.setDisabled(disabled)
@@ -249,6 +252,8 @@ def miscellanea(control, box, parent,
             box.layout().indexOf(control) == -1:
         box.layout().addWidget(control)
     if sizePolicy is not None:
+        if isinstance(sizePolicy, tuple):
+            sizePolicy = QSizePolicy(*sizePolicy)
         (box or control).setSizePolicy(sizePolicy)
     if addToLayout and parent and parent.layout() is not None:
         parent.layout().addWidget(box or control, stretch)
@@ -667,11 +672,11 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
     :param value: the master's attribute with which the value is synchronized
     :type value:  str
     :param minv: minimal value
-    :type minv: int
+    :type minv: int or float
     :param maxv: maximal value
-    :type maxv: int
+    :type maxv: int or float
     :param step: step (default: 1)
-    :type step: int
+    :type step: int or float
     :param box: tells whether the widget has a border, and its label
     :type box: int or str or None
     :param label: label that is put in above or to the left of the spin box
@@ -1069,8 +1074,8 @@ def button(widget, master, label, callback=None, width=None, height=None,
         activated on pressing Return.
     :type autoDefault: bool
     :param buttonType: the button type (default: `QPushButton`)
-    :type buttonType: PyQt4.QtGui.QAbstractButton
-    :rtype: PyQt4.QtGui.QAbstractButton
+    :type buttonType: PyQt4.QtGui.QPushButton
+    :rtype: PyQt4.QtGui.QPushButton
     """
     button = buttonType(widget)
     if label:
@@ -1350,6 +1355,8 @@ def appendRadioButton(group, label, insertInto=None,
     if tooltip is not None:
         w.setToolTip(tooltip)
     if sizePolicy:
+        if isinstance(sizePolicy, tuple):
+            sizePolicy = QSizePolicy(*sizePolicy)
         w.setSizePolicy(sizePolicy)
     if addToLayout:
         dest = insertInto or group
@@ -2218,17 +2225,16 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
             orientation = Qt.Vertical if checkbox_label else Qt.Horizontal
         b = widgetBox(widget, box=box, orientation=orientation,
                       addToLayout=False)
-        b.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Maximum)
+        b.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
     b.checkbox = cb = checkBox(b, master, value, checkbox_label,
                                callback=checkbox_toggled, tooltip=auto_label)
     if _is_horizontal(orientation):
         b.layout().addSpacing(10)
-    cb.setSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+    cb.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
     b.button = btn = button(b, master, label, callback=lambda: do_commit())
     if not checkbox_label:
-        btn.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                          QtGui.QSizePolicy.Preferred)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     checkbox_toggled()
     setattr(master, commit_name, unconditional_commit)
     misc['addToLayout'] = misc.get('addToLayout', True) and \
@@ -3090,11 +3096,19 @@ class ColoredBarItemDelegate(QtGui.QStyledItemDelegate):
         return QtGui.QBrush(bar_brush)
 
 
+class HorizontalGridDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.setPen(QColor(212, 212, 212))
+        painter.drawLine(option.rect.bottomLeft(), option.rect.bottomRight())
+        painter.restore()
+        QStyledItemDelegate.paint(self, painter, option, index)
+
+
 class VerticalLabel(QtGui.QLabel):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
-        self.setSizePolicy(QtGui.QSizePolicy.Preferred,
-                           QtGui.QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
         self.setMaximumWidth(self.sizeHint().width() + 2)
         self.setMargin(4)
 

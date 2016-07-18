@@ -77,10 +77,10 @@ def fix_win_pythonw_std_stream():
     """
     if sys.platform == "win32" and \
             os.path.basename(sys.executable) == "pythonw.exe":
-        if sys.stdout is not None and sys.stdout.fileno() < 0:
-            sys.stdout = open(os.devnull, "wb")
-        if sys.stdout is not None and sys.stderr.fileno() < 0:
-            sys.stderr = open(os.devnull, "wb")
+        if sys.stdout is None:
+            sys.stdout = open(os.devnull, "w")
+        if sys.stderr is None:
+            sys.stderr = open(os.devnull, "w")
 
 
 def make_sql_logger(level=logging.INFO):

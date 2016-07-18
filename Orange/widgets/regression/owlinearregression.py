@@ -86,7 +86,6 @@ class OWLinearRegression(OWBaseLearner):
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
         self.alpha_slider.setEnabled(self.reg_type != self.OLS)
         self.l1_ratio_slider.setEnabled(self.reg_type == self.Elastic)
-        self.commit()
 
     def handleNewSignals(self):
         self.commit()

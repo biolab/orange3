@@ -361,7 +361,7 @@ class OWTreeViewer2D(OWWidget):
     _DEF_NODE_WIDTH = 24
     _DEF_NODE_HEIGHT = 20
 
-    graph_name = True
+    graph_name = "scene"
 
     def __init__(self):
         super().__init__()

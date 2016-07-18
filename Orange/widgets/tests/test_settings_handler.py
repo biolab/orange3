@@ -191,6 +191,28 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(widget_mk2.component.int_setting, 42,
                          "spils defaults into sibling classes")
 
+    def test_schema_only_settings(self):
+        handler = SettingsHandler()
+        handler.read_defaults = lambda: None
+        handler.bind(SimpleWidget)
+
+        # fast_save should not update defaults
+        widget = SimpleWidget()
+        handler.fast_save(widget, 'schema_only_setting', 5)
+        self.assertEqual(
+            handler.known_settings['schema_only_setting'].default, None)
+
+        # update_defaults should not update defaults
+        widget.schema_only_setting = 5
+        handler.update_defaults(widget)
+        self.assertEqual(
+            handler.known_settings['schema_only_setting'].default, None)
+
+        # pack_data should pack setting
+        widget.schema_only_setting = 5
+        data = handler.pack_data(widget)
+        self.assertEqual(data['schema_only_setting'], 5)
+
 
 class Component:
     int_setting = Setting(42)
@@ -198,6 +220,7 @@ class Component:
 
 class SimpleWidget:
     setting = Setting(42)
+    schema_only_setting = Setting(None, schema_only=True)
     non_setting = 5
 
     component = SettingProvider(Component)

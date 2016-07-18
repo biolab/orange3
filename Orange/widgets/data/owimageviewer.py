@@ -3,6 +3,7 @@ Image Viewer Widget
 -------------------
 
 """
+import sys
 import os
 import weakref
 import logging
@@ -43,40 +44,41 @@ class GraphicsPixmapWidget(QGraphicsWidget):
         self.setCacheMode(QGraphicsItem.ItemCoordinateCache)
         self._pixmap = pixmap
         self._pixmapSize = QSizeF()
+        self._keepAspect = True
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def setPixmap(self, pixmap):
         if self._pixmap != pixmap:
             self._pixmap = QPixmap(pixmap)
             self.updateGeometry()
+            self.update()
 
     def pixmap(self):
         return QPixmap(self._pixmap)
 
-    def setPixmapSize(self, size):
-        if self._pixmapSize != size:
-            self._pixmapSize = QSizeF(size)
-            self.updateGeometry()
-
-    def pixmapSize(self):
-        if self._pixmapSize.isValid():
-            return QSizeF(self._pixmapSize)
-        else:
-            return QSizeF(self._pixmap.size())
-
     def sizeHint(self, which, constraint=QSizeF()):
         if which == Qt.PreferredSize:
-            return self.pixmapSize()
+            return QSizeF(self._pixmap.size())
         else:
             return QGraphicsWidget.sizeHint(self, which, constraint)
+
+    def setKeepAspectRatio(self, keep):
+        if self._keepAspect != keep:
+            self._keepAspect = bool(keep)
+            self.update()
+
+    def keepAspectRatio(self):
+        return self._keepAspect
 
     def paint(self, painter, option, widget=0):
         if self._pixmap.isNull():
             return
 
         rect = self.contentsRect()
-
-        pixsize = self.pixmapSize()
+        pixsize = QSizeF(self._pixmap.size())
+        aspectmode = (Qt.KeepAspectRatio if self._keepAspect
+                      else Qt.IgnoreAspectRatio)
+        pixsize.scale(rect.size(), aspectmode)
         pixrect = QRectF(QPointF(0, 0), pixsize)
         pixrect.moveCenter(rect.center())
 
@@ -132,13 +134,13 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
 
         layout.addItem(self.pixmapWidget)
         layout.addItem(self.labelWidget)
-
+        layout.addStretch()
         layout.setAlignment(self.pixmapWidget, Qt.AlignCenter)
         layout.setAlignment(self.labelWidget, Qt.AlignHCenter | Qt.AlignBottom)
+
         self.setLayout(layout)
 
-        self.setSizePolicy(QSizePolicy.MinimumExpanding,
-                           QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setTitle(title)
@@ -178,18 +180,14 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
             painter.save()
             painter.setPen(QPen(QColor(125, 162, 206, 192)))
             painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
-            painter.drawRoundedRect(QRectF(contents.topLeft(),
-                self.geometry().size()), 3, 3)
+            painter.drawRoundedRect(
+                QRectF(contents.topLeft(), self.geometry().size()), 3, 3)
             painter.restore()
 
     def _updatePixmapSize(self):
-        pixmap = self.pixmap()
-        if not pixmap.isNull() and self._size.isValid():
-            pixsize = QSizeF(self.pixmap().size())
-            pixsize.scale(self._size, Qt.KeepAspectRatio)
-        else:
-            pixsize = QSizeF()
-        self.pixmapWidget.setPixmapSize(pixsize)
+        pixsize = QSizeF(self._size)
+        self.pixmapWidget.setMinimumSize(pixsize)
+        self.pixmapWidget.setMaximumSize(pixsize)
 
 
 class ThumbnailWidget(QGraphicsWidget):
@@ -205,6 +203,16 @@ class ThumbnailWidget(QGraphicsWidget):
     def setGeometry(self, geom):
         super(ThumbnailWidget, self).setGeometry(geom)
         self.reflow(self.size().width())
+
+    def event(self, event):
+        if event.type() == QEvent.LayoutRequest:
+            sh = self.effectiveSizeHint(Qt.PreferredSize)
+            self.resize(sh)
+            self.layout().activate()
+            event.accept()
+            return True
+        else:
+            return super().event(event)
 
     def reflow(self, width):
         if not self.layout():
@@ -230,6 +238,8 @@ class ThumbnailWidget(QGraphicsWidget):
 
         for i, item in enumerate(items):
             layout.addItem(item, i // ncol, i % ncol)
+
+        layout.invalidate()
 
     def items(self):
         layout = self.layout()
@@ -330,7 +340,7 @@ class OWImageViewer(widget.OWWidget):
     imageAttr = settings.ContextSetting(0)
     titleAttr = settings.ContextSetting(0)
 
-    zoom = settings.Setting(25)
+    imageSize = settings.Setting(100)
     autoCommit = settings.Setting(False)
 
     buttons_area_orientation = Qt.Vertical
@@ -338,6 +348,19 @@ class OWImageViewer(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.data = None
+        self.allAttrs = []
+        self.stringAttrs = []
+
+        self.thumbnailWidget = None
+        self.sceneLayout = None
+        self.selectedIndices = []
+
+        #: List of _ImageItems
+        self.items = []
+
+        self._errcount = 0
+        self._successcount = 0
 
         self.info = gui.widgetLabel(
             gui.vBox(self.controlArea, "Info"),
@@ -363,9 +386,9 @@ class OWImageViewer(widget.OWWidget):
         )
 
         gui.hSlider(
-            self.controlArea, self, "zoom",
-            box="Zoom", minValue=1, maxValue=100, step=1,
-            callback=self.updateZoom,
+            self.controlArea, self, "imageSize",
+            box="Image Size", minValue=32, maxValue=1024, step=16,
+            callback=self.updateSize,
             createLabel=False
         )
         gui.rubber(self.controlArea)
@@ -387,16 +410,6 @@ class OWImageViewer(widget.OWWidget):
             self.onSelectionRectPointChanged, Qt.QueuedConnection
         )
         self.resize(800, 600)
-
-        self.thumbnailWidget = None
-        self.sceneLayout = None
-        self.selectedIndices = []
-
-        #: List of _ImageItems
-        self.items = []
-
-        self._errcount = 0
-        self._successcount = 0
 
         self.loader = ImageLoader(self)
 
@@ -452,7 +465,7 @@ class OWImageViewer(widget.OWWidget):
                          if numpy.isfinite(inst[attr])]
             widget = ThumbnailWidget()
             layout = widget.layout()
-
+            size = QSizeF(self.imageSize, self.imageSize)
             self.scene.addItem(widget)
 
             for i, inst in enumerate(instances):
@@ -462,7 +475,7 @@ class OWImageViewer(widget.OWWidget):
                 thumbnail = GraphicsThumbnailWidget(
                     QPixmap(), title=title, parent=widget
                 )
-
+                thumbnail.setThumbnailSize(size)
                 thumbnail.setToolTip(url.toString())
                 thumbnail.instance = inst
                 layout.addItem(thumbnail, i / 5, i % 5)
@@ -486,8 +499,6 @@ class OWImageViewer(widget.OWWidget):
                             pixmap = QPixmap.fromImage(future.result())
 
                         thumb.setPixmap(pixmap)
-                        if not pixmap.isNull():
-                            thumb.setThumbnailSize(self.pixmapSize(pixmap))
 
                         self._updateStatus(future)
 
@@ -503,11 +514,7 @@ class OWImageViewer(widget.OWWidget):
             self.sceneLayout = layout
 
         if self.sceneLayout:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
-            self.sceneLayout.activate()
+            self._updateGeometryConstraints()
 
     def urlFromValue(self, value):
         variable = value.variable
@@ -529,14 +536,6 @@ class OWImageViewer(widget.OWWidget):
         if not url.scheme():
             url.setScheme("file")
         return url
-
-    def pixmapSize(self, pixmap):
-        """
-        Return the preferred pixmap size based on the current `zoom` value.
-        """
-        scale = 2 * self.zoom / 100.0
-        size = QSizeF(pixmap.size()) * scale
-        return size.expandedTo(QSizeF(16, 16))
 
     def _cancelAllFutures(self):
         for item in self.items:
@@ -560,19 +559,12 @@ class OWImageViewer(widget.OWWidget):
     def thumbnailItems(self):
         return [item.widget for item in self.items]
 
-    def updateZoom(self):
+    def updateSize(self):
+        size = QSizeF(self.imageSize, self.imageSize)
         for item in self.thumbnailItems():
-            item.setThumbnailSize(self.pixmapSize(item.pixmap()))
+            item.setThumbnailSize(size)
 
-        if self.thumbnailWidget:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
-
-        if self.sceneLayout:
-            self.sceneLayout.activate()
+        self._updateGeometryConstraints()
 
     def updateTitles(self):
         titleAttr = self.allAttrs[self.titleAttr]
@@ -632,24 +624,32 @@ class OWImageViewer(widget.OWWidget):
     def _updateSceneRect(self):
         self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
+    def _updateGeometryConstraints(self):
+        # Update the thumbnail grid widget's width constraint (derived from
+        # the viewport's width
+        if self.thumbnailWidget is not None:
+            width = (self.sceneView.width() -
+                     self.sceneView.verticalScrollBar().width())
+            width = width - 2
+            self.thumbnailWidget.reflow(width)
+            self.thumbnailWidget.setPreferredWidth(width)
+            self.thumbnailWidget.layout().activate()
+
     def onDeleteWidget(self):
         self._cancelAllFutures()
+        self.clear()
 
     def eventFilter(self, receiver, event):
         if receiver is self.sceneView and event.type() == QEvent.Resize \
                 and self.thumbnailWidget:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
+            self._updateGeometryConstraints()
 
         return super(OWImageViewer, self).eventFilter(receiver, event)
 
 
 class ImageLoader(QObject):
     #: A weakref to a QNetworkAccessManager used for image retrieval.
-    #: (we can only have only one QNetworkDiskCache opened on the same
+    #: (we can only have one QNetworkDiskCache opened on the same
     #: directory)
     _NETMANAGER_REF = None
 
@@ -740,17 +740,24 @@ class ImageLoader(QObject):
         return future
 
 
-def main():
+def main(argv=sys.argv):
     import sip
 
-    app = QApplication([])
+    app = QApplication(argv)
+    argv = app.arguments()
     w = OWImageViewer()
     w.show()
     w.raise_()
-    data = Orange.data.Table('zoo-with-images')
+
+    if len(argv) > 1:
+        data = Orange.data.Table(argv[1])
+    else:
+        data = Orange.data.Table('zoo-with-images')
+
     w.setData(data)
     rval = app.exec_()
     w.saveSettings()
+    w.onDeleteWidget()
     sip.delete(w)
     app.processEvents()
     return rval
