@@ -189,10 +189,10 @@ class ClassificationScorer(Scorer):
             return self.from_contingency(
                 cont, 1. - np.sum(cont.unknowns)/instances_with_class)
 
+        scores = [score_from_contingency(f) for f in data.domain.attributes]
         if feature is not None:
-            return score_from_contingency(feature)
-        else:
-            return [score_from_contingency(f) for f in data.domain.attributes]
+            return scores[0]
+        return scores
 
 
 def _entropy(D):
