@@ -1,286 +1,19 @@
 """Tree inducers: SKL and Orange's own inducer"""
 from collections import OrderedDict
-from functools import lru_cache
 
-import numpy as np
 import bottleneck as bn
+import numpy as np
 import sklearn.tree as skl_tree
 from sklearn.tree._tree import TREE_LEAF
 
+from Orange.classification import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
 from Orange.preprocess.transformation import Indicator
 from Orange.statistics import distribution, contingency
-
-from Orange.base import Tree, Model, Learner
-from Orange.classification import SklLearner, SklModel
+from Orange.tree import Tree, Node, DiscreteNode, DiscreteNodeMapping, \
+    NumericNode, OrangeTreeModel
 
 __all__ = ["TreeLearner", "OrangeTreeLearner"]
-
-
-class Node:
-    """Tree node base class; instances of this class are also used as leaves
-
-    Attributes:
-        attr (Odange.data.Variable): The attribute used for splitting
-        attr_idx (int): The index of the attribute used for splitting
-        class_distr (Orange.statistics.distribution.Discrete):
-            class distribution on training data for this node
-        children (list of Node): child branches
-        subset (numpy.array): indices of data instances in this node
-    """
-    def __init__(self, attr, attr_idx, class_distr):
-        self.attr = attr
-        self.attr_idx = attr_idx
-        self.class_distr = class_distr
-        self.children = None
-        self.subset = np.array([])
-
-    def descend(self, inst):
-        """Return the child for the given data instance"""
-        return np.nan
-
-
-class DiscreteNode(Node):
-    """Node for discrete attributes"""
-    def __init__(self, attr, attr_idx, class_distr):
-        super().__init__(attr, attr_idx, class_distr)
-
-    def descend(self, inst):
-        return int(inst[self.attr_idx])
-
-    def describe_branch(self, i):
-        return self.attr.values[i]
-
-
-class DiscreteNodeMapping(Node):
-    """Node for discrete attributes with mapping to branches
-
-    Attributes:
-        mapping (numpy.ndarray): indices of branches for each attribute value
-    """
-    def __init__(self, attr, attr_idx, mapping, class_distr):
-        super().__init__(attr, attr_idx, class_distr)
-        self.mapping = mapping
-
-    def descend(self, inst):
-        val = inst[self.attr_idx]
-        return np.nan if np.isnan(val) else self.mapping[int(val)]
-
-    def describe_branch(self, i):
-        values = [self.attr.values[j]
-                  for j, v in enumerate(self.mapping) if v == i]
-        if len(values) == 1:
-            return values[0]
-        return "{} or {}".format(", ".join(values[:-1]), values[-1])
-
-
-class NumericNode(Node):
-    """Node for numeric attributes
-
-    Attributes:
-        threshold (float): values lower or equal to this threshold go to the
-            left branches, larger to the right
-    """
-    def __init__(self, attr, attr_idx, threshold, class_distr):
-        super().__init__(attr, attr_idx, class_distr)
-        self.threshold = threshold
-
-    def descend(self, inst):
-        val = inst[self.attr_idx]
-        return np.nan if np.isnan(val) else val > self.threshold
-
-    def describe_branch(self, i):
-        return "{} {}".format(("≤", ">")[i], self.threshold)
-
-
-class OrangeTreeModel(Model, Tree):
-    """
-    Tree classifier with proper handling of nominal attributes and binarization
-    and the interface API for visualization.
-    """
-
-    def __init__(self, data, root):
-        super().__init__(data.domain)
-        self.instances = data
-        self._root = root
-
-        self._class_distrs = self._thresholds = self._code = None
-        self._compile()
-
-    def predict_by_nodes(self, X):
-        """Prediction that does not use compiled trees; for demo only"""
-        n = len(X)
-        y = np.empty((n,))
-        for i in range(n):
-            x = X[i]
-            node = self._root
-            while True:
-                child_idx = node.descend(x)
-                if np.isnan(child_idx):
-                    break
-                node = node.children[child_idx]
-            y[i] = node.class_distr.modus()
-        return y
-
-    def predict_in_python(self, X):
-        """Prediction with compiled code, but in Python; for demo only"""
-        n = len(X)
-        y = np.empty((n, len(self._root.class_distr)))
-        for i in range(n):
-            x = X[i]
-            node_ptr = 0
-            while self._code[node_ptr]:
-                val = x[self._code[node_ptr + 2]]
-                if np.isnan(val):
-                    break
-                child_ptrs = self._code[node_ptr + 3:]
-                if self._code[node_ptr] == 3:
-                    node_idx = self._code[node_ptr + 1]
-                    node_ptr = child_ptrs[int(val > self._thresholds[node_idx])]
-                else:
-                    node_ptr = child_ptrs[int(val)]
-            node_idx = self._code[node_ptr + 1]
-            y[i, :] = self._class_distrs[node_idx]
-        return y
-
-    def predict(self, X):
-        return _tree_scorers.compute_predictions(
-            X, self._code, self._class_distrs, self._thresholds)
-
-    @property
-    @lru_cache(10)
-    def node_count(self):
-        def _count(node):
-            return 1 + sum(_count(c) for c in self.children(node))
-        return _count(self._root)
-
-    @property
-    @lru_cache(10)
-    def leaf_count(self):
-        def _count(node):
-            c = self.children(self)
-            return not c or sum(_count(c) for c in self.children(node))
-        return _count(self._root)
-
-    @property
-    def root(self):
-        return self._root
-
-    @staticmethod
-    def children(node):
-        return node.children or []
-
-    @staticmethod
-    def attribute(node):
-        return node.attr
-
-    @staticmethod
-    def split_condition(node, parent):
-        if parent is None:
-            return ""
-        return parent.describe_branch(parent.children.index(node))
-
-    @staticmethod
-    def rule(index_path):
-        return ""
-
-    @staticmethod
-    def num_instances(node):
-        return len(node.subset)
-
-    @staticmethod
-    def get_distribution(node):
-        return node.class_distr
-
-    @staticmethod
-    def majority(node):
-        return node.class_distr.modus()
-
-    def get_instances(self, nodes):
-        indices = np.unique(np.hstack([node.subset for node in nodes]))
-        if len(indices):
-            return self.instances[indices]
-
-    def print_tree(self, node=None, level=0):
-        """Simple tree printer"""
-        # pylint: disable=bad-builtin
-        if node is None:
-            node = self.root
-        if node.children is None:
-            return
-        for branch_no, child in enumerate(node.children):
-            print("{:>20} {}{} {}".format(
-                str(child.class_distr), "    " * level, node.attr.name,
-                node.describe_branch(branch_no)))
-            self.print_tree(child, level + 1)
-
-    def _compile(self):
-        def _get_dims(node):
-            nonlocal nnodes, codesize
-            nnodes += 1
-            codesize += 2  # node type + node index
-            if isinstance(node, DiscreteNodeMapping):
-                codesize += len(node.mapping)
-            if node.children:
-                codesize += 1 + len(node.children)  # attr index + children ptrs
-                for child in node.children:
-                    _get_dims(child)
-
-        NODE_TYPES = [Node, DiscreteNode, DiscreteNodeMapping, NumericNode]
-        def _compile_node(node):
-            # The node is compile into the following code (np.int32)
-            # [0] node type: index of type in NODE_TYPES)
-            # [1] node index: serves as index into class_distrs and thresholds
-            # If the node is not a leaf:
-            #     [2] attribute index
-            # This is followed by an array of indices of the code for children
-            # nodes. The length of this array is 2 for numeric attributes or
-            # **the number of attribute values** for discrete attributes
-            # This is different from the number of branches if discrete values
-            # are mapped to branches
-
-            # Thresholds and class distributions are stored in separate
-            # 1-d and 2-d array arrays of type np.float, indexed be node index
-            # The lengths of both equal the node count; we would gain (if
-            # anything) by not reserving space for unused threshold space
-            nonlocal code_ptr, node_idx
-            code_start = code_ptr
-            self._code[code_ptr] = NODE_TYPES.index(type(node))
-            self._code[code_ptr + 1] = node_idx
-            code_ptr += 2
-
-            self._class_distrs[node_idx, :] = node.class_distr
-            if isinstance(node, NumericNode):
-                self._thresholds[node_idx] = node.threshold
-            node_idx += 1
-
-            # pylint: disable=unidiomatic-typecheck
-            if type(node) == Node:
-                return code_start
-
-            self._code[code_ptr] = node.attr_idx
-            code_ptr += 1
-
-            jump_table_size = 2 if isinstance(node, NumericNode) \
-                else len(node.attr.values)
-            jump_table = self._code[code_ptr:code_ptr + jump_table_size]
-            code_ptr += jump_table_size
-            child_indices = [_compile_node(child) for child in node.children]
-            if isinstance(node, DiscreteNodeMapping):
-                jump_table[:] = np.array(child_indices)[node.mapping]
-            else:
-                jump_table[:] = child_indices
-
-            return code_start
-
-        nnodes = codesize = 0
-        _get_dims(self.root)
-        self._class_distrs = np.empty((nnodes, len(self.root.class_distr)))
-        self._thresholds = np.empty(nnodes)
-        self._code = np.empty(codesize, np.int32)
-
-        code_ptr = node_idx = 0
-        _compile_node(self.root)
 
 
 class OrangeTreeLearner(Learner):
@@ -293,10 +26,8 @@ class OrangeTreeLearner(Learner):
     MAX_BINARIZATION = 16
 
     def __init__(
-            self, *args,
-            binarize=True,
-            min_samples_leaf=1, min_samples_split=2, sufficient_majority=0.95,
-            max_depth=None):
+            self, *args, binarize=True, max_depth=None,
+            min_samples_leaf=1, min_samples_split=2, sufficient_majority=0.95):
         super().__init__(*args)
         self.binarize = binarize
         self.min_samples_leaf = min_samples_leaf
@@ -324,25 +55,21 @@ class OrangeTreeLearner(Learner):
             for efficiency reasons."""
             cont = contingency.Discrete(data, attr)
             attr_distr = np.sum(cont, axis=0)
-            # Skip instances with missing value of the attribute
-            class_distr_no_miss = np.sum(cont, axis=1)
+            cls_distr = np.sum(cont, axis=1)  # Skip insts without attr value
             n = sum(attr_distr)
             if np.min(attr_distr) < self.min_samples_leaf:
                 return None, None, None
-            class_distr[class_distr <= 0] = 1
-            cont[cont <= 0] = 1
-            class_entr = \
-                n * np.log(n) - \
-                np.sum(class_distr_no_miss * np.log(class_distr_no_miss))
+            cls_distr[cls_distr <= 0] = 1  # avoid log(0)
+            class_entr = n * np.log(n) - np.sum(cls_distr * np.log(cls_distr))
+            cont[cont <= 0] = 1  # avoid log(0)
             cont_entr = \
                 np.sum(attr_distr * np.log(attr_distr)) - \
                 np.sum(cont * np.log(cont))
-            sc = (class_entr - cont_entr) / n / np.log(2)
+            score = (class_entr - cont_entr) / n / np.log(2)
             branches = data[:, attr].X.flatten()
             branches[np.isnan(branches)] = -1
-            return (sc,
-                    DiscreteNode(attr, attr_no, class_distr),
-                    branches)
+            node = DiscreteNode(attr, attr_no, None)
+            return score, node, branches
 
         def _score_disc_bin():
             """Scoring for discrete attributes, with binarization"""
@@ -352,21 +79,16 @@ class OrangeTreeLearner(Learner):
             cont = contingency.Discrete(data, attr)
             attr_distr = np.sum(cont, axis=0)
             # Skip instances with missing value of the attribute
-            class_distr_no_miss = np.sum(cont, axis=1)
+            cls_distr = np.sum(cont, axis=1)
             best_score, best_mapping = _tree_scorers.find_binarization_entropy(
-                cont, class_distr_no_miss, attr_distr, self.min_samples_leaf)
+                cont, cls_distr, attr_distr, self.min_samples_leaf)
             if best_score <= 0:
                 return None, None, None
             best_score *= 1 - sum(cont.unknowns) / len(data)
-            best_cut = np.array(
-                [int(x)
-                 for x in reversed("{:>0{}b}".format(best_mapping, n_values))] +
-                [-1], dtype=np.int16)
-            col_x = data.X[:, attr_no].flatten()
-            col_x[np.isnan(col_x)] = n_values
-            return (best_score,
-                    DiscreteNodeMapping(attr, attr_no, best_cut[:-1], class_distr),
-                    best_cut[col_x.astype(int)])
+            mapping, branches = DiscreteNodeMapping.branches_from_mapping(
+                data.X[:, attr_no], best_mapping, n_values)
+            node = DiscreteNodeMapping(attr, attr_no, mapping, None)
+            return best_score, node, branches
 
         def _score_cont():
             """Scoring for numeric attributes"""
@@ -381,16 +103,15 @@ class OrangeTreeLearner(Learner):
             best_score *= non_nans / len(col_x)
             branches = col_x > best_cut
             branches[np.isnan(col_x)] = -1
-            return (best_score,
-                    NumericNode(attr, attr_no, best_cut, class_distr),
-                    branches)
+            node = NumericNode(attr, attr_no, best_cut, None)
+            return best_score, node, branches
 
         #######################################
         # The real _select_attr starts here
         domain = data.domain
         class_var = domain.class_var
         class_distr = distribution.Discrete(data, class_var)
-        best_node = Node(None, None, class_distr)
+        best_node = Node(None, None, None)
         best_score = best_branches = None
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
@@ -398,6 +119,7 @@ class OrangeTreeLearner(Learner):
                 disc_scorer() if attr.is_discrete else _score_cont()
             if node is not None and (best_score is None or sc > best_score):
                 best_score, best_node, best_branches = sc, node, branches
+        best_node.value = class_distr
         return best_node, best_branches
 
     def build_tree(self, data, active_inst, level=1):
@@ -407,7 +129,7 @@ class OrangeTreeLearner(Learner):
             root node (Node)"""
         node_insts = data[active_inst]
         distr = distribution.Discrete(node_insts, data.domain.class_var)
-        if len(data) < self.min_samples_split or \
+        if len(node_insts) < self.min_samples_split or \
                 max(distr) >= sum(distr) * self.sufficient_majority or \
                 self.max_depth is not None and level > self.max_depth:
             node, branches = Node(None, None, distr), None
@@ -583,15 +305,12 @@ class TreeClassifier(SklModel, Tree):
         assert counts.shape[0] == 1, "n_outputs > 1 "
         return counts[0]
 
-    def get_distribution(self, node_index):
+    def get_value(self, node_index):
         counts = self._get_unnormalized_distribution(node_index)
         counts_sum = np.sum(counts)
         if counts_sum > 0:
             counts = counts / counts_sum
         return counts
-
-    def majority(self, node_index):
-        return np.argmax(self.get_distribution(node_index))
 
     def num_instances(self, node_index):
         return np.sum(self._get_unnormalized_distribution(node_index))

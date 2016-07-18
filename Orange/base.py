@@ -4,10 +4,10 @@ import numpy as np
 import scipy
 
 from Orange.data import Table, Storage, Instance, Value
+from Orange.data.util import one_hot
+from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
-from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.data.util import one_hot
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 

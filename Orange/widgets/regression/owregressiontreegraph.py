@@ -9,20 +9,6 @@ from Orange.widgets.classify.owclassificationtreegraph import (OWTreeGraph,
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 
 
-class RegressionTreeNode(TreeNode):
-    def impurity(self):
-        """
-        :return: Impurity in a particular node.
-        """
-        return self.root.impurity[self.i]
-
-    def get_distribution(self):
-        """
-        :return: Average value in a particular node.
-        """
-        return self.root.value[self.node_id]
-
-
 class OWRegressionTreeGraph(OWTreeGraph):
     name = "Regression Tree Viewer"
     description = "A graphical visualization of a regression tree."

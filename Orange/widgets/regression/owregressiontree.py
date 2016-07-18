@@ -1,17 +1,14 @@
-from Orange.regression.tree import TreeRegressionLearner
-from Orange.widgets.settings import Setting
-from Orange.widgets.classify import owclassificationtree
+from Orange.regression.tree import OrangeTreeLearner
+from Orange.widgets.classify.owclassificationtree import OWTreeLearner
 
 
-class OWRegressionTree(owclassificationtree.OWClassificationTree):
+class OWRegressionTree(OWTreeLearner):
     name = "Regression Tree"
     description = "A regression tree algorithm with forward pruning."
     icon = "icons/RegressionTree.svg"
     priority = 30
 
-    LEARNER = TreeRegressionLearner
-
-    scores = (("Mean Squared Error", "mse"),)
+    LEARNER = OrangeTreeLearner
 
 
 if __name__ == "__main__":

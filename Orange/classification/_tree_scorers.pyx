@@ -25,7 +25,9 @@ def find_threshold_entropy(np.ndarray[np.float64_t, ndim=1] x,
     cdef int best_idx = 0
     cdef int N = idx.shape[0]
 
-    # Initial split (min_left on the left)
+    # Initial split (min_leaf on the left)
+    if N <= min_leaf:
+        return 0, 0
     for i in range(min_leaf - 1):  # one will be added in the loop
         # without temporary int, cython uses PyObjects here
         curr_y = int(y[idx[i]])
@@ -131,6 +133,112 @@ def find_binarization_entropy(np.ndarray[np.float64_t, ndim=2] cont,
                 best_mapping = mapping
     free(distr)
     return (class_entro - best_entro) / N / log(2), best_mapping
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def find_threshold_MSE(np.ndarray[np.float64_t, ndim=1] x,
+                       np.ndarray[np.float64_t, ndim=1] y,
+                       np.ndarray[np.int64_t, ndim=1] idx,
+                       int min_leaf):
+    cdef float sleft = 0, sum, inter, best_inter
+    cdef float curr_y
+    cdef int i, best_idx = 0
+    cdef int N = idx.shape[0]
+
+    # Initial split (min_leaf on the left)
+    if N <= min_leaf:
+        return 0, 0
+    for i in range(min_leaf - 1):  # one will be added in the loop
+        sum += y[idx[i]]
+    sleft = sum
+    for i in range(min_leaf - 1, N):
+        sum += y[idx[i]]
+
+    best_inter = (sum * sum) / N
+    for i in range(min_leaf - 1, N - min_leaf):
+        sleft += y[idx[i]]
+        if x[idx[i]] == x[idx[i + 1]]:
+            continue
+        inter = sleft * sleft / (i + 1) + (sum - sleft) * (sum - sleft) / (N - i - 1)
+        if inter > best_inter:
+            best_inter = inter
+            best_idx = i
+    return (best_inter - (sum * sum) / N) / N, x[idx[best_idx]]
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,
+                          np.ndarray[np.float64_t, ndim=1] y,
+                          int min_leaf):
+    cdef int n_values = int(np.max(x))
+    cdef float sleft, sum
+    cdef int left
+    cdef int i, change, to_right, allowed, m
+    cdef int best_mapping, move, mapping, previous
+    cdef float inter, best_inter
+    cdef int N = x.shape[0]
+
+    cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
+    cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
+
+    for i in range(N):
+        group_sizes[int(x[i])] += 1
+        group_sums[int(x[i])] += y[i]
+    left = N
+    sleft = sum = np.sum(group_sums)
+    best_inter = (sum * sum) / N
+
+    previous = 0
+    # Gray code
+    for m in range(1, 1 << (n_values - 1)):
+        # What moves where
+        mapping = m ^ (m >> 1)
+        change = mapping ^ previous
+        to_right = change & mapping
+        for move in range(n_values):
+            if change & 1:
+                break
+            change = change >> 1
+        previous = mapping
+
+        if to_right:
+            left -= group_sizes[move]
+            sleft -= group_sums[move]
+        else:
+            left += group_sizes[move]
+            sleft += group_sums[move]
+
+        if left >= min_leaf and (N - left) >= min_leaf:
+            inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
+            if inter < best_inter:
+                best_inter = inter
+                best_mapping = mapping
+    return (best_inter - sum * sum / N) / N, best_mapping
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,
+                        np.ndarray[np.float64_t, ndim=1] y):
+    cdef int n_values = int(np.max(x))
+    cdef int i
+    cdef int N = x.shape[0]
+    cdef float sum = 0
+
+    cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
+    cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
+
+    for i in range(N):
+        group_sizes[int(x[i])] += 1
+        group_sums[int(x[i])] += y[i]
+    inter = 0
+    for i in range(n_values):
+        if group_sizes[i]:
+            inter += group_sums[i] * group_sums[i] / group_sizes[i]
+            sum += group_sums[i]
+    return (inter - sum * sum / N) / N
 
 
 @cython.boundscheck(False)
