@@ -123,7 +123,7 @@ class ContinuousRule(Rule):
                 return ContinuousRule(self.attr_name, self.greater, larger)
             # When both are LT
             else:
-                smaller = self.value if self.value < rule.value else rule.value
+                smaller = min(self.value, rule.value)
                 return ContinuousRule(self.attr_name, self.greater, smaller)
         # When they have different signs we need to return an interval rule
         else:
