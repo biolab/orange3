@@ -107,7 +107,7 @@ class ScaleData:
         full_data = data
         self.raw_data = data
 
-        len_data = data and len(data) or 0
+        len_data = len(data) if data is not None else 0
 
         self.attribute_names = [attr.name for attr in full_data.domain]
         self.attribute_flip_info = {}
@@ -120,14 +120,11 @@ class ScaleData:
         self.data_class_name = self.data_has_class and full_data.domain.class_var.name
         if self.data_has_class:
             self.data_class_index = self.data_domain.index(self.data_class_name)
-        self.have_data = bool(self.raw_data and len(self.raw_data) > 0)
+        self.have_data = self.raw_data is not None and len(self.raw_data) > 0
 
-        self.domain_data_stat = getCached(full_data,
-                                          DomainBasicStats,
-                                          (full_data,))
+        self.domain_data_stat = getCached(full_data, DomainBasicStats, (full_data,))
 
-        sort_values_for_discrete_attrs = args.get("sort_values_for_discrete_attrs",
-                                                  1)
+        sort_values_for_discrete_attrs = args.get("sort_values_for_discrete_attrs", 1)
 
         for index in range(len(full_data.domain)):
             attr = full_data.domain[index]
@@ -146,8 +143,8 @@ class ScaleData:
         # each widget separately because of different
         # jitter_continuous and jitter_size values
         if getCached(data, "visualizationData"):
-            self.original_data, self.no_jittering_scaled_data, self.valid_data_array = getCached(data,
-                                                                                                 "visualizationData")
+            self.original_data, self.no_jittering_scaled_data, self.valid_data_array = \
+                getCached(data, "visualizationData")
         else:
             no_jittering_data = np.c_[full_data.X, full_data.Y].T
             valid_data_array = ~np.isnan(no_jittering_data)
@@ -184,7 +181,7 @@ class ScaleData:
             self.no_jittering_scaled_data = no_jittering_data
             self.valid_data_array = valid_data_array
 
-        if data:
+        if data is not None:
             setCached(data, "visualizationData",
                       (self.original_data, self.no_jittering_scaled_data,
                        self.valid_data_array))

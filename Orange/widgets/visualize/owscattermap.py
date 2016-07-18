@@ -679,7 +679,7 @@ class OWScatterMap(widget.OWWidget):
         self.plot.clear()
         self.x_var_index = min(self.x_var_index, len(self.x_var_model) - 1)
         self.y_var_index = min(self.y_var_index, len(self.y_var_model) - 1)
-        if not self.dataset or self.x_var_index == -1 or self.y_var_index == -1:
+        if self.dataset is None or self.x_var_index == -1 or self.y_var_index == -1:
             return
 
         data = self.dataset
@@ -1002,8 +1002,8 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
     inf_bounds = np.isinf([x_min, x_max, y_min, y_max])
     if not all(inf_bounds):
         # No need to filter the data
-        subset = data[(x_min <= data[xvar]) & (data[xvar] <= x_max)
-                      & (y_min <= data[yvar]) & (data[yvar] <= y_max)]
+        subset = data[(data[xvar] >= x_min) & (data[xvar] <= x_max)
+                      & (data[yvar] >= y_min) & (data[yvar] <= y_max)]
     else:
         subset = data
 
@@ -1011,8 +1011,8 @@ def grid_bin(data, xvar, yvar, xbins, ybins, zvar=None):
         contingencies = []
         for val in zvar.values:
             t = subset.from_table(querydomain, subset)
-            contingencies.append(contingency.get_contingencies(
-                t[t == val], col_variable=y_disc, row_variable=x_disc
+            contingencies.append(contingency.get_contingency(
+                t[t[zvar] == val], col_variable=y_disc, row_variable=x_disc
             ))
         contingencies = np.dstack(contingencies)
     else:

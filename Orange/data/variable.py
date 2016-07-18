@@ -478,9 +478,9 @@ class DiscreteVariable(Variable):
         :type val: float (should be whole number)
         :rtype: str
         """
-        if isnan(val):
+        if (isinstance(val, Number) and isnan(val)) or not val:
             return "?"
-        return '{}'.format(self.values[int(val)])
+        return str(val)
 
     str_val = repr_val
 

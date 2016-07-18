@@ -4,6 +4,7 @@ from itertools import product, chain
 from math import sqrt, log
 from operator import mul
 
+import numpy as np
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
     QColor, QGraphicsScene, QPainter, QPen,
@@ -151,7 +152,7 @@ class OWMosaicDisplay(OWWidget):
         self.closeContext()
         self.data = data
         self.init_combos(self.data)
-        if not self.data:
+        if self.data is None:
             self.discrete_data = None
             return
         if any(attr.is_continuous for attr in data.domain):
@@ -624,12 +625,16 @@ class OWMosaicDisplay(OWWidget):
             sql = type(data) == SqlTable
             name = not sql and data.name
             # save class_var because it is removed in the next line
-            data = data[:, attr_list + [class_var]]
+            if class_var not in attr_list:
+                temp_attr_list = attr_list + [class_var]
+            else:
+                temp_attr_list = attr_list
+            data = data.loc[:, temp_attr_list]
             data.domain.class_var = class_var
             if not sql:
                 data.name = name
         else:
-            data = data[:, attr_list]
+            data = data.loc[:, attr_list]
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
         if len(data) == 0:

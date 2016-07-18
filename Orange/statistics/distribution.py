@@ -307,9 +307,7 @@ def get_distributions_for_columns(data, columns):
 
     """
     domain = data.domain
-    # Normalize the columns to int indices
-    columns = [col if isinstance(col, int) else domain.index(col)
-               for col in columns]
+
     try:
         # Try the optimized code path (query the table|storage directly).
         dist_unks = data._compute_distributions(columns)

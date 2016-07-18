@@ -225,7 +225,7 @@ class OWSelectRows(widget.OWWidget):
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
         var = self.data.domain[attr_combo.currentText()]
-        oper_combo.addItems(Filter.for_variable(type(var)))
+        oper_combo.addItems([str(f) for f in Filter.for_variable(type(var))])
         oper_combo.setCurrentIndex(selected_index or 0)
         self.set_new_values(oper_combo, adding_all, selected_values)
         self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
@@ -237,25 +237,25 @@ class OWSelectRows(widget.OWWidget):
         return [child.text() for child in getattr(box, "controls", [box])
                 if isinstance(child, QtGui.QLineEdit)]
 
-    @staticmethod
-    def _get_value_contents(box):
+    def _get_value_contents(self, box):
         cont = []
         names = []
         for child in getattr(box, "controls", [box]):
             if isinstance(child, QtGui.QLineEdit):
                 cont.append(child.text())
             elif isinstance(child, QtGui.QComboBox):
-                cont.append(child.currentIndex())
+                # use the actual discrete variable value, not the .values index
+                cont.append(child.currentText())
             elif isinstance(child, QtGui.QToolButton):
                 if child.popup is not None:
                     model = child.popup.list_view.model()
                     for row in range(model.rowCount()):
                         item = model.item(row)
                         if item.checkState():
-                            cont.append(row + 1)
                             names.append(item.text())
                     child.desc_text = ', '.join(names)
                     child.set_text()
+                cont.append(names)
             elif child is None:
                 pass
             else:
@@ -354,7 +354,7 @@ class OWSelectRows(widget.OWWidget):
         self.add_all_button.setDisabled(
             data is None or
             len(data.domain.variables) + len(data.domain.metas) > 100)
-        if not data:
+        if data is None:
             self.data_desc = None
             self.commit()
             return
@@ -383,6 +383,16 @@ class OWSelectRows(widget.OWWidget):
                  self.cond_list.cellWidget(row, 1).currentIndex(),  # dropdown index
                  self._get_value_contents(self.cond_list.cellWidget(row, 2)))  # arguments
                 for row in range(self.cond_list.rowCount())]
+            # transform values of continuous variables into floats,
+            # but not time variables (those can be compared as text)
+            for i in range(len(self.conditions)):
+                var = self.data.domain[self.conditions[i][0]]
+                if var.is_continuous and not isinstance(var, TimeVariable):
+                    self.conditions[i] = (
+                        self.conditions[i][0],
+                        self.conditions[i][1],
+                        tuple(float(v) if v != '' else np.nan for v in self.conditions[i][2])
+                    )
             if self.update_on_change and (
                     self.last_output_conditions is None or
                     self.last_output_conditions != self.conditions):
@@ -394,17 +404,19 @@ class OWSelectRows(widget.OWWidget):
 
     def commit(self):
         self.error()
-        if self.data:
+        matching_output = self.data
+        non_matching_output = None
+        if self.data is not None:
             # bool element-wise filter (for subscripting)
             subscript_filter = np.repeat(True, len(self.data))
 
             # operator_index is the index of the operation in Filter.for_variable(...)
             # because they are inserted into the dropdown in the same order
             for column, operator_index, filter_args in self.conditions:
-                filter_op = Filter.for_variable(type(column))[operator_index]
+                filter_op = Filter.for_variable(type(self.data.domain[column]))[operator_index]
 
                 # add (element-wise and) the filter constraints to the current filter
-                subscript_filter &= filter_op(column, *filter_args)
+                subscript_filter &= filter_op(self.data[column], *filter_args)
 
             matching_output = self.data[subscript_filter]
             non_matching_output = self.data[~subscript_filter]
@@ -460,7 +472,7 @@ class OWSelectRows(widget.OWWidget):
 
         conditions = []
         for column, operator_index, filter_args in self.conditions:
-            filters = Filter.for_variable(type(column))
+            filters = Filter.for_variable(type(self.data.domain[column]))
             filter_op = filters[operator_index]
             if filter_op == Filter.IsDefined:
                 conditions.append("{} {}".format(column, filter_op))

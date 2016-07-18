@@ -884,7 +884,7 @@ class DomainContextHandler(ContextHandler):
         return context
 
     def open_context(self, widget, domain):
-        if domain is not None:
+        if domain is None:
             return None, False
 
         if not isinstance(domain, Domain):

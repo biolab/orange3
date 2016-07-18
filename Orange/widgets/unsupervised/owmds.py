@@ -522,6 +522,8 @@ class OWMDS(OWWidget):
             self._update_plot()
             return
 
+        self.error(1)
+
         if self.signal_data is not None:
             self.data = self.signal_data
         elif self.matrix_data is not None:
@@ -1024,27 +1026,28 @@ class OWMDS(OWWidget):
             class_vars = domain.class_vars
             metas = domain.metas
 
+            # manually construct new features ont the fly
+            # for the table to avoid trouble with missing domain columns
+            if self.output_embedding_role == OWMDS.AttrRole:
+                attrs = []
+            result = Orange.data.Table(Orange.data.Domain(attrs, class_vars, metas), self.data)
+
             if self.output_embedding_role == OWMDS.AttrRole:
                 attrs = embedding.domain.attributes
             elif self.output_embedding_role == OWMDS.AddAttrRole:
                 attrs = domain.attributes + embedding.domain.attributes
             elif self.output_embedding_role == OWMDS.MetaRole:
                 metas += embedding.domain.attributes
+            result["X"] = output["X"]
+            result["Y"] = output["Y"]
+            result.domain = Orange.data.Domain(attrs, class_vars, metas)
+        else:
+            result = output
 
-            domain = Orange.data.Domain(attrs, class_vars, metas)
-            output = Orange.data.Table.from_table(domain, self.data)
-
-            if self.output_embedding_role == OWMDS.AttrRole:
-                output.X[:] = embedding.X
-            if self.output_embedding_role == OWMDS.AddAttrRole:
-                output.X[:, -2:] = embedding.X
-            elif self.output_embedding_role == OWMDS.MetaRole:
-                output.metas[:, -2:] = embedding.X
-
-        self.send("Data", output)
-        if output is not None and self._selection_mask is not None and \
+        self.send("Data", result)
+        if result is not None and self._selection_mask is not None and \
                 numpy.any(self._selection_mask):
-            subset = output[self._selection_mask]
+            subset = result[self._selection_mask]
         else:
             subset = None
         self.send("Selected Data", subset)
@@ -1187,9 +1190,7 @@ class mdsplotutils(plotutils):
 
     @staticmethod
     def column_data(table, var, mask=None):
-        col, _ = table.get_column_view(var)
-        dtype = float if var.is_primitive() else object
-        col = numpy.asarray(col, dtype=dtype)
+        col = table[var].apply(var.to_val)
         if mask is not None:
             mask = numpy.asarray(mask, dtype=bool)
             return col[mask]
@@ -1217,7 +1218,7 @@ class mdsplotutils(plotutils):
                     palette = colorpalette.ColorPaletteGenerator(len(var.values))
 
                 color_data = plotutils.discrete_colors(
-                    col, nvalues=len(var.values), palette=palette)
+                    col, nvalues=len(var.values), palette=palette, variable=var)
             elif var.is_continuous:
                 color_data = plotutils.continuous_colors(
                     col, palette=plotstyle.continuous_palette)

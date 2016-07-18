@@ -205,16 +205,9 @@ def purge_var_M(var, data, flags):
     return state
 
 
-def has_at_least_two_values(data, var):
-    ((dist, _),) = data._compute_distributions([var])
-    if var.is_continuous:
-        dist = dist[1, :]
-    return np.sum(dist > 0.0) > 1
-
-
 def remove_constant(var, data):
     if var.is_continuous:
-        if not has_at_least_two_values(data, var):
+        if data[var].nunique() < 2:
             return None
         else:
             return var

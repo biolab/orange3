@@ -357,8 +357,11 @@ class Table(pd.DataFrame):
                     result[target_column.name] = np.atleast_1d(conversion(source_table))
             result.domain = target_domain
 
-            result.set_weights(source_table.weights)
-            result.index = source_table.index  # keep previous index
+            # if the new domain has 0 columns, the length of the table is also 0
+            # and we can't set the previous weights or index (which are len(source_table))
+            if len(result) != 0:
+                result.set_weights(source_table.weights)
+                result.index = source_table.index  # keep previous index
             result = result.iloc[row_indices]
 
             cls.conversion_cache[(id(target_domain), id(source_table))] = result
@@ -942,9 +945,10 @@ class Table(pd.DataFrame):
         nans = subset_df.isnull().sum(axis=0)
         nonnans = subset_df.count(axis=0) - nans
 
-        return pd.DataFrame([
-            mins, maxes, means, varc, nans, nonnans
-        ]).drop(Table._WEIGHTS_COLUMN, axis=1).values.T
+        # ensure correct ordering and remove the weights column
+        res = pd.DataFrame([mins, maxes, means, varc, nans, nonnans])
+        res = res[selected_columns]
+        return res.values.T
 
     def _compute_distributions(self, columns=None):
         """
@@ -1037,15 +1041,22 @@ class Table(pd.DataFrame):
         contingencies = []
         unknown_grouper = self.groupby(row_var)
         for var in col_vars:
-            # we limit ourselves to counting the weights (we only need the count, NAs don't matter)
-            # so we get a slimmer result and hopefully faster processing
-            pivot = pd.pivot_table(self, values=Table._WEIGHTS_COLUMN, index=[row_var],
-                                   columns=[var], aggfunc=np.size).fillna(0)
-            unknowns = unknown_grouper[var].agg(lambda x: x.isnull().sum())
-            if var.is_discrete:
-                contingencies.append((pivot.values, unknowns.values))
+            if var is row_var:
+                # we can't do a pivot table of a variable with itself easily,
+                # so instead just compute the distributions, which are equivalent
+                # row_var is always discrete
+                dist_unks = self._compute_distributions(columns=[row_var])
+                contingencies.append(dist_unks[0])
             else:
-                contingencies.append(((pivot.columns.values, pivot.values), unknowns.values))
+                # we limit ourselves to counting the weights (we only need the count, NAs don't matter)
+                # so we get a slimmer result and hopefully faster processing
+                pivot = pd.pivot_table(self, values=Table._WEIGHTS_COLUMN, index=[row_var],
+                                       columns=[var], aggfunc=np.sum).fillna(0)
+                unknowns = unknown_grouper[var].agg(lambda x: x.isnull().sum())
+                if var.is_discrete:
+                    contingencies.append((pivot.values, unknowns.values))
+                else:
+                    contingencies.append(((pivot.columns.values, pivot.values), unknowns.values))
         return contingencies, self[row_var].isnull().sum()
 
 

@@ -209,8 +209,7 @@ class OWBoxPlot(widget.OWWidget):
 
     # noinspection PyTypeChecker
     def set_data(self, dataset):
-        if dataset is not None and (
-                not bool(dataset) or not len(dataset.domain)):
+        if dataset is not None and (not len(dataset) or not len(dataset.domain)):
             dataset = None
         self.closeContext()
         self.dataset = dataset
@@ -219,7 +218,7 @@ class OWBoxPlot(widget.OWWidget):
         self.attributes_select = []
         self.attr_list_box.clear()
         self.group_list_box.clear()
-        if dataset:
+        if dataset is not None:
             domain = dataset.domain
             self.attributes = [(a.name, vartype(a)) for a in domain.variables +
                                domain.metas if a.is_primitive()]

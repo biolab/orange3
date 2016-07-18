@@ -78,6 +78,8 @@ class Indicator(Transformation):
         self.value = value
 
     def transform(self, c):
+        if self.variable.is_discrete:
+            c = c.apply(self.variable.to_val)
         return (c == self.value) * 1
 
 
@@ -98,6 +100,8 @@ class Indicator1(Transformation):
         self.value = value
 
     def transform(self, c):
+        if self.variable.is_discrete:
+            c = c.apply(self.variable.to_val)
         return (c == self.value) * 2 - 1
 
 
@@ -145,4 +149,4 @@ class Lookup(Transformation):
         self.lookup_table = lookup_table
 
     def transform(self, c):
-        return self.lookup_table[c]
+        return c.apply(lambda val: self.lookup_table[val])

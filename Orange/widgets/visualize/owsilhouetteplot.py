@@ -227,8 +227,7 @@ class OWSilhouettePlot(widget.OWWidget):
             self._matrix = numpy.asarray(metric(self._effective_data))
 
         labelvar = self.cluster_var_model[self.cluster_var_idx]
-        labels, _ = self.data.get_column_view(labelvar)
-        labels = labels.astype(int)
+        labels = self.data[labelvar].apply(labelvar.to_val).astype(int).values
         _, counts = numpy.unique(labels, return_counts=True)
         if numpy.count_nonzero(counts) >= 2:
             self.Error.need_two_clusters.clear()

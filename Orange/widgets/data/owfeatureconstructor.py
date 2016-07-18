@@ -455,7 +455,7 @@ class OWFeatureConstructor(OWWidget):
             desc = self.featuremodel[min(index, len(self.featuremodel) - 1)]
             editor = self.editors[type(desc)]
             self.editorstack.setCurrentWidget(editor)
-            editor.setEditorData(desc, self.data.domain if self.data else None)
+            editor.setEditorData(desc, self.data.domain if self.data is not None else None)
         self.editorstack.setEnabled(index >= 0)
         self.duplicateaction.setEnabled(index >= 0)
         self.removebutton.setEnabled(index >= 0)
@@ -891,7 +891,7 @@ class FeatureFunc:
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
-            return [self(inst) for inst in instance]
+            return [self(inst) for _, inst in instance.iterrows()]
         else:
             args = [instance[var] for _, var in self.args]
             return self.func(*args)

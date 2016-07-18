@@ -393,7 +393,7 @@ class OWScatterPlot(OWWidget):
         self.cb_attr_size.clear()
         self.cb_attr_size.addItem("(Same size)")
         self.graph.attr_size = None
-        if not self.data:
+        if self.data is None:
             return
 
         for var in self.data.domain.metas:

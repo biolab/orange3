@@ -354,7 +354,7 @@ class OWConfusionMatrix(widget.OWWidget):
             X = self.data.X[row_indices]
             Y = self.data.Y[row_indices]
             M = self.data.metas[row_indices]
-            row_ids = self.data.ids[row_indices]
+            row_ids = self.data.index[row_indices]
 
             M = numpy.hstack((M,) + tuple(extra))
             domain = Orange.data.Domain(

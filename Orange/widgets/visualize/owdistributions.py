@@ -13,7 +13,7 @@ from xml.sax.saxutils import escape
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QToolTip
-import numpy
+import numpy as np
 import pyqtgraph as pg
 
 import Orange.data
@@ -214,7 +214,7 @@ class OWDistributions(widget.OWWidget):
         self.warning()
         self.data = data
         if self.data is not None:
-            if not self.data:
+            if self.data is None:
                 self.warning("Empty input data cannot be visualized")
                 return
             domain = self.data.domain
@@ -393,13 +393,13 @@ class OWDistributions(widget.OWWidget):
             for i, dist in enumerate(cont):
                 v, W = dist
                 if len(v):
-                    weights.append(numpy.sum(W))
+                    weights.append(np.sum(W))
                     cols.append(colors[i])
                     cvar_values.append(cvar.values[i])
                     curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST,
                         smoothing_factor=self.smoothing_facs[self.smoothing_index]))
-            weights = numpy.array(weights)
-            sumw = numpy.sum(weights)
+            weights = np.array(weights)
+            sumw = np.sum(weights)
             weights /= sumw
             colors = cols
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
@@ -409,8 +409,8 @@ class OWDistributions(widget.OWWidget):
             for (X,Y) in curves:
                 X = X + (X[1] - X[0])/2
                 X = X[:-1]
-                X = numpy.array(X)
-                Y = numpy.array(Y)
+                X = np.array(X)
+                Y = np.array(Y)
                 curvesline.append((X,Y))
 
             for t in [ "fill", "line" ]:
@@ -431,12 +431,12 @@ class OWDistributions(widget.OWWidget):
 
             if self.show_prob:
                 M_EST = 5 #for M estimate
-                all_X = numpy.array(numpy.unique(numpy.hstack([X for X,_ in curvesline])))
-                inter_X = numpy.array(numpy.linspace(all_X[0], all_X[-1], len(all_X)*2))
-                curvesinterp = [ numpy.interp(inter_X, X, Y) for (X,Y) in curvesline ]
-                sumprob = numpy.sum(curvesinterp, axis=0)
+                all_X = np.array(np.unique(np.hstack([X for X, _ in curvesline])))
+                inter_X = np.array(np.linspace(all_X[0], all_X[-1], len(all_X) * 2))
+                curvesinterp = [np.interp(inter_X, X, Y) for (X, Y) in curvesline]
+                sumprob = np.sum(curvesinterp, axis=0)
                 # allcorrection = M_EST/sumw*numpy.sum(sumprob)/len(inter_X)
-                legal = sumprob > 0.05 * numpy.max(sumprob)
+                legal = sumprob > 0.05 * np.max(sumprob)
 
                 i = len(curvesinterp) + 1
                 show_all = self.show_prob == i
@@ -457,7 +457,7 @@ class OWDistributions(widget.OWWidget):
         elif var and var.is_discrete:
             bottomaxis.setTicks([list(enumerate(var.values))])
 
-            cont = numpy.array(cont)
+            cont = np.atleast_2d(np.array(cont))
             ncval = len(cvar_values)
 
             maxh = 0 #maximal column height
@@ -476,7 +476,7 @@ class OWDistributions(widget.OWWidget):
                                      if self.relative_freq else maxh)
                 if self.show_prob:
                     prob = dist / dsum
-                    ci = 1.96 * numpy.sqrt(prob * (1 - prob) / dsum)
+                    ci = 1.96 * np.sqrt(prob * (1 - prob) / dsum)
                 else:
                     ci = None
                 item = DistributionBarItem(geom, dist/scvar/maxrh
@@ -509,10 +509,10 @@ class OWDistributions(widget.OWWidget):
                         pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0)), 1)
                         pen.setCosmetic(True)
                         bar.setData(x=[i+position], y=[prob],
-                                    bottom=min(numpy.array([ci]), prob),
-                                    top=min(numpy.array([ci]), 1 - prob),
-                                     beam=numpy.array([0.05]),
-                                     brush=QtGui.QColor(1), pen=pen)
+                                    bottom=min(np.array([ci]), prob),
+                                    top=min(np.array([ci]), 1 - prob),
+                                    beam=np.array([0.05]),
+                                    brush=QtGui.QColor(1), pen=pen)
                         mark.setData([i+position], [prob], antialias=True, symbol="o",
                                  fillLevel=None, pxMode=True, size=10,
                                  brush=QtGui.QColor(colors[ic]), pen=pen)
@@ -586,29 +586,29 @@ def dist_sum(D1, D2):
     """
     X1, W1 = D1
     X2, W2 = D2
-    X = numpy.r_[X1, X2]
-    W = numpy.r_[W1, W2]
-    sort_ind = numpy.argsort(X)
+    X = np.r_[X1, X2]
+    W = np.r_[W1, W2]
+    sort_ind = np.argsort(X)
     X, W = X[sort_ind], W[sort_ind]
 
-    unique, uniq_index = numpy.unique(X, return_index=True)
-    spans = numpy.diff(numpy.r_[uniq_index, len(X)])
-    W = [numpy.sum(W[start:start + span])
+    unique, uniq_index = np.unique(X, return_index=True)
+    spans = np.diff(np.r_[uniq_index, len(X)])
+    W = [np.sum(W[start:start + span])
          for start, span in zip(uniq_index, spans)]
-    W = numpy.array(W)
+    W = np.array(W)
     assert W.shape[0] == unique.shape[0]
     return unique, W
 
 
 def ash_curve(dist, cont=None, bandwidth=None, m=3, smoothing_factor=1):
-    dist = numpy.asarray(dist)
+    dist = np.asarray(dist)
     X, W = dist
     if bandwidth is None:
         std = weighted_std(X, weights=W)
         size = X.size
         # if only one sample in the class
         if std == 0 and cont is not None:
-            std = weighted_std(cont.values, weights=numpy.sum(cont.counts, axis=0))
+            std = weighted_std(cont.values, weights=np.sum(cont.counts, axis=0))
             size = cont.values.size
         # if attr is constant or contingencies is None (no class variable)
         if std == 0:
@@ -636,10 +636,10 @@ def average_shifted_histogram(a, h, m=3, weights=None, smoothing=1):
     weights : array-like
         An array of weights of the same shape as `a`
     """
-    a = numpy.asarray(a)
+    a = np.asarray(a)
 
     if weights is not None:
-        weights = numpy.asarray(weights)
+        weights = np.asarray(weights)
         if weights.shape != a.shape:
             raise ValueError("weights should have the same shape as a")
         weights = weights.ravel()
@@ -651,71 +651,71 @@ def average_shifted_histogram(a, h, m=3, weights=None, smoothing=1):
     delta = h / m
     wfac = 4 #extended windows for gaussian smoothing
     offset = (wfac * m - 1) * delta
-    nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m * wfac - 1)
+    nbins = max(np.ceil((amax - amin + 2 * offset) / delta), 2 * m * wfac - 1)
 
-    bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
-                          endpoint=True)
-    hist, edges = numpy.histogram(a, bins, weights=weights, density=True)
+    bins = np.linspace(amin - offset, amax + offset, nbins + 1,
+                       endpoint=True)
+    hist, edges = np.histogram(a, bins, weights=weights, density=True)
 
-    kernel = gaussian_kernel((numpy.arange(2 * wfac * m - 1) - (wfac * m - 1)) / (wfac * m), wfac)
-    kernel = kernel / numpy.sum(kernel)
-    ash = numpy.convolve(hist, kernel, mode="same")
+    kernel = gaussian_kernel((np.arange(2 * wfac * m - 1) - (wfac * m - 1)) / (wfac * m), wfac)
+    kernel = kernel / np.sum(kernel)
+    ash = np.convolve(hist, kernel, mode="same")
 
-    ash = ash / numpy.diff(edges) / ash.sum()
+    ash = ash / np.diff(edges) / ash.sum()
 #     assert abs((numpy.diff(edges) * ash).sum()) <= 1e-6
     return ash, edges
 
 
 def triangular_kernel(x):
-    return numpy.clip(1, 0, 1 - numpy.abs(x))
+    return np.clip(1, 0, 1 - np.abs(x))
 
 
 def gaussian_kernel(x, k):
     #fit k standard deviations into available space from [-1 .. 1]
-    return 1/(numpy.sqrt(2 * numpy.pi)) * numpy.exp( - (x*k)**2 / (2))
+    return 1/(np.sqrt(2 * np.pi)) * np.exp(- (x * k) ** 2 / (2))
 
 
 def weighted_std(a, axis=None, weights=None, ddof=0):
-    mean = numpy.average(a, axis=axis, weights=weights)
+    mean = np.average(a, axis=axis, weights=weights)
 
     if axis is not None:
         shape = shape_reduce_keep_dims(a.shape, axis)
         mean = mean.reshape(shape)
 
-    sq_diff = numpy.power(a - mean, 2)
-    mean_sq_diff, wsum = numpy.average(
+    sq_diff = np.power(a - mean, 2)
+    mean_sq_diff, wsum = np.average(
         sq_diff, axis=axis, weights=weights, returned=True
     )
 
     if ddof != 0:
         mean_sq_diff *= wsum / (wsum - ddof)
 
-    return numpy.sqrt(mean_sq_diff)
+    return np.sqrt(mean_sq_diff)
 
 
 def weighted_quantiles(a, prob=[0.25, 0.5, 0.75], alphap=0.4, betap=0.4,
                        axis=None, weights=None):
-    a = numpy.asarray(a)
-    prob = numpy.asarray(prob)
+    a = np.asarray(a)
+    prob = np.asarray(prob)
 
-    sort_ind = numpy.argsort(a, axis)
+    sort_ind = np.argsort(a, axis)
     a = a[sort_ind]
 
     if weights is None:
-        weights = numpy.ones_like(a)
+        weights = np.ones_like(a)
     else:
-        weights = numpy.asarray(weights)
+        weights = np.asarray(weights)
         weights = weights[sort_ind]
 
-    n = numpy.sum(weights)
-    k = numpy.cumsum(weights, axis)
+    n = np.sum(weights)
+    k = np.cumsum(weights, axis)
 
     # plotting positions for the known n knots
     pk = (k - alphap * weights) / (n + 1 - alphap * weights - betap * weights)
 
 #     m = alphap + prob * (1 - alphap - betap)
 
-    return numpy.interp(prob, pk, a, left=a[0], right=a[-1])
+    return np.interp(prob, pk, a, left=a[0], right=a[-1])
 
 
 def shape_reduce_keep_dims(shape, axis):

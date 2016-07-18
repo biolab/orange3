@@ -1042,12 +1042,12 @@ class OWHeatMap(widget.OWWidget):
                 row_ix = parts.rows[i].indices
                 col_ix = parts.columns[j].indices
                 hw = GraphicsHeatmapWidget(parent=widget)
-                X_part = data[row_ix, col_ix].X
+                X_part = data.iloc[row_ix, col_ix].X
 
                 if sort_i[i] is not None:
-                    X_part = X_part[sort_i[i]]
+                    X_part = X_part.iloc[sort_i[i]]
                 if sort_j[j] is not None:
-                    X_part = X_part[:, sort_j[j]]
+                    X_part = X_part.iloc[:, sort_j[j]]
 
                 hw.set_levels(parts.levels)
                 hw.set_color_table(palette)

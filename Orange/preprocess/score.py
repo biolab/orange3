@@ -181,8 +181,7 @@ class ClassificationScorer(Scorer):
     ]
 
     def score_data(self, data, feature):
-        instances_with_class = \
-            np.sum(distribution.Discrete(data, data.domain.class_var))
+        instances_with_class = np.float64(np.sum(distribution.Discrete(data, data.domain.class_var)))
 
         def score_from_contingency(f):
             cont = contingency.Discrete(data, f)

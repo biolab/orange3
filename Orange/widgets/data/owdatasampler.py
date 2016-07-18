@@ -211,8 +211,8 @@ class OWDataSampler(OWWidget):
                     'Outputting fold %d, %d instance%s.' %
                     (self.selectedFold, len(sample), "s" * (len(sample) != 1))
                 )
-            sample = self.data[sample]
-            other = self.data[remaining]
+            sample = self.data.iloc[sample]
+            other = self.data.iloc[remaining]
             self.sampled_instances = len(sample)
             self.remaining_instances = len(other)
         self.send("Data Sample", sample)

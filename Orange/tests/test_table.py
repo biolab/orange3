@@ -821,6 +821,10 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertIsNot(self.table, new_table)
         self.assertEqual(new_table.domain, self.domain)
 
+    def test_creates_table_with_empty_domain(self):
+        new_table = data.Table.from_table(data.Domain(attributes=[]), self.table)
+        self.assertEqual(len(new_table), 0)
+
     def test_can_copy_table(self):
         new_table = data.Table.from_table(self.domain, self.table)
         self.assertTrue(new_table.equals(self.table))

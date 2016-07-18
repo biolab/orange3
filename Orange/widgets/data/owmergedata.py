@@ -84,7 +84,7 @@ class OWMergeData(widget.OWWidget):
         model[:] = allvars(data) if data is not None else []
 
         if data is not None and otherdata is not None and \
-                len(numpy.intersect1d(data.ids, otherdata.ids)):
+                len(numpy.intersect1d(data.index, otherdata.index)):
             for model_ in (model, othermodel):
                 if len(model_) and model_[0] != INSTANCEID:
                     model_.insert(0, INSTANCEID)
@@ -184,7 +184,7 @@ def merge(A, varA, B, varB):
         ((-i, m) for i, m in enumerate(B.domain.metas, start=1))
     )
     reduced_indices_B = [i for i, var in iter_vars_B if not var in all_vars_A]
-    reduced_B = B[:, list(reduced_indices_B)]
+    reduced_B = B.loc[list(reduced_indices_B)]
 
     return join_table_by_indices(A, reduced_B, merge_indices)
 

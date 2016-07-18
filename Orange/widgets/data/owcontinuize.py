@@ -138,7 +138,7 @@ class OWContinuize(widget.OWWidget):
 
 
 from Orange.preprocess.transformation import \
-    Identity, Indicator, Indicator1, Normalizer
+    Identity, Indicator, Indicator1, Normalizer, Ordinalize
 
 from functools import reduce
 
@@ -209,7 +209,7 @@ def continuize_domain(data_or_domain,
         data, domain = data_or_domain, data_or_domain.domain
 
     def needs_dist(var, mtreat, ctreat):
-        "Does the `var` need a distribution given specified flags"
+        """Does the `var` need a distribution given specified flags"""
         if var.is_discrete:
             return mtreat == Continuize.FrequentAsBase
         elif var.is_continuous:
@@ -217,20 +217,16 @@ def continuize_domain(data_or_domain,
         else:
             raise ValueError
 
-    # Compute the column indices which need a distribution.
-    attr_needs_dist = [needs_dist(var, multinomial_treatment,
-                                  continuous_treatment)
-                       for var in domain.attributes]
-    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave)
-                      for var in domain.class_vars]
+    # Compute the columns which need a distribution.
+    attr_needs_dist = [needs_dist(var, multinomial_treatment, continuous_treatment) for var in domain.attributes]
+    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave) for var in domain.class_vars]
+    dist_columns = [v for v, nd in zip(domain.attributes, attr_needs_dist) if nd] + \
+                   [v for v, nd in zip(domain.class_vars, cls_needs_dist) if nd]
 
-    columns = [i for i, needs in enumerate(attr_needs_dist + cls_needs_dist)
-               if needs]
-
-    if columns:
+    if dist_columns:
         if data is None:
-            raise TypeError("continuizer requires data")
-        dist = distribution.get_distributions_for_columns(data, columns)
+            raise TypeError("Continuizer requires data.")
+        dist = distribution.get_distributions_for_columns(data, dist_columns)
     else:
         dist = []
 
@@ -310,13 +306,11 @@ def _ensure_dist(var, data_or_dist):
 
 
 def normalized_var(var, translate, scale):
-    return Orange.data.ContinuousVariable(var.name,
-                                          compute_value=Normalizer(var, translate, scale))
+    return Orange.data.ContinuousVariable(var.name, compute_value=Normalizer(var, translate, scale))
 
 
 def ordinal_to_continuous(var):
-    return Orange.data.ContinuousVariable(var.name,
-                                          compute_value=Identity(var))
+    return Orange.data.ContinuousVariable(var.name, compute_value=Ordinalize(var))
 
 
 def ordinal_to_normalized_continuous(var, zero_based=True):
@@ -370,7 +364,7 @@ class DomainContinuizer:
             raise ValueError("Domain has multinomial attributes")
 
         newdomain = continuize_domain(
-            data or domain,
+            data if data is not None else domain,
             self.multinomial_treatment,
             self.continuous_treatment,
             self.class_treatment,
