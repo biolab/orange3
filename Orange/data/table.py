@@ -965,7 +965,9 @@ class Table(pd.DataFrame):
         distributions = []
         for col in columns:
             var = self.domain[col]
-            weighed_counts = self.groupby(col)[Table._WEIGHTS_COLUMN].sum()
+            # use groupby instead of value_counts so we can use weighed data
+            # also fill all unknown values with 0 because that's what NA means in this context
+            weighed_counts = self.groupby(col)[Table._WEIGHTS_COLUMN].sum().fillna(0)
             unknowns = self[col].isnull().sum()
             if var.is_discrete:
                 if var.ordered:
