@@ -1056,7 +1056,7 @@ def scheme_to_python(scheme, out_file):
                 # Strip excess indentation
                 pre_lines[i] = line[12:]
         pre_code = "\n".join(pre_lines)
-        pre_text += strip_declaration(pre_code)
+        pre_text += strip_declaration(pre_code) + "\n"
     out_file.write(pre_text + script)
 
 def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):

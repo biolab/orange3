@@ -497,11 +497,6 @@ class OWClassificationTreeGraph(OWTreeGraph):
         gen.add_import([QApplication, OWClassificationTreeGraph])
         gen.add_preamble(pre)
         gen.add_init("ow", "OWClassificationTreeGraph()", iscode=True)
-        # gen.add_init("ow.zoom", self.zoom)
-        # gen.add_init("ow.max_node_width", self.max_node_width)
-        # gen.add_init("ow.max_tree_depth", self.max_tree_depth)
-        # gen.add_init("ow.line_width_method", self.line_width_method)
-        # gen.add_init("ow.target_class_index", self.target_class_index)
         gen.set_main(run)
         gen.add_output("data", "data", iscode=True)
         return gen

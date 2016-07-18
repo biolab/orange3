@@ -110,8 +110,15 @@ class CodeGenerator(object):
             self.imports.append(extern)
 
     def add_preamble(self, func):
-        """ Inserts code within func before all widget code """
-        self.preambles.append(inspect.getsource(func))
+        """
+        Inserts code within func before all widget code.
+        `func` can either be a function or string.
+
+        """
+        if type(func) == str:
+            self.preambles.append("def x():\n" + (12 * " ") + func)
+        else:
+            self.preambles.append(inspect.getsource(func))
 
     def add_init(self, name, value, scrape=False, iscode=False):
         """
