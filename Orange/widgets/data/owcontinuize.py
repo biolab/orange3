@@ -378,6 +378,18 @@ class DomainContinuizer:
         )
         return newdomain
 
+    def __repr__(self):
+        return "DomainContinuizer({}{}{}{})".format(
+            "zero_based=False, ".format(self.zero_based) if not
+                self.zero_based else "",
+            "multinomial_treatment=Continuize.{}, ".format(repr(self.multinomial_treatment)) if
+                self.multinomial_treatment != Continuize.Indicators else "",
+            "continuous_treatment=Continuize.{}, ".format(repr(self.continuous_treatment)) if
+                self.continuous_treatment != Continuize.Leave else "",
+            "class_treatment=Continuize.{}, ".format(repr(self.class_treatment)) if
+                self.class_treatment != Continuize.Leave else ""
+        )
+
 
 if __name__ == "__main__":
     import sys

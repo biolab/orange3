@@ -1,5 +1,5 @@
 from .continuize import *
-from .discretize import DomainDiscretizer
+from .discretize import *
 from .fss import *
 from .impute import *
 from .normalize import *
