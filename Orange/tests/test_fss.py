@@ -45,14 +45,14 @@ class TestFSS(unittest.TestCase):
         t = self.iris
         for method in (Gini, Chi2):
             d1 = SelectBestFeatures(method=method)(self.iris)
-            expected = \
-                (t.petal_length, t.petal_width, t.sepal_length, t.sepal_width)
+            # expected = (t['petal length'], t['petal width'], t['sepal length'], t['sepal width'])
+            expected = ('petal length', 'petal width', 'sepal length', 'sepal width')
             self.assertSequenceEqual(d1.domain.attributes, expected)
 
             scores = method(d1)
             self.assertEqual(len(scores), 4)
 
-            score = method(d1, t.petal_length)
+            score = method(d1, 'petal length')
             self.assertIsInstance(score, float)
 
     def test_continuous_scores_on_discrete_features(self):
@@ -76,7 +76,7 @@ class TestFSS(unittest.TestCase):
 class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering(self):
         data = Table("iris")
-        data.X[:, (1, 3)] = np.NaN
+        data.iloc[:, (1, 3)] = np.NaN
 
         new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
