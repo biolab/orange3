@@ -288,10 +288,11 @@ class CodeGenerator(object):
             body += inpt[1] + "\n"
 
         # main function
-        main_lines = inspect.getsourcelines(self.main_func)[0]
-        main_lines = zerodent(main_lines, 12)
-        main_code = "".join(main_lines)
-        body += strip_declaration(main_code)
+        if self.main_func is not None:
+            main_lines = inspect.getsourcelines(self.main_func)[0]
+            main_lines = zerodent(main_lines, 12)
+            main_code = "".join(main_lines)
+            body += strip_declaration(main_code)
 
         # attributes generation
         for attrName, attrValue in self.attrs.items():

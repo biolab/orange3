@@ -1935,23 +1935,11 @@ class OWPreprocess(widget.OWWidget):
         return d
 
     def init_code_gen(self):
-        def run():
-            preprocessor = PreprocessorList(plist)
-            data = preprocessor(input_data)
-
         gen = self.code_gen()
         gen.set_widget(self)
-        gen.add_import([preprocess.preprocess.PreprocessorList, OWPreprocess])
-        plist = self.storedsettings["preprocessors"]
-        gen.add_init("ow", "OWPreprocess()", iscode=True)
-        gen.add_init("plist", "[None] * " + str(len(plist)), iscode=True)
-        for i, preproc in enumerate(plist):
-            ppdef = "ow._qname2ppdef[\"" + preproc[0] + "\"]"
-            gen.add_init("plist[" + str(i) + "]",
-                ppdef + ".viewclass.createinstance(params=" + str(preproc[1]) + ")", iscode=True)
-        gen.set_main(run)
+        gen.add_init("preprocessor", repr(self.buildpreproc()), iscode=True)
         gen.add_output("preprocessor", "preprocessor", iscode=True)
-        gen.add_output("preprocessed_data", "data", iscode=True)
+        gen.add_output("preprocessed_data", "preprocessor(input_data)", iscode=True)
 
         return gen
 
