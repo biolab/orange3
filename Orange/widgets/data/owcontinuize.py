@@ -218,20 +218,16 @@ def continuize_domain(data_or_domain,
         else:
             raise ValueError
 
-    # Compute the column indices which need a distribution.
-    attr_needs_dist = [needs_dist(var, multinomial_treatment,
-                                  continuous_treatment)
-                       for var in domain.attributes]
-    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave)
-                      for var in domain.class_vars]
+    # Compute the columns which need a distribution.
+    attr_needs_dist = [needs_dist(var, multinomial_treatment, continuous_treatment) for var in domain.attributes]
+    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave) for var in domain.class_vars]
+    dist_columns = [v for v, nd in zip(domain.attributes, attr_needs_dist) if nd] + \
+                   [v for v, nd in zip(domain.class_vars, cls_needs_dist) if nd]
 
-    columns = [i for i, needs in enumerate(attr_needs_dist + cls_needs_dist)
-               if needs]
-
-    if columns:
+    if dist_columns:
         if data is None:
-            raise TypeError("continuizer requires data")
-        dist = distribution.get_distributions_for_columns(data, columns)
+            raise TypeError("Continuizer requires data.")
+        dist = distribution.get_distributions_for_columns(data, dist_columns)
     else:
         dist = []
 
@@ -369,7 +365,7 @@ class DomainContinuizer(Reprable):
             raise ValueError("Domain has multinomial attributes")
 
         newdomain = continuize_domain(
-            data or domain,
+            data if data is not None else domain,
             self.multinomial_treatment,
             self.continuous_treatment,
             self.class_treatment,

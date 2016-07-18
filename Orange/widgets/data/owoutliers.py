@@ -127,7 +127,7 @@ class OWOutliers(widget.OWWidget):
             self.in_out_info_label.setText(' ')
 
         self.enable_covariance()
-        if self.data and len(self.data.domain.attributes) > 1500:
+        if self.data is not None and len(self.data.domain.attributes) > 1500:
             self.disable_covariance()
 
         self.commit()

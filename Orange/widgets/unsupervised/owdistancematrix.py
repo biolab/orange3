@@ -265,7 +265,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
         self.annotation_idx = 1
-        if items and not distances.axis:
+        if items is not None and not distances.axis:
             annotations.append("Attribute names")
             self.annotation_idx = 2
         elif isinstance(items, list) and \
@@ -279,7 +279,7 @@ class OWDistanceMatrix(widget.OWWidget):
                 self.annotation_idx = 2 + len(items.domain.attributes)
         self.annot_combo.model()[:] = annotations
 
-        if items:
+        if items is not None:
             self.openContext(distances, annotations)
             self._update_labels()
             self.tableview.resizeColumnsToContents()
@@ -323,7 +323,7 @@ class OWDistanceMatrix(widget.OWWidget):
             if inds:
                 sub_distances = self.distances.submatrix(inds)
                 if self.distances.axis and isinstance(self.items, Table):
-                    sub_table = self.items[inds]
+                    sub_table = self.items.loc[inds]
         self.send("Distances", sub_distances)
         self.send("Table", sub_table)
 

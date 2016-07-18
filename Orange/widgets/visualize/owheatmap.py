@@ -1068,7 +1068,7 @@ class OWHeatMap(widget.OWWidget):
                 row_ix = parts.rows[i].indices
                 col_ix = parts.columns[j].indices
                 hw = GraphicsHeatmapWidget(parent=widget)
-                X_part = data[row_ix, col_ix].X
+                X_part = data.iloc[row_ix, col_ix].X
 
                 if sort_i[i] is not None:
                     X_part = X_part[sort_i[i]]

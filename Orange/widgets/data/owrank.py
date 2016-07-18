@@ -403,7 +403,7 @@ class OWRank(OWWidget):
         indicating what measures should be recomputed.
 
         """
-        if not self.data:
+        if self.data is None:
             return
         if self.data.has_missing():
             self.information("Missing values have been imputed.")
@@ -648,7 +648,7 @@ class OWRank(OWWidget):
             self.selectMethod = OWRank.SelectAll
             self.selectButtons.button(self.selectMethod).setChecked(True)
         selected = self.selectedAttrs()
-        if not self.data or not selected:
+        if self.data is None or not selected:
             self.send("Reduced Data", None)
             self.out_domain_desc = None
         else:
@@ -658,7 +658,7 @@ class OWRank(OWWidget):
             self.out_domain_desc = report.describe_domain(data.domain)
 
     def selectedAttrs(self):
-        if self.data:
+        if self.data is not None:
             inds = self.ranksView.selectionModel().selectedRows(0)
             source = self.ranksProxyModel.mapToSource
             inds = map(source, inds)

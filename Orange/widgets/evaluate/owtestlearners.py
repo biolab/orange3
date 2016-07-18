@@ -274,7 +274,7 @@ class OWTestLearners(OWWidget):
         Set the input training dataset.
         """
         self.Information.data_sampled.clear()
-        if data and not data.domain.class_vars:
+        if data is not None and not data.domain.class_vars:
             self.Error.class_required()
             data = None
         elif data and len(data.domain.class_vars) > 1:
@@ -314,7 +314,7 @@ class OWTestLearners(OWWidget):
         Set the input separate testing dataset.
         """
         self.Information.test_data_sampled.clear()
-        if data and not data.domain.class_var:
+        if data is not None and not data.domain.class_var:
             self.Error.class_required()
             data = None
         else:
@@ -560,7 +560,7 @@ class OWTestLearners(OWWidget):
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
         self.class_selection_combo.clear()
-        if not self.data:
+        if self.data is None:
             return
 
         if self.data.domain.has_discrete_class:

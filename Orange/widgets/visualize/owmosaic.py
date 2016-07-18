@@ -883,12 +883,16 @@ class OWMosaicDisplay(OWWidget):
             sql = type(data) == SqlTable
             name = not sql and data.name
             # save class_var because it is removed in the next line
-            data = data[:, attr_list + [class_var]]
+            if class_var not in attr_list:
+                temp_attr_list = attr_list + [class_var]
+            else:
+                temp_attr_list = attr_list
+            data = data.loc[:, temp_attr_list]
             data.domain.class_var = class_var
             if not sql:
                 data.name = name
         else:
-            data = data[:, attr_list]
+            data = data.loc[:, attr_list]
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
         if len(data) == 0:
