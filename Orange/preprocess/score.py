@@ -8,6 +8,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
+from Orange.misc.reprable import Reprable
 
 
 __all__ = ["Chi2",
@@ -21,7 +22,7 @@ __all__ = ["Chi2",
            "FCBF"]
 
 
-class Scorer:
+class Scorer(Reprable):
     feature_type = None
     class_type = None
     supports_sparse_data = None

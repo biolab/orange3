@@ -5,6 +5,7 @@ from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from Orange.statistics.basic_stats import BasicStats
+from Orange.misc.reprable import Reprable
 from .transformation import Transformation
 from . import _discretize
 
@@ -95,7 +96,7 @@ class SingleValueSql:
         return "'%s'" % self.value
 
 
-class Discretization:
+class Discretization(Reprable):
     """Abstract base class for discretization classes."""
     def __call__(self, data, variable):
         """
@@ -136,7 +137,6 @@ class EqualFreq(Discretization):
             points = _discretize.split_eq_freq(d, self.n)
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
-
 
 class EqualWidth(Discretization):
     """Discretization into a fixed number of bins with equal widths.

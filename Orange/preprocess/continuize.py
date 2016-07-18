@@ -1,12 +1,13 @@
 from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
+from Orange.misc.reprable import Reprable
 from .transformation import Identity, Indicator, Indicator1, Normalizer
 from .preprocess import Continuize
 
 __all__ = ["DomainContinuizer", "MultinomialTreatment"]
 
 
-class DomainContinuizer:
+class DomainContinuizer(Reprable):
     def __new__(cls, data=None, zero_based=True,
                 multinomial_treatment=Continuize.Indicators,
                 transform_class=False):
