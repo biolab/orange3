@@ -92,6 +92,9 @@ class _NoneDisc(preprocess.discretize.Discretization):
     def __call__(self, data, variable):
         return None
 
+    def __repr__(self):
+        return "Orange.widgets.data.owpreprocess._NoneDisc()"
+
 
 class DiscretizeEditor(BaseEditor):
     """
@@ -295,6 +298,9 @@ class _RemoveNaNRows(preprocess.preprocess.Preprocess):
         mask = numpy.isnan(data.X)
         mask = numpy.any(mask, axis=1)
         return data[~mask]
+
+    def __repr__(self):
+        return "Orange.widgets.data.owpreprocess._RemoveNaNRows()"
 
 
 class ImputeEditor(BaseEditor):
@@ -730,6 +736,12 @@ class _Scaling(preprocess.preprocess.Preprocess):
                                     data.domain.metas)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "Orange.widgets.data.owpreprocess._Scaling(center={}, scale={})".format(
+            self.center.__module__ + "." + self.center.__name__,
+            self.scale.__module__ + "." + self.scale.__name__
+        )
+
 
 class Scale(BaseEditor):
     NoCentering, CenterMean, CenterMedian = 0, 1, 2
@@ -807,6 +819,11 @@ class _Randomize(preprocess.preprocess.Preprocess):
     def __call__(self, data):
         randomizer = Random(rand_type=self.rand_type)
         return randomizer(data)
+
+    def __repr__(self):
+        return "Orange.widgets.data.owpreprocess._Randomize(rand_type={})".format(
+            repr(self.rand_type)
+        )
 
 
 class Randomize(BaseEditor):

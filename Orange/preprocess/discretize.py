@@ -127,6 +127,8 @@ class EqualFreq(Discretization):
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
 
+    def __repr__(self):
+        return "EqualFreq(n={})".format(str(self.n))
 
 class EqualWidth(Discretization):
     """Discretization into a fixed number of bins with equal widths.
@@ -154,6 +156,9 @@ class EqualWidth(Discretization):
                 points = self._split_eq_width(min, max)
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
+
+    def __repr__(self):
+        return "EqualWidth(n={})".format(str(self.n))
 
     def _split_eq_width(self, min, max):
         if np.isnan(min) or np.isnan(max) or min == max:
@@ -193,6 +198,9 @@ class EntropyMDL(Discretization):
             points = []
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
+
+    def __repr__(self):
+        return "EntropyMDL(force={})".format(str(self.force))
 
     @classmethod
     def _normalize(cls, X, axis=None, out=None):

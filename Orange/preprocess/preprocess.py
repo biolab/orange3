@@ -65,6 +65,12 @@ class Continuize(Preprocess):
         domain = continuizer(data)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "Continuize(zero_based={}, multinomial_treatment={})".format(
+            str(self.zero_based),
+            str(self.multinomial_treatment)
+        )
+
 
 class Discretize(Preprocess):
     """
@@ -122,6 +128,11 @@ class Discretize(Preprocess):
             discretized(data.domain.metas, self.discretize_metas))
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "Discretize(method={}, remove_const={})".format(
+            repr(self.method), str(self.remove_const)
+        )
+
 
 class Impute(Preprocess):
     """
@@ -153,6 +164,10 @@ class Impute(Preprocess):
             newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        method_str = self.method.__module__ + "." + self.method.__class__.__name__
+        return "Impute(method={})".format(method_str)
+
 
 class SklImpute(Preprocess):
     __wraps__ = skl_preprocessing.Imputer
@@ -181,6 +196,9 @@ class SklImpute(Preprocess):
         new_data.attributes = getattr(data, 'attributes', {})
         return new_data
 
+    def __repr__(self):
+        return "SklImpute(strategy={})".format(repr(self.strategy))
+
 
 class RemoveConstant(Preprocess):
     """
@@ -204,6 +222,9 @@ class RemoveConstant(Preprocess):
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
+
+    def __repr__(self):
+        return "RemoveConstant()"
 
 
 class RemoveNaNClasses(Preprocess):
@@ -230,6 +251,9 @@ class RemoveNaNClasses(Preprocess):
         else:
             nan_cls = np.isnan(data.Y)
         return Table(data.domain, data, np.where(nan_cls == False))
+
+    def __repr__(self):
+        return "RemoveNaNClasses()"
 
 
 class Normalize(Preprocess):
@@ -301,6 +325,15 @@ class Normalize(Preprocess):
             transform_class=self.transform_class)
         return normalizer(data)
 
+    def __repr__(self):
+        norm_type_str = self.norm_type.__module__ + "." + \
+            self.norm_type.__name__
+        return "Normalize(zero_based={}, norm_type={}, transform_class={})".format(
+            str(self.zero_based),
+            norm_type_str,
+            str(self.transform_class)
+        )
+
 
 class Randomize(Preprocess):
     """
@@ -363,6 +396,11 @@ class Randomize(Preprocess):
 
         return new_data
 
+    def __repr__(self):
+        rand_type_str = self.rand_type.__module__ + "." + \
+            self.rand_type.__name__
+        return "Randomize(rand_type={})".format(rand_type_str)
+
     def randomize(self, table):
         if len(table.shape) > 1:
             for i in range(table.shape[1]):
@@ -380,6 +418,9 @@ class ProjectPCA(Preprocess):
         pca = Orange.projection.PCA(n_components=self.n_components)(data)
         return pca(data)
 
+    def __repr__(self):
+        return "ProjectPCA(n_components={})".format(str(self.n_components))
+
 
 class ProjectCUR(Preprocess):
 
@@ -394,6 +435,11 @@ class ProjectCUR(Preprocess):
             compute_U=False,
         )(data)
         return cur(data)
+
+    def __repr__(self):
+        return "ProjectCUR(rank={}, max_error={})".format(
+            str(self.rank),str(self.max_error)
+        )
 
 
 class PreprocessorList:
@@ -422,3 +468,9 @@ class PreprocessorList:
             data = pp(data)
         return data
 
+    def __repr__(self):
+        repstr = "PreprocessorList([\n"
+        for preproc in self.preprocessors:
+            repstr += "    " + repr(preproc) + ",\n"
+        repstr += "])"
+        return repstr
