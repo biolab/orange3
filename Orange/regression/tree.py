@@ -1,7 +1,7 @@
 import numpy as np
 import sklearn.tree as skl_tree
 
-from Orange.tree import Tree, Node, DiscreteNode, DiscreteNodeMapping, \
+from Orange.tree import Node, DiscreteNode, DiscreteNodeMapping, \
     NumericNode, OrangeTreeModel
 from Orange.regression import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
@@ -127,7 +127,7 @@ class OrangeTreeLearner(Learner):
 
 
 
-class TreeRegressor(SklModel, Tree):
+class TreeRegressor(SklModel):
     @property
     def tree(self):
         return self.skl_model.tree_

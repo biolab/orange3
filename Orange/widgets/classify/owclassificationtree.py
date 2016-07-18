@@ -1,8 +1,9 @@
+"""General tree learner base widget, and classification tree widget"""
+
 from collections import OrderedDict
 
 from PyQt4.QtCore import Qt
 
-from Orange.tree import Tree
 from Orange.data import Table
 from Orange.classification.tree import OrangeTreeLearner
 from Orange.widgets import gui
@@ -11,6 +12,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
 class OWTreeLearner(OWBaseLearner):
+    """Base widget for tree learners"""
     binary_trees = Setting(True)
     limit_min_leaf = Setting(True)
     min_leaf = Setting(2)
@@ -37,6 +39,8 @@ class OWTreeLearner(OWBaseLearner):
                      alignment=Qt.AlignRight, callback=self.settings_changed)
 
     def learner_kwargs(self):
+        # Pylint doesn't get our Settings
+        # pylint: disable=invalid-sequence-index
         return dict(
             max_depth=(None, self.max_depth)[self.limit_depth],
             min_samples_split=(2, self.min_internal)[self.limit_min_internal],
@@ -44,6 +48,7 @@ class OWTreeLearner(OWBaseLearner):
             binarize=self.binary_trees)
 
     def create_learner(self):
+        # pylint: disable=not-callable
         return self.LEARNER(**self.learner_kwargs())
 
     def get_learner_parameters(self):
@@ -61,9 +66,10 @@ class OWTreeLearner(OWBaseLearner):
 
 
 class OWClassificationTree(OWTreeLearner):
+    """Classification tree algorithm with forward pruning."""
+
     name = "Classification Tree"
     icon = "icons/ClassificationTree.svg"
-    description = "Classification tree algorithm with forward pruning."
     priority = 30
 
     LEARNER = OrangeTreeLearner
@@ -87,9 +93,10 @@ class OWClassificationTree(OWTreeLearner):
         if self.limit_majority:
             items["Pruning"] = ", " * bool(items["Pruning"]) + \
                 "stop splitting when the majority class reaches {} %".format(
-                self.sufficient_majority)
+                    self.sufficient_majority)
 
-if __name__ == "__main__":
+
+def _test():
     import sys
     from PyQt4.QtGui import QApplication
 
@@ -100,3 +107,6 @@ if __name__ == "__main__":
     ow.show()
     a.exec_()
     ow.saveSettings()
+
+if __name__ == "__main__":
+    _test()
