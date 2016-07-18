@@ -24,6 +24,14 @@ class Filter:
     def __call__(self, data):
         return
 
+    def __repr__(self):
+        args = self.__class__.__init__.__code__.co_varnames
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
+                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
+        )
+
 
 class IsDefined(Filter):
     """
@@ -376,8 +384,6 @@ class FilterContinuous(ValueFilter):
         if self.oper == self.IsDefined:
             return "{} is defined".format(column)
         return "invalid operator"
-
-    __repr__ = __str__
 
 
     # For PyCharm:

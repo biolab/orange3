@@ -212,6 +212,7 @@ class OWDataSampler(widget.OWWidget):
         self.send("Data Sample", sample)
         self.send("Remaining Data", other)
 
+
     def updateindices(self):
         err_msg = ""
         repl = True
@@ -248,20 +249,18 @@ class OWDataSampler(widget.OWWidget):
                       type(self.data) == Table and
                       self.data.domain.has_discrete_class)
         if self.sampling_type == self.FixedSize:
-            self.indices = sample_random_n(
-                self.data, size,
-                stratified=stratified, replace=self.replacement,
+            self.indice_gen = sample_random_n(
+                size, stratified=stratified, replace=self.replacement,
                 random_state=rnd)
         elif self.sampling_type == self.FixedProportion:
-            self.indices = sample_random_p(
-                self.data, self.sampleSizePercentage / 100,
-                stratified=stratified, random_state=rnd)
+            self.indice_gen = sample_random_p(
+                self.sampleSizePercentage / 100, stratified=stratified, random_state=rnd)
         elif self.sampling_type == self.Bootstrap:
-            self.indices = sample_bootstrap(data_length, random_state=rnd)
+            self.indice_gen = sample_bootstrap(data_length, random_state=rnd)
         else:
-            self.indices = sample_fold_indices(
-                self.data, self.number_of_folds, stratified=stratified,
-                random_state=rnd)
+            self.indice_gen = sample_fold_indices(
+                self.number_of_folds, stratified=stratified, random_state=rnd)
+        self.indices = self.indice_gen(self.data)
 
     def send_report(self):
         if self.sampling_type == self.FixedProportion:
@@ -294,62 +293,100 @@ class OWDataSampler(widget.OWWidget):
         self.report_items(items)
 
 
-def sample_fold_indices(table, folds=10, stratified=False, random_state=None):
-    """
-    :param Orange.data.Table table:
-    :param int folds: Number of folds
-    :param bool stratified: Return stratified indices (if applicable).
-    :param Random random_state:
-    :rval tuple-of-arrays: A tuple of array indices one for each fold.
-    """
-    if stratified and table.domain.has_discrete_class:
-        # XXX: StratifiedKFold does not support random_state
-        ind = skl_cross_validation.StratifiedKFold(
-            table.Y.ravel(), folds, random_state=random_state)
-    else:
-        ind = skl_cross_validation.KFold(
-            len(table), folds, shuffle=True, random_state=random_state)
-    return tuple(ind)
+class sample_fold_indices():
+    def __init__(self, folds=10, stratified=False, random_state=None):
+        """
+        :param int folds: Number of folds
+        :param bool stratified: Return stratified indices (if applicable).
+        :param Random random_state:
+        :rval tuple-of-arrays: A tuple of array indices one for each fold.
+        """
+        self.folds = folds
+        self.stratified = stratified
+        self.random_state = random_state
 
-
-def sample_random_n(table, n, stratified=False, replace=False,
-                    random_state=None):
-    if replace:
-        if random_state is None:
-            rgen = np.random
+    def __call__(self, table):
+        if self.stratified and table.domain.has_discrete_class:
+            # XXX: StratifiedKFold does not support random_state
+            ind = skl_cross_validation.StratifiedKFold(
+                table.Y.ravel(), self.folds, random_state=self.random_state)
         else:
-            rgen = np.random.mtrand.RandomState(random_state)
-        sample = rgen.random_integers(0, len(table) - 1, n)
-        o = np.ones(len(table))
-        o[sample] = 0
-        others = np.nonzero(o)[0]
-        return others, sample
-    if stratified and table.domain.has_discrete_class:
-        test_size = max(len(table.domain.class_var.values), n)
-        ind = skl_cross_validation.StratifiedShuffleSplit(
-            table.Y.ravel(), n_iter=1,
-            test_size=test_size, train_size=len(table) - test_size,
-            random_state=random_state)
-    else:
-        ind = skl_cross_validation.ShuffleSplit(
-            len(table), n_iter=1,
-            test_size=n, random_state=random_state)
-    return next(iter(ind))
+            ind = skl_cross_validation.KFold(
+                len(table), self.folds, shuffle=True, random_state=self.random_state)
+        return tuple(ind)
+
+    def __repr__(self):
+        args = self.__class__.__init__.__code__.co_varnames
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
+                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
+        )
 
 
-def sample_random_p(table, p, stratified=False, random_state=None):
-    n = int(math.ceil(len(table) * p))
-    return sample_random_n(table, n, stratified, False, random_state)
+class sample_random_n():
+    def __init__(self, n, stratified=False, replace=False,
+                    random_state=None):
+        self.n = n
+        self.stratified = stratified
+        self.replace = replace
+        self.random_state = random_state
+
+    def __call__(self, table):
+        if self.replace:
+            if self.random_state is None:
+                rgen = np.random
+            else:
+                rgen = np.random.mtrand.RandomState(random_state)
+            sample = rgen.random_integers(0, len(table) - 1, self.n)
+            o = np.ones(len(table))
+            o[sample] = 0
+            others = np.nonzero(o)[0]
+            return others, sample
+        if self.stratified and table.domain.has_discrete_class:
+            test_size = max(len(table.domain.class_var.values), self.n)
+            ind = skl_cross_validation.StratifiedShuffleSplit(
+                table.Y.ravel(), n_iter=1,
+                test_size=test_size, train_size=len(table) - test_size,
+                random_state=self.random_state)
+        else:
+            ind = skl_cross_validation.ShuffleSplit(
+                len(table), n_iter=1,
+                test_size=self.n, random_state=self.random_state)
+
+        return next(iter(ind))
+
+    __repr__ =  sample_fold_indices.__repr__
 
 
-def sample_bootstrap(size, random_state=None):
-    rgen = np.random.RandomState(random_state)
-    sample = rgen.randint(0, size, size)
-    sample.sort()  # not needed for the code below, just for the user
-    insample = np.ones((size,), dtype=np.bool)
-    insample[sample] = False
-    remaining = np.flatnonzero(insample)
-    return remaining, sample
+class sample_random_p():
+    def __init__(self, p, stratified=False, random_state=None):
+        self.p = p
+        self.stratified = stratified
+        self.random_state = random_state
+
+    def __call__(self, table):
+        n = int(math.ceil(len(table) * self.p))
+        return sample_random_n(n, self.stratified, self.random_state)(table)
+
+    __repr__ = sample_fold_indices.__repr__
+
+
+def sample_bootstrap():
+    def __init__(self, size, random_state=None):
+        self.size = size
+        self.random_state = random_state
+
+    def __call__(self):
+        rgen = np.random.RandomState(self.random_state)
+        sample = rgen.randint(0, self.size, self.size)
+        sample.sort()  # not needed for the code below, just for the user
+        insample = np.ones((self.size,), dtype=np.bool)
+        insample[sample] = False
+        remaining = np.flatnonzero(insample)
+        return remaining, sample
+
+    __repr__ = sample_fold_indices.__repr__
 
 
 def test_main():

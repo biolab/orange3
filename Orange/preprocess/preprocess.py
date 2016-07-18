@@ -9,12 +9,14 @@ import bottleneck as bn
 
 import Orange.data
 from Orange.data import Table
-from . import impute, discretize
+from Orange.statistics import distribution
+from . import impute, discretize, transformation
 from ..misc.enum import Enum
+
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
            "Normalize", "Randomize", "RemoveNaNClasses",
-           "ProjectPCA", "ProjectCUR"]
+           "ProjectPCA", "ProjectCUR", "Scaling"]
 
 
 class Preprocess:
@@ -32,6 +34,7 @@ class Preprocess:
 
     def __new__(cls, data=None, *args, **kwargs):
         self = super().__new__(cls)
+        self.data = data
         if isinstance(data, Orange.data.Storage):
             self.__init__(*args, **kwargs)
             return self(data)
@@ -40,6 +43,14 @@ class Preprocess:
 
     def __call__(self, data):
         raise NotImplementedError("Subclasses need to implement __call__")
+
+    def __repr__(self):
+        args = self.__class__.__init__.__code__.co_varnames
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
+                arg not in ("self") and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
+        )
 
 
 class Continuize(Preprocess):
@@ -231,6 +242,9 @@ class RemoveNaNClasses(Preprocess):
             nan_cls = np.isnan(data.Y)
         return Table(data.domain, data, np.where(nan_cls == False))
 
+    def __repr__(self):
+        return "RemoveNaNClasses()"
+
 
 class Normalize(Preprocess):
     """
@@ -395,6 +409,73 @@ class ProjectCUR(Preprocess):
         )(data)
         return cur(data)
 
+class Scaling(Preprocess):
+    """
+    Scale data preprocessor.
+    """
+    @staticmethod
+    def mean(dist):
+        values, counts = np.array(dist)
+        return np.average(values, weights=counts)
+
+    @staticmethod
+    def median(dist):
+        values, counts = np.array(dist)
+        cumdist = np.cumsum(counts)
+        if cumdist[-1] > 0:
+            cumdist /= cumdist[-1]
+
+        return np.interp(0.5, cumdist, values)
+
+    @staticmethod
+    def span(dist):
+        values = np.array(dist[0])
+        minval = np.min(values)
+        maxval = np.max(values)
+        return maxval - minval
+
+    @staticmethod
+    def std(dist):
+        values, counts = np.array(dist)
+        mean = np.average(values, weights=counts)
+        diff = values - mean
+        return np.sqrt(np.average(diff ** 2, weights=counts))
+
+    def __init__(self, center=mean.__func__, scale=std.__func__):
+        self.center = center
+        self.scale = scale
+
+    def __call__(self, data):
+        if self.center is None and self.scale is None:
+            return data
+
+        def transform(var):
+            dist = distribution.get_distribution(data, var)
+            if self.center:
+                c = self.center(dist)
+                dist[0, :] -= c
+            else:
+                c = 0
+
+            if self.scale:
+                s = self.scale(dist)
+                if s < 1e-15:
+                    s = 1
+            else:
+                s = 1
+            factor = 1 / s
+            return var.copy(compute_value=transformation.Normalizer(var, c, factor))
+
+        newvars = []
+        for var in data.domain.attributes:
+            if var.is_continuous:
+                newvars.append(transform(var))
+            else:
+                newvars.append(var)
+        domain = Orange.data.Domain(newvars, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
 
 class PreprocessorList:
     """
@@ -422,3 +503,9 @@ class PreprocessorList:
             data = pp(data)
         return data
 
+    def __repr__(self):
+        repstr = "PreprocessorList(["
+        for preproc in self.preprocessors:
+            repstr +=  repr(preproc) + ", "
+        repstr += "])"
+        return repstr
