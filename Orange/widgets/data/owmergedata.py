@@ -27,10 +27,8 @@ class OWMergeData(widget.OWWidget):
     outputs = [("Merged Data A+B", Orange.data.Table, ),
                ("Merged Data B+A", Orange.data.Table, )]
 
-    settingsHandler = settings.DomainContextHandler()
-
-    attr_a = settings.ContextSetting('')
-    attr_b = settings.ContextSetting('')
+    attr_a = settings.Setting('', schema_only=True)
+    attr_b = settings.Setting('', schema_only=True)
 
     want_main_area = False
 
@@ -82,36 +80,41 @@ class OWMergeData(widget.OWWidget):
 
         gui.rubber(self)
 
-    def setAttrs(self):
-        add = ()
-        if self.dataA is not None and self.dataB is not None \
-                and len(numpy.intersect1d(self.dataA.ids, self.dataB.ids)):
-            add = (INSTANCEID,)
-        if self.dataA is not None:
-            self.attrModelA[:] = add + allvars(self.dataA)
-        else:
-            self.attrModelA[:] = []
-        if self.dataB is not None:
-            self.attrModelB[:] = add + allvars(self.dataB)
-        else:
-            self.attrModelB[:] = []
+    def _setAttrs(self, model, data, othermodel, otherdata):
+        model[:] = allvars(data) if data is not None else []
+
+        if data is not None and otherdata is not None and \
+                len(numpy.intersect1d(data.ids, otherdata.ids)):
+            for model_ in (model, othermodel):
+                if len(model_) and model_[0] != INSTANCEID:
+                    model_.insert(0, INSTANCEID)
 
     @check_sql_input
     def setDataA(self, data):
         self.dataA = data
-        self.setAttrs()
-        self.closeContext()
-        self.attr_a = next(iter(self.attrModelA), '')
-        self.openContext(self.dataA)
+        self._setAttrs(self.attrModelA, data, self.attrModelB, self.dataB)
+        curr_index = -1
+        if self.attr_a:
+            curr_index = next((i for i, val in enumerate(self.attrModelA)
+                               if str(val) == self.attr_a), -1)
+        if curr_index != -1:
+            self.attrViewA.setCurrentIndex(curr_index)
+        else:
+            self.attr_a = INDEX
         self.infoBoxDataA.setText(self.dataInfoText(data))
 
     @check_sql_input
     def setDataB(self, data):
         self.dataB = data
-        self.setAttrs()
-        self.closeContext()
-        self.attr_b = next(iter(self.attrModelB), '')
-        self.openContext(self.dataB)
+        self._setAttrs(self.attrModelB, data, self.attrModelA, self.dataA)
+        curr_index = -1
+        if self.attr_b:
+            curr_index = next((i for i, val in enumerate(self.attrModelB)
+                               if str(val) == self.attr_b), -1)
+        if curr_index != -1:
+            self.attrViewB.setCurrentIndex(curr_index)
+        else:
+            self.attr_b = INDEX
         self.infoBoxDataB.setText(self.dataInfoText(data))
 
     def handleNewSignals(self):
