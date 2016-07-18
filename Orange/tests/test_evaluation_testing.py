@@ -446,7 +446,7 @@ class TestTestOnTestData(TestSampling):
         np.testing.assert_equal(res.row_indices, np.arange(nrows))
 
     def test_probs(self):
-        data = self.iris[30:130]
+        data = self.iris.iloc[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
         results = TestOnTestData(data, data, learners)
 
@@ -456,8 +456,8 @@ class TestTestOnTestData(TestSampling):
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
 
-        train = self.iris[50:120]
-        test = self.iris[:50]
+        train = self.iris.iloc[50:120]
+        test = self.iris.iloc[:50]
         results = TestOnTestData(train, test, learners)
         self.assertEqual(results.predicted.shape, (2, len(test)))
         np.testing.assert_equal(results.predicted, np.ones((2, 50)))
