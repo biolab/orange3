@@ -1,3 +1,5 @@
+"""Tree model used by Orange inducers, and Tree interface"""
+
 from functools import lru_cache
 
 import numpy as np
@@ -150,9 +152,23 @@ class DiscreteNodeMapping(Node):
 
     @staticmethod
     def branches_from_mapping(col_x, bit_mapping, n_values):
+        """
+        Return mapping and branches corresponding to column x
+
+        Args:
+            col_x (np.ndarray): data in x-column
+            bit_mapping (int): bitmask that specifies which attribute values
+                go to the left (0) and right (1) branch
+            n_values (int): the number of attribute values
+
+        Returns:
+            A tuple of two numpy array: branch indices corresponding to
+            attribute values and to data instances
+        """
         mapping = np.array(
-            [int(x) for x in reversed("{:>0{}b}".format(bit_mapping, n_values))
-             ] + [-1], dtype=np.int16)
+            [int(x)
+             for x in reversed("{:>0{}b}".format(bit_mapping, n_values))] +
+            [-1], dtype=np.int16)
         col_x = col_x.flatten()  # also ensures copy
         col_x[np.isnan(col_x)] = n_values
         return mapping[:-1], mapping[col_x.astype(int)]
@@ -254,8 +270,7 @@ class OrangeTreeModel(Model, Tree):
     @lru_cache(10)
     def leaf_count(self):
         def _count(node):
-            c = self.children(self)
-            return not c or sum(_count(c) for c in self.children(node))
+            return not node.children or sum(_count(c) for c in node.children)
         return _count(self._root)
 
     @property
@@ -289,9 +304,9 @@ class OrangeTreeModel(Model, Tree):
         return node.value
 
     def get_instances(self, nodes):
-        indices = np.unique(np.hstack([node.subset for node in nodes]))
-        if len(indices):
-            return self.instances[indices]
+        subsets = [node.subset for node in nodes]
+        if subsets:
+            return self.instances[np.unique(np.hstack(subsets))]
 
     def print_tree(self, node=None, level=0):
         """Simple tree printer for debug purposes"""

@@ -184,8 +184,8 @@ class OWTreeGraph(OWTreeViewer2D):
         if w > self.max_node_width:
             w = self.max_node_width
         for node in self.scene.nodes():
-            r = node.rect()
-            node.set_rect(QRectF(r.x(), r.y(), w, r.height()))
+            rect = node.rect()
+            node.set_rect(QRectF(rect.x(), rect.y(), w, rect.height()))
         self.scene.fix_pos(self.root_node, 10, 10)
 
     def _update_node_info_attr_name(self, node, text):
@@ -249,14 +249,14 @@ class OWTreeGraph(OWTreeViewer2D):
             class_var = self.domain.class_var
             if class_var.is_discrete:
                 self.scene.colors = [QColor(*col) for col in class_var.colors]
-                self.color_label.setText("Target class")
+                self.color_label.setText("Target class: ")
                 self.color_combo.addItem("None")
                 self.color_combo.addItems(self.domain.class_vars[0].values)
                 self.color_combo.setCurrentIndex(self.target_class_index)
             else:
                 self.scene.colors = \
                     ContinuousPaletteGenerator(*model.domain.class_var.colors)
-                self.color_label.setText("Color")
+                self.color_label.setText("Color by: ")
                 self.color_combo.addItems(self.COL_OPTIONS)
                 self.color_combo.setCurrentIndex(self.regression_colors)
             self.openContext(self.domain.class_var)
@@ -298,13 +298,16 @@ class OWTreeGraph(OWTreeViewer2D):
     def send_report(self):
         if not self.model:
             return
-        self.report_items((
-            ("Tree size", self.info.text()),
-            ("Edge widths",
-             ("Fixed", "Relative to root", "Relative to parent")[
-                 # pylint: disable=invalid-sequence-index
-                 self.line_width_method]),
-            ("Target class", self.target_combo.currentText())))
+        items = [("Tree size", self.info.text()),
+                 ("Edge widths",
+                  ("Fixed", "Relative to root", "Relative to parent")[
+                      # pylint: disable=invalid-sequence-index
+                      self.line_width_method])]
+        if self.domain.class_var.is_discrete:
+            items.append(("Target class", self.color_combo.currentText()))
+        elif self.regression_colors != self.COL_DEFAULT:
+            items.append(("Color by", self.COL_OPTIONS[self.regression_colors]))
+        self.report_items(items)
         self.report_plot(self.scene)
 
     def update_node_info(self, node):
@@ -314,7 +317,7 @@ class OWTreeGraph(OWTreeViewer2D):
             self.update_node_info_reg(node)
 
     def update_node_info_cls(self, node):
-        """Update the printed contenst of the node"""
+        """Update the printed contents of the node for classification trees"""
         node_id = node.node_id
         model = self.model
         distr = model.get_value(node_id)
@@ -339,18 +342,19 @@ class OWTreeGraph(OWTreeViewer2D):
                      format(text))
 
     def update_node_info_reg(self, node):
+        """Update the printed contents of the node for regression trees"""
         node_id = node.node_id
         model = self.model
         mean, var = model.get_value(node_id)
         insts = model.num_instances(node_id)
-        text = "{:2.1f}±{:2.1f}<br/>".format(mean, var)
-        text += "{:2.1f} instances".format(insts)
+        text = "{:.1f} ± {:.1f}<br/>".format(mean, var)
+        text += "{} instances".format(insts)
         text = self._update_node_info_attr_name(node, text)
         node.setHtml('<p style="line-height: 120%; margin-bottom: 0">{}</p>'.
                      format(text))
 
     def toggle_node_color_cls(self):
-        """Update the node color"""
+        """Update the node color for classification trees"""
         colors = self.scene.colors
         for node in self.scene.nodes():
             distr = self.model.get_value(node.node_id)
@@ -367,6 +371,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.scene.update()
 
     def toggle_node_color_reg(self):
+        """Update the node color for regression trees"""
         model = self.model
         def_color = QColor(192, 192, 255)
         if self.regression_colors == self.COL_DEFAULT:
@@ -381,16 +386,16 @@ class OWTreeGraph(OWTreeViewer2D):
         elif self.regression_colors == self.COL_MEAN:
             minv = np.nanmin(self.dataset.Y)
             maxv = np.nanmax(self.dataset.Y)
-            f = 1 / (maxv - minv) if minv != maxv else 1
+            fact = 1 / (maxv - minv) if minv != maxv else 1
             colors = self.scene.colors
             for node in self.scene.nodes():
                 node.backgroundBrush = QBrush(
-                    colors[f * (model.get_value(node.node_id)[0] - minv)])
+                    colors[fact * (model.get_value(node.node_id)[0] - minv)])
         else:
             nodes = list(self.scene.nodes())
-            vars = [model.get_value(node.node_id)[1] for node in nodes]
-            max_var = max(vars)
-            for node, var in zip(nodes, vars):
+            variances = [model.get_value(node.node_id)[1] for node in nodes]
+            max_var = max(variances)
+            for node, var in zip(nodes, variances):
                 node.backgroundBrush = QBrush(def_color.lighter(
                     120 - 20 * var / max_var))
         self.scene.update()

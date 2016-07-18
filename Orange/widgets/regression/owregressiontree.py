@@ -1,3 +1,5 @@
+"""Widget for induction of regression trees"""
+
 from Orange.regression.tree import OrangeTreeLearner
 from Orange.widgets.classify.owclassificationtree import OWTreeLearner
 
@@ -11,7 +13,7 @@ class OWRegressionTree(OWTreeLearner):
     LEARNER = OrangeTreeLearner
 
 
-if __name__ == "__main__":
+def _test():
     import sys
     from PyQt4.QtGui import QApplication
     from Orange.data import Table
@@ -23,3 +25,6 @@ if __name__ == "__main__":
     ow.show()
     a.exec_()
     ow.saveSettings()
+
+if __name__ == "__main__":
+    _test()
