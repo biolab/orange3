@@ -2,11 +2,11 @@
 import numpy as np
 
 from PyQt4.QtCore import Qt, QRectF, QPointF, QSizeF
-from PyQt4.QtGui import  QColor, QBrush, QPen, QFontMetrics, QStyle, \
+from PyQt4.QtGui import QColor, QBrush, QPen, QFontMetrics, QStyle, \
     QSizePolicy, QGraphicsRectItem, QGraphicsTextItem, QLabel, QComboBox
 
 from Orange.tree import Tree
-from Orange.widgets.classify.owtreeviewer2d import \
+from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.data import Table
 
@@ -147,8 +147,8 @@ class TreeNode(GraphicsNode):
 class OWTreeGraph(OWTreeViewer2D):
     """Graphical visualization of tree models"""
 
-    name = "Tree Model Viewer"
-    icon = "icons/ClassificationTreeGraph.svg"
+    name = "Tree Viewer"
+    icon = "icons/TreeViewer.svg"
     priority = 35
     inputs = [("Tree", Tree, "ctree")]
     outputs = [("Data", Table)]
@@ -230,14 +230,6 @@ class OWTreeGraph(OWTreeViewer2D):
         self.scene.update()
 
     def ctree(self, model=None):
-        def set_color_row(label, combo):
-            self._hide_coloring()
-            f = self.display_box.layout().setWidget
-            f(self.color_row_index, QFormLayout.LabelRole, label)
-            f(self.color_row_index, QFormLayout.FieldRole, combo)
-            label.setVisible(True)
-            combo.setVisible(True)
-
         """Input signal handler"""
         self.clear_scene()
         self.color_combo.clear()
@@ -256,14 +248,12 @@ class OWTreeGraph(OWTreeViewer2D):
                 self.clf_dataset = self.dataset
             class_var = self.domain.class_var
             if class_var.is_discrete:
-                self.node_type = ClassificationTreeNode
                 self.scene.colors = [QColor(*col) for col in class_var.colors]
                 self.color_label.setText("Target class")
                 self.color_combo.addItem("None")
                 self.color_combo.addItems(self.domain.class_vars[0].values)
                 self.color_combo.setCurrentIndex(self.target_class_index)
             else:
-                self.node_type = TreeNode
                 self.scene.colors = \
                     ContinuousPaletteGenerator(*model.domain.class_var.colors)
                 self.color_label.setText("Color")
@@ -279,7 +269,7 @@ class OWTreeGraph(OWTreeViewer2D):
 
     def walkcreate(self, node_id, parent=None):
         """Create a structure of tree nodes from the given model"""
-        node = self.node_type(self.model, node_id, parent)
+        node = TreeNode(self.model, node_id, parent)
         self.scene.addItem(node)
         if parent:
             edge = GraphicsEdge(node1=parent, node2=node)
@@ -414,7 +404,7 @@ def test():
     from Orange.regression.tree import OrangeTreeLearner
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
-    #data = Table("iris")
+    # data = Table("iris")
     data = Table("housing")
     clf = OrangeTreeLearner()(data)
     clf.instances = data
