@@ -4,10 +4,10 @@ import numpy as np
 import scipy
 
 from Orange.data import Table, Storage, Instance, Value
+from Orange.data.util import one_hot
+from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
-from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.data.util import one_hot
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -273,93 +273,3 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
 
 
-class Tree:
-    """Interface for tree based models.
-
-    Defines members needed for drawing of the tree.
-
-    The API is based on the notion of node indices. Node index can be of
-    an arbitrary type; for instances ints, like in skl trees, or node instances,
-    like in Orange trees.
-    """
-
-    #: Domain of data the tree was built from
-    domain = None
-
-    #: Data the tree was built from (Optional)
-    instances = None
-
-    @property
-    def node_count(self):
-        """Return the number of nodes"""
-        raise NotImplementedError()
-
-    @property
-    def leaf_count(self):
-        """Return the number of leaves"""
-        raise NotImplementedError()
-
-    @property
-    def root(self):
-        """Return root index"""
-        raise NotImplementedError()
-
-    def children(self, node_index):
-        """Return indices of child nodes"""
-        raise NotImplementedError()
-
-    def is_leaf(self, node_index):
-        """True if the node is a leaf"""
-        return not self.children(node_index)
-
-    def num_instances(self, node_index):
-        """The number of training instances at the node"""
-        raise NotImplementedError()
-
-    def attribute(self, node_index):
-        """Attribute whose value determines the branch"""
-        raise NotImplementedError()
-
-    def data_attribute(self, node_index):
-        """The original data attribute; unless indicators are used,
-        this is tha same as `attribute`"""
-        return self.attribute(node_index)
-
-    def split_condition(self, node_index, parent_index):
-        """Human-readable branch description, e.g. '< 42' or 'male'"""
-        raise NotImplementedError()
-
-    def rule(self, index_path):
-        """Human-readable rule with the conjunction of conditions along the
-        given path
-
-        Args:
-            index_path (list): a list of node indices starting at the root"""
-        raise NotImplementedError()
-
-    def get_distribution(self, node_index):
-        """Target value distribution for the node"""
-        raise NotImplementedError()
-
-    def majority(self, node_index):
-        """Majority target value for the given node"""
-        raise NotImplementedError()
-
-    @staticmethod
-    def get_instances(self, node_indices):
-        """Get indices of training instances belonging to the node"""
-        raise NotImplementedError()
-
-
-class RandomForest:
-    """Interface for random forest models
-    """
-
-    @property
-    def trees(self):
-        """Return a list of Trees in the forest
-
-        Returns
-        -------
-        List[Tree]
-        """
