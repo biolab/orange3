@@ -12,7 +12,8 @@ from Orange.base import SklLearner
 
 import Orange.classification
 from Orange.classification import (Learner, Model, NaiveBayesLearner,
-                                   LogisticRegressionLearner, NuSVMLearner)
+                                   LogisticRegressionLearner, NuSVMLearner,
+                                   OrangeTreeLearner)
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
 from Orange.evaluation import CrossValidation
@@ -240,6 +241,8 @@ class UnknownValuesInPrediction(unittest.TestCase):
                 learner = learner()
                 if isinstance(learner, NuSVMLearner):
                     learner.params["nu"] = 0.01
+                if isinstance(learner, OrangeTreeLearner):
+                    learner.binarize = False
                 model = learner(table)
                 model(table)
             except TypeError:

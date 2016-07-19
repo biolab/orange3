@@ -946,6 +946,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
 #define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
 #endif
 
+/* ExtTypeTest.proto */
+static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type);
+
 /* PyObjectCallMethO.proto */
 #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
@@ -953,9 +956,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject
 
 /* PyObjectCallOneArg.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
-
-/* ExtTypeTest.proto */
-static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type);
 
 /* PyIntFromDouble.proto */
 #if PY_MAJOR_VERSION < 3
@@ -1095,6 +1095,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_Py_intptr_t(Py_intptr_t value);
 
+/* CIntToPy.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_unsigned_int(unsigned int value);
+
 /* None.proto */
 #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
@@ -1205,6 +1208,9 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_enum__NPY_TYPES(enum NPY_TYPES v
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
 /* CIntFromPy.proto */
+static CYTHON_INLINE unsigned int __Pyx_PyInt_As_unsigned_int(PyObject *);
+
+/* CIntFromPy.proto */
 static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
 
 /* CheckBinaryVersion.proto */
@@ -1276,12 +1282,12 @@ static const char __pyx_k_X[] = "X";
 static const char __pyx_k_i[] = "i";
 static const char __pyx_k_j[] = "j";
 static const char __pyx_k_m[] = "m";
+static const char __pyx_k_n[] = "n";
 static const char __pyx_k_p[] = "p";
 static const char __pyx_k_x[] = "x";
 static const char __pyx_k_y[] = "y";
-static const char __pyx_k_np[] = "np";
+static const char __pyx_k_tx[] = "tx";
 static const char __pyx_k_idx[] = "idx";
-static const char __pyx_k_max[] = "max";
 static const char __pyx_k_mto[] = "mto";
 static const char __pyx_k_sum[] = "sum";
 static const char __pyx_k_val[] = "val";
@@ -1295,6 +1301,7 @@ static const char __pyx_k_distr[] = "distr";
 static const char __pyx_k_dtype[] = "dtype";
 static const char __pyx_k_empty[] = "empty";
 static const char __pyx_k_entro[] = "entro";
+static const char __pyx_k_int32[] = "int32";
 static const char __pyx_k_inter[] = "inter";
 static const char __pyx_k_mfrom[] = "mfrom";
 static const char __pyx_k_numpy[] = "numpy";
@@ -1327,6 +1334,7 @@ static const char __pyx_k_class_distr[] = "class_distr";
 static const char __pyx_k_class_entro[] = "class_entro";
 static const char __pyx_k_group_sizes[] = "group_sizes";
 static const char __pyx_k_predictions[] = "predictions";
+static const char __pyx_k_start_inter[] = "start_inter";
 static const char __pyx_k_RuntimeError[] = "RuntimeError";
 static const char __pyx_k_best_mapping[] = "best_mapping";
 static const char __pyx_k_class_distrs[] = "class_distrs";
@@ -1381,24 +1389,24 @@ static PyObject *__pyx_n_s_group_sums;
 static PyObject *__pyx_n_s_i;
 static PyObject *__pyx_n_s_idx;
 static PyObject *__pyx_n_s_import;
+static PyObject *__pyx_n_s_int32;
 static PyObject *__pyx_n_s_inter;
 static PyObject *__pyx_n_s_j;
 static PyObject *__pyx_n_s_left;
 static PyObject *__pyx_n_s_m;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_mapping;
-static PyObject *__pyx_n_s_max;
 static PyObject *__pyx_n_s_mfrom;
 static PyObject *__pyx_n_s_min_leaf;
 static PyObject *__pyx_n_s_move;
 static PyObject *__pyx_n_s_mto;
+static PyObject *__pyx_n_s_n;
 static PyObject *__pyx_n_s_n_classes;
 static PyObject *__pyx_n_s_n_values;
 static PyObject *__pyx_kp_u_ndarray_is_not_C_contiguous;
 static PyObject *__pyx_kp_u_ndarray_is_not_Fortran_contiguou;
 static PyObject *__pyx_n_s_node_idx;
 static PyObject *__pyx_n_s_node_ptr;
-static PyObject *__pyx_n_s_np;
 static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_n_s_p;
 static PyObject *__pyx_n_s_predictions;
@@ -1406,10 +1414,12 @@ static PyObject *__pyx_n_s_previous;
 static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_right;
 static PyObject *__pyx_n_s_sleft;
+static PyObject *__pyx_n_s_start_inter;
 static PyObject *__pyx_n_s_sum;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_thresholds;
 static PyObject *__pyx_n_s_to_right;
+static PyObject *__pyx_n_s_tx;
 static PyObject *__pyx_kp_u_unknown_dtype_code_in_numpy_pxd;
 static PyObject *__pyx_n_s_val;
 static PyObject *__pyx_n_s_val_distr;
@@ -1420,8 +1430,8 @@ static PyObject *__pyx_n_s_zeros;
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_find_threshold_entropy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_idx, int __pyx_v_n_classes, int __pyx_v_min_leaf); /* proto */
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_2find_binarization_entropy(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_cont, PyArrayObject *__pyx_v_class_distr, PyArrayObject *__pyx_v_val_distr, int __pyx_v_min_leaf); /* proto */
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_threshold_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, PyArrayObject *__pyx_v_idx, int __pyx_v_min_leaf); /* proto */
-static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binarization_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, int __pyx_v_min_leaf); /* proto */
-static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y); /* proto */
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binarization_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, int __pyx_v_n_values, int __pyx_v_min_leaf); /* proto */
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, int __pyx_v_n_values, int __pyx_v_min_leaf); /* proto */
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_predictions(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_X, PyArrayObject *__pyx_v_code, PyArrayObject *__pyx_v_class_distrs, PyArrayObject *__pyx_v_thresholds); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
@@ -1436,17 +1446,18 @@ static PyObject *__pyx_tuple__6;
 static PyObject *__pyx_tuple__7;
 static PyObject *__pyx_tuple__8;
 static PyObject *__pyx_tuple__9;
-static PyObject *__pyx_tuple__11;
-static PyObject *__pyx_tuple__13;
-static PyObject *__pyx_tuple__15;
-static PyObject *__pyx_tuple__17;
-static PyObject *__pyx_tuple__19;
-static PyObject *__pyx_codeobj__10;
-static PyObject *__pyx_codeobj__12;
-static PyObject *__pyx_codeobj__14;
-static PyObject *__pyx_codeobj__16;
-static PyObject *__pyx_codeobj__18;
-static PyObject *__pyx_codeobj__20;
+static PyObject *__pyx_tuple__10;
+static PyObject *__pyx_tuple__12;
+static PyObject *__pyx_tuple__14;
+static PyObject *__pyx_tuple__16;
+static PyObject *__pyx_tuple__18;
+static PyObject *__pyx_tuple__20;
+static PyObject *__pyx_codeobj__11;
+static PyObject *__pyx_codeobj__13;
+static PyObject *__pyx_codeobj__15;
+static PyObject *__pyx_codeobj__17;
+static PyObject *__pyx_codeobj__19;
+static PyObject *__pyx_codeobj__21;
 
 /* "Orange/classification/_tree_scorers.pyx":17
  * @cython.boundscheck(False)
@@ -3029,22 +3040,22 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
  *                        np.ndarray[np.int64_t, ndim=1] idx,
  *                        int min_leaf):
  *     cdef float sleft = 0, sum, inter, best_inter             # <<<<<<<<<<<<<<
- *     cdef float curr_y
  *     cdef int i, best_idx = 0
+ *     cdef int N = idx.shape[0]
  */
   __pyx_v_sleft = 0.0;
 
-  /* "Orange/classification/_tree_scorers.pyx":146
+  /* "Orange/classification/_tree_scorers.pyx":145
+ *                        int min_leaf):
  *     cdef float sleft = 0, sum, inter, best_inter
- *     cdef float curr_y
  *     cdef int i, best_idx = 0             # <<<<<<<<<<<<<<
  *     cdef int N = idx.shape[0]
  * 
  */
   __pyx_v_best_idx = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":147
- *     cdef float curr_y
+  /* "Orange/classification/_tree_scorers.pyx":146
+ *     cdef float sleft = 0, sum, inter, best_inter
  *     cdef int i, best_idx = 0
  *     cdef int N = idx.shape[0]             # <<<<<<<<<<<<<<
  * 
@@ -3052,40 +3063,49 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
  */
   __pyx_v_N = (__pyx_v_idx->dimensions[0]);
 
-  /* "Orange/classification/_tree_scorers.pyx":150
+  /* "Orange/classification/_tree_scorers.pyx":149
  * 
  *     # Initial split (min_leaf on the left)
  *     if N <= min_leaf:             # <<<<<<<<<<<<<<
  *         return 0, 0
- *     for i in range(min_leaf - 1):  # one will be added in the loop
+ *     sum = 0
  */
   __pyx_t_1 = ((__pyx_v_N <= __pyx_v_min_leaf) != 0);
   if (__pyx_t_1) {
 
-    /* "Orange/classification/_tree_scorers.pyx":151
+    /* "Orange/classification/_tree_scorers.pyx":150
  *     # Initial split (min_leaf on the left)
  *     if N <= min_leaf:
  *         return 0, 0             # <<<<<<<<<<<<<<
+ *     sum = 0
  *     for i in range(min_leaf - 1):  # one will be added in the loop
- *         sum += y[idx[i]]
  */
     __Pyx_XDECREF(__pyx_r);
     __Pyx_INCREF(__pyx_tuple__2);
     __pyx_r = __pyx_tuple__2;
     goto __pyx_L0;
 
-    /* "Orange/classification/_tree_scorers.pyx":150
+    /* "Orange/classification/_tree_scorers.pyx":149
  * 
  *     # Initial split (min_leaf on the left)
  *     if N <= min_leaf:             # <<<<<<<<<<<<<<
  *         return 0, 0
- *     for i in range(min_leaf - 1):  # one will be added in the loop
+ *     sum = 0
  */
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":152
+  /* "Orange/classification/_tree_scorers.pyx":151
  *     if N <= min_leaf:
  *         return 0, 0
+ *     sum = 0             # <<<<<<<<<<<<<<
+ *     for i in range(min_leaf - 1):  # one will be added in the loop
+ *         sum += y[idx[i]]
+ */
+  __pyx_v_sum = 0.0;
+
+  /* "Orange/classification/_tree_scorers.pyx":152
+ *         return 0, 0
+ *     sum = 0
  *     for i in range(min_leaf - 1):  # one will be added in the loop             # <<<<<<<<<<<<<<
  *         sum += y[idx[i]]
  *     sleft = sum
@@ -3095,7 +3115,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
     __pyx_v_i = __pyx_t_3;
 
     /* "Orange/classification/_tree_scorers.pyx":153
- *         return 0, 0
+ *     sum = 0
  *     for i in range(min_leaf - 1):  # one will be added in the loop
  *         sum += y[idx[i]]             # <<<<<<<<<<<<<<
  *     sleft = sum
@@ -3242,7 +3262,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
  *         if inter > best_inter:
  *             best_inter = inter             # <<<<<<<<<<<<<<
  *             best_idx = i
- *     return (best_inter - (sum * sum) / N) / N, x[idx[best_idx]]
+ *     # punishment for missing values is delivered outside
  */
       __pyx_v_best_inter = __pyx_v_inter;
 
@@ -3250,8 +3270,8 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
  *         if inter > best_inter:
  *             best_inter = inter
  *             best_idx = i             # <<<<<<<<<<<<<<
+ *     # punishment for missing values is delivered outside
  *     return (best_inter - (sum * sum) / N) / N, x[idx[best_idx]]
- * 
  */
       __pyx_v_best_idx = __pyx_v_i;
 
@@ -3266,9 +3286,9 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
     __pyx_L8_continue:;
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":167
- *             best_inter = inter
+  /* "Orange/classification/_tree_scorers.pyx":168
  *             best_idx = i
+ *     # punishment for missing values is delivered outside
  *     return (best_inter - (sum * sum) / N) / N, x[idx[best_idx]]             # <<<<<<<<<<<<<<
  * 
  * 
@@ -3277,20 +3297,20 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
   __pyx_t_16 = (__pyx_v_sum * __pyx_v_sum);
   if (unlikely(__pyx_v_N == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 167, __pyx_L1_error)
+    __PYX_ERR(0, 168, __pyx_L1_error)
   }
   __pyx_t_9 = (__pyx_v_best_inter - (__pyx_t_16 / __pyx_v_N));
   if (unlikely(__pyx_v_N == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 167, __pyx_L1_error)
+    __PYX_ERR(0, 168, __pyx_L1_error)
   }
-  __pyx_t_18 = PyFloat_FromDouble((__pyx_t_9 / __pyx_v_N)); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_18 = PyFloat_FromDouble((__pyx_t_9 / __pyx_v_N)); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_18);
   __pyx_t_19 = __pyx_v_best_idx;
   __pyx_t_20 = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int64_t *, __pyx_pybuffernd_idx.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_idx.diminfo[0].strides));
-  __pyx_t_21 = PyFloat_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_x.diminfo[0].strides))); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_21 = PyFloat_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_x.diminfo[0].strides))); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_21);
-  __pyx_t_22 = PyTuple_New(2); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_22 = PyTuple_New(2); if (unlikely(!__pyx_t_22)) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_22);
   __Pyx_GIVEREF(__pyx_t_18);
   PyTuple_SET_ITEM(__pyx_t_22, 0, __pyx_t_18);
@@ -3336,32 +3356,34 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_4find_thresho
   return __pyx_r;
 }
 
-/* "Orange/classification/_tree_scorers.pyx":172
+/* "Orange/classification/_tree_scorers.pyx":173
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
  *                           np.ndarray[np.float64_t, ndim=1] y,
- *                           int min_leaf):
+ *                           int n_values, int min_leaf):
  */
 
 /* Python wrapper */
 static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_7find_binarization_MSE(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_14classification_13_tree_scorers_6find_binarization_MSE[] = "find_binarization_MSE(ndarray x, ndarray y, int min_leaf)";
+static char __pyx_doc_6Orange_14classification_13_tree_scorers_6find_binarization_MSE[] = "find_binarization_MSE(ndarray x, ndarray y, int n_values, int min_leaf)";
 static PyMethodDef __pyx_mdef_6Orange_14classification_13_tree_scorers_7find_binarization_MSE = {"find_binarization_MSE", (PyCFunction)__pyx_pw_6Orange_14classification_13_tree_scorers_7find_binarization_MSE, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_14classification_13_tree_scorers_6find_binarization_MSE};
 static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_7find_binarization_MSE(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x = 0;
   PyArrayObject *__pyx_v_y = 0;
+  int __pyx_v_n_values;
   int __pyx_v_min_leaf;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("find_binarization_MSE (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x,&__pyx_n_s_y,&__pyx_n_s_min_leaf,0};
-    PyObject* values[3] = {0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x,&__pyx_n_s_y,&__pyx_n_s_n_values,&__pyx_n_s_min_leaf,0};
+    PyObject* values[4] = {0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
         case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -3376,39 +3398,46 @@ static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_7find_binariz
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_y)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 3, 3, 1); __PYX_ERR(0, 172, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 4, 4, 1); __PYX_ERR(0, 173, __pyx_L3_error)
         }
         case  2:
-        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_min_leaf)) != 0)) kw_args--;
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_n_values)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 3, 3, 2); __PYX_ERR(0, 172, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 4, 4, 2); __PYX_ERR(0, 173, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_min_leaf)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 4, 4, 3); __PYX_ERR(0, 173, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "find_binarization_MSE") < 0)) __PYX_ERR(0, 172, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "find_binarization_MSE") < 0)) __PYX_ERR(0, 173, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
       values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
     }
     __pyx_v_x = ((PyArrayObject *)values[0]);
     __pyx_v_y = ((PyArrayObject *)values[1]);
-    __pyx_v_min_leaf = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_min_leaf == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 174, __pyx_L3_error)
+    __pyx_v_n_values = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_n_values == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 175, __pyx_L3_error)
+    __pyx_v_min_leaf = __Pyx_PyInt_As_int(values[3]); if (unlikely((__pyx_v_min_leaf == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 175, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 172, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("find_binarization_MSE", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 173, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.classification._tree_scorers.find_binarization_MSE", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 172, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 173, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_6find_binarization_MSE(__pyx_self, __pyx_v_x, __pyx_v_y, __pyx_v_min_leaf);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 173, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 174, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_6find_binarization_MSE(__pyx_self, __pyx_v_x, __pyx_v_y, __pyx_v_n_values, __pyx_v_min_leaf);
 
   /* function exit code */
   goto __pyx_L0;
@@ -3419,22 +3448,23 @@ static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_7find_binariz
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binarization_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, int __pyx_v_min_leaf) {
-  int __pyx_v_n_values;
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binarization_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, int __pyx_v_n_values, int __pyx_v_min_leaf) {
   float __pyx_v_sleft;
   float __pyx_v_sum;
-  int __pyx_v_left;
-  int __pyx_v_i;
-  int __pyx_v_change;
-  int __pyx_v_to_right;
-  int __pyx_v_m;
-  int __pyx_v_best_mapping;
-  int __pyx_v_move;
-  int __pyx_v_mapping;
-  int __pyx_v_previous;
+  float __pyx_v_val;
+  unsigned int __pyx_v_left;
+  unsigned int __pyx_v_i;
+  unsigned int __pyx_v_change;
+  unsigned int __pyx_v_to_right;
+  unsigned int __pyx_v_m;
+  unsigned int __pyx_v_best_mapping;
+  unsigned int __pyx_v_move;
+  unsigned int __pyx_v_mapping;
+  unsigned int __pyx_v_previous;
   float __pyx_v_inter;
   float __pyx_v_best_inter;
-  int __pyx_v_N;
+  float __pyx_v_start_inter;
+  unsigned int __pyx_v_N;
   PyArrayObject *__pyx_v_group_sizes = 0;
   PyArrayObject *__pyx_v_group_sums = 0;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_group_sizes;
@@ -3451,24 +3481,24 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   PyObject *__pyx_t_4 = NULL;
-  int __pyx_t_5;
-  PyObject *__pyx_t_6 = NULL;
+  PyObject *__pyx_t_5 = NULL;
+  PyArrayObject *__pyx_t_6 = NULL;
   PyArrayObject *__pyx_t_7 = NULL;
-  PyArrayObject *__pyx_t_8 = NULL;
-  int __pyx_t_9;
-  Py_ssize_t __pyx_t_10;
-  Py_ssize_t __pyx_t_11;
-  Py_ssize_t __pyx_t_12;
+  npy_intp __pyx_t_8;
+  unsigned int __pyx_t_9;
+  size_t __pyx_t_10;
+  int __pyx_t_11;
+  size_t __pyx_t_12;
   float __pyx_t_13;
-  long __pyx_t_14;
-  int __pyx_t_15;
+  float __pyx_t_14;
+  long __pyx_t_15;
   int __pyx_t_16;
-  Py_ssize_t __pyx_t_17;
-  Py_ssize_t __pyx_t_18;
-  Py_ssize_t __pyx_t_19;
-  Py_ssize_t __pyx_t_20;
-  int __pyx_t_21;
-  float __pyx_t_22;
+  unsigned int __pyx_t_17;
+  size_t __pyx_t_18;
+  size_t __pyx_t_19;
+  size_t __pyx_t_20;
+  size_t __pyx_t_21;
+  int __pyx_t_22;
   __Pyx_RefNannySetupContext("find_binarization_MSE", 0);
   __pyx_pybuffer_group_sizes.pybuffer.buf = NULL;
   __pyx_pybuffer_group_sizes.refcount = 0;
@@ -3488,27 +3518,76 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
   __pyx_pybuffernd_y.rcbuffer = &__pyx_pybuffer_y;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 172, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 173, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 172, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 173, __pyx_L1_error)
   }
   __pyx_pybuffernd_y.diminfo[0].strides = __pyx_pybuffernd_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_y.diminfo[0].shape = __pyx_pybuffernd_y.rcbuffer->pybuffer.shape[0];
 
-  /* "Orange/classification/_tree_scorers.pyx":175
- *                           np.ndarray[np.float64_t, ndim=1] y,
- *                           int min_leaf):
- *     cdef int n_values = int(np.max(x))             # <<<<<<<<<<<<<<
- *     cdef float sleft, sum
- *     cdef int left
+  /* "Orange/classification/_tree_scorers.pyx":184
+ * 
+ *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = \
+ *         numpy.zeros(n_values, dtype=numpy.int32)             # <<<<<<<<<<<<<<
+ *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
+ * 
  */
-  __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 175, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_max); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 175, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 184, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_GIVEREF(__pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_1);
+  __pyx_t_1 = 0;
+  __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_int32); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_t_5) < 0) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 184, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  if (!(likely(((__pyx_t_5) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_5, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 184, __pyx_L1_error)
+  __pyx_t_6 = ((PyArrayObject *)__pyx_t_5);
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sizes.rcbuffer->pybuffer, (PyObject*)__pyx_t_6, &__Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+      __pyx_v_group_sizes = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf = NULL;
+      __PYX_ERR(0, 183, __pyx_L1_error)
+    } else {__pyx_pybuffernd_group_sizes.diminfo[0].strides = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_group_sizes.diminfo[0].shape = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.shape[0];
+    }
+  }
+  __pyx_t_6 = 0;
+  __pyx_v_group_sizes = ((PyArrayObject *)__pyx_t_5);
+  __pyx_t_5 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":185
+ *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = \
+ *         numpy.zeros(n_values, dtype=numpy.int32)
+ *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)             # <<<<<<<<<<<<<<
+ * 
+ *     N = 0
+ */
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 185, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 185, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_3))) {
     __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_3);
@@ -3520,265 +3599,234 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
     }
   }
   if (!__pyx_t_2) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_3, ((PyObject *)__pyx_v_x)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 175, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_GOTREF(__pyx_t_5);
   } else {
-    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 175, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 185, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_2); __pyx_t_2 = NULL;
-    __Pyx_INCREF(((PyObject *)__pyx_v_x));
-    __Pyx_GIVEREF(((PyObject *)__pyx_v_x));
-    PyTuple_SET_ITEM(__pyx_t_4, 0+1, ((PyObject *)__pyx_v_x));
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 175, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 175, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 175, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_v_n_values = __pyx_t_5;
-
-  /* "Orange/classification/_tree_scorers.pyx":181
- *     cdef int best_mapping, move, mapping, previous
- *     cdef float inter, best_inter
- *     cdef int N = x.shape[0]             # <<<<<<<<<<<<<<
- * 
- *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
- */
-  __pyx_v_N = (__pyx_v_x->dimensions[0]);
-
-  /* "Orange/classification/_tree_scorers.pyx":183
- *     cdef int N = x.shape[0]
- * 
- *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)             # <<<<<<<<<<<<<<
- *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
- * 
- */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 183, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 183, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 183, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_4))) {
-    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_4);
-    if (likely(__pyx_t_2)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-      __Pyx_INCREF(__pyx_t_2);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_4, function);
-    }
-  }
-  if (!__pyx_t_2) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 183, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __Pyx_GOTREF(__pyx_t_3);
-  } else {
-    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 183, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_2); __pyx_t_2 = NULL;
     __Pyx_GIVEREF(__pyx_t_1);
-    PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_1);
+    PyTuple_SET_ITEM(__pyx_t_4, 0+1, __pyx_t_1);
     __pyx_t_1 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 183, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 183, __pyx_L1_error)
-  __pyx_t_7 = ((PyArrayObject *)__pyx_t_3);
-  {
-    __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sizes.rcbuffer->pybuffer, (PyObject*)__pyx_t_7, &__Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
-      __pyx_v_group_sizes = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf = NULL;
-      __PYX_ERR(0, 183, __pyx_L1_error)
-    } else {__pyx_pybuffernd_group_sizes.diminfo[0].strides = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_group_sizes.diminfo[0].shape = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.shape[0];
-    }
-  }
-  __pyx_t_7 = 0;
-  __pyx_v_group_sizes = ((PyArrayObject *)__pyx_t_3);
-  __pyx_t_3 = 0;
-
-  /* "Orange/classification/_tree_scorers.pyx":184
- * 
- *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
- *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)             # <<<<<<<<<<<<<<
- * 
- *     for i in range(N):
- */
-  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 184, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 184, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 184, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_6))) {
-    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_6);
-    if (likely(__pyx_t_1)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
-      __Pyx_INCREF(__pyx_t_1);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_6, function);
-    }
-  }
-  if (!__pyx_t_1) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 184, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 185, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_GOTREF(__pyx_t_3);
-  } else {
-    __pyx_t_2 = PyTuple_New(1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_GIVEREF(__pyx_t_1); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_1); __pyx_t_1 = NULL;
-    __Pyx_GIVEREF(__pyx_t_4);
-    PyTuple_SET_ITEM(__pyx_t_2, 0+1, __pyx_t_4);
-    __pyx_t_4 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 184, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
-  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 184, __pyx_L1_error)
-  __pyx_t_8 = ((PyArrayObject *)__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  if (!(likely(((__pyx_t_5) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_5, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 185, __pyx_L1_error)
+  __pyx_t_7 = ((PyArrayObject *)__pyx_t_5);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sums.rcbuffer->pybuffer, (PyObject*)__pyx_t_8, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sums.rcbuffer->pybuffer, (PyObject*)__pyx_t_7, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
       __pyx_v_group_sums = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf = NULL;
-      __PYX_ERR(0, 184, __pyx_L1_error)
+      __PYX_ERR(0, 185, __pyx_L1_error)
     } else {__pyx_pybuffernd_group_sums.diminfo[0].strides = __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_group_sums.diminfo[0].shape = __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.shape[0];
     }
   }
-  __pyx_t_8 = 0;
-  __pyx_v_group_sums = ((PyArrayObject *)__pyx_t_3);
-  __pyx_t_3 = 0;
+  __pyx_t_7 = 0;
+  __pyx_v_group_sums = ((PyArrayObject *)__pyx_t_5);
+  __pyx_t_5 = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":186
+  /* "Orange/classification/_tree_scorers.pyx":187
  *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
  * 
- *     for i in range(N):             # <<<<<<<<<<<<<<
- *         group_sizes[int(x[i])] += 1
- *         group_sums[int(x[i])] += y[i]
+ *     N = 0             # <<<<<<<<<<<<<<
+ *     for i in range(x.shape[0]):
+ *         val = x[i]
  */
-  __pyx_t_5 = __pyx_v_N;
-  for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_5; __pyx_t_9+=1) {
+  __pyx_v_N = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":188
+ * 
+ *     N = 0
+ *     for i in range(x.shape[0]):             # <<<<<<<<<<<<<<
+ *         val = x[i]
+ *         if not npy_isnan(val):
+ */
+  __pyx_t_8 = (__pyx_v_x->dimensions[0]);
+  for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_i = __pyx_t_9;
 
-    /* "Orange/classification/_tree_scorers.pyx":187
- * 
- *     for i in range(N):
- *         group_sizes[int(x[i])] += 1             # <<<<<<<<<<<<<<
- *         group_sums[int(x[i])] += y[i]
- *     left = N
+    /* "Orange/classification/_tree_scorers.pyx":189
+ *     N = 0
+ *     for i in range(x.shape[0]):
+ *         val = x[i]             # <<<<<<<<<<<<<<
+ *         if not npy_isnan(val):
+ *             group_sizes[int(val)] += 1
  */
     __pyx_t_10 = __pyx_v_i;
-    __pyx_t_3 = __Pyx_PyInt_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_10, __pyx_pybuffernd_x.diminfo[0].strides))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 187, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_6 = PyObject_GetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 187, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_t_6, __pyx_int_1, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 187, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_3, __pyx_t_2) < 0)) __PYX_ERR(0, 187, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_v_val = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_10, __pyx_pybuffernd_x.diminfo[0].strides));
 
-    /* "Orange/classification/_tree_scorers.pyx":188
- *     for i in range(N):
- *         group_sizes[int(x[i])] += 1
- *         group_sums[int(x[i])] += y[i]             # <<<<<<<<<<<<<<
- *     left = N
- *     sleft = sum = np.sum(group_sums)
+    /* "Orange/classification/_tree_scorers.pyx":190
+ *     for i in range(x.shape[0]):
+ *         val = x[i]
+ *         if not npy_isnan(val):             # <<<<<<<<<<<<<<
+ *             group_sizes[int(val)] += 1
+ *             group_sums[int(val)] += y[i]
  */
-    __pyx_t_11 = __pyx_v_i;
-    __pyx_t_3 = __Pyx_PyInt_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_x.diminfo[0].strides))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_2 = PyObject_GetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_12 = __pyx_v_i;
-    __pyx_t_6 = PyFloat_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_y.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_y.diminfo[0].strides))); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_2, __pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_3, __pyx_t_4) < 0)) __PYX_ERR(0, 188, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_t_11 = ((!(npy_isnan(__pyx_v_val) != 0)) != 0);
+    if (__pyx_t_11) {
+
+      /* "Orange/classification/_tree_scorers.pyx":191
+ *         val = x[i]
+ *         if not npy_isnan(val):
+ *             group_sizes[int(val)] += 1             # <<<<<<<<<<<<<<
+ *             group_sums[int(val)] += y[i]
+ *             N += 1
+ */
+      __pyx_t_5 = __Pyx_PyInt_FromDouble(__pyx_v_val); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 191, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_3 = PyObject_GetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 191, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_4 = __Pyx_PyInt_AddObjC(__pyx_t_3, __pyx_int_1, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 191, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_5, __pyx_t_4) < 0)) __PYX_ERR(0, 191, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+      /* "Orange/classification/_tree_scorers.pyx":192
+ *         if not npy_isnan(val):
+ *             group_sizes[int(val)] += 1
+ *             group_sums[int(val)] += y[i]             # <<<<<<<<<<<<<<
+ *             N += 1
+ *     if N == 0:
+ */
+      __pyx_t_5 = __Pyx_PyInt_FromDouble(__pyx_v_val); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_4 = PyObject_GetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_12 = __pyx_v_i;
+      __pyx_t_3 = PyFloat_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_y.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_y.diminfo[0].strides))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_5, __pyx_t_1) < 0)) __PYX_ERR(0, 192, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+      /* "Orange/classification/_tree_scorers.pyx":193
+ *             group_sizes[int(val)] += 1
+ *             group_sums[int(val)] += y[i]
+ *             N += 1             # <<<<<<<<<<<<<<
+ *     if N == 0:
+ *         return 0, 0
+ */
+      __pyx_v_N = (__pyx_v_N + 1);
+
+      /* "Orange/classification/_tree_scorers.pyx":190
+ *     for i in range(x.shape[0]):
+ *         val = x[i]
+ *         if not npy_isnan(val):             # <<<<<<<<<<<<<<
+ *             group_sizes[int(val)] += 1
+ *             group_sums[int(val)] += y[i]
+ */
+    }
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":189
- *         group_sizes[int(x[i])] += 1
- *         group_sums[int(x[i])] += y[i]
+  /* "Orange/classification/_tree_scorers.pyx":194
+ *             group_sums[int(val)] += y[i]
+ *             N += 1
+ *     if N == 0:             # <<<<<<<<<<<<<<
+ *         return 0, 0
+ *     left = N
+ */
+  __pyx_t_11 = ((__pyx_v_N == 0) != 0);
+  if (__pyx_t_11) {
+
+    /* "Orange/classification/_tree_scorers.pyx":195
+ *             N += 1
+ *     if N == 0:
+ *         return 0, 0             # <<<<<<<<<<<<<<
+ *     left = N
+ *     sleft = sum = numpy.sum(group_sums)
+ */
+    __Pyx_XDECREF(__pyx_r);
+    __Pyx_INCREF(__pyx_tuple__3);
+    __pyx_r = __pyx_tuple__3;
+    goto __pyx_L0;
+
+    /* "Orange/classification/_tree_scorers.pyx":194
+ *             group_sums[int(val)] += y[i]
+ *             N += 1
+ *     if N == 0:             # <<<<<<<<<<<<<<
+ *         return 0, 0
+ *     left = N
+ */
+  }
+
+  /* "Orange/classification/_tree_scorers.pyx":196
+ *     if N == 0:
+ *         return 0, 0
  *     left = N             # <<<<<<<<<<<<<<
- *     sleft = sum = np.sum(group_sums)
- *     best_inter = (sum * sum) / N
+ *     sleft = sum = numpy.sum(group_sums)
+ *     best_inter = start_inter = (sum * sum) / N
  */
   __pyx_v_left = __pyx_v_N;
 
-  /* "Orange/classification/_tree_scorers.pyx":190
- *         group_sums[int(x[i])] += y[i]
+  /* "Orange/classification/_tree_scorers.pyx":197
+ *         return 0, 0
  *     left = N
- *     sleft = sum = np.sum(group_sums)             # <<<<<<<<<<<<<<
- *     best_inter = (sum * sum) / N
+ *     sleft = sum = numpy.sum(group_sums)             # <<<<<<<<<<<<<<
+ *     best_inter = start_inter = (sum * sum) / N
  * 
  */
-  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 190, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_sum); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 190, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_6))) {
-    __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_6);
-    if (likely(__pyx_t_4)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
-      __Pyx_INCREF(__pyx_t_4);
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_sum); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 197, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_3))) {
+    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_3);
+    if (likely(__pyx_t_1)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+      __Pyx_INCREF(__pyx_t_1);
       __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_6, function);
+      __Pyx_DECREF_SET(__pyx_t_3, function);
     }
   }
-  if (!__pyx_t_4) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_6, ((PyObject *)__pyx_v_group_sums)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 190, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
+  if (!__pyx_t_1) {
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_3, ((PyObject *)__pyx_v_group_sums)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 197, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
   } else {
-    __pyx_t_2 = PyTuple_New(1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 190, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_4); __pyx_t_4 = NULL;
+    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 197, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_GIVEREF(__pyx_t_1); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_1); __pyx_t_1 = NULL;
     __Pyx_INCREF(((PyObject *)__pyx_v_group_sums));
     __Pyx_GIVEREF(((PyObject *)__pyx_v_group_sums));
-    PyTuple_SET_ITEM(__pyx_t_2, 0+1, ((PyObject *)__pyx_v_group_sums));
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 190, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    PyTuple_SET_ITEM(__pyx_t_4, 0+1, ((PyObject *)__pyx_v_group_sums));
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 197, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
-  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __pyx_t_13 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_13 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 190, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_t_13 = __pyx_PyFloat_AsFloat(__pyx_t_5); if (unlikely((__pyx_t_13 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 197, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_v_sleft = __pyx_t_13;
   __pyx_v_sum = __pyx_t_13;
 
-  /* "Orange/classification/_tree_scorers.pyx":191
+  /* "Orange/classification/_tree_scorers.pyx":198
  *     left = N
- *     sleft = sum = np.sum(group_sums)
- *     best_inter = (sum * sum) / N             # <<<<<<<<<<<<<<
+ *     sleft = sum = numpy.sum(group_sums)
+ *     best_inter = start_inter = (sum * sum) / N             # <<<<<<<<<<<<<<
  * 
  *     previous = 0
  */
   __pyx_t_13 = (__pyx_v_sum * __pyx_v_sum);
   if (unlikely(__pyx_v_N == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 191, __pyx_L1_error)
+    __PYX_ERR(0, 198, __pyx_L1_error)
   }
-  __pyx_v_best_inter = (__pyx_t_13 / __pyx_v_N);
+  __pyx_t_14 = (__pyx_t_13 / __pyx_v_N);
+  __pyx_v_best_inter = __pyx_t_14;
+  __pyx_v_start_inter = __pyx_t_14;
 
-  /* "Orange/classification/_tree_scorers.pyx":193
- *     best_inter = (sum * sum) / N
+  /* "Orange/classification/_tree_scorers.pyx":200
+ *     best_inter = start_inter = (sum * sum) / N
  * 
  *     previous = 0             # <<<<<<<<<<<<<<
  *     # Gray code
@@ -3786,18 +3834,18 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
   __pyx_v_previous = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":195
+  /* "Orange/classification/_tree_scorers.pyx":202
  *     previous = 0
  *     # Gray code
  *     for m in range(1, 1 << (n_values - 1)):             # <<<<<<<<<<<<<<
  *         # What moves where
  *         mapping = m ^ (m >> 1)
  */
-  __pyx_t_14 = (1 << (__pyx_v_n_values - 1));
-  for (__pyx_t_5 = 1; __pyx_t_5 < __pyx_t_14; __pyx_t_5+=1) {
-    __pyx_v_m = __pyx_t_5;
+  __pyx_t_15 = (1 << (__pyx_v_n_values - 1));
+  for (__pyx_t_9 = 1; __pyx_t_9 < __pyx_t_15; __pyx_t_9+=1) {
+    __pyx_v_m = __pyx_t_9;
 
-    /* "Orange/classification/_tree_scorers.pyx":197
+    /* "Orange/classification/_tree_scorers.pyx":204
  *     for m in range(1, 1 << (n_values - 1)):
  *         # What moves where
  *         mapping = m ^ (m >> 1)             # <<<<<<<<<<<<<<
@@ -3806,7 +3854,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
     __pyx_v_mapping = (__pyx_v_m ^ (__pyx_v_m >> 1));
 
-    /* "Orange/classification/_tree_scorers.pyx":198
+    /* "Orange/classification/_tree_scorers.pyx":205
  *         # What moves where
  *         mapping = m ^ (m >> 1)
  *         change = mapping ^ previous             # <<<<<<<<<<<<<<
@@ -3815,7 +3863,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
     __pyx_v_change = (__pyx_v_mapping ^ __pyx_v_previous);
 
-    /* "Orange/classification/_tree_scorers.pyx":199
+    /* "Orange/classification/_tree_scorers.pyx":206
  *         mapping = m ^ (m >> 1)
  *         change = mapping ^ previous
  *         to_right = change & mapping             # <<<<<<<<<<<<<<
@@ -3824,37 +3872,37 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
     __pyx_v_to_right = (__pyx_v_change & __pyx_v_mapping);
 
-    /* "Orange/classification/_tree_scorers.pyx":200
+    /* "Orange/classification/_tree_scorers.pyx":207
  *         change = mapping ^ previous
  *         to_right = change & mapping
  *         for move in range(n_values):             # <<<<<<<<<<<<<<
  *             if change & 1:
  *                 break
  */
-    __pyx_t_9 = __pyx_v_n_values;
-    for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_9; __pyx_t_15+=1) {
-      __pyx_v_move = __pyx_t_15;
+    __pyx_t_16 = __pyx_v_n_values;
+    for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_16; __pyx_t_17+=1) {
+      __pyx_v_move = __pyx_t_17;
 
-      /* "Orange/classification/_tree_scorers.pyx":201
+      /* "Orange/classification/_tree_scorers.pyx":208
  *         to_right = change & mapping
  *         for move in range(n_values):
  *             if change & 1:             # <<<<<<<<<<<<<<
  *                 break
  *             change = change >> 1
  */
-      __pyx_t_16 = ((__pyx_v_change & 1) != 0);
-      if (__pyx_t_16) {
+      __pyx_t_11 = ((__pyx_v_change & 1) != 0);
+      if (__pyx_t_11) {
 
-        /* "Orange/classification/_tree_scorers.pyx":202
+        /* "Orange/classification/_tree_scorers.pyx":209
  *         for move in range(n_values):
  *             if change & 1:
  *                 break             # <<<<<<<<<<<<<<
  *             change = change >> 1
  *         previous = mapping
  */
-        goto __pyx_L8_break;
+        goto __pyx_L10_break;
 
-        /* "Orange/classification/_tree_scorers.pyx":201
+        /* "Orange/classification/_tree_scorers.pyx":208
  *         to_right = change & mapping
  *         for move in range(n_values):
  *             if change & 1:             # <<<<<<<<<<<<<<
@@ -3863,7 +3911,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
       }
 
-      /* "Orange/classification/_tree_scorers.pyx":203
+      /* "Orange/classification/_tree_scorers.pyx":210
  *             if change & 1:
  *                 break
  *             change = change >> 1             # <<<<<<<<<<<<<<
@@ -3872,9 +3920,9 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
       __pyx_v_change = (__pyx_v_change >> 1);
     }
-    __pyx_L8_break:;
+    __pyx_L10_break:;
 
-    /* "Orange/classification/_tree_scorers.pyx":204
+    /* "Orange/classification/_tree_scorers.pyx":211
  *                 break
  *             change = change >> 1
  *         previous = mapping             # <<<<<<<<<<<<<<
@@ -3883,47 +3931,47 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  */
     __pyx_v_previous = __pyx_v_mapping;
 
-    /* "Orange/classification/_tree_scorers.pyx":206
+    /* "Orange/classification/_tree_scorers.pyx":213
  *         previous = mapping
  * 
  *         if to_right:             # <<<<<<<<<<<<<<
  *             left -= group_sizes[move]
  *             sleft -= group_sums[move]
  */
-    __pyx_t_16 = (__pyx_v_to_right != 0);
-    if (__pyx_t_16) {
+    __pyx_t_11 = (__pyx_v_to_right != 0);
+    if (__pyx_t_11) {
 
-      /* "Orange/classification/_tree_scorers.pyx":207
+      /* "Orange/classification/_tree_scorers.pyx":214
  * 
  *         if to_right:
  *             left -= group_sizes[move]             # <<<<<<<<<<<<<<
  *             sleft -= group_sums[move]
  *         else:
  */
-      __pyx_t_17 = __pyx_v_move;
-      __pyx_v_left = (__pyx_v_left - (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_17, __pyx_pybuffernd_group_sizes.diminfo[0].strides)));
+      __pyx_t_18 = __pyx_v_move;
+      __pyx_v_left = (__pyx_v_left - (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_group_sizes.diminfo[0].strides)));
 
-      /* "Orange/classification/_tree_scorers.pyx":208
+      /* "Orange/classification/_tree_scorers.pyx":215
  *         if to_right:
  *             left -= group_sizes[move]
  *             sleft -= group_sums[move]             # <<<<<<<<<<<<<<
  *         else:
  *             left += group_sizes[move]
  */
-      __pyx_t_18 = __pyx_v_move;
-      __pyx_v_sleft = (__pyx_v_sleft - (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
+      __pyx_t_19 = __pyx_v_move;
+      __pyx_v_sleft = (__pyx_v_sleft - (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
 
-      /* "Orange/classification/_tree_scorers.pyx":206
+      /* "Orange/classification/_tree_scorers.pyx":213
  *         previous = mapping
  * 
  *         if to_right:             # <<<<<<<<<<<<<<
  *             left -= group_sizes[move]
  *             sleft -= group_sums[move]
  */
-      goto __pyx_L10;
+      goto __pyx_L12;
     }
 
-    /* "Orange/classification/_tree_scorers.pyx":210
+    /* "Orange/classification/_tree_scorers.pyx":217
  *             sleft -= group_sums[move]
  *         else:
  *             left += group_sizes[move]             # <<<<<<<<<<<<<<
@@ -3931,146 +3979,141 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
  * 
  */
     /*else*/ {
-      __pyx_t_19 = __pyx_v_move;
-      __pyx_v_left = (__pyx_v_left + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_group_sizes.diminfo[0].strides)));
+      __pyx_t_20 = __pyx_v_move;
+      __pyx_v_left = (__pyx_v_left + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_group_sizes.diminfo[0].strides)));
 
-      /* "Orange/classification/_tree_scorers.pyx":211
+      /* "Orange/classification/_tree_scorers.pyx":218
  *         else:
  *             left += group_sizes[move]
  *             sleft += group_sums[move]             # <<<<<<<<<<<<<<
  * 
  *         if left >= min_leaf and (N - left) >= min_leaf:
  */
-      __pyx_t_20 = __pyx_v_move;
-      __pyx_v_sleft = (__pyx_v_sleft + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
+      __pyx_t_21 = __pyx_v_move;
+      __pyx_v_sleft = (__pyx_v_sleft + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
     }
-    __pyx_L10:;
+    __pyx_L12:;
 
-    /* "Orange/classification/_tree_scorers.pyx":213
+    /* "Orange/classification/_tree_scorers.pyx":220
  *             sleft += group_sums[move]
  * 
  *         if left >= min_leaf and (N - left) >= min_leaf:             # <<<<<<<<<<<<<<
  *             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
- *             if inter < best_inter:
+ *             if inter > best_inter:
  */
-    __pyx_t_21 = ((__pyx_v_left >= __pyx_v_min_leaf) != 0);
-    if (__pyx_t_21) {
+    __pyx_t_22 = ((__pyx_v_left >= __pyx_v_min_leaf) != 0);
+    if (__pyx_t_22) {
     } else {
-      __pyx_t_16 = __pyx_t_21;
-      goto __pyx_L12_bool_binop_done;
+      __pyx_t_11 = __pyx_t_22;
+      goto __pyx_L14_bool_binop_done;
     }
-    __pyx_t_21 = (((__pyx_v_N - __pyx_v_left) >= __pyx_v_min_leaf) != 0);
-    __pyx_t_16 = __pyx_t_21;
-    __pyx_L12_bool_binop_done:;
-    if (__pyx_t_16) {
+    __pyx_t_22 = (((__pyx_v_N - __pyx_v_left) >= __pyx_v_min_leaf) != 0);
+    __pyx_t_11 = __pyx_t_22;
+    __pyx_L14_bool_binop_done:;
+    if (__pyx_t_11) {
 
-      /* "Orange/classification/_tree_scorers.pyx":214
+      /* "Orange/classification/_tree_scorers.pyx":221
  * 
  *         if left >= min_leaf and (N - left) >= min_leaf:
  *             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)             # <<<<<<<<<<<<<<
- *             if inter < best_inter:
+ *             if inter > best_inter:
  *                 best_inter = inter
  */
-      __pyx_t_13 = (__pyx_v_sleft * __pyx_v_sleft);
+      __pyx_t_14 = (__pyx_v_sleft * __pyx_v_sleft);
       if (unlikely(__pyx_v_left == 0)) {
         PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-        __PYX_ERR(0, 214, __pyx_L1_error)
+        __PYX_ERR(0, 221, __pyx_L1_error)
       }
-      __pyx_t_22 = ((__pyx_v_sum - __pyx_v_sleft) * (__pyx_v_sum - __pyx_v_sleft));
-      __pyx_t_9 = (__pyx_v_N - __pyx_v_left);
-      if (unlikely(__pyx_t_9 == 0)) {
+      __pyx_t_13 = ((__pyx_v_sum - __pyx_v_sleft) * (__pyx_v_sum - __pyx_v_sleft));
+      __pyx_t_17 = (__pyx_v_N - __pyx_v_left);
+      if (unlikely(__pyx_t_17 == 0)) {
         PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-        __PYX_ERR(0, 214, __pyx_L1_error)
+        __PYX_ERR(0, 221, __pyx_L1_error)
       }
-      __pyx_v_inter = ((__pyx_t_13 / __pyx_v_left) + (__pyx_t_22 / __pyx_t_9));
+      __pyx_v_inter = ((__pyx_t_14 / __pyx_v_left) + (__pyx_t_13 / __pyx_t_17));
 
-      /* "Orange/classification/_tree_scorers.pyx":215
+      /* "Orange/classification/_tree_scorers.pyx":222
  *         if left >= min_leaf and (N - left) >= min_leaf:
  *             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
- *             if inter < best_inter:             # <<<<<<<<<<<<<<
+ *             if inter > best_inter:             # <<<<<<<<<<<<<<
  *                 best_inter = inter
  *                 best_mapping = mapping
  */
-      __pyx_t_16 = ((__pyx_v_inter < __pyx_v_best_inter) != 0);
-      if (__pyx_t_16) {
+      __pyx_t_11 = ((__pyx_v_inter > __pyx_v_best_inter) != 0);
+      if (__pyx_t_11) {
 
-        /* "Orange/classification/_tree_scorers.pyx":216
+        /* "Orange/classification/_tree_scorers.pyx":223
  *             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
- *             if inter < best_inter:
+ *             if inter > best_inter:
  *                 best_inter = inter             # <<<<<<<<<<<<<<
  *                 best_mapping = mapping
- *     return (best_inter - sum * sum / N) / N, best_mapping
+ *     # factor N / x.shape[0] is the punishment for missing values
  */
         __pyx_v_best_inter = __pyx_v_inter;
 
-        /* "Orange/classification/_tree_scorers.pyx":217
- *             if inter < best_inter:
+        /* "Orange/classification/_tree_scorers.pyx":224
+ *             if inter > best_inter:
  *                 best_inter = inter
  *                 best_mapping = mapping             # <<<<<<<<<<<<<<
- *     return (best_inter - sum * sum / N) / N, best_mapping
- * 
+ *     # factor N / x.shape[0] is the punishment for missing values
+ *     # return (best_inter - start_inter) / N * (N / x.shape[0]), best_mapping
  */
         __pyx_v_best_mapping = __pyx_v_mapping;
 
-        /* "Orange/classification/_tree_scorers.pyx":215
+        /* "Orange/classification/_tree_scorers.pyx":222
  *         if left >= min_leaf and (N - left) >= min_leaf:
  *             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
- *             if inter < best_inter:             # <<<<<<<<<<<<<<
+ *             if inter > best_inter:             # <<<<<<<<<<<<<<
  *                 best_inter = inter
  *                 best_mapping = mapping
  */
       }
 
-      /* "Orange/classification/_tree_scorers.pyx":213
+      /* "Orange/classification/_tree_scorers.pyx":220
  *             sleft += group_sums[move]
  * 
  *         if left >= min_leaf and (N - left) >= min_leaf:             # <<<<<<<<<<<<<<
  *             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
- *             if inter < best_inter:
+ *             if inter > best_inter:
  */
     }
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":218
- *                 best_inter = inter
- *                 best_mapping = mapping
- *     return (best_inter - sum * sum / N) / N, best_mapping             # <<<<<<<<<<<<<<
+  /* "Orange/classification/_tree_scorers.pyx":227
+ *     # factor N / x.shape[0] is the punishment for missing values
+ *     # return (best_inter - start_inter) / N * (N / x.shape[0]), best_mapping
+ *     return (best_inter - start_inter) / x.shape[0], best_mapping             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_22 = (__pyx_v_sum * __pyx_v_sum);
-  if (unlikely(__pyx_v_N == 0)) {
+  __pyx_t_13 = (__pyx_v_best_inter - __pyx_v_start_inter);
+  if (unlikely((__pyx_v_x->dimensions[0]) == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 218, __pyx_L1_error)
+    __PYX_ERR(0, 227, __pyx_L1_error)
   }
-  __pyx_t_13 = (__pyx_v_best_inter - (__pyx_t_22 / __pyx_v_N));
-  if (unlikely(__pyx_v_N == 0)) {
-    PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 218, __pyx_L1_error)
-  }
-  __pyx_t_3 = PyFloat_FromDouble((__pyx_t_13 / __pyx_v_N)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 218, __pyx_L1_error)
+  __pyx_t_5 = PyFloat_FromDouble((__pyx_t_13 / (__pyx_v_x->dimensions[0]))); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 227, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_3 = __Pyx_PyInt_From_unsigned_int(__pyx_v_best_mapping); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 227, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_best_mapping); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 218, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 218, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 227, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_GIVEREF(__pyx_t_5);
+  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_5);
   __Pyx_GIVEREF(__pyx_t_3);
-  PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_3);
-  __Pyx_GIVEREF(__pyx_t_6);
-  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_t_6);
+  PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_3);
+  __pyx_t_5 = 0;
   __pyx_t_3 = 0;
-  __pyx_t_6 = 0;
-  __pyx_r = __pyx_t_2;
-  __pyx_t_2 = 0;
+  __pyx_r = __pyx_t_4;
+  __pyx_t_4 = 0;
   goto __pyx_L0;
 
-  /* "Orange/classification/_tree_scorers.pyx":172
+  /* "Orange/classification/_tree_scorers.pyx":173
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
  *                           np.ndarray[np.float64_t, ndim=1] y,
- *                           int min_leaf):
+ *                           int n_values, int min_leaf):
  */
 
   /* function exit code */
@@ -4079,7 +4122,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
   __Pyx_XDECREF(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_XDECREF(__pyx_t_6);
+  __Pyx_XDECREF(__pyx_t_5);
   { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
     __Pyx_PyThreadState_declare
     __Pyx_PyThreadState_assign
@@ -4105,31 +4148,35 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_binariz
   return __pyx_r;
 }
 
-/* "Orange/classification/_tree_scorers.pyx":223
+/* "Orange/classification/_tree_scorers.pyx":232
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
- *                         np.ndarray[np.float64_t, ndim=1] y):
- *     cdef int n_values = int(np.max(x))
+ *                         np.ndarray[np.float64_t, ndim=1] y,
+ *                         int n_values, int min_leaf):
  */
 
 /* Python wrapper */
 static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_9compute_grouped_MSE(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE[] = "compute_grouped_MSE(ndarray x, ndarray y)";
+static char __pyx_doc_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE[] = "compute_grouped_MSE(ndarray x, ndarray y, int n_values, int min_leaf)";
 static PyMethodDef __pyx_mdef_6Orange_14classification_13_tree_scorers_9compute_grouped_MSE = {"compute_grouped_MSE", (PyCFunction)__pyx_pw_6Orange_14classification_13_tree_scorers_9compute_grouped_MSE, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE};
 static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_9compute_grouped_MSE(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x = 0;
   PyArrayObject *__pyx_v_y = 0;
+  int __pyx_v_n_values;
+  int __pyx_v_min_leaf;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("compute_grouped_MSE (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x,&__pyx_n_s_y,0};
-    PyObject* values[2] = {0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x,&__pyx_n_s_y,&__pyx_n_s_n_values,&__pyx_n_s_min_leaf,0};
+    PyObject* values[4] = {0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
         case  0: break;
@@ -4143,32 +4190,46 @@ static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_9compute_grou
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_y)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("compute_grouped_MSE", 1, 2, 2, 1); __PYX_ERR(0, 223, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("compute_grouped_MSE", 1, 4, 4, 1); __PYX_ERR(0, 232, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_n_values)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_grouped_MSE", 1, 4, 4, 2); __PYX_ERR(0, 232, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_min_leaf)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_grouped_MSE", 1, 4, 4, 3); __PYX_ERR(0, 232, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compute_grouped_MSE") < 0)) __PYX_ERR(0, 223, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compute_grouped_MSE") < 0)) __PYX_ERR(0, 232, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
     }
     __pyx_v_x = ((PyArrayObject *)values[0]);
     __pyx_v_y = ((PyArrayObject *)values[1]);
+    __pyx_v_n_values = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_n_values == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 234, __pyx_L3_error)
+    __pyx_v_min_leaf = __Pyx_PyInt_As_int(values[3]); if (unlikely((__pyx_v_min_leaf == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 234, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("compute_grouped_MSE", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 223, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("compute_grouped_MSE", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 232, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.classification._tree_scorers.compute_grouped_MSE", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 223, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 224, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE(__pyx_self, __pyx_v_x, __pyx_v_y);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 232, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_5numpy_ndarray, 1, "y", 0))) __PYX_ERR(0, 233, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE(__pyx_self, __pyx_v_x, __pyx_v_y, __pyx_v_n_values, __pyx_v_min_leaf);
 
   /* function exit code */
   goto __pyx_L0;
@@ -4179,11 +4240,11 @@ static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_9compute_grou
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y) {
-  int __pyx_v_n_values;
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grouped_MSE(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyArrayObject *__pyx_v_y, int __pyx_v_n_values, int __pyx_v_min_leaf) {
   int __pyx_v_i;
-  int __pyx_v_N;
+  int __pyx_v_n;
   float __pyx_v_sum;
+  float __pyx_v_tx;
   PyArrayObject *__pyx_v_group_sizes = 0;
   PyArrayObject *__pyx_v_group_sums = 0;
   PyObject *__pyx_v_inter = NULL;
@@ -4201,23 +4262,25 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grou
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   PyObject *__pyx_t_4 = NULL;
-  int __pyx_t_5;
-  PyObject *__pyx_t_6 = NULL;
+  PyObject *__pyx_t_5 = NULL;
+  PyArrayObject *__pyx_t_6 = NULL;
   PyArrayObject *__pyx_t_7 = NULL;
-  PyArrayObject *__pyx_t_8 = NULL;
+  npy_intp __pyx_t_8;
   int __pyx_t_9;
   Py_ssize_t __pyx_t_10;
-  Py_ssize_t __pyx_t_11;
+  int __pyx_t_11;
   Py_ssize_t __pyx_t_12;
-  Py_ssize_t __pyx_t_13;
-  int __pyx_t_14;
+  int __pyx_t_13;
+  Py_ssize_t __pyx_t_14;
   Py_ssize_t __pyx_t_15;
   Py_ssize_t __pyx_t_16;
-  __pyx_t_5numpy_float64_t __pyx_t_17;
-  Py_ssize_t __pyx_t_18;
-  __pyx_t_5numpy_int32_t __pyx_t_19;
-  Py_ssize_t __pyx_t_20;
-  float __pyx_t_21;
+  Py_ssize_t __pyx_t_17;
+  __pyx_t_5numpy_float64_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  __pyx_t_5numpy_int32_t __pyx_t_20;
+  Py_ssize_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
+  float __pyx_t_23;
   __Pyx_RefNannySetupContext("compute_grouped_MSE", 0);
   __pyx_pybuffer_group_sizes.pybuffer.buf = NULL;
   __pyx_pybuffer_group_sizes.refcount = 0;
@@ -4237,27 +4300,85 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grou
   __pyx_pybuffernd_y.rcbuffer = &__pyx_pybuffer_y;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 223, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 232, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 223, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_y, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 232, __pyx_L1_error)
   }
   __pyx_pybuffernd_y.diminfo[0].strides = __pyx_pybuffernd_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_y.diminfo[0].shape = __pyx_pybuffernd_y.rcbuffer->pybuffer.shape[0];
 
-  /* "Orange/classification/_tree_scorers.pyx":225
- * def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,
- *                         np.ndarray[np.float64_t, ndim=1] y):
- *     cdef int n_values = int(np.max(x))             # <<<<<<<<<<<<<<
- *     cdef int i
- *     cdef int N = x.shape[0]
+  /* "Orange/classification/_tree_scorers.pyx":236
+ *                         int n_values, int min_leaf):
+ *     cdef int i, n
+ *     cdef float sum = 0, tx             # <<<<<<<<<<<<<<
+ * 
+ *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
  */
-  __pyx_t_2 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __pyx_v_sum = 0.0;
+
+  /* "Orange/classification/_tree_scorers.pyx":238
+ *     cdef float sum = 0, tx
+ * 
+ *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)             # <<<<<<<<<<<<<<
+ *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
+ * 
+ */
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_max); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 225, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 238, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_GIVEREF(__pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_1);
+  __pyx_t_1 = 0;
+  __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_int32); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, __pyx_t_5) < 0) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  if (!(likely(((__pyx_t_5) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_5, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 238, __pyx_L1_error)
+  __pyx_t_6 = ((PyArrayObject *)__pyx_t_5);
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sizes.rcbuffer->pybuffer, (PyObject*)__pyx_t_6, &__Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+      __pyx_v_group_sizes = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf = NULL;
+      __PYX_ERR(0, 238, __pyx_L1_error)
+    } else {__pyx_pybuffernd_group_sizes.diminfo[0].strides = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_group_sizes.diminfo[0].shape = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.shape[0];
+    }
+  }
+  __pyx_t_6 = 0;
+  __pyx_v_group_sizes = ((PyArrayObject *)__pyx_t_5);
+  __pyx_t_5 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":239
+ * 
+ *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
+ *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)             # <<<<<<<<<<<<<<
+ * 
+ *     for i in range(x.shape[0]):
+ */
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 239, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 239, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 239, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_3))) {
     __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_3);
@@ -4269,276 +4390,236 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grou
     }
   }
   if (!__pyx_t_2) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_3, ((PyObject *)__pyx_v_x)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 225, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_5 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 239, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __Pyx_GOTREF(__pyx_t_5);
   } else {
-    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 225, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 239, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_2); __pyx_t_2 = NULL;
-    __Pyx_INCREF(((PyObject *)__pyx_v_x));
-    __Pyx_GIVEREF(((PyObject *)__pyx_v_x));
-    PyTuple_SET_ITEM(__pyx_t_4, 0+1, ((PyObject *)__pyx_v_x));
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 225, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 225, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_t_3); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 225, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_v_n_values = __pyx_t_5;
-
-  /* "Orange/classification/_tree_scorers.pyx":227
- *     cdef int n_values = int(np.max(x))
- *     cdef int i
- *     cdef int N = x.shape[0]             # <<<<<<<<<<<<<<
- *     cdef float sum = 0
- * 
- */
-  __pyx_v_N = (__pyx_v_x->dimensions[0]);
-
-  /* "Orange/classification/_tree_scorers.pyx":228
- *     cdef int i
- *     cdef int N = x.shape[0]
- *     cdef float sum = 0             # <<<<<<<<<<<<<<
- * 
- *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
- */
-  __pyx_v_sum = 0.0;
-
-  /* "Orange/classification/_tree_scorers.pyx":230
- *     cdef float sum = 0
- * 
- *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)             # <<<<<<<<<<<<<<
- *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
- * 
- */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 230, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 230, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_4))) {
-    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_4);
-    if (likely(__pyx_t_2)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-      __Pyx_INCREF(__pyx_t_2);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_4, function);
-    }
-  }
-  if (!__pyx_t_2) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 230, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __Pyx_GOTREF(__pyx_t_3);
-  } else {
-    __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 230, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_2); __pyx_t_2 = NULL;
     __Pyx_GIVEREF(__pyx_t_1);
-    PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_t_1);
+    PyTuple_SET_ITEM(__pyx_t_4, 0+1, __pyx_t_1);
     __pyx_t_1 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 230, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 230, __pyx_L1_error)
-  __pyx_t_7 = ((PyArrayObject *)__pyx_t_3);
-  {
-    __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sizes.rcbuffer->pybuffer, (PyObject*)__pyx_t_7, &__Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
-      __pyx_v_group_sizes = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf = NULL;
-      __PYX_ERR(0, 230, __pyx_L1_error)
-    } else {__pyx_pybuffernd_group_sizes.diminfo[0].strides = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_group_sizes.diminfo[0].shape = __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.shape[0];
-    }
-  }
-  __pyx_t_7 = 0;
-  __pyx_v_group_sizes = ((PyArrayObject *)__pyx_t_3);
-  __pyx_t_3 = 0;
-
-  /* "Orange/classification/_tree_scorers.pyx":231
- * 
- *     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
- *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)             # <<<<<<<<<<<<<<
- * 
- *     for i in range(N):
- */
-  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 231, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 231, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_n_values); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 231, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_6))) {
-    __pyx_t_1 = PyMethod_GET_SELF(__pyx_t_6);
-    if (likely(__pyx_t_1)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
-      __Pyx_INCREF(__pyx_t_1);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_6, function);
-    }
-  }
-  if (!__pyx_t_1) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 231, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 239, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_GOTREF(__pyx_t_3);
-  } else {
-    __pyx_t_2 = PyTuple_New(1+1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 231, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_GIVEREF(__pyx_t_1); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_1); __pyx_t_1 = NULL;
-    __Pyx_GIVEREF(__pyx_t_4);
-    PyTuple_SET_ITEM(__pyx_t_2, 0+1, __pyx_t_4);
-    __pyx_t_4 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 231, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
-  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 231, __pyx_L1_error)
-  __pyx_t_8 = ((PyArrayObject *)__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  if (!(likely(((__pyx_t_5) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_5, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 239, __pyx_L1_error)
+  __pyx_t_7 = ((PyArrayObject *)__pyx_t_5);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sums.rcbuffer->pybuffer, (PyObject*)__pyx_t_8, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_group_sums.rcbuffer->pybuffer, (PyObject*)__pyx_t_7, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) {
       __pyx_v_group_sums = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf = NULL;
-      __PYX_ERR(0, 231, __pyx_L1_error)
+      __PYX_ERR(0, 239, __pyx_L1_error)
     } else {__pyx_pybuffernd_group_sums.diminfo[0].strides = __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_group_sums.diminfo[0].shape = __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.shape[0];
     }
   }
-  __pyx_t_8 = 0;
-  __pyx_v_group_sums = ((PyArrayObject *)__pyx_t_3);
-  __pyx_t_3 = 0;
+  __pyx_t_7 = 0;
+  __pyx_v_group_sums = ((PyArrayObject *)__pyx_t_5);
+  __pyx_t_5 = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":233
+  /* "Orange/classification/_tree_scorers.pyx":241
  *     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
  * 
- *     for i in range(N):             # <<<<<<<<<<<<<<
- *         group_sizes[int(x[i])] += 1
- *         group_sums[int(x[i])] += y[i]
+ *     for i in range(x.shape[0]):             # <<<<<<<<<<<<<<
+ *         tx = x[i]
+ *         if not npy_isnan(tx):
  */
-  __pyx_t_5 = __pyx_v_N;
-  for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_5; __pyx_t_9+=1) {
+  __pyx_t_8 = (__pyx_v_x->dimensions[0]);
+  for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_8; __pyx_t_9+=1) {
     __pyx_v_i = __pyx_t_9;
 
-    /* "Orange/classification/_tree_scorers.pyx":234
+    /* "Orange/classification/_tree_scorers.pyx":242
  * 
- *     for i in range(N):
- *         group_sizes[int(x[i])] += 1             # <<<<<<<<<<<<<<
- *         group_sums[int(x[i])] += y[i]
- *     inter = 0
+ *     for i in range(x.shape[0]):
+ *         tx = x[i]             # <<<<<<<<<<<<<<
+ *         if not npy_isnan(tx):
+ *             group_sizes[int(tx)] += 1
  */
     __pyx_t_10 = __pyx_v_i;
-    __pyx_t_3 = __Pyx_PyInt_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_10, __pyx_pybuffernd_x.diminfo[0].strides))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 234, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_6 = PyObject_GetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 234, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_t_6, __pyx_int_1, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 234, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_3, __pyx_t_2) < 0)) __PYX_ERR(0, 234, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_v_tx = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_10, __pyx_pybuffernd_x.diminfo[0].strides));
 
-    /* "Orange/classification/_tree_scorers.pyx":235
- *     for i in range(N):
- *         group_sizes[int(x[i])] += 1
- *         group_sums[int(x[i])] += y[i]             # <<<<<<<<<<<<<<
- *     inter = 0
- *     for i in range(n_values):
+    /* "Orange/classification/_tree_scorers.pyx":243
+ *     for i in range(x.shape[0]):
+ *         tx = x[i]
+ *         if not npy_isnan(tx):             # <<<<<<<<<<<<<<
+ *             group_sizes[int(tx)] += 1
+ *             group_sums[int(tx)] += y[i]
  */
-    __pyx_t_11 = __pyx_v_i;
-    __pyx_t_3 = __Pyx_PyInt_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_x.diminfo[0].strides))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 235, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_2 = PyObject_GetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 235, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_12 = __pyx_v_i;
-    __pyx_t_6 = PyFloat_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_y.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_y.diminfo[0].strides))); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 235, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_t_2, __pyx_t_6); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 235, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_3, __pyx_t_4) < 0)) __PYX_ERR(0, 235, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_t_11 = ((!(npy_isnan(__pyx_v_tx) != 0)) != 0);
+    if (__pyx_t_11) {
+
+      /* "Orange/classification/_tree_scorers.pyx":244
+ *         tx = x[i]
+ *         if not npy_isnan(tx):
+ *             group_sizes[int(tx)] += 1             # <<<<<<<<<<<<<<
+ *             group_sums[int(tx)] += y[i]
+ *     inter = 0
+ */
+      __pyx_t_5 = __Pyx_PyInt_FromDouble(__pyx_v_tx); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_3 = PyObject_GetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_5); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_4 = __Pyx_PyInt_AddObjC(__pyx_t_3, __pyx_int_1, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sizes), __pyx_t_5, __pyx_t_4) < 0)) __PYX_ERR(0, 244, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+      /* "Orange/classification/_tree_scorers.pyx":245
+ *         if not npy_isnan(tx):
+ *             group_sizes[int(tx)] += 1
+ *             group_sums[int(tx)] += y[i]             # <<<<<<<<<<<<<<
+ *     inter = 0
+ *     n = 0
+ */
+      __pyx_t_5 = __Pyx_PyInt_FromDouble(__pyx_v_tx); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 245, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_4 = PyObject_GetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 245, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_12 = __pyx_v_i;
+      __pyx_t_3 = PyFloat_FromDouble((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_y.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_y.diminfo[0].strides))); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 245, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_t_4, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 245, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_group_sums), __pyx_t_5, __pyx_t_1) < 0)) __PYX_ERR(0, 245, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+      /* "Orange/classification/_tree_scorers.pyx":243
+ *     for i in range(x.shape[0]):
+ *         tx = x[i]
+ *         if not npy_isnan(tx):             # <<<<<<<<<<<<<<
+ *             group_sizes[int(tx)] += 1
+ *             group_sums[int(tx)] += y[i]
+ */
+    }
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":236
- *         group_sizes[int(x[i])] += 1
- *         group_sums[int(x[i])] += y[i]
+  /* "Orange/classification/_tree_scorers.pyx":246
+ *             group_sizes[int(tx)] += 1
+ *             group_sums[int(tx)] += y[i]
  *     inter = 0             # <<<<<<<<<<<<<<
+ *     n = 0
  *     for i in range(n_values):
- *         if group_sizes[i]:
  */
   __Pyx_INCREF(__pyx_int_0);
   __pyx_v_inter = __pyx_int_0;
 
-  /* "Orange/classification/_tree_scorers.pyx":237
- *         group_sums[int(x[i])] += y[i]
+  /* "Orange/classification/_tree_scorers.pyx":247
+ *             group_sums[int(tx)] += y[i]
  *     inter = 0
+ *     n = 0             # <<<<<<<<<<<<<<
+ *     for i in range(n_values):
+ *         if group_sizes[i] < min_leaf:
+ */
+  __pyx_v_n = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":248
+ *     inter = 0
+ *     n = 0
  *     for i in range(n_values):             # <<<<<<<<<<<<<<
+ *         if group_sizes[i] < min_leaf:
+ *             return 0
+ */
+  __pyx_t_9 = __pyx_v_n_values;
+  for (__pyx_t_13 = 0; __pyx_t_13 < __pyx_t_9; __pyx_t_13+=1) {
+    __pyx_v_i = __pyx_t_13;
+
+    /* "Orange/classification/_tree_scorers.pyx":249
+ *     n = 0
+ *     for i in range(n_values):
+ *         if group_sizes[i] < min_leaf:             # <<<<<<<<<<<<<<
+ *             return 0
+ *         if group_sizes[i]:
+ */
+    __pyx_t_14 = __pyx_v_i;
+    __pyx_t_11 = (((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_14, __pyx_pybuffernd_group_sizes.diminfo[0].strides)) < __pyx_v_min_leaf) != 0);
+    if (__pyx_t_11) {
+
+      /* "Orange/classification/_tree_scorers.pyx":250
+ *     for i in range(n_values):
+ *         if group_sizes[i] < min_leaf:
+ *             return 0             # <<<<<<<<<<<<<<
  *         if group_sizes[i]:
  *             inter += group_sums[i] * group_sums[i] / group_sizes[i]
  */
-  __pyx_t_5 = __pyx_v_n_values;
-  for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_5; __pyx_t_9+=1) {
-    __pyx_v_i = __pyx_t_9;
+      __Pyx_XDECREF(__pyx_r);
+      __Pyx_INCREF(__pyx_int_0);
+      __pyx_r = __pyx_int_0;
+      goto __pyx_L0;
 
-    /* "Orange/classification/_tree_scorers.pyx":238
- *     inter = 0
+      /* "Orange/classification/_tree_scorers.pyx":249
+ *     n = 0
  *     for i in range(n_values):
+ *         if group_sizes[i] < min_leaf:             # <<<<<<<<<<<<<<
+ *             return 0
+ *         if group_sizes[i]:
+ */
+    }
+
+    /* "Orange/classification/_tree_scorers.pyx":251
+ *         if group_sizes[i] < min_leaf:
+ *             return 0
  *         if group_sizes[i]:             # <<<<<<<<<<<<<<
  *             inter += group_sums[i] * group_sums[i] / group_sizes[i]
  *             sum += group_sums[i]
  */
-    __pyx_t_13 = __pyx_v_i;
-    __pyx_t_14 = ((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_13, __pyx_pybuffernd_group_sizes.diminfo[0].strides)) != 0);
-    if (__pyx_t_14) {
+    __pyx_t_15 = __pyx_v_i;
+    __pyx_t_11 = ((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_group_sizes.diminfo[0].strides)) != 0);
+    if (__pyx_t_11) {
 
-      /* "Orange/classification/_tree_scorers.pyx":239
- *     for i in range(n_values):
+      /* "Orange/classification/_tree_scorers.pyx":252
+ *             return 0
  *         if group_sizes[i]:
  *             inter += group_sums[i] * group_sums[i] / group_sizes[i]             # <<<<<<<<<<<<<<
  *             sum += group_sums[i]
- *     return (inter - sum * sum / N) / N
+ *             n += group_sizes[i]
  */
-      __pyx_t_15 = __pyx_v_i;
       __pyx_t_16 = __pyx_v_i;
-      __pyx_t_17 = ((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_group_sums.diminfo[0].strides)) * (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
-      __pyx_t_18 = __pyx_v_i;
-      __pyx_t_19 = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_group_sizes.diminfo[0].strides));
-      if (unlikely(__pyx_t_19 == 0)) {
+      __pyx_t_17 = __pyx_v_i;
+      __pyx_t_18 = ((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_group_sums.diminfo[0].strides)) * (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_17, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
+      __pyx_t_19 = __pyx_v_i;
+      __pyx_t_20 = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_group_sizes.diminfo[0].strides));
+      if (unlikely(__pyx_t_20 == 0)) {
         PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-        __PYX_ERR(0, 239, __pyx_L1_error)
+        __PYX_ERR(0, 252, __pyx_L1_error)
       }
-      __pyx_t_3 = PyFloat_FromDouble((__pyx_t_17 / __pyx_t_19)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 239, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_4 = PyNumber_InPlaceAdd(__pyx_v_inter, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 239, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __Pyx_DECREF_SET(__pyx_v_inter, __pyx_t_4);
-      __pyx_t_4 = 0;
+      __pyx_t_5 = PyFloat_FromDouble((__pyx_t_18 / __pyx_t_20)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 252, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_v_inter, __pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 252, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+      __Pyx_DECREF_SET(__pyx_v_inter, __pyx_t_1);
+      __pyx_t_1 = 0;
 
-      /* "Orange/classification/_tree_scorers.pyx":240
+      /* "Orange/classification/_tree_scorers.pyx":253
  *         if group_sizes[i]:
  *             inter += group_sums[i] * group_sums[i] / group_sizes[i]
  *             sum += group_sums[i]             # <<<<<<<<<<<<<<
- *     return (inter - sum * sum / N) / N
- * 
+ *             n += group_sizes[i]
+ *     # factor n / x.shape[0] is the punishment for missing values
  */
-      __pyx_t_20 = __pyx_v_i;
-      __pyx_v_sum = (__pyx_v_sum + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
+      __pyx_t_21 = __pyx_v_i;
+      __pyx_v_sum = (__pyx_v_sum + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_group_sums.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_group_sums.diminfo[0].strides)));
 
-      /* "Orange/classification/_tree_scorers.pyx":238
- *     inter = 0
- *     for i in range(n_values):
+      /* "Orange/classification/_tree_scorers.pyx":254
+ *             inter += group_sums[i] * group_sums[i] / group_sizes[i]
+ *             sum += group_sums[i]
+ *             n += group_sizes[i]             # <<<<<<<<<<<<<<
+ *     # factor n / x.shape[0] is the punishment for missing values
+ *     #return (inter - sum * sum / n) / n * n / x.shape[0]
+ */
+      __pyx_t_22 = __pyx_v_i;
+      __pyx_v_n = (__pyx_v_n + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_group_sizes.rcbuffer->pybuffer.buf, __pyx_t_22, __pyx_pybuffernd_group_sizes.diminfo[0].strides)));
+
+      /* "Orange/classification/_tree_scorers.pyx":251
+ *         if group_sizes[i] < min_leaf:
+ *             return 0
  *         if group_sizes[i]:             # <<<<<<<<<<<<<<
  *             inter += group_sums[i] * group_sums[i] / group_sizes[i]
  *             sum += group_sums[i]
@@ -4546,40 +4627,40 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grou
     }
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":241
- *             inter += group_sums[i] * group_sums[i] / group_sizes[i]
- *             sum += group_sums[i]
- *     return (inter - sum * sum / N) / N             # <<<<<<<<<<<<<<
+  /* "Orange/classification/_tree_scorers.pyx":257
+ *     # factor n / x.shape[0] is the punishment for missing values
+ *     #return (inter - sum * sum / n) / n * n / x.shape[0]
+ *     return (inter - sum * sum / n) / x.shape[0]             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_21 = (__pyx_v_sum * __pyx_v_sum);
-  if (unlikely(__pyx_v_N == 0)) {
+  __pyx_t_23 = (__pyx_v_sum * __pyx_v_sum);
+  if (unlikely(__pyx_v_n == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 241, __pyx_L1_error)
+    __PYX_ERR(0, 257, __pyx_L1_error)
   }
-  __pyx_t_4 = PyFloat_FromDouble((__pyx_t_21 / __pyx_v_N)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 241, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_3 = PyNumber_Subtract(__pyx_v_inter, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 241, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble((__pyx_t_23 / __pyx_v_n)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 257, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_5 = PyNumber_Subtract(__pyx_v_inter, __pyx_t_1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 257, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_PyInt_From_Py_intptr_t((__pyx_v_x->dimensions[0])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 257, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_t_5, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 257, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_N); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 241, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = __Pyx_PyNumber_Divide(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 241, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_r = __pyx_t_6;
-  __pyx_t_6 = 0;
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_r = __pyx_t_3;
+  __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "Orange/classification/_tree_scorers.pyx":223
+  /* "Orange/classification/_tree_scorers.pyx":232
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
- *                         np.ndarray[np.float64_t, ndim=1] y):
- *     cdef int n_values = int(np.max(x))
+ *                         np.ndarray[np.float64_t, ndim=1] y,
+ *                         int n_values, int min_leaf):
  */
 
   /* function exit code */
@@ -4588,7 +4669,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grou
   __Pyx_XDECREF(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_XDECREF(__pyx_t_6);
+  __Pyx_XDECREF(__pyx_t_5);
   { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
     __Pyx_PyThreadState_declare
     __Pyx_PyThreadState_assign
@@ -4615,7 +4696,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8compute_grou
   return __pyx_r;
 }
 
-/* "Orange/classification/_tree_scorers.pyx":246
+/* "Orange/classification/_tree_scorers.pyx":262
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,             # <<<<<<<<<<<<<<
@@ -4657,21 +4738,21 @@ static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_11compute_pre
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_code)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, 1); __PYX_ERR(0, 246, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, 1); __PYX_ERR(0, 262, __pyx_L3_error)
         }
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_class_distrs)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, 2); __PYX_ERR(0, 246, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, 2); __PYX_ERR(0, 262, __pyx_L3_error)
         }
         case  3:
         if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_thresholds)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, 3); __PYX_ERR(0, 246, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, 3); __PYX_ERR(0, 262, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compute_predictions") < 0)) __PYX_ERR(0, 246, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compute_predictions") < 0)) __PYX_ERR(0, 262, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -4688,16 +4769,16 @@ static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_11compute_pre
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 246, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("compute_predictions", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 262, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.classification._tree_scorers.compute_predictions", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_X), __pyx_ptype_5numpy_ndarray, 1, "X", 0))) __PYX_ERR(0, 246, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_code), __pyx_ptype_5numpy_ndarray, 1, "code", 0))) __PYX_ERR(0, 247, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_class_distrs), __pyx_ptype_5numpy_ndarray, 1, "class_distrs", 0))) __PYX_ERR(0, 248, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_thresholds), __pyx_ptype_5numpy_ndarray, 1, "thresholds", 0))) __PYX_ERR(0, 249, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_X), __pyx_ptype_5numpy_ndarray, 1, "X", 0))) __PYX_ERR(0, 262, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_code), __pyx_ptype_5numpy_ndarray, 1, "code", 0))) __PYX_ERR(0, 263, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_class_distrs), __pyx_ptype_5numpy_ndarray, 1, "class_distrs", 0))) __PYX_ERR(0, 264, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_thresholds), __pyx_ptype_5numpy_ndarray, 1, "thresholds", 0))) __PYX_ERR(0, 265, __pyx_L1_error)
   __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_10compute_predictions(__pyx_self, __pyx_v_X, __pyx_v_code, __pyx_v_class_distrs, __pyx_v_thresholds);
 
   /* function exit code */
@@ -4769,42 +4850,42 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
   __pyx_pybuffernd_thresholds.rcbuffer = &__pyx_pybuffer_thresholds;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X.rcbuffer->pybuffer, (PyObject*)__pyx_v_X, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 246, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_X.rcbuffer->pybuffer, (PyObject*)__pyx_v_X, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 262, __pyx_L1_error)
   }
   __pyx_pybuffernd_X.diminfo[0].strides = __pyx_pybuffernd_X.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_X.diminfo[0].shape = __pyx_pybuffernd_X.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_X.diminfo[1].strides = __pyx_pybuffernd_X.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_X.diminfo[1].shape = __pyx_pybuffernd_X.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_code.rcbuffer->pybuffer, (PyObject*)__pyx_v_code, &__Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 246, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_code.rcbuffer->pybuffer, (PyObject*)__pyx_v_code, &__Pyx_TypeInfo_nn___pyx_t_5numpy_int32_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 262, __pyx_L1_error)
   }
   __pyx_pybuffernd_code.diminfo[0].strides = __pyx_pybuffernd_code.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_code.diminfo[0].shape = __pyx_pybuffernd_code.rcbuffer->pybuffer.shape[0];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_class_distrs.rcbuffer->pybuffer, (PyObject*)__pyx_v_class_distrs, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 246, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_class_distrs.rcbuffer->pybuffer, (PyObject*)__pyx_v_class_distrs, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 262, __pyx_L1_error)
   }
   __pyx_pybuffernd_class_distrs.diminfo[0].strides = __pyx_pybuffernd_class_distrs.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_class_distrs.diminfo[0].shape = __pyx_pybuffernd_class_distrs.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_class_distrs.diminfo[1].strides = __pyx_pybuffernd_class_distrs.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_class_distrs.diminfo[1].shape = __pyx_pybuffernd_class_distrs.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_thresholds.rcbuffer->pybuffer, (PyObject*)__pyx_v_thresholds, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 246, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_thresholds.rcbuffer->pybuffer, (PyObject*)__pyx_v_thresholds, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 262, __pyx_L1_error)
   }
   __pyx_pybuffernd_thresholds.diminfo[0].strides = __pyx_pybuffernd_thresholds.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_thresholds.diminfo[0].shape = __pyx_pybuffernd_thresholds.rcbuffer->pybuffer.shape[0];
 
-  /* "Orange/classification/_tree_scorers.pyx":253
+  /* "Orange/classification/_tree_scorers.pyx":269
  *     cdef np.float64_t val
  *     cdef np.ndarray[np.float64_t, ndim=2] predictions = \
  *         numpy.empty((X.shape[0], class_distrs.shape[1]), dtype=numpy.float64)             # <<<<<<<<<<<<<<
  * 
  *     for i in range(X.shape[0]):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_empty); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_empty); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_Py_intptr_t((__pyx_v_X->dimensions[0])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_Py_intptr_t((__pyx_v_X->dimensions[0])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyInt_From_Py_intptr_t((__pyx_v_class_distrs->dimensions[1])); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_From_Py_intptr_t((__pyx_v_class_distrs->dimensions[1])); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_1);
@@ -4812,32 +4893,32 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
   PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_3);
   __pyx_t_1 = 0;
   __pyx_t_3 = 0;
-  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_4);
   PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_4);
   __pyx_t_4 = 0;
-  __pyx_t_4 = PyDict_New(); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_4 = PyDict_New(); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_numpy); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_float64); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_float64); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_dtype, __pyx_t_5) < 0) __PYX_ERR(0, 253, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_dtype, __pyx_t_5) < 0) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 253, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 269, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (!(likely(((__pyx_t_5) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_5, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 253, __pyx_L1_error)
+  if (!(likely(((__pyx_t_5) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_5, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 269, __pyx_L1_error)
   __pyx_t_6 = ((PyArrayObject *)__pyx_t_5);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
     if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_predictions.rcbuffer->pybuffer, (PyObject*)__pyx_t_6, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_predictions = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_predictions.rcbuffer->pybuffer.buf = NULL;
-      __PYX_ERR(0, 252, __pyx_L1_error)
+      __PYX_ERR(0, 268, __pyx_L1_error)
     } else {__pyx_pybuffernd_predictions.diminfo[0].strides = __pyx_pybuffernd_predictions.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_predictions.diminfo[0].shape = __pyx_pybuffernd_predictions.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_predictions.diminfo[1].strides = __pyx_pybuffernd_predictions.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_predictions.diminfo[1].shape = __pyx_pybuffernd_predictions.rcbuffer->pybuffer.shape[1];
     }
   }
@@ -4845,7 +4926,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
   __pyx_v_predictions = ((PyArrayObject *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":255
+  /* "Orange/classification/_tree_scorers.pyx":271
  *         numpy.empty((X.shape[0], class_distrs.shape[1]), dtype=numpy.float64)
  * 
  *     for i in range(X.shape[0]):             # <<<<<<<<<<<<<<
@@ -4856,7 +4937,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
   for (__pyx_t_8 = 0; __pyx_t_8 < __pyx_t_7; __pyx_t_8+=1) {
     __pyx_v_i = __pyx_t_8;
 
-    /* "Orange/classification/_tree_scorers.pyx":256
+    /* "Orange/classification/_tree_scorers.pyx":272
  * 
  *     for i in range(X.shape[0]):
  *         node_ptr = 0             # <<<<<<<<<<<<<<
@@ -4865,7 +4946,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
  */
     __pyx_v_node_ptr = 0;
 
-    /* "Orange/classification/_tree_scorers.pyx":257
+    /* "Orange/classification/_tree_scorers.pyx":273
  *     for i in range(X.shape[0]):
  *         node_ptr = 0
  *         while code[node_ptr]:             # <<<<<<<<<<<<<<
@@ -4877,7 +4958,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
       __pyx_t_10 = ((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_code.rcbuffer->pybuffer.buf, __pyx_t_9, __pyx_pybuffernd_code.diminfo[0].strides)) != 0);
       if (!__pyx_t_10) break;
 
-      /* "Orange/classification/_tree_scorers.pyx":258
+      /* "Orange/classification/_tree_scorers.pyx":274
  *         node_ptr = 0
  *         while code[node_ptr]:
  *             val = X[i, code[node_ptr + 2]]             # <<<<<<<<<<<<<<
@@ -4889,7 +4970,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
       __pyx_t_13 = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_code.rcbuffer->pybuffer.buf, __pyx_t_11, __pyx_pybuffernd_code.diminfo[0].strides));
       __pyx_v_val = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_X.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_X.diminfo[0].strides, __pyx_t_13, __pyx_pybuffernd_X.diminfo[1].strides));
 
-      /* "Orange/classification/_tree_scorers.pyx":259
+      /* "Orange/classification/_tree_scorers.pyx":275
  *         while code[node_ptr]:
  *             val = X[i, code[node_ptr + 2]]
  *             if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -4899,7 +4980,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
       __pyx_t_10 = (npy_isnan(__pyx_v_val) != 0);
       if (__pyx_t_10) {
 
-        /* "Orange/classification/_tree_scorers.pyx":260
+        /* "Orange/classification/_tree_scorers.pyx":276
  *             val = X[i, code[node_ptr + 2]]
  *             if npy_isnan(val):
  *                 break             # <<<<<<<<<<<<<<
@@ -4908,7 +4989,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
  */
         goto __pyx_L6_break;
 
-        /* "Orange/classification/_tree_scorers.pyx":259
+        /* "Orange/classification/_tree_scorers.pyx":275
  *         while code[node_ptr]:
  *             val = X[i, code[node_ptr + 2]]
  *             if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -4917,7 +4998,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
  */
       }
 
-      /* "Orange/classification/_tree_scorers.pyx":261
+      /* "Orange/classification/_tree_scorers.pyx":277
  *             if npy_isnan(val):
  *                 break
  *             if code[node_ptr] == 3:             # <<<<<<<<<<<<<<
@@ -4928,7 +5009,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
       __pyx_t_10 = (((*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_code.rcbuffer->pybuffer.buf, __pyx_t_14, __pyx_pybuffernd_code.diminfo[0].strides)) == 3) != 0);
       if (__pyx_t_10) {
 
-        /* "Orange/classification/_tree_scorers.pyx":262
+        /* "Orange/classification/_tree_scorers.pyx":278
  *                 break
  *             if code[node_ptr] == 3:
  *                 node_idx = code[node_ptr + 1]             # <<<<<<<<<<<<<<
@@ -4938,7 +5019,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
         __pyx_t_15 = (__pyx_v_node_ptr + 1);
         __pyx_v_node_idx = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_code.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_code.diminfo[0].strides));
 
-        /* "Orange/classification/_tree_scorers.pyx":263
+        /* "Orange/classification/_tree_scorers.pyx":279
  *             if code[node_ptr] == 3:
  *                 node_idx = code[node_ptr + 1]
  *                 val_idx = int(val > thresholds[node_idx])             # <<<<<<<<<<<<<<
@@ -4948,7 +5029,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
         __pyx_t_16 = __pyx_v_node_idx;
         __pyx_v_val_idx = ((int)(__pyx_v_val > (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_thresholds.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_thresholds.diminfo[0].strides))));
 
-        /* "Orange/classification/_tree_scorers.pyx":261
+        /* "Orange/classification/_tree_scorers.pyx":277
  *             if npy_isnan(val):
  *                 break
  *             if code[node_ptr] == 3:             # <<<<<<<<<<<<<<
@@ -4958,7 +5039,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
         goto __pyx_L8;
       }
 
-      /* "Orange/classification/_tree_scorers.pyx":265
+      /* "Orange/classification/_tree_scorers.pyx":281
  *                 val_idx = int(val > thresholds[node_idx])
  *             else:
  *                 val_idx = int(val)             # <<<<<<<<<<<<<<
@@ -4970,7 +5051,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
       }
       __pyx_L8:;
 
-      /* "Orange/classification/_tree_scorers.pyx":266
+      /* "Orange/classification/_tree_scorers.pyx":282
  *             else:
  *                 val_idx = int(val)
  *             node_ptr = code[node_ptr + 3 + val_idx]             # <<<<<<<<<<<<<<
@@ -4982,7 +5063,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
     }
     __pyx_L6_break:;
 
-    /* "Orange/classification/_tree_scorers.pyx":267
+    /* "Orange/classification/_tree_scorers.pyx":283
  *                 val_idx = int(val)
  *             node_ptr = code[node_ptr + 3 + val_idx]
  *         node_idx = code[node_ptr + 1]             # <<<<<<<<<<<<<<
@@ -4992,19 +5073,19 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
     __pyx_t_18 = (__pyx_v_node_ptr + 1);
     __pyx_v_node_idx = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_int32_t *, __pyx_pybuffernd_code.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_code.diminfo[0].strides));
 
-    /* "Orange/classification/_tree_scorers.pyx":268
+    /* "Orange/classification/_tree_scorers.pyx":284
  *             node_ptr = code[node_ptr + 3 + val_idx]
  *         node_idx = code[node_ptr + 1]
  *         predictions[i] = class_distrs[node_idx]             # <<<<<<<<<<<<<<
  *     return predictions
  */
-    __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_class_distrs), __pyx_v_node_idx, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 268, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_GetItemInt(((PyObject *)__pyx_v_class_distrs), __pyx_v_node_idx, int, 1, __Pyx_PyInt_From_int, 0, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 284, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    if (unlikely(__Pyx_SetItemInt(((PyObject *)__pyx_v_predictions), __pyx_v_i, __pyx_t_5, int, 1, __Pyx_PyInt_From_int, 0, 0, 0) < 0)) __PYX_ERR(0, 268, __pyx_L1_error)
+    if (unlikely(__Pyx_SetItemInt(((PyObject *)__pyx_v_predictions), __pyx_v_i, __pyx_t_5, int, 1, __Pyx_PyInt_From_int, 0, 0, 0) < 0)) __PYX_ERR(0, 284, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   }
 
-  /* "Orange/classification/_tree_scorers.pyx":269
+  /* "Orange/classification/_tree_scorers.pyx":285
  *         node_idx = code[node_ptr + 1]
  *         predictions[i] = class_distrs[node_idx]
  *     return predictions             # <<<<<<<<<<<<<<
@@ -5014,7 +5095,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_pre
   __pyx_r = ((PyObject *)__pyx_v_predictions);
   goto __pyx_L0;
 
-  /* "Orange/classification/_tree_scorers.pyx":246
+  /* "Orange/classification/_tree_scorers.pyx":262
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,             # <<<<<<<<<<<<<<
@@ -5224,7 +5305,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 218, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 218, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -5280,7 +5361,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  * 
  *             info.buf = PyArray_DATA(self)
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 222, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 222, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -5589,7 +5670,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  *                 if   t == NPY_BYTE:        f = "b"
  *                 elif t == NPY_UBYTE:       f = "B"
  */
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 259, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 259, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -6404,7 +6485,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  * 
  *         if ((child.byteorder == c'>' and little_endian) or
  */
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 799, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 799, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -6472,7 +6553,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  *             # One could encode it in the format string and have Cython
  *             # complain instead, BUT: < and > in format strings also imply
  */
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 803, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 803, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -6581,7 +6662,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  * 
  *             # Until ticket #99 is fixed, use integers to avoid warnings
  */
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 823, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 823, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_Raise(__pyx_t_4, 0, 0, 0);
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -7237,24 +7318,24 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_i, __pyx_k_i, sizeof(__pyx_k_i), 0, 0, 1, 1},
   {&__pyx_n_s_idx, __pyx_k_idx, sizeof(__pyx_k_idx), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
+  {&__pyx_n_s_int32, __pyx_k_int32, sizeof(__pyx_k_int32), 0, 0, 1, 1},
   {&__pyx_n_s_inter, __pyx_k_inter, sizeof(__pyx_k_inter), 0, 0, 1, 1},
   {&__pyx_n_s_j, __pyx_k_j, sizeof(__pyx_k_j), 0, 0, 1, 1},
   {&__pyx_n_s_left, __pyx_k_left, sizeof(__pyx_k_left), 0, 0, 1, 1},
   {&__pyx_n_s_m, __pyx_k_m, sizeof(__pyx_k_m), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_mapping, __pyx_k_mapping, sizeof(__pyx_k_mapping), 0, 0, 1, 1},
-  {&__pyx_n_s_max, __pyx_k_max, sizeof(__pyx_k_max), 0, 0, 1, 1},
   {&__pyx_n_s_mfrom, __pyx_k_mfrom, sizeof(__pyx_k_mfrom), 0, 0, 1, 1},
   {&__pyx_n_s_min_leaf, __pyx_k_min_leaf, sizeof(__pyx_k_min_leaf), 0, 0, 1, 1},
   {&__pyx_n_s_move, __pyx_k_move, sizeof(__pyx_k_move), 0, 0, 1, 1},
   {&__pyx_n_s_mto, __pyx_k_mto, sizeof(__pyx_k_mto), 0, 0, 1, 1},
+  {&__pyx_n_s_n, __pyx_k_n, sizeof(__pyx_k_n), 0, 0, 1, 1},
   {&__pyx_n_s_n_classes, __pyx_k_n_classes, sizeof(__pyx_k_n_classes), 0, 0, 1, 1},
   {&__pyx_n_s_n_values, __pyx_k_n_values, sizeof(__pyx_k_n_values), 0, 0, 1, 1},
   {&__pyx_kp_u_ndarray_is_not_C_contiguous, __pyx_k_ndarray_is_not_C_contiguous, sizeof(__pyx_k_ndarray_is_not_C_contiguous), 0, 1, 0, 0},
   {&__pyx_kp_u_ndarray_is_not_Fortran_contiguou, __pyx_k_ndarray_is_not_Fortran_contiguou, sizeof(__pyx_k_ndarray_is_not_Fortran_contiguou), 0, 1, 0, 0},
   {&__pyx_n_s_node_idx, __pyx_k_node_idx, sizeof(__pyx_k_node_idx), 0, 0, 1, 1},
   {&__pyx_n_s_node_ptr, __pyx_k_node_ptr, sizeof(__pyx_k_node_ptr), 0, 0, 1, 1},
-  {&__pyx_n_s_np, __pyx_k_np, sizeof(__pyx_k_np), 0, 0, 1, 1},
   {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
   {&__pyx_n_s_p, __pyx_k_p, sizeof(__pyx_k_p), 0, 0, 1, 1},
   {&__pyx_n_s_predictions, __pyx_k_predictions, sizeof(__pyx_k_predictions), 0, 0, 1, 1},
@@ -7262,10 +7343,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_right, __pyx_k_right, sizeof(__pyx_k_right), 0, 0, 1, 1},
   {&__pyx_n_s_sleft, __pyx_k_sleft, sizeof(__pyx_k_sleft), 0, 0, 1, 1},
+  {&__pyx_n_s_start_inter, __pyx_k_start_inter, sizeof(__pyx_k_start_inter), 0, 0, 1, 1},
   {&__pyx_n_s_sum, __pyx_k_sum, sizeof(__pyx_k_sum), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_thresholds, __pyx_k_thresholds, sizeof(__pyx_k_thresholds), 0, 0, 1, 1},
   {&__pyx_n_s_to_right, __pyx_k_to_right, sizeof(__pyx_k_to_right), 0, 0, 1, 1},
+  {&__pyx_n_s_tx, __pyx_k_tx, sizeof(__pyx_k_tx), 0, 0, 1, 1},
   {&__pyx_kp_u_unknown_dtype_code_in_numpy_pxd, __pyx_k_unknown_dtype_code_in_numpy_pxd, sizeof(__pyx_k_unknown_dtype_code_in_numpy_pxd), 0, 1, 0, 0},
   {&__pyx_n_s_val, __pyx_k_val, sizeof(__pyx_k_val), 0, 0, 1, 1},
   {&__pyx_n_s_val_distr, __pyx_k_val_distr, sizeof(__pyx_k_val_distr), 0, 0, 1, 1},
@@ -7299,16 +7382,27 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "Orange/classification/_tree_scorers.pyx":151
+  /* "Orange/classification/_tree_scorers.pyx":150
  *     # Initial split (min_leaf on the left)
  *     if N <= min_leaf:
  *         return 0, 0             # <<<<<<<<<<<<<<
+ *     sum = 0
  *     for i in range(min_leaf - 1):  # one will be added in the loop
- *         sum += y[idx[i]]
  */
-  __pyx_tuple__2 = PyTuple_Pack(2, __pyx_int_0, __pyx_int_0); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_tuple__2 = PyTuple_Pack(2, __pyx_int_0, __pyx_int_0); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 150, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
+
+  /* "Orange/classification/_tree_scorers.pyx":195
+ *             N += 1
+ *     if N == 0:
+ *         return 0, 0             # <<<<<<<<<<<<<<
+ *     left = N
+ *     sleft = sum = numpy.sum(group_sums)
+ */
+  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_int_0, __pyx_int_0); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 195, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__3);
+  __Pyx_GIVEREF(__pyx_tuple__3);
 
   /* "../../../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":218
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)
@@ -7317,9 +7411,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  */
-  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_C_contiguous); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(1, 218, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__3);
-  __Pyx_GIVEREF(__pyx_tuple__3);
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_C_contiguous); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(1, 218, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__4);
+  __Pyx_GIVEREF(__pyx_tuple__4);
 
   /* "../../../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":222
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
@@ -7328,9 +7422,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             info.buf = PyArray_DATA(self)
  */
-  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_Fortran_contiguou); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(1, 222, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__4);
-  __Pyx_GIVEREF(__pyx_tuple__4);
+  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_Fortran_contiguou); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(1, 222, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__5);
+  __Pyx_GIVEREF(__pyx_tuple__5);
 
   /* "../../../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":259
  *                 if ((descr.byteorder == c'>' and little_endian) or
@@ -7339,9 +7433,9 @@ static int __Pyx_InitCachedConstants(void) {
  *                 if   t == NPY_BYTE:        f = "b"
  *                 elif t == NPY_UBYTE:       f = "B"
  */
-  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(1, 259, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__5);
-  __Pyx_GIVEREF(__pyx_tuple__5);
+  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(1, 259, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__6);
+  __Pyx_GIVEREF(__pyx_tuple__6);
 
   /* "../../../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":799
  * 
@@ -7350,9 +7444,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *         if ((child.byteorder == c'>' and little_endian) or
  */
-  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(1, 799, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__6);
-  __Pyx_GIVEREF(__pyx_tuple__6);
+  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(1, 799, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__7);
+  __Pyx_GIVEREF(__pyx_tuple__7);
 
   /* "../../../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":803
  *         if ((child.byteorder == c'>' and little_endian) or
@@ -7361,9 +7455,9 @@ static int __Pyx_InitCachedConstants(void) {
  *             # One could encode it in the format string and have Cython
  *             # complain instead, BUT: < and > in format strings also imply
  */
-  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(1, 803, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__7);
-  __Pyx_GIVEREF(__pyx_tuple__7);
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(1, 803, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__8);
+  __Pyx_GIVEREF(__pyx_tuple__8);
 
   /* "../../../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":823
  *             t = child.type_num
@@ -7372,9 +7466,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             # Until ticket #99 is fixed, use integers to avoid warnings
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor_2); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(1, 823, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__8);
-  __Pyx_GIVEREF(__pyx_tuple__8);
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor_2); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(1, 823, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
 
   /* "Orange/classification/_tree_scorers.pyx":17
  * @cython.boundscheck(False)
@@ -7383,10 +7477,10 @@ static int __Pyx_InitCachedConstants(void) {
  *                            np.ndarray[np.float64_t, ndim=1] y,
  *                            np.ndarray[np.int64_t, ndim=1] idx,
  */
-  __pyx_tuple__9 = PyTuple_Pack(15, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_idx, __pyx_n_s_n_classes, __pyx_n_s_min_leaf, __pyx_n_s_distr, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_entro, __pyx_n_s_class_entro, __pyx_n_s_best_entro, __pyx_n_s_p, __pyx_n_s_curr_y, __pyx_n_s_best_idx, __pyx_n_s_N); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 17, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__9);
-  __Pyx_GIVEREF(__pyx_tuple__9);
-  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(5, 0, 15, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_threshold_entropy, 17, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __pyx_tuple__10 = PyTuple_Pack(15, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_idx, __pyx_n_s_n_classes, __pyx_n_s_min_leaf, __pyx_n_s_distr, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_entro, __pyx_n_s_class_entro, __pyx_n_s_best_entro, __pyx_n_s_p, __pyx_n_s_curr_y, __pyx_n_s_best_idx, __pyx_n_s_N); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__10);
+  __Pyx_GIVEREF(__pyx_tuple__10);
+  __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(5, 0, 15, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__10, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_threshold_entropy, 17, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 17, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":65
  * @cython.boundscheck(False)
@@ -7395,10 +7489,10 @@ static int __Pyx_InitCachedConstants(void) {
  *                               np.ndarray[np.float64_t, ndim=1] class_distr,
  *                               np.ndarray[np.float64_t, ndim=1] val_distr,
  */
-  __pyx_tuple__11 = PyTuple_Pack(24, __pyx_n_s_cont, __pyx_n_s_class_distr, __pyx_n_s_val_distr, __pyx_n_s_min_leaf, __pyx_n_s_n_classes, __pyx_n_s_n_values, __pyx_n_s_distr, __pyx_n_s_mfrom, __pyx_n_s_mto, __pyx_n_s_left, __pyx_n_s_right, __pyx_n_s_i, __pyx_n_s_change, __pyx_n_s_to_right, __pyx_n_s_allowed, __pyx_n_s_m, __pyx_n_s_best_mapping, __pyx_n_s_move, __pyx_n_s_mapping, __pyx_n_s_previous, __pyx_n_s_entro, __pyx_n_s_class_entro, __pyx_n_s_best_entro, __pyx_n_s_N); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 65, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__11);
-  __Pyx_GIVEREF(__pyx_tuple__11);
-  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(4, 0, 24, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__11, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_binarization_entropy, 65, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 65, __pyx_L1_error)
+  __pyx_tuple__12 = PyTuple_Pack(24, __pyx_n_s_cont, __pyx_n_s_class_distr, __pyx_n_s_val_distr, __pyx_n_s_min_leaf, __pyx_n_s_n_classes, __pyx_n_s_n_values, __pyx_n_s_distr, __pyx_n_s_mfrom, __pyx_n_s_mto, __pyx_n_s_left, __pyx_n_s_right, __pyx_n_s_i, __pyx_n_s_change, __pyx_n_s_to_right, __pyx_n_s_allowed, __pyx_n_s_m, __pyx_n_s_best_mapping, __pyx_n_s_move, __pyx_n_s_mapping, __pyx_n_s_previous, __pyx_n_s_entro, __pyx_n_s_class_entro, __pyx_n_s_best_entro, __pyx_n_s_N); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 65, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__12);
+  __Pyx_GIVEREF(__pyx_tuple__12);
+  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(4, 0, 24, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_binarization_entropy, 65, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 65, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":140
  * @cython.boundscheck(False)
@@ -7407,46 +7501,46 @@ static int __Pyx_InitCachedConstants(void) {
  *                        np.ndarray[np.float64_t, ndim=1] y,
  *                        np.ndarray[np.int64_t, ndim=1] idx,
  */
-  __pyx_tuple__13 = PyTuple_Pack(12, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_idx, __pyx_n_s_min_leaf, __pyx_n_s_sleft, __pyx_n_s_sum, __pyx_n_s_inter, __pyx_n_s_best_inter, __pyx_n_s_curr_y, __pyx_n_s_i, __pyx_n_s_best_idx, __pyx_n_s_N); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 140, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__13);
-  __Pyx_GIVEREF(__pyx_tuple__13);
-  __pyx_codeobj__14 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__13, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_threshold_MSE, 140, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__14)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __pyx_tuple__14 = PyTuple_Pack(11, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_idx, __pyx_n_s_min_leaf, __pyx_n_s_sleft, __pyx_n_s_sum, __pyx_n_s_inter, __pyx_n_s_best_inter, __pyx_n_s_i, __pyx_n_s_best_idx, __pyx_n_s_N); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__14);
+  __Pyx_GIVEREF(__pyx_tuple__14);
+  __pyx_codeobj__15 = (PyObject*)__Pyx_PyCode_New(4, 0, 11, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__14, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_threshold_MSE, 140, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__15)) __PYX_ERR(0, 140, __pyx_L1_error)
 
-  /* "Orange/classification/_tree_scorers.pyx":172
+  /* "Orange/classification/_tree_scorers.pyx":173
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
  *                           np.ndarray[np.float64_t, ndim=1] y,
- *                           int min_leaf):
+ *                           int n_values, int min_leaf):
  */
-  __pyx_tuple__15 = PyTuple_Pack(21, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_min_leaf, __pyx_n_s_n_values, __pyx_n_s_sleft, __pyx_n_s_sum, __pyx_n_s_left, __pyx_n_s_i, __pyx_n_s_change, __pyx_n_s_to_right, __pyx_n_s_allowed, __pyx_n_s_m, __pyx_n_s_best_mapping, __pyx_n_s_move, __pyx_n_s_mapping, __pyx_n_s_previous, __pyx_n_s_inter, __pyx_n_s_best_inter, __pyx_n_s_N, __pyx_n_s_group_sizes, __pyx_n_s_group_sums); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 172, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__15);
-  __Pyx_GIVEREF(__pyx_tuple__15);
-  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(3, 0, 21, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__15, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_binarization_MSE, 172, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __pyx_tuple__16 = PyTuple_Pack(23, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_n_values, __pyx_n_s_min_leaf, __pyx_n_s_sleft, __pyx_n_s_sum, __pyx_n_s_val, __pyx_n_s_left, __pyx_n_s_i, __pyx_n_s_change, __pyx_n_s_to_right, __pyx_n_s_allowed, __pyx_n_s_m, __pyx_n_s_best_mapping, __pyx_n_s_move, __pyx_n_s_mapping, __pyx_n_s_previous, __pyx_n_s_inter, __pyx_n_s_best_inter, __pyx_n_s_start_inter, __pyx_n_s_N, __pyx_n_s_group_sizes, __pyx_n_s_group_sums); if (unlikely(!__pyx_tuple__16)) __PYX_ERR(0, 173, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__16);
+  __Pyx_GIVEREF(__pyx_tuple__16);
+  __pyx_codeobj__17 = (PyObject*)__Pyx_PyCode_New(4, 0, 23, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__16, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_binarization_MSE, 173, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__17)) __PYX_ERR(0, 173, __pyx_L1_error)
 
-  /* "Orange/classification/_tree_scorers.pyx":223
+  /* "Orange/classification/_tree_scorers.pyx":232
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
- *                         np.ndarray[np.float64_t, ndim=1] y):
- *     cdef int n_values = int(np.max(x))
+ *                         np.ndarray[np.float64_t, ndim=1] y,
+ *                         int n_values, int min_leaf):
  */
-  __pyx_tuple__17 = PyTuple_Pack(9, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_n_values, __pyx_n_s_i, __pyx_n_s_N, __pyx_n_s_sum, __pyx_n_s_group_sizes, __pyx_n_s_group_sums, __pyx_n_s_inter); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 223, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__17);
-  __Pyx_GIVEREF(__pyx_tuple__17);
-  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(2, 0, 9, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_grouped_MSE, 223, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 223, __pyx_L1_error)
+  __pyx_tuple__18 = PyTuple_Pack(11, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_n_values, __pyx_n_s_min_leaf, __pyx_n_s_i, __pyx_n_s_n, __pyx_n_s_sum, __pyx_n_s_tx, __pyx_n_s_group_sizes, __pyx_n_s_group_sums, __pyx_n_s_inter); if (unlikely(!__pyx_tuple__18)) __PYX_ERR(0, 232, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__18);
+  __Pyx_GIVEREF(__pyx_tuple__18);
+  __pyx_codeobj__19 = (PyObject*)__Pyx_PyCode_New(4, 0, 11, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__18, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_grouped_MSE, 232, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__19)) __PYX_ERR(0, 232, __pyx_L1_error)
 
-  /* "Orange/classification/_tree_scorers.pyx":246
+  /* "Orange/classification/_tree_scorers.pyx":262
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,             # <<<<<<<<<<<<<<
  *                         np.ndarray[np.int32_t, ndim=1] code,
  *                         np.ndarray[np.float64_t, ndim=2] class_distrs,
  */
-  __pyx_tuple__19 = PyTuple_Pack(10, __pyx_n_s_X, __pyx_n_s_code, __pyx_n_s_class_distrs, __pyx_n_s_thresholds, __pyx_n_s_node_ptr, __pyx_n_s_node_idx, __pyx_n_s_i, __pyx_n_s_val_idx, __pyx_n_s_val, __pyx_n_s_predictions); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(0, 246, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__19);
-  __Pyx_GIVEREF(__pyx_tuple__19);
-  __pyx_codeobj__20 = (PyObject*)__Pyx_PyCode_New(4, 0, 10, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__19, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_predictions, 246, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__20)) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_tuple__20 = PyTuple_Pack(10, __pyx_n_s_X, __pyx_n_s_code, __pyx_n_s_class_distrs, __pyx_n_s_thresholds, __pyx_n_s_node_ptr, __pyx_n_s_node_idx, __pyx_n_s_i, __pyx_n_s_val_idx, __pyx_n_s_val, __pyx_n_s_predictions); if (unlikely(!__pyx_tuple__20)) __PYX_ERR(0, 262, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__20);
+  __Pyx_GIVEREF(__pyx_tuple__20);
+  __pyx_codeobj__21 = (PyObject*)__Pyx_PyCode_New(4, 0, 10, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__20, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_predictions, 262, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__21)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -7615,40 +7709,40 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_find_threshold_MSE, __pyx_t_1) < 0) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":172
+  /* "Orange/classification/_tree_scorers.pyx":173
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
  *                           np.ndarray[np.float64_t, ndim=1] y,
- *                           int min_leaf):
+ *                           int n_values, int min_leaf):
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_7find_binarization_MSE, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 172, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_7find_binarization_MSE, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 173, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_find_binarization_MSE, __pyx_t_1) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_find_binarization_MSE, __pyx_t_1) < 0) __PYX_ERR(0, 173, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":223
+  /* "Orange/classification/_tree_scorers.pyx":232
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,             # <<<<<<<<<<<<<<
- *                         np.ndarray[np.float64_t, ndim=1] y):
- *     cdef int n_values = int(np.max(x))
+ *                         np.ndarray[np.float64_t, ndim=1] y,
+ *                         int n_values, int min_leaf):
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_9compute_grouped_MSE, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 223, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_9compute_grouped_MSE, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 232, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_grouped_MSE, __pyx_t_1) < 0) __PYX_ERR(0, 223, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_grouped_MSE, __pyx_t_1) < 0) __PYX_ERR(0, 232, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/classification/_tree_scorers.pyx":246
+  /* "Orange/classification/_tree_scorers.pyx":262
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,             # <<<<<<<<<<<<<<
  *                         np.ndarray[np.int32_t, ndim=1] code,
  *                         np.ndarray[np.float64_t, ndim=2] class_distrs,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_11compute_predictions, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_11compute_predictions, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_predictions, __pyx_t_1) < 0) __PYX_ERR(0, 246, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_predictions, __pyx_t_1) < 0) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "Orange/classification/_tree_scorers.pyx":1
@@ -8504,6 +8598,19 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
 }
 #endif
 
+/* ExtTypeTest */
+    static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type) {
+    if (unlikely(!type)) {
+        PyErr_SetString(PyExc_SystemError, "Missing type object");
+        return 0;
+    }
+    if (likely(PyObject_TypeCheck(obj, type)))
+        return 1;
+    PyErr_Format(PyExc_TypeError, "Cannot convert %.200s to %.200s",
+                 Py_TYPE(obj)->tp_name, type->tp_name);
+    return 0;
+}
+
 /* PyObjectCallMethO */
     #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
@@ -8558,19 +8665,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObjec
     return result;
 }
 #endif
-
-/* ExtTypeTest */
-      static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type) {
-    if (unlikely(!type)) {
-        PyErr_SetString(PyExc_SystemError, "Missing type object");
-        return 0;
-    }
-    if (likely(PyObject_TypeCheck(obj, type)))
-        return 1;
-    PyErr_Format(PyExc_TypeError, "Cannot convert %.200s to %.200s",
-                 Py_TYPE(obj)->tp_name, type->tp_name);
-    return 0;
-}
 
 /* PyIntFromDouble */
       #if PY_MAJOR_VERSION < 3
@@ -9349,6 +9443,33 @@ static void __Pyx_ReleaseBuffer(Py_buffer *view) {
     }
 }
 
+/* CIntToPy */
+          static CYTHON_INLINE PyObject* __Pyx_PyInt_From_unsigned_int(unsigned int value) {
+    const unsigned int neg_one = (unsigned int) -1, const_zero = (unsigned int) 0;
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(unsigned int) < sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(unsigned int) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+        } else if (sizeof(unsigned int) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+        }
+    } else {
+        if (sizeof(unsigned int) <= sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(unsigned int) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+        }
+    }
+    {
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        unsigned char *bytes = (unsigned char *)&value;
+        return _PyLong_FromByteArray(bytes, sizeof(unsigned int),
+                                     little, !is_unsigned);
+    }
+}
+
 /* None */
           #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
@@ -9803,6 +9924,191 @@ raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
         "can't convert negative value to int");
     return (int) -1;
+}
+
+/* CIntFromPy */
+          static CYTHON_INLINE unsigned int __Pyx_PyInt_As_unsigned_int(PyObject *x) {
+    const unsigned int neg_one = (unsigned int) -1, const_zero = (unsigned int) 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(unsigned int) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(unsigned int, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (unsigned int) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (unsigned int) 0;
+                case  1: __PYX_VERIFY_RETURN_INT(unsigned int, digit, digits[0])
+                case 2:
+                    if (8 * sizeof(unsigned int) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) >= 2 * PyLong_SHIFT) {
+                            return (unsigned int) (((((unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0]));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(unsigned int) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) >= 3 * PyLong_SHIFT) {
+                            return (unsigned int) (((((((unsigned int)digits[2]) << PyLong_SHIFT) | (unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0]));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(unsigned int) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) >= 4 * PyLong_SHIFT) {
+                            return (unsigned int) (((((((((unsigned int)digits[3]) << PyLong_SHIFT) | (unsigned int)digits[2]) << PyLong_SHIFT) | (unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0]));
+                        }
+                    }
+                    break;
+            }
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (unsigned int) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(unsigned int) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(unsigned int, unsigned long, PyLong_AsUnsignedLong(x))
+            } else if (sizeof(unsigned int) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(unsigned int, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+            }
+        } else {
+#if CYTHON_USE_PYLONG_INTERNALS
+            const digit* digits = ((PyLongObject*)x)->ob_digit;
+            switch (Py_SIZE(x)) {
+                case  0: return (unsigned int) 0;
+                case -1: __PYX_VERIFY_RETURN_INT(unsigned int, sdigit, (sdigit) (-(sdigit)digits[0]))
+                case  1: __PYX_VERIFY_RETURN_INT(unsigned int,  digit, +digits[0])
+                case -2:
+                    if (8 * sizeof(unsigned int) - 1 > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) - 1 > 2 * PyLong_SHIFT) {
+                            return (unsigned int) (((unsigned int)-1)*(((((unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0])));
+                        }
+                    }
+                    break;
+                case 2:
+                    if (8 * sizeof(unsigned int) > 1 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) - 1 > 2 * PyLong_SHIFT) {
+                            return (unsigned int) ((((((unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0])));
+                        }
+                    }
+                    break;
+                case -3:
+                    if (8 * sizeof(unsigned int) - 1 > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) - 1 > 3 * PyLong_SHIFT) {
+                            return (unsigned int) (((unsigned int)-1)*(((((((unsigned int)digits[2]) << PyLong_SHIFT) | (unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0])));
+                        }
+                    }
+                    break;
+                case 3:
+                    if (8 * sizeof(unsigned int) > 2 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) - 1 > 3 * PyLong_SHIFT) {
+                            return (unsigned int) ((((((((unsigned int)digits[2]) << PyLong_SHIFT) | (unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0])));
+                        }
+                    }
+                    break;
+                case -4:
+                    if (8 * sizeof(unsigned int) - 1 > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) - 1 > 4 * PyLong_SHIFT) {
+                            return (unsigned int) (((unsigned int)-1)*(((((((((unsigned int)digits[3]) << PyLong_SHIFT) | (unsigned int)digits[2]) << PyLong_SHIFT) | (unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0])));
+                        }
+                    }
+                    break;
+                case 4:
+                    if (8 * sizeof(unsigned int) > 3 * PyLong_SHIFT) {
+                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
+                            __PYX_VERIFY_RETURN_INT(unsigned int, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
+                        } else if (8 * sizeof(unsigned int) - 1 > 4 * PyLong_SHIFT) {
+                            return (unsigned int) ((((((((((unsigned int)digits[3]) << PyLong_SHIFT) | (unsigned int)digits[2]) << PyLong_SHIFT) | (unsigned int)digits[1]) << PyLong_SHIFT) | (unsigned int)digits[0])));
+                        }
+                    }
+                    break;
+            }
+#endif
+            if (sizeof(unsigned int) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT_EXC(unsigned int, long, PyLong_AsLong(x))
+            } else if (sizeof(unsigned int) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT_EXC(unsigned int, PY_LONG_LONG, PyLong_AsLongLong(x))
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            unsigned int val;
+            PyObject *v = __Pyx_PyNumber_IntOrLong(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (unsigned int) -1;
+        }
+    } else {
+        unsigned int val;
+        PyObject *tmp = __Pyx_PyNumber_IntOrLong(x);
+        if (!tmp) return (unsigned int) -1;
+        val = __Pyx_PyInt_As_unsigned_int(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to unsigned int");
+    return (unsigned int) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to unsigned int");
+    return (unsigned int) -1;
 }
 
 /* CIntFromPy */

@@ -3,15 +3,14 @@ from PyQt4.QtGui import QFont, QBrush
 from PyQt4.QtCore import Qt
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
-from Orange.classification.tree import TreeLearner
-from Orange.regression.tree import TreeRegressionLearner
+from Orange.classification.tree import OrangeTreeLearner
+from Orange.regression.tree import OrangeTreeLearner as RegressionTreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
 from Orange.canvas.report.owreport import OWReport
 from Orange.widgets import gui
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.classify.owclassificationtree import OWClassificationTree
-from Orange.widgets.classify.owclassificationtreegraph import OWClassificationTreeGraph
 from Orange.widgets.classify.owknn import OWKNNLearner
 from Orange.widgets.classify.owlogisticregression import OWLogisticRegression
 from Orange.widgets.classify.owmajority import OWMajority
@@ -42,7 +41,6 @@ from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.owtestlearners import OWTestLearners
 from Orange.widgets.regression.owregressiontree import OWRegressionTree
-from Orange.widgets.regression.owregressiontreegraph import OWRegressionTreeGraph
 from Orange.widgets.regression.owknnregression import OWKNNRegression
 from Orange.widgets.regression.owmean import OWMean
 from Orange.widgets.regression.owsvmregression import OWSVMRegression
@@ -63,6 +61,7 @@ from Orange.widgets.visualize.owscattermap import OWScatterMap
 from Orange.widgets.visualize.owscatterplot import OWScatterPlot
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
 from Orange.widgets.visualize.owvenndiagram import OWVennDiagram
+from Orange.widgets.visualize.owtreeviewer import OWTreeGraph
 
 
 class TestReport(WidgetTest):
@@ -136,9 +135,9 @@ class TestReportWidgets(WidgetTest):
     dist_widgets = [OWDistanceMap, OWHierarchicalClustering]
     visu_widgets = [OWBoxPlot, OWDistributions, OWHeatMap, OWLinearProjection,
                     OWMosaicDisplay, OWScatterPlot,
-                    OWSieveDiagram, OWScatterMap, OWVennDiagram]
-    spec_widgets = [OWClassificationTreeGraph, OWTestLearners,
-                    OWRegressionTreeGraph]
+                    OWSieveDiagram, OWScatterMap, OWVennDiagram,
+                    OWTreeGraph]
+    spec_widgets = [OWTestLearners]
 
     def _create_report(self, widgets, rep, data):
         for widget in widgets:
@@ -155,8 +154,8 @@ class TestReportWidgets(WidgetTest):
         data = Table("zoo")
         widgets = self.clas_widgets
 
-        w = OWClassificationTreeGraph()
-        clf = TreeLearner(max_depth=3)(data)
+        w = OWTreeGraph()
+        clf = OrangeTreeLearner(max_depth=3)(data)
         clf.instances = data
         w.ctree(clf)
         w.create_report_html()
@@ -199,8 +198,8 @@ class TestReportWidgets(WidgetTest):
         data = Table("housing")
         widgets = self.regr_widgets
 
-        w = OWRegressionTreeGraph()
-        mod = TreeRegressionLearner(max_depth=3)(data)
+        w = OWTreeGraph()
+        mod = RegressionTreeLearner(max_depth=3)(data)
         mod.instances = data
         w.ctree(mod)
         w.create_report_html()

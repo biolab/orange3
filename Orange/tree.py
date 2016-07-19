@@ -110,7 +110,7 @@ class Node:
         self.attr_idx = attr_idx
         self.value = value
         self.children = None
-        self.subset = np.array([])
+        self.subset = np.array([], dtype=np.int32)
 
     def descend(self, inst):
         """Return the child for the given data instance"""
@@ -123,13 +123,14 @@ class DiscreteNode(Node):
         super().__init__(attr, attr_idx, value)
 
     def descend(self, inst):
-        return int(inst[self.attr_idx])
+        val = inst[self.attr_idx]
+        return np.nan if np.isnan(val) else int(val)
 
     def describe_branch(self, i):
         return self.attr.values[i]
 
 
-class DiscreteNodeMapping(Node):
+class MappedDiscreteNode(Node):
     """Node for discrete attributes with mapping to branches
 
     Attributes:
@@ -171,7 +172,7 @@ class DiscreteNodeMapping(Node):
             [-1], dtype=np.int16)
         col_x = col_x.flatten()  # also ensures copy
         col_x[np.isnan(col_x)] = n_values
-        return mapping[:-1], mapping[col_x.astype(int)]
+        return mapping[:-1], mapping[col_x.astype(np.int16)]
 
 
 class NumericNode(Node):
@@ -211,7 +212,7 @@ class OrangeTreeModel(Model, Tree):
         rootval = self._root.value
         return np.empty((n,) + rootval.shape, dtype=rootval.dtype)
 
-    def predict_by_nodes(self, X):
+    def get_values_by_nodes(self, X):
         """Prediction that does not use compiled trees; for demo only"""
         n = len(X)
         y = self._prepare_predictions(n)
@@ -226,7 +227,7 @@ class OrangeTreeModel(Model, Tree):
             y[i] = node.value
         return y
 
-    def predict_in_python(self, X):
+    def get_values_in_python(self, X):
         """Prediction with compiled code, but in Python; for demo only"""
         n = len(X)
         y = self._prepare_predictions(n)
@@ -254,10 +255,15 @@ class OrangeTreeModel(Model, Tree):
 
     def predict(self, X):
         predictions = self.get_values(X)
-        if self.domain.class_var.is_discrete:
-            return predictions / np.sum(predictions, axis=1)
-        else:
+        if self.domain.class_var.is_continuous:
             return predictions[:, 0]
+        else:
+            sums = np.sum(predictions, axis=1)
+            # This can't happen because nodes with 0 instances are prohibited
+            # zeros = (sums == 0)
+            # predictions[zeros] = 1
+            # sums[zeros] = predictions.shape[1]
+            return predictions / sums[:, np.newaxis]
 
     @property
     @lru_cache(10)
@@ -309,26 +315,27 @@ class OrangeTreeModel(Model, Tree):
             return self.instances[np.unique(np.hstack(subsets))]
 
     def print_tree(self, node=None, level=0):
-        """Simple tree printer for debug purposes"""
-        # pylint: disable=bad-builtin
+        """String representation of tree for debug purposees"""
         if node is None:
             node = self.root
         if node.children is None:
-            return
+            return ""
+        res = ""
         for branch_no, child in enumerate(node.children):
-            print("{:>20} {}{} {}".format(
+            res += ("{:>20} {}{} {}\n".format(
                 str(child.value), "    " * level, node.attr.name,
                 node.describe_branch(branch_no)))
-            self.print_tree(child, level + 1)
+            res += self.print_tree(child, level + 1)
+        return res
 
-    NODE_TYPES = [Node, DiscreteNode, DiscreteNodeMapping, NumericNode]
+    NODE_TYPES = [Node, DiscreteNode, MappedDiscreteNode, NumericNode]
 
     def _compile(self):
         def _compute_sizes(node):
             nonlocal nnodes, codesize
             nnodes += 1
             codesize += 2  # node type + node index
-            if isinstance(node, DiscreteNodeMapping):
+            if isinstance(node, MappedDiscreteNode):
                 codesize += len(node.mapping)
             if node.children:
                 codesize += 1 + len(node.children)  # attr index + children ptrs
@@ -348,7 +355,7 @@ class OrangeTreeModel(Model, Tree):
             # are mapped to branches
 
             # Thresholds and class distributions are stored in separate
-            # 1-d and 2-d array arrays of type np.float, indexed be node index
+            # 1-d and 2-d array arrays of type np.float, indexed by node index
             # The lengths of both equal the node count; we would gain (if
             # anything) by not reserving space for unused threshold space
             nonlocal code_ptr, node_idx
@@ -374,7 +381,7 @@ class OrangeTreeModel(Model, Tree):
             jump_table = self._code[code_ptr:code_ptr + jump_table_size]
             code_ptr += jump_table_size
             child_indices = [_compile_node(child) for child in node.children]
-            if isinstance(node, DiscreteNodeMapping):
+            if isinstance(node, MappedDiscreteNode):
                 jump_table[:] = np.array(child_indices)[node.mapping]
             else:
                 jump_table[:] = child_indices

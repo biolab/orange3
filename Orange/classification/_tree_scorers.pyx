@@ -142,13 +142,13 @@ def find_threshold_MSE(np.ndarray[np.float64_t, ndim=1] x,
                        np.ndarray[np.int64_t, ndim=1] idx,
                        int min_leaf):
     cdef float sleft = 0, sum, inter, best_inter
-    cdef float curr_y
     cdef int i, best_idx = 0
     cdef int N = idx.shape[0]
 
     # Initial split (min_leaf on the left)
     if N <= min_leaf:
         return 0, 0
+    sum = 0
     for i in range(min_leaf - 1):  # one will be added in the loop
         sum += y[idx[i]]
     sleft = sum
@@ -164,6 +164,7 @@ def find_threshold_MSE(np.ndarray[np.float64_t, ndim=1] x,
         if inter > best_inter:
             best_inter = inter
             best_idx = i
+    # punishment for missing values is delivered outside
     return (best_inter - (sum * sum) / N) / N, x[idx[best_idx]]
 
 
@@ -171,24 +172,30 @@ def find_threshold_MSE(np.ndarray[np.float64_t, ndim=1] x,
 @cython.wraparound(False)
 def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,
                           np.ndarray[np.float64_t, ndim=1] y,
-                          int min_leaf):
-    cdef int n_values = int(np.max(x))
-    cdef float sleft, sum
-    cdef int left
-    cdef int i, change, to_right, allowed, m
-    cdef int best_mapping, move, mapping, previous
-    cdef float inter, best_inter
-    cdef int N = x.shape[0]
+                          int n_values, int min_leaf):
+    cdef float sleft, sum, val
+    cdef unsigned int left
+    cdef unsigned int i, change, to_right, allowed, m
+    cdef unsigned int best_mapping, move, mapping, previous
+    cdef float inter, best_inter, start_inter
+    cdef unsigned int N
 
-    cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
+    cdef np.ndarray[np.int32_t, ndim=1] group_sizes = \
+        numpy.zeros(n_values, dtype=numpy.int32)
     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
 
-    for i in range(N):
-        group_sizes[int(x[i])] += 1
-        group_sums[int(x[i])] += y[i]
+    N = 0
+    for i in range(x.shape[0]):
+        val = x[i]
+        if not npy_isnan(val):
+            group_sizes[int(val)] += 1
+            group_sums[int(val)] += y[i]
+            N += 1
+    if N == 0:
+        return 0, 0
     left = N
-    sleft = sum = np.sum(group_sums)
-    best_inter = (sum * sum) / N
+    sleft = sum = numpy.sum(group_sums)
+    best_inter = start_inter = (sum * sum) / N
 
     previous = 0
     # Gray code
@@ -212,33 +219,42 @@ def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,
 
         if left >= min_leaf and (N - left) >= min_leaf:
             inter = sleft * sleft / left + (sum - sleft) * (sum - sleft) / (N - left)
-            if inter < best_inter:
+            if inter > best_inter:
                 best_inter = inter
                 best_mapping = mapping
-    return (best_inter - sum * sum / N) / N, best_mapping
+    # factor N / x.shape[0] is the punishment for missing values
+    # return (best_inter - start_inter) / N * (N / x.shape[0]), best_mapping
+    return (best_inter - start_inter) / x.shape[0], best_mapping
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,
-                        np.ndarray[np.float64_t, ndim=1] y):
-    cdef int n_values = int(np.max(x))
-    cdef int i
-    cdef int N = x.shape[0]
-    cdef float sum = 0
+                        np.ndarray[np.float64_t, ndim=1] y,
+                        int n_values, int min_leaf):
+    cdef int i, n
+    cdef float sum = 0, tx
 
-    cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values)
+    cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
 
-    for i in range(N):
-        group_sizes[int(x[i])] += 1
-        group_sums[int(x[i])] += y[i]
+    for i in range(x.shape[0]):
+        tx = x[i]
+        if not npy_isnan(tx):
+            group_sizes[int(tx)] += 1
+            group_sums[int(tx)] += y[i]
     inter = 0
+    n = 0
     for i in range(n_values):
+        if group_sizes[i] < min_leaf:
+            return 0
         if group_sizes[i]:
             inter += group_sums[i] * group_sums[i] / group_sizes[i]
             sum += group_sums[i]
-    return (inter - sum * sum / N) / N
+            n += group_sizes[i]
+    # factor n / x.shape[0] is the punishment for missing values
+    #return (inter - sum * sum / n) / n * n / x.shape[0]
+    return (inter - sum * sum / n) / x.shape[0]
 
 
 @cython.boundscheck(False)

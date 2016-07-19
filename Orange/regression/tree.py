@@ -1,12 +1,13 @@
+"""Tree inducers: SKL and Orange's own inducer"""
 import numpy as np
 import sklearn.tree as skl_tree
 
-from Orange.tree import Node, DiscreteNode, DiscreteNodeMapping, \
+from Orange.tree import Node, DiscreteNode, MappedDiscreteNode, \
     NumericNode, OrangeTreeModel
 from Orange.regression import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
 
-__all__ = ["TreeRegressionLearner"]
+__all__ = ["TreeRegressionLearner", "OrangeTreeLearner"]
 
 
 class OrangeTreeLearner(Learner):
@@ -21,8 +22,8 @@ class OrangeTreeLearner(Learner):
     def __init__(
             self, *args,
             binarize=True, min_samples_leaf=1, min_samples_split=2,
-            max_depth=None):
-        super().__init__(*args)
+            max_depth=None, **kwargs):
+        super().__init__(*args, **kwargs)
         self.binarize = binarize
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
@@ -40,7 +41,8 @@ class OrangeTreeLearner(Learner):
         attr = attr_no = None
 
         def _score_disc():
-            score = _tree_scorers.compute_grouped_MSE(col_x, col_y)
+            score = _tree_scorers.compute_grouped_MSE(
+                col_x, col_y, len(attr.values), self.min_samples_leaf)
             if score == 0:
                 return None, None, None
             branches = col_x.flatten()
@@ -50,12 +52,12 @@ class OrangeTreeLearner(Learner):
         def _score_disc_bin():
             n_values = len(attr.values)
             if n_values == 2:
-                return _score_disc
+                return _score_disc()
             score, mapping = _tree_scorers.find_binarization_MSE(
-                col_x, col_y, self.min_samples_leaf)
-            mapping, branches = DiscreteNodeMapping.branches_from_mapping(
+                col_x, col_y, n_values, self.min_samples_leaf)
+            mapping, branches = MappedDiscreteNode.branches_from_mapping(
                 data.X[:, attr_no], mapping, len(attr.values))
-            node = DiscreteNodeMapping(attr, attr_no, mapping, None)
+            node = MappedDiscreteNode(attr, attr_no, mapping, None)
             return score, node, branches
 
         def _score_cont():
@@ -78,13 +80,14 @@ class OrangeTreeLearner(Learner):
         domain = data.domain
         col_y = data.Y
         best_node = Node(None, None, None)
-        best_score = best_branches = None
+        best_score = 0
+        best_branches = None
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
             col_x = data[:, attr_no].X.reshape((len(data),))
             sc, node, branches = \
                 disc_scorer() if attr.is_discrete else _score_cont()
-            if node is not None and (best_score is None or sc > best_score):
+            if node is not None and sc > best_score:
                 best_score, best_node, best_branches = sc, node, branches
         return best_node, best_branches
 
@@ -119,9 +122,12 @@ class OrangeTreeLearner(Learner):
                              "attributes with more than {} values".
                              format(self.MAX_BINARIZATION))
 
-        active_inst = np.arange(len(data), dtype=int)
-        model = OrangeTreeModel(data, self.build_tree(data, active_inst))
-        model.root.subset = active_inst
+        active_inst = np.nonzero(~np.isnan(data.Y))[0]
+        root = self.build_tree(data, active_inst)
+        if root.children is None:
+            root.value[np.isnan(root.value)] = 0  # tree without data
+        root.subset = active_inst
+        model = OrangeTreeModel(data, root)
         return model
 
 
