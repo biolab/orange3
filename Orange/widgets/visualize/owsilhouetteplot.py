@@ -27,13 +27,17 @@ class OWSilhouettePlot(widget.OWWidget):
     name = "Silhouette Plot"
     description = "Silhouette Plot"
 
-    icon = "icons/Silhouette.svg"
+    icon = "icons/SilhouettePlot.svg"
+    priority = 510
 
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
                ("Other Data", Orange.data.Table)]
 
-    replaces = ["orangecontrib.prototypes.widgets.owsilhouetteplot.OWSilhouettePlot"]
+    replaces = [
+        "orangecontrib.prototypes.widgets.owsilhouetteplot.OWSilhouettePlot",
+        "Orange.widgets.unsupervised.owsilhouetteplot.OWSilhouettePlot"
+    ]
 
     settingsHandler = settings.PerfectDomainContextHandler()
 
