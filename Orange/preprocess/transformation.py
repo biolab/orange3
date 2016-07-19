@@ -78,8 +78,6 @@ class Indicator(Transformation):
         self.value = value
 
     def transform(self, c):
-        if self.variable.is_discrete:
-            c = c.apply(self.variable.to_val)
         return (c == self.value) * 1
 
 
@@ -100,8 +98,6 @@ class Indicator1(Transformation):
         self.value = value
 
     def transform(self, c):
-        if self.variable.is_discrete:
-            c = c.apply(self.variable.to_val)
         return (c == self.value) * 2 - 1
 
 

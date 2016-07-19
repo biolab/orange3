@@ -167,34 +167,27 @@ class WeightedIndicator_1(Indicator1):
         return t
 
 
-def make_indicator_var(source, value_ind, weight=None, zero_based=True):
+def make_indicator_var(source, value, weight=None, zero_based=True):
     if zero_based and weight is None:
-        indicator = Indicator(source, value=value_ind)
+        indicator = Indicator(source, value=value)
     elif zero_based:
-        indicator = WeightedIndicator(source, value=value_ind, weight=weight)
+        indicator = WeightedIndicator(source, value=value, weight=weight)
     elif weight is None:
-        indicator = Indicator1(source, value=value_ind)
+        indicator = Indicator1(source, value=value)
     else:
-        indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
-    return Orange.data.ContinuousVariable(
-        "{}={}".format(source.name, source.values[value_ind]),
-        compute_value=indicator
-    )
+        indicator = WeightedIndicator_1(source, value=value, weight=weight)
+    return Orange.data.ContinuousVariable("{}={}".format(source.name, value), compute_value=indicator)
 
 
 def dummy_coding(var, base_value=-1, zero_based=True):
-    N = len(var.values)
     if base_value == -1:
-        base_value = var.base_value if var.base_value >= 0 else 0
+        base_value = var.values[var.base_value] if var.base_value >= 0 else var.values[0]
     assert 0 <= base_value < len(var.values)
-    return [make_indicator_var(var, i, zero_based=zero_based)
-            for i in range(N) if i != base_value]
+    return [make_indicator_var(var, v, zero_based=zero_based) for v in var.values if v != base_value]
 
 
 def one_hot_coding(var, zero_based=True):
-    N = len(var.values)
-    return [make_indicator_var(var, i, zero_based=zero_based)
-            for i in range(N)]
+    return [make_indicator_var(var, v, zero_based=zero_based) for v in var.values]
 
 
 def continuize_domain(data_or_domain,
