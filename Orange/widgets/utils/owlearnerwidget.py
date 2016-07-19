@@ -173,7 +173,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             self.model.name = self.learner_name
             self.model.instances = self.data
             self.valid_data = True
-
+        else:
+            self.model = None
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def check_data(self):
