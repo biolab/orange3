@@ -937,16 +937,30 @@ class Table(pd.DataFrame):
             if include_metas:
                 selected_columns += self.domain.metas
 
-        subset_df = self[selected_columns]
-        mins = subset_df.min(axis=0)
-        maxes = subset_df.max(axis=0)
-        means = subset_df.mean(axis=0)
-        varc = subset_df.var(axis=0)
-        nans = subset_df.isnull().sum(axis=0)
-        nonnans = subset_df.count(axis=0) - nans
+        # process continuous and discrete (== pandas categorical) separately for some,
+        # because including a categorical in the computation of e.g. mean,
+        # which is undefined for a categorical, returns an empty table
+        selected_continuous = [c for c in selected_columns if c.is_continuous]
+        selected_discrete = [c for c in selected_columns if not c.is_continuous]
+        assert len(selected_columns) == len(selected_continuous) + len(selected_discrete)
+
+        # discrete
+        d_means = pd.Series({k: np.nan for k in selected_discrete})
+        d_varc = pd.Series({k: np.nan for k in selected_discrete})
+
+        subset_continuous = self[selected_continuous]
+        c_means = subset_continuous.mean(axis=0)
+        c_varc = subset_continuous.var(axis=0)
+
+        # these are the same for both
+        subset_all = self[selected_columns]
+        mins = subset_all.min(axis=0)
+        maxes = subset_all.max(axis=0)
+        nans = subset_all.isnull().sum(axis=0)
+        nonnans = subset_all.count(axis=0) - nans
 
         # ensure correct ordering and remove the weights column
-        res = pd.DataFrame([mins, maxes, means, varc, nans, nonnans])
+        res = pd.DataFrame([mins, maxes, pd.concat((d_means, c_means)), pd.concat((d_varc, c_varc)), nans, nonnans])
         res = res[selected_columns]
         return res.values.T
 
