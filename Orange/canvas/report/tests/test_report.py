@@ -1,4 +1,3 @@
-import unittest
 from PyQt4.QtGui import QFont, QBrush
 from PyQt4.QtCore import Qt
 from Orange.data.table import Table
@@ -119,7 +118,6 @@ class TestReport(WidgetTest):
             '</tr></table>')
 
 
-@unittest.skip('Segfaults. Dunno. @astaric says it might be something on the QWidget.')
 class TestReportWidgets(WidgetTest):
     clas_widgets = [OWClassificationTree, OWKNNLearner, OWLogisticRegression,
                     OWMajority, OWNaiveBayes, OWRandomForest,
@@ -142,7 +140,7 @@ class TestReportWidgets(WidgetTest):
 
     def _create_report(self, widgets, rep, data):
         for widget in widgets:
-            w = widget()
+            w = self.create_widget(widget)
             if w.inputs and data is not None:
                 handler = getattr(w, w.inputs[0].handler)
                 handler(data)
@@ -152,10 +150,10 @@ class TestReportWidgets(WidgetTest):
 
     def test_report_widgets_classify(self):
         rep = OWReport.get_instance()
-        data = Table("zoo")
+        data = Table("titanic")
         widgets = self.clas_widgets
 
-        w = OWClassificationTreeGraph()
+        w = self.create_widget(OWClassificationTreeGraph)
         clf = TreeLearner(max_depth=3)(data)
         clf.instances = data
         w.ctree(clf)
@@ -181,7 +179,7 @@ class TestReportWidgets(WidgetTest):
                                   store_data=True)
         results.learner_names = ["LR l2"]
 
-        w = OWTestLearners()
+        w = self.create_widget(OWTestLearners)
         set_learner = getattr(w, w.inputs[0].handler)
         set_train = getattr(w, w.inputs[1].handler)
         set_test = getattr(w, w.inputs[2].handler)
@@ -199,7 +197,7 @@ class TestReportWidgets(WidgetTest):
         data = Table("housing")
         widgets = self.regr_widgets
 
-        w = OWRegressionTreeGraph()
+        w = self.create_widget(OWRegressionTreeGraph)
         mod = TreeRegressionLearner(max_depth=3)(data)
         mod.instances = data
         w.ctree(mod)
@@ -231,7 +229,6 @@ class TestReportWidgets(WidgetTest):
         self.assertEqual(len(widgets), 9)
         self._create_report(widgets, rep, data)
 
-    @unittest.skip('... in favor of other methods. Segfaults.')
     def test_report_widgets_all(self):
         rep = OWReport.get_instance()
         widgets = self.clas_widgets + self.data_widgets + self.eval_widgets + \
