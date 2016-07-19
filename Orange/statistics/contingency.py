@@ -1,12 +1,12 @@
 import math
 import numpy as np
-from Orange import data
+from Orange.data import Storage, Variable
 
 
 def _get_variable(variable, dat, attr_name,
                   expected_type=None, expected_name=""):
     failed = False
-    if isinstance(variable, data.Variable):
+    if isinstance(variable, Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
             raise ValueError("Variable does not match the variable in the data.")
@@ -18,7 +18,7 @@ def _get_variable(variable, dat, attr_name,
         failed = True
     if failed or (expected_type is not None and
                   not isinstance(variable, expected_type)):
-        if not expected_type or isinstance(variable, data.Variable):
+        if not expected_type or isinstance(variable, Variable):
             raise ValueError("Expected %s variable, not %s." % (expected_name, variable))
         else:
             raise ValueError("expected %s, not '%s'" %
@@ -32,7 +32,7 @@ def create_discrete(cls, *args):
 
 class Discrete(np.ndarray):
     def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None, unknown_rows=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, Storage):
             if unknowns is not None:
                 raise TypeError("Incompatible arguments (data table and 'unknowns').")
             return cls.from_data(dat, col_variable, row_variable)
@@ -154,7 +154,7 @@ class Discrete(np.ndarray):
 class Continuous:
     def __init__(self, dat=None, col_variable=None, row_variable=None,
                  unknowns=None, unknown_rows=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, Storage):
             if unknowns is not None:
                 raise TypeError("Incompatible arguments (data table and 'unknowns').")
             return self.from_data(dat, col_variable, row_variable)
