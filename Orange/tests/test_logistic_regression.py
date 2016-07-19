@@ -3,6 +3,7 @@
 
 import unittest
 import numpy as np
+import sklearn
 
 from Orange.data import Table, ContinuousVariable, Domain
 from Orange.classification import LogisticRegressionLearner, Model
@@ -106,3 +107,18 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         probs = m(self.zoo[50], m.Probs)
         probs2 = m(self.zoo[50, :], m.Probs)
         np.testing.assert_almost_equal(probs, probs2)
+
+    def test_single_class(self):
+        t = self.iris[60:90]
+        self.assertEqual(len(np.unique(t.Y)), 1)
+        learn = LogisticRegressionLearner()
+        model = learn(t)
+        self.assertEqual(model(t[0]), 1)
+        self.assertTrue(np.all(model(t[0], ret=Model.Probs) == [0, 1, 0]))
+        self.assertTrue(np.all(model(t) == 1))
+
+    def test_sklearn_single_class(self):
+        t = self.iris[60:90]
+        self.assertEqual(len(np.unique(t.Y)), 1)
+        lr = sklearn.linear_model.LogisticRegression()
+        self.assertRaises(ValueError, lr.fit, t.X, t.Y)
