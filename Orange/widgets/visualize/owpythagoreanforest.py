@@ -25,7 +25,7 @@ from Orange.widgets.widget import OWWidget
 
 
 class OWPythagoreanForest(OWWidget):
-    name = 'Pythagorean forest'
+    name = 'Pythagorean Forest'
     description = 'Pythagorean forest for visualising random forests.'
     icon = 'icons/PythagoreanForest.svg'
 

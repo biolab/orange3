@@ -387,6 +387,10 @@ class OWPythagorasTree(OWWidget):
     # CLASSIFICATION TREE SPECIFIC METHODS
     def _classification_update_target_class_combo(self):
         self._clear_target_class_combo()
+        list(filter(
+            lambda x: isinstance(x, QtGui.QLabel),
+            self.target_class_combo.parent().children()
+        ))[0].setText('Target class')
         self.target_class_combo.addItem('None')
         values = [c.title() for c in
                   self.tree_adapter.domain.class_vars[0].values]
@@ -467,6 +471,10 @@ class OWPythagorasTree(OWWidget):
     # REGRESSION TREE SPECIFIC METHODS
     def _regression_update_target_class_combo(self):
         self._clear_target_class_combo()
+        list(filter(
+            lambda x: isinstance(x, QtGui.QLabel),
+            self.target_class_combo.parent().children()
+        ))[0].setText('Node color')
         self.target_class_combo.addItems(
             list(zip(*self.REGRESSION_COLOR_CALC))[0])
         self.target_class_combo.setCurrentIndex(self.target_class_index)
