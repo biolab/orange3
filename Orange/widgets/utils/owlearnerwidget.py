@@ -173,7 +173,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             self.model.name = self.learner_name
             self.model.instances = self.data
             self.valid_data = True
-
+        else:
+            self.model = None
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def check_data(self):
@@ -197,7 +198,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.outdated_settings = True
         self.warning(self.OUTDATED_LEARNER_WARNING_ID,
                      None if self.auto_apply else "Press Apply to submit changes.")
-        self.apply()
+        if self.auto_apply:
+            self.apply()
 
     def send_report(self):
         self.report_items((("Name", self.learner_name),))

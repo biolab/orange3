@@ -5,8 +5,9 @@ import unittest
 from Orange.data import Table
 from Orange.statistics.util import stats
 from Orange.classification import LogisticRegressionLearner
-from Orange.widgets.classify.owlogisticregression import create_coef_table, OWLogisticRegression
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.classify.owlogisticregression import (create_coef_table,
+                                                          OWLogisticRegression)
+from Orange.widgets.tests.base import WidgetTest, WidgetLearnerTestMixin
 
 
 class LogisticRegressionTest(unittest.TestCase):
@@ -30,7 +31,8 @@ class LogisticRegressionTest(unittest.TestCase):
                          len(classifier.domain.class_var.values))
 
 
-class TestOWLogisticRegression(WidgetTest):
-    def test_data_before_apply(self):
-        widget = self.create_widget(OWLogisticRegression)
-        widget.set_data(Table("iris"))
+class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
+    def setUp(self):
+        self.widget = self.create_widget(OWLogisticRegression,
+                                         stored_settings={"auto_apply": False})
+        self.init()
