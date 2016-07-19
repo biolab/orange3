@@ -113,8 +113,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         self.assertEqual(len(np.unique(t.Y)), 1)
         learn = LogisticRegressionLearner()
         model = learn(t)
-        self.assertEqual(model(t[0]), 1)
-        self.assertTrue(np.all(model(t[0], ret=Model.Probs) == [0, 1, 0]))
+        self.assertEqual(model(t.iloc[0]), 1)
+        self.assertTrue(np.all(model(t.iloc[0], ret=Model.Probs) == [0, 1, 0]))
         self.assertTrue(np.all(model(t) == 1))
 
     def test_sklearn_single_class(self):
