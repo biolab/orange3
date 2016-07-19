@@ -1,8 +1,16 @@
 import unittest
+from collections import namedtuple
+from PyQt4 import QtGui
 
 from PyQt4.QtGui import QApplication
 import sip
 
+from Orange.data import Table
+from Orange.preprocess import RemoveNaNColumns, Randomize
+from Orange.preprocess.preprocess import PreprocessorList
+from Orange.classification.base_classification import (LearnerClassification,
+                                                       ModelClassification)
+from Orange.regression.base_regression import LearnerRegression, ModelRegression
 from Orange.canvas.report.owreport import OWReport
 
 app = None
@@ -146,3 +154,143 @@ class WidgetTest(GuiTest):
         if widget is None:
             widget = self.widget
         return self.signal_manager.outputs.get((widget, output_name), None)
+
+
+GuiToParam = namedtuple('GuiParam', 'name gui_el get set values set_values')
+
+
+class WidgetLearnerTestMixin:
+    """Base class for widget learner tests.
+
+    Contains init method to set up testing parameters and test methods.
+
+    All widget learner tests should extend it (beside extending WidgetTest
+    class as well). Learners with extra parameters, which can be set on the
+    widget, should override self.gui_to_params list in the setUp method. The
+    list should contain mapping: learner parameter - gui component.
+    """
+    def init(self):
+        self.iris = Table("iris")
+        self.housing = Table("housing")
+        if issubclass(self.widget.LEARNER, LearnerClassification):
+            self.data = self.iris
+            self.inadequate_data = self.housing
+            self.learner_class = LearnerClassification
+            self.model_name = "Classifier"
+            self.model_class = ModelClassification
+        else:
+            self.data = self.housing
+            self.inadequate_data = self.iris
+            self.learner_class = LearnerRegression
+            self.model_name = "Predictor"
+            self.model_class = ModelRegression
+        self.gui_to_params = []
+
+    def test_input_data(self):
+        """Check widget's data with data on the input"""
+        self.assertEqual(self.widget.data, None)
+        self.send_signal("Data", self.data)
+        self.assertEqual(self.widget.data, self.data)
+
+    def test_input_data_disconnect(self):
+        """Check widget's data and model after disconnecting data from input"""
+        self.send_signal("Data", self.data)
+        self.assertEqual(self.widget.data, self.data)
+        self.widget.apply_button.button.click()
+        self.send_signal("Data", None)
+        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.get_output(self.model_name))
+
+    def test_input_data_learner_adequacy(self):
+        """Check if error message is shown with inadequate data on input"""
+        err_id = self.widget.DATA_ERROR_ID
+        self.send_signal("Data", self.inadequate_data)
+        self.widget.apply_button.button.click()
+        self.assertIn(err_id, self.widget.widgetState.get("Error"))
+        self.assertEqual(self.widget.widgetState.get("Error").get(err_id),
+                         self.learner_class.learner_adequacy_err_msg)
+        self.send_signal("Data", self.data)
+        self.assertNotIn(err_id, self.widget.widgetState.get("Error"))
+
+    def test_input_preprocessor(self):
+        """Check learner's preprocessors with an extra pp on input"""
+        self.assertIsNone(self.widget.preprocessors)
+        self.send_signal("Preprocessor", Randomize)
+        pp = (Randomize,) + tuple(self.widget.LEARNER.preprocessors)
+        self.assertEqual(pp, self.widget.preprocessors)
+        self.widget.apply_button.button.click()
+        self.assertEqual(pp, tuple(self.widget.learner.preprocessors))
+
+    def test_input_preprocessors(self):
+        """Check multiple preprocessors on input"""
+        pp_list = PreprocessorList([Randomize, RemoveNaNColumns])
+        self.send_signal("Preprocessor", pp_list)
+        self.widget.apply_button.button.click()
+        self.assertEqual([pp_list] + list(self.widget.LEARNER.preprocessors),
+                         self.widget.learner.preprocessors)
+
+    def test_input_preprocessor_disconnect(self):
+        """Check learner's preprocessors after disconnecting pp from input"""
+        self.send_signal("Preprocessor", Randomize)
+        self.assertIsNotNone(self.widget.preprocessors)
+        self.send_signal("Preprocessor", None)
+        self.assertEqual(self.widget.preprocessors,
+                         tuple(self.widget.LEARNER.preprocessors))
+
+    def test_output_learner(self):
+        """Check if learner is on output after apply"""
+        self.assertIsNone(self.get_output("Learner"))
+        self.widget.apply_button.button.click()
+        self.assertIsNotNone(self.get_output("Learner"))
+        self.assertIsInstance(self.get_output("Learner"), self.widget.LEARNER)
+
+    def test_output_model(self):
+        """Check if model is on output after sending data and apply"""
+        self.assertIsNone(self.get_output(self.model_name))
+        self.widget.apply_button.button.click()
+        self.assertIsNone(self.get_output(self.model_name))
+        self.send_signal("Data", self.data)
+        self.widget.apply_button.button.click()
+        model = self.get_output(self.model_name)
+        self.assertIsNotNone(model)
+        self.assertIsInstance(model, self.widget.LEARNER.__returns__)
+        self.assertIsInstance(model, self.model_class)
+
+    def test_output_learner_name(self):
+        """Check if learner's name properly changes"""
+        new_name = "Learner Name"
+        name_line_edit = self.widget.findChildren(QtGui.QLineEdit)[0]
+        self.widget.apply_button.button.click()
+        self.assertEqual(self.widget.learner.name, name_line_edit.text())
+        name_line_edit.setText(new_name)
+        self.widget.apply_button.button.click()
+        self.assertEqual(self.get_output("Learner").name, new_name)
+
+    def test_output_model_name(self):
+        """Check if model's name properly changes"""
+        new_name = "Model Name"
+        name_line_edit = self.widget.findChildren(QtGui.QLineEdit)[0]
+        name_line_edit.setText(new_name)
+        self.send_signal("Data", self.data)
+        self.widget.apply_button.button.click()
+        self.assertEqual(self.get_output(self.model_name).name, new_name)
+
+    def test_parameters_default(self):
+        """Check if learner's parameters are set to default (widget's) values"""
+        self.widget.apply_button.button.click()
+        if hasattr(self.widget.learner, "params"):
+            learner_params = self.widget.learner.params
+            for element in self.gui_to_params:
+                self.assertEqual(learner_params.get(element.name),
+                                 element.get(element.gui_el))
+
+    def test_parameters(self):
+        """Check learner and model for various values of all parameters"""
+        for element in self.gui_to_params:
+            for val, set_val in zip(element.values, element.set_values):
+                self.send_signal("Data", self.data)
+                element.set(set_val, element.gui_el)
+                self.widget.apply_button.button.click()
+                param = self.widget.learner.params.get(element.name)
+                self.assertEqual(param, element.get(element.gui_el))
+                self.assertEqual(param, val)
