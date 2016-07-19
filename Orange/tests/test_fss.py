@@ -76,14 +76,14 @@ class TestFSS(unittest.TestCase):
 class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering(self):
         data = Table("iris")
-        data.iloc[:, (1, 3)] = np.NaN
+        data.iloc[:, [1, 3]] = np.NaN
 
         new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes) - 2)
 
         data = Table("iris")
-        data.X[0, 0] = np.NaN
+        data.loc[data.index[0], data.domain.attributes[0]] = np.NaN
         new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
