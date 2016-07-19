@@ -130,7 +130,7 @@ class WidgetTest(GuiTest):
                 break
         widget.handleNewSignals()
 
-    def get_ouput(self, output_name, widget=None):
+    def get_output(self, output_name, widget=None):
         """Return the last output that has been sent from the widget.
 
         Parameters
@@ -145,4 +145,4 @@ class WidgetTest(GuiTest):
         """
         if widget is None:
             widget = self.widget
-        self.signal_manager.outputs.get((widget, output_name), None)
+        return self.signal_manager.outputs.get((widget, output_name), None)
