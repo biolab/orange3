@@ -14,9 +14,8 @@ import pandas as pd
 
 from Orange import data
 from Orange.data import Variable
-from Orange.data import Unknown
+from Orange.data import Variable, DiscreteVariable, StringVariable
 from Orange.tests import test_dirname
-from data.variable import DiscreteVariable, StringVariable
 
 
 @np.vectorize

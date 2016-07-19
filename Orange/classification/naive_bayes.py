@@ -2,9 +2,8 @@ import numpy as np
 
 from Orange.classification import Learner, Model
 from Orange.data import Table
-from Orange.statistics import contingency
+from Orange.statistics import contingency, distribution
 from Orange.preprocess import Discretize
-from statistics import distribution
 
 __all__ = ["NaiveBayesLearner"]
 

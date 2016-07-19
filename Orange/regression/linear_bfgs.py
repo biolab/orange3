@@ -4,7 +4,7 @@ from scipy.optimize import fmin_l_bfgs_b
 from Orange.regression import Learner, Model
 from Orange.preprocess import (RemoveNaNClasses, Normalize, Continuize,
                                Impute, RemoveNaNColumns)
-from data import Domain
+from Orange.data import Domain
 
 __all__ = ["LinearRegressionLearner"]
 
