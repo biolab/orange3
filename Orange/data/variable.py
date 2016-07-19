@@ -72,7 +72,7 @@ class Variable(str, metaclass=VariableMeta):
         is not a copy, it is its own master.
     """
     Unknown = ValueUnknown
-    MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
+    MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~"}
 
     def __new__(cls, name="", *args, **kwargs):
         # compatibility with str

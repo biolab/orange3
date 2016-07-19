@@ -188,11 +188,11 @@ class TableTestCase(unittest.TestCase):
 
     def test_append(self):
         d = data.Table("test3")
-        d = d.append([None] * 5)
+        d = d.append(["?"] * 5)
         self.assertEqual(1, len(d))
         self.assertEqual(5, d.iloc[0].isnull().sum())  # the weight is not null
 
-        d = d.append([np.nan, 42.0, "0", None, np.nan])
+        d = d.append([np.nan, 42.0, "0", "?", np.nan])
         self.assertEqual(2, len(d))
         np.testing.assert_array_equal(list(d.iloc[1]), [np.nan, 42.0, "0", np.nan, np.nan] + [1])
 
