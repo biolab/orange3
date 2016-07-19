@@ -12,7 +12,8 @@ from Orange.base import SklLearner
 
 import Orange.classification
 from Orange.classification import (Learner, Model, NaiveBayesLearner,
-                                   LogisticRegressionLearner, NuSVMLearner)
+                                   LogisticRegressionLearner, NuSVMLearner,
+                                   OrangeTreeLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
@@ -244,6 +245,8 @@ class UnknownValuesInPrediction(unittest.TestCase):
                 # Skip slow tests
                 if isinstance(learner, _RuleLearner):
                     continue
+                if isinstance(learner, OrangeTreeLearner):
+                    learner.binarize = False
                 model = learner(table)
                 model(table)
             except TypeError:

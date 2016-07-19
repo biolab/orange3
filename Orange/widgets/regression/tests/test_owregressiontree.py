@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from Orange.base import Model
 from Orange.widgets.regression.owregressiontree import OWRegressionTree
 from Orange.widgets.tests.base import (WidgetTest, DefaultParameterMapping,
                                        ParameterMapping, WidgetLearnerTestMixin)
@@ -10,6 +11,7 @@ class TestOWRegressionTree(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWRegressionTree,
                                          stored_settings={"auto_apply": False})
         self.init()
+        self.model_class = Model
         scores = [score[1] for score in self.widget.scores]
         self.parameters = [
             ParameterMapping('criterion', self.widget.score_combo, scores),
