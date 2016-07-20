@@ -335,6 +335,9 @@ class OWSilhouettePlot(widget.OWWidget):
         self.send("Other Data", other)
 
     def send_report(self):
+        if not len(self.cluster_var_model):
+            return
+
         self.report_plot()
         caption = "Silhouette plot ({} distance), clustered by '{}'".format(
             self.Distances[self.distance_idx][0],
