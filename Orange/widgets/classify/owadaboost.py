@@ -26,10 +26,13 @@ class OWAdaBoostClassification(OWBaseLearner):
     learning_rate = Setting(1.)
     algorithm = Setting(0)
 
+    DEFAULT_BASE_ESTIMATOR = TreeLearner()
+
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Parameters")
-        self.base_estimator = TreeLearner()
-        self.base_label = gui.label(box, self, "Base estimator: " + self.base_estimator.name)
+        self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
+        self.base_label = gui.label(
+            box, self, "Base estimator: " + self.base_estimator.name)
 
         self.n_estimators_spin = gui.spin(
             box, self, "n_estimators", 1, 100, label="Number of estimators:",
@@ -54,14 +57,12 @@ class OWAdaBoostClassification(OWBaseLearner):
             algorithm=self.losses[self.algorithm]
         )
 
-    def set_base_learner(self, model):
-        self.base_estimator = model
-        if self.base_estimator:
-            self.base_label.setText("Base estimator: " + self.base_estimator.name)
-            self.apply_button.setDisabled(False)
-        else:
-            self.base_label.setText("No base estimator")
-            self.apply_button.setDisabled(True)
+    def set_base_learner(self, learner):
+        self.base_estimator = learner if learner \
+            else self.DEFAULT_BASE_ESTIMATOR
+        self.base_label.setText("Base estimator: " + self.base_estimator.name)
+        if self.auto_apply:
+            self.apply()
 
     def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
@@ -72,6 +73,7 @@ class OWAdaBoostClassification(OWBaseLearner):
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+
     a = QApplication(sys.argv)
     ow = OWAdaBoostClassification()
     ow.set_data(Table("iris"))
