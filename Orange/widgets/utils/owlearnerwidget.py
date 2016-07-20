@@ -226,10 +226,10 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         pass
 
     def add_learner_name_widget(self):
-        gui.lineEdit(self.controlArea, self, 'learner_name', box='Name',
-                     tooltip='The name will identify this model in other widgets',
-                     orientation=Qt.Horizontal,
-                     callback=lambda: self.apply())
+        self.name_line_edit = gui.lineEdit(
+            self.controlArea, self, 'learner_name', box='Name',
+            tooltip='The name will identify this model in other widgets',
+            orientation=Qt.Horizontal, callback=lambda: self.apply())
 
     def add_bottom_buttons(self):
         box = gui.hBox(self.controlArea, True)
