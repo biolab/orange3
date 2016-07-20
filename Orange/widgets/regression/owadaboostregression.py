@@ -23,9 +23,9 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
     loss = Setting(0)
 
     def add_specific_parameters(self, box):
-        gui.comboBox(box, self, "loss", label="Loss:",
-                     orientation=Qt.Horizontal, items=self.losses,
-                     callback=self.settings_changed)
+        self.loss_combo = gui.comboBox(
+            box, self, "loss", label="Loss:", orientation=Qt.Horizontal,
+            items=self.losses, callback=self.settings_changed)
 
     def create_learner(self):
         return self.LEARNER(
