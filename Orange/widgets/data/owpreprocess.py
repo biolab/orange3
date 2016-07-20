@@ -1847,6 +1847,7 @@ class OWPreprocess(widget.OWWidget):
         gen.set_widget(self)
         gen.add_import(preprocess.preprocess.PreprocessorList)
         gen.add_preamble("from Orange.preprocess import *")
+        gen.add_preamble("from Orange.preprocess.score import *")
         gen.add_init("preprocessor", repr(self.buildpreproc()), iscode=True)
         gen.add_output("preprocessor", "preprocessor", iscode=True)
         gen.add_output("preprocessed_data", "preprocessor(input_data)", iscode=True)

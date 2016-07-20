@@ -90,13 +90,13 @@ class SelectBestFeatures:
         return data.from_table(domain, data)
 
     def __repr__(self):
-        return ("Orange.preprocess.fss.SelectBestFeatures(" +
-               "method={}, k={}, threshold={}, decreasing={})".format(
-            self.method.__module__ + "." + self.method.__name__,
-            str(self.k),
-            str(self.threshold),
-            str(self.decreasing)
-        ))
+        return "SelectBestFeatures({}{}{}{})".format(
+            "method={}, ".format(self.method.__name__),
+            "k={}, ".format(str(self.k)) if self.k is not None else "",
+            "threshold={}, ".format(str(self.threshold)) if self.threshold \
+                is not None else "",
+            "decreasing=False" if not self.decreasing else ""
+        )
 
 
     def score_only_nice_features(self, data, method):
@@ -138,8 +138,8 @@ class SelectRandomFeatures:
         return data.from_table(domain, data)
 
     def __repr__(self):
-        return "Orange.preprocess.fss.SelectRandomFeatures(k={})".format(
-            str(self.k)
+        return "SelectRandomFeatures({})".format(
+            "k={}".format(str(self.k)) if self.k != 0.1 else ""
         )
 
 
@@ -172,6 +172,6 @@ class RemoveNaNColumns(Preprocess):
         return Orange.data.Table(domain, data)
 
     def __repr__(self):
-        return "Orange.preprocess.fss.RemoveNaNColumns(threshold={})".format(
+        return "RemoveNaNColumns(threshold={})".format(
             str(self.threshold)
         )

@@ -68,9 +68,10 @@ class Continuize(Preprocess):
         return data.from_table(domain, data)
 
     def __repr__(self):
-        return "Continuize(zero_based={}, multinomial_treatment={})".format(
-            str(self.zero_based),
-            str(self.multinomial_treatment)
+        return "Continuize({}{})".format(
+            "zero_based=False, " if not self.zero_based else "",
+            "multinomial_treatment={}".format(repr(repr(self.multinomial_treatment))) if \
+                self.multinomial_treatment != self.MultinomialTreatment else ""
         )
 
 
@@ -131,8 +132,10 @@ class Discretize(Preprocess):
         return data.from_table(domain, data)
 
     def __repr__(self):
-        return "Discretize(method={}, remove_const={})".format(
-            repr(self.method), str(self.remove_const)
+        return "Discretize({}{})".format(
+            "method={}, ".format(repr(self.method)) if \
+                self.method is not None else "",
+            "remove_const=False" if not self.remove_const else ""
         )
 
 
@@ -167,8 +170,10 @@ class Impute(Preprocess):
         return data.from_table(domain, data)
 
     def __repr__(self):
-        method_str = self.method.__module__ + "." + self.method.__class__.__name__
-        return "Impute(method={})".format(method_str)
+        return "Impute({})".format(
+            "method={}".format(repr(self.method)) if self.method \
+                != Orange.preprocess.impute.Average() else ""
+        )
 
 
 class SklImpute(Preprocess):
@@ -328,12 +333,12 @@ class Normalize(Preprocess):
         return normalizer(data)
 
     def __repr__(self):
-        norm_type_str = self.norm_type.__module__ + "." + \
-            self.norm_type.__name__
-        return "Normalize(zero_based={}, norm_type={}, transform_class={})".format(
-            str(self.zero_based),
-            norm_type_str,
-            str(self.transform_class)
+        return "Normalize({}{}{})".format(
+            "zero_based=False, " if not self.zero_based else "",
+            "norm_type={}, ".format(repr(self.norm_type)) if \
+                self.norm_type != NormalizeBySD else "",
+            "transform_class=True".format(str(self.transform_class)) if \
+                self.transform_class else ""
         )
 
 
@@ -399,9 +404,10 @@ class Randomize(Preprocess):
         return new_data
 
     def __repr__(self):
-        rand_type_str = self.rand_type.__module__ + "." + \
-            self.rand_type.__name__
-        return "Randomize(rand_type={})".format(rand_type_str)
+        return "Randomize({})".format(
+            "rand_type=Randomize.{}".format(repr(self.rand_type)) if \
+                self.rand_type != self.RandomizeClasses else ""
+        )
 
     def randomize(self, table):
         if len(table.shape) > 1:
@@ -421,7 +427,10 @@ class ProjectPCA(Preprocess):
         return pca(data)
 
     def __repr__(self):
-        return "ProjectPCA(n_components={})".format(str(self.n_components))
+        return "ProjectPCA({})".format(
+            "n_components={}".format(str(self.n_components)) if \
+                self.n_components is not None else ""
+        )
 
 
 class ProjectCUR(Preprocess):
