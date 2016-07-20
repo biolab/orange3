@@ -111,7 +111,7 @@ class CodeGenerator(object):
 
     def add_preamble(self, func):
         """
-        Inserts code within func before all widget code.
+        Inserts `func` before all widget code.
         `func` can either be a function or string.
 
         """
@@ -278,7 +278,7 @@ class CodeGenerator(object):
                         body += indent(1, "\"" + sName + "\": " +
                                 format_constant(sVal)) + ",\n"
                     except: # Setting is of an unstringifiable type
-                        pass
+                        print("Could not load setting; unstringifiable type")
             body += "})\n\n"
 
         # input declaration
