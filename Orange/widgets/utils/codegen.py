@@ -182,7 +182,7 @@ class CodeGenerator(object):
 
     def add_output(self, channel, value, iscode=False):
         """ Adds an output statement with the given channel """
-        self.outputs[channel] = (value, iscode,)
+        self.outputs[channel.lower()] = (value, iscode,)
 
     def add_extern(self, extern):
         """ Adds a function to the output code """
