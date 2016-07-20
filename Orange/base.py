@@ -264,7 +264,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def __repr__(self):
         return '{}({}{})'.format(type(self).__name__,
-                               ", ".join("{}={}".format(k, v)
+                               ", ".join("{}={}".format(k, repr(v))
                                          for k, v in self.params.items()),
                                 ", preprocessors={}".format(repr(self.preprocessors)) if \
                                         self.preprocessors is not None and self.preprocessors\

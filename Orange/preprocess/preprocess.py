@@ -475,7 +475,7 @@ class Scaling(Preprocess):
         diff = values - mean
         return np.sqrt(np.average(diff ** 2, weights=counts))
 
-    def __init__(self, center=mean, scale=std):
+    def __init__(self, center=mean.__func__, scale=std.__func__):
         self.center = center
         self.scale = scale
 

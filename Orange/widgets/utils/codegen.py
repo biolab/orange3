@@ -107,7 +107,7 @@ class CodeGenerator(object):
         if type(extern) == list:
             self.imports |= set(extern)
         else:
-            self.imports.append(extern)
+            self.imports |= set([extern])
 
     def add_preamble(self, func):
         """
@@ -262,7 +262,7 @@ class CodeGenerator(object):
             if type(constant) in (float, int, tuple, bool,):
                 return str(constant)
             elif(type(constant) == str):
-                return "\"" + constant + "\""
+                return repr(constant)
             else:
                 raise TypeError("unparsableType")
 
