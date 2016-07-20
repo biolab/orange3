@@ -46,7 +46,7 @@ class TestRules(unittest.TestCase):
             self.assertEqual(target_covered, to_compare)
 
         learner = CN2UnorderedLearner()
-        learner.rule_finder.general_validator.minimum_covered_examples = 10
+        learner.rule_finder.general_validator.min_covered_examples = 10
         learner.rule_finder.general_validator.max_rule_length = 2
         learner.rule_finder.significance_validator.alpha = 0.9
         learner.rule_finder.search_algorithm.beam_width = 5
