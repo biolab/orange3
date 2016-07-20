@@ -294,3 +294,11 @@ class WidgetLearnerTestMixin:
                 param = self.widget.learner.params.get(element.name)
                 self.assertEqual(param, element.get(element.gui_el))
                 self.assertEqual(param, val)
+                param = self.get_output("Learner").params.get(element.name)
+                self.assertEqual(param, val)
+                model = self.get_output(self.model_name)
+                if model is not None:
+                    self.assertEqual(model.params.get(element.name), val)
+                else:
+                    self.assertIn(self.widget.DATA_ERROR_ID,
+                                  self.widget.widgetState.get("Error"))
