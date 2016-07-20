@@ -23,9 +23,8 @@ from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
 from Orange import preprocess
-from Orange.statistics import distribution
 from Orange.preprocess import Continuize, ProjectPCA, \
-    ProjectCUR, Randomize as Random
+    ProjectCUR, Scaling, Randomize as _Randomize
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
@@ -669,79 +668,6 @@ class RandomFeatureSelectEditor(BaseEditor):
             # further implementations
             raise NotImplementedError
 
-class _Scaling(preprocess.preprocess.Preprocess):
-    """
-    Scale data preprocessor.
-    """
-    @staticmethod
-    def mean(dist):
-        values, counts = numpy.array(dist)
-        return numpy.average(values, weights=counts)
-
-    @staticmethod
-    def median(dist):
-        values, counts = numpy.array(dist)
-        cumdist = numpy.cumsum(counts)
-        if cumdist[-1] > 0:
-            cumdist /= cumdist[-1]
-
-        return numpy.interp(0.5, cumdist, values)
-
-    @staticmethod
-    def span(dist):
-        values = numpy.array(dist[0])
-        minval = numpy.min(values)
-        maxval = numpy.max(values)
-        return maxval - minval
-
-    @staticmethod
-    def std(dist):
-        values, counts = numpy.array(dist)
-        mean = numpy.average(values, weights=counts)
-        diff = values - mean
-        return numpy.sqrt(numpy.average(diff ** 2, weights=counts))
-
-    def __init__(self, center=mean, scale=std):
-        self.center = center
-        self.scale = scale
-
-    def __call__(self, data):
-        if self.center is None and self.scale is None:
-            return data
-
-        def transform(var):
-            dist = distribution.get_distribution(data, var)
-            if self.center:
-                c = self.center(dist)
-                dist[0, :] -= c
-            else:
-                c = 0
-
-            if self.scale:
-                s = self.scale(dist)
-                if s < 1e-15:
-                    s = 1
-            else:
-                s = 1
-            factor = 1 / s
-            return var.copy(compute_value=preprocess.transformation.Normalizer(var, c, factor))
-
-        newvars = []
-        for var in data.domain.attributes:
-            if var.is_continuous:
-                newvars.append(transform(var))
-            else:
-                newvars.append(var)
-        domain = Orange.data.Domain(newvars, data.domain.class_vars,
-                                    data.domain.metas)
-        return data.from_table(domain, data)
-
-    def __repr__(self):
-        return "Orange.widgets.data.owpreprocess._Scaling(center={}, scale={})".format(
-            self.center.__module__ + "." + self.center.__name__,
-            self.scale.__module__ + "." + self.scale.__name__
-        )
-
 
 class Scale(BaseEditor):
     NoCentering, CenterMean, CenterMedian = 0, 1, 2
@@ -786,48 +712,30 @@ class Scale(BaseEditor):
         if center == Scale.NoCentering:
             center = None
         elif center == Scale.CenterMean:
-            center = _Scaling.mean
+            center = Scaling.mean
         elif center == Scale.CenterMedian:
-            center = _Scaling.median
+            center = Scaling.median
         else:
             assert False
 
         if scale == Scale.NoScaling:
             scale = None
         elif scale == Scale.ScaleBySD:
-            scale = _Scaling.std
+            scale = Scaling.std
         elif scale == Scale.ScaleBySpan:
-            scale = _Scaling.span
+            scale = Scaling.span
         else:
             assert False
 
-        return _Scaling(center=center, scale=scale)
+        return Scaling(center=center, scale=scale)
 
     def __repr__(self):
         return "{}, {}".format(self.__centercb.currentText(),
                                self.__scalecb.currentText())
 
 
-class _Randomize(preprocess.preprocess.Preprocess):
-    """
-    Randomize data preprocessor.
-    """
-
-    def __init__(self, rand_type=Random.RandomizeClasses):
-        self.rand_type = rand_type
-
-    def __call__(self, data):
-        randomizer = Random(rand_type=self.rand_type)
-        return randomizer(data)
-
-    def __repr__(self):
-        return "Orange.widgets.data.owpreprocess._Randomize(rand_type={})".format(
-            repr(self.rand_type)
-        )
-
-
 class Randomize(BaseEditor):
-    RandomizeClasses, RandomizeAttributes, RandomizeMetas = Random.RandTypes
+    RandomizeClasses, RandomizeAttributes, RandomizeMetas = _Randomize.RandTypes
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)

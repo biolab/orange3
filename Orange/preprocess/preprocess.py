@@ -9,12 +9,14 @@ import bottleneck as bn
 
 import Orange.data
 from Orange.data import Table
-from . import impute, discretize
+from Orange.statistics import distribution
+from . import impute, discretize, transformation
 from ..misc.enum import Enum
+
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
            "Normalize", "Randomize", "RemoveNaNClasses",
-           "ProjectPCA", "ProjectCUR"]
+           "ProjectPCA", "ProjectCUR", "Scaling"]
 
 
 class Preprocess:
@@ -439,6 +441,83 @@ class ProjectCUR(Preprocess):
     def __repr__(self):
         return "ProjectCUR(rank={}, max_error={})".format(
             str(self.rank),str(self.max_error)
+        )
+
+class Scaling(Preprocess):
+    """
+    Scale data preprocessor.
+    """
+    @staticmethod
+    def mean(dist):
+        values, counts = np.array(dist)
+        return np.average(values, weights=counts)
+
+    @staticmethod
+    def median(dist):
+        values, counts = np.array(dist)
+        cumdist = np.cumsum(counts)
+        if cumdist[-1] > 0:
+            cumdist /= cumdist[-1]
+
+        return np.interp(0.5, cumdist, values)
+
+    @staticmethod
+    def span(dist):
+        values = np.array(dist[0])
+        minval = np.min(values)
+        maxval = np.max(values)
+        return maxval - minval
+
+    @staticmethod
+    def std(dist):
+        values, counts = np.array(dist)
+        mean = np.average(values, weights=counts)
+        diff = values - mean
+        return np.sqrt(np.average(diff ** 2, weights=counts))
+
+    def __init__(self, center=mean, scale=std):
+        self.center = center
+        self.scale = scale
+
+    def __call__(self, data):
+        if self.center is None and self.scale is None:
+            return data
+
+        def transform(var):
+            dist = distribution.get_distribution(data, var)
+            if self.center:
+                c = self.center(dist)
+                dist[0, :] -= c
+            else:
+                c = 0
+
+            if self.scale:
+                s = self.scale(dist)
+                if s < 1e-15:
+                    s = 1
+            else:
+                s = 1
+            factor = 1 / s
+            return var.copy(compute_value=transformation.Normalizer(var, c, factor))
+
+        newvars = []
+        for var in data.domain.attributes:
+            if var.is_continuous:
+                newvars.append(transform(var))
+            else:
+                newvars.append(var)
+        domain = Orange.data.Domain(newvars, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+    def __repr__(self):
+        return "Scaling({}{})".format(
+            "center={}, ".format("Scaling.median" if \
+                    self.center is not None else "None") if \
+                self.center != self.mean else "",
+            "scale={}".format("Scaling.span" if \
+                    self.scale is not None else "None") if \
+                self.scale != self.std else ""
         )
 
 
