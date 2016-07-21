@@ -22,7 +22,7 @@ class OWTreeLearner(OWBaseLearner):
     max_depth = Setting(100)
 
     spin_boxes = (
-        ("Min. number of instances in leaaves: ",
+        ("Min. number of instances in leaves: ",
          "limit_min_leaf", "min_leaf", 1, 1000),
         ("Do not split subsets smaller than: ",
          "limit_min_internal", "min_internal", 1, 1000),

@@ -39,15 +39,17 @@ class OrangeTreeLearner(Learner):
         """
         # Prevent false warnings by pylint
         attr = attr_no = None
+        REJECT_ATTRIBUTE = 0, None, None, 0
 
         def _score_disc():
+            n_values = len(attr.values)
             score = _tree_scorers.compute_grouped_MSE(
-                col_x, col_y, len(attr.values), self.min_samples_leaf)
+                col_x, col_y, n_values, self.min_samples_leaf)
             if score == 0:
-                return None, None, None
+                return REJECT_ATTRIBUTE
             branches = col_x.flatten()
             branches[np.isnan(branches)] = -1
-            return score, DiscreteNode(attr, attr_no, None), branches
+            return score, DiscreteNode(attr, attr_no, None), branches, n_values
 
         def _score_disc_bin():
             n_values = len(attr.values)
@@ -55,10 +57,12 @@ class OrangeTreeLearner(Learner):
                 return _score_disc()
             score, mapping = _tree_scorers.find_binarization_MSE(
                 col_x, col_y, n_values, self.min_samples_leaf)
+            if score == 0:
+                return REJECT_ATTRIBUTE
             mapping, branches = MappedDiscreteNode.branches_from_mapping(
                 data.X[:, attr_no], mapping, len(attr.values))
             node = MappedDiscreteNode(attr, attr_no, mapping, None)
-            return score, node, branches
+            return score, node, branches, 2
 
         def _score_cont():
             """Scoring for numeric attributes"""
@@ -68,28 +72,26 @@ class OrangeTreeLearner(Learner):
             score, cut = _tree_scorers.find_threshold_MSE(
                 col_x, col_y, arginds, self.min_samples_leaf)
             if score == 0:
-                return None, None, None
+                return  REJECT_ATTRIBUTE
             score *= non_nans / len(col_x)
             branches = (col_x > cut).astype(int)
             branches[np.isnan(col_x)] = -1
             node = NumericNode(attr, attr_no, cut, None)
-            return score, node, branches
+            return score, node, branches, 2
 
         #######################################
         # The real _select_attr starts here
         domain = data.domain
         col_y = data.Y
-        best_node = Node(None, None, None)
-        best_score = 0
-        best_branches = None
+        best_score, *best_res = REJECT_ATTRIBUTE
+        best_res = [Node(None, 0, None), ] + best_res[1:]
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
             col_x = data[:, attr_no].X.reshape((len(data),))
-            sc, node, branches = \
-                disc_scorer() if attr.is_discrete else _score_cont()
-            if node is not None and sc > best_score:
-                best_score, best_node, best_branches = sc, node, branches
-        return best_node, best_branches
+            sc, *res = disc_scorer() if attr.is_discrete else _score_cont()
+            if res[0] is not None and sc > best_score:
+                best_score, best_res = sc, res
+        return best_res
 
     def build_tree(self, data, active_inst, level=1):
         """Induce a tree from the given data
@@ -97,19 +99,20 @@ class OrangeTreeLearner(Learner):
         Returns:
             root node (Node)"""
         node_insts = data[active_inst]
+        if len(node_insts) < self.min_samples_leaf:
+            return None
         if len(node_insts) < self.min_samples_split or \
                 self.max_depth is not None and level > self.max_depth:
-            node, branches = Node(None, None, None), None
+            node, branches, n_children = Node(None, None, None), None, 0
         else:
-            node, branches = self._select_attr(node_insts)
+            node, branches, n_children = self._select_attr(node_insts)
         mean, var = np.mean(node_insts.Y), np.var(node_insts.Y)
         node.value = np.array([mean, 1 if np.isnan(var) else var])
         node.subset = active_inst
         if branches is not None:
             node.children = [
-                self.build_tree(data, active_inst[branches == branch],
-                                level + 1)
-                for branch in range(int(np.nanmax(branches) + 1))]
+                self.build_tree(data, active_inst[branches == br], level + 1)
+                for br in range(n_children)]
         return node
 
     def fit_storage(self, data):
@@ -124,8 +127,8 @@ class OrangeTreeLearner(Learner):
 
         active_inst = np.nonzero(~np.isnan(data.Y))[0]
         root = self.build_tree(data, active_inst)
-        if root.children is None:
-            root.value[np.isnan(root.value)] = 0  # tree without data
+        if root is None:
+            root = Node(None, 0, np.array([0., 0.]))
         root.subset = active_inst
         model = OrangeTreeModel(data, root)
         return model

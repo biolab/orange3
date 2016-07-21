@@ -276,7 +276,8 @@ class OWTreeGraph(OWTreeViewer2D):
             self.scene.addItem(edge)
             parent.graph_add_edge(edge)
         for child in self.model.children(node_id):
-            self.walkcreate(child, node)
+            if child is not None:
+                self.walkcreate(child, node)
         return node
 
     def node_tooltip(self, node):

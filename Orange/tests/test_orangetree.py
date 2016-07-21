@@ -41,19 +41,18 @@ class TestTree:
 
     def test_min_samples_split(self):
         clf = self.OrangeTreeLearner(
-            min_samples_split=10, min_samples_leaf=1,
-            **self.no_pruning_args)(self.data)
+            min_samples_split=10, **self.no_pruning_args)(self.data)
         self.assertTrue(
             all(node.children is None or len(node.subset) >= 10
                 for node in self.all_nodes(clf.root)))
 
     def test_min_samples_leaf(self):
+        # This test is slow, but it has a good tendency to fail at extreme
+        # conditions not thought of in advance and thus not covered in other
+        # tests
         for lim in (1, 2, 30):
-            args = dict(min_samples_split=1, min_samples_leaf=lim)
+            args = dict(min_samples_split=2, min_samples_leaf=lim)
             args.update(self.no_pruning_args)
-            clf = self.OrangeTreeLearner(**args)(self.data)
-            self.assertTrue(all(len(node.subset) >= lim
-                                for node in self.all_nodes(clf.root)))
             clf = self.OrangeTreeLearner(**args)(self.data_mixed)
             self.assertTrue(all(len(node.subset) >= lim
                                 for node in self.all_nodes(clf.root)))
@@ -182,6 +181,23 @@ class TestTree:
         self.assertIsInstance(tree.root, Node)
         np.testing.assert_almost_equal(tree.predict(np.array([[0., 0., 0.]])),
                                        self.prediction_on_0_1)
+
+    def test_allow_null_nodes(self):
+        domain = Domain([DiscreteVariable("x", values="abc"),
+                         ContinuousVariable("r1"),
+                         DiscreteVariable("r2", values="ab")],
+                        self.class_var)
+        xy = np.array([[0, 0, 0, 0], [0, 1, 1, 0], [1, 0, 0, 1], [1, 1, 1, 1]])
+        data = Table(domain, xy)
+        clf = self.OrangeTreeLearner(binarize=False)
+        tree = clf(data)
+        root = tree.root
+        self.assertIsInstance(root, DiscreteNode)
+        self.assertEqual(root.attr_idx, 0)
+        self.assertIsNotNone(root.children[0])
+        self.assertIsNotNone(root.children[1])
+        self.assertIsNone(root.children[2])
+        np.testing.assert_equal(tree(data), data.Y)
 
 
 class TestClassifier(TestTree, unittest.TestCase):
