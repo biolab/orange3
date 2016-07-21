@@ -224,7 +224,7 @@ class OrangeTreeModel(Model, Tree):
                 if np.isnan(child_idx):
                     break
                 next_node = node.children[child_idx]
-                if node is None:
+                if next_node is None:
                     break
                 node = next_node
             y[i] = node.value
