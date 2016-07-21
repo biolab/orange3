@@ -223,7 +223,10 @@ class OrangeTreeModel(Model, Tree):
                 child_idx = node.descend(x)
                 if np.isnan(child_idx):
                     break
-                node = node.children[child_idx]
+                next_node = node.children[child_idx]
+                if node is None:
+                    break
+                node = next_node
             y[i] = node.value
         return y
 
@@ -241,9 +244,12 @@ class OrangeTreeModel(Model, Tree):
                 child_ptrs = self._code[node_ptr + 3:]
                 if self._code[node_ptr] == 3:
                     node_idx = self._code[node_ptr + 1]
-                    node_ptr = child_ptrs[int(val > self._thresholds[node_idx])]
+                    next_node_ptr = child_ptrs[int(val > self._thresholds[node_idx])]
                 else:
-                    node_ptr = child_ptrs[int(val)]
+                    next_node_ptr = child_ptrs[int(val)]
+                if next_node_ptr == -1:
+                    break
+                node_ptr = next_node_ptr
             node_idx = self._code[node_ptr + 1]
             y[i] = self._values[node_idx]
         return y
@@ -340,7 +346,8 @@ class OrangeTreeModel(Model, Tree):
             if node.children:
                 codesize += 1 + len(node.children)  # attr index + children ptrs
                 for child in node.children:
-                    _compute_sizes(child)
+                    if child is not None:
+                        _compute_sizes(child)
 
         def _compile_node(node):
             # The node is compile into the following code (np.int32)
@@ -358,6 +365,8 @@ class OrangeTreeModel(Model, Tree):
             # 1-d and 2-d array arrays of type np.float, indexed by node index
             # The lengths of both equal the node count; we would gain (if
             # anything) by not reserving space for unused threshold space
+            if node is None:
+                return -1
             nonlocal code_ptr, node_idx
             code_start = code_ptr
             self._code[code_ptr] = self.NODE_TYPES.index(type(node))

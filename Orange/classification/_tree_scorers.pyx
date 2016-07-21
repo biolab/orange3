@@ -18,12 +18,12 @@ def find_threshold_entropy(np.ndarray[np.float64_t, ndim=1] x,
                            np.ndarray[np.float64_t, ndim=1] y,
                            np.ndarray[np.int64_t, ndim=1] idx,
                            int n_classes, int min_leaf):
-    cdef int *distr = <int *>calloc(2 * n_classes, sizeof(int))
+    cdef unsigned int *distr = <unsigned int *>calloc(2 * n_classes, sizeof(int))
     cdef Py_ssize_t i, j
-    cdef float entro, class_entro, best_entro
-    cdef int p, curr_y
-    cdef int best_idx = 0
-    cdef int N = idx.shape[0]
+    cdef double entro, class_entro, best_entro
+    cdef unsigned int p, curr_y
+    cdef unsigned int best_idx = 0
+    cdef unsigned int N = idx.shape[0]
 
     # Initial split (min_leaf on the left)
     if N <= min_leaf:
@@ -66,16 +66,16 @@ def find_binarization_entropy(np.ndarray[np.float64_t, ndim=2] cont,
                               np.ndarray[np.float64_t, ndim=1] class_distr,
                               np.ndarray[np.float64_t, ndim=1] val_distr,
                               int min_leaf):
-    cdef int n_classes = cont.shape[0]
-    cdef int n_values = cont.shape[1]
-    cdef float *distr = <float *>calloc(2 * n_classes, sizeof(float))
-    cdef float *mfrom
-    cdef float *mto
-    cdef float left, right
-    cdef int i, change, to_right, allowed, m
-    cdef int best_mapping, move, mapping, previous
-    cdef float entro, class_entro, best_entro
-    cdef float N = 0
+    cdef unsigned int n_classes = cont.shape[0]
+    cdef unsigned int n_values = cont.shape[1]
+    cdef double *distr = <double *>calloc(2 * n_classes, sizeof(double))
+    cdef double *mfrom
+    cdef double *mto
+    cdef double left, right
+    cdef unsigned int i, change, to_right, allowed, m
+    cdef unsigned int best_mapping, move, mapping, previous
+    cdef double entro, class_entro, best_entro
+    cdef double N = 0
 
     class_entro = 0
     for i in range(n_classes):
@@ -141,9 +141,9 @@ def find_threshold_MSE(np.ndarray[np.float64_t, ndim=1] x,
                        np.ndarray[np.float64_t, ndim=1] y,
                        np.ndarray[np.int64_t, ndim=1] idx,
                        int min_leaf):
-    cdef float sleft = 0, sum, inter, best_inter
-    cdef int i, best_idx = 0
-    cdef int N = idx.shape[0]
+    cdef double sleft = 0, sum, inter, best_inter
+    cdef unsigned int i, best_idx = 0
+    cdef unsigned int N = idx.shape[0]
 
     # Initial split (min_leaf on the left)
     if N <= min_leaf:
@@ -173,11 +173,11 @@ def find_threshold_MSE(np.ndarray[np.float64_t, ndim=1] x,
 def find_binarization_MSE(np.ndarray[np.float64_t, ndim=1] x,
                           np.ndarray[np.float64_t, ndim=1] y,
                           int n_values, int min_leaf):
-    cdef float sleft, sum, val
+    cdef double sleft, sum, val
     cdef unsigned int left
     cdef unsigned int i, change, to_right, allowed, m
     cdef unsigned int best_mapping, move, mapping, previous
-    cdef float inter, best_inter, start_inter
+    cdef double inter, best_inter, start_inter
     cdef unsigned int N
 
     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = \
@@ -233,7 +233,7 @@ def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,
                         np.ndarray[np.float64_t, ndim=1] y,
                         int n_values, int min_leaf):
     cdef int i, n
-    cdef float sum = 0, tx
+    cdef double sum = 0, inter, tx
 
     cdef np.ndarray[np.int32_t, ndim=1] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
     cdef np.ndarray[np.float64_t, ndim=1] group_sums = numpy.zeros(n_values)
@@ -247,11 +247,15 @@ def compute_grouped_MSE(np.ndarray[np.float64_t, ndim=1] x,
     n = 0
     for i in range(n_values):
         if group_sizes[i] < min_leaf:
-            return 0
-        if group_sizes[i]:
-            inter += group_sums[i] * group_sums[i] / group_sizes[i]
-            sum += group_sums[i]
-            n += group_sizes[i]
+            # We don't construct nodes with less than min_leaf instances
+            # If there is only one non-null node, the split will yield a
+            # score of 0
+            continue
+        inter += group_sums[i] * group_sums[i] / group_sizes[i]
+        sum += group_sums[i]
+        n += group_sizes[i]
+    if n < 2:
+        return 0
     # factor n / x.shape[0] is the punishment for missing values
     #return (inter - sum * sum / n) / n * n / x.shape[0]
     return (inter - sum * sum / n) / x.shape[0]
@@ -263,7 +267,8 @@ def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,
                         np.ndarray[np.int32_t, ndim=1] code,
                         np.ndarray[np.float64_t, ndim=2] class_distrs,
                         np.ndarray[np.float64_t, ndim=1] thresholds):
-    cdef int node_ptr, node_idx, i, val_idx
+    cdef unsigned int node_ptr, node_idx, i, val_idx
+    cdef signed int next_node_ptr
     cdef np.float64_t val
     cdef np.ndarray[np.float64_t, ndim=2] predictions = \
         numpy.empty((X.shape[0], class_distrs.shape[1]), dtype=numpy.float64)
@@ -279,7 +284,10 @@ def compute_predictions(np.ndarray[np.float64_t, ndim=2] X,
                 val_idx = int(val > thresholds[node_idx])
             else:
                 val_idx = int(val)
-            node_ptr = code[node_ptr + 3 + val_idx]
+            next_node_ptr = code[node_ptr + 3 + val_idx]
+            if next_node_ptr == -1:
+                break
+            node_ptr = next_node_ptr
         node_idx = code[node_ptr + 1]
         predictions[i] = class_distrs[node_idx]
     return predictions

@@ -1,5 +1,4 @@
 """Tree inducers: SKL and Orange's own inducer"""
-import bottleneck as bn
 import numpy as np
 import sklearn.tree as skl_tree
 
@@ -42,6 +41,7 @@ class OrangeTreeLearner(Learner):
         """
         # Prevent false warnings by pylint
         attr = attr_no = None
+        REJECT_ATTRIBUTE = 0, None, None, 0
 
         def _score_disc():
             """Scoring for discrete attributes, no binarization
@@ -50,26 +50,35 @@ class OrangeTreeLearner(Learner):
             functions. This is to make sure that it uses the same
             definition as the below classes that compute entropy themselves
             for efficiency reasons."""
-            if len(attr.values) < 2:
-                return None, None, None
+            n_values = len(attr.values)
+            if n_values < 2:
+                return REJECT_ATTRIBUTE
             cont = contingency.Discrete(data, attr)
             attr_distr = np.sum(cont, axis=0)
-            cls_distr = np.sum(cont, axis=1)  # Skip insts without attr value
+            null_nodes = attr_distr <= self.min_samples_leaf
+            # This is just for speed. If there is only a single non-null-node,
+            # entropy wouldn't decrease anyway.
+            if sum(null_nodes) >= n_values - 1:
+                return REJECT_ATTRIBUTE
+            cont[:, null_nodes] = 0
+            attr_distr = np.sum(cont, axis=0)
+            cls_distr = np.sum(cont, axis=1)
             n = sum(attr_distr)
-            if np.min(attr_distr) < self.min_samples_leaf:
-                return None, None, None
-            cls_distr[cls_distr <= 0] = 1  # avoid log(0)
+            # Avoid log(0); <= instead of == because we need an array
+            cls_distr[cls_distr <= 0] = 1
+            attr_distr[attr_distr <= 0] = 1
+            cont[cont <= 0] = 1
             class_entr = n * np.log(n) - np.sum(cls_distr * np.log(cls_distr))
-            cont[cont <= 0] = 1  # avoid log(0)
-            cont_entr = \
-                np.sum(attr_distr * np.log(attr_distr)) - \
-                np.sum(cont * np.log(cont))
-            score = (class_entr - cont_entr) / n / np.log(2)
+            attr_entr = np.sum(attr_distr * np.log(attr_distr))
+            cont_entr = np.sum(cont * np.log(cont))
+            score = (class_entr - attr_entr + cont_entr) / n / np.log(2)
             score *= n / len(data)  # punishment for missing values
             branches = data[:, attr].X.flatten()
             branches[np.isnan(branches)] = -1
+            if score == 0:
+                return REJECT_ATTRIBUTE
             node = DiscreteNode(attr, attr_no, None)
-            return score, node, branches
+            return score, node, branches, n_values
 
         def _score_disc_bin():
             """Scoring for discrete attributes, with binarization"""
@@ -81,16 +90,16 @@ class OrangeTreeLearner(Learner):
             # Skip instances with missing value of the attribute
             cls_distr = np.sum(cont, axis=1)
             if sum(attr_distr) == 0:  # all values are missing
-                return None, None, None
+                return REJECT_ATTRIBUTE
             best_score, best_mapping = _tree_scorers.find_binarization_entropy(
                 cont, cls_distr, attr_distr, self.min_samples_leaf)
             if best_score <= 0:
-                return None, None, None
+                return REJECT_ATTRIBUTE
             best_score *= 1 - sum(cont.unknowns) / len(data)
             mapping, branches = MappedDiscreteNode.branches_from_mapping(
                 data.X[:, attr_no], best_mapping, n_values)
             node = MappedDiscreteNode(attr, attr_no, mapping, None)
-            return best_score, node, branches
+            return best_score, node, branches, 2
 
         def _score_cont():
             """Scoring for numeric attributes"""
@@ -99,30 +108,29 @@ class OrangeTreeLearner(Learner):
             non_nans = len(col_x) - nans
             arginds = np.argsort(col_x)[:non_nans]
             best_score, best_cut = _tree_scorers.find_threshold_entropy(
-                col_x, data.Y, arginds, len(class_distr), self.min_samples_leaf)
+                col_x, data.Y, arginds,
+                len(class_var.values), self.min_samples_leaf)
             if best_score == 0:
-                return None, None, None
+                return REJECT_ATTRIBUTE
             best_score *= non_nans / len(col_x)
             branches = col_x > best_cut
             branches[np.isnan(col_x)] = -1
             node = NumericNode(attr, attr_no, best_cut, None)
-            return best_score, node, branches
+            return best_score, node, branches, 2
 
         #######################################
         # The real _select_attr starts here
         domain = data.domain
         class_var = domain.class_var
-        class_distr = distribution.Discrete(data, class_var)
-        best_node = Node(None, None, None)
-        best_score = best_branches = None
+        best_score, *best_res = REJECT_ATTRIBUTE
+        best_res = [Node(None, None, None)] + best_res[1:]
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
-            sc, node, branches = \
-                disc_scorer() if attr.is_discrete else _score_cont()
-            if node is not None and (best_score is None or sc > best_score):
-                best_score, best_node, best_branches = sc, node, branches
-        best_node.value = class_distr
-        return best_node, best_branches
+            sc, *res = disc_scorer() if attr.is_discrete else _score_cont()
+            if res[0] is not None and sc > best_score:
+                best_score, best_res = sc, res
+        best_res[0].value = distribution.Discrete(data, class_var)
+        return best_res
 
     def build_tree(self, data, active_inst, level=1):
         """Induce a tree from the given data
@@ -131,18 +139,19 @@ class OrangeTreeLearner(Learner):
             root node (Node)"""
         node_insts = data[active_inst]
         distr = distribution.Discrete(node_insts, data.domain.class_var)
+        if len(node_insts) < self.min_samples_leaf:
+            return None
         if len(node_insts) < self.min_samples_split or \
                 max(distr) >= sum(distr) * self.sufficient_majority or \
                 self.max_depth is not None and level > self.max_depth:
-            node, branches = Node(None, None, distr), None
+            node, branches, n_children = Node(None, None, distr), None, 0
         else:
-            node, branches = self._select_attr(node_insts)
+            node, branches, n_children = self._select_attr(node_insts)
         node.subset = active_inst
         if branches is not None:
             node.children = [
-                self.build_tree(data, active_inst[branches == branch],
-                                level + 1)
-                for branch in range(int(bn.nanmax(branches) + 1))]
+                self.build_tree(data, active_inst[branches == br], level + 1)
+                for br in range(n_children)]
         return node
 
     def fit_storage(self, data):
@@ -157,8 +166,11 @@ class OrangeTreeLearner(Learner):
 
         active_inst = np.nonzero(~np.isnan(data.Y))[0]
         root = self.build_tree(data, active_inst)
-        if root.children is None and sum(root.value) == 0:  # tree without data
-            root.value[:] = 1
+        if root is None:
+            distr = distribution.Discrete(data, data.domain.class_var)
+            if np.sum(distr) == 0:
+                distr[:] = 1
+            root = Node(None, 0, distr)
         root.subset = active_inst
         model = OrangeTreeModel(data, root)
         return model
