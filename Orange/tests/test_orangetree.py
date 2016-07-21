@@ -381,6 +381,20 @@ class TestTreeModel(unittest.TestCase):
             expected_values / np.sum(expected_values, axis=1)[:, np.newaxis]
         np.testing.assert_equal(model.predict(x), normalized)
 
+    def test_null_nodes(self):
+        a = DiscreteVariable("d4", "ab")
+        y = ContinuousVariable("ey")
+        domain = Domain([a], y)
+        data = Table(domain)
+        values = np.array([[42., 43], [44, 45]])
+        root = DiscreteNode(a, 0, values[1])
+        root.children = [Node(None, -1, values[0]), None]
+        model = OrangeTreeModel(data, root)
+        x = np.array([[0.], [1]])
+        np.testing.assert_equal(model.get_values(x), values)
+        np.testing.assert_equal(model.get_values_in_python(x), values)
+        np.testing.assert_equal(model.get_values_by_nodes(x), values)
+
     def test_methods(self):
         model = OrangeTreeModel(self.data, self.root)
         self.assertEqual(model.node_count, 8)
@@ -398,6 +412,9 @@ class TestTreeModel(unittest.TestCase):
         self.assertEqual(model.split_condition(self.root, None), "")
         self.assertEqual(model.split_condition(left, self.root), "≤ 13")
         self.assertEqual(model.split_condition(right, self.root), "> 13")
+
+        self.assertIsInstance(model.rule(self.root), str)
+        np.testing.assert_equal(model.get_value(self.root), np.array([0., 42]))
 
         left.subset = np.array([2, 3])
         self.assertEqual(model.num_instances(self.root), 0)
