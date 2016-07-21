@@ -7,23 +7,25 @@ import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import KNNLearner
-from Orange.evaluation import CA, CrossValidation
+from Orange.regression import KNNRegressionLearner
+from Orange.evaluation import CA, CrossValidation, MSE
 
 
 class TestKNNLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.learn = KNNLearner()
+        cls.housing = Table('housing')
 
     def test_KNN(self):
-        results = CrossValidation(self.iris, [self.learn], k=10)
+        results = CrossValidation(self.iris, [KNNLearner()], k=3)
         ca = CA(results)
         self.assertGreater(ca, 0.8)
         self.assertLess(ca, 0.99)
 
     def test_predict_single_instance(self):
-        clf = self.learn(self.iris)
+        lrn = KNNLearner()
+        clf = lrn(self.iris)
         for ins in self.iris[::20]:
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
@@ -42,9 +44,23 @@ class TestKNNLearner(unittest.TestCase):
         class_vars = (DiscreteVariable('Target 1'),)
         domain = Domain(attr, class_vars)
         t = Table(domain, x1, y1)
-        clf = self.learn(t)
+        lrn = KNNLearner()
+        clf = lrn(t)
         z = clf(x2)
         correct = (z == y2.flatten())
-        ca = sum(correct)/len(correct)
+        ca = sum(correct) / len(correct)
         self.assertGreater(ca, 0.1)
         self.assertLess(ca, 0.3)
+
+    def test_KNN_mahalanobis(self):
+        learners = [KNNLearner(metric="mahalanobis")]
+        results = CrossValidation(self.iris, learners, k=3)
+        ca = CA(results)
+        self.assertGreater(ca, 0.8)
+
+    def test_KNN_regression(self):
+        learners = [KNNRegressionLearner(),
+                    KNNRegressionLearner(metric="mahalanobis")]
+        results = CrossValidation(self.housing, learners, k=3)
+        mse = MSE(results)
+        self.assertLess(mse[1], mse[0])

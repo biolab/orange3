@@ -308,3 +308,19 @@ class RandomForest:
         -------
         List[Tree]
         """
+
+
+class KNNBase:
+    """Base class for KNN (classification and regression) learners
+    """
+    def __init__(self, n_neighbors=5, metric="euclidean", weights="uniform",
+                 algorithm='auto', metric_params=None,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
+
+    def fit(self, X, Y, W=None):
+        if self.params["metric_params"] is None and \
+                        self.params.get("metric") == "mahalanobis":
+            self.params["metric_params"] = {"V": np.cov(X.T)}
+        return super().fit(X, Y, W)

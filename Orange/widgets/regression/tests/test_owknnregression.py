@@ -15,9 +15,7 @@ class TestOWKNNRegression(WidgetTest, WidgetLearnerTestMixin):
             x.activated.emit(i)
             x.setCurrentIndex(i)
 
-        # FIXME: widget crashes when Mahalanobis metric is chosen.
-        # When fixed, remove metrics slicing
-        metrics = self.widget.metrics[:-1]
+        metrics = self.widget.metrics
         weights = self.widget.weights
         nn_spin = self.widget.n_neighbors_spin
         nn_min_max = [nn_spin.minimum(), nn_spin.maximum()]
