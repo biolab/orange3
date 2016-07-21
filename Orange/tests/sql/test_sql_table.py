@@ -15,6 +15,7 @@ from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
 from Orange.statistics.contingency import Continuous, Discrete, get_contingencies
 from Orange.statistics.distribution import get_distributions
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+import Orange.data.sql.compat.filter as filter
 
 
 @sql_test
@@ -45,10 +46,23 @@ class TestSqlTable(PostgresTest):
 
     def test_len(self):
         with self.sql_table_from_data(zip(self.float_variable(26))) as table:
-            self.assertEqual(len(table), 26)
+            self.assertEqual(len(table), 0)  # no rows downloaded
 
         with self.sql_table_from_data(zip(self.float_variable(0))) as table:
-            self.assertEqual(len(table), 0)
+            self.assertEqual(len(table), 0)  # no rows downloaded
+
+        with self.sql_table_from_data(zip(self.float_variable(10))) as table:
+            self.assertEqual(table.exact_len(), 10)
+            table.download_data()
+            self.assertEqual(table.exact_len(), 10)
+            self.assertEqual(len(table), 10)  # everything downloaded
+
+    def test_exact_len(self):
+        with self.sql_table_from_data(zip(self.float_variable(26))) as table:
+            self.assertEqual(table.exact_len(), 26)
+
+        with self.sql_table_from_data(zip(self.float_variable(0))) as table:
+            self.assertEqual(table.exact_len(), 0)
 
     def test_bool(self):
         with self.sql_table_from_data(()) as table:
@@ -59,14 +73,34 @@ class TestSqlTable(PostgresTest):
     def test_len_with_filter(self):
         data = zip(self.discrete_variable(26))
         with self.sql_table_from_data(data) as table:
-            self.assertEqual(len(table), 26)
+            self.assertEqual(len(table), 0)  # nothing downloaded
 
             filtered_table = filter.SameValue(table.domain[0], 'm')(table)
-            self.assertEqual(len(filtered_table), 13)
+            self.assertEqual(len(filtered_table), 0)  # nothing downloaded
 
             table.domain[0].values.append('x')
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
-            self.assertEqual(len(filtered_table), 0)
+            self.assertEqual(len(filtered_table), 0)  # nothing downloaded
+
+        data = zip(self.float_variable(26))
+        with self.sql_table_from_data(data) as table:
+            filtered_table = filter.Values(conditions=[
+                filter.FilterContinuous(0, filter.FilterContinuous.Greater, 1)
+            ])(table)
+            filtered_table.download_data()
+            self.assertEqual(len(filtered_table), 15)  # nothing downloaded
+
+    def test_exact_len_with_filter(self):
+        data = zip(self.discrete_variable(26))
+        with self.sql_table_from_data(data) as table:
+            self.assertEqual(table.exact_len(), 26)
+
+            filtered_table = filter.SameValue(table.domain[0], 'm')(table)
+            self.assertEqual(filtered_table.exact_len(), 13)
+
+            table.domain[0].values.append('x')
+            filtered_table = filter.SameValue(table.domain[0], 'x')(table)
+            self.assertEqual(filtered_table.exact_len(), 0)
 
     def test_XY_small(self):
         mat = np.random.randint(0, 2, (20, 3))
@@ -101,7 +135,7 @@ class TestSqlTable(PostgresTest):
     def test_download_data(self):
         mat = np.random.randint(0, 2, (20, 3))
         conn, table_name = self.create_sql_table(mat)
-        for member in ('X', 'Y', 'metas', 'W', 'ids'):
+        for member in ('X', 'Y', 'metas', 'W'):
             sql_table = SqlTable(conn, table_name,
                                  type_hints=Domain([], DiscreteVariable(
                                      name='col2', values=['0', '1', '2'])))
@@ -190,7 +224,7 @@ class TestSqlTable(PostgresTest):
                 name="qualitative petal length",
                 values=['<', '>'])], []))
 
-        self.assertEqual(len(table), 498)
+        self.assertEqual(table.exact_len(), 498)
         self.assertAlmostEqual(list(table[497]), [5.8, 1.2, 0.])
 
     def _mock_attribute(self, attr_name, formula=None):

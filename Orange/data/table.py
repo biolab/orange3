@@ -860,6 +860,9 @@ class Table(pd.DataFrame):
     def approx_len(self):
         return len(self)
 
+    def exact_len(self):
+        return len(self)
+
     def is_sparse(self):
         return isinstance(self, pd.SparseDataFrame)
 

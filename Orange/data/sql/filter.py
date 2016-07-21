@@ -1,7 +1,5 @@
-# temp dummy class because Filter was deleted
-class filter(object):
-    IsDefined = SameValue = Values = FilterDiscrete = \
-        FilterContinuous = FilterString = FilterStringList = Filter = object
+from Orange.data.sql.compat import filter
+
 
 class IsDefinedSql(filter.IsDefined):
     def to_sql(self):

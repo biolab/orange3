@@ -4,6 +4,10 @@ import string
 import unittest
 from urllib import parse
 import uuid
+from numbers import Number
+
+import numpy as np
+import pandas as pd
 
 import Orange
 from Orange.data.sql.table import SqlTable
@@ -76,13 +80,11 @@ def create_iris():
                 "iris" varchar(15)
             )
         """)
-        for row in iris:
+        for idx, row in iris.iterrows():
             values = []
-            for i, val in enumerate(row):
-                if i != 4:
-                    values.append(str(val))
-                else:
-                    values.append(iris.domain.class_var.values[int(val)])
+            for name, value in row.iteritems():
+                if name != Orange.data.Table._WEIGHTS_COLUMN:
+                    values.append(value)
             cur.execute("""INSERT INTO iris VALUES
             (%s, %s, %s, %s, '%s')""" % tuple(values))
         cur.execute("ANALYZE iris")
@@ -171,7 +173,7 @@ class PostgresTest(unittest.TestCase):
         self.drop_sql_table(table_name)
 
     def _create_sql_table(self, data, sql_column_types=None):
-        data = list(data)
+        data = [r for _, r in data.iterrows()] if isinstance(data, pd.DataFrame) else list(data)
         if sql_column_types is None:
             column_size = self._get_column_types(data)
             sql_column_types = [
@@ -196,7 +198,7 @@ class PostgresTest(unittest.TestCase):
         for row in data:
             values = []
             for v, t in zip(row, sql_column_types):
-                if v is None:
+                if v is None or (isinstance(v, Number) and np.isnan(v)):
                     values.append('NULL')
                 elif t == 0:
                     values.append(str(v))

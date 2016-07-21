@@ -292,8 +292,13 @@ class Domain:
             nmetas = len(self._metas)
             if len(inst) != nvars and len(inst) != nvars + nmetas:
                 raise ValueError("invalid data length for domain")
-            values = [var.to_val(val)
-                      for var, val in zip(self._variables, inst)]
+            # SQL table workaround
+            values = []
+            for var, val in zip(self._variables, inst):
+                try:
+                    values.append(var.to_val(val))
+                except:
+                    values.append(val)
             if len(inst) == nvars + nmetas:
                 metas = [var.to_val(val)
                          for var, val in zip(self._metas, inst[nvars:])]
