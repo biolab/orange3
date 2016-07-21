@@ -92,7 +92,7 @@ class Discrete(np.ndarray):
             self.unknown_rows = 0
             for idx, row in data.iterrows():
                 row_val, col_val = row.loc[row_variable], row.loc[col_variable]
-                w = row[Table._WEIGHTS_COLUMN]
+                w = row[data._WEIGHTS_COLUMN]
                 if math.isnan(row_variable.to_val(row_val)):
                     self.unknown_rows += w
                     continue

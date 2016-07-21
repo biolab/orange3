@@ -505,7 +505,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @staticmethod
     def header_names(data):
-        return [Table._WEIGHTS_COLUMN] + \
+        return [data._WEIGHTS_COLUMN] + \
                [v.name for v in chain(data.domain.attributes,
                                       data.domain.class_vars,
                                       data.domain.metas)]
@@ -542,7 +542,7 @@ class FileFormat(metaclass=FileFormatMeta):
     @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
-        vars = list(chain((ContinuousVariable(Table._WEIGHTS_COLUMN),),
+        vars = list(chain((ContinuousVariable(data._WEIGHTS_COLUMN),),
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))

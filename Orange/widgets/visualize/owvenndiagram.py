@@ -1571,7 +1571,7 @@ def venn_intersection(paths, key):
 
 
 def append_column(data, where, variable, column):
-    X, Y, M, W = data.X, data.Y, data.metas, data.W
+    X, Y, M, W = data.X, data.Y, data.metas, data.weights
     domain = data.domain
     attr = domain.attributes
     class_vars = domain.class_vars

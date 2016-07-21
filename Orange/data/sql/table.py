@@ -2,7 +2,6 @@
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
 from contextlib import contextmanager
-import functools
 from itertools import islice
 import logging
 import re
@@ -37,6 +36,7 @@ class SqlTable(Table):
     table_name = None
     #domain = None
     row_filters = ()
+    _cached__len__ = None
 
     @property
     def _constructor(self):
@@ -358,14 +358,6 @@ class SqlTable(Table):
                     break
                 yield row
 
-    def __bool__(self):
-        """Return True if the SqlTable is not empty."""
-        query = self._sql_query(["1"], limit=1)
-        with self._execute_sql_query(query) as cur:
-            return cur.fetchone() is not None
-
-    _cached__len__ = None
-
     def _count_rows(self):
         query = self._sql_query(["COUNT(*)"])
         with self._execute_sql_query(query) as cur:
@@ -391,12 +383,6 @@ class SqlTable(Table):
         if get_exact:
             threading.Thread(target=SqlTable._count_rows, args=(self,)).start()
         return alen
-
-    _X = None
-    _Y = None
-    _metas = None
-    _W = None
-    _ids = None
 
     def download_data(self, limit=None, partial=False):
         """Download SQL data and store it in memory as numpy matrices."""
@@ -452,18 +438,10 @@ class SqlTable(Table):
         return super(SqlTable, self).metas
 
     @property
-    def W(self):
-        """Numpy array with weight values."""
-        return self.weights
-
-    @property
     def weights(self):
         if not self.downloaded_data:
             self.download_data(AUTO_DL_LIMIT)
         return super(SqlTable, self).weights
-
-    def has_weights(self):
-        return False
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_var=False):
@@ -592,15 +570,6 @@ class SqlTable(Table):
             col_index = column.to_val(col_value)
             conts[row_index, col_index] = count
         return conts
-
-    def X_density(self):
-        return Orange.data.Table.DENSE
-
-    def Y_density(self):
-        return Orange.data.Table.DENSE
-
-    def metas_density(self):
-        return Orange.data.Table.DENSE
 
     # Filters
     def _filter_is_defined(self, columns=None, negate=False):
@@ -803,8 +772,6 @@ class SqlTableSeries(TableSeries):
     """
     A subclass of pandas' Series to properly override constructors to avoid problems.
     """
-    _metadata = ['domain']
-
     @property
     def _constructor(self):
         return SqlTableSeries
@@ -812,12 +779,6 @@ class SqlTableSeries(TableSeries):
     @property
     def _constructor_expanddim(self):
         return SqlTable
-
-    _to_numpy = SqlTable._to_numpy
-    X = SqlTable.X
-    Y = SqlTable.Y
-    metas = SqlTable.metas
-    weights = w = SqlTable.weights
 
 
 class SqlTablePanel(TablePanel):
@@ -851,11 +812,3 @@ class SqlRowInstance(Instance):
         super().__init__(domain, data[:nvar])
         if len(data) > nvar:
             self._metas = np.asarray(data[nvar:], dtype=object)
-
-
-class ToSql:
-    def __init__(self, sql):
-        self.sql = sql
-
-    def __call__(self):
-        return self.sql

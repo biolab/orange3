@@ -31,7 +31,7 @@ class Learner:
             "Descendants of Learner must overload method fit")
 
     def fit_storage(self, data):
-        return self.fit(data.X, data.Y, data.W)
+        return self.fit(data.X, data.Y, data.weights)
 
     def __call__(self, data):
         if not self.check_learner_adequacy(data.domain):

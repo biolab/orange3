@@ -7,8 +7,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import Domain, DiscreteVariable, StringVariable
-from Orange.data.table import Table, get_sample_datasets_dir
+from Orange.data import Domain, DiscreteVariable, StringVariable, Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
@@ -381,7 +380,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         dtpe = object if any(isinstance(m, StringVariable)
                              for m in domain.metas) else float
         m = np.array(m, dtype=dtpe).T if len(m) else None
-        table = Table.from_numpy(domain, X, y, m, self.data.W)
+        table = Table.from_numpy(domain, X, y, m, self.data.weights)
         self.send("Data", table)
         self.apply_button.hide()
 

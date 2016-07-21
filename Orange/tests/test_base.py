@@ -45,4 +45,4 @@ class TestSklLearner(unittest.TestCase):
         data.set_weights(1.2)
         with self.assertRaises(ValueError):
             skl = LogisticRegression(solver='liblinear')
-            skl.fit(data.X, data.Y, data.W)
+            skl.fit(data.X, data.Y, data.weights)

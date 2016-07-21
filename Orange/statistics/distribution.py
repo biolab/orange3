@@ -70,7 +70,7 @@ class Discrete(np.ndarray):
             self[:] = np.zeros(len(variable.values))
             self.variable = variable
             self.unknowns = 0
-            for val, w in zip(data.loc[:, variable], data.W):
+            for val, w in zip(data.loc[:, variable], data.weights):
                 if not isinstance(val, Number) or not math.isnan(val):
                     self[val] += w
                 else:
@@ -196,7 +196,7 @@ class Continuous(np.ndarray):
                 dtype = col.dtype.name
             dist = np.empty((2, len(col)), dtype=dtype)
             dist[0, :] = col
-            dist[1, :] = data.W
+            dist[1, :] = data.weights
             dist.sort(axis=0)
             dist = np.array(_orange.valuecount(dist))
             unknowns = len(col) - dist.shape[1]

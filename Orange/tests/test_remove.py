@@ -105,7 +105,7 @@ class TestRemover(unittest.TestCase):
         attr_res, class_res = remover.attr_results, remover.class_results
 
         for i in range(len(data)):
-            for j in (c for c in data.columns if c != Table._WEIGHTS_COLUMN):
+            for j in (c for c in data.columns if c != data._WEIGHTS_COLUMN):
                 self.assertEqual(new_data.iloc[i][j], data.iloc[i][j])
 
         self.assertEqual([a.name for a in new_data.domain.attributes],

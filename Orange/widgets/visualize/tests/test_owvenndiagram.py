@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 from Orange.data import (Table, Domain, StringVariable,
-                         DiscreteVariable, ContinuousVariable, dataset_dirs)
+                         DiscreteVariable, ContinuousVariable)
 from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
                                                     table_concat,
                                                     varying_between,

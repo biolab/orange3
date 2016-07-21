@@ -64,12 +64,6 @@ class TestSqlTable(PostgresTest):
         with self.sql_table_from_data(zip(self.float_variable(0))) as table:
             self.assertEqual(table.exact_len(), 0)
 
-    def test_bool(self):
-        with self.sql_table_from_data(()) as table:
-            self.assertEqual(bool(table), False)
-        with self.sql_table_from_data(zip(self.float_variable(1))) as table:
-            self.assertEqual(bool(table), True)
-
     def test_len_with_filter(self):
         data = zip(self.discrete_variable(26))
         with self.sql_table_from_data(data) as table:
@@ -135,7 +129,7 @@ class TestSqlTable(PostgresTest):
     def test_download_data(self):
         mat = np.random.randint(0, 2, (20, 3))
         conn, table_name = self.create_sql_table(mat)
-        for member in ('X', 'Y', 'metas', 'W'):
+        for member in ('X', 'Y', 'metas', 'weights'):
             sql_table = SqlTable(conn, table_name,
                                  type_hints=Domain([], DiscreteVariable(
                                      name='col2', values=['0', '1', '2'])))

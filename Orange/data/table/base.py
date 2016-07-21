@@ -1,14 +1,10 @@
 import os
-import warnings
 import zlib
 from collections import Sequence
 from threading import Lock
-from warnings import warn
-from numbers import Number, Integral
+from numbers import Number
 
 from itertools import chain
-import bottleneck as bn
-from scipy import sparse as sp
 import numpy as np
 import pandas as pd
 import pandas.core.internals
@@ -17,22 +13,15 @@ from Orange.data import Domain, StringVariable, ContinuousVariable, DiscreteVari
 from Orange.util import flatten, deprecated
 
 
-def get_sample_datasets_dir():
-    orange_data_table = os.path.dirname(__file__)
-    dataset_dir = os.path.join(orange_data_table, '..', 'datasets')
-    return os.path.realpath(dataset_dir)
-
-
-dataset_dirs = ['', get_sample_datasets_dir()]
-
-
 # noinspection PyPep8Naming
-class Table(pd.DataFrame):
-    KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy"}
+class TableBase:
+    KNOWN_PANDAS_KWARGS = {}
 
     # these were previously in Storage
     MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
 
+    # the default name for weights columns
+    # subclasses may override this to rename the column
     _WEIGHTS_COLUMN = "__weights__"
 
     # a counter for indexing rows, important for deterministically selecting rows
@@ -48,149 +37,6 @@ class Table(pd.DataFrame):
                  'attributes',
                  '__file__']
 
-    @property
-    def _constructor(self):
-        """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
-        return Table
-
-    @property
-    def _constructor_sliced(self):
-        """
-        An ugly workaround for the fact that pandas doesn't transfer _metadata to Series objects.
-        Where this property should return a constructor callable, we instead return a
-        proxy function, which sets the necessary properties from _metadata using a closure
-        to ensure thread-safety.
-
-        This enables TableSeries to use .X/.Y/.metas because it has a Domain.
-        """
-        attrs = {k: getattr(self, k, None) for k in Table._metadata}
-
-        class _transferer:
-            # this is a class and not a function because sometimes, pandas
-            # wants _constructor_sliced.from_array
-            def from_array(self, *args, **kwargs):
-                return _transferer._attr_setter(TableSeries.from_array(*args, **kwargs))
-
-            def __call__(self, *args, **kwargs):
-                return _transferer._attr_setter(TableSeries(*args, **kwargs))
-
-            @staticmethod
-            def _attr_setter(target):
-                for k, v in attrs.items():
-                    setattr(target, k, v)
-                return target
-
-        return _transferer()
-
-    @property
-    def _constructor_expanddim(self):
-        return TablePanel
-
-    def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
-        """
-        Exports a numpy matrix. The order is always X, Y, meta. Always 2D.
-        The columns are in the same order as in Table.domain._.
-        If writable == False (default), the numpy writable flag is set to false.
-            This means write operations on this array will loudly fail. 
-        """
-        cols = []
-        cols += self.domain.attributes if X else []
-        cols += self.domain.class_vars if Y else []
-        cols += self.domain.metas if meta else []
-
-        # support using this in TableSeries, whose len gives the number of columns
-        n_rows = 1 if isinstance(self, TableSeries) else len(self)
-
-        # preallocate result, we fill it in-place
-        # we need a more general dtype for metas (commonly strings),
-        # otherwise assignment fails later
-        dtype = object if meta else \
-                int if all(c.is_discrete for c in cols) else \
-                None
-        result = np.zeros((n_rows, len(cols)), dtype=object if meta else None)
-        # effectively a double for loop, see if this is a bottleneck later
-        for i, col in enumerate(cols):
-            if isinstance(self, TableSeries):
-                # if this is used in TableSeries, we don't have a series but an element
-                result[:, i] = col.to_val(self[col])
-            else:
-                result[:, i] = self[col].apply(col.to_val).values
-        result.setflags(write=writable)
-        return result
-
-    @property
-    def X(self):
-        """
-        Return a read-only numpy matrix of X.
-        The columns are in the same order as the columns in Table.domain.attributes.
-        """
-        return self._to_numpy(X=True)
-
-    @property
-    def Y(self):
-        """
-        Return a read-only numpy matrix of Y.
-        If there is only one column, a one-dimensional array is returned. Otherwise 2D.
-        The columns are in the same order as the columns in Table.domain.class_vars.
-        """
-        result = self._to_numpy(Y=True)
-        return result[:, 0] if result.shape[1] == 1 else result
-
-    @property
-    def metas(self):
-        """
-        Return a read-only numpy matrix of metas.
-        The columns are in the same order as the columns in Table.domain.metas.
-        """
-        return self._to_numpy(meta=True)
-
-    @property
-    def weights(self):
-        # TODO: do we switch to .weights and deprecate .W or keep .W?
-        """Get the weights as a numpy array."""
-        val = self[Table._WEIGHTS_COLUMN]
-        if hasattr(val, 'values'):
-            return val.values
-        else:
-            # at least 1D when using this in TableSeries, which instead returns a 0D ndarray directly
-            return np.atleast_1d(val)
-
-    @property
-    def W(self):
-        return self.weights
-
-    def set_weights(self, weight):
-        """
-        Set the weights for the instances in this table.
-        If a number, weights to set to that value.
-        If a string, weights are set to whatever the column with that name's values are,
-            but only if those values are all numbers and are not NA/NaN.
-        If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
-        """
-        if isinstance(weight, Number):
-            if np.isnan(weight):
-                raise ValueError("Weights cannot be nan. ")
-            self[Table._WEIGHTS_COLUMN] = weight
-        elif isinstance(weight, str):
-            if weight not in self.columns:
-                raise ValueError("{} is not a column.".format(weight))
-            if self[weight].isnull().any() and np.issubdtype(self[weight].dtype, Number):
-                raise ValueError("All values in the target column must be valid numbers.")
-            self[Table._WEIGHTS_COLUMN] = self[weight].fillna(value=self[weight].median())
-        elif isinstance(weight, (Sequence, np.ndarray)):  # np.ndarray is not a Sequence
-            if len(weight) != len(self):
-                raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
-            self[Table._WEIGHTS_COLUMN] = weight
-        elif isinstance(weight, pd.Series):
-            # drop everything but the values to uncomplicate things
-            if weight.isnull().any():
-                raise ValueError("Weights cannot be nan. ")
-            self[Table._WEIGHTS_COLUMN] = weight.values
-        elif isinstance(weight, pd.Categorical):
-            self[Table._WEIGHTS_COLUMN] = list(weight)
-        else:
-            raise TypeError("Expected one of [Number, str, Sequence, Series].")
-
     def __new__(cls, *args, **kwargs):
         """
         Create a new Table. Needed because we have two construction paths: Table() or Table.from_X.
@@ -200,7 +46,7 @@ class Table(pd.DataFrame):
         Do not pass positional arguments through to pandas.
         """
         # is pandas is calling this as part of its transformations, pass it through
-        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(Table.KNOWN_PANDAS_KWARGS)) == 0
+        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(cls.KNOWN_PANDAS_KWARGS)) == 0
 
         ##### START PANDAS SUBCLASS COMPATIBILITY SECTION #####
         # this compatibility hack must exist because we override __new__ in a way incompatible
@@ -233,13 +79,13 @@ class Table(pd.DataFrame):
                 return cls.from_url(args[0], **kwargs)
             else:
                 return cls.from_file(args[0], **kwargs)
-        elif isinstance(args[0], Table):
+        elif isinstance(args[0], TableBase):
             return cls.from_table(args[0].domain, args[0])
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
                 return cls.from_domain(domain, **kwargs)
-            if isinstance(args[0], Table):
+            if isinstance(args[0], TableBase):
                 return cls.from_table(domain, *args)
             elif isinstance(args[0], list):
                 return cls.from_list(domain, *args)
@@ -265,7 +111,7 @@ class Table(pd.DataFrame):
         # only pass through things known to pandas, e.g.
         # Table(..., weights=1) passes weights to from_numpy, but would error
         # when passing to pandas upstream
-        super(Table, self).__init__(**{k: v for k, v in kwargs.items() if k in Table.KNOWN_PANDAS_KWARGS})
+        super().__init__(**{k: v for k, v in kwargs.items() if k in self.KNOWN_PANDAS_KWARGS})
 
         # all weights initialized to 1 (see the weight functions for details)
         self.name = getattr(self, 'name', kwargs.get("name", "untitled"))
@@ -283,13 +129,13 @@ class Table(pd.DataFrame):
                 [c for c in self.domain.metas if c in self.columns]
             )
             if len(new_domain.variables) + len(new_domain.metas) != \
-               len(self.domain.variables) + len(self.domain.metas):
+                            len(self.domain.variables) + len(self.domain.metas):
                 self.domain = new_domain
         else:
             self.domain = None
 
         # only set the weights if they aren't set already
-        if Table._WEIGHTS_COLUMN not in self.columns:
+        if self._WEIGHTS_COLUMN not in self.columns:
             self.set_weights(1)
 
     @classmethod
@@ -304,6 +150,27 @@ class Table(pd.DataFrame):
         """
         result = cls(columns=domain.attributes + domain.class_vars + domain.metas)
         result.domain = domain
+        return result
+
+    @classmethod
+    @deprecated("t.iloc[row_indices].copy()")
+    def from_table_rows(cls, source, row_indices):
+        """
+        Construct a new table (copy) by selecting rows from the source table by their
+        position on the table.
+
+        :param source: an existing table
+        :type source: Orange.data.Table
+        :param row_indices: indices (positional) of the rows to include
+        :type row_indices: a slice or a sequence
+        :return: a new table
+        :rtype: Orange.data.Table
+        """
+        # don't just plain copy here: in case of subclasses of Table, a plain table is passed
+        # through the constructor and from_table to here, and expects to be converted
+        # into a proper subclass type
+        result = cls(data=source.iloc[row_indices]).copy()
+        result._transfer_properties(source, transfer_domain=True)  # because we manually copy data, not the whole table
         return result
 
     @classmethod
@@ -326,10 +193,10 @@ class Table(pd.DataFrame):
         :rtype: Orange.data.Table
         """
         # if a series is passed, convert it to a frame
-        if isinstance(source_table, TableSeries):
+        if isinstance(source_table, SeriesBase):
             d = source_table.domain
             # to pandas df first to avoid adding a column/row of weights automatically
-            source_table = Table(source_table.domain, pd.DataFrame(source_table).transpose())
+            source_table = cls(source_table.domain, pd.DataFrame(source_table).transpose())
 
         new_cache = cls.conversion_cache is None
         try:
@@ -377,24 +244,26 @@ class Table(pd.DataFrame):
                 cls.conversion_cache = None
 
     @classmethod
-    @deprecated("t.iloc[row_indices].copy()")
-    def from_table_rows(cls, source, row_indices):
+    def from_dataframe(cls, df, domain=None, reindex=False, weights=None):
         """
-        Construct a new table (copy) by selecting rows from the source table by their
-        position on the table.
+        Convert a pandas.DataFrame object to a Table.
+        This can infer infers column variable types and roles, reindex and set weights.
+        """
+        if domain is None:
+            result = cls._from_data_inferred(df)
+        else:
+            result = cls(data=df)
+            result.domain = domain
 
-        :param source: an existing table
-        :type source: Orange.data.Table
-        :param row_indices: indices (positional) of the rows to include
-        :type row_indices: a slice or a sequence
-        :return: a new table
-        :rtype: Orange.data.Table
-        """
-        # don't just plain copy here: in case of subclasses of Table, a plain table is passed
-        # through the constructor and from_table to here, and expects to be converted
-        # into a proper subclass type
-        result = cls(data=source.iloc[row_indices]).copy()
-        result._transfer_properties(source, transfer_domain=True)  # because we manually copy data, not the whole table
+        # transform any values we believe are null into actual null values
+        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        result._transform_discrete_into_categorical()
+        result._transform_timevariable_into_datetime()
+
+        if reindex:
+            result.index = cls._new_id(len(result), force_list=True)
+        if weights is not None:
+            result.set_weights(weights)
         return result
 
     @classmethod
@@ -551,27 +420,139 @@ class Table(pd.DataFrame):
         return result
 
     @classmethod
-    def from_dataframe(cls, df, domain=None, reindex=False, weights=None):
+    def from_file(cls, filename):
         """
-        Convert a pandas.DataFrame object to a Table.
-        This can infer infers column variable types and roles, reindex and set weights.
+        Read a data table from a file. The path can be absolute or relative.
+
+        :param filename: File name
+        :type filename: str
+        :return: a new data table
+        :rtype: Orange.data.Table
         """
-        if domain is None:
-            result = cls._from_data_inferred(df)
-        else:
-            result = cls(data=df)
-            result.domain = domain
+        from Orange.data.io import FileFormat
+        from Orange.data import dataset_dirs
 
-        # transform any values we believe are null into actual null values
-        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
-        result._transform_discrete_into_categorical()
-        result._transform_timevariable_into_datetime()
+        absolute_filename = FileFormat.locate(filename, dataset_dirs)
+        reader = FileFormat.get_reader(absolute_filename)
+        data = reader.read()
 
-        if reindex:
-            result.index = cls._new_id(len(result), force_list=True)
-        if weights is not None:
-            result.set_weights(weights)
+        # Readers return plain table. Make sure to cast it to appropriate
+        # (subclass) type
+        if cls != data.__class__:
+            data = cls(data)
+
+        data.name = os.path.splitext(os.path.split(filename)[-1])[0]
+        data.__file__ = absolute_filename
+        return data
+
+    @classmethod
+    def from_url(cls, url):
+        from Orange.data.io import UrlReader
+        reader = UrlReader(url)
+        data = reader.read()
+        if cls != data.__class__:
+            data = cls(data)
+        return data
+
+    def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
+        """
+        Exports a numpy matrix. The order is always X, Y, meta. Always 2D.
+        The columns are in the same order as in Table.domain._.
+        If writable == False (default), the numpy writable flag is set to false.
+            This means write operations on this array will loudly fail.
+        """
+        cols = []
+        cols += self.domain.attributes if X else []
+        cols += self.domain.class_vars if Y else []
+        cols += self.domain.metas if meta else []
+
+        # support using this in TableSeries, whose len gives the number of columns
+        n_rows = 1 if isinstance(self, SeriesBase) else len(self)
+
+        # preallocate result, we fill it in-place
+        # we need a more general dtype for metas (commonly strings),
+        # otherwise assignment fails later
+        dtype = object if meta else \
+            int if all(c.is_discrete for c in cols) else \
+                None
+        result = np.zeros((n_rows, len(cols)), dtype=object if meta else None)
+        # effectively a double for loop, see if this is a bottleneck later
+        for i, col in enumerate(cols):
+            if isinstance(self, SeriesBase):
+                # if this is used in TableSeries, we don't have a series but an element
+                result[:, i] = col.to_val(self[col])
+            else:
+                result[:, i] = self[col].apply(col.to_val).values
+        result.setflags(write=writable)
         return result
+
+    @property
+    def X(self):
+        """
+        Return a read-only numpy matrix of X.
+        The columns are in the same order as the columns in Table.domain.attributes.
+        """
+        return self._to_numpy(X=True)
+
+    @property
+    def Y(self):
+        """
+        Return a read-only numpy matrix of Y.
+        If there is only one column, a one-dimensional array is returned. Otherwise 2D.
+        The columns are in the same order as the columns in Table.domain.class_vars.
+        """
+        result = self._to_numpy(Y=True)
+        return result[:, 0] if result.shape[1] == 1 else result
+
+    @property
+    def metas(self):
+        """
+        Return a read-only numpy matrix of metas.
+        The columns are in the same order as the columns in Table.domain.metas.
+        """
+        return self._to_numpy(meta=True)
+
+    @property
+    def weights(self):
+        """Get the weights as a numpy array."""
+        val = self[self._WEIGHTS_COLUMN]
+        if hasattr(val, 'values'):
+            return val.values
+        else:
+            # at least 1D when using this in TableSeries, which instead returns a 0D ndarray directly
+            return np.atleast_1d(val)
+
+    def set_weights(self, weight):
+        """
+        Set the weights for the instances in this table.
+        If a number, weights to set to that value.
+        If a string, weights are set to whatever the column with that name's values are,
+            but only if those values are all numbers and are not NA/NaN.
+        If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
+        """
+        if isinstance(weight, Number):
+            if np.isnan(weight):
+                raise ValueError("Weights cannot be nan. ")
+            self[self._WEIGHTS_COLUMN] = weight
+        elif isinstance(weight, str):
+            if weight not in self.columns:
+                raise ValueError("{} is not a column.".format(weight))
+            if self[weight].isnull().any() and np.issubdtype(self[weight].dtype, Number):
+                raise ValueError("All values in the target column must be valid numbers.")
+            self[self._WEIGHTS_COLUMN] = self[weight].fillna(value=self[weight].median())
+        elif isinstance(weight, (Sequence, np.ndarray)):  # np.ndarray is not a Sequence
+            if len(weight) != len(self):
+                raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
+            self[self._WEIGHTS_COLUMN] = weight
+        elif isinstance(weight, pd.Series):  # not only SeriesBase
+            # drop everything but the values to uncomplicate things
+            if weight.isnull().any():
+                raise ValueError("Weights cannot be nan. ")
+            self[self._WEIGHTS_COLUMN] = weight.values
+        elif isinstance(weight, pd.Categorical):
+            self[self._WEIGHTS_COLUMN] = list(weight)
+        else:
+            raise TypeError("Expected one of [Number, str, Sequence, SeriesBase].")
 
     @classmethod
     def _new_id(cls, num=1, force_list=False):
@@ -628,54 +609,19 @@ class Table(pd.DataFrame):
         if not writer:
             desc = FileFormat.names.get(ext)
             if desc:
-                raise IOError("Writing of {}s is not supported".
-                    format(desc.lower()))
+                raise IOError("Writing of {}s is not supported".format(desc.lower()))
             else:
                 raise IOError("Unknown file name extension.")
         writer.write_file(filename, self)
-
-    @classmethod
-    def from_file(cls, filename):
-        """
-        Read a data table from a file. The path can be absolute or relative.
-
-        :param filename: File name
-        :type filename: str
-        :return: a new data table
-        :rtype: Orange.data.Table
-        """
-        from Orange.data.io import FileFormat
-
-        absolute_filename = FileFormat.locate(filename, dataset_dirs)
-        reader = FileFormat.get_reader(absolute_filename)
-        data = reader.read()
-
-        # Readers return plain table. Make sure to cast it to appropriate
-        # (subclass) type
-        if cls != data.__class__:
-            data = cls(data)
-
-        data.name = os.path.splitext(os.path.split(filename)[-1])[0]
-        data.__file__ = absolute_filename
-        return data
-
-    @classmethod
-    def from_url(cls, url):
-        from Orange.data.io import UrlReader
-        reader = UrlReader(url)
-        data = reader.read()
-        if cls != data.__class__:
-            data = cls(data)
-        return data
 
     def __getitem__(self, item):
         # if selecting a column subset, we need to transfer weights so they don't just disappear
         # only do this for multiple column selection, which returns a DataFrame by contract
         if isinstance(item, (Sequence, pd.Index)) and not isinstance(item, str) \
                 and all(isinstance(i, str) for i in item) \
-                and Table._WEIGHTS_COLUMN not in item:
-            item = list(item) + [Table._WEIGHTS_COLUMN]
-        return super(Table, self).__getitem__(item)
+                and self._WEIGHTS_COLUMN not in item:
+            item = list(item) + [self._WEIGHTS_COLUMN]
+        return super().__getitem__(item)
 
     def __setitem__(self, key, value):
         # if the table has an empty index and we're inserting a new row,
@@ -692,26 +638,13 @@ class Table(pd.DataFrame):
         # on the series to just merge the column into the table
         if isinstance(value, pd.Series) and not new_index_and_weights:
             value.index = self.index
-        super(Table, self).__setitem__(key, value)
+        super().__setitem__(key, value)
 
         if new_index_and_weights:
-            new_id = Table._new_id(len(self), force_list=True)
+            new_id = self._new_id(len(self), force_list=True)
             self.index = new_id
             # super call because we'd otherwise recurse back into this
-            super(Table, self).__setitem__(Table._WEIGHTS_COLUMN, 1)
-
-    # TODO: update str and repr
-    def __str__(self):
-        # return "[" + ",\n ".join(str(ex) for ex in self)
-        return super(Table, self).__str__()
-
-    def __repr__(self):
-        # s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
-        # if len(self) > 5:
-        #     s += ",\n ..."
-        # s += "\n]"
-        # return s
-        return super(Table, self).__str__()
+            super().__setitem__(self._WEIGHTS_COLUMN, 1)
 
     def clear(self):
         """Remove all rows from the table in-place."""
@@ -724,11 +657,11 @@ class Table(pd.DataFrame):
         """
         if not isinstance(other, pd.DataFrame):
             other = pd.DataFrame(data=[other],
-                                 columns=[c for c in self.columns if c != Table._WEIGHTS_COLUMN],
+                                 columns=[c for c in self.columns if c != self._WEIGHTS_COLUMN],
                                  index=[0])
-        other.index = Table._new_id(len(other), force_list=True)
-        if Table._WEIGHTS_COLUMN not in other.columns:
-            other[Table._WEIGHTS_COLUMN] = 1
+        other.index = self._new_id(len(other), force_list=True)
+        if self._WEIGHTS_COLUMN not in other.columns:
+            other[self._WEIGHTS_COLUMN] = 1
 
         # coerce incompatibilities: this happens when appending a list
         #  - category dtypes must match, coerce them
@@ -740,23 +673,23 @@ class Table(pd.DataFrame):
                 other[column] = other[column].astype('category',
                                                      categories=self[column].cat.categories,
                                                      ordered=self[column].cat.ordered)
-        result = super(Table, self).append(other)
+        result = super().append(other)
         # transform any values we believe are null into actual null values
         result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
         # append doesn't transfer properties for some reason
         result._transfer_properties(self)
-        return Table.from_dataframe(result, self.domain)
+        return self.from_dataframe(result, self.domain)
 
     @deprecated('Use Table.append() for adding new rows. This inserts a new column. ')
     def insert(self, *args, **kwargs):
-        super(Table, self).insert(*args, **kwargs)
+        super().insert(*args, **kwargs)
 
     @deprecated("Table.append(...)")
     def extend(self, rows, weight=1):
         return self.append(rows)
 
-    @staticmethod
-    def concatenate(tables, axis=1, reindex=True, colstack=True, rowstack=False):
+    @classmethod
+    def concatenate(cls, tables, axis=1, reindex=True, colstack=True, rowstack=False):
         """
         Concatenate tables by rows (axis = 0) or columns (axis = 1).
         If concatenating by columns, all tables must be the same length and
@@ -789,13 +722,13 @@ class Table(pd.DataFrame):
                 result = pd.concat(newtables, axis=0)
             else:
                 result = pd.concat(tables, axis=0)
-            new_index = Table._new_id(len(result))
+            new_index = cls._new_id(len(result))
             new_domain = tables[0].domain
             result.index = new_index
         elif axis == CONCAT_COLS:
 
             # check for same name
-            columns = [v for v in flatten([list(t.columns) for t in tables]) if v != Table._WEIGHTS_COLUMN]
+            columns = [v for v in flatten([list(t.columns) for t in tables]) if v != cls._WEIGHTS_COLUMN]
             if len(set(columns)) != len(columns):
                 raise ValueError("Cannot concatenate domains with same names.")
             if colstack:
@@ -815,17 +748,17 @@ class Table(pd.DataFrame):
             )
 
             # fix multiple weight columns: keep the first one
-            weight_columns = result[Table._WEIGHTS_COLUMN]
-            result = result.drop(Table._WEIGHTS_COLUMN, axis=1)
-            result[Table._WEIGHTS_COLUMN] = weight_columns.iloc[:, 0]
+            weight_columns = result[cls._WEIGHTS_COLUMN]
+            result = result.drop(cls._WEIGHTS_COLUMN, axis=1)
+            result[cls._WEIGHTS_COLUMN] = weight_columns.iloc[:, 0]
 
             if reindex:
-                new_index = Table._new_id(len(result))
+                new_index = cls._new_id(len(result))
                 result.index = new_index
         else:
             raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
         result._transfer_properties(tables[0])  # pd.concat does not do this by itself
-        return Table.from_dataframe(result, new_domain)
+        return cls.from_dataframe(result, new_domain)
 
     def _transfer_properties(self, from_table, transfer_domain=False):
         """
@@ -837,37 +770,12 @@ class Table(pd.DataFrame):
             if hasattr(from_table, name) and (transfer_domain or name != "domain"):
                 setattr(self, name, getattr(from_table, name))
 
-    def density(self):
-        """
-        Compute the table density:
-         - for sparse tables, return the reported density.
-         - for dense tables, return the ratio of null values (pandas interpretation of null).
-        """
-        if isinstance(self, pd.SparseDataFrame):
-            return super(Table, self).density
-        else:
-            return 1 - self.isnull().sum().sum() / self.size
-
-    def X_density(self):
-        return Table.DENSE
-
-    def Y_density(self):
-        return Table.DENSE
-
-    def metas_density(self):
-        return Table.DENSE
-
     def approx_len(self):
         return len(self)
 
     def exact_len(self):
         return len(self)
 
-    def is_sparse(self):
-        return isinstance(self, pd.SparseDataFrame)
-
-    def is_dense(self):
-        return not self.is_sparse()
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
@@ -882,6 +790,7 @@ class Table(pd.DataFrame):
         """
         An override to return TableSeries instead of Series (pandas doesn't do that by default).
         """
+        # super here is the next item in the MRO, e.g. pd.DataFrame or pd.SparseDataFrame
         gen = super().iterrows()
         for item in gen:
             yield (item[0], self._constructor_sliced(item[1]))
@@ -988,7 +897,7 @@ class Table(pd.DataFrame):
             var = self.domain[col]
             # use groupby instead of value_counts so we can use weighed data
             # also fill all unknown values with 0 because that's what NA means in this context
-            weighed_counts = self.groupby(col)[Table._WEIGHTS_COLUMN].sum().fillna(0)
+            weighed_counts = self.groupby(col)[self._WEIGHTS_COLUMN].sum().fillna(0)
             unknowns = self[col].isnull().sum()
             if var.is_discrete:
                 if var.ordered:
@@ -1067,7 +976,7 @@ class Table(pd.DataFrame):
             else:
                 # we limit ourselves to counting the weights (we only need the count, NAs don't matter)
                 # so we get a slimmer result and hopefully faster processing
-                pivot = pd.pivot_table(self, values=Table._WEIGHTS_COLUMN, index=[row_var],
+                pivot = pd.pivot_table(self, values=self._WEIGHTS_COLUMN, index=[row_var],
                                        columns=[var], aggfunc=np.sum).fillna(0)
                 unknowns = unknown_grouper[var].agg(lambda x: x.isnull().sum())
                 if var.is_discrete:
@@ -1076,37 +985,47 @@ class Table(pd.DataFrame):
                     contingencies.append(((pivot.columns.values, pivot.values), unknowns.values))
         return contingencies, self[row_var].isnull().sum()
 
+    def density(self):
+        raise NotImplementedError
 
-class TableSeries(pd.Series):
-    """
-    A subclass of pandas' Series to properly override constructors to avoid problems.
-    """
-    @property
-    def _constructor(self):
-        return TableSeries
+    def X_density(self):
+        """Get an enum value for the self.X density status. """
+        raise NotImplementedError
 
-    @property
-    def _constructor_expanddim(self):
-        return Table
+    def Y_density(self):
+        """Get an enum value for the self.Y density status. """
+        raise NotImplementedError
+
+    def metas_density(self):
+        """Get an enum value for the self.metas density status. """
+        raise NotImplementedError
+
+    def is_sparse(self):
+        raise NotImplementedError
+
+    def is_dense(self):
+        return not self.is_sparse()
+
+
+class SeriesBase:
+    """
+    A common superclass for Series (as in pd.Series or pd.SparseSeries) objects.
+    Transfers Table x/y/metas/weights functionality to the Series.
+    """
+    _metadata = ['domain']
 
     # use the same functions as in Table for this
     # WARNING: depends on TableSeries having a domain, which is ensured
     # in Table._constructor_sliced
-    _to_numpy = Table._to_numpy
-    X = Table.X
-    Y = Table.Y
-    metas = Table.metas
-    weights = w = Table.weights
+    _to_numpy = TableBase._to_numpy
+    X = TableBase.X
+    Y = TableBase.Y
+    metas = TableBase.metas
+    weights = w = TableBase.weights
 
 
-class TablePanel(pd.Panel):
+class PanelBase:
     """
-    A subclass of pandas' Panel to properly override constructors to avoid problems.
+    A common superclass for Panel (as in pd.Panel or pd.SparsePanel) objects.
     """
-    @property
-    def _constructor(self):
-        return TablePanel
-
-    @property
-    def _constructor_sliced(self):
-        return Table
+    pass
