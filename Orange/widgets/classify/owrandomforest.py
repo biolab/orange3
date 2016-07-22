@@ -71,6 +71,16 @@ class OWRandomForest(OWBaseLearner):
 
         return self.LEARNER(preprocessors=self.preprocessors, **common_args)
 
+    def check_data(self):
+        if super().check_data():
+            n_features = len(self.data.domain.attributes)
+            if self.use_max_features and self.max_features > n_features:
+                self.error(self.DATA_ERROR_ID,
+                           "Number of splitting attributes should "
+                           "be smaller than number of features.")
+                self.valid_data = False
+        return self.valid_data
+
     def get_learner_parameters(self):
         """Called by send report to list the parameters of the learner."""
         return (
