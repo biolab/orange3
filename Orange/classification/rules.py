@@ -5,9 +5,8 @@ from collections import namedtuple
 import bottleneck as bn
 import numpy as np
 from scipy.stats import chi2
-from Orange.data import Table, Domain
+from Orange.data import Table, _contingency
 from Orange.classification import Learner, Model
-from Orange.statistics import contingency
 from Orange.preprocess.discretize import EntropyMDL
 from Orange.preprocess import RemoveNaNClasses, Impute, Average
 
@@ -478,6 +477,8 @@ class TopDownSearchStrategy(SearchStrategy):
         possible_selectors = self.find_new_selectors(
             X[candidate_rule_covered_examples],
             Y[candidate_rule_covered_examples],
+            W[candidate_rule_covered_examples]
+            if W is not None else None,
             domain, candidate_rule_selectors)
 
         new_rules = []
@@ -508,7 +509,7 @@ class TopDownSearchStrategy(SearchStrategy):
 
         return new_rules
 
-    def find_new_selectors(self, X, Y, domain, existing_selectors):
+    def find_new_selectors(self, X, Y, W, domain, existing_selectors):
         existing_selectors = (existing_selectors if existing_selectors is not
                               None else [])
 
@@ -525,7 +526,7 @@ class TopDownSearchStrategy(SearchStrategy):
             # if continuous variable
             elif attribute.is_continuous:
                 # discretise if True
-                values = (self.discretise(X, Y, domain, attribute)
+                values = (self.discretise(X[:, i], Y, W, domain)
                           if self.discretise_continuous
                           else np.unique(X[:, i]))
                 # for each unique value, generate all possible selectors
@@ -541,13 +542,10 @@ class TopDownSearchStrategy(SearchStrategy):
         return possible_selectors
 
     @staticmethod
-    def discretise(X, Y, domain, attribute):
-        domain = (Domain(domain.attributes, domain.class_var) if domain.metas
-                  else domain)
-        data = Table.from_numpy(domain, X, Y)
-        cont = contingency.get_contingency(data, attribute)
-        values, counts = cont.values, cont.counts.T
-        cut_ind = np.array(EntropyMDL._entropy_discretize_sorted(counts, True))
+    def discretise(X, Y, W, domain):
+        values, counts, _ = _contingency.contingency_floatarray(
+            X, Y.astype(dtype=np.int8), len(domain.class_var.values), W)
+        cut_ind = np.array(EntropyMDL._entropy_discretize_sorted(counts.T, True))
         return [values[smh] for smh in cut_ind]
 
 
@@ -1438,8 +1436,8 @@ def main():
 
     data = Table('brown-selected.tab')
     learner = CN2UnorderedLearner()
-    learner.rule_finder.search_algorithm.beam_width = 10
     learner.rule_finder.general_validator.min_covered_examples = 10
+    learner.rule_finder.search_algorithm.beam_width = 10
     learner.rule_finder.search_strategy.discretise_continuous = True
     classifier = learner(data)
     for rule in classifier.rule_list:
@@ -1452,13 +1450,9 @@ def main():
     # learner.rule_finder.general_validator.min_covered_examples = 100
     # learner.rule_finder.search_algorithm.beam_width = 10
     # learner.rule_finder.search_strategy.discretise_continuous = True
-    # import time
-    # start = time.time()
     # classifier = learner(data)
-    # end = time.time()
     # for rule in classifier.rule_list:
     #     print(rule, rule.curr_class_dist.tolist(), rule.quality)
-    # print(len(classifier.rule_list), end - start)
     # print()
 
 if __name__ == "__main__":
