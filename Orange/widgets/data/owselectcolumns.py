@@ -9,7 +9,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import *
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.widgets.utils import itemmodels, vartype
 import Orange
 

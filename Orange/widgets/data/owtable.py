@@ -20,7 +20,7 @@ from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
 import Orange.data
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 

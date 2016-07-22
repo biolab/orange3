@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt
 import Orange.data
 from Orange.statistics import distribution
 from Orange.preprocess import Continuize, Normalize
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
