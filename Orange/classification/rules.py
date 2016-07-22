@@ -5,7 +5,7 @@ from collections import namedtuple
 import bottleneck as bn
 import numpy as np
 from scipy.stats import chi2
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.classification import Learner, Model
 from Orange.statistics import contingency
 from Orange.preprocess.discretize import EntropyMDL
@@ -650,7 +650,7 @@ class Rule:
 
         self.curr_class_dist = get_dist(Y[self.covered_examples],
                                         W[self.covered_examples]
-                                        if W is not None else W,
+                                        if W is not None else None,
                                         self.domain)
 
     def is_valid(self):
@@ -841,7 +841,7 @@ class _RuleLearner(Learner):
         """
         Constrain the search algorithm with a list of base rules.
 
-        Choose relevant functions to regulate the top-level control
+        Assign relevant functions to regulate the top-level control
         procedure (find_rules). Specify when the algorithm should stop
         the search (data_stopping, rule_stopping) and how instances
         covered are removed/adjusted (cover_and_remove) after finding a
@@ -878,7 +878,7 @@ class _RuleLearner(Learner):
         requirements of rule finder's validators.
 
         To induce decision lists (ordered rules), set target class to
-        None. To induce unordered rules (rule sets), learn rules for
+        None. To induce rule sets (unordered rules), learn rules for
         each class individually, in regard to the original learning
         data.
 
@@ -926,12 +926,59 @@ class _RuleLearner(Learner):
 
         If the minimum number of required covered examples can no longer
         be met, return True and conclude rule induction.
+
+        Important
+        ---------
+        This function is inherently linked to the GuardianValidator. If
+        a different general validator is used, it is imperative that the
+        minimum number of required covered examples is enforced or this
+        function overridden. The parameter min_covered_examples must be
+        accessible, else an exception is raised.
+
+        Parameters
+        ----------
+        X, Y, W : ndarray
+            Learning data.
+        target_class : int
+            Index of the class to model.
+
+        Returns
+        -------
+        res : bool
+            Whether or not rule induction will be stopped.
         """
         tc = target_class
         dist = get_dist(Y, W, self.domain)
         general_validator = self.rule_finder.general_validator
         num_possible = dist[tc] if tc is not None else dist.sum()
         return num_possible < general_validator.min_covered_examples
+
+    def lrs_significance_rule_stopping(self, new_rule):
+        """
+        Rule stopping.
+
+        If the latest rule is not found to be relevant in regard to the
+        initial class distribution, return True and conclude rule
+        induction.
+
+        Important
+        ---------
+        This function is inherently linked to the LRSValidator. If a
+        different general validator is used, it is imperative that this
+        function is overridden.
+
+        Parameters
+        ----------
+        new_rule : Rule
+            Evaluate this rule.
+
+        Returns
+        -------
+        res : bool
+            Whether or not rule induction will be stopped.
+        """
+        significance_validator = self.rule_finder.significance_validator
+        return not significance_validator.validate_rule(new_rule, _default=True)
 
     @staticmethod
     def exclusive_cover_and_remove(X, Y, W, new_rule):
@@ -940,14 +987,24 @@ class _RuleLearner(Learner):
 
         After covering a learning instance, remove it from further
         consideration.
+
+        Parameters
+        ----------
+        X, Y, W : ndarray
+            Learning data.
+        new_rule : Rule
+            Remove learning instances covered by this rule.
+
+        Returns
+        -------
+        X, Y, W : ndarray
+            Learning data subset.
         """
+        examples_to_keep = new_rule.covered_examples
         if new_rule.target_class is not None:
-            examples_to_keep = Y == new_rule.target_class
-            examples_to_keep &= new_rule.covered_examples
-            examples_to_keep = np.logical_not(examples_to_keep)
-        else:
-            examples_to_keep = np.logical_not(new_rule.covered_examples)
-        W = W[examples_to_keep] if W is not None else W
+            examples_to_keep &= Y == new_rule.target_class
+        examples_to_keep = np.logical_not(examples_to_keep)
+        W = W[examples_to_keep] if W is not None else None
         return X[examples_to_keep], Y[examples_to_keep], W
 
     def weighted_cover_and_remove(self, X, Y, W, new_rule):
@@ -956,41 +1013,59 @@ class _RuleLearner(Learner):
 
         After covering a learning instance, decrease its weight and
         in-turn decrease its impact on further iterations of the
-        algorithm. To use, learner parameter gamma must be set.
+        algorithm.
+
+        Important
+        ---------
+        To use this function, learner parameter gamma must be set.
+        Weights are adjusted inplace.
+
+        Parameters
+        ----------
+        X, Y, W : ndarray
+            Learning data.
+        new_rule : Rule
+            Adjust learning instances covered by this rule.
+
+        Returns
+        -------
+        X, Y, W : ndarray
+            Adjusted learning data.
         """
         examples_to_weigh = new_rule.covered_examples
         if new_rule.target_class is not None:
             examples_to_weigh &= Y == new_rule.target_class
+        if W is None:
+            W = np.ones(X.shape[0])
         W[examples_to_weigh] *= self.gamma
         return X, Y, W
-
-    def lrs_significance_rule_stopping(self, new_rule):
-        """
-        Rule stopping.
-
-        If the latest rule is not found relevant in regard to the
-        initial class distribution, return True and conclude rule
-        induction.
-        """
-        significance_validator = self.rule_finder.significance_validator
-        return not significance_validator.validate_rule(new_rule, _default=True)
 
     def generate_default_rule(self, X, Y, W, domain):
         """
         Generate a default rule, which mimics a majority classifier.
         Specific to each individual rule inducer, the application of the
-        default rule varies. To predict an instance, only one default
+        default rule varies. To predict an instance, a single default
         rule should be considered.
+
+        Parameters
+        ----------
+        X, Y, W : ndarray
+            Learning data.
+        domain : Orange.data.domain.Domain
+            Data domain, used to calculate class distributions.
+
+        Returns
+        -------
+        default_rule : Rule
+            Default rule with no selectors that covers all learning
+            instances and mimics a majority classifier.
         """
         rf = self.rule_finder
         dist = get_dist(Y, W, domain)
-        default_rule = Rule(domain=domain,
-                            initial_class_dist=dist,
-                            prior_class_dist=dist,
-                            quality_evaluator=rf.quality_evaluator,
-                            complexity_evaluator=rf.complexity_evaluator,
-                            significance_validator=rf.significance_validator,
-                            general_validator=rf.general_validator)
+
+        default_rule = Rule(None, None, self.domain, dist, dist,
+                            rf.quality_evaluator, rf.complexity_evaluator,
+                            rf.significance_validator, rf.general_validator)
 
         default_rule.filter_and_store(X, Y, W, None)
         default_rule.do_evaluate()
@@ -1012,6 +1087,78 @@ class _RuleClassifier(Model):
 
     def predict(self, X):
         raise NotImplementedError
+
+    def ordered_predict(self, X):
+        """
+        Following a decision list, for each instance, rules are tried in
+        order until one fires.
+
+        Parameters
+        ----------
+        X : ndarray
+            Classify this data.
+
+        Returns
+        -------
+        res : ndarray, float
+            Probabilistic classification.
+        """
+        num_classes = len(self.domain.class_var.values)
+        probabilities = np.array([np.zeros(num_classes, dtype=float)
+                                  for _ in range(X.shape[0])])
+
+        status = np.ones(X.shape[0], dtype=bool)
+        for rule in self.rule_list:
+            curr_covered = rule.evaluate_data(X)
+            curr_covered &= status
+            status &= np.bitwise_not(curr_covered)
+            probabilities[curr_covered] = rule.probabilities
+        return probabilities
+
+    def unordered_predict(self, X):
+        """
+        Following an unordered set of rules, for each instance, all
+        rules are tried and those that fire are collected. If a clash
+        occurs, class probabilities (predictions) of all collected rules
+        are summed and weighted.
+
+        Notes
+        -----
+        If no other rules fire, the default rule prediction is used.
+        Any other empty rules (a fallout most common in the domain of
+        weighted covering algorithms) are ignored.
+
+        Parameters
+        ----------
+        X : ndarray
+            Classify this data.
+
+        Returns
+        -------
+        res : ndarray, float
+            Probabilistic classification.
+        """
+        num_classes = len(self.domain.class_var.values)
+        probabilities = np.array([np.zeros(num_classes, dtype=float)
+                                  for _ in range(X.shape[0])])
+
+        num_hits = np.zeros(X.shape[0], dtype=int)
+        total_weight = np.vstack(np.zeros(X.shape[0], dtype=float))
+        for rule in self.rule_list[:-1]:
+            if rule.length > 0:
+                curr_covered = rule.evaluate_data(X)
+                num_hits += curr_covered
+                temp = rule.curr_class_dist.sum()
+                probabilities[curr_covered] += rule.probabilities * temp
+                total_weight[curr_covered] += temp
+
+        default_rule = self.rule_list[-1]
+        weigh_down = num_hits > 0
+        apply_default = num_hits == 0
+
+        probabilities[weigh_down] /= total_weight[weigh_down]
+        probabilities[apply_default] = default_rule.probabilities
+        return probabilities
 
 
 class CN2Learner(_RuleLearner):
@@ -1039,11 +1186,9 @@ class CN2Learner(_RuleLearner):
     def fit(self, X, Y, W=None):
         Y = Y.astype(dtype=int)
         rule_list = self.find_rules(X, Y, W, None, self.base_rules, self.domain)
-
         # add the default rule, if required
         if not rule_list or rule_list and rule_list[-1].length > 0:
-            default_rule = self.generate_default_rule(X, Y, W, self.domain)
-            rule_list.append(default_rule)
+            rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
         return CN2Classifier(domain=self.domain, rule_list=rule_list)
 
 
@@ -1063,17 +1208,7 @@ class CN2Classifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        num_classes = len(self.domain.class_var.values)
-        probabilities = np.array([np.zeros(num_classes, dtype=float)
-                                  for _ in range(X.shape[0])])
-
-        status = np.ones(X.shape[0], dtype=bool)
-        for rule in self.rule_list:
-            curr_covered = rule.evaluate_data(X)
-            curr_covered &= status
-            status &= np.bitwise_not(curr_covered)
-            probabilities[curr_covered] = rule.probabilities
-        return probabilities
+        return self.ordered_predict(X)
 
 
 class CN2UnorderedLearner(_RuleLearner):
@@ -1110,12 +1245,10 @@ class CN2UnorderedLearner(_RuleLearner):
         Y = Y.astype(dtype=int)
         rule_list = []
         for curr_class in range(len(self.domain.class_var.values)):
-            r = self.find_rules(X, Y, W, curr_class, self.base_rules, self.domain)
-            rule_list.extend(r)
-
+            rule_list.extend(self.find_rules(X, Y, W, curr_class,
+                                             self.base_rules, self.domain))
         # add the default rule
-        default_rule = self.generate_default_rule(X, Y, W, self.domain)
-        rule_list.append(default_rule)
+        rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
         return CN2UnorderedClassifier(domain=self.domain, rule_list=rule_list)
 
 
@@ -1137,26 +1270,7 @@ class CN2UnorderedClassifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        num_classes = len(self.domain.class_var.values)
-        probabilities = np.array([np.zeros(num_classes, dtype=float)
-                                  for _ in range(X.shape[0])])
-
-        num_hits = np.zeros(X.shape[0], dtype=int)
-        total_weight = np.vstack(np.zeros(X.shape[0], dtype=float))
-        for rule in self.rule_list[:-1]:
-            curr_covered = rule.evaluate_data(X)
-            num_hits += curr_covered
-            temp = rule.curr_class_dist.sum()
-            probabilities[curr_covered] += rule.probabilities * temp
-            total_weight[curr_covered] += temp
-
-        default_rule = self.rule_list[-1]
-        weigh_down = num_hits > 0
-        apply_default = num_hits == 0
-
-        probabilities[weigh_down] /= total_weight[weigh_down]
-        probabilities[apply_default] = default_rule.probabilities
-        return probabilities
+        self.unordered_predict(X)
 
 
 class CN2SDLearner(_RuleLearner):
@@ -1165,16 +1279,17 @@ class CN2SDLearner(_RuleLearner):
     evaluate found hypotheses, Weighted relative accuracy measure is
     used. Returns a CN2SDClassifier if called with data.
 
-    In this setting, ordered rule induction exclusively refers to
+    In this setting, ordered rule induction refers exclusively to
     finding best rule conditions and assigning the majority class in the
-    rule head.
+    rule head (target class is set to None). To later predict instances,
+    rules will be regarded as unordered.
 
     Notes
     -----
     A weighted covering algorithm is applied, in which subsequently
     induced rules also represent interesting and sufficiently large
     subgroups of the population. Covered positive examples are not
-    deleted from the learning set, but rather their weight is reduced.
+    deleted from the learning set, rather their weight is reduced.
 
     The algorithm demonstrates how classification rule learning
     (predictive induction) can be adapted to subgroup discovery, a task
@@ -1200,16 +1315,10 @@ class CN2SDLearner(_RuleLearner):
 
     def fit(self, X, Y, W=None):
         Y = Y.astype(dtype=int)
-        W = W if W is not None else np.ones(X.shape[0])
-        rule_list = self.find_rules(X, Y, np.copy(W), None,
-                                    self.base_rules, self.domain)
-
-        # make room for the one and only default rule
-        rule_list = [rule for rule in rule_list if rule.length != 0]
-
+        rule_list = self.find_rules(X, Y, np.copy(W) if W is not None else None,
+                                    None, self.base_rules, self.domain)
         # add the default rule
-        default_rule = self.generate_default_rule(X, Y, W, self.domain)
-        rule_list.append(default_rule)
+        rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
         return CN2SDClassifier(domain=self.domain, rule_list=rule_list)
 
 
@@ -1217,13 +1326,17 @@ class CN2SDClassifier(_RuleClassifier):
     def predict(self, X):
         """
         In contrast to the classic CN2 algorithm, all applicable rules
-        are taken into account even though CN2SD produces a decision
-        list.
+        are taken into account even though CN2SD induces ordered rules.
 
-        Following a decision list, for each instance, all rules are
-        tried and those that fire are collected. If a clash occurs,
-        class probabilities (predictions) of all collected rules are
-        summed and weighted.
+        For each instance, all rules are tried and those that fire are
+        collected. If a clash occurs, class probabilities (predictions)
+        of all collected rules are summed and weighted.
+
+        Notes
+        -----
+        If no other rules fire, the default rule prediction is used.
+        Any other empty rules (a fallout most common in the domain of
+        weighted covering algorithms) are ignored.
 
         Parameters
         ----------
@@ -1235,26 +1348,7 @@ class CN2SDClassifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        num_classes = len(self.domain.class_var.values)
-        probabilities = np.array([np.zeros(num_classes, dtype=float)
-                                  for _ in range(X.shape[0])])
-
-        num_hits = np.zeros(X.shape[0], dtype=int)
-        total_weight = np.vstack(np.zeros(X.shape[0], dtype=float))
-        for rule in self.rule_list[:-1]:
-            curr_covered = rule.evaluate_data(X)
-            num_hits += curr_covered
-            temp = rule.curr_class_dist.sum()
-            probabilities[curr_covered] += rule.probabilities * temp
-            total_weight[curr_covered] += temp
-
-        default_rule = self.rule_list[-1]
-        weigh_down = num_hits > 0
-        apply_default = num_hits == 0
-
-        probabilities[weigh_down] /= total_weight[weigh_down]
-        probabilities[apply_default] = default_rule.probabilities
-        return probabilities
+        self.unordered_predict(X)
 
 
 class CN2SDUnorderedLearner(_RuleLearner):
@@ -1263,15 +1357,12 @@ class CN2SDUnorderedLearner(_RuleLearner):
     evaluate found hypotheses, Weighted relative accuracy measure is
     used. Returns a CN2SDUnorderedClassifier if called with data.
 
-    In this setting, unordered rule induction refers to learning classes
-    one by one.
-
     Notes
     -----
     A weighted covering algorithm is applied, in which subsequently
     induced rules also represent interesting and sufficiently large
     subgroups of the population. Covered positive examples are not
-    deleted from the learning set, but rather their weight is reduced.
+    deleted from the learning set, rather their weight is reduced.
 
     The algorithm demonstrates how classification rule learning
     (predictive induction) can be adapted to subgroup discovery, a task
@@ -1297,19 +1388,13 @@ class CN2SDUnorderedLearner(_RuleLearner):
 
     def fit(self, X, Y, W=None):
         Y = Y.astype(dtype=int)
-        W = W if W is not None else np.ones(X.shape[0])
         rule_list = []
         for curr_class in range(len(self.domain.class_var.values)):
-            target_rules = self.find_rules(X, Y, np.copy(W), curr_class,
-                                           self.base_rules, self.domain)
-
-            # make room for the one and only default rule
-            target_rules = [rule for rule in target_rules if rule.length != 0]
-            rule_list.extend(target_rules)
-
+            rule_list.extend(self.find_rules(
+                X, Y, np.copy(W) if W is not None else None,
+                curr_class, self.base_rules, self.domain))
         # add the default rule
-        default_rule = self.generate_default_rule(X, Y, W, self.domain)
-        rule_list.append(default_rule)
+        rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
         return CN2SDUnorderedClassifier(domain=self.domain, rule_list=rule_list)
 
 
@@ -1321,6 +1406,12 @@ class CN2SDUnorderedClassifier(_RuleClassifier):
         occurs, class probabilities (predictions) of all collected rules
         are summed and weighted.
 
+        Notes
+        -----
+        If no other rules fire, the default rule prediction is used.
+        Any other empty rules (a fallout most common in the domain of
+        weighted covering algorithms) are ignored.
+
         Parameters
         ----------
         X : ndarray
@@ -1331,54 +1422,32 @@ class CN2SDUnorderedClassifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        num_classes = len(self.domain.class_var.values)
-        probabilities = np.array([np.zeros(num_classes, dtype=float)
-                                  for _ in range(X.shape[0])])
-
-        num_hits = np.zeros(X.shape[0], dtype=int)
-        total_weight = np.vstack(np.zeros(X.shape[0], dtype=float))
-        for rule in self.rule_list[:-1]:
-            curr_covered = rule.evaluate_data(X)
-            num_hits += curr_covered
-            temp = rule.curr_class_dist.sum()
-            probabilities[curr_covered] += rule.probabilities * temp
-            total_weight[curr_covered] += temp
-
-        default_rule = self.rule_list[-1]
-        weigh_down = num_hits > 0
-        apply_default = num_hits == 0
-
-        probabilities[weigh_down] /= total_weight[weigh_down]
-        probabilities[apply_default] = default_rule.probabilities
-        return probabilities
+        self.unordered_predict(X)
 
 
 def main():
     data = Table('titanic')
     learner = CN2Learner()
+    learner.rule_finder.significance_validator.default_alpha = 0.15
     classifier = learner(data)
     for rule in classifier.rule_list:
         print(rule.curr_class_dist.tolist(), rule)
     print()
 
-    data = Table('iris')
-    learner = CN2UnorderedLearner()
-    learner.rule_finder.general_validator.min_covered_examples = 10
-    classifier = learner(data)
-    for rule in classifier.rule_list:
-        print(rule, rule.curr_class_dist.tolist(), rule.quality)
-    print()
-
-    data = Table('adult')
-    learner = CN2UnorderedLearner()
-    learner.rule_finder.general_validator.max_rule_length = 5
-    learner.rule_finder.general_validator.min_covered_examples = 100
-    learner.rule_finder.search_algorithm.beam_width = 10
-    learner.rule_finder.search_strategy.discretise_continuous = True
-    classifier = learner(data)
-    for rule in classifier.rule_list:
-        print(rule, rule.curr_class_dist.tolist(), rule.quality)
-
+    # data = Table('adult')
+    # learner = CN2UnorderedLearner()
+    # learner.rule_finder.general_validator.max_rule_length = 5
+    # learner.rule_finder.general_validator.min_covered_examples = 100
+    # learner.rule_finder.search_algorithm.beam_width = 10
+    # learner.rule_finder.search_strategy.discretise_continuous = True
+    # import time
+    # start = time.time()
+    # classifier = learner(data)
+    # end = time.time()
+    # for rule in classifier.rule_list:
+    #     print(rule, rule.curr_class_dist.tolist(), rule.quality)
+    # print(len(classifier.rule_list), end - start)
+    # print()
 
 if __name__ == "__main__":
     main()
