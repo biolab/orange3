@@ -542,6 +542,8 @@ class TopDownSearchStrategy(SearchStrategy):
 
     @staticmethod
     def discretise(X, Y, domain, attribute):
+        domain = (Domain(domain.attributes, domain.class_var) if domain.metas
+                  else domain)
         data = Table.from_numpy(domain, X, Y)
         cont = contingency.get_contingency(data, attribute)
         values, counts = cont.values, cont.counts.T
@@ -1429,6 +1431,15 @@ def main():
     data = Table('titanic')
     learner = CN2Learner()
     learner.rule_finder.significance_validator.default_alpha = 0.15
+    classifier = learner(data)
+    for rule in classifier.rule_list:
+        print(rule.curr_class_dist.tolist(), rule)
+    print()
+
+    data = Table('brown-selected.tab')
+    learner = CN2UnorderedLearner()
+    learner.rule_finder.general_validator.min_covered_examples = 10
+    learner.rule_finder.search_strategy.discretise_continuous = True
     classifier = learner(data)
     for rule in classifier.rule_list:
         print(rule.curr_class_dist.tolist(), rule)
