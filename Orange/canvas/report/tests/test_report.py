@@ -5,7 +5,7 @@ import warnings
 from AnyQt.QtGui import QFont, QBrush
 from AnyQt.QtCore import Qt
 
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
 from Orange.regression.tree import TreeLearner as RegressionTreeLearner

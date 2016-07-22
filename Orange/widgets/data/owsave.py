@@ -1,6 +1,6 @@
 import os.path
 
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.data.io import FileFormat
