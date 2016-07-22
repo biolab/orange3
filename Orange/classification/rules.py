@@ -817,7 +817,7 @@ class RuleHunter:
 
 class _RuleLearner(Learner):
     """
-    A base rule induction learner. Descendants should return a suitable
+    A base rule induction learner. Descendants should return a relevant
     classifier if called with data.
 
     Separate and conquer strategy is applied, allowing for different
@@ -1272,7 +1272,7 @@ class CN2UnorderedClassifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        self.unordered_predict(X)
+        return self.unordered_predict(X)
 
 
 class CN2SDLearner(_RuleLearner):
@@ -1350,7 +1350,7 @@ class CN2SDClassifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        self.unordered_predict(X)
+        return self.unordered_predict(X)
 
 
 class CN2SDUnorderedLearner(_RuleLearner):
@@ -1424,7 +1424,7 @@ class CN2SDUnorderedClassifier(_RuleClassifier):
         res : ndarray, float
             Probabilistic classification.
         """
-        self.unordered_predict(X)
+        return self.unordered_predict(X)
 
 
 def main():
@@ -1438,6 +1438,7 @@ def main():
 
     data = Table('brown-selected.tab')
     learner = CN2UnorderedLearner()
+    learner.rule_finder.search_algorithm.beam_width = 10
     learner.rule_finder.general_validator.min_covered_examples = 10
     learner.rule_finder.search_strategy.discretise_continuous = True
     classifier = learner(data)
