@@ -17,7 +17,7 @@ from Orange.util import deprecated
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import webview
+from Orange.widgets.utils.webview import WebviewWidget
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.gui.utils import message_critical
 
@@ -172,17 +172,7 @@ class OWReport(OWWidget):
                 item = self.table_model.get_item_by_id(item_id)
                 item.comment = value
 
-        if webview.HAVE_WEBENGINE:
-            viewclass = webview.WebEngineView
-        else:
-            viewclass = webview.WebKitView
-
-        self.report_view = viewclass(
-            self.mainArea, bridge=PyBridge(self),
-            contextMenuPolicy=Qt.NoContextMenu,
-            sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-                                   QSizePolicy.Expanding)
-        )
+        self.report_view = WebviewWidget(self.mainArea, bridge=PyBridge(self))
         self.mainArea.layout().addWidget(self.report_view)
 
     @deprecated("Widgets should not be pickled")
@@ -329,16 +319,11 @@ class OWReport(OWWidget):
         elif extension == ".report":
             self.save(filename)
         else:
-            page = self.report_view.page()
-
             def save_html(contents):
                 with open(filename, "w", encoding="utf-8") as f:
                     f.write(contents)
 
-            if webview.HAVE_WEBENGINE:
-                page.toHtml(save_html)
-            else:
-                save_html(page.mainFrame().toHtml())
+            save_html(self.report_view.html())
         self.report_changed = False
         return QDialog.Accepted
 

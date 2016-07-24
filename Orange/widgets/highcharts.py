@@ -5,49 +5,19 @@ Highcharts JS library.
 from json import dumps as json
 
 from collections import defaultdict
-from collections.abc import MutableMapping, Mapping, Set, Sequence, Iterable
+from collections.abc import MutableMapping
 
 from os.path import join, dirname
-from urllib.parse import urljoin
-from urllib.request import pathname2url
 
 import numpy as np
 
-from PyQt4.QtCore import QUrl, QObject, pyqtProperty, pyqtSlot, QTimer
-from PyQt4.QtGui import QColor
+from AnyQt.QtCore import QObject, pyqtSlot
 
-from Orange.widgets.webview import WebView
+from Orange.widgets.gui import WebviewWidget
 
 
 def _Autotree():
     return defaultdict(_Autotree)
-
-
-def _to_primitive_types(d):
-    # pylint: disable=too-many-return-statements
-    if isinstance(d, np.integer):
-        return int(d)
-    if isinstance(d, (float, np.floating)):
-        return float(d) if not np.isnan(d) else None
-    if isinstance(d, (str, int, bool)):
-        return d
-    if isinstance(d, np.ndarray):
-        # Highcharts chokes on NaN values. Instead it prefers 'null' for
-        # points it is not intended to show.
-        new = d.astype(object)
-        new[np.isnan(d)] = None
-        return new.tolist()
-    if isinstance(d, Mapping):
-        return {k: _to_primitive_types(d[k]) for k in d}
-    if isinstance(d, Set):
-        return {k: 1 for k in d}
-    if isinstance(d, (Sequence, Iterable)):
-        return [_to_primitive_types(i) for i in d]
-    if d is None:
-        return None
-    if isinstance(d, QColor):
-        return d.name()
-    raise TypeError
 
 
 def _merge_dicts(master, update):
@@ -79,7 +49,7 @@ def _kwargs_options(kwargs):
     return kwoptions
 
 
-class Highchart(WebView):
+class Highchart(WebviewWidget):
     """Create a Highcharts webview widget.
 
     Parameters
@@ -127,8 +97,7 @@ class Highchart(WebView):
         these kwargs-derived objects.
     """
 
-    _HIGHCHARTS_HTML = urljoin(
-        'file:', pathname2url(join(join(dirname(__file__), '_highcharts'), 'chart.html')))
+    _HIGHCHARTS_HTML = join(dirname(__file__), '_highcharts', 'chart.html')
 
     def __init__(self,
                  parent=None,
@@ -152,10 +121,8 @@ class Highchart(WebView):
         if enable_select and not selection_callback:
             raise ValueError('enable_select requires selection_callback')
 
-        super().__init__(parent, bridge,
-                         debug=debug,
-                         url=QUrl(self._HIGHCHARTS_HTML))
-        self.debug = debug
+        super().__init__(parent, bridge, debug=debug)
+
         self.highchart = highchart
         self.enable_zoom = enable_zoom
         enable_point_select = '+' in enable_select
@@ -166,7 +133,6 @@ class Highchart(WebView):
                 mapNavigation_enableButtons=False)))
         if enable_select:
             self._selection_callback = selection_callback
-            self.frame.addToJavaScriptWindowObject('__highchart', self)
             _merge_dicts(options, _kwargs_options(dict(
                 chart_events_click='/**/unselectAllPoints/**/')))
         if enable_point_select:
@@ -180,85 +146,24 @@ class Highchart(WebView):
         if kwargs:
             _merge_dicts(options, _kwargs_options(kwargs))
 
-        super_evalJS = super().evalJS
-        super_evalJS('window.__js_queue = [];')
-        self._is_init = False
-
-        def evalOptions():
-            super_evalJS(javascript)
-            super_evalJS('''
-                var options = {options};
-                fixupOptionsObject(options);
-                Highcharts.setOptions(options);
-            '''.format(options=json(options)))
-            self._is_init = True
-
-        self.frame.loadFinished.connect(evalOptions)
+        with open(self._HIGHCHARTS_HTML) as html:
+            self.setHtml(html.read() % dict(javascript=javascript,
+                                            options=json(options)),
+                         self.toFileURL(dirname(self._HIGHCHARTS_HTML)) + '/')
 
     def contextMenuEvent(self, event):
         """ Zoom out on right click. Also disable context menu."""
         if self.enable_zoom:
-            self.evalJS('chart.zoomOut();')
-        if self.debug:
-            super().contextMenuEvent(event)
-
-    @staticmethod
-    def _JSObject_factory(obj):
-        pyqt_type = type(obj).__mro__[-2]
-        if isinstance(obj, (list, np.ndarray)):
-            pyqt_type = 'QVariantList'
-        elif isinstance(obj, Mapping):
-            pyqt_type = 'QVariantMap'
-        else:
-            raise TypeError("Can't expose object of type {}. Too easy. Use "
-                            "evalJS method instead.".format(type(obj)))
-
-        class _JSObject(QObject):
-            """ This class hopefully prevent options data from being marshalled
-            into a string-like dumb (JSON) object when passed into JavaScript. """
-            def __init__(self, parent, obj):
-                super().__init__(parent)
-                self._obj = obj
-
-            @pyqtProperty(pyqt_type)
-            def _options(self):
-                return self._obj
-
-        return _JSObject
+            self.evalJS('chart.zoomOut(); 0;')
+        super().contextMenuEvent(event)
 
     def exposeObject(self, name, obj):
-        """Expose the object `obj` as ``window.<name>`` in JavaScript.
-
-        If the object contains any string values that start and end with
-        literal ``/**/``, those are evaluated as JS expressions the result
-        value replaces the string in the object.
-
-        The exposure, as defined here, represents a snapshot of object at
-        the time of execution. Any future changes on the original Python
-        object are not (necessarily) visible in its JavaScript counterpart.
-
-        Parameters
-        ----------
-        name: str
-            The global name the object is exposed as.
-        obj: object
-            The object to expose. Must contain only primitive types, such as:
-            int, float, str, bool, list, dict, set, numpy.ndarray.
-        """
-        try:
-            obj = _to_primitive_types(obj)
-        except TypeError:
-            raise TypeError(
-                'object must consist of primitive types '
-                '(allowed: int, float, str, bool, list, '
-                'dict, set, numpy.ndarray, ...)') from None
-
-        pydata = self._JSObject_factory(obj)(self, obj)
-        self.frame.addToJavaScriptWindowObject('_' + name, pydata)
-        self.evalJS('''
-            window.{0} = window._{0}._options;
-            fixupOptionsObject({0});
-        '''.format(name))
+        if isinstance(obj, np.ndarray):
+            # Highcharts chokes on NaN values. Instead it prefers 'null' for
+            # points it is not intended to show.
+            obj = obj.astype(object)
+            obj[np.isnan(obj)] = None
+        super().exposeObject(name, obj)
 
     def chart(self, options=None, *,
               highchart=None, javascript='', javascript_after='', **kwargs):
@@ -289,25 +194,11 @@ class Highchart(WebView):
         highchart = highchart or self.highchart or 'Chart'
         self.evalJS('''
             {javascript};
-            window.chart = new Highcharts.{highchart}(pydata);
+            window.chart = new Highcharts.{highchart}(pydata); 0;
             {javascript_after};
         '''.format(javascript=javascript,
                    javascript_after=javascript_after,
                    highchart=highchart,))
-
-    def evalJS(self, javascript):
-        """ Asynchronously evaluate JavaScript code. """
-        _ENQUEUE = '__js_queue.push(function() { %s; });'
-        evalJS = super().evalJS
-
-        def _dequeue():
-            if not self._is_init:
-                QTimer.singleShot(1, _dequeue)
-                return
-            return evalJS('while (__js_queue.length) (__js_queue.shift())();')
-
-        evalJS(_ENQUEUE % javascript)
-        return _dequeue()
 
     def clear(self):
         """Remove all series from the chart"""
@@ -317,7 +208,7 @@ class Highchart(WebView):
                     chart.series[0].remove(false);
                 }
                 chart.redraw();
-            }
+            }; 0;
         ''')
 
     @pyqtSlot('QVariantList')
@@ -331,13 +222,13 @@ class Highchart(WebView):
         This method overrides svg method from WebView because
         SVG itself does not contain chart labels (title, axis labels, ...)
         """
-        html = self.frame.toHtml()
+        html = self.html()
         return html[html.index('<div id="container"'):html.rindex('</div>') + 6]
 
 
 def main():
     """ A simple test. """
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtGui import QApplication
     app = QApplication([])
 
     def _on_selected_points(points):

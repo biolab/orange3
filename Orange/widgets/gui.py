@@ -23,10 +23,9 @@ from AnyQt.QtWidgets import (
 
 try:
     # Some Orange widgets might expect this here
-    from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
+    from Orange.widgets.utils.webview import WebviewWidget  # pylint: disable=unused-import
 except ImportError:
-    # WebviewWidget based on QWebView (QtWebKit) might not be available
-    pass
+    pass  # Neither WebKit nor WebEngine are available
 
 import Orange.data
 from Orange.widgets.utils import getdeepattr
