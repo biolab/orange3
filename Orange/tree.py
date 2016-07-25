@@ -275,14 +275,15 @@ class OrangeTreeModel(Model, Tree):
     @lru_cache(10)
     def node_count(self):
         def _count(node):
-            return 1 + sum(_count(c) for c in self.children(node))
+            return 1 + sum(_count(c) for c in self.children(node) if c)
         return _count(self._root)
 
     @property
     @lru_cache(10)
     def leaf_count(self):
         def _count(node):
-            return not node.children or sum(_count(c) for c in node.children)
+            return not node.children or \
+                   sum(_count(c) if c else 1 for c in node.children)
         return _count(self._root)
 
     @property
@@ -350,6 +351,8 @@ class OrangeTreeModel(Model, Tree):
                         _compute_sizes(child)
 
         def _compile_node(node):
+            from Orange.classification._tree_scorers import NULL_BRANCH
+
             # The node is compile into the following code (np.int32)
             # [0] node type: index of type in NODE_TYPES)
             # [1] node index: serves as index into values and thresholds
@@ -366,7 +369,7 @@ class OrangeTreeModel(Model, Tree):
             # The lengths of both equal the node count; we would gain (if
             # anything) by not reserving space for unused threshold space
             if node is None:
-                return -1
+                return NULL_BRANCH
             nonlocal code_ptr, node_idx
             code_start = code_ptr
             self._code[code_ptr] = self.NODE_TYPES.index(type(node))

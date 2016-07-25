@@ -50,7 +50,7 @@ class PieChart(QGraphicsRectItem):
             painter.drawPie(-self.r, -self.r, 2 * self.r, 2 * self.r,
                             int(start_angle), int(angle))
             start_angle += angle
-        painter.setPen(QPen(Qt.white))
+        painter.setPen(QPen(Qt.black))
         painter.setBrush(QBrush())
         painter.drawEllipse(-self.r, -self.r, 2 * self.r, 2 * self.r)
 
@@ -367,7 +367,7 @@ class OWTreeGraph(OWTreeViewer2D):
             else:
                 modus = np.argmax(distr)
                 p = distr[modus] / (total or 1)
-                color = colors[int(modus)].lighter(400 - 300 * p)
+                color = colors[int(modus)].lighter(300 - 200 * p)
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 

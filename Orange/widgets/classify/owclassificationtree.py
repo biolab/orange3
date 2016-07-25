@@ -85,10 +85,11 @@ class OWClassificationTree(OWTreeLearner):
           "limit_majority", "sufficient_majority", 51, 100),) + \
         OWTreeLearner.spin_boxes[-1:]
 
-    def learner_opts(self):
+    def learner_kwargs(self):
         opts = super().learner_kwargs()
         opts['sufficient_majority'] = \
             (1, self.sufficient_majority / 100)[self.limit_majority]
+        return opts
 
     def get_learner_parameters(self):
         items = super().get_learner_parameters()

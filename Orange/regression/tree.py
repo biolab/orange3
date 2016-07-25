@@ -13,6 +13,28 @@ __all__ = ["TreeRegressionLearner", "OrangeTreeLearner"]
 class OrangeTreeLearner(Learner):
     """
     Tree inducer with proper handling of nominal attributes and binarization.
+
+    The inducer can handle missing values of attributes and target.
+    For discrete attributes with more than two possible values, each value can
+    get a separate branch (`binarize=False`), or values can be grouped into
+    two groups (`binarize=True`, default).
+
+    The tree growth can be limited by the required number of instances for
+    internal nodes and for leafs, and by the maximal depth of the tree.
+
+    If the tree is not binary, it can contain zero-branches.
+
+    Args:
+        binarize: if `True` (default) the inducer will find optimal split into
+            two subsets for values of discrete attributes. If `False`, each
+            value gets its branch.
+        min_samples_leaf: the minimal number of data instances in a leaf
+        min_samples_split: the minimal nubmer of data instances that is split
+            into subgroups
+        max_depth: the maximal depth of the tree
+
+    Returns:
+        instance of OrangeTreeModel
     """
     __returns__ = OrangeTreeModel
 
@@ -45,6 +67,8 @@ class OrangeTreeLearner(Learner):
             n_values = len(attr.values)
             score = _tree_scorers.compute_grouped_MSE(
                 col_x, col_y, n_values, self.min_samples_leaf)
+            # The score is already adjusted for missing attribute values, so
+            # we don't do it here
             if score == 0:
                 return REJECT_ATTRIBUTE
             branches = col_x.flatten()
@@ -57,6 +81,8 @@ class OrangeTreeLearner(Learner):
                 return _score_disc()
             score, mapping = _tree_scorers.find_binarization_MSE(
                 col_x, col_y, n_values, self.min_samples_leaf)
+            # The score is already adjusted for missing attribute values, so
+            # we don't do it here
             if score == 0:
                 return REJECT_ATTRIBUTE
             mapping, branches = MappedDiscreteNode.branches_from_mapping(

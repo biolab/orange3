@@ -14,6 +14,31 @@ __all__ = ["TreeLearner", "OrangeTreeLearner"]
 class OrangeTreeLearner(Learner):
     """
     Tree inducer with proper handling of nominal attributes and binarization.
+
+    The inducer can handle missing values of attributes and target.
+    For discrete attributes with more than two possible values, each value can
+    get a separate branch (`binarize=False`), or values can be grouped into
+    two groups (`binarize=True`, default).
+
+    The tree growth can be limited by the required number of instances for
+    internal nodes and for leafs, the sufficient proportion of majority class,
+    and by the maximal depth of the tree.
+
+    If the tree is not binary, it can contain zero-branches.
+
+    Args:
+        binarize (bool): if `True` (default) the inducer will find optimal
+            split into two subsets for values of discrete attributes. If
+            `False`, each value gets its branch.
+        min_samples_leaf (float): the minimal number of data instances in a leaf
+        min_samples_split (float): the minimal nubmer of data instances that is
+            split into subgroups
+        max_depth (int): the maximal depth of the tree
+        sufficient_majority (float): a majority at which the data is not split
+            further
+
+    Returns:
+        instance of OrangeTreeModel
     """
     __returns__ = OrangeTreeModel
 
