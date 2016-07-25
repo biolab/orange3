@@ -111,6 +111,8 @@ class Node:
         self.value = value
         self.children = None
         self.subset = np.array([], dtype=np.int32)
+        self.description = None
+        self.rule = None
 
     def descend(self, inst):
         """Return the child for the given data instance"""
@@ -126,9 +128,6 @@ class DiscreteNode(Node):
         val = inst[self.attr_idx]
         return np.nan if np.isnan(val) else int(val)
 
-    def describe_branch(self, i):
-        return self.attr.values[i]
-
 
 class MappedDiscreteNode(Node):
     """Node for discrete attributes with mapping to branches
@@ -143,13 +142,6 @@ class MappedDiscreteNode(Node):
     def descend(self, inst):
         val = inst[self.attr_idx]
         return np.nan if np.isnan(val) else self.mapping[int(val)]
-
-    def describe_branch(self, i):
-        values = [self.attr.values[j]
-                  for j, v in enumerate(self.mapping) if v == i]
-        if len(values) == 1:
-            return values[0]
-        return "{} or {}".format(", ".join(values[:-1]), values[-1])
 
     @staticmethod
     def branches_from_mapping(col_x, bit_mapping, n_values):
@@ -189,9 +181,6 @@ class NumericNode(Node):
     def descend(self, inst):
         val = inst[self.attr_idx]
         return np.nan if np.isnan(val) else val > self.threshold
-
-    def describe_branch(self, i):
-        return "{} {}".format(("≤", ">")[i], self.threshold)
 
 
 class OrangeTreeModel(Model, Tree):
@@ -336,6 +325,49 @@ class OrangeTreeModel(Model, Tree):
 
     NODE_TYPES = [Node, DiscreteNode, MappedDiscreteNode, NumericNode]
 
+    def _construct_descriptions(self):
+        def _compute_subtree(node, conditions):
+            if node.children:
+                for i, child in enumerate(node.children):
+                    attr = node.attr
+                    if isinstance(node, DiscreteNode):
+                        node.condition = {i}
+                        node.description = \
+                            self.domain.attributes[node.attr_no].values[i]
+                    elif isinstance(node, MappedDiscreteNode):
+                        branch_values = \
+                            {j for j, v in enumerate(self.mapping) if v == i}
+                        conditions.get(attr, set(range(len(attr.values))))
+                        # don't use &=, we mustn't change the existing set!
+                        node.condition =  conditions[attr] & branch_values
+                        values = [attr.values[j]
+                                  for j in sorted(conditions[attr])]
+                        node.description = values[0] if len(values) == 1 else \
+                            "{} or {}".format(", ".join(values[:-1]),
+                                              values[-1])
+                    else:  # NumericNode
+                        threshold = node.threshold
+                        lower, upper = conditions.get(attr, (None, None))
+                        if i == 0 and (lower is None or threshold > lower):
+                            lower = threshold
+                        elif i == 1 and (upper is None or threshold < upper):
+                            upper = threshold
+                        node.condition = (upper, lower)
+                        node.description = "{} {}".format(("≤", ">")[i],
+                                                          self.threshold)
+                    old_cond = conditions[attr]
+                    conditions[attr] = node.condition
+                    _compute_subtree()
+                    conditions[attr] = old_cond
+
+            if isinstance(node, DiscreteNode):
+
+
+
+            pass
+
+        _compute_subtree(self.root, {})
+"""
     def _compile(self):
         def _compute_sizes(node):
             nonlocal nnodes, codesize
