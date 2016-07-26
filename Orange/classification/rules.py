@@ -1436,7 +1436,7 @@ def main():
 
     data = Table('brown-selected.tab')
     learner = CN2UnorderedLearner()
-    learner.rule_finder.general_validator.min_covered_examples = 10
+    learner.rule_finder.general_validator.min_covered_examples = 15
     learner.rule_finder.search_algorithm.beam_width = 10
     learner.rule_finder.search_strategy.discretise_continuous = True
     classifier = learner(data)
