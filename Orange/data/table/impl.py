@@ -1,4 +1,6 @@
-from Orange.data import ContinuousVariable, Domain, StringVariable
+import warnings
+
+from Orange.data import ContinuousVariable, Domain, StringVariable, DiscreteVariable
 
 from .base import *
 import pandas as pd
@@ -249,9 +251,14 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         # sparse structures can't hold anything other than continuous variables, so limit
         # the domain (also: isinstance(TimeVariable(), ContinuousVariable) == True)
         columns = []
+        domain = Domain(domain.attributes, domain.class_vars, domain.metas)
         for v in domain.attributes + domain.class_vars + domain.metas or []:
             if isinstance(v, StringVariable):
                 raise ValueError("Sparse matrices do not support string variables.")
+            elif isinstance(v, DiscreteVariable) and any(not isinstance(i, Number) for i in v.values):
+                warnings.warn("Replacing discrete variable values with numbers! "
+                              "(sparse matrices can't hold anything but numerics)")
+                v.values = list(range(len(v.values)))
             columns.append(v.name)
 
         partial_sdfs = []
@@ -273,6 +280,34 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         result.domain = domain
         result.set_weights(weights or 1)  # weights can be None
         return result
+
+    def _compute_distributions(self, columns=None):
+        # this needs reimplementing because of possible columns without values
+        if columns is None:
+            columns = self.domain.attributes + self.domain.class_vars + self.domain.metas
+        distributions = []
+        for col in columns:
+            var = self.domain[col]
+            if var.is_discrete:
+                # so we correctly process columns where a value doesn't appear, we need to
+                # process each value separately
+                vals = var.values
+            else:
+                # if we're using the thing above, might as well consolidate
+                # the behaviour and not use groupby
+                vals = self[col].unique()
+            weighed_counts = pd.Series({v: self[self[col] == v][self._WEIGHTS_COLUMN].sum() for v in vals})
+            unknowns = self[col].isnull().sum()
+            if var.is_discrete:
+                if var.ordered:
+                    distributions.append((np.array([weighed_counts.loc[val] for val in var.values]), unknowns))
+                else:
+                    distributions.append((weighed_counts.values, unknowns))
+            else:
+                # explicitly return a 2D if the column is all-zeros
+                distributions.append((np.array(sorted(weighed_counts.iteritems())).T
+                                      if len(weighed_counts) != 0 else np.empty((2, 0)), unknowns))
+        return distributions
 
     @property
     def density(self):
