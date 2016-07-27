@@ -12,3 +12,5 @@ joblib>=0.9.4
 # time processing
 pytz
 python-dateutil
+# pandas speedup
+numexpr
