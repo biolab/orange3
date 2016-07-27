@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, Domain
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
     Chi2
 from Orange.preprocess import SelectBestFeatures, Impute, RemoveNaNColumns, SelectRandomFeatures
@@ -90,10 +90,14 @@ class TestRemoveNaNColumns(unittest.TestCase):
 
     def test_column_filtering_sparse(self):
         data = Table("iris")
-        data.X = csr_matrix(data.X)
+        data_sparse = Table(
+            Domain(data.domain.attributes),
+            csr_matrix(data.X)
+        )
 
-        new_data = RemoveNaNColumns(data)
-        self.assertEqual(data, new_data)
+        new_data = RemoveNaNColumns(data_sparse)
+        self.assertEqual(data_sparse.domain, new_data.domain)
+        np.testing.assert_array_equal(data_sparse.values, new_data.values)
 
 
 class TestSelectRandomFeatures(unittest.TestCase):

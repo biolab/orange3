@@ -2,7 +2,7 @@ import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
 
-from Orange import data
+from Orange.data import TableBase, SeriesBase, Domain, Table
 from Orange.misc import DistMatrix
 from Orange.preprocess import SklImpute
 
@@ -13,17 +13,17 @@ def _preprocess(table):
     """Remove categorical attributes and impute missing values."""
     if not len(table):
         return table
-    new_domain = data.Domain([a for a in table.domain.attributes if a.is_continuous],
+    new_domain = Domain([a for a in table.domain.attributes if a.is_continuous],
                              table.domain.class_vars,
                              table.domain.metas)
-    new_data = data.Table(new_domain, table)
+    new_data = Table(new_domain, table)
     new_data = SklImpute(new_data)
     return new_data
 
 
 def _orange_to_numpy(x):
     """Convert :class:`Orange.data.Table` to :class:`numpy.ndarray`."""
-    if isinstance(x, (data.Table, data.TableSeries)):
+    if isinstance(x, (TableBase, SeriesBase)):
         return x.X
     elif isinstance(x, np.ndarray):
         return np.atleast_2d(x)
@@ -71,7 +71,7 @@ class SklDistance(Distance):
             if x2 is not None:
                 x2 = x2.T
         dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric=self.metric)
-        if isinstance(e1, (data.Table, data.TableSeries)):
+        if isinstance(e1, (TableBase, SeriesBase)):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
@@ -117,7 +117,7 @@ class SpearmanDistance(Distance):
             dist = np.array([[dist]])
         elif isinstance(dist, np.ndarray):
             dist = dist[:slc, slc:]
-        if isinstance(e1, data.Table):
+        if isinstance(e1, TableBase):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
@@ -159,7 +159,7 @@ class PearsonDistance(Distance):
             dist = (1. - np.abs(rho)) / 2.
         else:
             dist = (1. - rho) / 2.
-        if isinstance(e1, data.Table):
+        if isinstance(e1, TableBase):
             dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
@@ -214,7 +214,7 @@ class MahalanobisDistance(Distance):
         dist = skl_metrics.pairwise.pairwise_distances(x1, x2, metric='mahalanobis', VI=self.VI)
         if np.isnan(dist).any() and impute:
             dist = np.nan_to_num(dist)
-        if isinstance(e1, (data.Table, data.TableSeries)):
+        if isinstance(e1, (TableBase, SeriesBase)):
             dist = DistMatrix(dist, e1, e2, self.axis)
         else:
             dist = DistMatrix(dist)

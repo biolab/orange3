@@ -12,9 +12,9 @@ from scipy.sparse import csr_matrix, issparse
 import numpy as np
 import pandas as pd
 
-from Orange import data
-from Orange.data import Variable
-from Orange.data import Variable, DiscreteVariable, StringVariable
+from Orange.data import Variable, DiscreteVariable, Table, SparseTable, StringVariable, \
+    get_sample_datasets_dir, dataset_dirs, TableSeries, Domain, ContinuousVariable
+from Orange.data.io import FileFormat
 from Orange.tests import test_dirname
 
 
@@ -34,27 +34,27 @@ def assert_array_nanequal(*args, **kwargs):
 
 def cols_wo_weights(table):
     # semantic beautification for this filter
-    return [c for c in table.columns if c != data.Table._WEIGHTS_COLUMN]
+    return [c for c in table.columns if c != Table._WEIGHTS_COLUMN]
 
 
 class TableTestCase(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
-        data.dataset_dirs.append(test_dirname())
+        dataset_dirs.append(test_dirname())
 
     def tearDown(self):
-        data.dataset_dirs.remove(test_dirname())
+        dataset_dirs.remove(test_dirname())
 
     def test_filename(self):
-        dir = data.get_sample_datasets_dir()
-        d = data.Table("iris")
+        dir = get_sample_datasets_dir()
+        d = Table("iris")
         self.assertEqual(d.__file__, os.path.join(dir, "iris.tab"))
 
-        d = data.Table("test2.tab")
+        d = Table("test2.tab")
         self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
 
     def test_can_read_iris(self):
-        t = data.Table('iris')
+        t = Table('iris')
         self.assertEqual(4, len(t.domain.attributes))
         self.assertEqual(1, len(t.domain.class_vars))
         self.assertEqual(0, len(t.domain.metas))
@@ -65,27 +65,27 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(150, len(t))
         self.assertEqual(6, len(t.columns))  # 5 + weights
         self.assertEqual({'sepal length', 'sepal width', 'petal length', 'petal width', 'iris'},
-                         set(c for c in t.columns if c != data.Table._WEIGHTS_COLUMN))
+                         set(c for c in t.columns if c != Table._WEIGHTS_COLUMN))
         self.assertEqual(3.2, t['sepal width'].iloc[2])
         self.assertEqual(0.2, t['petal width'].iloc[22])
         self.assertTrue((t.weights == 1).all())
 
     def test_bool(self):
-        d = data.Table("iris")
+        d = Table("iris")
         self.assertFalse(d.empty)
         d.clear()
         self.assertTrue(d.empty)
 
-        d = data.Table("test3")
+        d = Table("test3")
         self.assertTrue(d.empty)
 
-        d = data.Table("iris")
+        d = Table("iris")
         self.assertFalse(d.empty)
         d.clear()
         self.assertTrue(d.empty)
 
     def test_checksum(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         d.iloc[42, 3] = 0
         crc1 = d.checksum(False)
         d.iloc[42, 3] = 1
@@ -106,13 +106,13 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(crc1, crc6)
 
     def test_total_weight(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         self.assertEqual(d.weights.sum(), len(d))
 
         d.set_weights(0)
-        d.loc[0, data.Table._WEIGHTS_COLUMN] = 0.1
-        d.loc[10, data.Table._WEIGHTS_COLUMN] = 0.2
-        d.loc[-1, data.Table._WEIGHTS_COLUMN] = 0.2
+        d.loc[0, Table._WEIGHTS_COLUMN] = 0.1
+        d.loc[10, Table._WEIGHTS_COLUMN] = 0.2
+        d.loc[-1, Table._WEIGHTS_COLUMN] = 0.2
         self.assertAlmostEqual(d.weights.sum(), 0.5)
         d.drop(10, axis=0, inplace=True)
         self.assertAlmostEqual(d.weights.sum(), 0.3)
@@ -120,7 +120,7 @@ class TableTestCase(unittest.TestCase):
         self.assertAlmostEqual(d.weights.sum(), 0)
 
     def test_has_missing(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
@@ -132,12 +132,12 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(d.has_missing())
         self.assertTrue(d.has_missing_class())
 
-        d = data.Table("test3")
+        d = Table("test3")
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
     def test_shuffle(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         crc = d.checksum()
         names = set(str(x["name"]) for _, x in d.iterrows())
 
@@ -186,7 +186,7 @@ class TableTestCase(unittest.TestCase):
         return True
 
     def test_append(self):
-        d = data.Table("test3")
+        d = Table("test3")
         d = d.append(["?"] * 5)
         self.assertEqual(1, len(d))
         self.assertEqual(5, d.iloc[0].isnull().sum())  # the weight is not null
@@ -198,7 +198,7 @@ class TableTestCase(unittest.TestCase):
         assert_array_nanequal(d.metas, np.array([[v.Unknown for v in d.domain.metas]] * 2, dtype=object))
 
     def test_append2(self):
-        d = data.Table("iris")
+        d = Table("iris")
         d = d.shuffle()
         l1 = len(d)
         d = d.append([1, 2, 3, 4, 0])
@@ -210,50 +210,51 @@ class TableTestCase(unittest.TestCase):
             d.append(x.iloc[50])
 
     def test_copy_sparse(self):
-        t = data.Table('iris')
-        t.X = csr_matrix(t.X)
+        data = Table("iris")
+        t = Table(
+            Domain(data.domain.attributes, [ContinuousVariable("y")]),
+            csr_matrix(data.X),
+            csr_matrix(np.array([data.Y]).T)
+        )
         copy = t.copy()
 
         self.assertEqual((t.X != copy.X).nnz, 0)      # sparse matrices match by content
-        np.testing.assert_equal(t.Y, copy.Y)
-        np.testing.assert_equal(t.metas, copy.metas)
-
-        self.assertNotEqual(id(t.X), id(copy.X))
-        self.assertNotEqual(id(t._Y), id(copy._Y))
-        self.assertNotEqual(id(t.metas), id(copy.metas))
+        np.testing.assert_equal(t.X.todense(), copy.X.todense())
+        np.testing.assert_equal(t.Y.todense(), copy.Y.todense())
+        np.testing.assert_equal(t.metas.todense(), copy.metas.todense())
 
     def test_concatenate(self):
-        d1 = data.Domain([data.ContinuousVariable('a1')])
-        t1 = data.Table.from_list(d1, [[1],
+        d1 = Domain([ContinuousVariable('a1')])
+        t1 = Table.from_list(d1, [[1],
                                        [2]])
-        d2 = data.Domain([data.ContinuousVariable('a2')], metas=[data.StringVariable('s')])
-        t2 = data.Table.from_list(d2, [[3, 'foo'],
+        d2 = Domain([ContinuousVariable('a2')], metas=[StringVariable('s')])
+        t2 = Table.from_list(d2, [[3, 'foo'],
                                        [4, 'fuu']])
-        self.assertRaises(ValueError, lambda: data.Table.concatenate((t1, t2), axis=5))
+        self.assertRaises(ValueError, lambda: Table.concatenate((t1, t2), axis=5))
 
-        t3 = data.Table.concatenate((t1, t2))
+        t3 = Table.concatenate((t1, t2))
         self.assertEqual(t3.domain.attributes, t1.domain.attributes + t2.domain.attributes)
         self.assertEqual(len(t3.domain.metas), 1)
         self.assertEqual(t3.X.shape, (2, 2))
-        self.assertRaises(ValueError, lambda: data.Table.concatenate((t3, t1)))
+        self.assertRaises(ValueError, lambda: Table.concatenate((t3, t1)))
 
-        t4 = data.Table.concatenate((t3, t3), axis=0)
+        t4 = Table.concatenate((t3, t3), axis=0)
         np.testing.assert_equal(t4.X, [[1, 3],
                                        [2, 4],
                                        [1, 3],
                                        [2, 4]])
-        t4 = data.Table.concatenate((t3, t1), axis=0)
+        t4 = Table.concatenate((t3, t1), axis=0)
         np.testing.assert_equal(t4.X, [[1, 3],
                                        [2, 4],
                                        [1, np.nan],
                                        [2, np.nan]])
 
     def test_convert_through_append(self):
-        d = data.Table("iris")
-        dom2 = data.Domain([d.domain[0], d.domain[2], d.domain[4]])
-        d2 = data.Table(dom2)
-        dom3 = data.Domain([d.domain[1], d.domain[2]], None)
-        d3 = data.Table(dom3)
+        d = Table("iris")
+        dom2 = Domain([d.domain[0], d.domain[2], d.domain[4]])
+        d2 = Table(dom2)
+        dom3 = Domain([d.domain[1], d.domain[2]], None)
+        d3 = Table(dom3)
         for _, e in d.iloc[:5].iterrows():
             d2.append(e)
             d3.append(e)
@@ -264,7 +265,7 @@ class TableTestCase(unittest.TestCase):
     def test_pickle(self):
         import pickle
 
-        d = data.Table("zoo")
+        d = Table("zoo")
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d.attributes, d2.attributes)
@@ -273,7 +274,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d.checksum(include_metas=False),
                          d2.checksum(include_metas=False))
 
-        d = data.Table("iris")
+        d = Table("iris")
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d.name, d2.name)
@@ -282,21 +283,21 @@ class TableTestCase(unittest.TestCase):
                          d2.checksum(include_metas=False))
 
     def test_saveTab(self):
-        d = data.Table("iris").iloc[:3]
+        d = Table("iris").iloc[:3]
         d.save("test-save.tab")
         try:
-            d2 = data.Table("test-save.tab")
+            d2 = Table("test-save.tab")
             for (_, e1), (_, e2) in zip(d.iterrows(), d2.iterrows()):
                 self.assertEqual(list(e1), list(e2))
         finally:
             os.remove("test-save.tab")
 
-        dom = data.Domain([data.ContinuousVariable("a")])
-        d = data.Table(dom)
+        dom = Domain([ContinuousVariable("a")])
+        d = Table(dom)
         d["a"] = [0, 1, 2]
         d.save("test-save.tab")
         try:
-            d2 = data.Table("test-save.tab")
+            d2 = Table("test-save.tab")
             self.assertEqual(len(d.domain.attributes), 1)
             self.assertEqual(d.domain.class_var, None)
             for i in range(3):
@@ -304,21 +305,21 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("test-save.tab")
 
-        dom = data.Domain([data.ContinuousVariable("a")], None)
-        d = data.Table(dom)
+        dom = Domain([ContinuousVariable("a")], None)
+        d = Table(dom)
         d["a"] = [0, 1, 2]
         d.save("test-save.tab")
         try:
-            d2 = data.Table("test-save.tab")
+            d2 = Table("test-save.tab")
             self.assertEqual(len(d.domain.attributes), 1)
             for i in range(3):
                 self.assertEqual(list(d2.iloc[i]), [i, 1])  # + weights
         finally:
             os.remove("test-save.tab")
 
-        d = data.Table("zoo")
+        d = Table("zoo")
         d.save("test-zoo.tab")
-        dd = data.Table("test-zoo")
+        dd = Table("test-zoo")
         try:
             self.assertTupleEqual(d.domain.metas, dd.domain.metas, msg="Meta attributes don't match.")
             self.assertTupleEqual(d.domain.variables, dd.domain.variables, msg="Attributes don't match.")
@@ -330,10 +331,10 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("test-zoo.tab")
 
-        d = data.Table("zoo")
+        d = Table("zoo")
         d.set_weights(range(len(d)))
         d.save("test-zoo-weights.tab")
-        dd = data.Table("test-zoo-weights")
+        dd = Table("test-zoo-weights")
         try:
             self.assertTupleEqual(d.domain.metas, dd.domain.metas, msg="Meta attributes don't match.")
             self.assertTupleEqual(d.domain.variables, dd.domain.variables, msg="Attributes don't match.")
@@ -346,10 +347,10 @@ class TableTestCase(unittest.TestCase):
             os.remove("test-zoo-weights.tab")
 
     def test_save_pickle(self):
-        table = data.Table("iris")
+        table = Table("iris")
         try:
             table.save("iris.pickle")
-            table2 = data.Table.from_file("iris.pickle")
+            table2 = Table.from_file("iris.pickle")
             np.testing.assert_almost_equal(table.X, table2.X)
             np.testing.assert_almost_equal(table.Y, table2.Y)
             self.assertIs(table.domain[0], table2.domain[0])
@@ -359,9 +360,9 @@ class TableTestCase(unittest.TestCase):
     def test_from_numpy(self):
         a = np.arange(16, dtype="d").reshape((4, 4))
         b = np.array(["no", "no", "no", "yes"])
-        dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
-                          data.DiscreteVariable("e", values=["no", "yes"]))
-        table = data.Table(dom, a, b)
+        dom = Domain([ContinuousVariable(x) for x in "abcd"],
+                          DiscreteVariable("e", values=["no", "yes"]))
+        table = Table(dom, a, b)
         for i in range(4):
             self.assertEqual(table.iloc[i]["e"], "no" if i < 3 else "yes")
             for j in range(5):
@@ -371,16 +372,16 @@ class TableTestCase(unittest.TestCase):
                     self.assertEqual(b[i], table.iloc[i, j + 1])
 
     def test_table_dtypes(self):
-        table = data.Table("iris")
-        new_domain = data.Domain(table.domain.attributes, table.domain.class_vars, table.domain.class_vars)
-        new_table = data.Table(new_domain, table)
+        table = Table("iris")
+        new_domain = Domain(table.domain.attributes, table.domain.class_vars, table.domain.class_vars)
+        new_table = Table(new_domain, table)
 
         self.assertEqual(new_table.X.dtype, np.float64)
         self.assertEqual(new_table.Y.dtype, np.float64)
         self.assertEqual(new_table.metas.dtype, object)
 
     def test_attributes(self):
-        table = data.Table("iris")
+        table = Table("iris")
         self.assertEqual(table.attributes, {})
         table.attributes[1] = "test"
         table2 = table[:4]
@@ -413,24 +414,24 @@ class TableTests(unittest.TestCase):
         self.weight_data = np.random.random((self.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
-        attributes = [data.ContinuousVariable(name=a) for a in self.attributes]
-        class_vars = [data.ContinuousVariable(name=c) for c in self.class_vars] if with_classes else []
-        metas = [data.DiscreteVariable(name=m, values=list(map(int, range(5)))) for m in self.metas] if with_metas else []
+        attributes = [ContinuousVariable(name=a) for a in self.attributes]
+        class_vars = [ContinuousVariable(name=c) for c in self.class_vars] if with_classes else []
+        metas = [DiscreteVariable(name=m, values=list(map(int, range(5)))) for m in self.metas] if with_metas else []
         variables = attributes + class_vars
-        return MagicMock(data.Domain,
+        return MagicMock(Domain,
                          attributes=attributes,
                          class_vars=class_vars,
                          metas=metas,
                          variables=variables)
 
     def create_domain(self, attributes=(), classes=(), metas=()):
-        attr_vars = [data.ContinuousVariable(name=a) if isinstance(a, str)
+        attr_vars = [ContinuousVariable(name=a) if isinstance(a, str)
                      else a for a in attributes]
-        class_vars = [data.ContinuousVariable(name=c) if isinstance(c, str)
+        class_vars = [ContinuousVariable(name=c) if isinstance(c, str)
                       else c for c in classes]
-        meta_vars = [data.DiscreteVariable(name=m, values=list(map(int, range(5))))
+        meta_vars = [DiscreteVariable(name=m, values=list(map(int, range(5))))
                      if isinstance(m, str) else m for m in metas]
-        return data.Domain(attr_vars, class_vars, meta_vars)
+        return Domain(attr_vars, class_vars, meta_vars)
 
     def assert_discretes_are_categoricals(self, table):
         for v in chain(table.domain.variables, table.domain.metas):
@@ -440,11 +441,11 @@ class TableTests(unittest.TestCase):
 
 class CreateEmptyTable(TableTests):
     def test_calling_new_with_no_parameters_constructs_a_new_instance(self):
-        table = data.Table()
-        self.assertIsInstance(table, data.Table)
+        table = Table()
+        self.assertIsInstance(table, Table)
 
     def test_table_has_file(self):
-        table = data.Table()
+        table = Table()
         self.assertIsNone(table.__file__)
 
 
@@ -453,13 +454,13 @@ class CreateTableWithFilename(TableTests):
 
     @patch("os.path.exists", Mock(return_value=True))
     def test_read_data_calls_reader(self):
-        table_mock = Mock(data.Table)
+        table_mock = Mock(Table)
         reader_instance = Mock(read=Mock(return_value=table_mock))
         reader_mock = Mock(return_value=reader_instance)
 
-        with patch.dict(data.io.FileFormat.readers,
+        with patch.dict(FileFormat.readers,
                         {'.xlsx': reader_mock}):
-            table = data.Table.from_file("test.xlsx")
+            table = Table.from_file("test.xlsx")
 
         reader_mock.assert_called_with("test.xlsx")
         reader_instance.read.assert_called_with()
@@ -468,31 +469,31 @@ class CreateTableWithFilename(TableTests):
     @patch("os.path.exists", Mock(return_value=False))
     def test_raises_error_if_file_does_not_exist(self):
         with self.assertRaises(IOError):
-            data.Table.from_file(self.filename)
+            Table.from_file(self.filename)
 
     @patch("os.path.exists", Mock(return_value=True))
     def test_raises_error_if_file_has_unknown_extension(self):
         with self.assertRaises(IOError):
-            data.Table.from_file("file.invalid_extension")
+            Table.from_file("file.invalid_extension")
 
     @patch("Orange.data.Table.from_file")
     def test_calling_new_with_string_argument_calls_read_data(self, read_data):
-        data.Table(self.filename)
+        Table(self.filename)
 
         read_data.assert_called_with(self.filename)
 
     @patch("Orange.data.Table.from_file")
     def test_calling_new_with_keyword_argument_filename_calls_read_data(
             self, read_data):
-        data.Table(filename=self.filename)
+        Table(filename=self.filename)
 
         read_data.assert_called_with(self.filename)
 
 
 class CreateTableWithUrl(TableTests):
     def test_load_from_url(self):
-        d1 = data.Table('iris')
-        d2 = data.Table('https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab')
+        d1 = Table('iris')
+        d2 = Table('https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab')
         np.testing.assert_array_equal(d1.X, d2.X)
         np.testing.assert_array_equal(d1.Y, d2.Y)
 
@@ -514,7 +515,7 @@ a\tb\tc
 
     @patch('Orange.data.io.urlopen', urlopen)
     def test_google_sheets(self):
-        d = data.Table(self.urlopen.url)
+        d = Table(self.urlopen.url)
         self.urlopen.assert_called_with('https://docs.google.com/spreadsheets/d/ABCD/export?format=tsv',
                                         timeout=10)
         self.assertEqual(len(d), 2)
@@ -524,7 +525,7 @@ a\tb\tc
 class CreateTableWithDomain(TableTests):
     def test_creates_an_empty_table_with_given_domain(self):
         domain = self.mock_domain()
-        table = data.Table.from_domain(domain)
+        table = Table.from_domain(domain)
         self.assertEqual(table.domain, domain)
         self.assert_discretes_are_categoricals(table)
 
@@ -532,7 +533,7 @@ class CreateTableWithDomain(TableTests):
     def test_calling_new_with_domain_calls_new_from_domain(
             self, new_from_domain):
         domain = self.mock_domain()
-        data.Table(domain)
+        Table(domain)
 
         new_from_domain.assert_called_with(domain)
 
@@ -540,22 +541,22 @@ class CreateTableWithDomain(TableTests):
 class CreateTableWithData(TableTests):
     def test_creates_a_table_with_given_X(self):
         # from numpy
-        table = data.Table(np.array(self.data))
-        self.assertIsInstance(table.domain, data.Domain)
+        table = Table(np.array(self.data))
+        self.assertIsInstance(table.domain, Domain)
         np.testing.assert_almost_equal(table.X, self.data)
         self.assert_discretes_are_categoricals(table)
 
         # from list
-        table = data.Table(list(self.data))
-        self.assertIsInstance(table.domain, data.Domain)
+        table = Table(list(self.data))
+        self.assertIsInstance(table.domain, Domain)
         np.testing.assert_almost_equal(table.X, self.data)
         self.assert_discretes_are_categoricals(table)
 
     def test_creates_a_table_from_domain_and_list(self):
-        domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
-                              data.ContinuousVariable(name="b")],
-                             data.DiscreteVariable(name="y", values="abc"))
-        table = data.Table(domain, [["m", 1, "c"],
+        domain = Domain([DiscreteVariable(name="a", values="mf"),
+                              ContinuousVariable(name="b")],
+                             DiscreteVariable(name="y", values="abc"))
+        table = Table(domain, [["m", 1, "c"],
                                     ["f", 2, "?"],
                                     ["m", 3, "a"],
                                     ["?", "?", "c"]])
@@ -566,10 +567,10 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
 
     def test_creates_a_table_from_domain_and_list_and_weights(self):
-        domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
-                              data.ContinuousVariable(name="b")],
-                             data.DiscreteVariable(name="y", values="abc"))
-        table = data.Table(domain, [["m", 1, "c"],
+        domain = Domain([DiscreteVariable(name="a", values="mf"),
+                              ContinuousVariable(name="b")],
+                             DiscreteVariable(name="y", values="abc"))
+        table = Table(domain, [["m", 1, "c"],
                                     ["f", 2, "?"],
                                     ["m", 3, "a"],
                                     ["?", "?", "c"]], [1, 2, 3, 4])
@@ -581,14 +582,14 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.weights, np.array([1, 2, 3, 4]))
 
     def test_creates_a_table_from_domain_and_list_and_metas(self):
-        metas = [data.DiscreteVariable("Meta 1", values="XYZ"),
-                 data.ContinuousVariable("Meta 2"),
-                 data.StringVariable("Meta 3")]
-        domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
-                              data.ContinuousVariable(name="b")],
-                             data.DiscreteVariable(name="y", values="abc"),
+        metas = [DiscreteVariable("Meta 1", values="XYZ"),
+                 ContinuousVariable("Meta 2"),
+                 StringVariable("Meta 3")]
+        domain = Domain([DiscreteVariable(name="a", values="mf"),
+                              ContinuousVariable(name="b")],
+                             DiscreteVariable(name="y", values="abc"),
                              metas=metas)
-        table = data.Table(domain, [["m", 1, "c", "X", 2, "bb"],
+        table = Table(domain, [["m", 1, "c", "X", 2, "bb"],
                                     ["f", 2, "?", "Y", 1, "aa"],
                                     ["m", 3, "a", "Z", 3, "bb"],
                                     ["?", "?", "c", "X", 1, "aa"]])
@@ -605,9 +606,9 @@ class CreateTableWithData(TableTests):
                                                dtype=object))
 
     def test_creates_a_table_from_list_of_instances(self):
-        table = data.Table('iris')
+        table = Table('iris')
         # skip weights
-        new_table = data.Table(table.domain, [[v for i, v in enumerate(list(row)) if i != len(table.columns) - 1]
+        new_table = Table(table.domain, [[v for i, v in enumerate(list(row)) if i != len(table.columns) - 1]
                                               for _, row in table.iterrows()])
         self.assertIs(table.domain, new_table.domain)
         self.assert_discretes_are_categoricals(table)
@@ -618,9 +619,9 @@ class CreateTableWithData(TableTests):
         np.testing.assert_array_equal(table.metas, new_table.metas)
 
     def test_creates_a_table_from_list_of_instances_metas(self):
-        table = data.Table('zoo')
+        table = Table('zoo')
         # skip weights
-        new_table = data.Table(data.Domain(attributes=[], metas=table.domain.metas), table.metas.tolist())
+        new_table = Table(Domain(attributes=[], metas=table.domain.metas), table.metas.tolist())
         self.assertEqual(table.domain.metas, new_table.domain.metas)
         self.assert_discretes_are_categoricals(table)
         self.assertEqual(new_table.X.size, 0)
@@ -630,24 +631,24 @@ class CreateTableWithData(TableTests):
     def test_creates_a_table_with_domain_and_given_X(self):
         domain = self.mock_domain()
 
-        table = data.Table(domain, self.data)
-        self.assertIsInstance(table.domain, data.Domain)
+        table = Table(domain, self.data)
+        self.assertIsInstance(table.domain, Domain)
         self.assert_discretes_are_categoricals(table)
         self.assertEqual(table.domain, domain)
         np.testing.assert_almost_equal(table.X, self.data)
 
     def test_creates_a_table_with_given_X_and_Y(self):
-        table = data.Table(self.data, self.class_data)
+        table = Table(self.data, self.class_data)
 
-        self.assertIsInstance(table.domain, data.Domain)
+        self.assertIsInstance(table.domain, Domain)
         self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, self.data)
         np.testing.assert_almost_equal(table.Y, self.class_data)
 
     def test_creates_a_table_with_given_X_Y_and_metas(self):
-        table = data.Table(self.data, self.class_data, self.meta_data)
+        table = Table(self.data, self.class_data, self.meta_data)
 
-        self.assertIsInstance(table.domain, data.Domain)
+        self.assertIsInstance(table.domain, Domain)
         self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(table.X, self.data)
         np.testing.assert_almost_equal(table.Y, self.class_data)
@@ -655,35 +656,35 @@ class CreateTableWithData(TableTests):
 
     def test_creates_a_discrete_class_if_Y_has_few_distinct_values(self):
         Y = np.array([float(np.random.randint(0, 2)) for i in self.data])
-        table = data.Table(self.data, Y, self.meta_data)
+        table = Table(self.data, Y, self.meta_data)
 
         np.testing.assert_almost_equal(table.Y, Y)
-        self.assertIsInstance(table.domain.class_vars[0], data.DiscreteVariable)
+        self.assertIsInstance(table.domain.class_vars[0], DiscreteVariable)
 
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
-        table = data.Table.from_numpy(domain, self.data)
+        table = Table.from_numpy(domain, self.data)
 
         self.assertEqual(table.domain, domain)
         self.assert_discretes_are_categoricals(table)
 
     def test_sets_Y_if_given(self):
         domain = self.mock_domain(with_classes=True)
-        table = data.Table.from_numpy(domain, self.data, self.class_data)
+        table = Table.from_numpy(domain, self.data, self.class_data)
 
         np.testing.assert_almost_equal(table.Y, self.class_data)
         self.assert_discretes_are_categoricals(table)
 
     def test_sets_metas_if_given(self):
         domain = self.mock_domain(with_metas=True)
-        table = data.Table.from_numpy(domain, self.data, metas=self.meta_data)
+        table = Table.from_numpy(domain, self.data, metas=self.meta_data)
 
         np.testing.assert_almost_equal(table.metas, self.meta_data)
         self.assert_discretes_are_categoricals(table)
 
     def test_sets_weights_if_given(self):
         domain = self.mock_domain()
-        table = data.Table.from_numpy(domain, self.data, weights=self.weight_data)
+        table = Table.from_numpy(domain, self.data, weights=self.weight_data)
 
         np.testing.assert_equal(table.weights.shape, (len(self.data), ))
         self.assert_discretes_are_categoricals(table)
@@ -691,7 +692,7 @@ class CreateTableWithData(TableTests):
 
     def test_initializes_Y_metas_and_W_if_not_given(self):
         domain = self.mock_domain()
-        table = data.Table.from_numpy(domain, self.data)
+        table = Table.from_numpy(domain, self.data)
 
         self.assertEqual(table.Y.shape, (self.nrows, len(domain.class_vars)))
         self.assertEqual(table.metas.shape, (self.nrows, len(domain.metas)))
@@ -704,17 +705,17 @@ class CreateTableWithData(TableTests):
 
         with self.assertRaises(ValueError):
             data_ = np.hstack((self.data, ones))
-            data.Table.from_numpy(domain, data_, self.class_data,
+            Table.from_numpy(domain, data_, self.class_data,
                                   self.meta_data)
 
         with self.assertRaises(ValueError):
             classes_ = np.hstack((self.class_data, ones))
-            data.Table.from_numpy(domain, self.data, classes_,
+            Table.from_numpy(domain, self.data, classes_,
                                   self.meta_data)
 
         with self.assertRaises(ValueError):
             metas_ = np.hstack((self.meta_data, ones))
-            data.Table.from_numpy(domain, self.data, self.class_data,
+            Table.from_numpy(domain, self.data, self.class_data,
                                   metas_)
 
     def test_raises_error_if_lengths_of_data_do_not_match(self):
@@ -722,35 +723,35 @@ class CreateTableWithData(TableTests):
 
         with self.assertRaises(ValueError):
             data_ = np.vstack((self.data, np.zeros((1, len(self.attributes)))))
-            data.Table(domain, data_, self.class_data, self.meta_data)
+            Table(domain, data_, self.class_data, self.meta_data)
 
         with self.assertRaises(ValueError):
             class_data_ = np.vstack((self.class_data,
                                      np.zeros((1, len(self.class_vars)))))
-            data.Table(domain, self.data, class_data_, self.meta_data)
+            Table(domain, self.data, class_data_, self.meta_data)
 
         with self.assertRaises(ValueError):
             meta_data_ = np.vstack((self.meta_data,
                                     np.zeros((1, len(self.metas)))))
-            data.Table(domain, self.data, self.class_data, meta_data_)
+            Table(domain, self.data, self.class_data, meta_data_)
 
     @patch("Orange.data.Table.from_numpy")
     def test_calling_new_with_domain_and_numpy_arrays_calls_new_from_numpy(
             self, new_from_numpy):
         domain = self.mock_domain()
-        data.Table(domain, self.data)
+        Table(domain, self.data)
         new_from_numpy.assert_called_with(domain, self.data)
 
         domain = self.mock_domain(with_classes=True)
-        data.Table(domain, self.data, self.class_data)
+        Table(domain, self.data, self.class_data)
         new_from_numpy.assert_called_with(domain, self.data, self.class_data)
 
         domain = self.mock_domain(with_classes=True, with_metas=True)
-        data.Table(domain, self.data, self.class_data, self.meta_data)
+        Table(domain, self.data, self.class_data, self.meta_data)
         new_from_numpy.assert_called_with(
             domain, self.data, self.class_data, self.meta_data)
 
-        data.Table(domain, self.data, self.class_data,
+        Table(domain, self.data, self.class_data,
                    self.meta_data, self.weight_data)
         new_from_numpy.assert_called_with(domain, self.data, self.class_data,
                                           self.meta_data, self.weight_data)
@@ -764,28 +765,28 @@ class CreateTableWithData(TableTests):
 
         nullcol = np.empty((self.nrows, 0))
         domain = self.create_domain(self.attributes)
-        table = data.Table(domain, self.data)
+        table = Table(domain, self.data)
         self.assert_discretes_are_categoricals(table)
 
-        table_1 = data.Table.from_numpy(
+        table_1 = Table.from_numpy(
             domain, table.X, table.Y, table.metas, table.weights)
         assert_equal(table, table_1)
         self.assert_discretes_are_categoricals(table_1)
 
         domain = self.create_domain(classes=self.class_vars)
-        table = data.Table(domain, nullcol, self.class_data)
+        table = Table(domain, nullcol, self.class_data)
         self.assert_discretes_are_categoricals(table)
 
-        table_1 = data.Table.from_numpy(
+        table_1 = Table.from_numpy(
             domain, table.X, table.Y, table.metas, table.weights)
         self.assert_discretes_are_categoricals(table_1)
         assert_equal(table, table_1)
 
         domain = self.create_domain(metas=self.metas)
-        table = data.Table(domain, nullcol, nullcol, self.meta_data)
+        table = Table(domain, nullcol, nullcol, self.meta_data)
         self.assert_discretes_are_categoricals(table)
 
-        table_1 = data.Table.from_numpy(
+        table_1 = Table.from_numpy(
             domain, table.X, table.Y, table.metas, table.weights)
         self.assert_discretes_are_categoricals(table_1)
         assert_equal(table, table_1)
@@ -809,31 +810,31 @@ class CreateTableWithDomainAndTable(TableTests):
         super(CreateTableWithDomainAndTable, self).setUp()
         self.domain = self.create_domain(
             self.attributes, self.class_vars, self.metas)
-        self.table = data.Table(
+        self.table = Table(
             self.domain, self.data, self.class_data, self.meta_data)
 
     def test_creates_table_with_given_domain(self):
-        new_table = data.Table.from_table(self.table.domain, self.table)
+        new_table = Table.from_table(self.table.domain, self.table)
 
-        self.assertIsInstance(new_table, data.Table)
+        self.assertIsInstance(new_table, Table)
         self.assert_discretes_are_categoricals(new_table)
         self.assertIsNot(self.table, new_table)
         self.assertEqual(new_table.domain, self.domain)
 
     def test_creates_table_with_empty_domain(self):
-        new_table = data.Table.from_table(data.Domain(attributes=[]), self.table)
+        new_table = Table.from_table(Domain(attributes=[]), self.table)
         self.assertEqual(len(new_table), 0)
 
     def test_can_copy_table(self):
-        new_table = data.Table.from_table(self.domain, self.table)
+        new_table = Table.from_table(self.domain, self.table)
         self.assertTrue(new_table.equals(self.table))
 
     def test_can_change_attribute_roles(self):
         x = self.table.domain.attributes[:3]
         y = self.table.domain.attributes[3:5]
         meta = self.table.domain.attributes[5:]
-        new_domain = data.Domain(x, y, meta)
-        new_table = data.Table(new_domain, self.table)
+        new_domain = Domain(x, y, meta)
+        new_table = Table(new_domain, self.table)
         self.assert_discretes_are_categoricals(new_table)
 
         self.assertEqual(new_table.X.shape[1], len(x))
@@ -844,25 +845,28 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertAlmostEqual(new_table.metas.sum(), self.table[meta].values.sum() - self.table.weights.sum())
 
     def test_creates_table_with_given_domain_and_row_filter(self):
-        new_domain = data.Domain(self.table.domain.attributes[:2], [], [])
-        new_table = data.Table.from_table(new_domain, self.table, [2, 3, 8])
+        new_domain = Domain(self.table.domain.attributes[:2], [], [])
+        new_table = Table.from_table(new_domain, self.table, [2, 3, 8])
         np.testing.assert_array_almost_equal(self.table.X[[2, 3, 8], :2], new_table.X)
 
     def test_from_table_on_sparse_data(self):
-        iris = data.Table("iris")
-        iris.X = csr_matrix(iris.X)
+        iris = Table("iris")
+        iris = Table(
+            Domain(iris.domain.attributes),
+            csr_matrix(iris.X)
+        )
 
-        new_domain = data.domain.Domain(iris.domain.attributes[:2], iris.domain.class_vars,
+        new_domain = Domain(iris.domain.attributes[:2], iris.domain.class_vars,
                                         iris.domain.metas, source=iris.domain)
-        new_iris = data.Table.from_table(new_domain, iris)
+        new_iris = SparseTable.from_table(new_domain, iris)
         self.assertTrue(issparse(new_iris.X))
         self.assertEqual(new_iris.X.shape[1], 2)
         self.assertEqual(len(new_iris.domain.attributes), 2)
 
         all_vars = chain(iris.domain.variables, iris.domain.metas)
         n_all = len(iris.domain) + len(iris.domain.metas)
-        new_domain = data.domain.Domain([], [], all_vars, source=iris.domain)
-        new_iris = data.Table.from_table(new_domain, iris)
+        new_domain = Domain([], [], all_vars, source=iris.domain)
+        new_iris = Table.from_table(new_domain, iris)
         self.assertEqual(len(new_iris.domain.metas), n_all)
         self.assertEqual(new_iris.metas.shape[1], n_all)
 
@@ -898,7 +902,7 @@ class TableIndexingTests(TableTests):
         d = self.domain = \
             self.create_domain(self.attributes, self.class_vars, self.metas)
         t = self.table = \
-            data.Table(self.domain, self.data, self.class_data, self.meta_data)
+            Table(self.domain, self.data, self.class_data, self.meta_data)
         self.magic_table = \
             np.column_stack((self.table.X, self.table.Y,
                              self.table.metas[:, ::-1]))
@@ -940,7 +944,7 @@ class TableElementAssignmentTest(TableTests):
     def setUp(self):
         super(TableElementAssignmentTest, self).setUp()
         self.domain = self.create_domain(self.attributes, self.class_vars, self.metas)
-        self.table = data.Table(self.domain, self.data, self.class_data, self.meta_data)
+        self.table = Table(self.domain, self.data, self.class_data, self.meta_data)
 
     def test_can_assign_values(self):
         self.table.loc[self.table.index[0], self.domain.attributes[0]] = 123.
@@ -988,15 +992,15 @@ class InterfaceTest(unittest.TestCase):
     """
 
     features = (
-        data.ContinuousVariable(name="Continuous Feature 1"),
-        data.ContinuousVariable(name="Continuous Feature 2"),
-        data.DiscreteVariable(name="Discrete Feature 1", values=[0, 1]),
-        data.DiscreteVariable(name="Discrete Feature 2", values=["value1", "value2"]),
+        ContinuousVariable(name="Continuous Feature 1"),
+        ContinuousVariable(name="Continuous Feature 2"),
+        DiscreteVariable(name="Discrete Feature 1", values=[0, 1]),
+        DiscreteVariable(name="Discrete Feature 2", values=["value1", "value2"]),
     )
 
     class_vars = (
-        data.ContinuousVariable(name="Continuous Class"),
-        data.DiscreteVariable(name="Discrete Class", values=[0, 1])
+        ContinuousVariable(name="Continuous Class"),
+        DiscreteVariable(name="Discrete Class", values=[0, 1])
     )
 
     feature_data = [
@@ -1018,8 +1022,8 @@ class InterfaceTest(unittest.TestCase):
     nrows = 4
 
     def setUp(self):
-        self.domain = data.Domain(attributes=self.features, class_vars=self.class_vars)
-        self.table = data.Table.from_list(self.domain, self.data)
+        self.domain = Domain(attributes=self.features, class_vars=self.class_vars)
+        self.table = Table.from_list(self.domain, self.data)
 
     def test_iteration(self):
         for (idx, row), expected_data in zip(self.table.iterrows(), self.data):
@@ -1044,7 +1048,6 @@ class InterfaceTest(unittest.TestCase):
         new_value = 2
         new_row = [new_value] * (len(self.table.columns) - 1)  # -1 for weights
         newt = self.table.append(new_row)
-        a = newt.iloc[-1]
         self.assertEqual(list(newt.iloc[-1][cols_wo_weights(newt)]), new_row)
 
     def test_delete_rows(self):
@@ -1065,7 +1068,7 @@ class InterfaceTest(unittest.TestCase):
         # also TablePanel, but we don't need that here
         # see pandas' subclassing docs and our impl for more info
 
-        class _ExtendedSeries(data.TableSeries):
+        class _ExtendedSeries(TableSeries):
             @property
             def _constructor(self):
                 return _ExtendedSeries
@@ -1074,7 +1077,7 @@ class InterfaceTest(unittest.TestCase):
             def _constructor_expanddim(self):
                 return _ExtendedTable
 
-        class _ExtendedTable(data.Table):
+        class _ExtendedTable(Table):
             @property
             def _constructor(self):
                 return _ExtendedTable
@@ -1094,15 +1097,15 @@ class InterfaceTest(unittest.TestCase):
 class TestPandasInteraction(unittest.TestCase):
     def setUp(self):
         # test assertions: a must bot have weight set here
-        self.a = data.Table([[1, 2, 3], [3, 4, 5]])
-        self.b = data.Table([[1, 2], [3, 4], [5, 6]])
+        self.a = Table([[1, 2, 3], [3, 4, 5]])
+        self.b = Table([[1, 2], [3, 4], [5, 6]])
         self.b.set_weights(np.random.random(len(self.b)))
 
     def test_unique_index_across_tables(self):
         self.assertEqual(len(self.a) + len(self.b), len(set(self.a.index).union(set(self.b.index))))
 
     def test_unique_index_from_empty_table(self):
-        c = data.Table()
+        c = Table()
         c["foo"] = [1, 2, 3, 4, 5]
         self.assertEqual(len(self.a) + len(self.b) + len(c),
                          len(set(self.a.index).union(set(self.b.index)).union(set(c.index))))
@@ -1111,7 +1114,7 @@ class TestPandasInteraction(unittest.TestCase):
         np.testing.assert_array_equal(np.repeat(1, len(self.a)), self.a.weights)
 
     def test_default_weights_from_empty_table(self):
-        c = data.Table()
+        c = Table()
         c["foo"] = [1, 2]
         np.testing.assert_array_equal(np.repeat(1, len(c)), c.weights)
 

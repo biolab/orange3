@@ -6,6 +6,7 @@ from numbers import Number
 
 from itertools import chain
 import numpy as np
+import scipy.sparse as sp
 import pandas as pd
 import pandas.core.internals
 
@@ -349,6 +350,14 @@ class TableBase:
             else:
                 return np.atleast_2d(what).T
 
+        # if anything is sparse, use the sparse version
+        if sp.issparse(X) or (Y is not None and sp.issparse(Y)) \
+                          or (metas is not None and sp.issparse(metas)) \
+                          or (weights is not None and sp.issparse(weights)):
+            # explicitly construct a sparse table as this can be called from Table(...)
+            from .impl import SparseTable
+            return SparseTable._from_sparse_numpy(domain, X, Y, metas, weights)
+
         if domain is None:
             result = cls._from_data_inferred(X, Y, metas)
             if weights is not None:
@@ -673,12 +682,11 @@ class TableBase:
                 other[column] = other[column].astype('category',
                                                      categories=self[column].cat.categories,
                                                      ordered=self[column].cat.ordered)
-        result = super().append(other)
-        # transform any values we believe are null into actual null values
-        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+        # also coerce into the proper class
+        result = self.from_dataframe(super().append(other), self.domain)
         # append doesn't transfer properties for some reason
         result._transfer_properties(self)
-        return self.from_dataframe(result, self.domain)
+        return result
 
     @deprecated('Use Table.append() for adding new rows. This inserts a new column. ')
     def insert(self, *args, **kwargs):
@@ -985,6 +993,7 @@ class TableBase:
                     contingencies.append(((pivot.columns.values, pivot.values), unknowns.values))
         return contingencies, self[row_var].isnull().sum()
 
+    @property
     def density(self):
         raise NotImplementedError
 
@@ -1000,11 +1009,13 @@ class TableBase:
         """Get an enum value for the self.metas density status. """
         raise NotImplementedError
 
+    @property
     def is_sparse(self):
         raise NotImplementedError
 
+    @property
     def is_dense(self):
-        return not self.is_sparse()
+        return not self.is_sparse
 
 
 class SeriesBase:
