@@ -12,7 +12,7 @@ cimport numpy as np
 from libc.math cimport log
 
 cdef extern from "numpy/npy_math.h":
-    bint npy_isnan(double x)
+    bint npy_isnan(double x) nogil
 
 cpdef enum:
     NULL_BRANCH = -1
@@ -331,22 +331,23 @@ def compute_grouped_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
         np.int32_t[:] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
         double[:] group_sums = numpy.zeros(n_values)
 
-    for i in range(x.shape[0]):
-        tx = x[i]
-        if not npy_isnan(tx):
-            group_sizes[<int>tx] += 1
-            group_sums[<int>tx] += y[i]
-    inter = 0
-    n = 0
-    for i in range(n_values):
-        if group_sizes[i] < min_leaf:
-            # We don't construct nodes with less than min_leaf instances
-            # If there is only one non-null node, the split will yield a
-            # score of 0
-            continue
-        inter += group_sums[i] * group_sums[i] / group_sizes[i]
-        sum += group_sums[i]
-        n += group_sizes[i]
+    with nogil:
+        for i in range(x.shape[0]):
+            tx = x[i]
+            if not npy_isnan(tx):
+                group_sizes[<int>tx] += 1
+                group_sums[<int>tx] += y[i]
+        inter = 0
+        n = 0
+        for i in range(n_values):
+            if group_sizes[i] < min_leaf:
+                # We don't construct nodes with less than min_leaf instances
+                # If there is only one non-null node, the split will yield a
+                # score of 0
+                continue
+            inter += group_sums[i] * group_sums[i] / group_sizes[i]
+            sum += group_sums[i]
+            n += group_sizes[i]
     if n < 2:
         return 0
     # factor n / x.shape[0] is the punishment for missing values

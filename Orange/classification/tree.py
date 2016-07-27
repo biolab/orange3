@@ -88,7 +88,7 @@ class OrangeTreeLearner(Learner):
             cont[:, null_nodes] = 0
             attr_distr = np.sum(cont, axis=0)
             cls_distr = np.sum(cont, axis=1)
-            n = sum(attr_distr)
+            n = np.sum(attr_distr)
             # Avoid log(0); <= instead of == because we need an array
             cls_distr[cls_distr <= 0] = 1
             attr_distr[attr_distr <= 0] = 1
@@ -114,13 +114,13 @@ class OrangeTreeLearner(Learner):
             attr_distr = np.sum(cont, axis=0)
             # Skip instances with missing value of the attribute
             cls_distr = np.sum(cont, axis=1)
-            if sum(attr_distr) == 0:  # all values are missing
+            if np.sum(attr_distr) == 0:  # all values are missing
                 return REJECT_ATTRIBUTE
             best_score, best_mapping = _tree_scorers.find_binarization_entropy(
                 cont, cls_distr, attr_distr, self.min_samples_leaf)
             if best_score <= 0:
                 return REJECT_ATTRIBUTE
-            best_score *= 1 - sum(cont.unknowns) / len(data)
+            best_score *= 1 - np.sum(cont.unknowns) / len(data)
             mapping, branches = MappedDiscreteNode.branches_from_mapping(
                 data.X[:, attr_no], best_mapping, n_values)
             node = MappedDiscreteNode(attr, attr_no, mapping, None)
