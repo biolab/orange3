@@ -360,7 +360,6 @@ time,continuous
         for stream in (output_csv, input_csv):
             stream.close = lambda: None  # HACK: Prevent closing of streams
 
-        # hack so this small file can read successfully
         table = CSVReader(input_csv).read()
         self.assertIsInstance(table.domain['Date'], TimeVariable)
         self.assertEqual(table.domain['Date'].repr_val(table['Date'].iloc[0]), '1920-12-12 00:00:00')
@@ -370,10 +369,9 @@ time,continuous
 
         CSVReader.write_file(output_csv, table)
 
-        # csv can't sniff because of too many : in the output, replace those parts
         output_csv = StringIO(output_csv.getvalue().replace(" 00:00:00+00:00", ""))
         reread = CSVReader(output_csv).read()
-        reread.index = [0, 1, 2]  # override for comparison purposes
+        reread.index = table.index  # override for comparison purposes
         self.assertTrue(reread.equals(table))
 
 PickleContinuousVariable = create_pickling_tests(

@@ -14,6 +14,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def setUp(self):
         self.iris = Table("iris")
         self.housing = Table("housing")
+        self.titanic = Table("titanic")
 
     def test_adaboost(self):
         learn = SklAdaBoostLearner()
@@ -28,7 +29,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         tree_estimator = TreeLearner()
         stump = SklAdaBoostLearner(base_estimator=stump_estimator)
         tree = SklAdaBoostLearner(base_estimator=tree_estimator)
-        results = CrossValidation(self.iris, [stump, tree], k=4)
+        results = CrossValidation(self.titanic, [stump, tree], k=4)
         ca = CA(results)
         self.assertLess(ca[0], ca[1])
 

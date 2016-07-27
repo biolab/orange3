@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.statistics import distribution
-from Orange import data
+from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain, Variable
 from Orange.tests import test_filename
 
 class Distribution_DiscreteTestCase(unittest.TestCase):
@@ -18,7 +18,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.rfreqs = [x/s for x in self.freqs]
 
     def test_from_table(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.Discrete(d, "type")
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
@@ -41,7 +41,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertEqual(disc, disc5)
 
     def test_construction(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
 
         disc = distribution.Discrete(d, "type")
         self.assertIsInstance(disc, np.ndarray)
@@ -63,7 +63,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
                                       [0]*len(d.domain.class_var.values))
 
     def test_fallback(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         default = distribution.Discrete(d, "type")
 
         d._compute_distributions = Mock(side_effect=NotImplementedError)
@@ -73,7 +73,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
     def test_equality(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         d1 = distribution.Discrete(d, 0)
         d2 = distribution.Discrete(d, 0)
         d3 = distribution.Discrete(d, 1)
@@ -83,7 +83,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertNotEqual(d1, d3)
 
     def test_indexing(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         indamphibian = d.domain.class_var.to_val("amphibian")
 
         disc = distribution.class_distribution(d)
@@ -103,7 +103,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertEqual(list(disc), self.freqs)
 
     def test_hash(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.Discrete(d, "type")
 
         disc2 = distribution.Discrete(d, d.domain.class_var)
@@ -119,7 +119,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertNotEqual(hash(disc), hash(disc2))
 
     def test_add(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.Discrete(d, "type")
 
         disc += [1, 2, 3, 4, 5, 6, 7]
@@ -134,7 +134,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertEqual(disc3, [2*x for x in range(1, 8)])
 
     def test_normalize(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.Discrete(d, "type")
         disc.normalize()
         self.assertEqual(disc, self.rfreqs)
@@ -147,12 +147,12 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(disc1, [1/v]*v)
 
     def test_modus(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.Discrete(d, "type")
         self.assertEqual(str(disc.modus()), "mammal")
 
     def test_random(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.Discrete(d, "type")
         ans = set()
         for i in range(1000):
@@ -163,7 +163,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
 class Distribution_ContinuousTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.iris = data.Table("iris")
+        cls.iris = Table("iris")
 
     def setUp(self):
         self.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
@@ -229,7 +229,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
 
 class TestClassDistribution(unittest.TestCase):
     def test_class_distribution(self):
-        d = data.Table("zoo")
+        d = Table("zoo")
         disc = distribution.class_distribution(d)
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
@@ -239,7 +239,7 @@ class TestClassDistribution(unittest.TestCase):
 
 class TestGetDistribution(unittest.TestCase):
     def test_get_distribution(self):
-        d = data.Table("iris")
+        d = Table("iris")
         cls = d.domain.class_var
         disc = distribution.get_distribution(d, cls)
         self.assertIsInstance(disc, np.ndarray)
@@ -262,7 +262,7 @@ class TestGetDistribution(unittest.TestCase):
 
 class TestDomainDistribution(unittest.TestCase):
     def test_get_distributions(self):
-        d = data.Table("iris")
+        d = Table("iris")
         ddist = distribution.get_distributions(d)
 
         self.assertEqual(len(ddist), 5)
@@ -283,10 +283,10 @@ class TestDomainDistribution(unittest.TestCase):
         np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
 
     def test_sparse_get_distributions(self):
-        domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=list("abc"))
+        domain = Domain(
+            [DiscreteVariable("d%i" % i, values=list("abc"))
              for i in range(10)] +
-            [data.ContinuousVariable("c%i" % i) for i in range(10)])
+            [ContinuousVariable("c%i" % i) for i in range(10)])
 
         #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
         # ------------------------------------------------------------
@@ -306,7 +306,7 @@ class TestDomainDistribution(unittest.TestCase):
                    2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
-        d = data.Table.from_numpy(domain, X)
+        d = Table.from_numpy(domain, X)
 
         ddist = distribution.get_distributions(d)
 
@@ -363,7 +363,8 @@ class TestDomainDistribution(unittest.TestCase):
         np.testing.assert_almost_equal(ddist[19], z)
 
     def test_compute_distributions_metas(self):
-        d = data.Table(test_filename("test9.tab"))
+        Variable._clear_all_caches()
+        d = Table(test_filename("test9.tab"))
         variable = d.domain[-2]
         dist, _ = d._compute_distributions([variable])[0]
         np.testing.assert_almost_equal(dist, [3, 3, 2])

@@ -354,8 +354,6 @@ class SparseTable(TableBase, pd.SparseDataFrame):
                     contingencies.append(((col_vals, cont), unks))
         return contingencies, self[row_var].isnull().sum()
 
-
-
     @property
     def density(self):
         """
