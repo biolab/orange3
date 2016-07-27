@@ -8,7 +8,7 @@ import traceback
 
 import Orange
 from Orange.data import Table, Variable
-from Orange.regression import Learner
+from Orange.regression import Learner, OrangeTreeLearner
 from Orange.tests import test_filename
 
 
@@ -56,6 +56,8 @@ class TestRegression(unittest.TestCase):
         for learner in self.all_learners():
             try:
                 learner = learner()
+                if isinstance(learner, OrangeTreeLearner):
+                    learner.binarize = False
                 model = learner(table)
                 model(table)
             except TypeError:

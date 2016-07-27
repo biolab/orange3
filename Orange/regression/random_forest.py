@@ -1,6 +1,6 @@
 import sklearn.ensemble as skl_ensemble
 
-from Orange.base import RandomForest
+from Orange.tree import RandomForest
 from Orange.regression import SklLearner, SklModel
 from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess.score import LearnerScorer

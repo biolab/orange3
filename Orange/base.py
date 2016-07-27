@@ -4,10 +4,10 @@ import numpy as np
 import scipy
 
 from Orange.data import Table, Storage, Instance, Value
+from Orange.data.util import one_hot
+from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
-from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.data.util import one_hot
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -27,11 +27,15 @@ class Learner:
         self.preprocessors = list(preprocessors)
 
     def fit(self, X, Y, W=None):
-        raise NotImplementedError(
-            "Descendants of Learner must overload method fit")
+        raise RuntimeError(
+            "Descendants of Learner must overload method fit or "
+            "fit_storage")
 
     def fit_storage(self, data):
-        return self.fit(data.X, data.Y, data.W)
+        """Default implementation of fit_storage defaults to calling fit.
+        Derived classes must define fit_storage or fit"""
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+        return self.fit(X, Y, W)
 
     def __call__(self, data):
         if not self.check_learner_adequacy(data.domain):
@@ -49,11 +53,7 @@ class Learner:
 
         self.domain = data.domain
 
-        if type(self).fit is Learner.fit:
-            model = self.fit_storage(data)
-        else:
-            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            model = self.fit(X, Y, W)
+        model = self.fit_storage(data)
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
@@ -90,7 +90,7 @@ class Model:
         self.domain = domain
 
     def predict(self, X):
-        if self.predict_storage == Model.predict_storage:
+        if type(self).predict_storage is Model.predict_storage:
             raise TypeError("Descendants of Model must overload method predict")
         else:
             Y = np.zeros((len(X), len(self.domain.class_vars)))
@@ -273,38 +273,3 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
 
 
-class Tree:
-    """Interface for tree based models.
-
-    Defines members needed for drawing of the tree.
-    """
-
-    #: Domain of data the tree was built from
-    domain = None
-
-    #: Data the tree was built from (Optional)
-    instances = None
-
-    @property
-    def tree(self):
-        """Return underlying tree representation
-
-        Returns
-        -------
-        sklearn.tree._tree.Tree
-        """
-        raise NotImplementedError()
-
-
-class RandomForest:
-    """Interface for random forest models
-    """
-
-    @property
-    def trees(self):
-        """Return a list of Trees in the forest
-
-        Returns
-        -------
-        List[Tree]
-        """

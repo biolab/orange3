@@ -190,7 +190,6 @@ class ClassificationScorer(Scorer):
                 cont, 1. - np.sum(cont.unknowns)/instances_with_class)
 
         scores = [score_from_contingency(f) for f in data.domain.attributes]
-
         if feature is not None:
             return scores[0]
         return scores

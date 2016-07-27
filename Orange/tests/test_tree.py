@@ -27,18 +27,6 @@ class TestTreeLearner(unittest.TestCase):
         pred = model(table)
         self.assertTrue(np.all(table.Y.flatten() == pred))
 
-    def test_get_tree_classification(self):
-        table = Table('iris')
-        learn = TreeLearner()
-        clf = learn(table)
-        self.assertIsInstance(clf.tree, Tree)
-
-    def test_get_tree_regression(self):
-        table = Table('housing')
-        learn = TreeRegressionLearner()
-        clf = learn(table)
-        self.assertIsInstance(clf.tree, Tree)
-
 
 class TestDecisionTreeClassifier(unittest.TestCase):
     @classmethod
