@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, TableBase
 
 
 def _get_variable(variable, dat, attr_name,
@@ -32,7 +32,7 @@ def create_discrete(cls, *args):
 
 class Discrete(np.ndarray):
     def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None, unknown_rows=None):
-        if isinstance(dat, Table):
+        if isinstance(dat, TableBase):
             if unknowns is not None:
                 raise TypeError("Incompatible arguments (data table and 'unknowns').")
             return cls.from_data(dat, col_variable, row_variable)
@@ -156,7 +156,7 @@ class Discrete(np.ndarray):
 class Continuous:
     def __init__(self, dat=None, col_variable=None, row_variable=None,
                  unknowns=None, unknown_rows=None):
-        if isinstance(dat, Table):
+        if isinstance(dat, TableBase):
             if unknowns is not None:
                 raise TypeError("Incompatible arguments (data table and 'unknowns').")
             return self.from_data(dat, col_variable, row_variable)

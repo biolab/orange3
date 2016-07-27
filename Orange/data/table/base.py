@@ -982,8 +982,6 @@ class TableBase:
                 dist_unks = self._compute_distributions(columns=[row_var])
                 contingencies.append(dist_unks[0])
             else:
-                # we limit ourselves to counting the weights (we only need the count, NAs don't matter)
-                # so we get a slimmer result and hopefully faster processing
                 pivot = pd.pivot_table(self, values=self._WEIGHTS_COLUMN, index=[row_var],
                                        columns=[var], aggfunc=np.sum).fillna(0)
                 unknowns = unknown_grouper[var].agg(lambda x: x.isnull().sum())

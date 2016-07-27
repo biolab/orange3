@@ -309,6 +309,53 @@ class SparseTable(TableBase, pd.SparseDataFrame):
                                       if len(weighed_counts) != 0 else np.empty((2, 0)), unknowns))
         return distributions
 
+    def _compute_contingency(self, col_vars=None, row_var=None):
+        # pivot table doesn't work properly for sparse (who would have thought),
+        # so reimplement in a really inefficient manner
+        if row_var is None:
+            row_var = self.domain.class_var
+            if row_var is None:
+                raise ValueError("No row variable. ")
+        if col_vars is None:
+            col_vars = self.domain.attributes
+
+        row_var = self.domain[row_var]
+        col_vars = [self.domain[v] for v in col_vars]
+        if not row_var.is_discrete:
+            raise TypeError("Row variable must be discrete. ")
+        if any(not (var.is_discrete or var.is_continuous) for var in col_vars):
+            raise ValueError("Contingency can be computed only for discrete and continuous values. ")
+
+        def _get_vals(var):
+            if var.is_discrete:
+                return var.values
+            else:
+                return self[var].unique()
+
+        contingencies = []
+        for var in col_vars:
+            if var is row_var:
+                dist_unks = self._compute_distributions(columns=[row_var])
+                contingencies.append(dist_unks[0])
+            else:
+                # beware the snail
+                col_vals = _get_vals(var)
+                row_vals = _get_vals(row_var)
+                cont = np.zeros((len(row_vals), len(col_vals)))
+                unks = np.zeros(len(row_vals))
+                for i, rv in enumerate(row_vals):
+                    rvfilter = self[self[row_var] == rv]
+                    for j, cv in enumerate(col_vals):
+                        cont[i, j] = rvfilter[self[var] == cv][self._WEIGHTS_COLUMN].sum()
+                    unks[i] = rvfilter[var].isnull().sum()
+                if var.is_discrete:
+                    contingencies.append((cont, unks))
+                else:
+                    contingencies.append(((col_vals, cont), unks))
+        return contingencies, self[row_var].isnull().sum()
+
+
+
     @property
     def density(self):
         """
