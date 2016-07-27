@@ -466,9 +466,17 @@ class FileFormat(metaclass=FileFormatMeta):
                     col_type, col_role = Domain.infer_type_role(contents[col_idx],
                                                                 force_role=col_role if col_role != 'x' else None)
 
-                # for discrete variables that haven't specified their values in the header
                 if col_type is DiscreteVariable and 'values' not in col_type_kwargs:
+                    # for discrete variables that haven't specified their values in the header
                     col_type_kwargs.update(values=DiscreteVariable.generate_unique_values(contents[col_idx]))
+                elif col_type is ContinuousVariable and typef in ContinuousVariable.TYPE_HEADERS:
+                    # guard against reading non-continuous data into continuous columns
+                    # (this happens when the column is specified manually, therefore typef check)
+                    # this doesn't catch timevariable errors, even though they are continuous,
+                    # even though timevariables are also continuous
+                    if not np.issubdtype(contents[col_idx].dtype, np.number):
+                        raise ValueError("Non-continuous data read into a continuous column "
+                                         "(column {}: {}).".format(col_idx + 1, name))
 
                 # use an existing variable if available, otherwise get a brand new one
                 # with a brand new name
@@ -558,22 +566,20 @@ class CSVReader(FileFormat):
     SUPPORT_COMPRESSED = True
     PRIORITY = 20
 
-    def read_header(self):
-        # restrict to cls.delimiters, this also stabilizes some weird behaviour
-        # when there is not a lot of data to infer the delimiter
-        # don't skip blank lines on case of an empty third header line
-        return pd.read_table(self.filename,
-                             sep=self.DELIMITERS, header=None, index_col=False, skipinitialspace=True,
-                             skip_blank_lines=False, parse_dates=False,
-                             compression='infer', engine='python', nrows=3)
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.actual_delimiter = None
 
-    def read_contents(self, skiprows):
+    def sniff_delimiter(self):
+        if self.actual_delimiter is not None:
+            return self.actual_delimiter
+
         # sniff the separator for efficiency (inferring with pandas forces the python engine)
         sniffer = csv.Sniffer()
         try:
             if hasattr(self.filename, 'read'):  # if a file-like object is passed
                 self.filename.seek(0)
-                sample = self.filename.read(2048)
+                sample = self.filename.read(4096)
                 self.filename.seek(0)
                 delimiter = sniffer.sniff(sample).delimiter
             else:
@@ -587,14 +593,29 @@ class CSVReader(FileFormat):
         # only allow a delimiter that is in the delimiters
         if delimiter not in self.DELIMITERS:
             delimiter = self.DELIMITERS[0]
+        self.actual_delimiter = delimiter
+        return delimiter
 
-        # don't parse dates, we want more control over timezones
-        # see TimeVariable.column_to_datetime
+    def read_header(self):
+        # restrict to cls.delimiters, this also stabilizes some weird behaviour
+        # when there is not a lot of data to infer the delimiter
+        # don't skip blank lines on case of an empty third header line
+        return pd.read_table(self.filename,
+                             sep=self.sniff_delimiter(), header=None, index_col=False, skipinitialspace=True,
+                             skip_blank_lines=False, parse_dates=False,
+                             compression='infer', engine='python', nrows=3)
+
+    def read_contents(self, skiprows):
+        # be sure
+        if hasattr(self.filename, 'read'):
+            self.filename.seek(0)
         try:
+            # don't parse dates, we want more control over timezones
+            # see TimeVariable.column_to_datetime
             # fix the sniffed delimiter,
             # skip blank lines here, we're not interested in them
             return pd.read_table(self.filename,
-                                 sep=delimiter, header=None, index_col=False, skipinitialspace=True,
+                                 sep=self.sniff_delimiter(), header=None, index_col=False, skipinitialspace=True,
                                  skip_blank_lines=True, parse_dates=False,
                                  compression='infer', skiprows=skiprows, na_values=Variable.MISSING_VALUES)
         except pd.io.common.EmptyDataError:

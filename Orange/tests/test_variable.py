@@ -9,6 +9,7 @@ import pkgutil
 from datetime import datetime, timezone, date
 
 from io import StringIO
+from unittest import mock
 
 import numpy as np
 import pandas as pd
@@ -345,6 +346,7 @@ class TestTimeVariable(VariableTest):
         with self.assertRaises(ValueError):
             var.column_to_datetime(pd.Series('123'))
 
+    @mock.patch("Orange.data.io.CSVReader.DELIMITERS", ',')
     def test_readwrite_timevariable(self):
         output_csv = StringIO()
         input_csv = StringIO("""\
@@ -359,10 +361,7 @@ time,continuous
             stream.close = lambda: None  # HACK: Prevent closing of streams
 
         # hack so this small file can read successfully
-        tmp = CSVReader.DELIMITERS
-        CSVReader.DELIMITERS = ','
         table = CSVReader(input_csv).read()
-        CSVReader.DELIMITERS = tmp
         self.assertIsInstance(table.domain['Date'], TimeVariable)
         self.assertEqual(table.domain['Date'].repr_val(table['Date'].iloc[0]), '1920-12-12 00:00:00')
         # Dates before 1970 are negative
@@ -373,9 +372,7 @@ time,continuous
 
         # csv can't sniff because of too many : in the output, replace those parts
         output_csv = StringIO(output_csv.getvalue().replace(" 00:00:00+00:00", ""))
-        CSVReader.DELIMITERS = ','
         reread = CSVReader(output_csv).read()
-        CSVReader.DELIMITERS = tmp
         reread.index = [0, 1, 2]  # override for comparison purposes
         self.assertTrue(reread.equals(table))
 
