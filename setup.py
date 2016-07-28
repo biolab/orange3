@@ -171,7 +171,7 @@ PACKAGE_DATA = {
                for ext in ["tab", "csv", "basket", "info"]],
     "Orange.canvas": ["icons/*.png", "icons/*.svg"],
     "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
-    "Orange.canvas.application.tutorials": ["*.ows"],
+    "Orange.canvas.application.workflows": ["*.ows"],
     "Orange.canvas.report": ["icons/*.svg", "*.html"],
     "Orange.widgets": ["icons/*.png",
                        "icons/*.svg",
