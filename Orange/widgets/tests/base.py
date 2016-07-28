@@ -1,6 +1,5 @@
 import unittest
 from collections import namedtuple
-from PyQt4 import QtGui
 
 from PyQt4.QtGui import QApplication
 import sip
@@ -259,18 +258,17 @@ class WidgetLearnerTestMixin:
     def test_output_learner_name(self):
         """Check if learner's name properly changes"""
         new_name = "Learner Name"
-        name_line_edit = self.widget.findChildren(QtGui.QLineEdit)[0]
         self.widget.apply_button.button.click()
-        self.assertEqual(self.widget.learner.name, name_line_edit.text())
-        name_line_edit.setText(new_name)
+        self.assertEqual(self.widget.learner.name,
+                         self.widget.name_line_edit.text())
+        self.widget.name_line_edit.setText(new_name)
         self.widget.apply_button.button.click()
         self.assertEqual(self.get_output("Learner").name, new_name)
 
     def test_output_model_name(self):
         """Check if model's name properly changes"""
         new_name = "Model Name"
-        name_line_edit = self.widget.findChildren(QtGui.QLineEdit)[0]
-        name_line_edit.setText(new_name)
+        self.widget.name_line_edit.setText(new_name)
         self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
         self.assertEqual(self.get_output(self.model_name).name, new_name)
@@ -294,3 +292,11 @@ class WidgetLearnerTestMixin:
                 param = self.widget.learner.params.get(element.name)
                 self.assertEqual(param, element.get(element.gui_el))
                 self.assertEqual(param, val)
+                param = self.get_output("Learner").params.get(element.name)
+                self.assertEqual(param, val)
+                model = self.get_output(self.model_name)
+                if model is not None:
+                    self.assertEqual(model.params.get(element.name), val)
+                else:
+                    self.assertIn(self.widget.DATA_ERROR_ID,
+                                  self.widget.widgetState.get("Error"))

@@ -1,6 +1,7 @@
 from PyQt4.QtCore import Qt
 
 from Orange.regression.base_regression import LearnerRegression
+from Orange.regression import TreeRegressionLearner
 from Orange.data import Table
 from Orange.ensembles import SklAdaBoostRegressionLearner
 from Orange.widgets import gui
@@ -22,15 +23,18 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
     losses = ["Linear", "Square", "Exponential"]
     loss = Setting(0)
 
+    DEFAULT_BASE_ESTIMATOR = TreeRegressionLearner()
+
     def add_specific_parameters(self, box):
-        gui.comboBox(box, self, "loss", label="Loss:",
-                     orientation=Qt.Horizontal, items=self.losses,
-                     callback=self.settings_changed)
+        self.loss_combo = gui.comboBox(
+            box, self, "loss", label="Loss:", orientation=Qt.Horizontal,
+            items=self.losses, callback=self.settings_changed)
 
     def create_learner(self):
         return self.LEARNER(
             base_estimator=self.base_estimator,
             n_estimators=self.n_estimators,
+            learning_rate=self.learning_rate,
             preprocessors=self.preprocessors,
             loss=self.losses[self.loss].lower()
         )
@@ -44,6 +48,7 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+
     a = QApplication(sys.argv)
     ow = OWAdaBoostRegression()
     ow.set_data(Table("housing"))
