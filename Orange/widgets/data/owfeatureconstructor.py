@@ -41,6 +41,13 @@ StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
 
 def make_variable(descriptor, compute_value):
+    def make_discrete_value(v):
+        try:
+            thing = float(v)
+            return int(v) if thing.is_integer() else thing
+        except ValueError:
+            return str(v)
+
     if isinstance(descriptor, ContinuousDescriptor):
         return Orange.data.ContinuousVariable(
             descriptor.name,
@@ -49,7 +56,7 @@ def make_variable(descriptor, compute_value):
     elif isinstance(descriptor, DiscreteDescriptor):
         return Orange.data.DiscreteVariable(
             descriptor.name,
-            values=descriptor.values,
+            values=[make_discrete_value(v) for v in descriptor.values],
             ordered=descriptor.ordered,
             base_value=descriptor.base_value,
             compute_value=compute_value)
@@ -542,8 +549,7 @@ class OWFeatureConstructor(OWWidget):
     def check_attrs_values(self, attr, data):
         for i in range(len(data)):
             for var in attr:
-                if not math.isnan(data[i, var]) \
-                        and int(data[i, var]) >= len(var.values):
+                if data.loc[data.index[i], var] not in var.values:
                     return var.name
         return None
 
@@ -829,6 +835,12 @@ def make_lambda(expression, args, values):
         else:
             return ast.Name(id=arg, ctx=ast.Param(), lineno=1, col_offset=0)
 
+    def make_value(v):
+        try:
+            return ast.Num(float(v))
+        except ValueError:
+            return ast.Str(str(v))
+
     lambda_ = ast.Lambda(
         args=ast.arguments(
             args=[make_arg(arg) for arg in args + values],
@@ -837,7 +849,7 @@ def make_lambda(expression, args, values):
             kwonlyargs=[],
             kwarg=None,
             kwargannotation=None,
-            defaults=[ast.Str(v) for v in values],
+            defaults=[make_value(v) for v in values],
             kw_defaults=[]),
         body=expression.body,
     )

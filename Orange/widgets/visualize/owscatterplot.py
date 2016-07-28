@@ -295,11 +295,12 @@ class OWScatterPlot(OWWidget):
 
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
-        if self.data and data and self.data.checksum() == data.checksum():
+        if self.data is not None and data is not None \
+                and self.data.checksum() == data.checksum():
             return
 
         self.closeContext()
-        same_domain = (self.data and data and
+        same_domain = (self.data is not None and data is not None and
                        data.domain.checksum() == self.data.domain.checksum())
         self.data = data
         self.data_metas_X = self.move_primitive_metas_to_X(data)
@@ -319,7 +320,7 @@ class OWScatterPlot(OWWidget):
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
-        if self.data and len(self.data) > 2000:
+        if self.data is not None and len(self.data) > 2000:
             return self.__timer.stop()
         data_sample = self.sql_data.sample_time(time, no_cache=True)
         if data_sample:
@@ -506,7 +507,7 @@ class OWScatterPlot(OWWidget):
 
     def send_report(self):
         disc_attr = False
-        if self.data:
+        if self.data is not None:
             domain = self.data.domain
             disc_attr = domain[self.attr_x].is_discrete or \
                         domain[self.attr_y].is_discrete

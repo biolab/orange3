@@ -13,7 +13,7 @@ class MergeDataTest(unittest.TestCase):
         dd[("1",)] = [0, 1]
         dd[("huh",)] = [2]
         dd[("hoy",)] = [3]
-        dd[("?",)] = [4]
+        dd[('nan',)] = [4]
         dd[("2",)] = [5]
         dd[("oh yeah",)] = [6]
         dd[("3",)] = [7]

@@ -12,6 +12,7 @@ from functools import reduce
 from xml.sax.saxutils import escape
 
 import numpy
+import pandas as pd
 from PyQt4.QtGui import (
     QComboBox, QGraphicsScene, QGraphicsView, QGraphicsWidget,
     QGraphicsPathItem, QGraphicsTextItem, QPainterPath, QPainter,
@@ -21,10 +22,9 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF
 from PyQt4.QtCore import pyqtSignal as Signal
 
-import Orange.data
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
 
 
@@ -39,8 +39,8 @@ class OWVennDiagram(widget.OWWidget):
     icon = "icons/VennDiagram.svg"
     priority = 410
 
-    inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]
-    outputs = [("Selected Data", Orange.data.Table)]
+    inputs = [("Data", Table, "setData", widget.Multiple)]
+    outputs = [("Selected Data", Table)]
 
     # Selected disjoint subset indices
     selection = settings.Setting([])
@@ -194,7 +194,7 @@ class OWVennDiagram(widget.OWWidget):
         del self._queue[:]
 
         self._createDiagram()
-        if self.data:
+        if self.data is not None:
             self.info.setText(
                 "{} data sets on input.\n".format(len(self.data)))
         else:
@@ -306,7 +306,7 @@ class OWVennDiagram(widget.OWWidget):
                 return []
 
         def items_by_eq(key, input):
-            return list(map(ComparableInstance, input.table))
+            return list(map(ComparableInstance, [r for _, r in input.table.iterrows()]))
 
         input = self.data[key]
         if useidentifiers:
@@ -343,7 +343,7 @@ class OWVennDiagram(widget.OWWidget):
             self.itemsets[key] = itemset
 
     def _storeHints(self):
-        if self.data:
+        if self.data is not None:
             self.inputhints.clear()
             for i, (key, input) in enumerate(self.data.items()):
                 attrs = source_attributes(input.table.domain)
@@ -518,8 +518,8 @@ class OWVennDiagram(widget.OWWidget):
             else:
                 return str(val) in selected_items
 
-        source_var = Orange.data.StringVariable("source")
-        item_id_var = Orange.data.StringVariable("item_id")
+        source_var = StringVariable("source")
+        item_id_var = StringVariable("item_id")
 
         names = [itemset.title.strip() for itemset in self.itemsets.values()]
         names = uniquify(names)
@@ -536,7 +536,7 @@ class OWVennDiagram(widget.OWWidget):
                     return str(inst[attr])
             else:
                 mask = [ComparableInstance(inst) in selected_items
-                        for inst in input.table]
+                        for _, inst in input.table.iterrows()]
                 _map = {item: str(i) for i, item in enumerate(selected_items)}
 
                 def instance_key(inst):
@@ -551,7 +551,7 @@ class OWVennDiagram(widget.OWWidget):
             # add columns with source table id and set id
 
             if not self.output_duplicates:
-                id_column = numpy.array([[instance_key(inst)] for inst in subset],
+                id_column = numpy.array([[instance_key(row)] for _, row in subset.iterrows()],
                                         dtype=object)
                 source_names = numpy.array([[names[i]]] * len(subset),
                                            dtype=object)
@@ -562,7 +562,7 @@ class OWVennDiagram(widget.OWWidget):
             selected_subsets.append(subset)
 
         if selected_subsets and not self.output_duplicates:
-            data = table_concat(selected_subsets)
+            data = Table.concatenate(selected_subsets, axis=0)
             # Get all variables which are not constant between the same
             # item set
             varying = varying_between(data, [item_id_var])
@@ -574,7 +574,7 @@ class OWVennDiagram(widget.OWWidget):
             # remove the temporary item set id column
             data = drop_columns(data, [item_id_var])
         elif selected_subsets:
-            data = table_concat(selected_subsets)
+            data = Table.concatenate(selected_subsets, axis=0)
         else:
             data = None
 
@@ -617,8 +617,8 @@ class ComparableInstance:
     def __init__(self, inst):
         self.inst = inst
         self.domain = inst.domain
-        self.__hash = hash((self.inst.x.data.tobytes(),
-                            self.inst.y.data.tobytes()))
+        self.__hash = hash((self.inst.X.data.tobytes(),
+                            self.inst.Y.data.tobytes()))
 
     def __hash__(self):
         return self.__hash
@@ -627,8 +627,8 @@ class ComparableInstance:
         # XXX: comparing NaN with different payload
         return (isinstance(other, ComparableInstance)
                 and domain_eq(self.domain, other.domain)
-                and self.inst.x.data.tobytes() == other.inst.x.data.tobytes()
-                and self.inst.y.data.tobytes() == other.inst.y.data.tobytes())
+                and self.inst.X.data.tobytes() == other.inst.X.data.tobytes()
+                and self.inst.Y.data.tobytes() == other.inst.Y.data.tobytes())
 
     def __iter__(self):
         return iter(self.inst)
@@ -638,41 +638,6 @@ class ComparableInstance:
 
     def __str__(self):
         return str(self.inst)
-
-
-def table_concat(tables):
-    """
-    Concatenate a list of tables.
-
-    The resulting table will have a union of all attributes of `tables`.
-
-    """
-    attributes = []
-    class_vars = []
-    metas = []
-    variables_seen = set()
-
-    for table in tables:
-        attributes.extend(v for v in table.domain.attributes
-                          if v not in variables_seen)
-        variables_seen.update(table.domain.attributes)
-
-        class_vars.extend(v for v in table.domain.class_vars
-                          if v not in variables_seen)
-        variables_seen.update(table.domain.class_vars)
-
-        metas.extend(v for v in table.domain.metas
-                     if v not in variables_seen)
-
-        variables_seen.update(table.domain.metas)
-
-    domain = Orange.data.Domain(attributes, class_vars, metas)
-    new_table = Orange.data.Table(domain)
-
-    for table in tables:
-        new_table.extend(Orange.data.Table.from_table(domain, table))
-
-    return new_table
 
 
 def copy_descriptor(descriptor, newname=None):
@@ -687,23 +652,22 @@ def copy_descriptor(descriptor, newname=None):
         newname = descriptor.name
 
     if descriptor.is_discrete:
-        newf = Orange.data.DiscreteVariable(
+        newf = DiscreteVariable(
             newname,
             values=descriptor.values,
             base_value=descriptor.base_value,
             ordered=descriptor.ordered,
         )
         newf.attributes = dict(descriptor.attributes)
-
     elif descriptor.is_continuous:
-        newf = Orange.data.ContinuousVariable(newname)
+        newf = ContinuousVariable(newname)
         newf.number_of_decimals = descriptor.number_of_decimals
         newf.attributes = dict(descriptor.attributes)
-
     else:
         newf = type(descriptor)(newname)
         newf.attributes = dict(descriptor.attributes)
 
+    newf._compute_value = lambda table: table[descriptor].values
     return newf
 
 
@@ -711,7 +675,7 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
     """
     Reshape a data table into a wide format.
 
-    :param Orange.data.Table table:
+    :param Table table:
         Source data table in long format.
     :param varlist:
         A list of variables to reshape.
@@ -726,7 +690,7 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
     def inst_key(inst, vars):
         return tuple(str(inst[var]) for var in vars)
 
-    instance_groups = [inst_key(inst, groupvarlist) for inst in table]
+    instance_groups = [inst_key(row, groupvarlist) for idx, row in table.iterrows()]
     # A list of groups (for each element in a group the varying variable
     # will be duplicated)
     groups = list(unique(instance_groups))
@@ -734,7 +698,7 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
 
     # A list of instance ids (subject ids)
     # Each instance in the output will correspond to one of these ids)
-    instance_ids = [inst_key(inst, idvarlist) for inst in table]
+    instance_ids = [inst_key(row, idvarlist) for idx, row in table.iterrows()]
     ids = list(unique(instance_ids))
 
     # an mapping from ids to an list of input instance indices
@@ -764,13 +728,13 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
         elif feat not in groupvarlist:
             newfeatures.append(feat)
 
-    for feat in table.domain.class_vars:
-        if feat in varlist:
-            features = expanded(feat)
-            newclass_vars.extend(features)
-            expanded_features[feat] = dict(zip(groups, features))
-        elif feat not in groupvarlist:
-            newclass_vars.append(feat)
+    for targ in table.domain.class_vars:
+        if targ in varlist:
+            targets = expanded(targ)
+            newclass_vars.extend(targets)
+            expanded_features[targ] = dict(zip(groups, targets))
+        elif targ not in groupvarlist:
+            newclass_vars.append(targ)
 
     for meta in table.domain.metas:
         if meta in varlist:
@@ -780,25 +744,25 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
         elif meta not in groupvarlist:
             newmetas.append(meta)
 
-    domain = Orange.data.Domain(newfeatures, newclass_vars, newmetas)
+    domain = Domain(newfeatures, newclass_vars, newmetas)
     prototype_indices = [inst_by_id[inst_id][0] for inst_id in ids]
-    newtable = Orange.data.Table.from_table(domain, table)[prototype_indices]
+    newtable = Table.from_table(domain, table).iloc[prototype_indices]
     in_expanded = set(f for efd in expanded_features.values() for f in efd.values())
 
     for i, inst_id in enumerate(ids):
         indices = inst_by_id[inst_id]
-        instance = newtable[i]
+        instance = newtable.iloc[i]
 
         for var in domain.variables + domain.metas:
             if var in idvarlist or var in in_expanded:
                 continue
-            if numpy.isnan(instance[var]):
+            if pd.isnull(instance.loc[var]):
                 for ind in indices:
-                    if not numpy.isnan(table[ind, var]):
-                        newtable[i, var] = table[ind, var]
+                    if not pd.isnull(table.loc[table.index[ind], var]):
+                        newtable.loc[newtable.index[i], var] = table.loc[table.index[ind], var]
 
         for index in indices:
-            source_inst = table[index]
+            source_inst = table.iloc[index]
             group = instance_groups[index]
             for source_var in varlist:
                 newf = expanded_features[source_var][group]
@@ -823,18 +787,10 @@ def unique(seq):
 from Orange.widgets.data.owmergedata import group_table_indices
 
 
-def unique_non_nan(ar):
-    # metas have sometimes object dtype, but values are numpy floats
-    ar = ar.astype('float64')
-    uniq = numpy.unique(ar)
-    return uniq[~numpy.isnan(uniq)]
-
-
 def varying_between(table, idvarlist):
     """
     Return a list of all variables with non constant values between
     groups defined by `idvarlist`.
-
     """
     def inst_key(inst, vars):
         return tuple(str(inst[var]) for var in vars)
@@ -847,18 +803,12 @@ def varying_between(table, idvarlist):
     idmap = group_table_indices(table, idvarlist)
     values = {}
     varying = set()
-    for indices in idmap.values():
-        subset = table[indices]
-        for var in list(candidate_set):
-            values = subset[:, var]
-            values, _ = subset.get_column_view(var)
+    for indices in sorted(idmap.values()):
+        subset = table.iloc[indices]
+        for var in sorted(candidate_set):
+            num_uniq = (~pd.isnull(pd.unique(subset[var]))).sum()
 
-            if var.is_string:
-                uniq = set(values)
-            else:
-                uniq = unique_non_nan(values)
-
-            if len(uniq) > 1:
+            if num_uniq > 1:
                 varying.add(var)
                 candidate_set.remove(var)
 
@@ -1588,9 +1538,9 @@ def append_column(data, where, variable, column):
         M = numpy.hstack((M, column))
     else:
         raise ValueError
-    domain = Orange.data.Domain(attr, class_vars, metas)
-    table = Orange.data.Table.from_numpy(domain, X, Y, M, W if W.size else None)
-    table.ids = data.ids
+    domain = Domain(attr, class_vars, metas)
+    table = Table.from_numpy(domain, X, Y, M, W if W.size else None)
+    table.index = data.index
     return table
 
 
@@ -1600,20 +1550,20 @@ def drop_columns(data, columns):
     def filter_vars(vars):
         return tuple(var for var in vars if var not in columns)
 
-    domain = Orange.data.Domain(
+    domain = Domain(
         filter_vars(data.domain.attributes),
         filter_vars(data.domain.class_vars),
         filter_vars(data.domain.metas)
     )
-    return Orange.data.Table.from_table(domain, data)
+    return Table.from_table(domain, data)
 
 
 def test():
     import sklearn.cross_validation as skl_cross_validation
     app = QApplication([])
     w = OWVennDiagram()
-    data = Orange.data.Table("brown-selected")
-    data = append_column(data, "M", Orange.data.StringVariable("Test"),
+    data = Table("brown-selected")
+    data = append_column(data, "M", StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
 
     indices = skl_cross_validation.ShuffleSplit(
@@ -1648,8 +1598,8 @@ def test():
 def test1():
     app = QApplication([])
     w = OWVennDiagram()
-    data1 = Orange.data.Table("brown-selected")
-    data2 = Orange.data.Table("brown-selected")
+    data1 = Table("brown-selected")
+    data2 = Table("brown-selected")
     w.setData(data1, 1)
     w.setData(data2, 2)
     w.handleNewSignals()

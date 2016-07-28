@@ -14,12 +14,13 @@ from Orange.widgets.data.owfeatureconstructor import (
     freevars, make_lambda, validate_exp
 )
 
+
 class FeatureConstructorTest(unittest.TestCase):
     def test_construct_variables_discrete(self):
         data = Table("iris")
         name = 'Discrete Variable'
-        expression = "iris_one if iris == 'Iris-setosa' else iris_two " \
-                     "if iris == 'Iris-versicolor' else iris_three"
+        expression = "'iris one' if iris == 'Iris-setosa' else 'iris two' " \
+                     "if iris == 'Iris-versicolor' else 'iris three'"
         values = ('iris one', 'iris two', 'iris three')
         desc = PyListModel(
             [DiscreteDescriptor(name=name, expression=expression,
@@ -32,7 +33,7 @@ class FeatureConstructorTest(unittest.TestCase):
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
         self.assertEqual(data.domain[name].values, list(values))
         for i in range(3):
-            self.assertEqual(data[i * 50, name], values[i])
+            self.assertEqual(data.loc[data.index[i * 50], name], values[i])
 
     def test_construct_variables_continuous(self):
         data = Table("iris")
@@ -48,8 +49,9 @@ class FeatureConstructorTest(unittest.TestCase):
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
         for i in range(3):
-            self.assertEqual(data[i * 50, name],
-                             pow(data[i * 50, 0] + data[i * 50, 1], 2))
+            self.assertEqual(data.loc[data.index[i * 50], name],
+                             pow(data.loc[data.index[i * 50], data.domain[0]] +
+                                 data.loc[data.index[i * 50], data.domain[1]], 2))
 
     def test_construct_variables_string(self):
         data = Table("iris")
@@ -65,8 +67,8 @@ class FeatureConstructorTest(unittest.TestCase):
                      data)
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
-            self.assertEqual(data[i * 50, name],
-                             str(data[i * 50, "iris"]) + "_name")
+            self.assertEqual(data.loc[data.index[i * 50], name],
+                             str(data.loc[data.index[i * 50], "iris"]) + "_name")
 
 
 class TestTools(unittest.TestCase):

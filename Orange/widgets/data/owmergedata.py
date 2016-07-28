@@ -202,10 +202,9 @@ def group_table_indices(table, key_vars, exclude_unknown=False):
 
     """
     groups = defaultdict(list)
-    for i, inst in enumerate(table):
-        key = [inst.id if a == INSTANCEID else
-               i if a == INDEX else inst[a]
-                   for a in key_vars]
+    for i, (idx, row) in enumerate(table.iterrows()):
+        key = [idx if a == INSTANCEID else i if a == INDEX else row[a]
+               for a in key_vars]
         if exclude_unknown and any(math.isnan(k) for k in key):
             continue
         key = tuple([str(k) for k in key])
@@ -217,7 +216,7 @@ def left_join_indices(table1, table2, vars1, vars2):
     key_map1 = group_table_indices(table1, vars1)
     key_map2 = group_table_indices(table2, vars2)
     indices = []
-    for i, inst in enumerate(table1):
+    for i, (_, inst) in enumerate(table1.iterrows()):
         key = tuple([str(inst.id if v == INSTANCEID else
                          i if v == INDEX else inst[v])
                             for v in vars1])

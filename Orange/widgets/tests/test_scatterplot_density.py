@@ -47,6 +47,7 @@ class TestScatterplotDensity(TestCase):
         self.assertTrue(np.all(img[:, :, 3] == 128))
 
     def test_sampling(self):
+        np.random.seed(0)
         x_data = [4, 1] + list(uniform(10, 20, 1000))
         y_data = [95, 3] + list(uniform(15, 20, 1000))
         sample = grid_sample(x_data, y_data, k=30, g=10)
