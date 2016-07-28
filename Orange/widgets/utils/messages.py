@@ -70,6 +70,11 @@ class UnboundMsg(str):
         """Remove the message."""
         raise RuntimeError("Message is not bound")
 
+    # The method is implemented in _BoundMsg
+    def is_shown(self):
+        """Return True if message is currently displayed."""
+        raise RuntimeError("Message is not bound")
+
     # Ensure that two instance of message are always different
     # In particular, there may be multiple messages "{}".
     def __hash__(self):
@@ -110,6 +115,9 @@ class _BoundMsg(UnboundMsg):
 
     def clear(self):
         self.group.deactivate_msg(self)
+
+    def is_shown(self):
+        return self in self.group.active
 
     def __str__(self):
         return self.formatted

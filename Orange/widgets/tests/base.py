@@ -11,6 +11,7 @@ from Orange.classification.base_classification import (LearnerClassification,
                                                        ModelClassification)
 from Orange.regression.base_regression import LearnerRegression, ModelRegression
 from Orange.canvas.report.owreport import OWReport
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 app = None
 
@@ -168,6 +169,9 @@ class WidgetLearnerTestMixin:
     widget, should override self.gui_to_params list in the setUp method. The
     list should contain mapping: learner parameter - gui component.
     """
+
+    widget = None  # type: OWBaseLearner
+
     def init(self):
         self.iris = Table("iris")
         self.housing = Table("housing")
@@ -202,14 +206,12 @@ class WidgetLearnerTestMixin:
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
-        err_id = self.widget.DATA_ERROR_ID
+        error = self.widget.Error.data_error
         self.send_signal("Data", self.inadequate_data)
         self.widget.apply_button.button.click()
-        self.assertIn(err_id, self.widget.widgetState.get("Error"))
-        self.assertEqual(self.widget.widgetState.get("Error").get(err_id),
-                         self.learner_class.learner_adequacy_err_msg)
+        self.assertTrue(self.widget.Error.data_error.is_shown())
         self.send_signal("Data", self.data)
-        self.assertNotIn(err_id, self.widget.widgetState.get("Error"))
+        self.assertFalse(self.widget.Error.data_error.is_shown())
 
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
