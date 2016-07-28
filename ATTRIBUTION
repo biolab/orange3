@@ -1,0 +1,13 @@
+Orange uses [Highcharts] for some of its visualizations. Some files in
+Orange/widgets/_highcharts directory are courtesy of Highsoft AS and are
+licensed differently, namely commercial use is not allowed. Additionally,
+jQuery in the same directory is provided courtesy of jQuery Foundation and
+is licensed under the terms of MIT license. Please see
+Orange/widgets/_highcharts/LICENSE file for details.
+
+[Highcharts]: http://www.highcharts.com/
+
+In addition to the above, Orange depends on multiple open-source projects
+the developers of which we are very grateful to.
+
+Support libre/open-source software.
