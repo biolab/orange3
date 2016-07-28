@@ -837,7 +837,7 @@ def make_lambda(expression, args, values):
             kwonlyargs=[],
             kwarg=None,
             kwargannotation=None,
-            defaults=[ast.Num(i) for i in range(len(values))],
+            defaults=[ast.Str(v) for v in values],
             kw_defaults=[]),
         body=expression.body,
     )
