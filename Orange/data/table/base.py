@@ -728,10 +728,17 @@ class TableBase:
                     new.columns = tables[0].columns
                     newtables.append(new)
                 result = pd.concat(newtables, axis=0)
+                new_domain = tables[0].domain
             else:
                 result = pd.concat(tables, axis=0)
+                # merges columns (nans for rows without those)
+                # domain must contain the uniques of all variables
+                new_domain = Domain(
+                    list(set(flatten(t.domain.attributes for t in tables))),
+                    list(set(flatten(t.domain.class_vars for t in tables))),
+                    list(set(flatten(t.domain.metas for t in tables)))
+                )
             new_index = cls._new_id(len(result))
-            new_domain = tables[0].domain
             result.index = new_index
         elif axis == CONCAT_COLS:
 
