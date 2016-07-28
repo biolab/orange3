@@ -6,7 +6,6 @@
 
 
 import numpy as np
-numpy = np
 cimport numpy as np
 
 from libc.math cimport log
@@ -109,7 +108,7 @@ def find_binarization_entropy(double[:, :] cont, double[:] class_distr,
     cdef:
         unsigned int n_classes = cont.shape[0]
         unsigned int n_values = cont.shape[1]
-        double[:] distr = numpy.zeros(2 * n_classes)
+        double[:] distr = np.zeros(2 * n_classes)
         double[:] mfrom
         double[:] mto
         double left, right
@@ -256,8 +255,8 @@ def find_binarization_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
         double inter, best_inter, start_inter
         unsigned int N
 
-        np.int32_t[:] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
-        double[:] group_sums = numpy.zeros(n_values)
+        np.int32_t[:] group_sizes = np.zeros(n_values, dtype=np.int32)
+        double[:] group_sums = np.zeros(n_values)
 
     N = 0
     for i in range(x.shape[0]):
@@ -328,8 +327,8 @@ def compute_grouped_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
         int i, n
         double sum = 0, inter, tx
 
-        np.int32_t[:] group_sizes = numpy.zeros(n_values, dtype=numpy.int32)
-        double[:] group_sums = numpy.zeros(n_values)
+        np.int32_t[:] group_sizes = np.zeros(n_values, dtype=np.int32)
+        double[:] group_sums = np.zeros(n_values)
 
     with nogil:
         for i in range(x.shape[0]):
@@ -375,29 +374,29 @@ def compute_predictions(double[:, :] X, int[:] code,
         a matrix of values
     """
     cdef:
-        unsigned int node_ptr, i, val_idx
+        unsigned int node_ptr, i, j, val_idx
         signed int next_node_ptr, node_idx
         np.float64_t val
-        double[: ,:] predictions = numpy.empty(
-            (X.shape[0], values.shape[1]), dtype=numpy.float64)
-        # np.ndarray[np.float64_t, ndim=2] predictions = numpy.empty(
-        #     (X.shape[0], class_distrs.shape[1]), dtype=numpy.float64)
+        double[: ,:] predictions = np.empty(
+            (X.shape[0], values.shape[1]), dtype=np.float64)
 
-    for i in range(X.shape[0]):
-        node_ptr = 0
-        while code[node_ptr]:
-            val = X[i, code[node_ptr + 2]]
-            if npy_isnan(val):
-                break
-            if code[node_ptr] == 3:
-                node_idx = code[node_ptr + 1]
-                val_idx = int(val > thresholds[node_idx])
-            else:
-                val_idx = int(val)
-            next_node_ptr = code[node_ptr + 3 + val_idx]
-            if next_node_ptr == NULL_BRANCH:
-                break
-            node_ptr = next_node_ptr
-        node_idx = code[node_ptr + 1]
-        predictions[i] = values[node_idx]
+    with nogil:
+        for i in range(X.shape[0]):
+            node_ptr = 0
+            while code[node_ptr]:
+                val = X[i, code[node_ptr + 2]]
+                if npy_isnan(val):
+                    break
+                if code[node_ptr] == 3:
+                    node_idx = code[node_ptr + 1]
+                    val_idx = int(val > thresholds[node_idx])
+                else:
+                    val_idx = int(val)
+                next_node_ptr = code[node_ptr + 3 + val_idx]
+                if next_node_ptr == NULL_BRANCH:
+                    break
+                node_ptr = next_node_ptr
+            node_idx = code[node_ptr + 1]
+            for j in range(values.shape[1]):
+                predictions[i, j] = values[node_idx, j]
     return np.asarray(predictions)
