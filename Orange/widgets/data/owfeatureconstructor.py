@@ -544,8 +544,7 @@ class OWFeatureConstructor(OWWidget):
     def check_attrs_values(self, attr, data):
         for i in range(len(data)):
             for var in attr:
-                if not math.isnan(data[i, var]) \
-                        and int(data[i, var]) >= len(var.values):
+                if data[var].iloc[data.index[i]] not in range(var.values):
                     return var.name
         return None
 
@@ -826,10 +825,7 @@ def bind_variable(descriptor, env):
 
 def make_lambda(expression, args, values):
     def make_arg(name):
-        if sys.version_info >= (3, 0):
-            return ast.arg(arg=name, annotation=None)
-        else:
-            return ast.Name(id=arg, ctx=ast.Param(), lineno=1, col_offset=0)
+        return ast.arg(arg=name, annotation=None)
 
     lambda_ = ast.Lambda(
         args=ast.arguments(

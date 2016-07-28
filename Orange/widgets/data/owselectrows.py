@@ -324,7 +324,7 @@ class OWSelectRows(widget.OWWidget):
                 combo = QComboBox()
                 combo.addItems([""] + var.values)
                 if lc[0]:
-                    combo.setCurrentIndex(int(lc[0]))
+                    combo.setCurrentIndex(int(var.to_val(lc[0])))
                 else:
                     combo.setCurrentIndex(0)
                 combo.var_type = vartype(var)

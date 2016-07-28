@@ -26,7 +26,7 @@ class TestVennDiagram(unittest.TestCase):
         return Table(domain, table.X, table.Y, metas)
 
     def test_reshape_wide(self):
-        class_var = DiscreteVariable("c", values=["x"])
+        class_var = DiscreteVariable("c", values=list("abcdefghij"))
         item_id_var = StringVariable("item_id")
         source_var = StringVariable("source")
         c1, c, item_id, ca, cb = np.random.randint(10, size=5)
@@ -34,8 +34,8 @@ class TestVennDiagram(unittest.TestCase):
                             [DiscreteVariable("c(a)", class_var.values),
                              DiscreteVariable("c(b)", class_var.values),
                              source_var, item_id_var]),
-                     np.array([[c1], [c1]], dtype=object),
-                     np.array([[c], [c]], dtype=object),
+                     np.array([[c1], [c1]]),
+                     np.array([[c], [c]]),
                      np.array([[ca, np.nan, "a", item_id],
                                [np.nan, cb, "b", item_id]], dtype=object))
 

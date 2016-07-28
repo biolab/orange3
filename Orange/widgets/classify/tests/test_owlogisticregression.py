@@ -19,7 +19,7 @@ class LogisticRegressionTest(unittest.TestCase):
         coef_table = create_coef_table(classifier)
         self.assertEqual(1, len(stats(coef_table.metas, None)))
         self.assertEqual(len(coef_table), len(classifier.domain.attributes) + 1)
-        self.assertEqual(len(coef_table[0]), 1)
+        self.assertEqual(len(coef_table.iloc[0]), 1)
 
     def test_coef_table_multiple(self):
         data = Table("zoo")
@@ -28,7 +28,7 @@ class LogisticRegressionTest(unittest.TestCase):
         coef_table = create_coef_table(classifier)
         self.assertEqual(1, len(stats(coef_table.metas, None)))
         self.assertEqual(len(coef_table), len(classifier.domain.attributes) + 1)
-        self.assertEqual(len(coef_table[0]),
+        self.assertEqual(len(coef_table.iloc[0]),
                          len(classifier.domain.class_var.values))
 
 

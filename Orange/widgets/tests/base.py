@@ -351,12 +351,12 @@ class WidgetLearnerTestMixin:
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
         self.send_signal("Data", self.data)
-        self.assertEqual(self.widget.data, self.data)
+        self.assertIs(self.widget.data, self.data)
 
     def test_input_data_disconnect(self):
         """Check widget's data and model after disconnecting data from input"""
         self.send_signal("Data", self.data)
-        self.assertEqual(self.widget.data, self.data)
+        self.assertIs(self.widget.data, self.data)
         self.widget.apply_button.button.click()
         self.send_signal("Data", None)
         self.assertEqual(self.widget.data, None)
