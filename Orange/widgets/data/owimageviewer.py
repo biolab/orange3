@@ -7,6 +7,8 @@ import sys
 import os
 import weakref
 import logging
+import enum
+import itertools
 from xml.sax.saxutils import escape
 from collections import namedtuple
 from functools import partial
@@ -18,13 +20,15 @@ from PyQt4.QtGui import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsItem,
     QGraphicsTextItem, QGraphicsRectItem, QGraphicsLinearLayout,
     QGraphicsGridLayout, QSizePolicy, QPixmap, QPen, QBrush, QColor,
-    QPainter, QPainterPath, QApplication, QImageReader
+    QPainter, QPainterPath, QApplication, QImageReader, QWidget, QLabel,
+    QStyle, QShortcut
 )
 from PyQt4.QtCore import (
-    Qt, QObject, QEvent, QThread, QSizeF, QRectF, QPointF, QUrl, QDir
+    Qt, QObject, QEvent, QThread, QSize, QPoint, QRect,
+    QSizeF, QRectF, QPointF, QUrl, QDir, QMargins
 )
 
-from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 from PyQt4.QtNetwork import (
     QNetworkAccessManager, QNetworkDiskCache, QNetworkRequest, QNetworkReply
 )
@@ -32,6 +36,7 @@ from PyQt4.QtNetwork import (
 import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.overlay import proxydoc
 
 from concurrent.futures import Future
 
@@ -39,28 +44,23 @@ _log = logging.getLogger(__name__)
 
 
 class GraphicsPixmapWidget(QGraphicsWidget):
-    def __init__(self, pixmap, parent=None):
-        QGraphicsWidget.__init__(self, parent)
+    """
+    A QGraphicsWidget displaying a QPixmap
+    """
+    def __init__(self, pixmap=None, parent=None):
+        super().__init__(parent)
         self.setCacheMode(QGraphicsItem.ItemCoordinateCache)
-        self._pixmap = pixmap
-        self._pixmapSize = QSizeF()
+        self._pixmap = QPixmap(pixmap) if pixmap is not None else QPixmap()
         self._keepAspect = True
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def setPixmap(self, pixmap):
-        if self._pixmap != pixmap:
-            self._pixmap = QPixmap(pixmap)
-            self.updateGeometry()
-            self.update()
+        self._pixmap = QPixmap(pixmap)
+        self.updateGeometry()
+        self.update()
 
     def pixmap(self):
         return QPixmap(self._pixmap)
-
-    def sizeHint(self, which, constraint=QSizeF()):
-        if which == Qt.PreferredSize:
-            return QSizeF(self._pixmap.size())
-        else:
-            return QGraphicsWidget.sizeHint(self, which, constraint)
 
     def setKeepAspectRatio(self, keep):
         if self._keepAspect != keep:
@@ -69,6 +69,16 @@ class GraphicsPixmapWidget(QGraphicsWidget):
 
     def keepAspectRatio(self):
         return self._keepAspect
+
+    def setGeometry(self, rect):
+        self.prepareGeometryChange()
+        super().setGeometry(rect)
+
+    def sizeHint(self, which, constraint=QSizeF()):
+        if which == Qt.PreferredSize:
+            return QSizeF(self._pixmap.size())
+        else:
+            return QGraphicsWidget.sizeHint(self, which, constraint)
 
     def paint(self, painter, option, widget=0):
         if self._pixmap.isNull():
@@ -92,14 +102,18 @@ class GraphicsPixmapWidget(QGraphicsWidget):
 
 
 class GraphicsTextWidget(QGraphicsWidget):
-    def __init__(self, text, parent=None):
-        QGraphicsWidget.__init__(self, parent)
+    def __init__(self, text, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
         self.labelItem = QGraphicsTextItem(self)
         self.setHtml(text)
 
         self.labelItem.document().documentLayout().documentSizeChanged.connect(
             self.onLayoutChanged
         )
+
+    def setGeometry(self, rect):
+        self.prepareGeometryChange()
+        super().setGeometry(rect)
 
     def onLayoutChanged(self, *args):
         self.updateGeometry()
@@ -118,9 +132,9 @@ class GraphicsTextWidget(QGraphicsWidget):
 
 
 class GraphicsThumbnailWidget(QGraphicsWidget):
-    def __init__(self, pixmap, title="", parent=None):
-        QGraphicsWidget.__init__(self, parent)
-
+    def __init__(self, pixmap, title="", parentItem=None, **kwargs):
+        super().__init__(parentItem, **kwargs)
+        self.setFocusPolicy(Qt.StrongFocus)
         self._title = None
         self._size = QSizeF()
 
@@ -143,8 +157,13 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+
         self.setTitle(title)
         self.setTitleWidth(100)
+
+    def setGeometry(self, rect):
+        self.prepareGeometryChange()
+        super().setGeometry(rect)
 
     def setPixmap(self, pixmap):
         self.pixmapWidget.setPixmap(pixmap)
@@ -176,10 +195,15 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
 
     def paint(self, painter, option, widget=0):
         contents = self.contentsRect()
-        if self.isSelected():
+
+        if option.state & (QStyle.State_Selected | QStyle.State_HasFocus):
             painter.save()
-            painter.setPen(QPen(QColor(125, 162, 206, 192)))
-            painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
+            if option.state & QStyle.State_HasFocus:
+                painter.setPen(QPen(QColor(125, 0, 0, 192)))
+            else:
+                painter.setPen(QPen(QColor(125, 162, 206, 192)))
+            if option.state & QStyle.State_Selected:
+                painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
             painter.drawRoundedRect(
                 QRectF(contents.topLeft(), self.geometry().size()), 3, 3)
             painter.restore()
@@ -190,66 +214,255 @@ class GraphicsThumbnailWidget(QGraphicsWidget):
         self.pixmapWidget.setMaximumSize(pixsize)
 
 
-class ThumbnailWidget(QGraphicsWidget):
-    def __init__(self, parent=None):
-        QGraphicsWidget.__init__(self, parent)
+class GraphicsThumbnailGrid(QGraphicsWidget):
+
+    class LayoutMode(enum.Enum):
+        FixedColumnCount, AutoReflow = 0, 1
+    FixedColumnCount, AutoReflow = LayoutMode
+
+    #: Signal emitted when the current (thumbnail) changes
+    currentThumbnailChanged = Signal(object)
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__layoutMode = GraphicsThumbnailGrid.AutoReflow
+        self.__columnCount = -1
+        self.__thumbnails = []  # type: List[GraphicsThumbnailWidget]
+        #: The current 'focused' thumbnail item. This is the item that last
+        #: received the keyboard focus (though it does not necessarily have
+        #: it now)
+        self.__current = None  # type: Optional[GraphicsThumbnailWidget]
+        self.__reflowPending = False
+
         self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         self.setContentsMargins(10, 10, 10, 10)
-        layout = QGraphicsGridLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        self.setLayout(layout)
+        # NOTE: Keeping a reference to the layout. self.layout()
+        # returns a QGraphicsLayout wrapper (i.e. strips the
+        # QGraphicsGridLayout-nes of the object).
+        self.__layout = QGraphicsGridLayout()
+        self.__layout.setContentsMargins(0, 0, 0, 0)
+        self.__layout.setSpacing(10)
+        self.setLayout(self.__layout)
 
-    def setGeometry(self, geom):
-        super(ThumbnailWidget, self).setGeometry(geom)
-        self.reflow(self.size().width())
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        if event.newSize().width() != event.oldSize().width() and \
+                self.__layoutMode == GraphicsThumbnailGrid.AutoReflow:
+            self.__reflow()
+
+    def setGeometry(self, rect):
+        self.prepareGeometryChange()
+        super().setGeometry(rect)
+
+    def count(self):
+        """
+        Returns
+        -------
+        count: int
+            Number of thumbnails in the widget
+        """
+        return len(self.__thumbnails)
+
+    def addThumbnail(self, thumbnail):
+        """
+        Add/append a thumbnail to the widget
+
+        Parameters
+        ----------
+        thumbnail: Union[GraphicsThumbnailWidget, QPixmap]
+            The thumbnail to insert
+        """
+        self.insertThumbnail(self.count(), thumbnail)
+
+    def insertThumbnail(self, index, thumbnail):
+        """
+        Insert a new thumbnail into a widget.
+
+        Raise a ValueError if thumbnail is already in the view.
+
+        Parameters
+        ----------
+        index : int
+            Index where to insert
+        thumbnail : Union[GraphicsThumbnailWidget, QPixmap]
+            The thumbnail to insert. GraphicsThumbnailGrid takes ownership
+            of the item.
+        """
+        if isinstance(thumbnail, QPixmap):
+            thumbnail = GraphicsThumbnailWidget(thumbnail, parentItem=self)
+        elif thumbnail in self.__thumbnails:
+            raise ValueError("{!r} is already inserted".format(thumbnail))
+        elif not isinstance(thumbnail, GraphicsThumbnailWidget):
+            raise TypeError
+
+        index = max(min(index, self.count()), 0)
+
+        moved = self.__takeItemsFrom(index)
+        assert moved == self.__thumbnails[index:]
+        self.__thumbnails.insert(index, thumbnail)
+        self.__appendItems([thumbnail] + moved)
+        thumbnail.setParentItem(self)
+        thumbnail.installEventFilter(self)
+        assert self.count() == self.layout().count()
+
+        self.__scheduleLayout()
+
+    def removeThumbnail(self, thumbnail):
+        """
+        Remove a single thumbnail from the grid.
+
+        Raise a ValueError if thumbnail is not in the grid.
+
+        Parameters
+        ----------
+        thumbnail : GraphicsThumbnailWidget
+            Thumbnail to remove. Items ownership is transferred to the caller.
+        """
+        index = self.__thumbnails.index(thumbnail)
+        moved = self.__takeItemsFrom(index)
+
+        del self.__thumbnails[index]
+        assert moved[0] is thumbnail and self.__thumbnails[index:] == moved[1:]
+        self.__appendItems(moved[1:])
+
+        thumbnail.removeEventFilter(self)
+        if thumbnail.parentItem() is self:
+            thumbnail.setParentItem(None)
+
+        if self.__current is thumbnail:
+            self.__current = None
+            self.currentThumbnailChanged.emit(None)
+
+        assert self.count() == self.layout().count()
+
+    def thumbnailAt(self, index):
+        """
+        Return the thumbnail widget at `index`
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        thumbnail : GraphicsThumbnailWidget
+
+        """
+        return self.__thumbnails[index]
+
+    def clear(self):
+        """
+        Remove all thumbnails from the grid.
+        """
+        removed = self.__takeItemsFrom(0)
+        assert removed == self.__thumbnails
+        self.__thumbnails = []
+        for thumb in removed:
+            thumb.removeEventFilter(self)
+            if thumb.parentItem() is self:
+                thumb.setParentItem(None)
+        if self.__current is not None:
+            self.__current = None
+            self.currentThumbnailChanged.emit(None)
+
+    def __takeItemsFrom(self, fromindex):
+        # remove all items starting at fromindex from the layout and
+        # return them
+        # NOTE: Operate on layout only
+        layout = self.__layout
+        taken = []
+        for i in reversed(range(fromindex, layout.count())):
+            item = layout.itemAt(i)
+            layout.removeAt(i)
+            taken.append(item)
+        return list(reversed(taken))
+
+    def __appendItems(self, items):
+        # Append/insert items into the layout at the end
+        # NOTE: Operate on layout only
+        layout = self.__layout
+        columns = max(layout.columnCount(), 1)
+        for i, item in enumerate(items, layout.count()):
+            layout.addItem(item, i // columns, i % columns)
+
+    def __scheduleLayout(self):
+        if not self.__reflowPending:
+            self.__reflowPending = True
+            QApplication.postEvent(self, QEvent(QEvent.LayoutRequest),
+                                   Qt.HighEventPriority)
 
     def event(self, event):
         if event.type() == QEvent.LayoutRequest:
-            sh = self.effectiveSizeHint(Qt.PreferredSize)
-            self.resize(sh)
-            self.layout().activate()
-            event.accept()
-            return True
+            if self.__layoutMode == GraphicsThumbnailGrid.AutoReflow:
+                self.__reflow()
+            else:
+                self.__gridlayout()
+
+            if self.parentLayoutItem() is None:
+                sh = self.effectiveSizeHint(Qt.PreferredSize)
+                self.resize(sh)
+
+            if self.layout():
+                self.layout().activate()
+
+        return super().event(event)
+
+    def setFixedColumnCount(self, count):
+        if count < 0:
+            if self.__layoutMode != GraphicsThumbnailGrid.AutoReflow:
+                self.__layoutMode = GraphicsThumbnailGrid.AutoReflow
+                self.__reflow()
         else:
-            return super().event(event)
+            if self.__layoutMode != GraphicsThumbnailGrid.FixedColumnCount:
+                self.__layoutMode = GraphicsThumbnailGrid.FixedColumnCount
 
-    def reflow(self, width):
-        if not self.layout():
-            return
+            if self.__columnCount != count:
+                self.__columnCount = count
+                self.__gridlayout()
 
-        left, right, _, _ = self.getContentsMargins()
-        layout = self.layout()
-        width -= left + right
+    def __reflow(self):
+        self.__reflowPending = False
+        layout = self.__layout
+        width = self.contentsRect().width()
+        hints = [item.effectiveSizeHint(Qt.PreferredSize)
+                 for item in self.__thumbnails]
 
-        hints = self._hints(Qt.PreferredSize)
         widths = [max(24, h.width()) for h in hints]
         ncol = self._fitncols(widths, layout.horizontalSpacing(), width)
 
-        if ncol == layout.columnCount():
-            return
+        self.__relayoutGrid(ncol)
 
-        items = [layout.itemAt(i) for i in range(layout.count())]
+    def __gridlayout(self):
+        assert self.__layoutMode == GraphicsThumbnailGrid.FixedColumnCount
+        self.__relayoutGrid(self.__columnCount)
+
+    def __relayoutGrid(self, columnCount):
+        layout = self.__layout
+        if columnCount == layout.columnCount():
+            return
 
         # remove all items from the layout, then re-add them back in
         # updated positions
-        for item in items:
-            layout.removeItem(item)
-
+        items = self.__takeItemsFrom(0)
         for i, item in enumerate(items):
-            layout.addItem(item, i // ncol, i % ncol)
-
-        layout.invalidate()
+            layout.addItem(item, i // columnCount, i % columnCount)
 
     def items(self):
-        layout = self.layout()
-        if layout:
-            return [layout.itemAt(i) for i in range(layout.count())]
-        else:
-            return []
+        """
+        Return all thumbnail items.
 
-    def _hints(self, which):
-        return [item.effectiveSizeHint(which) for item in self.items()]
+        Returns
+        -------
+        thumbnails : List[GraphicsThumbnailWidget]
+        """
+        return list(self.__thumbnails)
+
+    def currentItem(self):
+        """
+        Return the current (last focused) thumbnail item.
+        """
+        return self.__current
 
     def _fitncols(self, widths, spacing, constraint):
         def sliced(seq, ncol):
@@ -269,6 +482,80 @@ class ThumbnailWidget(QGraphicsWidget):
                 break
 
         return ncol_best
+
+    def keyPressEvent(self, event):
+        if event.key() in [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down]:
+            self._moveCurrent(event.key(), event.modifiers())
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def eventFilter(self, receiver, event):
+        if isinstance(receiver, GraphicsThumbnailWidget) and \
+                event.type() == QEvent.FocusIn and \
+                receiver in self.__thumbnails:
+            self.__current = receiver
+            self.currentThumbnailChanged.emit(receiver)
+
+        return super().eventFilter(receiver, event)
+
+    def _moveCurrent(self, key, modifiers=Qt.NoModifier):
+        """
+        Move the current thumbnail focus (`currentItem`) based on a key press
+        (Qt.Key{Up,Down,Left,Right})
+
+        Parameters
+        ----------
+        key : Qt.Key
+        modifiers : Qt.Modifiers
+        """
+        current = self.__current
+        layout = self.__layout
+        columns = layout.columnCount()
+        rows = layout.rowCount()
+        itempos = {}
+        for i, j in itertools.product(range(rows), range(columns)):
+            if i * columns + j >= layout.count():
+                break
+            item = layout.itemAt(i, j)
+            if item is not None:
+                itempos[item] = (i, j)
+        pos = itempos.get(current, None)
+
+        if pos is None:
+            return False
+
+        i, j = pos
+        index = i * columns + j
+        if key == Qt.Key_Left:
+            index = index - 1
+        elif key == Qt.Key_Right:
+            index = index + 1
+        elif key == Qt.Key_Down:
+            index = index + columns
+        elif key == Qt.Key_Up:
+            index = index - columns
+
+        index = min(max(index, 0), layout.count() - 1)
+        i = index // columns
+        j = index % columns
+        newcurrent = layout.itemAt(i, j)
+        assert newcurrent is self.__thumbnails[index]
+
+        if newcurrent is not None:
+            if not modifiers & (Qt.ShiftModifier | Qt.ControlModifier):
+                for item in self.__thumbnails:
+                    if item is not newcurrent:
+                        item.setSelected(False)
+                # self.scene().clearSelection()
+
+            newcurrent.setSelected(True)
+            newcurrent.setFocus(Qt.TabFocusReason)
+            newcurrent.ensureVisible()
+
+        if self.__current is not newcurrent:
+            self.__current = newcurrent
+            self.currentThumbnailChanged.emit(newcurrent)
 
 
 class GraphicsScene(QGraphicsScene):
@@ -317,6 +604,249 @@ class GraphicsScene(QGraphicsScene):
         self.selectionRectPointChanged.emit(pos)
 
 
+class ThumbnailView(QGraphicsView):
+    """
+    A widget displaying a image thumbnail grid in a scroll area
+    """
+    FixedColumnCount, AutoReflow = GraphicsThumbnailGrid.LayoutMode
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setRenderHint(QPainter.Antialiasing)
+        self.setRenderHint(QPainter.TextAntialiasing)
+
+        self.__layoutMode = ThumbnailView.AutoReflow
+        self.__columnCount = -1
+
+        self.__grid = GraphicsThumbnailGrid()
+        self.__grid.currentThumbnailChanged.connect(
+            self.__onCurrentThumbnailChanged
+        )
+        self.__previewWidget = None
+        scene = GraphicsScene(self)
+        scene.addItem(self.__grid)
+        scene.selectionRectPointChanged.connect(
+            self.__ensureVisible, Qt.QueuedConnection
+        )
+        self.setScene(scene)
+
+        sh = QShortcut(Qt.Key_Space, self,
+                       context=Qt.WidgetWithChildrenShortcut)
+        sh.activated.connect(self.__previewToogle)
+
+        self.__grid.geometryChanged.connect(self.__updateSceneRect)
+
+    @proxydoc(GraphicsThumbnailGrid.addThumbnail)
+    def addThumbnail(self, thumbnail):
+        self.__grid.addThumbnail(thumbnail)
+
+    @proxydoc(GraphicsThumbnailGrid.insertThumbnail)
+    def insertThumbnail(self, index, thumbnail):
+        self.__grid.insertThumbnail(index, thumbnail)
+
+    @proxydoc(GraphicsThumbnailGrid.setFixedColumnCount)
+    def setFixedColumnCount(self, count):
+        self.__grid.setFixedColumnCount(count)
+
+    @proxydoc(GraphicsThumbnailGrid.count)
+    def count(self):
+        return self.__grid.count()
+
+    def clear(self):
+        """
+        Clear all thumbnails and close/delete the preview window if used.
+        """
+        self.__grid.clear()
+
+        if self.__previewWidget is not None:
+            self.__closePreview()
+
+    def sizeHint(self):
+        return QSize(480, 640)
+
+    def __updateSceneRect(self):
+        self.scene().setSceneRect(self.scene().itemsBoundingRect())
+        # Full viewport update, otherwise contents outside the new
+        # sceneRect can persist on the viewport
+        self.viewport().update()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if event.size().width() != event.oldSize().width():
+            width = event.size().width() - 2
+
+            self.__grid.setMaximumWidth(width)
+            self.__grid.setMinimumWidth(width)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape and self.__previewWidget is not None:
+            self.__closePreview()
+            event.accept()
+            return
+        return super().keyPressEvent(event)
+
+    def __previewToogle(self):
+        if self.__previewWidget is None and self.__grid.currentItem() is not None:
+            focusitem = self.__grid.currentItem()
+            preview = self.__getPreviewWidget()
+            preview.show()
+            preview.raise_()
+            preview.setPixmap(focusitem.pixmap())
+        else:
+            self.__closePreview()
+
+    def __getPreviewWidget(self):
+        # return the preview image view widget
+        if self.__previewWidget is None:
+            self.__previewWidget = Preview(self)
+            self.__previewWidget.setWindowFlags(
+                Qt.WindowStaysOnTopHint | Qt.Tool)
+            self.__previewWidget.setAttribute(
+                Qt.WA_ShowWithoutActivating)
+            self.__previewWidget.setFocusPolicy(Qt.NoFocus)
+            self.__previewWidget.installEventFilter(self)
+
+        return self.__previewWidget
+
+    def __updatePreviewPixmap(self):
+        current = self.__grid.currentItem()
+        if isinstance(current, GraphicsThumbnailWidget) and \
+                current.parentItem() is self.__grid and \
+                self.__previewWidget is not None:
+            self.__previewWidget.setPixmap(current.pixmap())
+
+    def __closePreview(self):
+        if self.__previewWidget is not None:
+            self.__previewWidget.close()
+            self.__previewWidget.setPixmap(QPixmap())
+            self.__previewWidget.deleteLater()
+            self.__previewWidget = None
+
+    def eventFilter(self, receiver, event):
+        if receiver is self.__previewWidget and \
+                event.type() == QEvent.KeyPress:
+            if event.key() in [Qt.Key_Left, Qt.Key_Right,
+                               Qt.Key_Down, Qt.Key_Up]:
+                self.__grid._moveCurrent(event.key())
+                event.accept()
+                return True
+            elif event.key() in [Qt.Key_Escape, Qt.Key_Space]:
+                self.__closePreview()
+                event.accept()
+                return True
+        return super().eventFilter(receiver, event)
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self.__closePreview()
+
+    def __onCurrentThumbnailChanged(self, thumbnail):
+        if thumbnail is not None:
+            self.__updatePreviewPixmap()
+        else:
+            self.__closePreview()
+
+    @Slot(QPointF)
+    def __ensureVisible(self, point):
+        self.ensureVisible(QRectF(point, QSizeF(1, 1)), 5, 5),
+
+
+class Preview(QWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__pixmap = QPixmap()
+        # Flag indicating if the widget was resized as a result of user
+        # initiated window resize. When false the widget will automatically
+        # resize/re-position based on pixmap size.
+        self.__hasExplicitSize = False
+        self.__inUpdateWindowGeometry = False
+
+    def setPixmap(self, pixmap):
+        if self.__pixmap != pixmap:
+            self.__pixmap = QPixmap(pixmap)
+            self.__updateWindowGeometry()
+            self.update()
+            self.updateGeometry()
+
+    def pixmap(self):
+        return QPixmap(self.__pixmap)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.isVisible() and self.isWindow() and \
+                not self.__inUpdateWindowGeometry:
+            # mark that we have an explicit user provided size
+            self.__hasExplicitSize = True
+
+    def __updateWindowGeometry(self):
+        if not self.isWindow() or self.__hasExplicitSize:
+            return
+
+        def framemargins(widget):
+            frame, geom = widget.frameGeometry(), widget.geometry()
+            return QMargins(geom.left() - frame.left(),
+                            geom.top() - frame.top(),
+                            geom.right() - frame.right(),
+                            geom.bottom() - frame.bottom())
+
+        def fitRect(rect, targetrect):
+            size = rect.size().boundedTo(targetgeom.size())
+            newrect = QRect(rect.topLeft(), size)
+            dx, dy = 0, 0
+            if newrect.left() < targetrect.left():
+                dx = targetrect.left() - newrect.left()
+            if newrect.top() < targetrect.top():
+                dy = targetrect.top() - newrect.top()
+            if newrect.right() > targetrect.right():
+                dx = targetrect.right() - newrect.right()
+            if newrect.bottom() > targetrect.bottom():
+                dy = targetrect.bottom() - newrect.bottom()
+            return newrect.translated(dx, dy)
+
+        margins = framemargins(self)
+        minsize = QSize(120, 120)
+        pixsize = self.__pixmap.size()
+        available = QApplication.desktop().availableGeometry(self)
+        available = available.adjusted(margins.left(), margins.top(),
+                                       -margins.right(), -margins.bottom())
+        # extra adjustment so the preview does not cover the whole desktop
+        available = available.adjusted(10, 10, -10, -10)
+        targetsize = pixsize.boundedTo(available.size()).expandedTo(minsize)
+        pixsize.scale(targetsize, Qt.KeepAspectRatio)
+
+        if not self.testAttribute(Qt.WA_WState_Created) or \
+                self.testAttribute(Qt.WA_WState_Hidden):
+            center = available.center()
+        else:
+            center = self.geometry().center()
+        targetgeom = QRect(QPoint(0, 0), pixsize)
+        targetgeom.moveCenter(center)
+        if not available.contains(targetgeom):
+            targetgeom = fitRect(targetgeom, available)
+        self.__inUpdateWindowGeometry = True
+        self.setGeometry(targetgeom)
+        self.__inUpdateWindowGeometry = False
+
+    def sizeHint(self):
+        return self.__pixmap.size()
+
+    def paintEvent(self, event):
+        if self.__pixmap.isNull():
+            return
+
+        sourcerect = QRect(QPoint(0, 0), self.__pixmap.size())
+        pixsize = QSizeF(self.__pixmap.size())
+        rect = self.contentsRect()
+        pixsize.scale(QSizeF(rect.size()), Qt.KeepAspectRatio)
+        targetrect = QRectF(QPointF(0, 0), pixsize)
+        targetrect.moveCenter(QPointF(rect.center()))
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        painter.drawPixmap(targetrect, self.__pixmap, QRectF(sourcerect))
+        painter.end()
+
+
 _ImageItem = namedtuple(
     "_ImageItem",
     ["index",   # Row index in the input data table
@@ -346,14 +876,19 @@ class OWImageViewer(widget.OWWidget):
     buttons_area_orientation = Qt.Vertical
     graph_name = "scene"
 
+    UserAdviceMessages = [
+        widget.Message(
+            "Pressing the 'Space' key while the thumbnail view has focus and "
+            "a selected item will open a window with a full image",
+            persistent_id="preview-introduction")
+    ]
+
     def __init__(self):
         super().__init__()
         self.data = None
         self.allAttrs = []
         self.stringAttrs = []
 
-        self.thumbnailWidget = None
-        self.sceneLayout = None
         self.selectedIndices = []
 
         #: List of _ImageItems
@@ -395,23 +930,18 @@ class OWImageViewer(widget.OWWidget):
 
         gui.auto_commit(self.buttonsArea, self, "autoCommit", "Send", box=False)
 
-        self.scene = GraphicsScene()
-        self.sceneView = QGraphicsView(self.scene, self)
-        self.sceneView.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.sceneView.setRenderHint(QPainter.Antialiasing, True)
-        self.sceneView.setRenderHint(QPainter.TextAntialiasing, True)
-        self.sceneView.setFocusPolicy(Qt.WheelFocus)
-        self.sceneView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.sceneView.installEventFilter(self)
-        self.mainArea.layout().addWidget(self.sceneView)
-
-        self.scene.selectionChanged.connect(self.onSelectionChanged)
-        self.scene.selectionRectPointChanged.connect(
-            self.onSelectionRectPointChanged, Qt.QueuedConnection
+        self.thumbnailView = ThumbnailView(
+            alignment=Qt.AlignTop | Qt.AlignLeft,  # scene alignment,
+            focusPolicy=Qt.StrongFocus,
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn
         )
-        self.resize(800, 600)
-
+        self.mainArea.layout().addWidget(self.thumbnailView)
+        self.scene = self.thumbnailView.scene()
+        self.scene.selectionChanged.connect(self.onSelectionChanged)
         self.loader = ImageLoader(self)
+
+    def sizeHint(self):
+        return QSize(800, 600)
 
     def setData(self, data):
         self.closeContext()
@@ -421,8 +951,9 @@ class OWImageViewer(widget.OWWidget):
 
         if data is not None:
             domain = data.domain
-            self.allAttrs = domain.variables + domain.metas
-            self.stringAttrs = [a for a in self.allAttrs if a.is_string]
+            self.allAttrs = (domain.class_vars + domain.metas +
+                             domain.attributes)
+            self.stringAttrs = [a for a in domain.metas if a.is_string]
 
             self.stringAttrs = sorted(
                 self.stringAttrs,
@@ -463,22 +994,18 @@ class OWImageViewer(widget.OWWidget):
             titleAttr = self.allAttrs[self.titleAttr]
             instances = [inst for inst in self.data
                          if numpy.isfinite(inst[attr])]
-            widget = ThumbnailWidget()
-            layout = widget.layout()
+            assert self.thumbnailView.count() == 0
             size = QSizeF(self.imageSize, self.imageSize)
-            self.scene.addItem(widget)
 
             for i, inst in enumerate(instances):
                 url = self.urlFromValue(inst[attr])
                 title = str(inst[titleAttr])
 
-                thumbnail = GraphicsThumbnailWidget(
-                    QPixmap(), title=title, parent=widget
-                )
+                thumbnail = GraphicsThumbnailWidget(QPixmap(), title=title)
                 thumbnail.setThumbnailSize(size)
                 thumbnail.setToolTip(url.toString())
                 thumbnail.instance = inst
-                layout.addItem(thumbnail, i / 5, i % 5)
+                self.thumbnailView.addThumbnail(thumbnail)
 
                 if url.isValid():
                     future = self.loader.get(url)
@@ -506,15 +1033,7 @@ class OWImageViewer(widget.OWWidget):
                     future = None
                 self.items.append(_ImageItem(i, thumbnail, url, future))
 
-            widget.show()
-            widget.geometryChanged.connect(self._updateSceneRect)
-
             self.info.setText("Retrieving...\n")
-            self.thumbnailWidget = widget
-            self.sceneLayout = layout
-
-        if self.sceneLayout:
-            self._updateGeometryConstraints()
 
     def urlFromValue(self, value):
         variable = value.variable
@@ -550,9 +1069,7 @@ class OWImageViewer(widget.OWWidget):
         self._cancelAllFutures()
 
         self.items = []
-        self.thumbnailWidget = None
-        self.sceneLayout = None
-        self.scene.clear()
+        self.thumbnailView.clear()
         self._errcount = 0
         self._successcount = 0
 
@@ -564,8 +1081,6 @@ class OWImageViewer(widget.OWWidget):
         for item in self.thumbnailItems():
             item.setThumbnailSize(size)
 
-        self._updateGeometryConstraints()
-
     def updateTitles(self):
         titleAttr = self.allAttrs[self.titleAttr]
         for item in self.items:
@@ -575,9 +1090,6 @@ class OWImageViewer(widget.OWWidget):
         selected = [item for item in self.items if item.widget.isSelected()]
         self.selectedIndices = [item.index for item in selected]
         self.commit()
-
-    def onSelectionRectPointChanged(self, point):
-        self.sceneView.ensureVisible(QRectF(point, QSizeF(1, 1)), 5, 5)
 
     def commit(self):
         if self.data:
@@ -621,30 +1133,9 @@ class OWImageViewer(widget.OWWidget):
                            "No images found! Make sure the '%s' attribute "
                            "is tagged with 'type=image'" % attr.name)
 
-    def _updateSceneRect(self):
-        self.scene.setSceneRect(self.scene.itemsBoundingRect())
-
-    def _updateGeometryConstraints(self):
-        # Update the thumbnail grid widget's width constraint (derived from
-        # the viewport's width
-        if self.thumbnailWidget is not None:
-            width = (self.sceneView.width() -
-                     self.sceneView.verticalScrollBar().width())
-            width = width - 2
-            self.thumbnailWidget.reflow(width)
-            self.thumbnailWidget.setPreferredWidth(width)
-            self.thumbnailWidget.layout().activate()
-
     def onDeleteWidget(self):
         self._cancelAllFutures()
         self.clear()
-
-    def eventFilter(self, receiver, event):
-        if receiver is self.sceneView and event.type() == QEvent.Resize \
-                and self.thumbnailWidget:
-            self._updateGeometryConstraints()
-
-        return super(OWImageViewer, self).eventFilter(receiver, event)
 
 
 class ImageLoader(QObject):
