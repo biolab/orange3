@@ -720,6 +720,18 @@ class Rule:
                 self.significance_validator, self.general_validator)
 
     def __eq__(self, other):
+        # if self.length == other.length:
+        #     for s in self.selectors:
+        #         if s not in other.selectors:
+        #             if self.domain.attributes[s[0]].is_continuous:
+        #                 return False
+        #             if len(self.domain.attributes[s[0]].values) == 2:
+        #                 op = "==" if s[1] == "!=" else "!="
+        #                 value = int(not s[2])
+        #                 if Selector(s[0], op, value) not in other.selectors:
+        #                     return False
+        #     return True
+        # return False
         return self.selectors == other.selectors
 
     def __str__(self):
