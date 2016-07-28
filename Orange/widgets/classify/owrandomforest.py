@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 from PyQt4 import QtGui
-from PyQt4.QtGui import QLabel, QGridLayout
-from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification.random_forest import RandomForestLearner
@@ -29,72 +27,32 @@ class OWRandomForest(OWBaseLearner):
     index_output = settings.Setting(0)
 
     def add_main_layout(self):
-        form = QGridLayout()
-        basic_box = gui.widgetBox(
-            self.controlArea, "Basic Properties", orientation=form)
+        box = gui.vBox(self.controlArea, 'Basic Properties')
+        self.n_estimators_spin = gui.spin(
+            box, self, "n_estimators", minv=1, maxv=10000, controlWidth=50,
+            label="Number of trees: ", callback=self.settings_changed)
+        self.max_features_spin = gui.spin(
+            box, self, "max_features", 2, 50, controlWidth=50,
+            label="Number of attributes considered at each split: ",
+            callback=self.settings_changed, checked="use_max_features",
+            checkCallback=self.settings_changed)
+        self.random_state_spin = gui.spin(
+            box, self, "random_state", 0, 2 ** 31 - 1, controlWidth=50,
+            label="Fixed seed for random generator: ",
+            callback=self.settings_changed, checked="use_random_state",
+            checkCallback=self.settings_changed)
 
-        form.addWidget(QLabel(self.tr("Number of trees: ")),
-                       0, 0, Qt.AlignLeft)
-        spin = gui.spin(basic_box, self, "n_estimators", minv=1, maxv=10000,
-                        callback=self.settings_changed, addToLayout=False,
-                        controlWidth=50)
-        form.addWidget(spin, 0, 1, Qt.AlignRight)
-
-        max_features_cb = gui.checkBox(
-            basic_box, self, "use_max_features",
-            callback=self.settings_changed, addToLayout=False,
-            label="Number of attributes considered at each split: ")
-
-        max_features_spin = gui.spin(
-            basic_box, self, "max_features", 2, 50, addToLayout=False,
-            callback=self.settings_changed, controlWidth=50)
-
-        form.addWidget(max_features_cb, 1, 0, Qt.AlignLeft)
-        form.addWidget(max_features_spin, 1, 1, Qt.AlignRight)
-
-        random_state_cb = gui.checkBox(
-            basic_box, self, "use_random_state", callback=self.settings_changed,
-            addToLayout=False, label="Fixed seed for random generator: ")
-        random_state_spin = gui.spin(
-            basic_box, self, "random_state", 0, 2 ** 31 - 1, addToLayout=False,
-            callback=self.settings_changed, controlWidth=50)
-
-        form.addWidget(random_state_cb, 2, 0, Qt.AlignLeft)
-        form.addWidget(random_state_spin, 2, 1, Qt.AlignRight)
-        self._max_features_spin = max_features_spin
-        self._random_state_spin = random_state_spin
-
-        # Growth control
-        form = QGridLayout()
-        growth_box = gui.widgetBox(
-            self.controlArea, "Growth Control", orientation=form)
-
-        max_depth_cb = gui.checkBox(
-            growth_box, self, "use_max_depth",
+        box = gui.vBox(self.controlArea, "Growth Control")
+        self.max_depth_spin = gui.spin(
+            box, self, "max_depth", 1, 50, controlWidth=50,
             label="Limit depth of individual trees: ",
-            callback=self.settings_changed,
-            addToLayout=False)
-
-        max_depth_spin = gui.spin(
-            growth_box, self, "max_depth", 1, 50, addToLayout=False,
-            callback=self.settings_changed)
-
-        form.addWidget(max_depth_cb, 3, 0, Qt.AlignLeft)
-        form.addWidget(max_depth_spin, 3, 1, Qt.AlignRight)
-
-        min_samples_split_cb = gui.checkBox(
-            growth_box, self, "use_min_samples_split",
+            callback=self.settings_changed, checked="use_max_depth",
+            checkCallback=self.settings_changed)
+        self.min_samples_split_spin = gui.spin(
+            box, self, "min_samples_split", 1, 1000, controlWidth=50,
             label="Do not split subsets smaller than: ",
-            callback=self.settings_changed, addToLayout=False)
-
-        min_samples_split_spin = gui.spin(
-            growth_box, self, "min_samples_split", 1, 1000, addToLayout=False,
-            callback=self.settings_changed)
-
-        form.addWidget(min_samples_split_cb, 4, 0, Qt.AlignLeft)
-        form.addWidget(min_samples_split_spin, 4, 1, Qt.AlignRight)
-        self._max_depth_spin = max_depth_spin
-        self._min_samples_split_spin = min_samples_split_spin
+            callback=self.settings_changed, checked="use_min_samples_split",
+            checkCallback=self.settings_changed)
 
         # Index on the output
         # gui.doubleSpin(self.controlArea, self, "index_output", 0, 10000, 1,
@@ -113,12 +71,15 @@ class OWRandomForest(OWBaseLearner):
 
         return self.LEARNER(preprocessors=self.preprocessors, **common_args)
 
-    def settings_changed(self):
-        super().settings_changed()
-        self._max_features_spin.setEnabled(self.use_max_features)
-        self._random_state_spin.setEnabled(self.use_random_state)
-        self._max_depth_spin.setEnabled(self.use_max_depth)
-        self._min_samples_split_spin.setEnabled(self.use_min_samples_split)
+    def check_data(self):
+        if super().check_data():
+            n_features = len(self.data.domain.attributes)
+            if self.use_max_features and self.max_features > n_features:
+                self.error(self.DATA_ERROR_ID,
+                           "Number of splitting attributes should "
+                           "be smaller than number of features.")
+                self.valid_data = False
+        return self.valid_data
 
     def get_learner_parameters(self):
         """Called by send report to list the parameters of the learner."""
