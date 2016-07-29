@@ -11,8 +11,6 @@ import pytz
 import collections
 from datetime import datetime, timedelta, timezone
 
-from . import _variable
-
 from Orange.util import Registry, color_to_hex, hex_to_color
 
 
@@ -205,20 +203,6 @@ class Variable(str, metaclass=VariableMeta):
         raise RuntimeError(
             "primitive variable descriptors must overload to_val()")
 
-    def val_from_str_add(self, s):
-        """
-        Convert the given string to a value of the variable. The method
-        is similar to :obj:`to_val` except that it only accepts strings and
-        that it adds new values to the variable's domain where applicable.
-
-        The base class method calls `to_val`.
-
-        :param s: symbolic representation of the value
-        :type s: str
-        :rtype: float or object
-        """
-        return self.to_val(s)
-
     def __str__(self):
         return self.name
 
@@ -260,14 +244,7 @@ class ContinuousVariable(Variable):
         by :obj:`to_val`.
 
     The value of `number_of_decimals` is set to 3 and `adjust_decimals`
-    is set to 2. When :obj:`val_from_str_add` is called for the first
-    time with a string as an argument, `number_of_decimals` is set to the
-    number of decimals in the string and `adjust_decimals` is set to 1.
-    In the subsequent calls of `to_val`, the nubmer of decimals is
-    increased if the string argument has a larger number of decimals.
-
-    If the `number_of_decimals` is set manually, `adjust_decimals` is
-    set to 0 to prevent changes by `to_val`.
+    is set to 2.
     """
 
     TYPE_HEADERS = ('continuous', 'c')
@@ -318,13 +295,6 @@ class ContinuousVariable(Variable):
         if s in self.unknown_str:
             return Unknown
         return float(s)
-
-    def val_from_str_add(self, s):
-        """
-        Convert a value from a string and adjust the number of decimals if
-        `adjust_decimals` is non-zero.
-        """
-        return _variable.val_from_str_add_cont(self, s)
 
     def repr_val(self, val):
         """
@@ -451,23 +421,6 @@ class DiscreteVariable(Variable):
         """ Add a value `s` to the list of values.
         """
         self.values.append(s)
-
-    def val_from_str_add(self, s):
-        """
-        Similar to :obj:`to_val`, except that it accepts only strings and that
-        it adds the value to the list if it does not exist yet.
-
-        :param s: symbolic representation of the value
-        :type s: str
-        :rtype: float
-        """
-        s = str(s) if s is not None else s
-        try:
-            return ValueUnknown if s in self.unknown_str \
-                else self.values.index(s)
-        except ValueError:
-            self.add_value(s)
-            return len(self.values) - 1
 
     def repr_val(self, val):
         """
@@ -629,8 +582,6 @@ class StringVariable(Variable):
         if isinstance(s, str):
             return s
         return str(s)
-
-    val_from_str_add = to_val
 
     @staticmethod
     def str_val(val):

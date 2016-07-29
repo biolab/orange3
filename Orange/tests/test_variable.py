@@ -250,16 +250,6 @@ class TestContinuousVariable(VariableTest):
         self.assertEqual(a.str_val(4.654321), "4.6543")
         self.assertEqual(a.str_val(Unknown), "?")
 
-    def test_adjust_decimals(self):
-        a = ContinuousVariable("a")
-        self.assertEqual(a.str_val(4.654321), "4.654")
-        a.val_from_str_add("5")
-        self.assertEqual(a.str_val(4.654321), "5")
-        a.val_from_str_add("  5.12    ")
-        self.assertEqual(a.str_val(4.654321), "4.65")
-        a.val_from_str_add("5.1234")
-        self.assertEqual(a.str_val(4.654321), "4.6543")
-
     def test_colors(self):
         a = ContinuousVariable("a")
         self.assertEqual(a.colors, ((0, 0, 255), (255, 255, 0), False))
