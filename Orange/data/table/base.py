@@ -208,7 +208,10 @@ class TableBase:
                 if cached is not None:
                     return cached
             if target_domain == source_table.domain:
-                return cls.from_table_rows(source_table, row_indices)
+                # intentional casting to subclass
+                result = cls(data=source_table.iloc[row_indices]).copy()
+                # because we manually copy data, not the whole table
+                result._transfer_properties(source_table, transfer_domain=True)
 
             result = cls()
             conversion = target_domain.get_conversion(source_table.domain)
@@ -710,6 +713,10 @@ class TableBase:
         If colstack == False, perform an outer join instead of column stacking.
         The resulting table will always retain the properties (name etc.) of the first table.
         """
+        def unique_preserve_order(iterable):
+            s = set()
+            return [item for item in iterable if not (item in s or s.add(item))]
+
         if not tables:
             raise ValueError('Need at least one table to concatenate.')
         if len(tables) == 1:
@@ -734,9 +741,9 @@ class TableBase:
                 # merges columns (nans for rows without those)
                 # domain must contain the uniques of all variables
                 new_domain = Domain(
-                    list(set(flatten(t.domain.attributes for t in tables))),
-                    list(set(flatten(t.domain.class_vars for t in tables))),
-                    list(set(flatten(t.domain.metas for t in tables)))
+                    unique_preserve_order(flatten(t.domain.attributes for t in tables)),
+                    unique_preserve_order(flatten(t.domain.class_vars for t in tables)),
+                    unique_preserve_order(flatten(t.domain.metas for t in tables))
                 )
             new_index = cls._new_id(len(result))
             result.index = new_index

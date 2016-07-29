@@ -15,7 +15,7 @@ from Orange.data import Domain, Table, DiscreteVariable, ContinuousVariable, Str
     TimeVariable, TableSeries, TablePanel
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.compat import filter
-from Orange.data.sql.compat import Value, Instance
+from Orange.data.sql.compat import Instance
 import Orange.misc
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
@@ -281,10 +281,7 @@ class SqlTable(Table):
             try:
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                return Value(
-                    var,
-                    next(self._query([var], rows=[row_idx]))[0]
-                )
+                return next(self._query([var], rows=[row_idx]))[0]
             except TypeError:
                 pass
 

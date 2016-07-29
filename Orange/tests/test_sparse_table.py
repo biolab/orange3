@@ -89,9 +89,8 @@ class InterfaceTest(tabletests.InterfaceTest):
         assert newt is not self.table
 
     def test_value_indexing(self):
-        from test_table import cols_wo_weights
         for i in range(self.nrows):
-            for j, c in enumerate(cols_wo_weights(self.table)):
+            for j, c in enumerate(tabletests.cols_wo_weights(self.table)):
                 np.testing.assert_equal(self.table.iloc[i][c], self.data_sparseformat[i][j])
 
     def test_pandas_subclass_slicing_bug(self):

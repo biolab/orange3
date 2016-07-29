@@ -3,7 +3,6 @@ from numbers import Real, Integral
 from math import isnan
 import numpy as np
 
-from Orange.data.sql.compat import Value
 from Orange.data import Unknown
 
 
@@ -175,8 +174,7 @@ class Instance:
         return chain(iter(self._x), iter(self._y))
 
     def values(self):
-        return (Value(var, val)
-                for var, val in zip(self.domain.variables, self))
+        return [val for val in self]
 
     def __len__(self):
         return len(self._x) + len(self._y)
@@ -202,15 +200,14 @@ class Instance:
         Throws an exception if there are multiple classes.
         """
         self._check_single_class()
-        return Value(self._domain.class_var, self._y[0])
+        return self._y[0]
 
     def get_classes(self):
         """
         Return the class value as a list of instances of
         :obj:`Orange.data.Value`.
         """
-        return (Value(var, value)
-                for var, value in zip(self._domain.class_vars, self._y))
+        return self._y
 
     def set_class(self, value):
         """
