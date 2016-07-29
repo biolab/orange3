@@ -1063,6 +1063,7 @@ class GraphicsTextEdit(QGraphicsTextItem):
 
     def __init__(self, *args, **kwargs):
         super(GraphicsTextEdit, self).__init__(*args, **kwargs)
+        self.setCursor(Qt.IBeamCursor)
         self.setTabChangesFocus(True)
         self._edittrigger = GraphicsTextEdit.DoubleClicked
         self._editing = False
