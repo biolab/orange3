@@ -15,7 +15,7 @@ from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.widget import Msg
 
 
-class VizRankDialog(QDialog, ProgressBarMixin):
+class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     """
     Base class for VizRank dialogs, providing a GUI with a table and a button,
     and the skeleton for managing the evaluation of visualizations.
@@ -60,10 +60,17 @@ class VizRankDialog(QDialog, ProgressBarMixin):
 
     processingStateChanged = Signal(int)
     progressBarValueChanged = Signal(float)
+    messageActivated = Signal(Msg)
+    messageDeactivated = Signal(Msg)
 
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
-        super().__init__(windowTitle=self.captionTitle)
+        QDialog.__init__(self, windowTitle=self.captionTitle)
+        WidgetMessagesMixin.__init__(self)
+        self.setLayout(QVBoxLayout())
+
+        self.insert_message_bar()
+        self.layout().insertWidget(0, self.message_bar)
         self.master = master
 
         self.keep_running = False
@@ -71,7 +78,6 @@ class VizRankDialog(QDialog, ProgressBarMixin):
         self.saved_progress = 0
         self.scores = []
 
-        self.setLayout(QVBoxLayout())
         self.rank_model = QStandardItemModel(self)
         self.rank_table = view = QTableView(
             selectionBehavior=QTableView.SelectRows,
@@ -206,7 +212,7 @@ class VizRankDialog(QDialog, ProgressBarMixin):
             self.button.setText("Continue")
 
 
-class VizRankDialogAttrPair(VizRankDialog, WidgetMessagesMixin):
+class VizRankDialogAttrPair(VizRankDialog):
     """
     VizRank dialog for pairs of attributes. The class provides most of the
     needed methods, except for `initialize` which is expected to store a
@@ -220,16 +226,14 @@ class VizRankDialogAttrPair(VizRankDialog, WidgetMessagesMixin):
     """
 
     pairSelected = Signal(Variable, Variable)
-    messageActivated = Signal(Msg)
-    messageDeactivated = Signal(Msg)
 
     _AttrRole = next(gui.OrangeUserRole)
 
+    class Information(VizRankDialog.Information):
+        nothing_to_rank = Msg("There is nothing to rank.")
+
     def __init__(self, master):
         VizRankDialog.__init__(self, master)
-        WidgetMessagesMixin.__init__(self)
-        self.insert_message_bar()
-        self.layout().insertWidget(0, self.message_bar)
         self.resize(320, 512)
         self.attrs = []
 
@@ -240,12 +244,10 @@ class VizRankDialogAttrPair(VizRankDialog, WidgetMessagesMixin):
 
     def check_preconditions(self):
         """Refuse ranking if there are less than two feature or instances."""
-        self.master.Information.add_message(
-            "nothing_to_rank", "There is nothing to rank.")
         can_rank = self.master.data is not None and \
             len(self.master.data.domain.attributes) >= 2 and \
             len(self.master.data) >= 2
-        self.master.Information.nothing_to_rank(shown=not can_rank)
+        self.Information.nothing_to_rank(shown=not can_rank)
         return can_rank
 
     def on_selection_changed(self, selected, deselected):
