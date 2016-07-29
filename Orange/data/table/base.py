@@ -1009,18 +1009,6 @@ class TableBase:
     def density(self):
         raise NotImplementedError
 
-    def X_density(self):
-        """Get an enum value for the self.X density status. """
-        raise NotImplementedError
-
-    def Y_density(self):
-        """Get an enum value for the self.Y density status. """
-        raise NotImplementedError
-
-    def metas_density(self):
-        """Get an enum value for the self.metas density status. """
-        raise NotImplementedError
-
     @property
     def is_sparse(self):
         raise NotImplementedError

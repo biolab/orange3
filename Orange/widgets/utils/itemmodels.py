@@ -774,10 +774,7 @@ class TableModel(QAbstractTableModel):
         super().__init__(parent)
         self.source = sourcedata
         self.domain = domain = sourcedata.domain
-
-        self.X_density = sourcedata.X_density()
-        self.Y_density = sourcedata.Y_density()
-        self.M_density = sourcedata.metas_density()
+        self.table_is_dense = sourcedata.is_dense
 
         def format_sparse(vars, datagetter, instance):
             data = datagetter(instance)
@@ -792,7 +789,7 @@ class TableModel(QAbstractTableModel):
             return str(instance[var])
 
         def make_basket_formater(vars, density, role):
-            formater = (format_sparse if density == Table.SPARSE
+            formater = (format_sparse if not self.table_is_dense
                         else format_sparse_bool)
             if role == TableModel.Attribute:
                 getter = operator.attrgetter("sparse_x")
@@ -815,30 +812,17 @@ class TableModel(QAbstractTableModel):
             )
 
         columns = []
-
-        if self.Y_density != Table.DENSE:
-            coldesc = make_basket(domain.class_vars, self.Y_density,
-                                  TableModel.ClassVar)
+        if self.table_is_dense:
+            coldesc = make_basket(domain.class_vars, self.table_is_dense, TableModel.ClassVar)
+            columns.append(coldesc)
+            coldesc = make_basket(domain.metas, self.table_is_dense, TableModel.Meta)
+            columns.append(coldesc)
+            coldesc = make_basket(domain.attributes, self.table_is_dense, TableModel.Attribute)
             columns.append(coldesc)
         else:
-            columns += [make_column(var, TableModel.ClassVar)
-                        for var in domain.class_vars]
-
-        if self.M_density != Table.DENSE:
-            coldesc = make_basket(domain.metas, self.M_density,
-                                  TableModel.Meta)
-            columns.append(coldesc)
-        else:
-            columns += [make_column(var, TableModel.Meta)
-                        for var in domain.metas]
-
-        if self.X_density != Table.DENSE:
-            coldesc = make_basket(domain.attributes, self.X_density,
-                                  TableModel.Attribute)
-            columns.append(coldesc)
-        else:
-            columns += [make_column(var, TableModel.Attribute)
-                        for var in domain.attributes]
+            columns += [make_column(var, TableModel.ClassVar) for var in domain.class_vars]
+            columns += [make_column(var, TableModel.Meta) for var in domain.metas]
+            columns += [make_column(var, TableModel.Attribute) for var in domain.attributes]
 
         #: list of all domain variables (class_vars + metas + attrs)
         self.vars = domain.class_vars + domain.metas + domain.attributes

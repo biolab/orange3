@@ -74,18 +74,6 @@ Data access
     Return the number of data instances (rows)
 
 
-Inspection
-----------
-
-.. method:: Storage.X_density, Storage.Y_density, Storage.metas_density
-
-    Indicates whether the attributes, classes and meta attributes are dense
-    (`Storage.DENSE`) or sparse (`Storage.SPARSE`). If they are sparse and
-    all values are 0 or 1, it is marked as (`Storage.SPARSE_BOOL`). The
-    Storage class provides a default DENSE. If the data has no attibutes,
-    classes or meta attributes, the corresponding method should re
-
-
 Filters
 -------
 

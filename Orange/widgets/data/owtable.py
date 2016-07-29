@@ -915,24 +915,17 @@ def table_summary(table):
             dist, numpy.cumsum([len(domain.attributes),
                                 len(domain.class_vars)]))
 
-        def parts(array, density, col_dist):
-            array = numpy.atleast_2d(array)
+        def parts(array, is_dense, col_dist):
             nans = sum([dist.nans for dist in col_dist])
             non_nans = sum([dist.non_nans for dist in col_dist])
-            if density == Table.DENSE:
+            if is_dense:
                 return DenseArray(nans, non_nans, col_dist)
-            elif density == Table.SPARSE:
-                return SparseArray(nans, non_nans, col_dist)
-            elif density == Table.SPARSE_BOOL:
-                return SparseBoolArray(nans, non_nans, col_dist)
-            elif density == Table.MISSING:
-                return NotAvailable()
             else:
-                assert False
+                return SparseArray(nans, non_nans, col_dist)
 
-        X_part = parts(table.X, table.X_density(), X_dist)
-        Y_part = parts(table.Y, table.Y_density(), Y_dist)
-        M_part = parts(table.metas, table.metas_density(), M_dist)
+        X_part = parts(table.X, table.is_dense, X_dist)
+        Y_part = parts(table.Y, table.is_dense, Y_dist)
+        M_part = parts(table.metas, table.is_dense, M_dist)
         return Summary(n_instances, domain, X_part, Y_part, M_part)
 
 

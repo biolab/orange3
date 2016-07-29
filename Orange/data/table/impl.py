@@ -56,15 +56,6 @@ class Table(TableBase, pd.DataFrame):
         """
         return 1 - self.isnull().sum().sum() / self.size
 
-    def X_density(self):
-        return TableBase.DENSE
-
-    def Y_density(self):
-        return TableBase.DENSE
-
-    def metas_density(self):
-        return TableBase.DENSE
-
     @property
     def is_sparse(self):
         return False
@@ -361,15 +352,6 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         Return the density as reported by pd.SparseDataFrame
         """
         return pd.SparseDataFrame.density(self)
-
-    def X_density(self):
-        return TableBase.SPARSE
-
-    def Y_density(self):
-        return TableBase.SPARSE
-
-    def metas_density(self):
-        return TableBase.SPARSE
 
     @property
     def is_sparse(self):

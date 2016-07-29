@@ -74,9 +74,9 @@ class OWDataInfo(widget.OWWidget):
             self.data_desc = None
             return
 
-        sparses = [s for s, m in (("features", data.X_density),
-                                  ("meta attributes", data.metas_density),
-                                  ("targets", data.Y_density)) if m() > 1]
+        sparses = [s for s, m in (("features", data.is_sparse),
+                                  ("meta attributes", data.is_sparse),
+                                  ("targets", data.is_sparse)) if m() > 1]
         if sparses:
             sparses = "<p>Sparse representation: %s</p>" % ", ".join(sparses)
         else:
