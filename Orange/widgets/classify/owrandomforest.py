@@ -5,6 +5,7 @@ from Orange.data import Table
 from Orange.classification.random_forest import RandomForestLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.widget import Msg
 
 
 class OWRandomForest(OWBaseLearner):
@@ -25,6 +26,9 @@ class OWRandomForest(OWBaseLearner):
     min_samples_split = settings.Setting(5)
     use_min_samples_split = settings.Setting(True)
     index_output = settings.Setting(0)
+
+    class Error(OWBaseLearner.Error):
+        not_enough_features = Msg("Insufficient number of attributes ({})")
 
     def add_main_layout(self):
         box = gui.vBox(self.controlArea, 'Basic Properties')
@@ -75,9 +79,7 @@ class OWRandomForest(OWBaseLearner):
         if super().check_data():
             n_features = len(self.data.domain.attributes)
             if self.use_max_features and self.max_features > n_features:
-                self.error(self.DATA_ERROR_ID,
-                           "Number of splitting attributes should "
-                           "be smaller than number of features.")
+                self.Error.data_error(n_features)
                 self.valid_data = False
         return self.valid_data
 

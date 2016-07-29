@@ -187,8 +187,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             if not self.learner.check_learner_adequacy(self.data.domain):
                 self.Error.data_error(self.learner.learner_adequacy_err_msg)
             elif len(np.unique(self.data.Y)) < 2:
-                self.Error.data_error("Data contains a single target value. "
-                                      "There is nothing to learn.")
+                self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:
                 self.Error.data_error("Data has no features to learn from.")
             else:
