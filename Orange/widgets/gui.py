@@ -747,7 +747,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         widgetLabel(bi, posttext)
 
     isDouble = spinType == float
-    sbox = bi.control = \
+    sbox = bi.control = b.control = \
         (SpinBoxWFocusOut, DoubleSpinBoxWFocusOut)[isDouble](minv, maxv,
                                                              step, bi)
     if bi is not widget:
