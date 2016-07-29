@@ -5,7 +5,57 @@ Change Log
 ------------
 * ...
 
-[3.3.6] - 2016-06-01
+[3.3.7] - 2016-08-05
+--------------------
+##### Enhancements
+* ImageViewer: Add a 'Preview' like window ([#1402](../../pull/1402))
+* Pythagorean tree and Pythagorean forest widgets ([#1441](../../pull/1441))
+* New workflow examples for the Welcome screen ([#1438](../../pull/1438))
+* Test widgets on travis ([#1417](../../pull/1417))
+* Save painted data to schema ([#1452](../../pull/1452))
+* Welcome screen: New icons for welcome screen ([#1436](../../pull/1436))
+* SqlTable: Automatically recognize date/time fields ([#1424](../../pull/1424))
+* Proxy support for add-on installation ([#1379](../../pull/1379))
+* Automatically create required SQL extensions ([#1395](../../pull/1395))
+* Ranking for Sieve, refactoring of Sieve, Mosaic and VizRank ([#1382](../../pull/1382))
+* Rank adopted for sparse data ([#1399](../../pull/1399))
+* PCA: Add lines and labels showing the explained variance ([#1383](../../pull/1383))
+* Implement copying graph to clipboard using Ctrl-C (Cmd-C) ([#1386](../../pull/1386))
+* Parallelized cross validation & other evaluation methods ([#1004](../../pull/1004))
+* Image viewer thumbnail size ([#1381](../../pull/1381))
+
+##### Bugfixes
+* Table names set by readers ([#1481](../../pull/1481))
+* OWRandomForest: Fix, refactor and widget tests ([#1477](../../pull/1477))
+* KNN: Fix crash when Mahanalobis metric is used ([#1475](../../pull/1475))
+* Fix AdaBoost widgets and add some tests ([#1474](../../pull/1474))
+* Table: Fix ensure_copy for sparse matrices ([#1456](../../pull/1456))
+* statistics.utils: Fix stats for sparse when last column missing ([#1432](../../pull/1432))
+* MDS and Distances widges fix ([#1435](../../pull/1435))
+* OWBaseLearner: Learner name is changed on output when user changes it and auto apply selected  ([#1453](../../pull/1453))
+* Stop advertising support for weights in LogisticRegression. ([#1448](../../pull/1448))
+* OWScatterPlot: Fix information message reference ([#1440](../../pull/1440))
+* Fix Tree preprocessor order. ([#1447](../../pull/1447))
+* SqlTable: Cast to text for unknown and string types ([#1430](../../pull/1430))
+* NaiveBayes: Handle degenerate cases ([#1442](../../pull/1442))
+* OWBoxPlot: Show corresponding label when ploting discrete variable ([#1400](../../pull/1400))
+* Lin and Log Regression: Prevent double commit ([#1401](../../pull/1401))
+* KMeans: Silhouette score format precision fixed to integer ([#1434](../../pull/1434))
+* Select Rows: skip undefined TimeVariable filters ([#1429](../../pull/1429))
+* OWTestLearners: Fix reporting results table ([#1421](../../pull/1421))
+* Scatterplot: Sends none in no instance selected ([#1428](../../pull/1428))
+* PCA: Fix the variance spin. ([#1396](../../pull/1396))
+* overlay: Auto disconnect when the overlay widget is deleted ([#1412](../../pull/1412))
+* PaintData: Send None instead of empty table when the plot is empty ([#1425](../../pull/1425))
+* Rand Forest Class: Min sample replaces max leaf nodes ([#1403](../../pull/1403))
+* SelectRows: Index attrs only by visible in set_data ([#1398](../../pull/1398))
+* File: Stores filenames to image attributes ([#1393](../../pull/1393))
+* Fix a logging error on windows ([#1390](../../pull/1390))
+* OWLearnerWidget: Don't crash when training data contains no features  ([#1389](../../pull/1389))
+* TimeVariable: fix repr rounding and repr for nan ([#1387](../../pull/1387))
+
+
+[3.3.6] - 2016-06-24
 --------------------
 ##### Enhancements
 * Automatically discretize continuous variables in Sieve (#1372)
@@ -151,7 +201,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.6...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.7...HEAD
+[3.3.7]: https://github.com/biolab/orange3/compare/3.3.6...3.3.7
 [3.3.6]: https://github.com/biolab/orange3/compare/3.3.5...3.3.6
 [3.3.5]: https://github.com/biolab/orange3/compare/3.3.4...3.3.5
 [3.3.4]: https://github.com/biolab/orange3/compare/3.3.3...3.3.4
