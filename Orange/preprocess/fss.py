@@ -89,6 +89,16 @@ class SelectBestFeatures:
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "SelectBestFeatures({}{}{}{})".format(
+            "method={}, ".format(self.method.__name__),
+            "k={}, ".format(str(self.k)) if self.k is not None else "",
+            "threshold={}, ".format(str(self.threshold)) if self.threshold \
+                is not None else "",
+            "decreasing=False" if not self.decreasing else ""
+        )
+
+
     def score_only_nice_features(self, data, method):
         mask = np.array([isinstance(a, method.feature_type)
                          for a in data.domain.attributes])
@@ -127,6 +137,11 @@ class SelectRandomFeatures:
             data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "SelectRandomFeatures({})".format(
+            "k={}".format(str(self.k)) if self.k != 0.1 else ""
+        )
+
 
 class RemoveNaNColumns(Preprocess):
     """
@@ -155,3 +170,8 @@ class RemoveNaNColumns(Preprocess):
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
+
+    def __repr__(self):
+        return "RemoveNaNColumns(threshold={})".format(
+            str(self.threshold)
+        )

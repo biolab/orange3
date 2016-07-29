@@ -9,12 +9,14 @@ import bottleneck as bn
 
 import Orange.data
 from Orange.data import Table
-from . import impute, discretize
+from Orange.statistics import distribution
+from . import impute, discretize, transformation
 from ..misc.enum import Enum
+
 
 __all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
            "Normalize", "Randomize", "RemoveNaNClasses",
-           "ProjectPCA", "ProjectCUR"]
+           "ProjectPCA", "ProjectCUR", "Scaling"]
 
 
 class Preprocess:
@@ -64,6 +66,13 @@ class Continuize(Preprocess):
             multinomial_treatment=self.multinomial_treatment)
         domain = continuizer(data)
         return data.from_table(domain, data)
+
+    def __repr__(self):
+        return "Continuize({}{})".format(
+            "zero_based=False, " if not self.zero_based else "",
+            "multinomial_treatment={}".format(repr(repr(self.multinomial_treatment))) if \
+                self.multinomial_treatment != self.MultinomialTreatment else ""
+        )
 
 
 class Discretize(Preprocess):
@@ -122,6 +131,13 @@ class Discretize(Preprocess):
             discretized(data.domain.metas, self.discretize_metas))
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "Discretize({}{})".format(
+            "method={}, ".format(repr(self.method)) if \
+                self.method is not None else "",
+            "remove_const=False" if not self.remove_const else ""
+        )
+
 
 class Impute(Preprocess):
     """
@@ -153,6 +169,12 @@ class Impute(Preprocess):
             newattrs, data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        return "Impute({})".format(
+            "method={}".format(repr(self.method)) if self.method \
+                != Orange.preprocess.impute.Average() else ""
+        )
+
 
 class SklImpute(Preprocess):
     __wraps__ = skl_preprocessing.Imputer
@@ -181,6 +203,9 @@ class SklImpute(Preprocess):
         new_data.attributes = getattr(data, 'attributes', {})
         return new_data
 
+    def __repr__(self):
+        return "SklImpute(strategy={})".format(repr(self.strategy))
+
 
 class RemoveConstant(Preprocess):
     """
@@ -204,6 +229,9 @@ class RemoveConstant(Preprocess):
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
+
+    def __repr__(self):
+        return "RemoveConstant()"
 
 
 class RemoveNaNClasses(Preprocess):
@@ -230,6 +258,9 @@ class RemoveNaNClasses(Preprocess):
         else:
             nan_cls = np.isnan(data.Y)
         return Table(data.domain, data, np.where(nan_cls == False))
+
+    def __repr__(self):
+        return "RemoveNaNClasses()"
 
 
 class Normalize(Preprocess):
@@ -301,6 +332,15 @@ class Normalize(Preprocess):
             transform_class=self.transform_class)
         return normalizer(data)
 
+    def __repr__(self):
+        return "Normalize({}{}{})".format(
+            "zero_based=False, " if not self.zero_based else "",
+            "norm_type={}, ".format(repr(self.norm_type)) if \
+                self.norm_type != NormalizeBySD else "",
+            "transform_class=True".format(str(self.transform_class)) if \
+                self.transform_class else ""
+        )
+
 
 class Randomize(Preprocess):
     """
@@ -363,6 +403,12 @@ class Randomize(Preprocess):
 
         return new_data
 
+    def __repr__(self):
+        return "Randomize({})".format(
+            "rand_type=Randomize.{}".format(repr(self.rand_type)) if \
+                self.rand_type != self.RandomizeClasses else ""
+        )
+
     def randomize(self, table):
         if len(table.shape) > 1:
             for i in range(table.shape[1]):
@@ -380,6 +426,12 @@ class ProjectPCA(Preprocess):
         pca = Orange.projection.PCA(n_components=self.n_components)(data)
         return pca(data)
 
+    def __repr__(self):
+        return "ProjectPCA({})".format(
+            "n_components={}".format(str(self.n_components)) if \
+                self.n_components is not None else ""
+        )
+
 
 class ProjectCUR(Preprocess):
 
@@ -394,6 +446,88 @@ class ProjectCUR(Preprocess):
             compute_U=False,
         )(data)
         return cur(data)
+
+    def __repr__(self):
+        return "ProjectCUR(rank={}, max_error={})".format(
+            str(self.rank),str(self.max_error)
+        )
+
+class Scaling(Preprocess):
+    """
+    Scale data preprocessor.
+    """
+    @staticmethod
+    def mean(dist):
+        values, counts = np.array(dist)
+        return np.average(values, weights=counts)
+
+    @staticmethod
+    def median(dist):
+        values, counts = np.array(dist)
+        cumdist = np.cumsum(counts)
+        if cumdist[-1] > 0:
+            cumdist /= cumdist[-1]
+
+        return np.interp(0.5, cumdist, values)
+
+    @staticmethod
+    def span(dist):
+        values = np.array(dist[0])
+        minval = np.min(values)
+        maxval = np.max(values)
+        return maxval - minval
+
+    @staticmethod
+    def std(dist):
+        values, counts = np.array(dist)
+        mean = np.average(values, weights=counts)
+        diff = values - mean
+        return np.sqrt(np.average(diff ** 2, weights=counts))
+
+    def __init__(self, center=mean.__func__, scale=std.__func__):
+        self.center = center
+        self.scale = scale
+
+    def __call__(self, data):
+        if self.center is None and self.scale is None:
+            return data
+
+        def transform(var):
+            dist = distribution.get_distribution(data, var)
+            if self.center:
+                c = self.center(dist)
+                dist[0, :] -= c
+            else:
+                c = 0
+
+            if self.scale:
+                s = self.scale(dist)
+                if s < 1e-15:
+                    s = 1
+            else:
+                s = 1
+            factor = 1 / s
+            return var.copy(compute_value=transformation.Normalizer(var, c, factor))
+
+        newvars = []
+        for var in data.domain.attributes:
+            if var.is_continuous:
+                newvars.append(transform(var))
+            else:
+                newvars.append(var)
+        domain = Orange.data.Domain(newvars, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+    def __repr__(self):
+        return "Scaling({}{})".format(
+            "center={}, ".format("Scaling.median" if \
+                    self.center is not None else "None") if \
+                self.center != self.mean else "",
+            "scale={}".format("Scaling.span" if \
+                    self.scale is not None else "None") if \
+                self.scale != self.std else ""
+        )
 
 
 class PreprocessorList:
@@ -422,3 +556,9 @@ class PreprocessorList:
             data = pp(data)
         return data
 
+    def __repr__(self):
+        repstr = "PreprocessorList([\n"
+        for preproc in self.preprocessors:
+            repstr += "    " + repr(preproc) + ",\n"
+        repstr += "])"
+        return repstr

@@ -194,6 +194,25 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                 self.valid_data = True
         return self.valid_data
 
+    def init_code_gen(self):
+        def run():
+            model = learner(input_data)
+            model.instances = input_data
+
+        gen = self.code_gen()
+        gen.set_widget(self)
+        self.apply()
+        self.update_learner()
+        self.update_model()
+        gen.add_init("learner", repr(self.learner), iscode=True)
+        gen.set_main(run)
+        gen.add_import([self.LEARNER])
+        gen.add_preamble("from Orange.classification import *")
+        gen.add_output("learner", "learner", iscode=True)
+        gen.add_output(self.OUTPUT_MODEL_NAME, "model", iscode=True)
+
+        return gen
+
     def settings_changed(self, *args, **kwargs):
         self.outdated_settings = True
         self.warning(self.OUTDATED_LEARNER_WARNING_ID,

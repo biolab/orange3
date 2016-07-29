@@ -16,6 +16,7 @@ from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.utils.codegen import indent
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -274,6 +275,33 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.send("Data", data)
         self.editor_model.set_domain(data.domain)
         self.data = data
+
+    def init_code_gen(self):
+        def run():
+            data = Table(dataPath)
+
+        gen = self.code_gen()
+
+        # Send reference to the widget to the generator
+        gen.set_widget(self)
+
+        # Add imported external dependencies
+        gen.add_import([Table])
+
+        # Declarations inserted into __init__(self)
+        if self.url_combo.currentText() != "":
+            dataPath = self.url_combo.currentText()
+        else:
+            dataPath = self.last_path()
+        gen.add_init("dataPath", dataPath)
+
+        # Sets the main function that's executed to produce output
+        gen.set_main(run)
+
+        # Add declaration after main code body
+        gen.add_output("data", "data", iscode=True)
+
+        return gen
 
     def _get_reader(self):
         """

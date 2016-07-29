@@ -109,6 +109,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.scene.update()
         self.send("Data", None)
 
+
     def walkcreate(self, tree, node_id, parent=None):
         node = self.NODE(tree, self.domain, parent, i=node_id)
         self.scene.addItem(node)
@@ -471,6 +472,33 @@ class OWClassificationTreeGraph(OWTreeGraph):
                                    QSizePolicy.Fixed))
         self.display_box.layout().addRow("Target class: ", self.target_combo)
         gui.rubber(self.controlArea)
+
+    def init_code_gen(self):
+        def pre():
+            qapp = QApplication([])
+
+        def run():
+            ow.handleNewSignals()
+            ow.ctree(input_classification_tree)
+            # Update display with above settings
+            ow.toggle_zoom_slider()
+            ow.toggle_node_size()
+            ow.toggle_tree_depth()
+            ow.toggle_line_width()
+            ow.toggle_color()
+            # Display classification tree
+            ow.show()
+            qapp.exec()
+            ow.update_selection()
+
+        gen = self.code_gen(loadsettings=True)
+        gen.set_widget(self)
+        gen.add_import([QApplication, OWClassificationTreeGraph])
+        gen.add_preamble(pre)
+        gen.add_init("ow", "OWClassificationTreeGraph()", iscode=True)
+        gen.set_main(run)
+        gen.add_output("data", "data", iscode=True)
+        return gen
 
     def ctree(self, model=None):
         super().ctree(model)

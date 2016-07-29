@@ -636,7 +636,7 @@ class OWDataTable(widget.OWWidget):
             self.set_info(None)
 
     def _update_variable_labels(self, view):
-        "Update the variable labels visibility for `view`"
+        """Update the variable labels visibility for `view`"""
         model = view.model()
         if isinstance(model, TableSliceProxy):
             model = model.sourceModel()
@@ -777,6 +777,44 @@ class OWDataTable(widget.OWWidget):
             model = model.sourceModel()
         return model
 
+    def get_selected_data(self, view):
+        model = self._get_model(view)
+        table = model.source  # The input data table
+
+        # Selections of individual instances are not implemented
+        # for SqlTables
+        if isinstance(table, SqlTable):
+            self.send("Selected Data", selected_data)
+            self.send("Other Data", other_data)
+            return False, False
+
+        rowsel, colsel = self.get_selection(view)
+        self.selected_rows, self.selected_cols = rowsel, colsel
+
+        domain = table.domain
+
+        if len(colsel) < len(domain) + len(domain.metas):
+            # only a subset of the columns is selected
+            allvars = domain.class_vars + domain.metas + domain.attributes
+            columns = [(c, model.headerData(c, Qt.Horizontal,
+                                            TableModel.DomainRole))
+                       for c in colsel]
+            assert all(role is not None for _, role in columns)
+
+            def select_vars(role):
+                """select variables for role (TableModel.DomainRole)"""
+                return [allvars[c] for c, r in columns if r == role]
+
+            attrs = select_vars(TableModel.Attribute)
+            if attrs and issparse(table.X):
+                # for sparse data you can only select all attributes
+                attrs = table.domain.attributes
+            class_vars = select_vars(TableModel.ClassVar)
+            metas = select_vars(TableModel.Meta)
+            domain = Orange.data.Domain(attrs, class_vars, metas)
+
+        return rowsel, domain
+
     def commit(self):
         """
         Commit/send the current selected row/column selection.
@@ -784,18 +822,11 @@ class OWDataTable(widget.OWWidget):
         selected_data = other_data = None
         view = self.tabs.currentWidget()
         if view and view.model() is not None:
-            model = self._get_model(view)
-            table = model.source  # The input data table
-
-            # Selections of individual instances are not implemented
-            # for SqlTables
-            if isinstance(table, SqlTable):
-                self.send("Selected Data", selected_data)
-                self.send("Other Data", other_data)
+            rowsel, domain = self.get_selected_data(view)
+            if not(rowsel and domain):
                 return
-
-            rowsel, colsel = self.get_selection(view)
-            self.selected_rows, self.selected_cols = rowsel, colsel
+            model = self._get_model(view)
+            table = model.source
 
             def select(data, rows, domain):
                 """
@@ -811,28 +842,6 @@ class OWDataTable(widget.OWWidget):
                     return data.from_table(domain, data)
                 else:
                     return data
-
-            domain = table.domain
-
-            if len(colsel) < len(domain) + len(domain.metas):
-                # only a subset of the columns is selected
-                allvars = domain.class_vars + domain.metas + domain.attributes
-                columns = [(c, model.headerData(c, Qt.Horizontal,
-                                                TableModel.DomainRole))
-                           for c in colsel]
-                assert all(role is not None for _, role in columns)
-
-                def select_vars(role):
-                    """select variables for role (TableModel.DomainRole)"""
-                    return [allvars[c] for c, r in columns if r == role]
-
-                attrs = select_vars(TableModel.Attribute)
-                if attrs and issparse(table.X):
-                    # for sparse data you can only select all attributes
-                    attrs = table.domain.attributes
-                class_vars = select_vars(TableModel.ClassVar)
-                metas = select_vars(TableModel.Meta)
-                domain = Orange.data.Domain(attrs, class_vars, metas)
 
             # Avoid a copy if all/none rows are selected.
             if not rowsel:
@@ -850,6 +859,31 @@ class OWDataTable(widget.OWWidget):
 
         self.send("Selected Data", selected_data)
         self.send("Other Data", other_data)
+
+    def init_code_gen(self):
+        def pre():
+            qapp = QApplication([])
+
+        def run():
+            ow = OWDataTable()
+            ow.set_dataset(input_data)
+            ow.show()
+            qapp.exec()
+            view = ow.tabs.currentWidget()
+            rowsel, domain = ow.get_selected_data(view)
+            selected_data = data.from_table(domain, input_data, rowsel)
+            selmask = numpy.ones((len(input_data),), dtype=bool)
+            selmask[rowsel] = False
+            other_data = data.from_table(domain, input_data, numpy.flatnonzero(selmask))
+
+        print(self.selected_rows, self.selected_cols)
+        gen = self.code_gen()
+        gen.add_import([OWDataTable, QtGui.QApplication, numpy])
+        gen.add_preamble(pre)
+        gen.set_main(run)
+        gen.add_output("selected_data", "selected_data", iscode=True)
+        gen.add_output("other_data", "other_data", iscode=True)
+        return gen
 
     def copy(self):
         """

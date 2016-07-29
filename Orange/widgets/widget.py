@@ -19,6 +19,7 @@ from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from .utils.overlay import MessageOverlayWidget
+from .utils.codegen import CodeGenerator
 
 
 def _asmappingproxy(mapping):
@@ -174,6 +175,8 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         self.setFocusPolicy(Qt.StrongFocus)
 
         self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
+
+        self.code_gen = CodeGenerator
 
         self.__blocking = False
 

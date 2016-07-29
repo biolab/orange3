@@ -103,7 +103,7 @@ class LinearRegressionModel(Model):
 if __name__ == '__main__':
     import Orange.data
     import sklearn.cross_validation as skl_cross_validation
-    
+
     np.random.seed(42)
 
     def numerical_grad(f, params, e=1e-4):
