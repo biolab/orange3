@@ -1484,13 +1484,12 @@ class SequenceFlow(QWidget):
                 self.update()
 
         def paintEvent(self, event):
+            super().paintEvent(event)
             painter = QStylePainter(self)
             opt = QStyleOptionFrame()
             opt.initFrom(self)
             painter.drawPrimitive(QStyle.PE_FrameDockWidget, opt)
             painter.end()
-
-            super().paintEvent(event)
 
         def focusInEvent(self, event):
             event.accept()
