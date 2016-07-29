@@ -1150,7 +1150,7 @@ class TableModel(QAbstractTableModel):
         row, col = self.__sortIndInv[index.row()], index.column()
         if role == Qt.EditRole:
             try:
-                self.source[row, col] = value
+                self.source.iloc[row, col] = value
             except (TypeError, IndexError):
                 return False
             else:
