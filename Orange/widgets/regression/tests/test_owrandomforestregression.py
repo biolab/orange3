@@ -44,10 +44,6 @@ class TestOWRandomForestRegression(WidgetTest, WidgetLearnerTestMixin):
                 el.name, el.gui_el, lambda x: x.value(),
                 lambda i, x: x.setValue(i), el_min_max, el_min_max)
         self.test_parameters()
-        # FIXME: checkboxes are reset to default, since the widget settings were saved
-        self.widget.max_features_spin[0].setCheckState(False)
-        self.widget.random_state_spin[0].setCheckState(False)
-        self.widget.max_depth_spin[0].setCheckState(False)
 
     def test_parameters_unchecked(self):
         """Check learner and model for various values of all parameters
@@ -58,5 +54,3 @@ class TestOWRandomForestRegression(WidgetTest, WidgetLearnerTestMixin):
         self.gui_to_params[4] = GuiToParam(el.name, el.gui_el, lambda x: 2,
                                            lambda i, x: x.setValue(i), [2], [0])
         self.test_parameters()
-        # FIXME: checkboxes are reset to default, since the widget settings were saved
-        self.widget.min_samples_split_spin[0].setCheckState(True)

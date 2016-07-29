@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, OWComponent
+from Orange.widgets.settings import Setting
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget
 
@@ -10,10 +11,13 @@ class DummyComponent(OWComponent):
 
 
 class MyWidget(OWWidget):
+    name = "Dummy"
+
+    field = Setting(42)
+
     def __init__(self):
         super().__init__()
 
-        self.field = 42
         self.component = DummyComponent(self)
         self.widget = None
 
@@ -69,5 +73,11 @@ class WidgetTestCase(WidgetTest):
 
         self.assertEqual(len(calls), 5)
 
+    def test_widget_tests_do_not_use_stored_settings(self):
+        widget = self.create_widget(MyWidget)
 
+        widget.field = 5
+        widget.saveSettings()
 
+        widget2 = self.create_widget(MyWidget)
+        self.assertEqual(widget2.field, 42)

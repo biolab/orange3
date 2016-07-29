@@ -102,12 +102,32 @@ class WidgetTest(GuiTest):
         -------
         Widget instance : cls
         """
+        self.reset_default_settings(cls)
         widget = cls.__new__(cls, signal_manager=self.signal_manager,
                              stored_settings=stored_settings)
         widget.__init__()
         self.process_events()
         self.widgets.append(widget)
         return widget
+
+    @staticmethod
+    def reset_default_settings(cls):
+        """Reset default setting values for widget
+
+        Discards settings read from disk and changes stored by fast_save
+
+        Parameters
+        ----------
+        cls : OWWidget
+            widget to reset settings for
+        """
+        settings_handler = getattr(cls, "settingsHandler", None)
+        if settings_handler:
+            # Rebind settings handler to get fresh copies of settings
+            # in known_settings
+            settings_handler.bind(cls)
+            # Reset defaults read from disk
+            settings_handler.defaults = {}
 
     @staticmethod
     def process_events():
