@@ -8,7 +8,7 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.widgets.classify.owlogisticregression import (create_coef_table,
                                                           OWLogisticRegression)
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
-                                       GuiToParam)
+                                       ParameterMapping)
 
 
 class LogisticRegressionTest(unittest.TestCase):
@@ -37,21 +37,20 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWLogisticRegression,
                                          stored_settings={"auto_apply": False})
         self.init()
-
-        def combo_set_value(i, x):
-            x.activated.emit(i)
-            x.setCurrentIndex(i)
-
-        pen_types = self.widget.penalty_types_short
         c_slider = self.widget.c_slider
-        c_min_max = [c_slider.minimum(), c_slider.maximum()]
-        c_min_max_values = [self.widget.C_s[0], self.widget.C_s[-1]]
-        self.gui_to_params = [
-            GuiToParam('penalty', self.widget.penalty_combo,
-                       lambda x: pen_types[x.currentIndex()],
-                       combo_set_value, pen_types, list(range(len(pen_types)))),
-            GuiToParam('C', c_slider, lambda x: self.widget.C_s[x.value()],
-                       lambda i, x: x.setValue(i), c_min_max_values, c_min_max)]
+
+        def setter(val):
+            index = self.widget.C_s.index(val)
+            self.widget.C_s[c_slider.value()]
+            c_slider.setValue(index)
+
+        self.parameters = [
+            ParameterMapping('penalty', self.widget.penalty_combo,
+                             self.widget.penalty_types_short),
+            ParameterMapping('C', c_slider,
+                             values=[self.widget.C_s[0], self.widget.C_s[-1]],
+                             getter=lambda: self.widget.C_s[c_slider.value()],
+                             setter=setter)]
 
     def test_output_coefficients(self):
         """Check if coefficients are on output after apply"""
