@@ -1034,9 +1034,5 @@ class SeriesBase:
     metas = TableBase.metas
     weights = w = TableBase.weights
 
-
-class PanelBase:
-    """
-    A common superclass for Panel (as in pd.Panel or pd.SparsePanel) objects.
-    """
-    pass
+# no PanelBase because pandas only has one (pd.Panel), SparsePanel was removed
+# use TablePanel instead

@@ -71,7 +71,7 @@ class TableSeries(SeriesBase, pd.Series):
         return Table
 
 
-class TablePanel(PanelBase, pd.Panel):
+class TablePanel(pd.Panel):
     @property
     def _constructor(self):
         return TablePanel
@@ -121,7 +121,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
 
     @property
     def _constructor_expanddim(self):
-        return SparseTablePanel
+        return TablePanel
 
     def __setitem__(self, key, value):
         # we don't want any special handling, use pandas directly
@@ -365,14 +365,4 @@ class SparseTableSeries(SeriesBase, pd.SparseSeries):
 
     @property
     def _constructor_expanddim(self):
-        return SparseTable
-
-
-class SparseTablePanel(PanelBase, pd.SparsePanel):
-    @property
-    def _constructor(self):
-        return SparseTablePanel
-
-    @property
-    def _constructor_sliced(self):
         return SparseTable
