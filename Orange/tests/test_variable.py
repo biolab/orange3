@@ -130,7 +130,6 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable(name="Feature 0", values=values)
 
         self.assertEqual(var.to_val("F"), 0)
-        self.assertTrue(math.isnan(var.to_val("?")))
 
         with self.assertRaises(ValueError):
             var.to_val("G")

@@ -564,7 +564,7 @@ class SqlTable(Table):
         conts = np.zeros((len(row.values), len(column.values)))
         for row_value, col_value, count in data:
             row_index = row.to_val(row_value)
-            col_index = column.to_val(col_value)
+            col_index = col_value
             conts[row_index, col_index] = count
         return conts
 

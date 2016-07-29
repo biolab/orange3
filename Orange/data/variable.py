@@ -203,6 +203,11 @@ class Variable(str, metaclass=VariableMeta):
         raise RuntimeError(
             "primitive variable descriptors must overload to_val()")
 
+    def to_val_col(self, col):
+        """A version of to_val that works exclusively on SeriesBase columns."""
+        # no default implementation we want
+        raise NotImplementedError
+
     def __str__(self):
         return self.name
 
@@ -295,6 +300,9 @@ class ContinuousVariable(Variable):
         if s in self.unknown_str:
             return Unknown
         return float(s)
+
+    def to_val_col(self, col):
+        return col.astype(float)
 
     def repr_val(self, val):
         """
@@ -400,22 +408,23 @@ class DiscreteVariable(Variable):
         :param s: values, represented as a number, string or `None`
         :rtype: float
         """
-        if s is None:
-            return ValueUnknown
-
-        if isinstance(s, (Integral, Real)):
-            if isnan(s):
-                return s
-            elif s in self.values:
-                return self.values.index(s)
-            else:
-                # find the nearest instance
-                return np.argmin([np.abs(v - s) if isinstance(v, Number) else np.inf for v in self.values])
-        if s in self.unknown_str:
-            return ValueUnknown
-        if not isinstance(s, str):
-            raise TypeError('Cannot convert {} to value of "{}"'.format(type(s).__name__, self.name))
+        if pd.isnull(s):
+            return np.nan
+        # performs better than a dict; at least for a reasonable amount of categories
         return self.values.index(s)
+
+    def to_val_col(self, col):
+        # compared to the complicated to_val, this is orders of magnitude faster
+        # testing on adult.occupation:
+        # list comprehension to_val: 3.498
+        # .map(reverse dict of .values): 0.237
+        # .apply(to_val): 0.059
+        # col.cat.codes: 0.007
+        # col.cat.codes.replace(-1, np.nan): 0.225
+        # it would be great to use pandas' codes, but that returns -1 for unknown values,
+        # whereas we need np.nan - and converting those to nan later is slower than applying
+        # I suspect this is because application is sped up with an accelerator
+        return col.apply(self.to_val)
 
     def add_value(self, s):
         """ Add a value `s` to the list of values.
@@ -583,10 +592,13 @@ class StringVariable(Variable):
             return s
         return str(s)
 
+    def to_val_col(self, col):
+        return col.apply(self.to_val)
+
     @staticmethod
     def str_val(val):
         """Return a string representation of the value."""
-        if val is "":
+        if val in Variable.MISSING_VALUES or pd.isnull(val):
             return "?"
         return str(val)
 
@@ -691,3 +703,6 @@ class TimeVariable(ContinuousVariable):
     def to_val(self, s):
         # unix float seconds
         return s.timestamp()
+
+    def to_val_col(self, col):
+        return col.ts.timestamp

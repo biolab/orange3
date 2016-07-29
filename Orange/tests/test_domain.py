@@ -330,16 +330,16 @@ class TestDomainInit(unittest.TestCase):
 
     def test_conversion_size(self):
         domain = Domain([age, gender, income], [race])
-        self.assertRaises(ValueError, domain.convert, [0] * 3)
-        self.assertRaises(ValueError, domain.convert, [0] * 5)
+        self.assertRaises(ValueError, domain.convert, [0, "M", 0])
+        self.assertRaises(ValueError, domain.convert, [0, "M", 0, "White", 0])
 
         domain = Domain([age, income], [race],
                         [gender, education, ssn])
-        self.assertRaises(ValueError, domain.convert, [0] * 2)
-        self.assertRaises(ValueError, domain.convert, [0] * 4)
-        self.assertRaises(ValueError, domain.convert, [0] * 7)
-        domain.convert([0] * 3)
-        domain.convert([0] * 6)
+        self.assertRaises(ValueError, domain.convert, [0, 0])
+        self.assertRaises(ValueError, domain.convert, [0, 0, "White", "M"])
+        self.assertRaises(ValueError, domain.convert, [0, 0, "White", "M", "C", "123", 0])
+        domain.convert([0, 0, "White"])
+        domain.convert([0, 0, "White", "M", "C", "123"])
 
     def test_preprocessor_chaining(self):
         domain = Domain([DiscreteVariable("a", values="01"),

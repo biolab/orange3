@@ -1190,7 +1190,7 @@ class mdsplotutils(plotutils):
 
     @staticmethod
     def column_data(table, var, mask=None):
-        col = table[var].apply(var.to_val)
+        col = var.to_val_col(table[var])
         if mask is not None:
             mask = numpy.asarray(mask, dtype=bool)
             return col[mask]
