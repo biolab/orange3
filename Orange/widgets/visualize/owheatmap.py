@@ -27,6 +27,7 @@ from Orange.widgets.io import FileFormat
 
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
+from Orange.widgets.widget import Msg
 
 
 def split_domain(domain, split_label):
@@ -452,6 +453,12 @@ class OWHeatMap(widget.OWWidget):
 
     graph_name = "scene"
 
+    class Information(widget.OWWidget.Information):
+        sampled = Msg("Data has been sampled")
+        discrete_ignored = Msg("{} discrete column{} ignored")
+        row_clust = Msg("{}")
+        col_clust = Msg("{}")
+
     def __init__(self):
         super().__init__()
 
@@ -655,14 +662,13 @@ class OWHeatMap(widget.OWWidget):
         """Set the input dataset to display."""
         self.closeContext()
         self.clear()
-        self.error(0)
-        self.information([0, 1])
+        self.clear_messages()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
                 data = Table(data)
             else:
-                self.information(0, "Data has been sampled")
+                self.Information.sampled()
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
@@ -678,11 +684,11 @@ class OWHeatMap(widget.OWWidget):
                        data.domain.metas),
                 data)
             if not data.domain.attributes:
-                self.error(0, "No continuous feature columns")
+                self.error("No continuous feature columns")
                 input_data = data = None
             else:
-                self.information(1, "{} discrete column{} ignored"
-                                .format(ndisc, "s" if ndisc > 1 else ""))
+                self.Information.discrete_ignored(
+                    ndisc, "s" if ndisc > 1 else "")
 
         self.data = data
         self.input_data = input_data
@@ -1263,8 +1269,8 @@ class OWHeatMap(widget.OWWidget):
         cco_enabled = M <= OWHeatMap._MaxOrderedClustering
         sort_rows, sort_cols = self.sort_rows, self.sort_columns
 
-        row_clust_msg = None
-        col_clust_msg = None
+        row_clust_msg = ""
+        col_clust_msg = ""
 
         if not rco_enabled and sort_rows == OWHeatMap.OrderedClustering:
             sort_rows = OWHeatMap.Clustering
@@ -1286,8 +1292,8 @@ class OWHeatMap(widget.OWWidget):
             col_clust_msg = "Column clustering was disabled due to the " \
                             "input matrix being to big"
 
-        self.information(3, row_clust_msg)
-        self.information(4, col_clust_msg)
+        self.Information.row_clust(row_clust_msg)
+        self.Information.col_clust(col_clust_msg)
 
         self.sort_rows = sort_rows
         self.sort_columns = sort_cols

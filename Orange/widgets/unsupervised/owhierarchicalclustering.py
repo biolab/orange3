@@ -938,12 +938,12 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._set_cut_line_visible(self.selection_method == 1)
 
     def set_distances(self, matrix):
-        self.error(0)
+        self.error()
         self._set_items(None)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
-                self.error(0, "Empty distance matrix")
+                self.error("Empty distance matrix")
                 matrix = None
 
         self.matrix = matrix

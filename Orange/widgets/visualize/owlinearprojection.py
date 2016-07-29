@@ -552,12 +552,12 @@ class OWLinearProjection(widget.OWWidget):
         """
         self.closeContext()
         self.clear()
-        self.information(0)
+        self.information()
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
                 data = Table(data)
             else:
-                self.information(0, "Data has been sampled")
+                self.information("Data has been sampled")
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
@@ -693,10 +693,8 @@ class OWLinearProjection(widget.OWWidget):
         shape_vars = [var for var in disc_vars
                       if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
 
-        self.warning(0)
-        if not len(cont_vars):
-            self.warning(
-                "Need at least one continuous feature to plot the data.")
+        self.warning("Plotting requires continuous features.",
+                     shown=not len(cont_vars))
 
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]

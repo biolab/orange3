@@ -344,7 +344,7 @@ class OWSelectRows(widget.OWWidget):
     def commit(self):
         matching_output = self.data
         non_matching_output = None
-        self.error(21)
+        self.error()
         if self.data:
             domain = self.data.domain
             conditions = []
@@ -361,7 +361,7 @@ class OWSelectRows(widget.OWWidget):
                         try:
                             values = [attr.parse(v) for v in values]
                         except ValueError as e:
-                            self.error(21, e.args[0])
+                            self.error(e.args[0])
                             return
 
                     filter = data_filter.FilterContinuous(

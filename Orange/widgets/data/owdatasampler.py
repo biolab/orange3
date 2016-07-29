@@ -11,9 +11,10 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
+from Orange.widgets.widget import Msg, OWWidget
 
 
-class OWDataSampler(widget.OWWidget):
+class OWDataSampler(OWWidget):
     name = "Data Sampler"
     description = "Randomly draw a subset of data points " \
                   "from the input data set."
@@ -43,6 +44,11 @@ class OWDataSampler(widget.OWWidget):
     sampleSizeSqlPercentage = Setting(0.1)
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
+
+    class Error(OWWidget.Error):
+        too_many_folds = Msg("Number of folds exceeds data size")
+        sample_larger_than_data = Msg("Sample must be smaller than data")
+        not_enough_to_stratify = Msg("Data is too small to stratify")
 
     def __init__(self):
         super().__init__()
@@ -213,7 +219,7 @@ class OWDataSampler(widget.OWWidget):
         self.send("Remaining Data", other)
 
     def updateindices(self):
-        err_msg = ""
+        self.Error.clear()
         repl = True
         data_length = len(self.data)
         num_classes = len(self.data.domain.class_var.values) \
@@ -228,18 +234,16 @@ class OWDataSampler(widget.OWWidget):
             repl = False
         elif self.sampling_type == self.CrossValidation:
             if data_length < self.number_of_folds:
-                err_msg = "Number of folds exceeds the data size"
+                self.Error.too_many_folds()
         else:
             assert self.sampling_type == self.Bootstrap
 
         if not repl and size is not None and (data_length <= size):
-            err_msg = "Sample must be smaller than data"
+            self.Error.sample_larger_than_data()
         if not repl and data_length <= num_classes and self.stratify:
-            err_msg = "Not enough data for stratified sampling"
+            self.Error.not_enough_to_stratify()
 
-        self.error(0)
-        if err_msg:
-            self.error(err_msg)
+        if self.Error.active:
             self.indices = None
             return
 

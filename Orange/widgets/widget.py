@@ -4,10 +4,9 @@ import types
 from functools import reduce
 
 from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, QSettings, QUrl
-from PyQt4.QtGui import QDialog, QPixmap, QVBoxLayout, QSizePolicy, \
-    qApp, QStyle, QIcon, QApplication, \
-    QShortcut, QKeySequence, QDesktopServices, QSplitter, QSplitterHandle, \
-    QWidget, QPushButton
+from PyQt4.QtGui import QDialog, QVBoxLayout, QSizePolicy, qApp, QStyle, \
+    QIcon, QShortcut, QKeySequence, QDesktopServices, QSplitter, \
+    QSplitterHandle, QWidget, QPushButton
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
@@ -18,7 +17,14 @@ from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
+from Orange.widgets.utils.messages import \
+    WidgetMessagesMixin, UnboundMsg
 from .utils.overlay import MessageOverlayWidget
+
+# Msg is imported and renamed, so widgets can import it from this module rather
+# than the one with the mixin (Orange.widgets.utils.messages). Assignment is
+# used instead of "import ... as", otherwise PyCharm does not suggest import
+Msg = UnboundMsg
 
 
 def _asmappingproxy(mapping):
@@ -36,6 +42,7 @@ class WidgetMetaClass(type(QDialog)):
        the value of the attribute is replaced with the default."""
 
     #noinspection PyMethodParameters
+    # pylint: disable=bad-classmethod-argument
     def __new__(mcs, name, bases, kwargs):
         from Orange.canvas.registry.description import (
             input_channel_from_args, output_channel_from_args)
@@ -63,7 +70,8 @@ class WidgetMetaClass(type(QDialog)):
         return cls
 
 
-class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
+class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
+               metaclass=WidgetMetaClass):
     """Base widget class"""
 
     # Global widget count
@@ -127,13 +135,14 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
     #: static size contents.
     resizing_enabled = True
 
-    widgetStateChanged = Signal(str, int, str)
     blockingStateChanged = Signal(bool)
     processingStateChanged = Signal(int)
 
-    # For reasons I don't understand, the signal has to be defined here and
-    # not in the mix-in class, otherwise PyQt can't connect to it.
+    # Signals have to be class attributes and cannot be inherited,
+    # say from a mixin. This has something to do with the way PyQt binds them
     progressBarValueChanged = Signal(float)
+    messageActivated = Signal(Msg)
+    messageDeactivated = Signal(Msg)
 
     settingsHandler = None
     """:type: SettingsHandler"""
@@ -153,6 +162,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
+        WidgetMessagesMixin.__init__(self)
 
         stored_settings = kwargs.get('stored_settings', None)
         if self.settingsHandler:
@@ -173,8 +183,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
 
         self.setFocusPolicy(Qt.StrongFocus)
 
-        self.widgetState = {"Info": {}, "Warning": {}, "Error": {}}
-
         self.__blocking = False
 
         # flag indicating if the widget's position was already restored
@@ -188,7 +196,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
         self.splitter = None
-        self.warning_bar = self.warning_label = self.warning_icon = None
         if self.want_basic_layout:
             self.set_basic_layout()
 
@@ -197,12 +204,11 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
 
         sc = QShortcut(QKeySequence.Copy, self)
         sc.activated.connect(self.copy_to_clipboard)
-
         return self
 
+    # pylint: disable=super-init-not-called
     def __init__(self, *args, **kwargs):
-        """QDialog __init__ was already called in __new__,
-        please do not call it here."""
+        """__init__s are called in __new__; don't call them from here"""
 
     @classmethod
     def get_flags(cls):
@@ -230,15 +236,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
     def _insert_splitter(self):
         self.splitter = self._Splitter(Qt.Horizontal, self)
         self.layout().addWidget(self.splitter)
-
-    def _insert_warning_bar(self):
-        self.warning_bar = gui.hBox(self, spacing=0)
-        self.warning_icon = gui.widgetLabel(self.warning_bar, "")
-        self.warning_label = gui.widgetLabel(self.warning_bar, "")
-        self.warning_label.setStyleSheet("padding-top: 5px")
-        self.warning_bar.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        gui.rubber(self.warning_bar)
-        self.warning_bar.setVisible(False)
 
     def _insert_control_area(self):
         self.left_side = gui.vBox(self.splitter, spacing=0)
@@ -298,7 +295,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
 
         self.want_main_area = self.want_main_area or self.graph_name
         self._create_default_buttons()
-        self._insert_warning_bar()
+        self.insert_message_bar()
         self._insert_splitter()
         if self.want_control_area:
             self._insert_control_area()
@@ -580,150 +577,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, metaclass=WidgetMetaClass):
         else:
             QDialog.keyPressEvent(self, e)
 
-    def information(self, id=0, text=None):
-        """
-        Set/clear a widget information message (for `id`).
-
-        Args:
-            id (int or list): The id of the message
-            text (str): Text of the message.
-        """
-        self._set_state("Info", id, text)
-
-    def warning(self, id=0, text=""):
-        """
-        Set/clear a widget warning message (for `id`).
-
-        Args:
-            id (int or list): The id of the message
-            text (str): Text of the message.
-        """
-        self._set_state("Warning", id, text)
-
-    def error(self, id=0, text=""):
-        """
-        Set/clear a widget error message (for `id`).
-
-        Args:
-            id (int or list): The id of the message
-            text (str): Text of the message.
-        """
-        self._set_state("Error", id, text)
-
-    def _set_state(self, state_type, id, text):
-        changed = 0
-        if isinstance(id, list):
-            for val in id:
-                if val in self.widgetState[state_type]:
-                    self.widgetState[state_type].pop(val)
-                    changed = 1
-        else:
-            if isinstance(id, str):
-                text = id
-                id = 0
-            if not text:
-                if id in self.widgetState[state_type]:
-                    self.widgetState[state_type].pop(id)
-                    changed = 1
-            else:
-                self.widgetState[state_type][id] = text
-                changed = 1
-
-        if changed:
-            if isinstance(id, list):
-                for i in id:
-                    self.widgetStateChanged.emit(state_type, i, "")
-            else:
-                self.widgetStateChanged.emit(state_type, id, text or "")
-
-        tooltip_lines = []
-        highest_type = None
-        for a_type in ("Error", "Warning", "Info"):
-            msgs_for_ids = self.widgetState.get(a_type)
-            if not msgs_for_ids:
-                continue
-            msgs_for_ids = list(msgs_for_ids.values())
-            if not msgs_for_ids:
-                continue
-            tooltip_lines += msgs_for_ids
-            if highest_type is None:
-                highest_type = a_type
-
-        if highest_type is None:
-            self._set_warning_bar(None)
-        elif len(tooltip_lines) == 1:
-            msg = tooltip_lines[0]
-            if "\n" in msg:
-                self._set_warning_bar(
-                    highest_type, msg[:msg.index("\n")] + " (...)", msg)
-            else:
-                self._set_warning_bar(
-                    highest_type, tooltip_lines[0], tooltip_lines[0])
-        else:
-            self._set_warning_bar(
-                highest_type,
-                "{} problems during execution".format(len(tooltip_lines)),
-                "\n".join(tooltip_lines))
-
-        return changed
-
-    def _set_warning_bar(self, state_type, text=None, tooltip=None):
-        colors = {"Error": ("#ffc6c6", "black", QStyle.SP_MessageBoxCritical),
-                  "Warning": ("#ffffc9", "black", QStyle.SP_MessageBoxWarning),
-                  "Info": ("#ceceff", "black", QStyle.SP_MessageBoxInformation)}
-        current_height = self.height()
-        if state_type is None:
-            if not self.warning_bar.isHidden():
-                new_height = current_height - self.warning_bar.height()
-                self.warning_bar.setVisible(False)
-                self.resize(self.width(), new_height)
-            return
-        background, foreground, icon = colors[state_type]
-        style = QApplication.instance().style()
-        self.warning_icon.setPixmap(style.standardIcon(icon).pixmap(14, 14))
-
-        self.warning_bar.setStyleSheet(
-            "background-color: {}; color: {};"
-            "padding: 3px; padding-left: 6px; vertical-align: center".
-            format(background, foreground))
-        self.warning_label.setText(text)
-        self.warning_bar.setToolTip(tooltip)
-        if self.warning_bar.isHidden():
-            self.warning_bar.setVisible(True)
-            new_height = current_height + self.warning_bar.height()
-            self.resize(self.width(), new_height)
-
-    def widgetStateToHtml(self, info=True, warning=True, error=True):
-        """Create HTML code with images and status messages describing
-        the current widget state.
-        """
-        iconpaths = {
-            "Info": gui.resource_filename("icons/information.png"),
-            "Warning": gui.resource_filename("icons/warning.png"),
-            "Error": gui.resource_filename("icons/error.png")
-        }
-        items = []
-
-        for show, what in [(info, "Info"), (warning, "Warning"),
-                           (error, "Error")]:
-            if show and self.widgetState[what]:
-                items.append('<img src="%s" style="float: left;"> %s' %
-                             (iconpaths[what],
-                              "\n".join(self.widgetState[what].values())))
-        return "<br>".join(items)
-
-    @classmethod
-    def getWidgetStateIcons(cls):
-        """Return a (potentially cached) dictionary with icons for
-        info (key `Info`), warning (`Warning`) and error (`Error`)
-        """
-        if not hasattr(cls, "_cached__widget_state_icons"):
-            info = QPixmap(gui.resource_filename("icons/information.png"))
-            warning = QPixmap(gui.resource_filename("icons/warning.png"))
-            error = QPixmap(gui.resource_filename("icons/error.png"))
-            cls._cached__widget_state_icons = \
-                {"Info": info, "Warning": warning, "Error": error}
-        return cls._cached__widget_state_icons
 
     defaultKeyActions = {}
 

@@ -980,15 +980,13 @@ class OWImageViewer(widget.OWWidget):
 
     def clear(self):
         self.data = None
-        self.information(0)
-        self.error(0)
+        self.error()
         self.imageAttrCB.clear()
         self.titleAttrCB.clear()
         self.clearScene()
 
     def setupScene(self):
-        self.information(0)
-        self.error(0)
+        self.error()
         if self.data:
             attr = self.stringAttrs[self.imageAttr]
             titleAttr = self.allAttrs[self.titleAttr]
@@ -1128,9 +1126,8 @@ class OWImageViewer(widget.OWWidget):
                     "{} images".format(count)
                 )
             attr = self.stringAttrs[self.imageAttr]
-            if self._errcount == count and not "type" in attr.attributes:
-                self.error(0,
-                           "No images found! Make sure the '%s' attribute "
+            if self._errcount == count and "type" not in attr.attributes:
+                self.error("No images found! Make sure the '%s' attribute "
                            "is tagged with 'type=image'" % attr.name)
 
     def onDeleteWidget(self):

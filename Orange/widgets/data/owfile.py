@@ -260,8 +260,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 errors.append(str(ex))
                 data = None
                 self.editor_model.reset()
-            self.warning(
-                33, warnings[-1].message.args[0] if warnings else '')
+            self.warning(warnings[-1].message.args[0] if warnings else '')
 
         if data is None:
             self.send("Data", None)
