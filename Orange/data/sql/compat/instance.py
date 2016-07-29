@@ -117,7 +117,7 @@ class Instance:
             value = self._y[key - len(self.domain.attributes)]
         else:
             value = self._metas[-1 - key]
-        return Value(self._domain[key], value)
+        return value
 
     #TODO Should we return an instance of `object` if we have a meta attribute
     #     that is not Discrete or Continuous? E.g. when we have strings, we'd

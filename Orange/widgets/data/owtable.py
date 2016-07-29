@@ -897,7 +897,7 @@ def table_summary(table):
         len_future = concurrent.futures.Future()
 
         def _len():
-            len_future.set_result(len(table))
+            len_future.set_result(table.exact_len())
         threading.Thread(target=_len).start()  # KILL ME !!!
 
         return ApproxSummary(approx_len, len_future, table.domain,

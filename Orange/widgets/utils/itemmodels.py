@@ -850,9 +850,15 @@ class TableModel(QAbstractTableModel):
                    [set(var.attributes) for var in self.vars],
                    set()))
 
-        @lru_cache(maxsize=1000)
-        def row_instance(index):
-            return self.source.iloc[int(index)]
+        if hasattr(self.source, '_fetch_row'):
+            # override for SQL tables: their length
+            @lru_cache(maxsize=1000)
+            def row_instance(index):
+                return self.source[int(index)]
+        else:
+            @lru_cache(maxsize=1000)
+            def row_instance(index):
+                return self.source.iloc[int(index)]
         self._row_instance = row_instance
 
         # column basic statistics (VariableStatsRole), computed when
@@ -1028,6 +1034,8 @@ class TableModel(QAbstractTableModel):
         except IndexError:
             self.layoutAboutToBeChanged.emit()
             self.beginRemoveRows(self.parent(), row, max(self.rowCount(), row))
+            # resize table on index errors:
+            # e.g. SQL table not completely downloaded
             self.__rowCount = min(row, self.__rowCount)
             self.endRemoveRows()
             self.layoutChanged.emit()
@@ -1061,7 +1069,7 @@ class TableModel(QAbstractTableModel):
         row, col = self.__sortIndInv[index.row()], index.column()
         if role == Qt.EditRole:
             try:
-                self.source[row, col] = value
+                self.source.iloc[row, col] = value
             except (TypeError, IndexError):
                 return False
             else:
