@@ -22,9 +22,6 @@ class CustomRuleClassifier(_RuleClassifier):
         self.rule_ordering = rule_ordering
         self.covering_algorithm = covering_algorithm
 
-        for rule in self.rule_list:
-            print(rule.curr_class_dist.tolist(), rule)
-
     def predict(self, X):
         if (self.rule_ordering == "ordered" and
                 self.covering_algorithm == "exclusive"):
@@ -136,6 +133,7 @@ class OWRuleLearner(OWBaseLearner):
     checked_parent_alpha = Setting(False)
     base_rules = None
 
+    gamma_spin = None
     want_main_area = False
     resizing_enabled = False
     auto_apply = Setting(False)
@@ -162,7 +160,7 @@ class OWRuleLearner(OWBaseLearner):
 
         insert_gamma_box = gui.vBox(widget=covering_algorithm_box, box=None)
         gui.separator(insert_gamma_box, 0, 14)
-        gamma_spin = gui.doubleSpin(
+        self.gamma_spin = gui.doubleSpin(
             widget=insert_gamma_box, master=self, value="gamma", minv=0.0,
             maxv=1.0, step=0.01, label="γ:", orientation=Qt.Horizontal,
             callback=self.settings_changed, alignment=Qt.AlignRight)
@@ -173,7 +171,7 @@ class OWRuleLearner(OWBaseLearner):
         evaluation_measure_box = gui.comboBox(
             widget=middle_box, master=self, value="evaluation_measure",
             label="Evaluation measure:", orientation=Qt.Horizontal,
-            items=("Laplace Accuracy", "Entropy", "WRAcc"),
+            items=("Laplace accuracy", "Entropy", "WRAcc"),
             callback=self.settings_changed, contentsLength=4)
 
         beam_width_box = gui.spin(
@@ -187,7 +185,7 @@ class OWRuleLearner(OWBaseLearner):
 
         min_covered_examples_box = gui.spin(
             widget=bottom_box, master=self, value="min_covered_examples", minv=1,
-            maxv=100, step=1, label="Minimum rule coverage:",
+            maxv=10000, step=1, label="Minimum rule coverage:",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80)
 
@@ -199,17 +197,24 @@ class OWRuleLearner(OWBaseLearner):
 
         default_alpha_spin = gui.doubleSpin(
             widget=bottom_box, master=self, value="default_alpha", minv=0.0,
-            maxv=1.0, step=0.01, label="Statistical signifiance\n(default α):",
+            maxv=1.0, step=0.01, label="Statistical significance\n(default α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_default_alpha")
 
         parent_alpha_spin = gui.doubleSpin(
             widget=bottom_box, master=self, value="parent_alpha", minv=0.0,
-            maxv=1.0, step=0.01, label="Relative signifiance\n(parent α):",
+            maxv=1.0, step=0.01, label="Relative significance\n(parent α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_parent_alpha")
+
+        self.settings_changed()
+
+    def settings_changed(self, *args, **kwargs):
+        self.gamma_spin.setDisabled(
+            self.storage_covers[self.covering_algorithm] != "weighted")
+        super().settings_changed(args, kwargs)
 
     def create_learner(self):
         return self.LEARNER(
