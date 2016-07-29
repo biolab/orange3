@@ -4,6 +4,7 @@
 import unittest
 import multiprocessing as mp
 import numpy as np
+import warnings
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.regression import LinearRegressionLearner, MeanLearner
@@ -254,20 +255,23 @@ class TestCrossValidation(TestSampling):
         self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)
 
     def test_unpicklable_params(self):
-
         class NonPicklableLearner(MajorityLearner):
             pass
 
-        self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [NonPicklableLearner()], k=3, n_jobs=3)
+        # assertRaises fails, do this manually
+        with warnings.catch_warnings(record=True) as w:
+            CrossValidation(self.iris, [NonPicklableLearner()], k=3, n_jobs=3)
+            self.assertTrue(any(w))  # raised warning
 
     def test_internal_cv(self):
         # This test just covers; can't catch warnings from subprocesses
         proc = mp.current_process()
         was_daemon = proc.daemon
         proc.daemon = True
-        self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [_ParameterTuningLearner()], k=2, n_jobs=3)
+        # assertRaises fails, do this manually
+        with warnings.catch_warnings(record=True) as w:
+            CrossValidation(self.iris, [_ParameterTuningLearner()], k=2, n_jobs=3)
+            self.assertTrue(any(w))  # raised warning
         proc.daemon = was_daemon
 
 

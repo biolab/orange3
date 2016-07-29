@@ -42,14 +42,6 @@ class TestDistMatrix(TestCase):
         self.assertTrue(tables_equal(unpickled_dist.col_items, self.dist.col_items))
         self.assertEqual(unpickled_dist.axis, self.dist.axis)
 
-    def test_deprecated(self):
-        a9 = np.arange(9).reshape(3, 3)
-        m = DistMatrix(a9)
-        with self.assertWarns(OrangeDeprecationWarning):
-            self.assertEqual(m.dim, 3)
-        with self.assertWarns(OrangeDeprecationWarning):
-            np.testing.assert_almost_equal(m.X, a9)
-
     def test_from_file(self):
         with named_file(
             """3 axis=0 asymmetric col_labels row_labels
