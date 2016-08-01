@@ -38,9 +38,9 @@ values from the original one.
 
     >>> from Orange.data import discretization
     >>> d_iris = discretization.DomainDiscretizer(iris)
-    >>> d_iris[0]
+    >>> d_iris.iloc[0]
     DiscreteVariable('D_sepal length')
-    >>> d_iris[0].values
+    >>> d_iris.iloc[0].values
     ['<5.2', '[5.2, 5.8)', '[5.8, 6.5)', '>=6.5']
 
 See :obj:`Variable.compute_value` for a detailed example.
@@ -95,7 +95,7 @@ Base class
         >>> from Orange.preprocess import DomainDiscretizer
 
         >>> iris = Table("iris")
-        >>> iris_1 = iris[::2]
+        >>> iris_1 = iris.iloc[::2]
         >>> d_iris_1 = DomainDiscretizer(iris_1)
 
         >>> d_iris_1[0]
@@ -112,9 +112,9 @@ Base class
     This function (and the corresponding functions for other variables)
     is used for converting the remaining data::
 
-        >>> iris_2 = iris[1::2]
+        >>> iris_2 = iris.iloc[1::2]
         >>> d_iris_2 = Table(d_iris_1.domain, iris_2)
-        >>> d_iris_2[0]
+        >>> d_iris_2.iloc[0]
         [<5.2, [2.8, 3), <1.6, <0.2 | Iris-setosa]
 
     In the first line we select the instances with odd indices in the original
@@ -144,7 +144,6 @@ Continuous variables
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
 
 Discrete variables
 ------------------
@@ -155,7 +154,6 @@ Discrete variables
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
 
 String variables
 ----------------
@@ -166,7 +164,6 @@ String variables
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
 
 Time variables
 --------------

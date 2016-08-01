@@ -52,7 +52,7 @@ SQL table (``data.sql``)
         A list of filters that are applied when constructing the query. The
         filters in the should have a method `to_sql`. Module
         :obj:`Orange.data.sql.filter` contains classes derived from filters in
-        :obj:`Orange.data.filter` with the appropriate implementation of the
+        :obj:`Orange.data.sql.compat.filter` with the appropriate implementation of the
         method.
 
 

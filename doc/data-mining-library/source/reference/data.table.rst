@@ -86,9 +86,6 @@ The preferred way to construct a table is to invoke a named constructor.
 Inspection
 ----------
 
-.. automethod:: Table.is_view
-.. automethod:: Table.is_copy
-.. automethod:: Table.ensure_copy
 .. automethod:: Table.has_missing
 .. automethod:: Table.has_missing_class
 .. automethod:: Table.checksum
@@ -97,14 +94,58 @@ Row manipulation
 ----------------
 
 .. automethod:: Table.append
-.. automethod:: Table.extend
-.. automethod:: Table.insert
 .. automethod:: Table.clear
 .. automethod:: Table.shuffle
 
 Weights
 -------
 
-.. automethod:: Table.has_weights
 .. automethod:: Table.set_weights
-.. automethod:: Table.total_weight
+
+Aggregators
+-----------
+
+Similarly to filters, storage classes should provide several methods for fast
+computation of statistics. These methods are not called directly but by modules
+within :obj:`Orange.statistics`.
+
+.. method:: _compute_basic_stats(
+    self, columns=None, include_metas=False, compute_variance=False)
+
+    Compute basic statistics for the specified variables: minimal and maximal
+    value, the mean and a varianca (or a zero placeholder), the number
+    of missing and defined values.
+
+    :param columns: a list of columns for which the statistics is computed;
+        if `None`, the function computes the data for all variables
+    :type columns: list of ints, variable names or descriptors of type
+        :obj:`Orange.data.Variable`
+    :param include_metas: a flag which tells whether to include meta attributes
+        (applicable only if `columns` is `None`)
+    :type include_metas: bool
+    :param compute_variance: a flag which tells whether to compute the variance
+    :type compute_variance: bool
+    :return: a list with tuple (min, max, mean, variance, #nans, #non-nans)
+        for each variable
+    :rtype: list
+
+.. method:: _compute_distributions(self, columns=None)
+
+    Compute the distribution for the specified variables. The result is a list
+    of pairs containing the distribution and the number of rows for which the
+    variable value was missing.
+
+    For discrete variables, the distribution is represented as a vector with
+    absolute frequency of each value. For continuous variables, the result is
+    a 2-d array of shape (2, number-of-distinct-values); the first row contains
+    (distinct) values of the variables and the second has their absolute
+    frequencies.
+
+    :param columns: a list of columns for which the distributions are computed;
+        if `None`, the function runs over all variables
+    :type columns: list of ints, variable names or descriptors of type
+        :obj:`Orange.data.Variable`
+    :return: a list of distributions
+    :rtype: list of numpy arrays
+
+.. automethod:: Orange.data.storage.Storage._compute_contingency

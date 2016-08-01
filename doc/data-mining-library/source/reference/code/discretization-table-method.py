@@ -6,9 +6,9 @@ d_disc_iris = disc(iris)
 disc_iris = Orange.data.Table(d_disc_iris, iris)
 
 print("Original data set:")
-for e in iris[:3]:
-    print(e)
+for idx, row in iris.iloc[:3].iterrows():
+    print(row)
 
 print("Discretized data set:")
-for e in disc_iris[:3]:
-    print(e)
+for idx, row in disc_iris.iloc[:3].iterrows():
+    print(row)

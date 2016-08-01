@@ -5,9 +5,9 @@ disc.method = Orange.preprocess.discretize.EqualFreq(n=3)
 d_iris = disc(iris)
 
 print("Original data set:")
-for e in iris[:3]:
-    print(e)
+for idx, row in iris.iloc[:3].iterrows():
+    print(row)
 
 print("Discretized data set:")
-for e in d_iris[:3]:
-    print(e)
+for idx, row in d_iris.iloc[:3].iterrows():
+    print(row)

@@ -8,7 +8,7 @@ Classification
 Much of Orange is devoted to machine learning methods for classification, or supervised data mining. These methods rely on the data with class-labeled instances, like that of senate voting. Here is a code that loads this data set, displays the first data instance and shows its predicted class (``republican``)::
 
    >>> data = Orange.data.Table("voting")
-   >>> data[0]
+   >>> data.iloc[0]
    [n, y, n, y, y, ... | republican]
 
 Orange implements function for construction of classification models, their evaluation and scoring. In a nutshel, here is the code that reports on cross-validated accuracy and AUC for logistic regression and random forests:
@@ -38,7 +38,7 @@ Classification uses two types of objects: learners and classifiers. Learners con
     >>> data = Orange.data.Table("voting")
     >>> learner = Orange.classification.LogisticRegressionLearner()
     >>> classifier = learner(data)
-    >>> classifier(data[:3])
+    >>> classifier(data.iloc[:3])
     array([ 0.,  0.,  1.])
 
 Above, we read the data, constructed a logistic regression learner, gave it the data set to construct a classifier, and used it to predict the class of the first three data instances. We also use these concepts in the following code that predicts the classes of the selected three instances in the data set:
