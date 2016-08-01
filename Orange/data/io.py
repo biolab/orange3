@@ -669,8 +669,14 @@ class CSVReader(FileFormat):
                 try:
                     reader = csv.reader(file, dialect=dialect)
                     data = self.data_table(reader)
-                    data.name = os.path.splitext(
-                        os.path.split(self.filename)[-1])[0]
+
+                    # TODO: Name can be set unconditionally when/if
+                    # self.filename will always be a string with the file name.
+                    # Currently, some tests pass StringIO instead of
+                    # the file name to a reader.
+                    if isinstance(self.filename, str):
+                        data.name = os.path.splitext(
+                            os.path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
