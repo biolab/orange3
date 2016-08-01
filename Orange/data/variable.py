@@ -1,15 +1,15 @@
 import re
 from numbers import Number, Real, Integral
 from math import isnan, floor, sqrt
-import numpy as np
-import pandas as pd
 from pickle import PickleError
 import copy
 import dateutil
 import pytz
-
 import collections
 from datetime import datetime, timedelta, timezone
+
+import numpy as np
+import pandas as pd
 
 from Orange.util import Registry, color_to_hex, hex_to_color
 
@@ -200,14 +200,18 @@ class Variable(str, metaclass=VariableMeta):
         For discrete variables, return the indices of its variable.values.
         For string variables, return the string.
 
+        Must support converting either single values or a complete column (pd.Series).
+        The column operation should be faster than iterating and transforming
+        one value at a time.
+
         Parameters
         ----------
-        s : Iterable | Number | str
+        s : pd.Series | Number | str
             The value(s) to generate a numeric representation for.
 
         Returns
         -------
-        Iterable | Number | str
+        pd.Series | Number | str
             The (numeric) representation of the given values.
         """
         if not self.is_primitive():
@@ -216,11 +220,6 @@ class Variable(str, metaclass=VariableMeta):
             return Unknown
         raise RuntimeError(
             "primitive variable descriptors must overload to_val()")
-
-    def to_val_col(self, col):
-        """A version of to_val that works exclusively on SeriesBase columns."""
-        # no default implementation we want
-        raise NotImplementedError
 
     def __str__(self):
         return self.name
@@ -303,12 +302,12 @@ class ContinuousVariable(Variable):
         self._out_format = "%.{}f".format(self.number_of_decimals)
 
     def to_val(self, s):
-        if s in self.unknown_str:
-            return Unknown
-        return float(s)
-
-    def to_val_col(self, col):
-        return col.astype(float)
+        if isinstance(s, pd.Series):
+            return s.astype(float)
+        else:
+            if s in self.unknown_str:
+                return Unknown
+            return float(s)
 
     def repr_val(self, val):
         """Return the value as a string with the prescribed number of decimals."""
@@ -407,24 +406,26 @@ class DiscreteVariable(Variable):
             args += ", base_value={}".format(self.base_value)
         return "{}('{}', {})".format(self.__class__.__name__, self.name, args)
 
-    def to_val(self, s):
-        if pd.isnull(s):
-            return np.nan
-        # performs better than a dict; at least for a reasonable amount of categories
-        return self.values.index(s)
-
-    def to_val_col(self, col):
-        # compared to the complicated to_val, this is orders of magnitude faster
-        # testing on adult.occupation:
-        # list comprehension to_val: 3.498
-        # .map(reverse dict of .values): 0.237
-        # .apply(to_val): 0.059
-        # col.cat.codes: 0.007
-        # col.cat.codes.replace(-1, np.nan): 0.225
-        # it would be great to use pandas' codes, but that returns -1 for unknown values,
-        # whereas we need np.nan - and converting those to nan later is slower than applying
-        # I suspect this is because application is sped up with an accelerator
-        return col.apply(self.to_val)
+    def to_val(self, c):
+        def transform_func(s):
+            if pd.isnull(s):
+                return np.nan
+            # performs better than a dict; at least for a reasonable amount of categories
+            return self.values.index(s)
+        if isinstance(c, pd.Series):
+            # compared to the complicated to_val, this is orders of magnitude faster
+            # testing on adult.occupation:
+            # list comprehension to_val: 3.498
+            # .map(reverse dict of .values): 0.237
+            # .apply(to_val): 0.059
+            # col.cat.codes: 0.007
+            # col.cat.codes.replace(-1, np.nan): 0.225
+            # it would be great to use pandas' codes, but that returns -1 for unknown values,
+            # whereas we need np.nan - and converting those to nan later is slower than applying
+            # I suspect this is because application is sped up with an accelerator
+            return c.apply(transform_func)
+        else:
+            return transform_func(c)
 
     def add_value(self, s):
         """Add a value `s` to the list of values."""
@@ -592,15 +593,16 @@ class StringVariable(Variable):
     Unknown = ""
     TYPE_HEADERS = ('string', 's', 'text')
 
-    def to_val(self, s):
-        if s is None or (isinstance(s, Number) and np.isnan(s)):
-            return ""
-        if isinstance(s, str):
-            return s
-        return str(s)
-
-    def to_val_col(self, col):
-        return col.apply(self.to_val)
+    def to_val(self, c):
+        def transform_func(s):
+            if s is None or (isinstance(s, Number) and np.isnan(s)):
+                return ""
+            if isinstance(s, str):
+                return s
+        if isinstance(c, pd.Series):
+            return c.apply(transform_func)
+        else:
+            return transform_func(c)
 
     @staticmethod
     def str_val(val):
@@ -737,7 +739,7 @@ class TimeVariable(ContinuousVariable):
 
     def to_val(self, s):
         # unix float seconds
-        return s.timestamp()
-
-    def to_val_col(self, col):
-        return col.ts.timestamp
+        if isinstance(s, pd.Series):
+            return s.ts.timestamp
+        else:
+            return s.timestamp()

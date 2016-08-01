@@ -621,7 +621,7 @@ class TableBase:
                 # if this is used in TableSeries, we don't have a series but an element
                 result[:, i] = col.to_val(self[col])
             else:
-                result[:, i] = col.to_val_col(self[col]).values
+                result[:, i] = col.to_val(self[col]).values
         result.setflags(write=writable)
         return result
 
