@@ -89,6 +89,10 @@ class TestBasketReader(unittest.TestCase):
         table = read_basket(fname)
         self.assertEqual(len(table.domain.variables), 4)
 
+    def test_data_name(self):
+        filename = os.path.join(os.path.dirname(__file__), 'iris_basket.basket')
+        self.assertEqual(read_basket(filename).name, 'iris_basket')
+
 
 if __name__ == "__main__":
     unittest.main()
