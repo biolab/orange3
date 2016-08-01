@@ -990,15 +990,6 @@ def scheme_to_python(scheme, out_file):
     each perform their calculations independently to output the result script.
 
     """
-    # Attach a Widget Manager to the scheme
-    from .widgetsscheme import WidgetManager
-    scheme.widget_manager = WidgetManager()
-    scheme.widget_manager.set_scheme(scheme)
-
-    # Re-trigger event listeners to populate the widget manager
-    for node in scheme.nodes:
-        scheme.node_added.emit(node)
-
     # Topographically sort scheme
     sorted_nodes, adjs = scheme_toposort(scheme)
     widget_names = []
