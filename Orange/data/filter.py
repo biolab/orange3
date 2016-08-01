@@ -388,8 +388,8 @@ class FilterContinuous(ValueFilter):
         return "FilterContinuous({}, {}{}{})".format(
             repr(self.column),
             repr(self.oper),
-            ", " + repr(self.ref) if self.ref is not None else "",
-            ", " + repr(self.max) if self.max is not None else ""
+            ", ref=" + repr(self.ref) if self.ref is not None else "",
+            ", max=" + repr(self.max) if self.max is not None else ""
         )
 
 
