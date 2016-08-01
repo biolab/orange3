@@ -59,7 +59,7 @@ def vstack_by_subdomain(data, sub_domains):
     for sub_dom in sub_domains:
         sub_data = data.from_table(sub_dom, data)
         # TODO: improve O(N ** 2)
-        newtable.extend(sub_data)
+        newtable.append(sub_data)
 
     return newtable
 

@@ -19,9 +19,6 @@ class TableBase:
     """An abstract base class for data storage structures in Orange."""
     KNOWN_PANDAS_KWARGS = {}
 
-    # these were previously in Storage
-    MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
-
     # the default name for weights columns
     # subclasses may override this to rename the column
     _WEIGHTS_COLUMN = "__weights__"
@@ -873,14 +870,6 @@ class TableBase:
         # append doesn't transfer properties for some reason
         result._transfer_properties(self)
         return result
-
-    @deprecated('Use Table.append() for adding new rows. This inserts a new column. ')
-    def insert(self, *args, **kwargs):
-        super().insert(*args, **kwargs)
-
-    @deprecated("Table.append(...)")
-    def extend(self, rows, weight=1):
-        return self.append(rows)
 
     @classmethod
     def concatenate(cls, tables, axis=1, reindex=True, colstack=True, rowstack=False):
