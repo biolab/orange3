@@ -31,9 +31,6 @@ from Orange.data import (
 from Orange.util import Registry, flatten, namegen
 
 
-_IDENTITY = lambda i: i
-
-
 class Compression:
     """Supported compression extensions"""
     GZIP = '.gz'
@@ -571,6 +568,15 @@ class CSVReader(FileFormat):
         self.actual_delimiter = None
 
     def sniff_delimiter(self):
+        """Sniff a delimiter from a limited sample of the data.
+
+        Can cache already-sniffed delimiters and falls back to "\t" if unable to sniff.
+
+        Returns
+        -------
+        str
+            The sniffed delimiter.
+        """
         if self.actual_delimiter is not None:
             return self.actual_delimiter
 

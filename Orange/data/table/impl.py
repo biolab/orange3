@@ -8,6 +8,8 @@ from pandas.sparse.array import BlockIndex
 
 
 class Table(TableBase, pd.DataFrame):
+    """A dense implementation of an orange table."""
+
     KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy"}
 
     @property
@@ -82,6 +84,7 @@ class TablePanel(pd.Panel):
 
 
 class SparseTable(TableBase, pd.SparseDataFrame):
+    """A sparse implementation of an orange table."""
     # this differs from Table.KNOWN_PANDAS_KWARGS by default_kind and default_fill_value
     KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy", "default_kind", "default_fill_value"}
 
@@ -128,10 +131,26 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         return pd.SparseDataFrame.__setitem__(self, key, value)
 
     def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
-        """
+        """Generate a sparse matrix representation
+
         Unlike the default _to_numpy, this creates scipy.sparse matrices.
         Does not generate a dense matrix in memory.
-        Returns scipy.sparse.coo_matrix.
+
+        Parameters
+        ----------
+        X : bool, default False
+            Whether to include the domain attributes in the result.
+        Y : bool, default False
+            Whether to include the domain class variables in the result.
+        meta : bool, default False
+            Whether to include the domain metas in the result.
+        writable : bool, default False
+            Whether to mark the resulting domain as writable.
+        Returns
+        -------
+        scipy.sparse.coo_matrix
+            The sparse matrix of the selected and transformed table data.
+
         """
         cols = []
         cols += self.domain.attributes if X else []
@@ -169,9 +188,9 @@ class SparseTable(TableBase, pd.SparseDataFrame):
 
     @classmethod
     def _coo_to_sparse_dataframe(cls, coo_matrix, column_index_start):
-        """
-        Convert a scipy.sparse.coo_matrix into a sparse dataframe,
-        with indices and columns starting from 0.
+        """Convert a scipy.sparse.coo_matrix into a sparse dataframe.
+
+        Indices start at 0.
 
         This constructs a single SparseTableSeries, which is then used to fill up
         the resulting SparseTable column-by-column. This is, counter-intuitively,
@@ -182,6 +201,20 @@ class SparseTable(TableBase, pd.SparseDataFrame):
 
         We can't pass a list of SparseSeries rows to the SparseDataFrame constructor,
         as we would with a dense DataFrame, because that doesn't (yet?) work.
+
+        Parameters
+        ----------
+        coo_matrix : scipy.sparse.coo_matrix
+            The origin COOrdinate matrix.
+        column_index_start : int
+            Where to start counting the columns from.
+            Useful for later concatenating multiple DataFrames.
+
+        Returns
+        -------
+        pd.SparseDataFrame
+            The resulting sparse data frame.
+            Not a SparseTable yet because we don't have any Orange-specific data associated with it.
         """
         # convert into a multiindex sparse series
         # transposed because it's easier to get rows from ss
@@ -208,10 +241,31 @@ class SparseTable(TableBase, pd.SparseDataFrame):
 
     @classmethod
     def _from_sparse_numpy(cls, domain, X, Y=None, metas=None, weights=None):
-        """
-        Construct a SparseTable from scipy.sparse matrices.
+        """Construct a SparseTable from scipy.sparse matrices.
+
         This accepts X/Y/metas-like matrices (as in no strings) because
         scipy.sparse doesn't support anything other than numbers.
+
+        If domain is None, all columns are assumed to be continuous.
+
+        Parameters
+        ----------
+        domain : Domain
+            If None, the domain is inferred from the data. Otherwise, specifies
+            the column assignment to the new SparseTable.
+        X : scipy.sparse.spmatrix | np.ndarray
+            The X component of the data (or undetermined, depending on the domain).
+        Y : scipy.sparse.spmatrix | np.ndarray, optional, default None
+            The Y component of the data.
+        metas : scipy.sparse.spmatrix | np.ndarray, optional, default None
+            The meta attributes of the data.
+        weights : scipy.sparse.spmatrix | np.ndarray, optional, default None
+            The meta attributes of the data.
+
+        Returns
+        -------
+        SparseTable
+            A new SparseTable consturcted from the given data.
         """
         if domain is None:
             # legendary inference: everything is continuous! :D
@@ -347,10 +401,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
 
     @property
     def density(self):
-        """
-        Compute the table density.
-        Return the density as reported by pd.SparseDataFrame
-        """
+        """Return the density as reported by pd.SparseDataFrame.density"""
         return pd.SparseDataFrame.density(self)
 
     @property

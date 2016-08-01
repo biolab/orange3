@@ -38,33 +38,24 @@ class Variable(str, metaclass=VariableMeta):
     name and some basic properties. This extends str so it plays nicely with
     pandas' column values.
 
-    .. attribute:: name
-
+    Attributes
+    ----------
+    name : str
         The name of the variable.
-
-    .. attribute:: unknown_str
-
+    unknown_str : set
         A set of values that represent unknowns in conversion from textual
-        formats. Default is `{"?", ".", "", "NA", "~", None}`.
-
-    .. attribute:: compute_value
-
+        formats. Default is Variable.MISSING_VALUES.
+    compute_value : Callable
         A function for computing the variable's value when converting from
         another domain which does not contain this variable. The base class
         defines a static method `compute_value`, which returns `Unknown`.
         Non-primitive variables must redefine it to return `None`.
-
-    .. attribute:: source_variable
-
+    source_variable : Variable
         An optional descriptor of the source variable - if any - from which
         this variable is derived and computed via :obj:`compute_value`.
-
-    .. attribute:: attributes
-
+    attributes : dict
         A dictionary with user-defined attributes of the variable
-
-    .. attribute:: master
-
+    master : Variable
         The variable that this variable is a copy of. If a copy is made from a
         copy, the copy has a reference to the original master. If the variable
         is not a copy, it is its own master.
@@ -77,9 +68,7 @@ class Variable(str, metaclass=VariableMeta):
         return super().__new__(cls, name)
 
     def __init__(self, name="", compute_value=None):
-        """
-        Construct a variable descriptor.
-        """
+        """Construct a variable descriptor."""
         super().__init__()
         self.name = name
         self._compute_value = compute_value
@@ -95,11 +84,12 @@ class Variable(str, metaclass=VariableMeta):
         self._colors = None
 
     def make_proxy(self):
-        """
-        Copy the variable and set the master to `self.master` or to `self`.
+        """Copy the variable and set the master to `self.master` or to `self`.
 
-        :return: copy of self
-        :rtype: Variable
+        Returns
+        -------
+        Variable
+            A copy of self.
         """
         var = self.__class__()
         var.__dict__.update(self.__dict__)
@@ -126,9 +116,18 @@ class Variable(str, metaclass=VariableMeta):
 
     @classmethod
     def make(cls, name):
-        """
-        Return an existing continuous variable with the given name, or
-        construct and return a new one.
+        """Make a new variable with respect to the cache.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+
+        Returns
+        -------
+        Variable
+            An existing continuous variable with the given name, or
+            construct and return a new one.
         """
         if not name:
             raise ValueError("Variables without names cannot be stored or made")
@@ -136,45 +135,58 @@ class Variable(str, metaclass=VariableMeta):
 
     @classmethod
     def _clear_cache(cls):
-        """
-        Clear the list of variables for reuse by :obj:`make`.
-        """
+        """Clear the list of variables for reuse by :obj:`make`."""
         cls._all_vars.clear()
 
     @staticmethod
     def _clear_all_caches():
-        """
-        Clears list of stored variables for all subclasses
-        """
+        """Clears list of stored variables for all subclasses"""
         for cls in Variable.registry.values():
             cls._clear_cache()
 
     @classmethod
     def is_primitive(cls):
-        """
-        `True` if the variable's values are stored as floats.
+        """Determine whether the variable is primitive.
+
         Non-primitive variables can appear in the data only as meta attributes.
+
+        Returns
+        -------
+        bool
+            True if if the variable's values are stored as floats.
         """
         return issubclass(cls, (DiscreteVariable, ContinuousVariable))
 
     @property
     def is_discrete(self):
+        """Determine whether the variable is discrete."""
         return isinstance(self, DiscreteVariable)
 
     @property
     def is_continuous(self):
+        """Determine whether the variable is continuous."""
         return isinstance(self, ContinuousVariable)
 
     @property
     def is_string(self):
+        """Determine whether the variable has string values."""
         return isinstance(self, StringVariable)
 
     def repr_val(self, val):
-        """
-        Return a textual representation of variable's value `val`. Argument
-        `val` must be a float (for primitive variables) or an arbitrary
-        Python object (for non-primitives).
+        """Return a textual representation val, determined by the variable.
 
+        Parameters
+        ----------
+        val
+            The value for which to generate a textual representation.
+
+        Returns
+        -------
+        str
+            The textual representation of the value.
+
+        Notes
+        -----
         Derived classes must overload the function.
         """
         raise RuntimeError("variable descriptors must overload repr_val()")
@@ -182,19 +194,21 @@ class Variable(str, metaclass=VariableMeta):
     str_val = repr_val
 
     def to_val(self, s):
-        """
-        Convert the given argument to a value of the variable. The
-        argument can be a string, a number or `None`. For primitive variables,
-        the base class provides a method that returns
-        :obj:`~Orange.data.Unknown` if `s` is found in
-        :obj:`~Orange.data.Variable.unknown_str`, and raises an exception
-        otherwise. For non-primitive variables it returns the argument itself.
+        """Convert the given argument to the (numeric) value of the variable.
 
-        Derived classes of primitive variables must overload the function.
+        For continuous variables, output a float representation of the data.
+        For discrete variables, return the indices of its variable.values.
+        For string variables, return the string.
 
-        :param s: value, represented as a number, string or `None`
-        :type s: str, float or None
-        :rtype: float or object
+        Parameters
+        ----------
+        s : Iterable | Number | str
+            The value(s) to generate a numeric representation for.
+
+        Returns
+        -------
+        Iterable | Number | str
+            The (numeric) representation of the given values.
         """
         if not self.is_primitive():
             return s
@@ -230,6 +244,7 @@ class Variable(str, metaclass=VariableMeta):
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
     def copy(self, compute_value):
+        """Make a deep copy of this variable."""
         var = Variable(self.name, compute_value)
         var.attributes = dict(self.attributes)
         return var
@@ -237,21 +252,15 @@ class Variable(str, metaclass=VariableMeta):
 
 class ContinuousVariable(Variable):
     """
-    Descriptor for continuous variables.
+    A descriptor for continuous variables.
 
-    .. attribute:: number_of_decimals
-
-        The number of decimals when the value is printed out (default: 3).
-
-    .. attribute:: adjust_decimals
-
-        A flag regulating whether the `number_of_decimals` is being adjusted
-        by :obj:`to_val`.
-
-    The value of `number_of_decimals` is set to 3 and `adjust_decimals`
-    is set to 2.
+    Attributes
+    ----------
+    number_of_decimals : int, default 3
+        The number of decimals when the value is printed out.
+    adjust_decimals : int, default 2
+        A flag regulating whether the `number_of_decimals` is being adjusted by :obj:`to_val`.
     """
-
     TYPE_HEADERS = ('continuous', 'c')
 
     def __init__(self, name="", number_of_decimals=None, compute_value=None):
@@ -294,9 +303,6 @@ class ContinuousVariable(Variable):
         self._out_format = "%.{}f".format(self.number_of_decimals)
 
     def to_val(self, s):
-        """
-        Convert a value, given as an instance of an arbitrary type, to a float.
-        """
         if s in self.unknown_str:
             return Unknown
         return float(s)
@@ -305,9 +311,7 @@ class ContinuousVariable(Variable):
         return col.astype(float)
 
     def repr_val(self, val):
-        """
-        Return the value as a string with the prescribed number of decimals.
-        """
+        """Return the value as a string with the prescribed number of decimals."""
         if isnan(val):
             return "?"
         return self._out_format % val
@@ -326,30 +330,30 @@ class DiscreteVariable(Variable):
     are stored as floats; the numbers corresponds to indices in the list of
     values.
 
-    .. attribute:: values
-
+    Attributes
+    ----------
+    name : str
+        The name of the variable.
+    values : list
         A list of variable's values.
-
-    .. attribute:: ordered
-
+    ordered : bool, default False
         Some algorithms (and, in particular, visualizations) may
         sometime reorder the values of the variable, e.g. alphabetically.
         This flag hints that the given order of values is "natural"
         (e.g. "small", "middle", "large") and should not be changed.
-
-    .. attribute:: base_value
-
+    base_value : int, default -1
         The index of the base value, or -1 if there is none. The base value is
         used in some methods like, for instance, when creating dummy variables
         for regression.
+    compute_value : Callable, default None
+        A function to compute this variable's values from a source table.
     """
-
     TYPE_HEADERS = ('discrete', 'd')
 
     _all_vars = collections.defaultdict(list)
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1, compute_value=None):
-        """ Construct a discrete variable descriptor with the given values. """
+        """Construct a discrete variable descriptor with the given values."""
         super().__init__(name, compute_value)
         self.ordered = ordered
         self.values = list(values)
@@ -383,9 +387,16 @@ class DiscreteVariable(Variable):
         self.attributes["colors"][i] = color_to_hex(color)
 
     def __repr__(self):
-        """
-        Give a string representation of the variable, for instance,
-        `"DiscreteVariable('Gender', values=['male', 'female'])"`.
+        """Give a string representation of the variable.
+
+        Returns
+        -------
+        str
+            The string represtation of the variable.
+
+        Examples
+        --------
+        `"DiscreteVariable('Gender', values=['male', 'female'])"`
         """
         args = "values=[{}]".format(
             ", ".join([repr(x) for x in self.values[:5]] +
@@ -397,17 +408,6 @@ class DiscreteVariable(Variable):
         return "{}('{}', {})".format(self.__class__.__name__, self.name, args)
 
     def to_val(self, s):
-        """
-        Convert the given argument to a value of the variable (`float`).
-        If the argument is numeric, its value is returned without checking
-        whether it is integer and within bounds. `Unknown` is returned if the
-        argument is one of the representations for unknown values. Otherwise,
-        the argument must be a string and the method returns its index in
-        :obj:`values`.
-
-        :param s: values, represented as a number, string or `None`
-        :rtype: float
-        """
         if pd.isnull(s):
             return np.nan
         # performs better than a dict; at least for a reasonable amount of categories
@@ -427,19 +427,10 @@ class DiscreteVariable(Variable):
         return col.apply(self.to_val)
 
     def add_value(self, s):
-        """ Add a value `s` to the list of values.
-        """
+        """Add a value `s` to the list of values."""
         self.values.append(s)
 
     def repr_val(self, val):
-        """
-        Return a textual representation of the value (`self.values[int(val)]`)
-        or "?" if the value is unknown.
-
-        :param val: value
-        :type val: float (should be whole number)
-        :rtype: str
-        """
         if (isinstance(val, Number) and isnan(val)) or not val:
             return "?"
         return str(val)
@@ -455,9 +446,9 @@ class DiscreteVariable(Variable):
 
     @classmethod
     def make(cls, name, values=(), ordered=False, base_value=-1):
-        """
-        Return a variable with the given name and other properties. The method
-        first looks for a compatible existing variable: the existing
+        """Return a variable with the given name and other properties.
+
+        The method first looks for a compatible existing variable: the existing
         variable must have the same name and both variables must have either
         ordered or unordered values. If values are ordered, the order must be
         compatible: all common values must have the same order. If values are
@@ -469,20 +460,25 @@ class DiscreteVariable(Variable):
         values are ordered using sorted. Otherwise, it
         constructs and returns a new variable descriptor.
 
-        :param name: the name of the variable
-        :type name: str
-        :param values: symbolic values for the variable
-        :type values: list
-        :param ordered: tells whether the order of values is fixed
-        :type ordered: bool
-        :param base_value: the index of the base value, or -1 if there is none
-        :type base_value: int
-        :returns: an existing compatible variable or `None`
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+        values : list
+            Symbolic values for the variable.
+        ordered : bool, default False
+            Whether the order of the values is significant.
+        base_value : int, default -1
+            The index of the base value or -1 if there is none.
+
+        Returns
+        -------
+        Variable
+            An existing compatible variable or a new variable.
         """
         if not name:
             raise ValueError("Variables without names cannot be stored or made")
-        var = cls._find_compatible(
-            name, values, ordered, base_value)
+        var = cls._find_compatible(name, values, ordered, base_value)
         if var:
             return var
         if not ordered:
@@ -497,21 +493,29 @@ class DiscreteVariable(Variable):
 
     @classmethod
     def _find_compatible(cls, name, values=(), ordered=False, base_value=-1):
-        """
-        Return a compatible existing value, or `None` if there is None.
+        """Return a compatible existing variable if it exists.
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable.
+        values : list
+            Symbolic values for the variable.
+        ordered : bool, default False
+            Whether the order of the values is significant.
+        base_value : int, default -1
+            The index of the base value or -1 if there is none.
+
+        Returns
+        -------
+        Variable
+            A compatible existing variable if it exists.
+
+        See Also
+        --------
         See :obj:`make` for details; this function differs by returning `None`
         instead of constructing a new descriptor. (Method :obj:`make` calls
         this function.)
-
-        :param name: the name of the variable
-        :type name: str
-        :param values: symbolic values for the variable
-        :type values: list
-        :param ordered: tells whether the order of values is fixed
-        :type ordered: bool
-        :param base_value: the index of the base value, or -1 if there is none
-        :type base_value: int
-        :returns: an existing compatible variable or `None`
         """
         base_rep = base_value != -1 and values[base_value]
         existing = cls._all_vars.get(name)
@@ -564,9 +568,19 @@ class DiscreteVariable(Variable):
 
     @classmethod
     def generate_unique_values(cls, column):
-        """
-        Generate a sorted set of unique values from a pandas column,
-        taking into account values we consider missing (Variable.MISSING_VALUES).
+        """Generate a sorted set of unique values.
+
+        Takes into account values we consider missing (Variable.MISSING_VALUES).
+
+        Parameters
+        ----------
+        column : pd.Series
+            The column to generate unique values of.
+
+        Returns
+        -------
+        list
+            A sorted list of unique values.
         """
         # comparing np.nan doesn't always work, use the appropriate mechanism
         raw = column[~column.isnull()].unique()
@@ -574,18 +588,11 @@ class DiscreteVariable(Variable):
 
 
 class StringVariable(Variable):
-    """
-    Descriptor for string variables. String variables can only appear as
-    meta attributes.
-    """
+    """Descriptor for string variables. String variables can only appear as meta attributes."""
     Unknown = ""
     TYPE_HEADERS = ('string', 's', 'text')
 
     def to_val(self, s):
-        """
-        Return the value as a string. If it is already a string, the same
-        object is returned.
-        """
         if s is None or (isinstance(s, Number) and np.isnan(s)):
             return ""
         if isinstance(s, str):
@@ -597,13 +604,11 @@ class StringVariable(Variable):
 
     @staticmethod
     def str_val(val):
-        """Return a string representation of the value."""
         if val in Variable.MISSING_VALUES or pd.isnull(val):
             return "?"
         return str(val)
 
     def repr_val(self, val):
-        """Return a string representation of the value."""
         return '"{}"'.format(self.str_val(val))
 
 
@@ -640,8 +645,17 @@ class TimeVariable(ContinuousVariable):
 
     @staticmethod
     def column_looks_like_time(column):
-        """
-        Determine whether a column looks like it should be a TimeVariable.
+        """Determine whether a column looks like it should be a TimeVariable.
+
+        Parameters
+        ----------
+        column : pd.Series
+            The column to check.
+
+        Returns
+        -------
+        bool
+            True if the column's values look like they are times.
         """
         # all values must be strings (otherwise integers under 10e5 would be years)
         # and be able to be parsed with python's datetime module
@@ -651,6 +665,18 @@ class TimeVariable(ContinuousVariable):
 
     @classmethod
     def _detect_timezone(cls, date_string):
+        """Detect a timezone from a date string.
+
+        Parameters
+        ----------
+        date_string : str
+            The date string to check.
+
+        Returns
+        -------
+        pytz.timezone
+            An appropriate pytz timezone object or None if no timezone.
+        """
         # detect a timezone from the first date, but only if we don't have one yet
         tzinfo = dateutil.parser.parse(date_string).tzinfo
         if tzinfo is None:
@@ -667,9 +693,18 @@ class TimeVariable(ContinuousVariable):
                 return appropriate_timezones[0] if appropriate_timezones else None
 
     def column_to_datetime(self, column):
-        """
-        Convert a column to a pandas datetime column.
+        """Convert a column to a pandas datetime column.
+
         Takes note of the source timezone to display it correctly later.
+
+        Parameters
+        ----------
+        column : pd.Series
+            The column to transform.
+
+        Returns
+        -------
+        A transformed pd.Series of the datetime type, with timezone information.
         """
         for val in column:
             # handle missing values like they don't exist

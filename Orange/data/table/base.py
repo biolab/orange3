@@ -16,6 +16,7 @@ from Orange.util import flatten, deprecated
 
 # noinspection PyPep8Naming
 class TableBase:
+    """An abstract base class for data storage structures in Orange."""
     KNOWN_PANDAS_KWARGS = {}
 
     # these were previously in Storage
@@ -39,13 +40,36 @@ class TableBase:
                  '__file__']
 
     def __new__(cls, *args, **kwargs):
-        """
-        Create a new Table. Needed because we have two construction paths: Table() or Table.from_X.
+        """Create a new Table, the exact result type depends on the data passed.
+
         If called without arguments, create and initialize a blank Table, otherwise
-        intelligently call one of the Table.from_X functions, depending on the arguments.
+        intelligently call one of the TableBase.from_X functions, depending on the arguments.
         Also passes through pandas.DataFrame constructor keyword arguments.
-        Do not pass positional arguments through to pandas.
+        Does not pass positional arguments through to pandas, unless called from pandas internals.
+
+        Parameters
+        ----------
+        args
+            One of:
+             - (str): create a Table from a file or URL
+             - (TableBase): initialize from another TableBase,
+             - (np.ndarray | scipy.sparse): a dense or sparse matrix, resulting
+               Table data type depends on the type passed, infer a domain
+                - Up to four may be passed to fit into X/Y/metas/weights respectively.
+             - (Domain, np.ndarray | scipy.sparse): Same as above, without domain inference
+             - (Domain, TableBase): convert another TableBase object to the passed domain
+             - (Domain, list): create a Table based on a list of rows.
+             - (Domain, pd.DataFrame): create a table based on an existing pandas DataFrame and Domain.
+        kwargs
+            Used exclusively for compatibility with pandas.
+
+        Returns
+        -------
+        A new Table or SparseTable, depending on the arguments passed and the calling class.
         """
+        # Needed because we have two construction paths: Table() or Table.from_X,
+        # complications arise from having a completely different signature from pandas.
+
         # is pandas is calling this as part of its transformations, pass it through
         all_kwargs_are_pandas = len(set(kwargs.keys()).difference(cls.KNOWN_PANDAS_KWARGS)) == 0
 
@@ -97,6 +121,12 @@ class TableBase:
         return cls.from_numpy(domain, *args, **kwargs)
 
     def __init__(self, *args, **kwargs):
+        """Initialize the object.
+
+        Sets the name and other attributes and calls pandas' initialization.
+        Filters the domain: retains only the columns actually in the table.
+        Sets the weights if they are not set already.
+        """
         # see the comment in __new__ for the rationale here
         # also, another tidbit is that pandas has some internals that need to be set up
         # and expects its arguments to be set appropriately
@@ -114,7 +144,6 @@ class TableBase:
         # when passing to pandas upstream
         super().__init__(**{k: v for k, v in kwargs.items() if k in self.KNOWN_PANDAS_KWARGS})
 
-        # all weights initialized to 1 (see the weight functions for details)
         self.name = getattr(self, 'name', kwargs.get("name", "untitled"))
         self.attributes = getattr(self, 'attributes', kwargs.get("attributes", {}))
         self.__file__ = getattr(self, '__file__', kwargs.get("__file__"))
@@ -141,13 +170,17 @@ class TableBase:
 
     @classmethod
     def from_domain(cls, domain):
-        """
-        Construct a new `Table` for the given domain.
+        """Construct a new Table for the given Domain.
 
-        :param domain: domain for the `Table`
-        :type domain: Orange.data.Domain
-        :return: a new table
-        :rtype: Orange.data.Table
+        Parameters
+        ----------
+        domain : Domain
+            The domain passed to the new Table object.
+
+        Returns
+        -------
+        TableBase
+            The new Table with a Domain assigned.
         """
         result = cls(columns=domain.attributes + domain.class_vars + domain.metas)
         result.domain = domain
@@ -156,16 +189,18 @@ class TableBase:
     @classmethod
     @deprecated("t.iloc[row_indices].copy()")
     def from_table_rows(cls, source, row_indices):
-        """
-        Construct a new table (copy) by selecting rows from the source table by their
-        position on the table.
+        """Construct a new Table as a copy of the selected rows (position indexing).
 
-        :param source: an existing table
-        :type source: Orange.data.Table
-        :param row_indices: indices (positional) of the rows to include
-        :type row_indices: a slice or a sequence
-        :return: a new table
-        :rtype: Orange.data.Table
+        Parameters
+        ----------
+        source : TableBase
+            The source Table.
+        row_indices
+            The locations of the selected rows in any of the standard formats.
+        Returns
+        -------
+        TableBase
+            A subset of the original Table as a copy.
         """
         # don't just plain copy here: in case of subclasses of Table, a plain table is passed
         # through the constructor and from_table to here, and expects to be converted
@@ -176,22 +211,26 @@ class TableBase:
 
     @classmethod
     def from_table(cls, target_domain, source_table, row_indices=slice(None)):
-        """
-        Create a new table from selected columns and/or rows of an existing
-        one. The columns are chosen using a domain. The domain may also include
-        variables that do not appear in the source table; they are computed
-        from source variables if possible.
+        """Create a new Table as a conversion from the source Table's domain to the new one.
 
-        The resulting data may be a view or a copy of the existing data.
+        Row indices may be given to select a subset at the same time.
+        The new domain defines the columns of the new table - new columns are computed
+        on the fly from source columns whenever appropriate.
 
-        :param target_domain: the domain for the new table
-        :type target_domain: Orange.data.Domain
-        :param source_table: the source table
-        :type source_table: Orange.data.Table
-        :param row_indices: indices of the rows to include
-        :type row_indices: a slice or a sequence
-        :return: a new table
-        :rtype: Orange.data.Table
+        Parameters
+        ----------
+        target_domain : Domain
+            The new domain. Defines the resulting columns and the transformation
+            from the original Table to the new one.
+        source_table : TableBase
+            The source table.
+        row_indices : slice | list[int] | list[bool], optional
+            The row indices to select a subset of the resulting table.
+
+        Returns
+        -------
+        TableBase
+            A table converted from the source domain to the target domain.
         """
         # if a series is passed, convert it to a frame
         if isinstance(source_table, SeriesBase):
@@ -249,6 +288,25 @@ class TableBase:
 
     @classmethod
     def from_dataframe(cls, df, domain=None, reindex=False, weights=None):
+        """Create a new Table from a pandas DataFrame.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The source pandas DataFrame.
+        domain : Domain, optional, default None
+            The domain to use for the result. If None, the domain is inferred.
+        reindex : bool, default False
+            Whether to override the original DataFrame's index with a new one.
+        weights : anything TableBase.set_weights accepts, optional, default None
+            The weights to use on the resulting DataFrame.
+
+        Returns
+        -------
+        TableBase
+            A new Table generated from the source DataFrame.
+        """
+
         """
         Convert a pandas.DataFrame object to a Table.
         This can infer infers column variable types and roles, reindex and set weights.
@@ -272,7 +330,8 @@ class TableBase:
 
     @classmethod
     def _from_data_inferred(cls, X_or_data, Y=None, meta=None, infer_roles=True):
-        """
+        """Create a Table and infer its domain.
+
         Create a Table and infer its domain.
 
         X_or_data, Y and meta can be instances of Table, DataFrame,
@@ -287,10 +346,26 @@ class TableBase:
         if given a numpy matrix of dtype object (e.g. mixed numbers and strings),
         pandas will interpret all columns as objects, and so will we.
 
-        Return a new Table with the inferred domain.
         Where possible, column names are preserved form the input, otherwise they are named
         "Feature <n>", "Class <n>", "Target <n>" or "Meta <n>".
         The domain is marked as anonymous.
+
+        Parameters
+        ----------
+        X_or_data : np.ndarray | pd.DataFrame
+            Either the X component of the data as a numpy ndarray or a complete pandas DataFrame.
+            If this is the only data argument, the column roles are also inferred.
+        Y : np.ndarray, optional, default None
+            The Y component of the data. Always assigned to Y in the result.
+        meta : np.ndarray, optional, default None
+            The meta attributes of the data. Always assigned to metas in the result.
+        infer_roles : bool, optional, default True
+            Whether to enable column role inference.
+
+        Returns
+        -------
+        TableBase
+            Return a new Table with the inferred domain.
         """
         role_vars = {'x': [], 'y': [], 'meta': []}
         result = cls()
@@ -329,23 +404,28 @@ class TableBase:
 
     @classmethod
     def from_numpy(cls, domain, X, Y=None, metas=None, weights=None):
-        """
-        Construct a table from numpy arrays with the given domain. The number
-        of variables in the domain must match the number of columns in the
-        corresponding arrays. All arrays must have the same number of rows.
-        Arrays may be of different numpy types, and may be dense or sparse.
+        """Construct a table from numpy arrays with the given domain.
 
-        :param domain: the domain for the new table
-        :type domain: Orange.data.Domain
-        :param X: array with attribute values
-        :type X: np.array
-        :param Y: array with class values
-        :type Y: np.array
-        :param metas: array with meta attributes
-        :type metas: np.array
-        :param weights: array with weights
-        :type weights: np.array
-        :return:
+        The number of variables in the domain must match the number of columns in the
+        corresponding arrays. All arrays must have the same number of rows.
+
+        Parameters
+        ----------
+        domain : Domain
+            If None, the domain is inferred from the data. Otherwise, specifies
+            the column assignment to the new Table.
+        X : np.ndarray
+            The X component of the data (or undetermined, depending on the domain).
+        Y : np.ndarray, optional, default None
+            The Y component of the data.
+        metas : np.ndarray, optional, default None
+            The meta attributes of the data.
+        weights : anything TableBase.set_weights accepts, optional, default None
+            The weights to use for the resulting Table.
+        Returns
+        -------
+        TableBase
+            A new Table constructed from the given data.
         """
         def correct_shape(what):
             if what is None or len(what.shape) == 2:
@@ -397,8 +477,22 @@ class TableBase:
 
     @classmethod
     def from_list(cls, domain, rows, weights=None):
-        """
-        Construct a table from a list of rows and optionally some weights.
+        """Construct a table from a list of rows.
+
+        Parameters
+        ----------
+        domain : Domain
+            The domain to use for the data.
+        rows : list[list[obj]]
+            A list of rows. Must be rectangular with the number of columns
+            matching the columns in the domain.
+        weights : anything TableBase.set_weights accepts, optional, default None
+            The weights to use for the resulting Table.
+
+        Returns
+        -------
+        TableBase
+            A Table constructed from the given data.
         """
         if weights is not None and len(rows) != len(weights):
             raise ValueError("Mismatching number of instances and weights.")
@@ -433,13 +527,17 @@ class TableBase:
 
     @classmethod
     def from_file(cls, filename):
-        """
-        Read a data table from a file. The path can be absolute or relative.
+        """Read a Table from a file.
 
-        :param filename: File name
-        :type filename: str
-        :return: a new data table
-        :rtype: Orange.data.Table
+        Parameters
+        ----------
+        filename : str
+            The relative or absolute filename for the file from which to read the data.
+
+        Returns
+        -------
+        TableBase
+            A table constructed from the given file.
         """
         from Orange.data.io import FileFormat
         from Orange.data import dataset_dirs
@@ -459,6 +557,18 @@ class TableBase:
 
     @classmethod
     def from_url(cls, url):
+        """Read a table from a URL.
+
+        Parameters
+        ----------
+        url : str
+            The URL to read the table from.
+
+        Returns
+        -------
+        TableBase
+            A table constructed from the given URL.
+        """
         from Orange.data.io import UrlReader
         reader = UrlReader(url)
         data = reader.read()
@@ -467,11 +577,31 @@ class TableBase:
         return data
 
     def _to_numpy(self, X=False, Y=False, meta=False, writable=False):
-        """
-        Exports a numpy matrix. The order is always X, Y, meta. Always 2D.
+        """Export a transformed numpy matrix.
+
+        The order is always X, Y, meta. Always 2D.
         The columns are in the same order as in Table.domain._.
         If writable == False (default), the numpy writable flag is set to false.
-            This means write operations on this array will loudly fail.
+        This means write operations on this array will loudly fail.
+
+        This is not the same as .values, but instead transforms the attributes to
+        numeric values (where possible); e.g. uses var.values indices instead of
+        actual descriptors.
+
+        Parameters
+        ----------
+        X : bool, default False
+            Whether to include the domain attributes in the result.
+        Y : bool, default False
+            Whether to include the domain class variables in the result.
+        meta : bool, default False
+            Whether to include the domain metas in the result.
+        writable : bool, default False
+            Whether to mark the resulting domain as writable.
+        Returns
+        -------
+        np.ndarray
+            The numpy array of the selected and transformed table data.
         """
         cols = []
         cols += self.domain.attributes if X else []
@@ -500,33 +630,50 @@ class TableBase:
 
     @property
     def X(self):
+        """Return a read-only 2D numpy array of X.
+
+        The columns are in the same order as the columns in Table.domain.attributes.
+
+        Returns
+        -------
+        np.ndarray
+        """
+
         """
         Return a read-only numpy matrix of X.
-        The columns are in the same order as the columns in Table.domain.attributes.
+
         """
         return self._to_numpy(X=True)
 
     @property
     def Y(self):
-        """
-        Return a read-only numpy matrix of Y.
+        """Return a read-only numpy array of Y.
+
         If there is only one column, a one-dimensional array is returned. Otherwise 2D.
         The columns are in the same order as the columns in Table.domain.class_vars.
+
+        Returns
+        -------
+        np.ndarray
         """
         result = self._to_numpy(Y=True)
         return result[:, 0] if result.shape[1] == 1 else result
 
     @property
     def metas(self):
-        """
-        Return a read-only numpy matrix of metas.
+        """Return a read-only 2D numpy array of metas.
+
         The columns are in the same order as the columns in Table.domain.metas.
+
+        Returns
+        -------
+        np.ndarray
         """
         return self._to_numpy(meta=True)
 
     @property
     def weights(self):
-        """Get the weights as a numpy array."""
+        """Get the weights as a 1D numpy array."""
         val = self[self._WEIGHTS_COLUMN]
         if hasattr(val, 'values'):
             return val.values
@@ -535,12 +682,22 @@ class TableBase:
             return np.atleast_1d(val)
 
     def set_weights(self, weight):
-        """
-        Set the weights for the instances in this table.
-        If a number, weights to set to that value.
-        If a string, weights are set to whatever the column with that name's values are,
+        """Set the weights for the instances in this table.
+
+        Parameters
+        ----------
+        weight : Number or str or Sequence or np.ndarray or pd.Series
+            If a number, all weights are set to that value.
+            If a string, weights are set to whatever the column with that name's values are,
             but only if those values are all numbers and are not NA/NaN.
-        If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
+            If a sequence of (non-NA/NaN) numbers, set those values as the sequence.
+
+        Raises
+        ------
+        ValueError
+            If weights are nan, the column does not exist or the sequence lenght is mismatched.
+        TypeError
+            If an unrecognized type is passed.
         """
         if isinstance(weight, Number):
             if np.isnan(weight):
@@ -568,9 +725,22 @@ class TableBase:
 
     @classmethod
     def _new_id(cls, num=1, force_list=False):
-        """
-        Generate new globally unique numbers.
-        Generate a single number or a list of them, if specified.
+        """Generate new application-wide globally-unique numbers.
+
+        Parameters
+        ----------
+        num : int, optional, default 1
+            The number of new IDs to generate.
+        force_list : bool, optional, default False
+            Whether to always force the result to be a list,
+            even if only one number is generated.
+
+        Returns
+        -------
+        int or list[int]
+            New globally-unique identifiers.
+            If generating a single number and not forcing into a list, output an integer.
+            Otherwise output a list of integers of len(num).
         """
         with cls._next_instance_lock:
             out = np.arange(cls._next_instance_id, cls._next_instance_id + num)
@@ -578,9 +748,9 @@ class TableBase:
             return out[0] if num == 1 and not force_list else out
 
     def _transform_discrete_values_to_descriptors(self):
-        """
-        Transform discrete variables given in descriptor index form
-        into actual descriptors.
+        """Transform discrete variables given in index form into descriptors.
+
+        The conversion is performed in-place.
         """
         for var in chain(self.domain.variables, self.domain.metas):
             if isinstance(var, DiscreteVariable):
@@ -594,8 +764,9 @@ class TableBase:
                     self[var.name] = self[var.name].apply(lambda v: var.values[int(v)])
 
     def _transform_discrete_into_categorical(self):
-        """
-        Transform discrete variables into pandas' categorical.
+        """Transform columns with discrete variables into pandas' categoricals.
+
+        The operation is performed in-place.
         This must be done after replacing null values because those aren't values,
         and also after transforming discretes to descriptors.
         """
@@ -604,16 +775,18 @@ class TableBase:
                 self[var.name] = pd.Categorical(self[var.name], categories=var.values, ordered=var.ordered)
 
     def _transform_timevariable_into_datetime(self):
+        """Transform columns with TimeVariables into pandas' datetime columns (in-place)."""
         for var in chain(self.domain.variables, self.domain.metas):
             if isinstance(var, TimeVariable):
                 self[var.name] = var.column_to_datetime(self[var.name])
 
     def save(self, filename):
-        """
-        Save a data table to a file. The path can be absolute or relative.
+        """Save a Table to a file.
 
-        :param filename: File name
-        :type filename: str
+        Parameters
+        ----------
+        filename : str
+            The destination file path, absolute or relative.
         """
         ext = os.path.splitext(filename)[1]
         from Orange.data.io import FileFormat
@@ -663,9 +836,19 @@ class TableBase:
         self.drop(self.index, inplace=True)
 
     def append(self, other, ignore_index=False, verify_integrity=False):
-        """
-        Append a new row to the table, returning a new Table.
-        row can be a list-like of a single row, TableSeries (a single row slice) or a Table.
+        """Append a new row to a table, returning a new Table.
+
+        Parameters
+        ----------
+        other : list[obj] | SeriesBase | TableBase.
+            A list-like of a single row, TableSeries (a single row slice) or a Table.
+        ignore_index : bool, optional, default False
+            Provided for pandas API compatibility, ignored.
+        verify_integrity : bool, optional, default False
+            Provided for pandas API compatibility, ignored.
+        Notes
+        -----
+        Overrides the pandas append functionality!
         """
         if not isinstance(other, pd.DataFrame):
             other = pd.DataFrame(data=[other],
@@ -701,17 +884,36 @@ class TableBase:
 
     @classmethod
     def concatenate(cls, tables, axis=1, reindex=True, colstack=True, rowstack=False):
-        """
-        Concatenate tables by rows (axis = 0) or columns (axis = 1).
-        If concatenating by columns, all tables must be the same length and
-            no two columns may have the same name.
-        If concatenating by rows, perform an outer join if rowstack == False, otherwise stack.
-        By default, this performs reindexing: all resulting rows will be given a new index.
-        If reindex == False
-            - when concatenating rows: some rows may have the same index.
-            - when concatenating columns: the index of the first table is preserved.
-        If colstack == False, perform an outer join instead of column stacking.
-        The resulting table will always retain the properties (name etc.) of the first table.
+        """Concatenate tables by rows or columns.
+
+        The resulting table will always retain the properties (name etc.) of the first table in the sequence.
+
+        Parameters
+        ----------
+        tables : list[TableBase]
+            A list of tables to concatenate.
+        axis : int, optional, default 1
+            The axis by which to concatenate.
+            Axis 0 are rows, axis 1 are columns.
+        reindex : bool, optional, default True
+            Whether to generate a new index for the resulting Table.
+            If reindex is False
+             - when concatenating rows: some rows may have the same index
+             - when concatenating columns: the index of the first table is preserved
+        colstack : bool, optional, default True
+            Whether to stack columns when concatenating by columns.
+            No two columns may have the same name.
+            If colstack is True, the number of rows must match on all tables.
+            If colstack is False, perform an outer join instead.
+        rowstack : bool, optional, default False
+            Whether to stack rows when concatenating by rows.
+            If rowstack is True, the number of columns must match on all tables.
+            If rowstack is False, perform an outer join on the columns with NA values
+            in places without data.
+        Returns
+        -------
+        TableBase
+            The concatenated table.
         """
         def unique_preserve_order(iterable):
             s = set()
@@ -748,7 +950,6 @@ class TableBase:
             new_index = cls._new_id(len(result))
             result.index = new_index
         elif axis == CONCAT_COLS:
-
             # check for same name
             columns = [v for v in flatten([list(t.columns) for t in tables]) if v != cls._WEIGHTS_COLUMN]
             if len(set(columns)) != len(columns):
@@ -783,8 +984,17 @@ class TableBase:
         return cls.from_dataframe(result, new_domain)
 
     def _transfer_properties(self, from_table, transfer_domain=False):
-        """
-        Transfer properties (such as the name) to this table.
+        """Transfer properties (such as the name) to this table.
+
+        Parameters
+        ----------
+        from_table : TableBase
+            The table to source the attributes from.
+        transfer_domain : bool, optional, default False
+            Whether to transfer the domain.
+
+        Notes
+        -----
         This should normally not be used, but it is used when these properties
         are not automatically transferred on manipulation, in particular when using pd.concat.
         """
@@ -793,11 +1003,12 @@ class TableBase:
                 setattr(self, name, getattr(from_table, name))
 
     def approx_len(self):
+        """Return the approximate length of the table."""
         return len(self)
 
     def exact_len(self):
+        """Return the exact length of the table."""
         return len(self)
-
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
@@ -809,9 +1020,7 @@ class TableBase:
         return self[self.domain.class_vars].isnull().any().any()
 
     def iterrows(self):
-        """
-        An override to return TableSeries instead of Series (pandas doesn't do that by default).
-        """
+        """An override to return TableSeries instead of Series (pandas doesn't do that by default)."""
         # super here is the next item in the MRO, e.g. pd.DataFrame or pd.SparseDataFrame
         gen = super().iterrows()
         for item in gen:
@@ -819,10 +1028,10 @@ class TableBase:
 
     @deprecated
     def checksum(self, include_metas=True):
+        """Return a checksum over X, Y, metas and W."""
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object
         # (after pickling and unpickling such arrays, checksum changes)
         # Why, and should we fix it or remove it?
-        """Return a checksum over X, Y, metas and W."""
         cs = zlib.adler32(np.ascontiguousarray(self.X))
         cs = zlib.adler32(np.ascontiguousarray(self.Y), cs)
         if include_metas:
@@ -831,22 +1040,31 @@ class TableBase:
         return cs
 
     def shuffle(self):
-        """
-        Shuffle the rows of the table.
-        Return a new table (with the same index).
+        """Shuffle the rows of the table.
+
+        Returns
+        -------
+        TableBase
+            A new table with the same index, but the rows shuffled.
         """
         return self.sample(frac=1)
 
     @deprecated('pandas-style column access: t[["colname1", "colname2"]]')
     def get_column_view(self, index):
-        """
-        Return a vector - as a view, not a copy - with a column of the table,
-        and a bool flag telling whether this column is sparse. Note that
-        vertical slicing of sparse matrices is inefficient.
+        """Get a single column view of the table.
 
-        :param index: the index of the column
-        :type index: int, str or Orange.data.Variable
-        :return: (one-dimensional numpy array, sparse)
+        Return a vector - as a view, not a copy - with a column of the table,
+        and a bool flag telling whether this column is sparse.
+
+        Parameters
+        ----------
+        index : int | str
+            The index of the column or the column name.
+
+        Returns
+        -------
+        (np.ndarray, bool)
+            A tuple of the column values and a flag indicating the sparsity of the column.
         """
         if isinstance(index, str):
             col = self[index]
@@ -855,13 +1073,24 @@ class TableBase:
         return col.values, isinstance(col, pd.SparseSeries)
 
     def _compute_basic_stats(self, columns=None, include_metas=False):
-        """
-        Compute basic stats for each of the columns.
+        """Compute basic stats for each of the columns.
 
+        Parameters
+        ----------
+        columns : list[str | Variable], optional, default None
+            A list of columns to compute the stats for, None selects all.
+        include_metas : bool, optional, default False
+            Whether to include meta attributes in the statistics computations.
+
+        Returns
+        -------
+        np.ndarray
+            The resulting array has len(columns) rows, where each row
+            contains (min, max, mean, var, #nans, #non-nans) in that order.
+
+        Notes
+        -----
         This is a legacy method and should be avoided and/or replaced where possible.
-
-        :param columns: columns to calculate stats for. None = all of them
-        :return: A np.ndarray of (min, max, mean, var, #nans, #non-nans) rows for each column.
         """
         selected_columns = columns
         if columns is None:
@@ -899,18 +1128,24 @@ class TableBase:
         return res.values.T
 
     def _compute_distributions(self, columns=None):
-        """
-        Compute distribution of values for the given columns.
+        """Compute the distribution of values for the given columns.
 
-        :param columns: columns to calculate distributions for
-        :return: a list of distribution tuples. Type of distribution depends on the
-                 type of the column:
-                   - for discrete, distribution is a 1d np.array containing the
-                     occurrence counts for each of the values.
-                   - for continuous, distribution is a 2d np.array with
-                     distinct (ordered) values of the variable in the first row
-                     and their counts in second.
-                 The second element of each tuple is the number of NA values of the column.
+        Parameters
+        ----------
+        columns : list[str | Variable], optional, default None
+            A list of columns to compute the stats for, None selects all.
+
+        Returns
+        -------
+        list[(np.ndarray, int)]
+            A list of distribution tuples. Type of distribution depends on the
+            type of the column:
+             - for discrete, distribution is a 1d np.array containing the
+               occurrence counts for each of the values.
+             - for continuous, distribution is a 2d np.array with
+               distinct (ordered) values of the variable in the first row
+               and their counts in second.
+            The second element of each tuple is the number of NA values of the column.
         """
         if columns is None:
             columns = self.domain.attributes + self.domain.class_vars + self.domain.metas
@@ -931,43 +1166,46 @@ class TableBase:
         return distributions
 
     def _compute_contingency(self, col_vars=None, row_var=None):
-        """
-        Compute contingency matrices for one or more discrete or
-        continuous variables against the specified discrete variable.
+        """Compute contingency matrices for one or more discrete or continuous variables
+        against the specified discrete variable.
 
-        The result is a tuple of (list of contingencies, num missing row_var values).
+        Parameters
+        ----------
+        col_vars : list[str | Variable], optional, default None
+            The variables whose values will correspond to columns in the result items.
+            If None, selects all attributes from the domain.
+        row_var : str | DiscreteVariable, optional, default None
+            The variable whose values will correspond to rows in the result.
+            Limited to discrete variables.
 
-        The list of contingencies contains a pair for each column variable.
-        The first element contains the contingencies (this changes depending on the variable type; see below),
-        and the second element is a 1D numpy array, where each element is the count of missing
-        column variable elements for the respective row variable value.
+        Returns
+        -------
+        (list[(np.ndarray | (list[Number], np.ndarray), np.ndarray)], int)
+            The result is a tuple of (list of contingencies, num missing row_var values).
 
-        The format of contingencies returned depends on the variable type:
-        - for discrete variables, it is a numpy array, where
-          element (i, j) contains the count of rows with the i-th value of the
-          row variable and the j-th value of the column variable.
-        - for continuous variables, the contingency is a list of two arrays,
-          where the first array contains ordered distinct values of the
-          column_variable and the element (i, j) of the second array
-          contains count of rows with i-th value of the row variable
-          and j-th value of the ordered column variable.
+            The list of contingencies contains a pair for each column variable.
+            The first element contains the contingencies (this changes depending on the variable type; see below),
+            and the second element is a 1D numpy array, where each element is the count of missing
+            column variable elements for the respective row variable value.
 
-        The final output structure looks like:
-        result (tuple)
-         |__contingencies (list of len(col_vars))
-         |   |__contingency, one of
-         |   |   |__2D np.array
-         |   |   |__tuple(sorted list of continuous values, 2D np.array)
-         |   |__1D np.array (missing column elements for each row value)
-         |__num missing row_var values (int)
+            The format of contingencies returned depends on the variable type:
+            - for discrete variables, it is a numpy array, where
+              element (i, j) contains the count of rows with the i-th value of the
+              row variable and the j-th value of the column variable.
+            - for continuous variables, the contingency is a list of two arrays,
+              where the first array contains ordered distinct values of the
+              column_variable and the element (i, j) of the second array
+              contains count of rows with i-th value of the row variable
+              and j-th value of the ordered column variable.
 
-        :param col_vars: variables whose values will correspond to columns of
-            contingency matrices
-        :type col_vars: list of ints, variable names or descriptors of type
-            :obj:`Orange.data.Variable`
-        :param row_var: a discrete variable whose values will correspond to the
-            rows of contingency matrices
-        :type row_var: int, variable name or :obj:`Orange.data.DiscreteVariable`
+            The final output structure looks like:
+            result (tuple)
+             |__contingencies (list of len(col_vars))
+             |   |__contingency, one of
+             |   |   |__2D np.array
+             |   |   |__tuple(sorted list of continuous values, 2D np.array)
+             |   |__1D np.array (missing column elements for each row value)
+             |__num missing row_var values (int)
         """
         if row_var is None:
             row_var = self.domain.class_var
@@ -1007,14 +1245,17 @@ class TableBase:
 
     @property
     def density(self):
+        """Return the density of the current table."""
         raise NotImplementedError
 
     @property
     def is_sparse(self):
+        """Return True if the current table is sparse."""
         raise NotImplementedError
 
     @property
     def is_dense(self):
+        """Return True if the current table is dense."""
         return not self.is_sparse
 
 
