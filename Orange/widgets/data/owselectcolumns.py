@@ -642,6 +642,23 @@ class OWSelectAttributes(widget.OWWidget):
             self.send("Data", None)
             self.send("Features", None)
 
+    def init_code_gen(self, load_settings=True):
+        def run():
+            domain = Domain(attributes, class_var, metas)
+            newdata = input_data.from_table(domain, input_data)
+
+        gen = self.code_gen()
+        gen.add_import([widget.AttributeList, Orange.data.ContinuousVariable,
+                        Orange.data.StringVariable, Orange.data.DiscreteVariable,
+                        Orange.data.Domain])
+        gen.add_init("attributes", repr(list(self.used_attrs)), iscode=True)
+        gen.add_init("class_var", repr(list(self.class_attrs)), iscode=True)
+        gen.add_init("metas", repr(list(self.meta_attrs)), iscode=True)
+        gen.set_main(run)
+        gen.add_output("Data", "newdata", iscode=True)
+        gen.add_output("Features", "AttributeList(attributes)", iscode=True)
+        return gen
+
     def reset(self):
         if self.data is not None:
             self.available_attrs[:] = []
