@@ -388,11 +388,15 @@ class OWSelectRows(widget.OWWidget):
                     filter = data_filter.FilterDiscrete(attr_index, f_values)
                 conditions.append(filter)
 
+            print(repr(conditions))
+
             if conditions:
                 self.filters = data_filter.Values(conditions)
                 matching_output = self.filters(self.data)
                 self.filters.negate = True
                 non_matching_output = self.filters(self.data)
+            else:
+                self.filters = None
 
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name
@@ -419,6 +423,41 @@ class OWSelectRows(widget.OWWidget):
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
 
         self.update_info(matching_output, self.data_out_rows, "Out: ")
+
+    def init_code_gen(self):
+        # filter may be negated during unmatched data calculation
+        if self.filters is not None:
+            self.filters.negate = False
+
+        def run():
+            if filters is not None:
+                matching_output = filters(data)
+                filters.negate = True
+                unmatched_data = filters(data)
+            else:
+                matching_output = input_data
+                unmatched_data = None
+
+            if purge_attrs or purge_classes:
+                attr_flags = sum([Remove.RemoveConstant * purge_attrs,
+                                  Remove.RemoveUnusedValues * purge_attrs])
+                class_flags = sum([Remove.RemoveConstant * purge_classes,
+                                  Remove.RemoveUnusedValues * purge_classes])
+                # same settings used for attributes and meta features
+                remover = Remove(attr_flags, class_flags, attr_flags)
+
+                matching_output = remover(matching_output)
+                unmatched_data = remover(unmatched_data)
+
+        gen = self.code_gen()
+        gen.add_import([Remove, data_filter.Values, data_filter.FilterContinuous])
+        gen.add_init("filters", repr(self.filters), iscode=True)
+        gen.add_init("purge_attrs", self.purge_attributes)
+        gen.add_init("purge_classes", self.purge_classes)
+        gen.set_main(run)
+        gen.add_output("Matching Data", "matching_output", iscode=True)
+        gen.add_output("Unmatched Data", "unmatched_data", iscode=True)
+        return gen
 
     def update_info(self, data, lab1, label):
         def sp(s, capitalize=True):
