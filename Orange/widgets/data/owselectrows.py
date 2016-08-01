@@ -389,10 +389,10 @@ class OWSelectRows(widget.OWWidget):
                 conditions.append(filter)
 
             if conditions:
-                filters = data_filter.Values(conditions)
-                matching_output = filters(self.data)
-                filters.negate = True
-                non_matching_output = filters(self.data)
+                self.filters = data_filter.Values(conditions)
+                matching_output = self.filters(self.data)
+                self.filters.negate = True
+                non_matching_output = self.filters(self.data)
 
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name

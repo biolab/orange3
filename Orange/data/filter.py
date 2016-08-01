@@ -224,6 +224,13 @@ class Values(Filter):
             sel = np.logical_not(sel)
         return data[sel]
 
+    def __repr__(self):
+        return "Values({}{}{})".format(
+            repr(self.conditions),
+            ", conjunction=False" if not self.conjunction else "",
+            ", negate=True" if self.negate else ""
+        )
+
 
 class ValueFilter(Filter):
     """
@@ -377,7 +384,13 @@ class FilterContinuous(ValueFilter):
             return "{} is defined".format(column)
         return "invalid operator"
 
-    __repr__ = __str__
+    def __repr__(self):
+        return "FilterContinuous({}, {}{}{})".format(
+            repr(self.column),
+            repr(self.oper),
+            ", " + repr(self.ref) if self.ref is not None else "",
+            ", " + repr(self.max) if self.max is not None else ""
+        )
 
 
     # For PyCharm:
