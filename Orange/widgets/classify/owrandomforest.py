@@ -76,10 +76,11 @@ class OWRandomForest(OWBaseLearner):
         return self.LEARNER(preprocessors=self.preprocessors, **common_args)
 
     def check_data(self):
+        self.Error.not_enough_features.clear()
         if super().check_data():
             n_features = len(self.data.domain.attributes)
             if self.use_max_features and self.max_features > n_features:
-                self.Error.data_error(n_features)
+                self.Error.not_enough_features(n_features)
                 self.valid_data = False
         return self.valid_data
 
