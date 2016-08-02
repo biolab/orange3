@@ -41,7 +41,7 @@ score_meta = namedtuple(
 SCORES = [
     score_meta("Information Gain", "Inf. gain", score.InfoGain),
     score_meta("Gain Ratio", "Gain Ratio", score.GainRatio),
-    score_meta("Gini Gain", "Gini", score.Gini),
+    score_meta("Gini Decrease", "Gini", score.Gini),
     score_meta("ANOVA", "ANOVA", score.ANOVA),
     score_meta("Chi2", "Chi2", score.Chi2),
     score_meta("Univariate Linear Regression", "Univar. Lin. Reg.", score.UnivariateLinearRegression),
