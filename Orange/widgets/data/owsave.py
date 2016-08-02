@@ -87,6 +87,17 @@ class OWSave(widget.OWWidget):
             except Exception as errValue:
                 self.error(str(errValue))
 
+    def init_code_gen(self):
+        def run():
+            wrier.write(filename, input_data)
+
+        self.save_file_as()
+        gen = self.code_gen()
+        gen.add_init("filename", self.filename)
+        gen.add_init("writer", repr(self.writer), iscode=True)
+        gen.set_main(run)
+        return gen
+
 
 if __name__ == "__main__":
     import sys
