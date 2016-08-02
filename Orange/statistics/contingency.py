@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from Orange.data import Table, Variable, TableBase
+from Orange.data import Variable, TableBase
 
 
 def _get_variable(variable, dat, attr_name,
@@ -143,11 +143,13 @@ class Discrete(np.ndarray):
         super().__setitem__(index, value)
 
     def normalize(self, axis=None):
-        t = np.sum(self, axis=axis)
+        t = np.array(np.sum(self, axis=axis))
         if t > 1e-6:
             self[:] /= t
             if axis is None or axis == 1:
-                self.unknowns /= t
+                # cannot do this in-place, because self.unknowns is dtype int
+                # see https://github.com/numpy/numpy/issues/6464
+                self.unknowns = self.unknowns / t
 
     def __reduce__(self):
         return create_discrete, (Discrete, np.copy(self), self.col_variable, self.row_variable, self.unknowns)
@@ -244,7 +246,7 @@ def get_contingency(dat, col_variable, row_variable=None, unknowns=None, unknown
     elif variable.is_continuous:
         return Continuous(dat, col_variable, row_variable, unknowns, unknown_rows)
     else:
-        raise TypeError("cannot compute distribution of '%s'" % type(variable).__name__)
+        raise TypeError("Cannot compute distribution of '%s'" % type(variable).__name__)
 
 
 def get_contingencies(dat, skip_discrete=False, skip_continuous=False):

@@ -242,3 +242,30 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],
                                               [0, 0, 2], [0, 1, 0]])
 
+    def test_discrete_normalize(self):
+        cont1 = contingency.Discrete(self.zoo, 0)
+        cont2 = contingency.Discrete(self.zoo, 0)
+        cont1.normalize()
+        np.testing.assert_array_equal(cont1, cont2 / np.sum(cont2))
+
+    def test_continuous_normalize(self):
+        d = data.Table("iris")
+        cont = contingency.Continuous(d, "sepal width")
+        # assert not throws
+        cont.normalize()
+        cont.normalize(axis=1)
+        with self.assertRaises(ValueError):
+            cont.normalize(axis=0)
+
+    def test_setitem_not_implemented(self):
+        d = data.Table("iris")
+        cont = contingency.Continuous(d, "sepal width")
+        with self.assertRaises(NotImplementedError):
+            cont[1] = [1, 34, 4, 3, 1]
+
+    def test_equality(self):
+        d1 = data.Table("iris")
+        cont1 = contingency.Continuous(d1, "sepal width")
+        d2 = data.Table("iris")
+        cont2 = contingency.Continuous(d2, "sepal width")
+        self.assertTrue(cont1 == cont2)
