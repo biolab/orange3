@@ -162,11 +162,12 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     def __new__(cls, *args, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
-        WidgetMessagesMixin.__init__(self)
 
         stored_settings = kwargs.get('stored_settings', None)
         if self.settingsHandler:
             self.settingsHandler.initialize(self, stored_settings)
+
+        WidgetMessagesMixin.__init__(self)
 
         self.signalManager = kwargs.get('signal_manager', None)
         self.__env = _asmappingproxy(kwargs.get("env", {}))

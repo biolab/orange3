@@ -459,6 +459,9 @@ class OWHeatMap(widget.OWWidget):
         row_clust = Msg("{}")
         col_clust = Msg("{}")
 
+    class Error(widget.OWWidget.Error):
+        no_continuous = Msg("No continuous feature columns")
+
     def __init__(self):
         super().__init__()
 
@@ -684,7 +687,7 @@ class OWHeatMap(widget.OWWidget):
                        data.domain.metas),
                 data)
             if not data.domain.attributes:
-                self.error("No continuous feature columns")
+                self.Error.no_continuous()
                 input_data = data = None
             else:
                 self.Information.discrete_ignored(
@@ -1292,8 +1295,12 @@ class OWHeatMap(widget.OWWidget):
             col_clust_msg = "Column clustering was disabled due to the " \
                             "input matrix being to big"
 
-        self.Information.row_clust(row_clust_msg)
-        self.Information.col_clust(col_clust_msg)
+        self.Information.row_clust.clear()
+        self.Information.col_clust.clear()
+        if row_clust_msg:
+            self.Information.row_clust(row_clust_msg)
+        if col_clust_msg:
+            self.Information.col_clust(col_clust_msg)
 
         self.sort_rows = sort_rows
         self.sort_columns = sort_cols
