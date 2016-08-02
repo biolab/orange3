@@ -159,6 +159,33 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
             ans.add(int(disc.random()))
         self.assertEqual(ans, set(range(len(d.domain.class_var.values))))
 
+    def test_math_ops(self):
+        d = Table("zoo")
+        disc = distribution.Discrete(d, "type")
+        disc_array = np.array(disc)
+        disc_unks = disc.unknowns
+        np.testing.assert_array_equal(disc + 2, disc_array + 2)
+        np.testing.assert_array_equal(disc - 2, disc_array - 2)
+        np.testing.assert_array_equal(disc * 2, disc_array * 2)
+        np.testing.assert_array_equal(disc / 2, disc_array / 2)
+        np.testing.assert_almost_equal((disc + 2).unknowns, disc.unknowns)
+        np.testing.assert_almost_equal((disc - 2).unknowns, disc.unknowns)
+        np.testing.assert_almost_equal((disc * 2).unknowns, disc.unknowns * 2)
+        np.testing.assert_almost_equal((disc / 2).unknowns, disc.unknowns / 2)
+
+        disc += 2
+        np.testing.assert_array_equal(disc, disc_array + 2)
+        np.testing.assert_almost_equal(disc.unknowns, disc_unks)
+        disc -= 2
+        np.testing.assert_array_equal(disc, disc_array)
+        np.testing.assert_almost_equal(disc.unknowns, disc_unks)
+        disc *= 2
+        np.testing.assert_array_equal(disc, disc_array * 2)
+        np.testing.assert_almost_equal(disc.unknowns, disc_unks * 2)
+        disc /= 2
+        np.testing.assert_array_equal(disc, disc_array)
+        np.testing.assert_almost_equal(disc.unknowns, disc_unks)
+
 
 class Distribution_ContinuousTestCase(unittest.TestCase):
     @classmethod
@@ -226,6 +253,12 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
             ans.add(v)
         self.assertGreater(len(ans), 10)
 
+    def test_min_max(self):
+        t = self.iris
+        disc = distribution.Continuous(t, "petal length")
+        np.testing.assert_almost_equal(disc.min(), t["petal length"].min())
+        np.testing.assert_almost_equal(disc.max(), t["petal length"].max())
+
 
 class TestClassDistribution(unittest.TestCase):
     def test_class_distribution(self):
@@ -237,7 +270,8 @@ class TestClassDistribution(unittest.TestCase):
         np.testing.assert_array_equal(disc,
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
-class TestGetDistribution(unittest.TestCase):
+
+class TestDomainDistribution(unittest.TestCase):
     def test_get_distribution(self):
         d = Table("iris")
         cls = d.domain.class_var
@@ -259,8 +293,11 @@ class TestGetDistribution(unittest.TestCase):
         disc = distribution.get_distribution(d, "petal length")
         np.testing.assert_almost_equal(disc, freqs)
 
+    def test_on_string(self):
+        t = Table('zoo')
+        with self.assertRaises(TypeError):
+            disc = distribution.get_distribution(t, "name")
 
-class TestDomainDistribution(unittest.TestCase):
     def test_get_distributions(self):
         d = Table("iris")
         ddist = distribution.get_distributions(d)

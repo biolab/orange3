@@ -11,8 +11,7 @@ def _get_variable(dat, variable, expected_type=None, expected_name=""):
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
-            raise ValueError("variable does not match the variable"
-                             "in the data")
+            raise ValueError("Variable does not match the variable in the data.")
     elif hasattr(dat, "domain"):
         variable = dat.domain[variable]
     elif hasattr(dat, "variable"):
@@ -22,10 +21,9 @@ def _get_variable(dat, variable, expected_type=None, expected_name=""):
     if failed or (expected_type is not None
                   and not isinstance(variable, expected_type)):
         if isinstance(variable, data.Variable):
-            raise ValueError(
-                "expected %s variable not %s" % (expected_name, variable))
+            raise ValueError("Expected %s variable not %s." % (expected_name, variable))
         else:
-            raise ValueError("expected %s, not '%s'" %
+            raise ValueError("Expected %s, not '%s.'" %
                              (expected_type.__name__, type(variable).__name__))
     return variable
 
@@ -130,14 +128,14 @@ class Discrete(np.ndarray):
             self.unknowns *= other
         return self
 
-    def __div__(self, other):
-        s = super().__mul__(other)
+    def __truediv__(self, other):
+        s = super().__truediv__(other)
         if isinstance(other, Real):
             s.unknowns = self.unknowns / other
         return s
 
-    def __idiv__(self, other):
-        super().__imul__(other)
+    def __itruediv__(self, other):
+        super().__itruediv__(other)
         if isinstance(other, Real):
             self.unknowns /= other
         return self
@@ -167,8 +165,7 @@ class Continuous(np.ndarray):
     def __new__(cls, dat, variable=None, unknowns=None):
         if isinstance(dat, data.Table):
             if unknowns is not None:
-                raise TypeError(
-                    "incompatible arguments (data table and 'unknowns'")
+                raise TypeError("incompatible arguments (data table and 'unknowns'")
             return cls.from_data(variable, dat)
         if isinstance(dat, int):
             self = super().__new__(cls, (2, dat))
@@ -187,19 +184,7 @@ class Continuous(np.ndarray):
     @classmethod
     def from_data(cls, variable, data):
         variable = _get_variable(data, variable)
-        try:
-            dist, unknowns = data._compute_distributions([variable])[0]
-        except NotImplementedError:
-            col = data[:, variable]
-            dtype = col.dtype
-            if not "float" in dtype.name and "float" in col.dtype.name:
-                dtype = col.dtype.name
-            dist = np.empty((2, len(col)), dtype=dtype)
-            dist[0, :] = col
-            dist[1, :] = data.weights
-            dist.sort(axis=0)
-            dist = np.array(_orange.valuecount(dist))
-            unknowns = len(col) - dist.shape[1]
+        dist, unknowns = data._compute_distributions([variable])[0]
 
         self = super().__new__(cls, dist.shape)
         self[:] = dist
@@ -214,6 +199,9 @@ class Continuous(np.ndarray):
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
 
+    def __getitem__(self, item):
+        return super().__getitem__(item)
+
     def normalize(self):
         t = np.sum(self[1, :])
         if t > 1e-6:
@@ -226,7 +214,6 @@ class Continuous(np.ndarray):
         val = np.argmax(self[1, :])
         return self[0, val]
 
-    # TODO implement __getitem__ that will return a normal array, not Continuous
     def min(self):
         return self[0, 0]
 
@@ -258,7 +245,7 @@ def class_distribution(data):
     elif data.domain.class_vars:
         return [get_distribution(cls, data) for cls in data.domain.class_vars]
     else:
-        raise ValueError("domain has no class attribute")
+        raise ValueError("Domain has no class attribute.")
 
 
 def get_distribution(dat, variable, unknowns=None):
@@ -268,17 +255,16 @@ def get_distribution(dat, variable, unknowns=None):
     elif variable.is_continuous:
         return Continuous(dat, variable, unknowns)
     else:
-        raise TypeError("cannot compute distribution of '%s'" %
-                        type(variable).__name__)
+        raise TypeError("Cannot compute distribution of '%s.'" % type(variable).__name__)
 
 
-def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
+def get_distributions(dat, skip_discrete=False, skip_continuous=False):
     vars = dat.domain.variables
-    if skipDiscrete:
-        if skipContinuous:
+    if skip_discrete:
+        if skip_continuous:
             return []
         columns = [i for i, var in enumerate(vars) if var.is_continuous]
-    elif skipContinuous:
+    elif skip_continuous:
         columns = [i for i, var in enumerate(vars) if var.is_discrete]
     else:
         columns = None
@@ -304,17 +290,14 @@ def get_distributions_for_columns(data, columns):
     :param list columns:
         List of column indices into the `data.domain` (indices can be
         :class:`int` or instances of `Orange.data.Variable`)
-
     """
-    domain = data.domain
-
     try:
-        # Try the optimized code path (query the table|storage directly).
+        # Try the optimized code path (query the table directly).
         dist_unks = data._compute_distributions(columns)
     except NotImplementedError:
         # Use default slow(er) implementation.
         return [get_distribution(data, i) for i in columns]
     else:
         # dist_unkn is a list of (values, unknowns)
-        return [get_distribution(dist, domain[col], unknown)
+        return [get_distribution(dist, data.domain[col], unknown)
                 for col, (dist, unknown) in zip(columns, dist_unks)]
