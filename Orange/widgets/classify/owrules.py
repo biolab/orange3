@@ -73,12 +73,12 @@ class CustomRuleLearner(_RuleLearner):
             evaluator = WeightedRelativeAccuracyEvaluator()
         self.rule_finder.quality_evaluator = evaluator
 
-        # bottom-level search procedure (overfitting avoidance heuristics)
+        # bottom-level search procedure (over-fitting avoidance heuristics)
         min_rule_cov = min_covered_examples
         self.rule_finder.general_validator.min_covered_examples = min_rule_cov
         self.rule_finder.general_validator.max_rule_length = max_rule_length
 
-        # bottom-level search procedure (overfitting avoidance heuristics)
+        # bottom-level search procedure (over-fitting avoidance heuristics)
         self.rule_finder.significance_validator.default_alpha = default_alpha
         self.rule_finder.significance_validator.parent_alpha = parent_alpha
 
@@ -109,7 +109,7 @@ class CustomRuleLearner(_RuleLearner):
 
 class OWRuleLearner(OWBaseLearner):
     name = "Rule Induction"
-    description = ""
+    description = "Induce rules from data."
     icon = ""
     priority = 19
 
@@ -119,6 +119,7 @@ class OWRuleLearner(OWBaseLearner):
     storage_covers = ["exclusive", "weighted"]
     storage_measures = ["laplace", "entropy", "wracc"]
 
+    # default parameter values
     learner_name = Setting("CN2 rule inducer")
     rule_ordering = Setting(0)
     covering_algorithm = Setting(0)
@@ -131,9 +132,11 @@ class OWRuleLearner(OWBaseLearner):
     parent_alpha = Setting(1.0)
     checked_default_alpha = Setting(False)
     checked_parent_alpha = Setting(False)
-    base_rules = None
 
+    # actual widget elements
+    base_rules = None
     gamma_spin = None
+
     want_main_area = False
     resizing_enabled = False
     auto_apply = Setting(False)
@@ -180,7 +183,7 @@ class OWRuleLearner(OWBaseLearner):
             callback=self.settings_changed, alignment=Qt.AlignRight,
             controlWidth=80)
 
-        # bottom-level search procedure (overfitting avoidance bias)
+        # bottom-level search procedure (over-fitting avoidance bias)
         bottom_box = gui.vBox(widget=self.controlArea, box="Rule filtering")
 
         min_covered_examples_box = gui.spin(

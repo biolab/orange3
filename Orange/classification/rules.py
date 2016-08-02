@@ -5,6 +5,7 @@ from collections import namedtuple
 import bottleneck as bn
 import numpy as np
 from scipy.stats import chi2
+
 from Orange.data import Table, _contingency
 from Orange.classification import Learner, Model
 from Orange.preprocess.discretize import EntropyMDL
@@ -767,9 +768,11 @@ class RuleHunter:
         """
         Return a single rule.
 
-        The search is guided by the evaluators and controlled by the
-        validators. Search strategy creates and refines rules, whereas
-        search algorithm maneuvers through the search space.
+        The search is guided by search heuristics (evaluators) and
+        controlled by over-fitting avoidance heuristics (validators).
+        Search strategy creates and refines rules, whereas search
+        algorithm maneuvers through the search space towards a better
+        solution.
 
         Parameters
         ----------
