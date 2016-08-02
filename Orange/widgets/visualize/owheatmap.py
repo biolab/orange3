@@ -1295,8 +1295,12 @@ class OWHeatMap(widget.OWWidget):
             col_clust_msg = "Column clustering was disabled due to the " \
                             "input matrix being to big"
 
-        self.Information.row_clust(row_clust_msg)
-        self.Information.col_clust(col_clust_msg)
+        self.Information.row_clust.clear()
+        self.Information.col_clust.clear()
+        if row_clust_msg:
+            self.Information.row_clust(row_clust_msg)
+        if col_clust_msg:
+            self.Information.col_clust(col_clust_msg)
 
         self.sort_rows = sort_rows
         self.sort_columns = sort_cols
