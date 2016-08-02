@@ -319,45 +319,27 @@ class Domain:
         (np.ndarray, np.ndarray, np.ndarray)
             A tuple of converted X, Y and metas.
         """
-        from Orange.data import TableSeries
 
-        if isinstance(inst, TableSeries):
-            if inst.domain == self:
-                return inst.X, inst.Y, inst.metas
-            c = self.get_conversion(inst.domain)
-            l = len(inst.domain.attributes)
-            values = [(inst.X[i] if 0 <= i < l
-                       else inst.Y[i - l] if i >= l
-                       else inst.metas[-i - 1])
-                      if isinstance(i, int)
-                      else (Unknown if not i else i(inst))
-                      for i in c.variables]
-            metas = [(inst.X[i] if 0 <= i < l
-                      else inst.Y[i - l] if i >= l
-                      else inst.metas[-i - 1])
-                     if isinstance(i, int)
-                     else (Unknown if not i else i(inst))
-                     for i in c.metas]
+        nvars = len(self._variables)
+        nmetas = len(self._metas)
+        if len(inst) != nvars and len(inst) != nvars + nmetas:
+            raise ValueError("invalid data length for domain")
+        # SQL table workaround
+        values = []
+        for var, val in zip(self._variables, inst):
+            try:
+                values.append(var.to_val(val))
+            except:
+                values.append(val)
+        if len(inst) == nvars + nmetas:
+            metas = [var.to_val(val)
+                     for var, val in zip(self._metas, inst[nvars:])]
         else:
-            nvars = len(self._variables)
-            nmetas = len(self._metas)
-            if len(inst) != nvars and len(inst) != nvars + nmetas:
-                raise ValueError("invalid data length for domain")
-            # SQL table workaround
-            values = []
-            for var, val in zip(self._variables, inst):
-                try:
-                    values.append(var.to_val(val))
-                except:
-                    values.append(val)
-            if len(inst) == nvars + nmetas:
-                metas = [var.to_val(val)
-                         for var, val in zip(self._metas, inst[nvars:])]
-            else:
-                metas = [var.Unknown for var in self._metas]
+            metas = [var.Unknown for var in self._metas]
         nattrs = len(self.attributes)
         # Let np.array decide dtype for values
-        return np.array(values[:nattrs]), np.array(values[nattrs:]),\
+        return np.array(values[:nattrs]), \
+               np.array(values[nattrs:]), \
                np.array(metas, dtype=object)
 
     def select_columns(self, col_idx):

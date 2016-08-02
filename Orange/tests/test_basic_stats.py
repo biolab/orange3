@@ -8,7 +8,7 @@ from Orange.data import Table
 from Orange.statistics.basic_stats import DomainBasicStats, BasicStats
 
 
-class TestDomainBasicStats(TestCase):
+class TestBasicStats(TestCase):
     def setUp(self):
         self.zoo = Table("zoo")
 
@@ -25,6 +25,15 @@ class TestDomainBasicStats(TestCase):
         domain_stats = DomainBasicStats(self.zoo, include_metas=True)
         self.assertStatsEqual(domain_stats.stats,
                               attr_stats + class_var_stats + meta_stats)
+
+    def test_basic_stats_empty(self):
+        stats = BasicStats()
+        self.assertEqual(stats.min, float("inf"))
+        self.assertEqual(stats.max, float("-inf"))
+        self.assertEqual(stats.mean, 0)
+        self.assertEqual(stats.var, 0)
+        self.assertEqual(stats.nans, 0)
+        self.assertEqual(stats.non_nans, 0)
 
     def assertStatsEqual(self, stats1, stats2):
         self.assertEqual(len(stats1), len(stats2))

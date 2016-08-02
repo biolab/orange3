@@ -80,7 +80,7 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(string_var.to_val(42), "42")
 
         cont_var = ContinuousVariable("x")
-        self.assertTrue(math.isnan(cont_var.to_val("?")))
+        self.assertTrue(math.isnan(cont_var.to_val(np.nan)))
         self.assertTrue(math.isnan(Unknown))
 
         var = Variable("x")

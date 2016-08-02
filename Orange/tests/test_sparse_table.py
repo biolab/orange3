@@ -5,7 +5,7 @@ import scipy.sparse as sp
 import numpy as np
 import pandas as pd
 
-from Orange.data import Table, Domain, ContinuousVariable, SparseTable
+from Orange.data import Table, Domain, ContinuousVariable, SparseTable, StringVariable
 from Orange.tests import test_table as tabletests
 
 
@@ -98,3 +98,15 @@ class InterfaceTest(tabletests.InterfaceTest):
         self.assertIsInstance(self.table, SparseTable)
         self.assertIsInstance(self.table.iloc[:2], pd.SparseDataFrame)  # should be SparseTable
         self.assertIsInstance(self.table[:2], pd.SparseDataFrame)  # should be SparseTable
+
+    def test_string_variables_unsupported(self):
+        mat = sp.coo_matrix([[1, 2],
+                             [3, 4]])
+        with self.assertRaises(ValueError):
+            st = SparseTable(Domain([], [], [StringVariable("s")]), mat)
+
+    def test_density(self):
+        self.assertTrue(self.table.is_sparse)
+        self.assertFalse(self.table.is_dense)
+        self.assertLess(self.table.density, 0.5)
+        self.assertGreater(self.table.density, 0.25)

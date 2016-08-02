@@ -305,8 +305,6 @@ class ContinuousVariable(Variable):
         if isinstance(s, pd.Series):
             return s.astype(float)
         else:
-            if s in self.unknown_str:
-                return Unknown
             return float(s)
 
     def repr_val(self, val):
@@ -599,6 +597,7 @@ class StringVariable(Variable):
                 return ""
             if isinstance(s, str):
                 return s
+            return str(s)
         if isinstance(c, pd.Series):
             return c.apply(transform_func)
         else:

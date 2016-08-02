@@ -93,9 +93,6 @@ class TableBase:
         if 'filename' in kwargs:
             args = [kwargs.pop('filename')]
 
-        if not args:
-            raise TypeError("Table takes at least 1 positional argument (0 given))")
-
         if isinstance(args[0], str):
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
@@ -904,9 +901,9 @@ class TableBase:
         TableBase
             The concatenated table.
         """
-        def unique_preserve_order(iterable):
+        def unique_by_name_preserve_order(iterable):
             s = set()
-            return [item for item in iterable if not (item in s or s.add(item))]
+            return [item for item in iterable if not (item.name in s or s.add(item.name))]
 
         if not tables:
             raise ValueError('Need at least one table to concatenate.')
@@ -932,9 +929,9 @@ class TableBase:
                 # merges columns (nans for rows without those)
                 # domain must contain the uniques of all variables
                 new_domain = Domain(
-                    unique_preserve_order(flatten(t.domain.attributes for t in tables)),
-                    unique_preserve_order(flatten(t.domain.class_vars for t in tables)),
-                    unique_preserve_order(flatten(t.domain.metas for t in tables))
+                    unique_by_name_preserve_order(flatten(t.domain.attributes for t in tables)),
+                    unique_by_name_preserve_order(flatten(t.domain.class_vars for t in tables)),
+                    unique_by_name_preserve_order(flatten(t.domain.metas for t in tables))
                 )
             new_index = cls._new_id(len(result))
             result.index = new_index
@@ -1253,6 +1250,7 @@ class SeriesBase:
     A common superclass for Series (as in pd.Series or pd.SparseSeries) objects.
     Transfers Table x/y/metas/weights functionality to the Series.
     """
+    _WEIGHTS_COLUMN = TableBase._WEIGHTS_COLUMN
     _metadata = ['domain']
 
     # use the same functions as in Table for this

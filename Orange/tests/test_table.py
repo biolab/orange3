@@ -6,6 +6,7 @@ import unittest
 from itertools import chain
 from math import isnan
 import random
+import warnings
 
 from unittest.mock import Mock, MagicMock, patch
 from scipy.sparse import csr_matrix, issparse
@@ -119,6 +120,63 @@ class TableTestCase(unittest.TestCase):
         d.clear()
         self.assertAlmostEqual(d.weights.sum(), 0)
 
+    def test_set_weights_list(self):
+        t = Table('iris')
+        w = list(np.random.random(len(t)))
+        t.set_weights(w)
+        np.testing.assert_almost_equal(t.weights, w)
+
+    def test_set_weights_list_wrong_length(self):
+        t = Table('iris')
+        w = list(np.random.random(len(t) - 1))
+        with self.assertRaises(ValueError):
+            t.set_weights(w)
+
+    def test_set_weights_array(self):
+        t = Table('iris')
+        w = np.random.random(len(t))
+        t.set_weights(w)
+        np.testing.assert_almost_equal(t.weights, w)
+
+    def test_set_weights_nan(self):
+        t = Table('iris')
+        with self.assertRaises(ValueError):
+            t.set_weights(np.nan)
+
+    def test_set_weights_existing_column(self):
+        t = Table('iris')
+        t.set_weights("sepal width")
+        np.testing.assert_almost_equal(t.weights, t["sepal width"])
+
+    def test_set_weights_nonexisting_column(self):
+        t = Table('iris')
+        with self.assertRaises(ValueError):
+            t.set_weights("this column doesnt exist in iris")
+
+    def test_set_weights_existing_column_with_nan(self):
+        t = Table('iris')
+        t.loc[t.index[0], "sepal width"] = np.nan
+        with self.assertRaises(ValueError):
+            t.set_weights("sepal width")
+
+    def test_set_weights_series(self):
+        t = Table('iris')
+        w = pd.Series(np.random.random(len(t)))
+        t.set_weights(w)
+        np.testing.assert_almost_equal(t.weights, w.values)
+
+    def test_set_weights_series_with_nan(self):
+        t = Table('iris')
+        w = pd.Series(np.random.random(len(t)))
+        w.iloc[2] = np.nan
+        with self.assertRaises(ValueError):
+            t.set_weights(w)
+
+    def test_set_weights_invalid(self):
+        t = Table('iris')
+        with self.assertRaises(TypeError):
+            t.set_weights({1: 2, "orange": "cool"})
+
     def test_has_missing(self):
         d = Table("zoo")
         self.assertFalse(d.has_missing())
@@ -223,13 +281,86 @@ class TableTestCase(unittest.TestCase):
         np.testing.assert_equal(t.Y.todense(), copy.Y.todense())
         np.testing.assert_equal(t.metas.todense(), copy.metas.todense())
 
+    def test_concatenate_no_tables(self):
+        with self.assertRaises(ValueError):
+            Table.concatenate([])
+
+    def test_concatenate_single_copies(self):
+        t1 = Table('iris')
+        t2 = Table.concatenate([t1])
+        self.assertTrue(t1.equals(t2))
+        self.assertEqual(t1.domain, t2.domain)
+        self.assertNotEqual(id(t1), id(t2))
+
+    def test_concatenate_stacking(self):
+        t1 = Table(Domain([ContinuousVariable("c1"), ContinuousVariable("c2")]),
+                   [[1, 2],
+                    [3, 4]])
+        t2 = Table(Domain([ContinuousVariable("c3"), ContinuousVariable("c4")]),
+                   [[5, 6],
+                    [7, 8]])
+        rowstack = Table.concatenate([t1, t2], axis=0, rowstack=True)
+        self.assertEqual(len(rowstack.columns), 3)  # 2 + weights
+        self.assertEqual(id(t1.domain), id(rowstack.domain))
+        np.testing.assert_almost_equal(rowstack.X, [[1, 2],
+                                                    [3, 4],
+                                                    [5, 6],
+                                                    [7, 8]])
+        colstack = Table.concatenate([t1, t2], axis=1, colstack=True)
+        self.assertEqual(len(colstack.columns), 5)  # 4 + weights
+        self.assertTrue(all(v in colstack.domain
+                            for v in t1.domain.attributes + t2.domain.attributes))
+        np.testing.assert_almost_equal(colstack.X, [[1, 2, 5, 6],
+                                                    [3, 4, 7, 8]])
+
+    def test_concatenate_stacking_mismatch(self):
+        t1 = Table(Domain([ContinuousVariable("c1"), ContinuousVariable("c2")]),
+                   [[1, 2],
+                    [3, 4]])
+        t2 = Table(Domain([ContinuousVariable("c3"), ContinuousVariable("c4"), ContinuousVariable("c5")]),
+                   [[5, 6, 0],
+                    [7, 8, 0],
+                    [0, 0, 0]])
+        with self.assertRaises(ValueError):
+            Table.concatenate([t1, t2], axis=0, rowstack=True)
+        with self.assertRaises(ValueError):
+            Table.concatenate([t1, t2], axis=1, colstack=True)
+
+    def test_concatenate_nostacking(self):
+        t1 = Table(Domain([ContinuousVariable("c1"), ContinuousVariable("c2")]),
+                   [[1, 2],
+                    [3, 4]])
+        t1.index = [0, 1]
+        t2 = Table(Domain([ContinuousVariable("c2"), ContinuousVariable("c3")]),
+                   [[5, 6],
+                    [7, 8]])
+        t2.index = [1, 2]
+        rows = Table.concatenate([t1, t2], axis=0, rowstack=False)
+        self.assertEqual(len(rows.columns), 4)  # 3 + weights
+        self.assertTrue([v in rows.domain for v in ("c1", "c2", "c3")])
+        self.assertEqual(len(rows.domain), 3)
+        np.testing.assert_almost_equal(rows.X, [[1, 2, np.nan],
+                                                [3, 4, np.nan],
+                                                [np.nan, 5, 6],
+                                                [np.nan, 7, 8]])
+        # we can't have duplicate columns now
+        t2.domain = Domain([ContinuousVariable("c3"), ContinuousVariable("c4")])
+        t2.columns = ["c3", "c4", Table._WEIGHTS_COLUMN]
+        cols = Table.concatenate([t1, t2], axis=1, colstack=False)
+        self.assertEqual(len(cols.columns), 5)  # 4 + weights
+        self.assertTrue(all(v in cols.domain
+                            for v in t1.domain.attributes + t2.domain.attributes))
+        np.testing.assert_almost_equal(cols.X, [[1, 2, np.nan, np.nan],
+                                                [3, 4, 5, 6],
+                                                [np.nan, np.nan, 7, 8]])
+
     def test_concatenate(self):
         d1 = Domain([ContinuousVariable('a1')])
         t1 = Table.from_list(d1, [[1],
-                                       [2]])
+                                  [2]])
         d2 = Domain([ContinuousVariable('a2')], metas=[StringVariable('s')])
         t2 = Table.from_list(d2, [[3, 'foo'],
-                                       [4, 'fuu']])
+                                  [4, 'fuu']])
         self.assertRaises(ValueError, lambda: Table.concatenate((t1, t2), axis=5))
 
         t3 = Table.concatenate((t1, t2))
@@ -346,6 +477,11 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("test-zoo-weights.tab")
 
+    def test_save_unknown_extension(self):
+        t = Table('iris')
+        with self.assertRaises(IOError):
+            t.save("iris.extensionfromtheyear3000")
+
     def test_save_pickle(self):
         table = Table("iris")
         try:
@@ -388,6 +524,29 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(table2.attributes[1], "test")
         table2.attributes[1] = "modified"
         self.assertEqual(table.attributes[1], "modified")
+
+    def test_get_column_view(self):
+        # get_column_view is deprecated
+        t = Table('iris')
+        with warnings.catch_warnings(record=True) as w:
+            cv = t.get_column_view(0)
+            self.assertTrue(any(w))
+            np.testing.assert_almost_equal(cv[0], t[t.domain[0]].values)
+            self.assertFalse(cv[1])
+
+        with warnings.catch_warnings(record=True) as w:
+            cv = t.get_column_view("petal length")
+            self.assertTrue(any(w))
+            np.testing.assert_almost_equal(cv[0], t["petal length"].values)
+            self.assertFalse(cv[1])
+
+    def test_density(self):
+        t = Table("iris")
+        self.assertTrue(t.is_dense)
+        self.assertFalse(t.is_sparse)
+        self.assertEqual(t.density, 1)
+        t.iloc[0, 0] = np.nan
+        self.assertLess(t.density, 1)
 
     # TODO Test conjunctions and disjunctions of conditions
 
@@ -566,6 +725,25 @@ class CreateTableWithData(TableTests):
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
 
+    def test_creates_a_table_from_domain_and_list_non_rectangular(self):
+        domain = Domain([DiscreteVariable(name="a", values="mf"),
+                         ContinuousVariable(name="b")],
+                        DiscreteVariable(name="y", values="abc"))
+        with self.assertRaises(ValueError):
+            table = Table(domain, [["m", 1, "c"],
+                                   ["f", 2],
+                                   ["m", 3, "a", "f"],
+                                   ["?", "?", "c"]])
+
+    def test_creates_a_table_from_domain_and_list_column_mismatch(self):
+        domain = Domain([DiscreteVariable(name="a", values="mf")],
+                        DiscreteVariable(name="y", values="abc"))
+        with self.assertRaises(ValueError):
+            table = Table(domain, [["m", 1, "c"],
+                                   ["f", 2, "a"],
+                                   ["m", 3, "a"],
+                                   ["?", "?", "c"]])
+
     def test_creates_a_table_from_domain_and_list_and_weights(self):
         domain = Domain([DiscreteVariable(name="a", values="mf"),
                               ContinuousVariable(name="b")],
@@ -580,6 +758,16 @@ class CreateTableWithData(TableTests):
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
         np.testing.assert_almost_equal(table.Y, np.array([2, np.nan, 0, 2]))
         np.testing.assert_almost_equal(table.weights, np.array([1, 2, 3, 4]))
+
+    def test_creates_a_table_from_domain_and_list_and_weights_mismatched(self):
+        domain = Domain([DiscreteVariable(name="a", values="mf"),
+                         ContinuousVariable(name="b")],
+                        DiscreteVariable(name="y", values="abc"))
+        with self.assertRaises(ValueError):
+            table = Table(domain, [["m", 1, "c"],
+                                   ["f", 2, "?"],
+                                   ["m", 3, "a"],
+                                   ["?", "?", "c"]], [1, 2, 3])
 
     def test_creates_a_table_from_domain_and_list_and_metas(self):
         metas = [DiscreteVariable("Meta 1", values="XYZ"),
@@ -790,6 +978,18 @@ class CreateTableWithData(TableTests):
             domain, table.X, table.Y, table.metas, table.weights)
         self.assert_discretes_are_categoricals(table_1)
         assert_equal(table, table_1)
+
+    def test_from_table_rows(self):
+        domain = self.create_domain(self.attributes)
+        table = Table(domain, self.data)
+        with warnings.catch_warnings(record=True) as w:
+            s = Table.from_table_rows(table, [0, 1, 2])
+            self.assertTrue(any(w))
+
+    def test_from_numpy_mismatched_columns(self):
+        domain = self.create_domain(self.attributes, self.class_vars)
+        with self.assertRaises(ValueError):
+            t = Table(domain, self.data, None)
 
 
 class CreateTableWithDomainAndTable(TableTests):
@@ -1129,6 +1329,10 @@ class TestPandasInteraction(unittest.TestCase):
     def test_weights_transfer_on_empty_column_subset(self):
         subset = self.b[[]]
         np.testing.assert_array_equal(self.b.weights, subset.weights)
+
+    def test_series_have_weights(self):
+        s = self.b.iloc[0]
+        np.testing.assert_almost_equal(s.weights, self.b.weights[0])
 
 if __name__ == "__main__":
     unittest.main()

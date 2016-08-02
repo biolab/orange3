@@ -281,6 +281,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
             if mat is None or sp.isspmatrix_coo(mat):
                 return mat
             elif not sp.issparse(mat):
+                # the result of this is always two-dimensional
                 return sp.coo_matrix(mat)
             else:
                 return mat.tocoo()
@@ -288,10 +289,6 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         Y = _any_to_coo(Y)
         metas = _any_to_coo(metas)
         weights = _any_to_coo(weights)
-
-        # our Y needs to be 2D (problem with 1-column .Y)
-        if Y is not None and len(Y.shape) != 2:
-            raise ValueError("Expected Y to be two-dimensional.")
 
         # sparse structures can't hold anything other than continuous variables, so limit
         # the domain (also: isinstance(TimeVariable(), ContinuousVariable) == True)
@@ -402,7 +399,8 @@ class SparseTable(TableBase, pd.SparseDataFrame):
     @property
     def density(self):
         """Return the density as reported by pd.SparseDataFrame.density"""
-        return pd.SparseDataFrame.density(self)
+        # density is a property
+        return pd.SparseDataFrame.density.fget(self)
 
     @property
     def is_sparse(self):

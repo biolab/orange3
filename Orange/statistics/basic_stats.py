@@ -5,14 +5,13 @@ def _get_variable(variable, dat):
     if isinstance(variable, Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
-            raise ValueError("variable does not match the variable "
-                             "in the data")
+            raise ValueError("Variable does not match the variable in the data.")
     elif hasattr(dat, "domain"):
         variable = dat.domain[variable]
     elif hasattr(dat, "variable"):
         variable = dat.variable
     else:
-        raise ValueError("invalid specification of variable")
+        raise ValueError("Invalid specification of variable.")
     return variable
 
 
