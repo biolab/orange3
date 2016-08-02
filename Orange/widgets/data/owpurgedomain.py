@@ -147,6 +147,31 @@ class OWPurgeDomain(widget.OWWidget):
 
         self.send("Data", data)
 
+    def init_code_gen(self):
+        def run():
+            attr_flags = sum([Remove.SortValues * sortValues,
+                          Remove.RemoveConstant * removeAttributes,
+                          Remove.RemoveUnusedValues * removeValues])
+            class_flags = sum([Remove.SortValues * sortClasses,
+                               Remove.RemoveConstant * removeClassAttribute,
+                               Remove.RemoveUnusedValues * removeClasses])
+            meta_flags = sum([Remove.RemoveConstant * removeMetaAttributes,
+                              Remove.RemoveUnusedValues * removeMetaAttributeValues])
+            remover = Remove(attr_flags, class_flags, meta_flags)
+
+        opts = "[sortValues, removeAttributes, removeValues, sortClasses, removeClassAttribute," + \
+            "removeClasses, removeMetaAttributes, removeMetaAttributeValues]"
+        selfOpts = repr([self.sortValues, self.removeAttributes, self.removeValues, self.sortClasses,
+                        self.removeClassAttribute, self.removeClasses, self.removeMetaAttributes,
+                        self.removeMetaAttributeValues])
+
+        gen = self.code_gen()
+        gen.add_import(Remove)
+        gen.add_init(opts, selfOpts, iscode=True)
+        gen.set_main(run)
+        gen.add_output("Data", "remover(input_data)", iscode=True)
+        return gen
+
     def send_report(self):
         def list_opts(opts):
             return "; ".join(label.lower()
