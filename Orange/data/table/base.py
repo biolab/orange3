@@ -632,11 +632,6 @@ class TableBase:
         -------
         np.ndarray
         """
-
-        """
-        Return a read-only numpy matrix of X.
-
-        """
         return self._to_numpy(X=True)
 
     @property
