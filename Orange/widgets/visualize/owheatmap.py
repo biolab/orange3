@@ -459,6 +459,9 @@ class OWHeatMap(widget.OWWidget):
         row_clust = Msg("{}")
         col_clust = Msg("{}")
 
+    class Error(widget.OWWidget.Error):
+        no_continuous = Msg("No continuous feature columns")
+
     def __init__(self):
         super().__init__()
 
@@ -684,7 +687,7 @@ class OWHeatMap(widget.OWWidget):
                        data.domain.metas),
                 data)
             if not data.domain.attributes:
-                self.error("No continuous feature columns")
+                self.Error.no_continuous()
                 input_data = data = None
             else:
                 self.Information.discrete_ignored(

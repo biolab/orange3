@@ -17,4 +17,13 @@ class TestOWHeatMap(WidgetTest):
             self.assertEqual(self.widget.data, None)
             self.send_signal("Data", data)
             self.assertEqual(self.widget.data, data)
+            self.assertFalse(self.widget.Error.active)
+            self.assertFalse(self.widget.Warning.active)
+            self.assertFalse(self.widget.Information.active)
             self.send_signal("Data", None)
+
+    def test_error_message(self):
+        self.send_signal("Data", self.titanic)
+        self.assertTrue(self.widget.Error.active)
+        self.send_signal("Data", self.iris)
+        self.assertFalse(self.widget.Error.active)
