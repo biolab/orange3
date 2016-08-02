@@ -6,7 +6,7 @@ from PyQt4 import QtGui
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
-from Orange.data.io import FileFormat
+from Orange.data.io import FileFormat, CSVReader, TabReader, PickleReader
 from Orange.widgets.utils import filedialogs
 
 
@@ -89,11 +89,13 @@ class OWSave(widget.OWWidget):
 
     def init_code_gen(self):
         def run():
-            wrier.write(filename, input_data)
+            writers = [CSVReader, TabReader, PickleReader]
+            writer = writers[0] # Edit this line to change output format
+            writer.write(filename, input_data)
 
-        self.save_file_as()
         gen = self.code_gen()
-        gen.add_init("filename", self.filename)
+        gen.add_import([CSVReader, TabReader, PickleReader])
+        gen.add_init("filename", self.filename or self.last_dir or "./out")
         gen.add_init("writer", repr(self.writer), iscode=True)
         gen.set_main(run)
         return gen
