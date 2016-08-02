@@ -6,8 +6,6 @@ Rank (score) features for prediction.
 
 """
 
-from collections import namedtuple
-
 import numpy as np
 from scipy.sparse import issparse
 
@@ -22,19 +20,12 @@ from Orange.canvas import report
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.sql import check_sql_input
 
+score_meta = score.score_meta
 
 def table(shape, fill=None):
     """ Return a 2D table with shape filed with ``fill``
     """
     return [[fill for j in range(shape[1])] for i in range(shape[0])]
-
-
-score_meta = namedtuple(
-    "score_meta",
-    ["name",
-     "shortname",
-     "score"]
-)
 
 # Default scores.
 SCORES = [
@@ -356,6 +347,7 @@ class OWRank(widget.OWWidget):
                         else:
                             self.measure_scores.append(row)
                         learner_col += 1
+        self.labels = labels
         self.contRanksModel.setHorizontalHeaderLabels(
             self.contRanksLabels + labels
         )
@@ -520,6 +512,38 @@ class OWRank(widget.OWWidget):
             data = Orange.data.Table(domain, self.data)
             self.send("Reduced Data", data)
             self.out_domain_desc = report.describe_domain(data.domain)
+
+    def init_code_gen(self):
+        def run():
+            measures = measures + [(label,) for label in labels]
+            features = [ContinuousVariable(s[0]) for s in measures]
+            metas = [StringVariable("Feature name")]
+            domain = Domain(features, metas=metas)
+
+            shape = (len(measures) + len(learners), len(input_data.domain.attributes))
+            measure_scores = table(shape, None)
+
+            scores = numpy.array(measure_scores).T
+            feature_names = numpy.array([a.name for a in input_data.domain.attributes])
+            # Reshape to 2d array as Table does not like 1d arrays
+            feature_names = feature_names[:, None]
+
+            domain = Domain(selected, input_data.domain.class_var, metas=metas)
+            reduced_data = Table(domain, input_data)
+
+        gen = self.code_gen()
+        gen.add_import([Orange.data.Domain, Orange.data.Table, Orange.data.DiscreteVariable,
+                        Orange.data.StringVariable, Orange.data.ContinuousVariable, np,
+                        (Orange.preprocess.score, "*"), score_meta])
+        gen.add_extern(table)
+        gen.add_init("labels", repr(self.labels), iscode=True)
+        gen.add_init("measures", repr(self.measures), iscode=True)
+        gen.add_init("learners", repr(self.learners), iscode=True)
+        gen.add_init("selected", repr(self.selectedAttrs()), iscode=True)
+        gen.set_main(run)
+        gen.add_output("Scores", "scores", iscode=True)
+        gen.add_output("Reduced Data", "reduced_data", iscode=True)
+        return gen
 
     def selectedAttrs(self):
         if self.data:

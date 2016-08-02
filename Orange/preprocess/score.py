@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from itertools import chain
 
 import numpy as np
@@ -393,6 +393,19 @@ class RReliefF(Scorer):
         return "RReliefF({}{})".format(
             "n_iterations={}, ".format(self.n_iterations) if self.n_iterations != 50 else "",
             "k_nearest={}".format(self.k_nearest) if self.k_nearest != 50 else ""
+        )
+
+
+class score_meta(namedtuple(
+        "score_meta",
+        ["name",
+         "shortname",
+         "score"])):
+    def __repr__(self):
+        return "score_meta({}, {}, {})".format(
+            "name={}".format(repr(self[0])),
+            "shortname={}".format(repr(self[1])),
+            "score={}()".format(self[2].__name__)
         )
 
 

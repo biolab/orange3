@@ -388,8 +388,6 @@ class OWSelectRows(widget.OWWidget):
                     filter = data_filter.FilterDiscrete(attr_index, f_values)
                 conditions.append(filter)
 
-            print(repr(conditions))
-
             if conditions:
                 self.filters = data_filter.Values(conditions)
                 matching_output = self.filters(self.data)
