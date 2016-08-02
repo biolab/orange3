@@ -26,7 +26,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         for data in (self.data, self.housing):
             self.assertEqual(self.widget.data, None)
             self.send_signal("Data", data)
-            self.assertEqual(self.widget.data, data)
+            self.assertIs(self.widget.data, data)
             self.assertFalse(self.widget.Error.active)
             self.assertFalse(self.widget.Warning.active)
             self.assertFalse(self.widget.Information.active)
