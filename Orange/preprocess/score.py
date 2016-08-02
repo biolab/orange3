@@ -75,6 +75,9 @@ class SklScorer(Scorer, metaclass=WrapperMeta):
             return score[0]
         return score
 
+    def __repr__(self):
+        return "SklScorer()"
+
 
 class Chi2(SklScorer):
     """
@@ -94,6 +97,9 @@ class Chi2(SklScorer):
         f, p = skl_fss.chi2(X, y)
         return f
 
+    def __repr__(self):
+        return "Chi2()"
+
 
 class ANOVA(SklScorer):
     """
@@ -110,6 +116,8 @@ class ANOVA(SklScorer):
         f, p = skl_fss.f_classif(X, y)
         return f
 
+    def __repr__(self):
+        return "ANOVA()"
 
 class UnivariateLinearRegression(SklScorer):
     """
@@ -125,6 +133,9 @@ class UnivariateLinearRegression(SklScorer):
     def score(self, X, y):
         f, p = skl_fss.f_regression(X, y)
         return f
+
+    def __repr__(self):
+        return "UnivariateLinearRegression()"
 
 
 class LearnerScorer(Scorer):
@@ -152,6 +163,9 @@ class LearnerScorer(Scorer):
 
         return scores[:, data.domain.attributes.index(feature)] \
             if feature else scores
+
+    def __repr__(self):
+        return "LearnerScorer()"
 
 
 class ClassificationScorer(Scorer):
@@ -194,6 +208,9 @@ class ClassificationScorer(Scorer):
         if feature is not None:
             return scores[0]
         return scores
+
+    def __repr__(self):
+        return "ClassificationScorer()"
 
 
 def _entropy(D):
@@ -254,6 +271,9 @@ class FCBF(ClassificationScorer):
         scores = [i[0] for i in sorted(chain(best, worst), key=lambda i: i[1])]
         return np.array(scores) if not feature else scores[0]
 
+    def __repr__(self):
+        return "FCBF()"
+
 
 class InfoGain(ClassificationScorer):
     """
@@ -264,6 +284,9 @@ class InfoGain(ClassificationScorer):
         h_class = _entropy(np.sum(cont, axis=1))
         h_residual = _entropy(np.compress(np.sum(cont, axis=0), cont, axis=1))
         return nan_adjustment * (h_class - h_residual)
+
+    def __repr__(self):
+        return "InfoGain()"
 
 
 class GainRatio(ClassificationScorer):
@@ -284,6 +307,9 @@ class GainRatio(ClassificationScorer):
             h_attribute = 1
         return nan_adjustment * (h_class - h_residual) / h_attribute
 
+    def __repr__(self):
+        return "GainRatio()"
+
 
 class Gini(ClassificationScorer):
     """
@@ -292,6 +318,9 @@ class Gini(ClassificationScorer):
     """
     def from_contingency(self, cont, nan_adjustment):
         return (_gini(np.sum(cont, axis=1)) - _gini(cont)) * nan_adjustment
+
+    def __repr__(self):
+        return "Gini()"
 
 
 class ReliefF(Scorer):
@@ -329,6 +358,12 @@ class ReliefF(Scorer):
             return weights[0]
         return weights
 
+    def __repr__(self):
+        return "ReliefF({}{})".format(
+            "n_iterations={}, ".format(self.n_iterations) if self.n_iterations != 50 else "",
+            "k_nearest={}".format(self.k_nearest) if self.k_nearest != 10 else ""
+        )
+
 
 class RReliefF(Scorer):
     feature_type = Variable
@@ -353,6 +388,12 @@ class RReliefF(Scorer):
         if feature:
             return weights[0]
         return weights
+
+    def __repr__(self):
+        return "RReliefF({}{})".format(
+            "n_iterations={}, ".format(self.n_iterations) if self.n_iterations != 50 else "",
+            "k_nearest={}".format(self.k_nearest) if self.k_nearest != 50 else ""
+        )
 
 
 if __name__ == '__main__':
