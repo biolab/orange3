@@ -103,6 +103,10 @@ class CodeGenerator(object):
         Adds an import for the supplied exernal variable to the start of
         the exported script.
 
+        Passing a tuple allows for complex imports.
+        `(Orange.data, "*")` generates the following import:
+            `from Orange.data import *`
+
         """
         if type(extern) == list:
             self.imports |= set(extern)
@@ -222,14 +226,22 @@ class CodeGenerator(object):
 
         # Imports generation
         for dependency in self.imports:
-            # Try importing it as a function/submodule
-            try:
-                importString = "from " + dependency.__module__
-                preamble.add(importString +
-                    " import " + dependency.__name__)
-            except:
-                # Import it as a module
-                preamble.add("import " + dependency.__name__)
+            # Basic import
+            if type(dependency) != tuple:
+                # Try importing it as a function/submodule
+                try:
+                    importString = "from " + dependency.__module__
+                    preamble.add(importString +
+                        " import " + dependency.__name__)
+                except:
+                    # Import it as a module
+                    preamble.add("import " + dependency.__name__)
+            # complex import
+            else:
+                if dependency[1] == "*":
+                    preamble.add("from {} import *".format(
+                        dependency[0].__name__)
+                    )
         body += "\n"
 
         # External function generation
