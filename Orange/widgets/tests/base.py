@@ -319,5 +319,6 @@ class WidgetLearnerTestMixin:
                 model = self.get_output(self.model_name)
                 if model is not None:
                     self.assertEqual(model.params.get(element.name), val)
+                    self.assertFalse(self.widget.Error.active)
                 else:
                     self.assertTrue(self.widget.Error.active)
