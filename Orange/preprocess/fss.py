@@ -172,6 +172,7 @@ class RemoveNaNColumns(Preprocess):
         return Orange.data.Table(domain, data)
 
     def __repr__(self):
-        return "RemoveNaNColumns(threshold={})".format(
-            str(self.threshold)
+        return "RemoveNaNColumns({})".format(
+            "threshold={}".format(str(self.threshold)) if self.threshold
+                is not None else ""
         )

@@ -71,7 +71,7 @@ class Continuize(Preprocess):
         return "Continuize({}{})".format(
             "zero_based=False, " if not self.zero_based else "",
             "multinomial_treatment={}".format(repr(repr(self.multinomial_treatment))) if \
-                self.multinomial_treatment != self.MultinomialTreatment else ""
+                self.multinomial_treatment != self.Indicators else ""
         )
 
 
@@ -204,7 +204,10 @@ class SklImpute(Preprocess):
         return new_data
 
     def __repr__(self):
-        return "SklImpute(strategy={})".format(repr(self.strategy))
+        return "SklImpute({})".format(
+            "strategy={}".format(repr(self.strategy)) if self.strategy
+                 != "mean" else ""
+        )
 
 
 class RemoveConstant(Preprocess):
