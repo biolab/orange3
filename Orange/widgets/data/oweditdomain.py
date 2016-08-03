@@ -538,6 +538,29 @@ class OWEditDomain(widget.OWWidget):
 
         self.send("Data", new_data)
 
+    def init_code_gen(self):
+        def run():
+            new_data = None
+            input_domain = input_data.domain
+            n_attrs = len(input_domain.attributes)
+            n_vars = len(input_domain.variables)
+            n_class_vars = len(input_domain.class_vars)
+            all_new_vars = list(domain_model)
+            attrs = all_new_vars[: n_attrs]
+            class_vars = all_new_vars[n_attrs: n_attrs + n_class_vars]
+            new_metas = all_new_vars[n_attrs + n_class_vars:]
+            new_domain = Domain(attrs, class_vars, new_metas)
+            new_data = input_data.from_table(new_domain, input_data)
+
+        gen = self.code_gen()
+        gen.add_import([Orange.data.Domain, itemmodels.PyListModel,
+            Orange.data.ContinuousVariable, Orange.data.StringVariable,
+            Orange.data.DiscreteVariable])
+        gen.set_main(run)
+        gen.add_init("domain_model", repr(self.domain_model), iscode=True)
+        gen.add_output("data", "new_data", iscode=True)
+        return gen
+
     def sizeHint(self):
         sh = super().sizeHint()
         return sh.expandedTo(QSize(660, 550))
