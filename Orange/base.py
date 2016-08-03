@@ -266,8 +266,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return '{}({}{})'.format(type(self).__name__,
                                ", ".join("{}={}".format(k, repr(v))
                                          for k, v in self.params.items()),
-                                ", preprocessors={}".format(repr(self.preprocessors)) if \
-                                        self.preprocessors != self.default_preprocessors else "")
+                                ", preprocessors={}".format(repr(self.preprocessors)))
 
     @property
     def supports_weights(self):
