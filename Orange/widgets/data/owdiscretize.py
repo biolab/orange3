@@ -466,6 +466,45 @@ class OWDiscretize(widget.OWWidget):
             output = self.data.from_table(domain, self.data)
         self.send("Data", output)
 
+    def init_code_gen(self):
+        def run():
+            def discretized_var(source):
+                index = list(varmodel).index(source)
+                state = var_state[index]
+                if state.disc_var is None:
+                    return None
+                elif state.disc_var is source:
+                    return source
+                elif state.points == []:
+                    return None
+                else:
+                    return state.disc_var
+
+            def disc_var(source):
+                if source and source.is_continuous:
+                    return discretized_var(source)
+                else:
+                    return source
+
+            attributes = [disc_var(v) for v in input_data.domain.attributes]
+            attributes = [v for v in attributes if v is not None]
+
+            class_var = disc_var(input_data.domain.class_var)
+
+            domain = Domain(
+                attributes, class_var,
+                metas=input_data.domain.metas
+            )
+            output = input_data.from_table(domain, self.data)
+
+        gen = self.code_gen()
+        gen.add_import([Orange.data.Domain])
+        gen.add_init("varmodel", repr(self.varmodel), iscode=True)
+        gen.add_init("var_state", repr(self.var_state), iscode=True)
+        gen.set_main(run)
+        gen.add_output("Data", "data", iscode=True)
+        return gen
+
     def storeSpecificSettings(self):
         super().storeSpecificSettings()
         self.saved_var_states = {
