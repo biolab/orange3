@@ -144,6 +144,30 @@ class OWMergeData(widget.OWWidget):
         self.send("Merged Data A+B", AB)
         self.send("Merged Data B+A", BA)
 
+    def init_code_gen(self):
+        import Orange.data as data
+
+        def run():
+            AB, BA = None, None
+            if indexA is not None and indexB is not None:
+                varA = attrModelA[indexA]
+                varB = attrModelB[indexB]
+                AB = merge(self.dataA, varA, self.dataB, varB)
+                BA = merge(self.dataB, varB, self.dataA, varA)
+
+        gen = self.code_gen()
+        gen.add_import([data.DiscreteVariable, data.ContinuousVariable,
+            data.StringVariable, itemmodels.PyListModel])
+        gen.add_extern(merge)
+        gen.add_init("indexA", repr(self.selectedIndexA()), iscode=True)
+        gen.add_init("indexB", repr(self.selectedIndexB()), iscode=True)
+        gen.add_init("attrModelA", repr(self.attrModelA), iscode=True)
+        gen.add_init("attrModelB", repr(self.attrModelB), iscode=True)
+        gen.set_main(run)
+        gen.add_output("merged data AB", "AB", iscode=True)
+        gen.add_output("merged data BA", "BA", iscode=True)
+        return gen
+
     def _selectedAttrAChanged(self, *args):
         self._invalidate()
 
