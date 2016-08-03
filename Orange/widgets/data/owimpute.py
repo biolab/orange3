@@ -272,6 +272,45 @@ class OWImpute(OWWidget):
         self.send("Data", data)
         self.modified = False
 
+    def init_code_gen(self):
+        def run():
+            drop_mask = numpy.zeros(len(input_data), bool)
+            attributes = []
+            class_vars = []
+
+            for i, var in enumerate(varmodel):
+                method = variable_methods.get(i, default_method)
+
+                if not method.supports_variable(var):
+                    print("Default method could not impute some "
+                                    "of the variables.")
+                elif isinstance(method, DropInstances):
+                    drop_mask |= method(input_data, var)
+                else:
+                    var = method(input_data, var)
+
+                if isinstance(var, Variable):
+                    var = [var]
+
+                if i < len(input_data.domain.attributes):
+                    attributes.extend(var)
+                else:
+                    class_vars.extend(var)
+
+            domain = Domain(attributes, class_vars, input_data.domain.metas)
+            data = input_data.from_table(domain, input_data[~drop_mask])
+
+        gen = self.code_gen()
+        gen.add_import([np, Orange.data.Variable, Orange.data.Domain,
+            Orange.data.DiscreteVariable, Orange.data.StringVariable,
+            Orange.data.ContinuousVariable, (impute, "*"), itemmodels.PyListModel])
+        gen.add_init("default_method", repr(self.default_method), iscode=True)
+        gen.add_init("variable_methods", repr(self.variable_methods), iscode=True)
+        gen.add_init("varmodel", repr(self.varmodel), iscode=True)
+        gen.add_output("Data", "data", iscode=True)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         specific = []
         for i, var in enumerate(self.varmodel):
