@@ -336,7 +336,7 @@ class Normalize(Preprocess):
         return "Normalize({}{}{})".format(
             "zero_based=False, " if not self.zero_based else "",
             "norm_type={}, ".format(repr(self.norm_type)) if \
-                self.norm_type != NormalizeBySD else "",
+                self.norm_type != self.NormalizeBySD else "",
             "transform_class=True".format(str(self.transform_class)) if \
                 self.transform_class else ""
         )
