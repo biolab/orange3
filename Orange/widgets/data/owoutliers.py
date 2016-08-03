@@ -156,6 +156,47 @@ class OWOutliers(widget.OWWidget):
         self.send("Inliers", inliers)
         self.send("Outliers", outliers)
 
+    def init_code_gen(self):
+        def run():
+            inliers = outliers = None
+            if input_data is not None and len(input_data) > 0:
+                try:
+                    model = learner(input_data)
+                    print(repr(model))
+                    y_pred = model(input_data)
+
+                    if outlier_method == Covariance:
+                        mahal = model.mahalanobis(input_data.X)
+                        mahal = mahal.reshape(len(input_data), 1)
+                        attrs = input_data.domain.attributes
+                        classes = input_data.domain.class_vars
+                        new_metas = list(input_data.domain.metas) + \
+                                    [ContinuousVariable(name="Mahalanobis")]
+                        new_domain = Domain(attrs, classes, new_metas)
+                        new_data = Table(new_domain, input_data)
+                        new_data.metas = numpy.hstack((input_data.metas, mahal))
+                    else:
+                        new_domain = input_data.domain
+                        new_data = input_data
+                    y_pred = numpy.array(y_pred)
+                except:
+                    print("Error during outlier detection: Singular Covariance Matrix")
+                else:
+                    inliers_ind = np.where(y_pred == 1)[0]
+                    outliers_ind = np.where(y_pred == -1)[0]
+                    inliers = Table(new_domain, new_data, inliers_ind)
+                    outliers = Table(new_domain, new_data, outliers_ind)
+
+        gen = self.code_gen()
+        gen.add_import([np, ContinuousVariable, Table, self.learner.__class__, Table])
+        gen.add_init("OneClassSVM, Covariance", "range(2)", iscode=True)
+        gen.add_init("outlier_method", self.outlier_method)
+        gen.add_init("learner", repr(self.learner), iscode=True)
+        gen.set_main(run)
+        gen.add_output("Inliers", "inliers", iscode=True)
+        gen.add_output("Outliers", "outliers", iscode=True)
+        return gen
+
     def detect_outliers(self):
         if self.outlier_method == self.OneClassSVM:
             learner = OneClassSVMLearner(
@@ -166,7 +207,9 @@ class OWOutliers(widget.OWWidget):
                 support_fraction=self.support_fraction
                 if self.empirical_covariance else None,
                 contamination=self.cont / 100.)
+        self.learner = learner
         model = learner(self.data)
+        print(repr(model))
         y_pred = model(self.data)
         self.add_metas(model)
         return np.array(y_pred)
