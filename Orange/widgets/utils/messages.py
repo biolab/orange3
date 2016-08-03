@@ -30,6 +30,7 @@ Clearing messages work analogously.
 
 from operator import attrgetter
 from warnings import warn
+from inspect import getattr_static
 
 from PyQt4.QtGui import QApplication, QStyle, QSizePolicy
 
@@ -263,7 +264,7 @@ class MessagesMixin:
         # type(self).__dict__ wouldn't return inherited messages, hence dir
         self.message_groups = []
         for name in dir(self):
-            group_class = getattr(self, name)
+            group_class = getattr_static(self, name)
             if isinstance(group_class, type) and \
                     issubclass(group_class, MessageGroup) and \
                     group_class is not MessageGroup:
