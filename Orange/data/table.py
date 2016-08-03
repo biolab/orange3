@@ -525,7 +525,6 @@ class Table(MutableSequence, Storage):
         if cls != data.__class__:
             data = cls(data)
 
-        data.name = os.path.splitext(os.path.split(filename)[-1])[0]
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
 

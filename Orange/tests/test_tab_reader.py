@@ -9,8 +9,9 @@ import shutil
 
 import numpy as np
 
-from Orange.data import Table, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, DiscreteVariable
 from Orange.data.io import TabReader
+
 
 def read_tab_file(filename):
     return TabReader(filename).read()
@@ -152,3 +153,9 @@ class TestTabReader(unittest.TestCase):
         table = Table(path.join(tempdir, "out.tab"))
         self.assertEqual(table.attributes[1], "test")
         shutil.rmtree(tempdir)
+
+    def test_data_name(self):
+        table1 = Table('iris')
+        table2 = TabReader(table1.__file__).read()
+        self.assertEqual(table1.name, 'iris')
+        self.assertEqual(table2.name, 'iris')
