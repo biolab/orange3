@@ -162,7 +162,6 @@ class OWOutliers(widget.OWWidget):
             if input_data is not None and len(input_data) > 0:
                 try:
                     model = learner(input_data)
-                    print(repr(model))
                     y_pred = model(input_data)
 
                     if outlier_method == Covariance:
@@ -188,7 +187,9 @@ class OWOutliers(widget.OWWidget):
                     outliers = Table(new_domain, new_data, outliers_ind)
 
         gen = self.code_gen()
-        gen.add_import([np, ContinuousVariable, Table, self.learner.__class__, Table])
+        from Orange import preprocess
+        gen.add_import([np, ContinuousVariable, Table, self.learner.__class__, Table,
+            (preprocess, "*")])
         gen.add_init("OneClassSVM, Covariance", "range(2)", iscode=True)
         gen.add_init("outlier_method", self.outlier_method)
         gen.add_init("learner", repr(self.learner), iscode=True)
@@ -209,7 +210,6 @@ class OWOutliers(widget.OWWidget):
                 contamination=self.cont / 100.)
         self.learner = learner
         model = learner(self.data)
-        print(repr(model))
         y_pred = model(self.data)
         self.add_metas(model)
         return np.array(y_pred)
