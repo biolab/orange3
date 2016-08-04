@@ -214,24 +214,27 @@ class OWDataSampler(widget.OWWidget):
 
     def init_code_gen(self):
         def run():
-            indices = indice_gen()
+            indices = indice_gen(input_data)
 
             if input_data is not None:
                 if isCrossValidation:
-                    remaining, sample = indices[self.selectedFold - 1]
+                    remaining, sample = indices[selectedFold - 1]
                 else:
                     remaining, sample = indices
-                sample = input_data.data[sample]
-                other = input_data.data[remaining]
+                sample = input_data[sample]
+                other = input_data[remaining]
             else:
                 sample = other = None
 
         if self.indices is None or not self.use_seed:
             self.updateindices()
         gen = self.code_gen()
+        gen.add_import([self.indice_gen])
         gen.set_main(run)
         gen.add_init("isCrossValidation", self.sampling_type == self.CrossValidation)
         gen.add_init("indice_gen", repr(self.indice_gen), iscode=True)
+        if self.sampling_type == self.CrossValidation:
+            gen.add_init("selectedFold", self.selectedFold)
         gen.add_output("Data Sample", "sample", iscode=True)
         gen.add_output("Remaining Data", "other", iscode=True)
         return gen
@@ -346,6 +349,8 @@ class sample_fold_indices():
                 self.random_state is not None else ""
         )
 
+    __name__ = "sample_fold_indices"
+
 
 class sample_random_n():
     def __init__(self, n, stratified=False, replace=False,
@@ -360,7 +365,7 @@ class sample_random_n():
             if self.random_state is None:
                 rgen = np.random
             else:
-                rgen = np.random.mtrand.RandomState(random_state)
+                rgen = np.random.mtrand.RandomState(self.random_state)
             sample = rgen.random_integers(0, len(table) - 1, self.n)
             o = np.ones(len(table))
             o[sample] = 0
@@ -381,12 +386,14 @@ class sample_random_n():
 
     def __repr__(self):
         return "sample_random_n({}{}{}{})".format(
-            n,
+            self.n,
             ", stratified=True" if self.stratified else "",
             ", replace=True" if not self.replace else "",
             ", random_state={}".format(repr(self.random_state)) if
                 self.random_state is not None else ""
         )
+
+    __name__ = "sample_random_n"
 
 
 class sample_random_p():
@@ -397,16 +404,18 @@ class sample_random_p():
 
     def __call__(self, table):
         n = int(math.ceil(len(table) * self.p))
-        return sample_random_n(self.table, self.n,
-            self.stratified, False, self.random_state)
+        return sample_random_n(n, self.stratified,
+            False, self.random_state)(table)
 
     def __repr__(self):
         return "sample_random_p({}{}{})".format(
-            p,
+            self.p,
             ", stratified=True" if self.stratified else "",
             ", random_state={}".format(repr(self.random_state)) if
                 self.random_state is not None else ""
         )
+
+    __name__ = "sample_random_p"
 
 
 def sample_bootstrap():
@@ -429,6 +438,8 @@ def sample_bootstrap():
             ", random_state={}".format(repr(self.random_state)) if
                 self.random_state is not None else ""
         )
+
+    __name__ = "sample_bootstrap"
 
 
 def test_main():
