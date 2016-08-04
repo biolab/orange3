@@ -13,7 +13,7 @@ def zerodent(lines, n):
 
     """
     for i, line in enumerate(lines):
-        if "def" not in line and line != "\n":
+        if i != 0 and line != "\n":
             # Strip excess indentation
             lines[i] = line[n:]
     return lines

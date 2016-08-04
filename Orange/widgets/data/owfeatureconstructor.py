@@ -589,6 +589,46 @@ class OWFeatureConstructor(widget.OWWidget):
 
         self.send("Data", data)
 
+    def init_code_gen(self):
+        def run():
+            desc = list(featuremodel)
+
+            def validate(source):
+                try:
+                    return validate_exp(ast.parse(source, mode="eval"))
+                except Exception:
+                    return False
+
+            def remove_invalid_expression(desc):
+                return (desc if validate(desc.expression)
+                        else desc._replace(expression=""))
+
+            desc = map(remove_invalid_expression, desc)
+            source_vars = tuple(input_data.domain) + input_data.domain.metas
+            new_variables = construct_variables(desc, source_vars)
+
+            attrs = [var for var in new_variables if var.is_primitive()]
+            metas = [var for var in new_variables if not var.is_primitive()]
+            new_domain = Domain(
+                input_data.domain.attributes + tuple(attrs),
+                input_data.domain.class_vars,
+                metas=input_data.domain.metas + tuple(metas)
+            )
+
+            try:
+                data = Table(new_domain, input_data)
+            except Exception as err:
+                print(repr(err.args[0]))
+
+        gen = self.code_gen()
+        gen.add_import([ast, validate_exp, construct_variables,
+            Orange.data.Domain, Orange.data.Table, itemmodels.PyListModel,
+            ContinuousDescriptor, StringDescriptor, DiscreteDescriptor])
+        gen.add_init("featuremodel", repr(self.featuremodel), iscode=True)
+        gen.add_output("Data", "data", iscode=True)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         items = OrderedDict()
         for feature in self.featuremodel:
