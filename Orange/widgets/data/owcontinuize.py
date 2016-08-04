@@ -126,6 +126,21 @@ class OWContinuize(widget.OWWidget):
         else:
             self.send("Data", None)
 
+    def init_code_gen(self):
+        def run():
+            if input_data is not None:
+                domain = continuizer(input_data)
+                data = Table.from_table(domain, input_data)
+            else:
+                data = None
+
+        gen = self.code_gen()
+        gen.add_import([Table, DomainContinuizer, Continuize])
+        gen.add_init("continuizer", repr(self.constructContinuizer()), iscode=True)
+        gen.add_output("data", "data", iscode=True)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         self.report_items(
             "Settings",
@@ -377,6 +392,18 @@ class DomainContinuizer:
             self.zero_based
         )
         return newdomain
+
+    def __repr__(self):
+        return "DomainContinuizer({}{}{}{})".format(
+            "zero_based=False, ".format(self.zero_based) if not
+                self.zero_based else "",
+            "multinomial_treatment=Continuize.{}, ".format(repr(self.multinomial_treatment)) if
+                self.multinomial_treatment != Continuize.Indicators else "",
+            "continuous_treatment=Continuize.{}, ".format(repr(self.continuous_treatment)) if
+                self.continuous_treatment != Continuize.Leave else "",
+            "class_treatment=Continuize.{}, ".format(repr(self.class_treatment)) if
+                self.class_treatment != Continuize.Leave else ""
+        )
 
 
 if __name__ == "__main__":

@@ -240,7 +240,7 @@ class CodeGenerator(object):
             else:
                 if dependency[1] == "*":
                     preamble.add("from {} import *".format(
-                        dependency[0].__name__)
+                        dependency[0].__module__)
                     )
         body += "\n"
 
