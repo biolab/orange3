@@ -176,6 +176,56 @@ class OWConcatenate(widget.OWWidget):
 
         self.send("Data", data)
 
+    def init_code_gen(self):
+        def run():
+            input_additional_data = [input_additional_data]
+            tables = []
+            if input_primary_data is not None:
+                tables = [input_primary_data] + list(input_additional_data)
+                domain = input_primary_data.domain
+            elif input_additional_data:
+                tables = input_additional_data
+                if merge_type == OWConcatenate.MergeUnion:
+                    domain = reduce(domain_union,
+                                    (table.domain for table in tables))
+                else:
+                    domain = reduce(domain_intersection,
+                                    (table.domain for table in tables))
+
+            tables = [Table.from_table(domain, table)
+                      for table in tables]
+
+            if tables:
+                data = concat(tables)
+                if append_source_column:
+                    source_var = Orange.data.DiscreteVariable(
+                        source_attr_name,
+                        values=["{}".format(i) for i in range(len(tables))]
+                    )
+                    source_values = list(
+                        chain(*(repeat(i, len(table))
+                                for i, table in enumerate(tables)))
+                    )
+                    places = ["class_vars", "attributes", "metas"]
+                    place = places[source_column_role]
+
+                    data = append_columns(
+                        data, **{place: [(source_var, source_values)]}
+                    )
+            else:
+                data = None
+
+        gen = self.code_gen()
+        gen.add_import([OWConcatenate, Orange.data.Table, numpy, Orange])
+        gen.add_extern(concat)
+        gen.add_init("merge_type", repr(self.merge_type), iscode=True)
+        gen.add_init("append_source_column", self.append_source_column)
+        gen.add_init("source_attr_name", repr(self.source_attr_name), iscode=True)
+        gen.add_init("source_column_role", repr(self.source_column_role), iscode=True)
+        gen.add_output("Data", "data", iscode=True)
+        gen.set_main(run)
+        return gen
+
     def _merge_type_changed(self, ):
         if self.primary_data is None and self.more_data:
             self.apply()
