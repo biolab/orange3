@@ -589,6 +589,25 @@ class OWImageViewer(widget.OWWidget):
         else:
             self.send("Data", None)
 
+    def init_code_gen(self):
+        def pre():
+            qapp = QApplication([])
+
+        def run():
+            ow.show()
+            ow.raise_()
+            ow.setData(input_data)
+            qapp.exec_()
+            ow.saveSettings()
+            ow.onDeleteWidget()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_init("ow", "OWImageViewer()", iscode=True)
+        gen.set_widget(self)
+        gen.add_import([OWImageViewer])
+        gen.set_main(run)
+        return gen
+
     def _updateStatus(self, future):
         if future.cancelled():
             return

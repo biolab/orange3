@@ -72,7 +72,7 @@ class CodeGenerator(object):
     the core functionality of a widget.
 
     """
-    def __init__(self, loadsettings=False):
+    def __init__(self, loadsettings=False, qapp=False):
         self.loadsettings = loadsettings
         self.name = "unnamed_widget"
         self.orig_widget = None
@@ -89,6 +89,14 @@ class CodeGenerator(object):
         self.outputs = {}
         self.null_lines = []
         self.replacements = []
+
+        def pre():
+            qapp = QApplication([])
+
+        if qapp:
+            from PyQt4.QtGui import QApplication
+            self.add_preamble(pre)
+            self.add_import(QApplication)
 
     def set_widget(self, widget):
         """

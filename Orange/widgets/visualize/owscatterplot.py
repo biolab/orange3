@@ -429,10 +429,8 @@ class OWScatterPlot(OWWidget):
         def pre():
             qapp = QApplication([])
 
-        def pre2():
-            import numpy as np
-
         def run():
+            ow = OWScatterPlot()
             ow.set_data(input_data)
             try:
                 ow.set_subset_data(input_data_subset)
@@ -446,13 +444,11 @@ class OWScatterPlot(OWWidget):
         gen.set_widget(self)
         gen.add_import([QApplication, OWScatterPlot, np])
         gen.add_preamble(pre)
-        gen.add_preamble(pre2)
-        gen.add_init("ow", "OWScatterPlot()", iscode=True)
         gen.set_main(run)
         gen.add_output("selected_data",
             "ow.data[ow.graph.get_selection()]", iscode=True)
         gen.add_output("other_data",
-            "ow.data[np.full(len(ow.data), True, dtype=bool)]", iscode=True)
+            "ow.data[numpy.full(len(ow.data), True, dtype=bool)]", iscode=True)
 
         return gen
 
