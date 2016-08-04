@@ -283,6 +283,7 @@ class OWSieveDiagram(OWWidget):
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
             selection = self.data[sel_idx]
+        self._selection = selection
         self.send("Selection", selection)
 
     def update_graph(self):
@@ -455,6 +456,25 @@ class OWSieveDiagram(OWWidget):
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attrX, self.attrY)
+
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            try:
+                ow.set_input_features(input_features)
+            except:
+                pass
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWSieveDiagram)
+        gen.add_init("ow", "OWSieveDiagram()", iscode=True)
+        gen.add_output("Selection", "ow._selection", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
 
     def send_report(self):
         self.report_plot()

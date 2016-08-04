@@ -205,6 +205,28 @@ class OWParallelCoordinates(OWVisWidget):
 
             self.send_shown_attributes()
 
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            try:
+                ow.set_subset_data(input_data_subset)
+            except:
+                pass
+            try:
+                ow.set_input_features(input_features)
+            except:
+                pass
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWParallelCoordinates)
+        gen.add_init("ow", "OWParallelCoordinates()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         self.report_plot(self.graph)
 

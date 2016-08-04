@@ -426,29 +426,35 @@ class OWScatterPlot(OWWidget):
         self.graph.attr_label = ""
 
     def init_code_gen(self):
-        def pre():
-            qapp = QApplication([])
-
         def run():
-            ow = OWScatterPlot()
             ow.set_data(input_data)
             try:
                 ow.set_subset_data(input_data_subset)
             except:
                 pass
+            try:
+                ow.set_shown_attributes(input_features)
+            except:
+                pass
+            features = None
+            if ow.attr_x or ow.attr_y:
+                dom = Domain([], metas=(StringVariable(name="feature"),))
+                features = Table(dom, [[ow.attr_x], [ow.attr_y]])
+                features.name = "Features"
             ow.handleNewSignals()
             ow.show()
             qapp.exec()
 
-        gen = self.code_gen()
+        gen = self.code_gen(loadsettings=True, qapp=True)
         gen.set_widget(self)
-        gen.add_import([QApplication, OWScatterPlot, np])
-        gen.add_preamble(pre)
+        gen.add_import([QApplication, OWScatterPlot, np, Domain, Table, StringVariable])
+        gen.add_init("ow", "OWScatterPlot()", iscode=True)
         gen.set_main(run)
         gen.add_output("selected_data",
             "ow.data[ow.graph.get_selection()]", iscode=True)
         gen.add_output("other_data",
             "ow.data[numpy.full(len(ow.data), True, dtype=bool)]", iscode=True)
+        gen.add_output("features", "features", iscode=True)
 
         return gen
 

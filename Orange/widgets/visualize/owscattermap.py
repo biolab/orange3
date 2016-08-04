@@ -981,6 +981,20 @@ class OWScatterMap(widget.OWWidget):
             self.x_var_model[self.x_var_index],
             self.y_var_model[self.y_var_index])
 
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWScatterMap)
+        gen.add_init("ow", "OWScatterMap()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         if self.dataset is None:
             return

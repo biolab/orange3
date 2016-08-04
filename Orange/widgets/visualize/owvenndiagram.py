@@ -572,12 +572,28 @@ class OWVennDiagram(widget.OWWidget):
             data = table_concat(selected_subsets)
         else:
             data = None
+        self._selection = data
 
         self.send("Selected Data", data)
 
     def getSettings(self, *args, **kwargs):
         self._storeHints()
         return super().getSettings(self, *args, **kwargs)
+
+    def init_code_gen(self):
+        def run():
+            ow.setData(input_data)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWVennDiagram)
+        gen.add_init("ow", "OWVennDiagram()", iscode=True)
+        gen.add_output("Selection", "ow._selection", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
 
     def send_report(self):
         self.report_plot()

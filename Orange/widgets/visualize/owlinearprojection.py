@@ -1055,8 +1055,28 @@ class OWLinearProjection(widget.OWWidget):
             indices = numpy.flatnonzero(self._selection_mask)
             if len(indices) > 0:
                 subset = self.data[indices]
+        self._selected = subset
 
         self.send("Selected Data", subset)
+
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            try:
+                ow.set_subset_data(input_data_subset)
+            except:
+                pass
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWLinearProjection)
+        gen.add_init("ow", "OWLinearProjection()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        gen.add_output("Selected Data", "ow._selected", iscode=True)
+        return gen
 
     def send_report(self):
         self.report_plot(name="", plot=self.viewbox.getViewBox())

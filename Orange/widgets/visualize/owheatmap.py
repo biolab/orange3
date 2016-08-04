@@ -1492,12 +1492,28 @@ class OWHeatMap(widget.OWWidget):
                 indices = np.hstack([merge_indices[i] for i in indices])
 
             data = self.input_data[indices]
+        self._selection = data
 
         self.send("Selected Data", data)
 
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
+
+    def init_code_gen(self):
+        def run():
+            ow.set_dataset(input_data)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWHeatMap)
+        gen.add_init("ow", "OWHeatMap()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        gen.add_output("Selected Data", "ow._selection", iscode=True)
+        return gen
 
     def send_report(self):
         self.report_items((

@@ -246,8 +246,27 @@ class OWMosaicDisplay(OWWidget):
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
             selection = self.data[sel_idx]
+        self._selection = selection
         self.send("Selected Data", selection)
 
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            try:
+                ow.set_subset_data(input_data_subset)
+            except:
+                pass
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWMosaicDisplay)
+        gen.add_init("ow", "OWMosaicDisplay()", iscode=True)
+        gen.add_output("Selected Data", "ow._selection", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
 
     def send_report(self):
         self.report_plot(self.canvas)

@@ -429,6 +429,20 @@ class OWBoxPlot(widget.OWWidget):
                                    self.scene_width, len(self.boxes * 40) + 90)
         self.infot1.setText("")
 
+    def init_code_gen(self):
+        def run():
+            ow.set_data(data)
+            ow.handleNewSignals()
+            ow.show()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWBoxPlot)
+        gen.set_widget(self)
+        gen.add_init("ow", "OWBoxPlot()", iscode=True)
+        gen.set_main(run)
+        return gen
+
     # noinspection PyPep8Naming
     def compute_tests(self):
         # The t-test and ANOVA are implemented here since they efficiently use

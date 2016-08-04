@@ -560,6 +560,20 @@ class OWDistributions(widget.OWWidget):
         if self.variable_idx >= 0:
             return self.varmodel[self.variable_idx]
 
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWDistributions)
+        gen.add_init("ow", "OWDistributions()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         if self.variable_idx < 0:
             return
