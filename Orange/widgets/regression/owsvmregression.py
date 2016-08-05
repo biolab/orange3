@@ -40,31 +40,28 @@ class OWSVMRegression(OWBaseSVM):
                 self.controlArea, self, "svrtype", [], box="SVR Type",
                 orientation=form)
 
-        form.addWidget(gui.appendRadioButton(box, "ε-SVR", addToLayout=False),
-                       0, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Cost (C):"),
-                       0, 1, Qt.AlignRight)
-        form.addWidget(gui.doubleSpin(box, self, "epsilon_C", 0.1, 512.0, 0.1,
-                                      decimals=2, addToLayout=False),
-                       0, 2)
-        form.addWidget(QLabel("Loss epsilon (ε):"),
-                       1, 1, Qt.AlignRight)
-        form.addWidget(gui.doubleSpin(box, self, "epsilon", 0.1, 512.0, 0.1,
-                                      decimals=2, addToLayout=False),
-                       1, 2)
+        self.epsilon_radio = gui.appendRadioButton(box, "ε-SVR",
+                                                   addToLayout=False)
+        self.epsilon_C_spin = gui.doubleSpin(box, self, "epsilon_C", 0.1, 512.0,
+                                             0.1, decimals=2, addToLayout=False)
+        self.epsilon_spin = gui.doubleSpin(box, self, "epsilon", 0.1, 512.0,
+                                           0.1, decimals=2, addToLayout=False)
+        form.addWidget(self.epsilon_radio, 0, 0, Qt.AlignLeft)
+        form.addWidget(QtGui.QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
+        form.addWidget(self.epsilon_C_spin, 0, 2)
+        form.addWidget(QLabel("Loss epsilon (ε):"), 1, 1, Qt.AlignRight)
+        form.addWidget(self.epsilon_spin, 1, 2)
 
-        form.addWidget(gui.appendRadioButton(box, "ν-SVR", addToLayout=False),
-                       2, 0, Qt.AlignLeft)
-        form.addWidget(QLabel("Cost (C):"),
-                       2, 1, Qt.AlignRight)
-        form.addWidget(gui.doubleSpin(box, self, "nu_C", 0.1, 512.0, 0.1,
-                                      decimals=2, addToLayout=False),
-                       2, 2)
-        form.addWidget(QLabel("Complexity bound (ν):"),
-                       3, 1, Qt.AlignRight)
-        form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
-                                      decimals=2, addToLayout=False),
-                       3, 2)
+        self.nu_radio = gui.appendRadioButton(box, "ν-SVR", addToLayout=False)
+        self.nu_C_spin = gui.doubleSpin(box, self, "nu_C", 0.1, 512.0, 0.1,
+                                        decimals=2, addToLayout=False)
+        self.nu_spin = gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
+                                      decimals=2, addToLayout=False)
+        form.addWidget(self.nu_radio, 2, 0, Qt.AlignLeft)
+        form.addWidget(QLabel("Cost (C):"), 2, 1, Qt.AlignRight)
+        form.addWidget(self.nu_C_spin, 2, 2)
+        form.addWidget(QLabel("Complexity bound (ν):"), 3, 1, Qt.AlignRight)
+        form.addWidget(self.nu_spin, 3, 2)
 
     def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
