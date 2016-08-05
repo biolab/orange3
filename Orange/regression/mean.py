@@ -30,6 +30,9 @@ class MeanLearner(Learner):
         dist = distribution.get_distribution(data, data.domain.class_var)
         return MeanModel(dist)
 
+    def __repr__(self):
+        return "MeanLearner()"
+
 
 # noinspection PyMissingConstructor
 class MeanModel(Model):
