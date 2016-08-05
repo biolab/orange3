@@ -247,9 +247,14 @@ class CodeGenerator(object):
             # complex import
             else:
                 if dependency[1] == "*":
-                    preamble.add("from {} import *".format(
-                        dependency[0].__module__)
-                    )
+                    try:
+                        preamble.add("from {} import *".format(
+                            dependency[0].__module__
+                        ))
+                    except:
+                        preamble.add("from {} import *".format(
+                            dependency[0].__name__
+                        ))
         body += "\n"
 
         # External function generation
