@@ -125,6 +125,15 @@ class PolynomialLearner(Learner):
         self.degree = degree
         self.learner = learner
 
+    def __repr__(self):
+        return "PolynomialLearner({}{}{})".format(
+            "learner={}, ".format(repr(self.learner)) if self.learner !=
+                LinearRegressionLearner() else "",
+            "degree={}, ".format(self.degree) if self.degree != 2 else "",
+            "preprocessors={}".format(repr(self.preprocessors)) if
+                self.preprocessors is not None else ""
+        )
+
     def fit(self, X, Y, W):
         polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
         X = polyfeatures.fit_transform(X)
