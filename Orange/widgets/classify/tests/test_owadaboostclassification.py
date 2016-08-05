@@ -3,7 +3,7 @@
 from Orange.classification import TreeLearner, KNNLearner
 from Orange.widgets.classify.owadaboost import OWAdaBoostClassification
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
-                                       GuiToParam)
+                                       ParameterMapping)
 
 
 class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
@@ -11,24 +11,11 @@ class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWAdaBoostClassification,
                                          stored_settings={"auto_apply": False})
         self.init()
-
-        def combo_set_value(i, x):
-            x.activated.emit(i)
-            x.setCurrentIndex(i)
-
         losses = self.widget.losses
-        nest_spin = self.widget.n_estimators_spin
-        nest_min_max = [nest_spin.minimum(), nest_spin.maximum()]
-        rate_spin = self.widget.learning_rate_spin
-        rate_min_max = [rate_spin.minimum(), rate_spin.maximum()]
-        self.gui_to_params = [
-            GuiToParam('algorithm', self.widget.algorithm_combo,
-                       lambda x: x.currentText(),
-                       combo_set_value, losses, list(range(len(losses)))),
-            GuiToParam('learning_rate', rate_spin, lambda x: x.value(),
-                       lambda i, x: x.setValue(i), rate_min_max, rate_min_max),
-            GuiToParam('n_estimators', nest_spin, lambda x: x.value(),
-                       lambda i, x: x.setValue(i), nest_min_max, nest_min_max)]
+        self.parameters = [
+            ParameterMapping('algorithm', self.widget.algorithm_combo, losses),
+            ParameterMapping('learning_rate', self.widget.learning_rate_spin),
+            ParameterMapping('n_estimators', self.widget.n_estimators_spin)]
 
     def test_input_learner(self):
         """Check if base learner properly changes with learner on the input"""

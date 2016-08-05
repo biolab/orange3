@@ -1,7 +1,7 @@
 import unittest
-from collections import namedtuple
 
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import (QApplication, QComboBox, QSpinBox, QDoubleSpinBox,
+                         QSlider)
 import sip
 
 from Orange.data import Table
@@ -176,7 +176,116 @@ class WidgetTest(GuiTest):
         return self.signal_manager.outputs.get((widget, output_name), None)
 
 
-GuiToParam = namedtuple('GuiParam', 'name gui_el get set values set_values')
+class BaseParameterMapping:
+    """Base class for mapping between gui components and learner's parameters
+    when testing learner widgets.
+
+    Parameters
+    ----------
+    name : str
+        Name of learner's parameter.
+
+    gui_element : QWidget
+        Gui component who's corresponding parameter is to be tested.
+
+    values: list
+        List of values to be tested.
+
+    getter: function
+        It gets component's value.
+
+    setter: function
+        It sets component's value.
+    """
+
+    def __init__(self, name, gui_element, values, getter, setter):
+        self.name = name
+        self.gui_element = gui_element
+        self.values = values
+        self.get_value = getter
+        self.set_value = setter
+
+
+class DefaultParameterMapping(BaseParameterMapping):
+    """Class for mapping between gui components and learner's parameters
+    when testing unchecked properties and therefore default parameters
+    should be used.
+
+    Parameters
+    ----------
+    name : str
+        Name of learner's parameter.
+
+    default_value: str, int,
+        Value that should be used by default.
+    """
+
+    def __init__(self, name, default_value):
+        super().__init__(name, None, [default_value],
+                         lambda: default_value, lambda x: None)
+
+
+class ParameterMapping(BaseParameterMapping):
+    """Class for mapping between gui components and learner parameters
+    when testing learner widgets
+
+    Parameters
+    ----------
+    name : str
+        Name of learner's parameter.
+
+    gui_element : QWidget
+        Gui component who's corresponding parameter is to be tested.
+
+    values: list, mandatory for ComboBox, optional otherwise
+        List of values to be tested. When None, it is set according to
+        component's type.
+
+    getter: function, optional
+        It gets component's value. When None, it is set according to
+        component's type.
+
+    setter: function, optional
+        It sets component's value. When None, it is set according to
+        component's type.
+    """
+
+    def __init__(self, name, gui_element, values=None,
+                 getter=None, setter=None):
+        super().__init__(name, gui_element,
+                         values or self._default_values(gui_element),
+                         getter or self._default_get_value(gui_element, values),
+                         setter or self._default_set_value(gui_element, values))
+
+    @staticmethod
+    def _default_values(gui_element):
+        if isinstance(gui_element, (QSpinBox, QDoubleSpinBox, QSlider)):
+            return [gui_element.minimum(), gui_element.maximum()]
+        else:
+            raise TypeError("{} is not supported".format(gui_element))
+
+    @staticmethod
+    def _default_get_value(gui_element, values):
+        if isinstance(gui_element, (QSpinBox, QDoubleSpinBox, QSlider)):
+            return lambda: gui_element.value()
+        elif isinstance(gui_element, QComboBox):
+            return lambda: values[gui_element.currentIndex()]
+        else:
+            raise TypeError("{} is not supported".format(gui_element))
+
+    @staticmethod
+    def _default_set_value(gui_element, values):
+        if isinstance(gui_element, (QSpinBox, QDoubleSpinBox, QSlider)):
+            return lambda val: gui_element.setValue(val)
+        elif isinstance(gui_element, QComboBox):
+            def fun(val):
+                value = values.index(val)
+                gui_element.activated.emit(value)
+                gui_element.setCurrentIndex(value)
+
+            return fun
+        else:
+            raise TypeError("{} is not supported".format(gui_element))
 
 
 class WidgetLearnerTestMixin:
@@ -186,7 +295,7 @@ class WidgetLearnerTestMixin:
 
     All widget learner tests should extend it (beside extending WidgetTest
     class as well). Learners with extra parameters, which can be set on the
-    widget, should override self.gui_to_params list in the setUp method. The
+    widget, should override self.parameters list in the setUp method. The
     list should contain mapping: learner parameter - gui component.
     """
 
@@ -207,7 +316,7 @@ class WidgetLearnerTestMixin:
             self.learner_class = LearnerRegression
             self.model_name = "Predictor"
             self.model_class = ModelRegression
-        self.gui_to_params = []
+        self.parameters = []
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
@@ -226,7 +335,6 @@ class WidgetLearnerTestMixin:
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
-        error = self.widget.Error.data_error
         self.send_signal("Data", self.inadequate_data)
         self.widget.apply_button.button.click()
         self.assertTrue(self.widget.Error.data_error.is_shown())
@@ -300,25 +408,26 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         if hasattr(self.widget.learner, "params"):
             learner_params = self.widget.learner.params
-            for element in self.gui_to_params:
-                self.assertEqual(learner_params.get(element.name),
-                                 element.get(element.gui_el))
+            for parameter in self.parameters:
+                self.assertEqual(learner_params.get(parameter.name),
+                                 parameter.get_value())
 
     def test_parameters(self):
         """Check learner and model for various values of all parameters"""
-        for element in self.gui_to_params:
-            for val, set_val in zip(element.values, element.set_values):
+        for parameter in self.parameters:
+            assert isinstance(parameter, BaseParameterMapping)
+            for val, set_val in zip(parameter.values, parameter.values):
                 self.send_signal("Data", self.data)
-                element.set(set_val, element.gui_el)
+                parameter.set_value(set_val)
                 self.widget.apply_button.button.click()
-                param = self.widget.learner.params.get(element.name)
-                self.assertEqual(param, element.get(element.gui_el))
+                param = self.widget.learner.params.get(parameter.name)
+                self.assertEqual(param, parameter.get_value())
                 self.assertEqual(param, val)
-                param = self.get_output("Learner").params.get(element.name)
+                param = self.get_output("Learner").params.get(parameter.name)
                 self.assertEqual(param, val)
                 model = self.get_output(self.model_name)
                 if model is not None:
-                    self.assertEqual(model.params.get(element.name), val)
+                    self.assertEqual(model.params.get(parameter.name), val)
                     self.assertFalse(self.widget.Error.active)
                 else:
                     self.assertTrue(self.widget.Error.active)
