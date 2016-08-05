@@ -114,6 +114,11 @@ class OWBaseSVM(OWBaseLearner):
             sv = self.data[self.model.skl_model.support_]
         self.send("Support vectors", sv)
 
+    def init_code_gen(self):
+        gen = super().init_code_gen()
+        gen.add_output("Support Vectors", "input_data[model.skl_model.support_]", iscode=True)
+        return gen
+
 
 class OWSVMClassification(OWBaseSVM):
     name = "SVM"
