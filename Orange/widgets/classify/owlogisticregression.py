@@ -83,6 +83,12 @@ class OWLogisticRegression(OWBaseLearner):
         return (("Regularization", "{}, C={}".format(
                 self.penalty_types[self.penalty_type], self.C_s[self.C_index])),)
 
+    def init_code_gen(self):
+        gen = super().init_code_gen()
+        gen.add_import([create_coef_table])
+        gen.add_output("Coefficients", "create_coef_table(model)", iscode=True)
+        return gen
+
 
 def create_coef_table(classifier):
     i = classifier.intercept

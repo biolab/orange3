@@ -198,15 +198,16 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             model = learner(input_data)
             model.instances = input_data
 
-        gen = self.code_gen()
-        gen.set_widget(self)
         self.apply()
         self.update_learner()
         self.update_model()
-        gen.add_init("learner", repr(self.learner), iscode=True)
-        gen.set_main(run)
+
+        gen = self.code_gen()
+        gen.set_widget(self)
         import Orange.preprocess as _preprocess
         gen.add_import([self.LEARNER, (_preprocess, "*")])
+        gen.add_init("learner", repr(self.learner), iscode=True)
+        gen.set_main(run)
         gen.add_preamble("from Orange.classification import *")
         gen.add_output("learner", "learner", iscode=True)
         gen.add_output(self.OUTPUT_MODEL_NAME, "model", iscode=True)
