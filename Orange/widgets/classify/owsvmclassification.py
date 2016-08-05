@@ -17,13 +17,14 @@ class OWBaseSVM(OWBaseLearner):
     #: kernel degree
     degree = settings.Setting(3)
     #: gamma
-    gamma = settings.Setting(1.0)
+    gamma = settings.Setting(0.0)
     #: coef0 (adative constant)
     coef0 = settings.Setting(0.0)
 
     #: numerical tolerance
     tol = settings.Setting(0.001)
 
+    _default_gamma = "auto"
     kernels = (("Linear", "x⋅y"),
                ("Polynomial", "(g x⋅y + c)<sup>d</sup>"),
                ("RBF", "exp(-g|x-y|²)"),
@@ -50,6 +51,7 @@ class OWBaseSVM(OWBaseLearner):
         inbox = gui.vBox(spbox)
         gamma = gui.doubleSpin(
             inbox, self, "gamma", 0.0, 10.0, 0.01, label=" g: ", **common)
+        gamma.setSpecialValueText(self._default_gamma)
         coef0 = gui.doubleSpin(
             inbox, self, "coef0", 0.0, 10.0, 0.01, label=" c: ", **common)
         degree = gui.doubleSpin(
@@ -94,17 +96,18 @@ class OWBaseSVM(OWBaseLearner):
         self.settings_changed()
 
     def _report_kernel_parameters(self, items):
+        gamma = self.gamma or self._default_gamma
         if self.kernel_type == 0:
             items["Kernel"] = "Linear"
         elif self.kernel_type == 1:
             items["Kernel"] = \
                 "Polynomial, ({g:.4} x⋅y + {c:.4})<sup>{d}</sup>".format(
-                    g=self.gamma, c=self.coef0, d=self.degree)
+                    g=gamma, c=self.coef0, d=self.degree)
         elif self.kernel_type == 2:
-            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(self.gamma)
+            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(gamma)
         else:
             items["Kernel"] = "Sigmoid, tanh({g:.4} x⋅y + {c:.4})".format(
-                g=self.gamma, c=self.coef0)
+                g=gamma, c=self.coef0)
 
     def update_model(self):
         super().update_model()
@@ -173,7 +176,7 @@ class OWSVMClassification(OWBaseSVM):
         common_args = dict(
             kernel=kernel,
             degree=self.degree,
-            gamma=self.gamma,
+            gamma=self.gamma or self._default_gamma,
             coef0=self.coef0,
             tol=self.tol,
             max_iter=self.max_iter if self.limit_iter else -1,

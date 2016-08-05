@@ -71,7 +71,7 @@ class OWSVMRegression(OWBaseSVM):
         common_args = dict(
             kernel=kernel,
             degree=self.degree,
-            gamma=self.gamma,
+            gamma=self.gamma if self.gamma else self._default_gamma,
             coef0=self.coef0,
             tol=self.tol,
             preprocessors=self.preprocessors
