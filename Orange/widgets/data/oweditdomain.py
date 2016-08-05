@@ -543,9 +543,12 @@ class OWEditDomain(widget.OWWidget):
         return sh.expandedTo(QSize(660, 550))
 
     def send_report(self):
-        self.report_raw("", EditDomainReport(
-            old_domain=chain(self.data.domain.variables, self.data.domain.metas),
-            new_domain=self.domain_model).to_html())
+        if self.data is not None:
+            self.report_raw("", EditDomainReport(
+                old_domain=chain(self.data.domain.variables, self.data.domain.metas),
+                new_domain=self.domain_model).to_html())
+        else:
+            self.report_data(None)
 
 
 class EditDomainReport:

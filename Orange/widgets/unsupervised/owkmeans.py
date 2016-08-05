@@ -358,10 +358,11 @@ class OWKMeans(widget.OWWidget):
             self.run()
 
     def send_report(self):
+        k_clusters = self.k
+        if self.optimize_k and self.optimization_runs and self.selected_row() is not None:
+            k_clusters = self.optimization_runs[self.selected_row()][1].k
         self.report_items((
-            ("Number of clusters",
-             self.optimization_runs[self.selected_row()][1].k
-             if self.optimize_k else self.k),
+            ("Number of clusters", k_clusters),
             ("Optimization",
              self.optimize_k != 0 and
              "{}, {} re-runs limited to {} steps".format(
