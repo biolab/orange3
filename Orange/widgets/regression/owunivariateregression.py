@@ -5,7 +5,7 @@ import pyqtgraph as pg
 import numpy as np
 
 from Orange.data import Table, Domain
-from Orange.data.variable import ContinuousVariable, StringVariable
+from Orange.data.variable import ContinuousVariable, StringVariable, DiscreteVariable
 from Orange.regression.linear import (RidgeRegressionLearner, PolynomialLearner,
                                       LinearRegressionLearner, LinearModel)
 from Orange.regression import Learner
@@ -98,6 +98,34 @@ class OWUnivariateRegression(OWBaseLearner):
                            disableAutoRange=True)
 
         self.mainArea.layout().addWidget(self.plotview)
+
+    def init_code_gen(self):
+        def run():
+            predictor = learner(input_data)
+            model = predictor.model
+            if hasattr(model, "model"):
+                model = model.model
+            elif hasattr(model, "skl_model"):
+                model = model.skl_model
+            if model is not None and hasattr(model, "coef_"):
+                domain = Domain([ContinuousVariable("coef", number_of_decimals=7)],
+                                metas=[StringVariable("name")])
+                coefs = [model.intercept_ + model.coef_[0]] + list(model.coef_[1:])
+                names = ["1", x_label] + \
+                        ["{}^{}".format(x_label, i) for i in range(2, degree + 1)]
+                coef_table = Table(domain, list(zip(coefs, names)))
+            else:
+                coef_table = None
+
+        gen = super().init_code_gen()
+        import Orange.regression.linear as _linear
+        gen.add_import([Domain, Table, ContinuousVariable, StringVariable,
+            DiscreteVariable, (_linear, "*")])
+        gen.add_init("degree", int(self.polynomialexpansion))
+        gen.add_init("x_label", repr(self.x_label), iscode=True)
+        gen.set_main(run)
+        gen.add_output("Coefficients", "coef_table", iscode=True)
+        return gen
 
     def send_report(self):
         if self.data is None:
@@ -221,6 +249,7 @@ class OWUnivariateRegression(OWBaseLearner):
             x_label = self.x_var_model[self.x_var_index]
             axis = self.plot.getAxis("bottom")
             axis.setLabel(x_label)
+            self.x_label = x_label
 
             y_label = self.y_var_model[self.y_var_index]
             axis = self.plot.getAxis("left")

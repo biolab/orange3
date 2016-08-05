@@ -205,10 +205,11 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         gen = self.code_gen()
         gen.set_widget(self)
         import Orange.preprocess as _preprocess
-        gen.add_import([self.LEARNER, (_preprocess, "*")])
+        import Orange.classification as _classification
+        gen.add_import([self.LEARNER, (_preprocess, "*"),
+            (_classification, "*")])
         gen.add_init("learner", repr(self.learner), iscode=True)
         gen.set_main(run)
-        gen.add_preamble("from Orange.classification import *")
         gen.add_output("learner", "learner", iscode=True)
         gen.add_output(self.OUTPUT_MODEL_NAME, "model", iscode=True)
 
