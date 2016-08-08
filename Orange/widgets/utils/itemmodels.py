@@ -149,7 +149,10 @@ class PyTableModel(QAbstractTableModel):
                                           1 if strlen < 5 else
                                           0 if strlen < 6 else
                                           3,
-                                          'f' if strlen < 6 and absval >= .001 else 'e')
+                                          'f' if (absval == 0 or
+                                                  absval >= .001 and
+                                                  strlen < 6)
+                                          else 'e')
             return str(value)
         if role == Qt.TextAlignmentRole and isinstance(value, Number):
             return Qt.AlignRight | Qt.AlignVCenter
