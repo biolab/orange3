@@ -424,8 +424,8 @@ class TopDownSearchStrategy(SearchStrategy):
     instances is developed. The hypothesis space of possible rules is
     then searched repeatedly by specialising candidate rules.
     """
-    def __init__(self, discretise_continuous=False):
-        self.discretise_continuous = discretise_continuous
+    def __init__(self, bound_continuous=False):
+        self.bound_continuous = bound_continuous
         self.storage = None
 
     def initialise_rule(self, X, Y, W, target_class, base_rules, domain,
@@ -528,7 +528,7 @@ class TopDownSearchStrategy(SearchStrategy):
             elif attribute.is_continuous:
                 # discretise if True
                 values = (self.discretise(X[:, i], Y, W, domain)
-                          if self.discretise_continuous
+                          if self.bound_continuous
                           else np.unique(X[:, i]))
                 # for each unique value, generate all possible selectors
                 for val in values:
@@ -1443,28 +1443,39 @@ class CN2SDUnorderedClassifier(_RuleClassifier):
 def main():
     data = Table('titanic')
     learner = CN2Learner()
-    learner.rule_finder.significance_validator.default_alpha = 0.15
+    # learner.rule_finder.significance_validator.default_alpha = 0.15
+    learner.rule_finder.general_validator.min_covered_examples = 10
     classifier = learner(data)
     for rule in classifier.rule_list:
-        print(rule.curr_class_dist.tolist(), rule)
+        print(rule.curr_class_dist.tolist(), rule, rule.quality)
     print()
 
-    data = Table('brown-selected.tab')
+    data = Table('iris.tab')
     learner = CN2UnorderedLearner()
-    learner.rule_finder.general_validator.min_covered_examples = 15
     learner.rule_finder.search_algorithm.beam_width = 10
-    learner.rule_finder.search_strategy.discretise_continuous = True
+    learner.rule_finder.search_strategy.bound_continuous = True
+    learner.rule_finder.general_validator.min_covered_examples = 10
     classifier = learner(data)
     for rule in classifier.rule_list:
-        print(rule.curr_class_dist.tolist(), rule)
+        print(rule, rule.curr_class_dist.tolist())
     print()
+
+    data = Table('titanic')
+    learner = CN2UnorderedLearner()
+    learner.rule_finder.search_algorithm.beam_width = 10
+    learner.rule_finder.general_validator.min_covered_examples = 1
+    classifier = learner(data)
+    for rule in classifier.rule_list:
+        print(rule.curr_class_dist.tolist(), rule, rule.quality)
+    print()
+    print(len(classifier.rule_list))
 
     # data = Table('adult')
     # learner = CN2UnorderedLearner()
     # learner.rule_finder.general_validator.max_rule_length = 5
     # learner.rule_finder.general_validator.min_covered_examples = 100
     # learner.rule_finder.search_algorithm.beam_width = 10
-    # learner.rule_finder.search_strategy.discretise_continuous = True
+    # learner.rule_finder.search_strategy.bound_continuous = True
     # classifier = learner(data)
     # for rule in classifier.rule_list:
     #     print(rule, rule.curr_class_dist.tolist(), rule.quality)
