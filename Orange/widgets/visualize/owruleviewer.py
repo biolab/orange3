@@ -36,6 +36,7 @@ class OWRuleViewer(widget.OWWidget):
     want_main_area = True
     want_control_area = False
 
+    presentation = None
     compact_view = False
 
     def __init__(self):
@@ -62,10 +63,6 @@ class OWRuleViewer(widget.OWWidget):
         self.mainArea.layout().addWidget(self.view)
         gui.checkBox(widget=self.mainArea, master=self, value="compact_view",
                      label="Compact view", callback=self.on_update)
-
-        # copy = QtGui.QAction("Copy", self, shortcut=QtGui.QKeySequence.Copy,
-        #                      triggered=self.copy)
-        # self.addAction(copy)
 
     def set_classifier(self, classifier):
         self.classifier = classifier
@@ -104,56 +101,25 @@ class OWRuleViewer(widget.OWWidget):
                 self.view.horizontalHeader().setResizeMode(
                     0, QHeaderView.Interactive)
 
-                if self.view.horizontalHeader().sectionSize(0) > 300:
-                    self.view.horizontalHeader().resizeSection(0, 290)
+                if self.view.horizontalHeader().sectionSize(0) > 250:
+                    self.view.horizontalHeader().resizeSection(0, 240)
             else:
                 self.view.setWordWrap(True)
                 self.view.horizontalHeader().setResizeMode(
                     QHeaderView.ResizeToContents)
 
-    def copy(self):
-        """
-        Copy current TableView selection to the clipboard.
-        """
-        print('HI')
-        view = self.view
-        # if view is not None:
-        #     mime = table_selection_to_mime_data(view)
-        #     QtGui.QApplication.clipboard().setMimeData(
-        #         mime, QtGui.QClipboard.Clipboard)
-        table_selection_to_mime_data(view)
+    def copy_to_clipboard(self):
+        if self.view is not None and self.view.selectionmodel().hasSelection():
+            highlighted_rows_indices = set(index.row() for index in
+                                           self.view.selectedIndexes())
 
+            actual_rows_indices = sorted([self.model.headerData(i, Qt.Vertical)
+                                          for i in highlighted_rows_indices])
 
-def table_selection_to_mime_data(table):
-    lines = table_selection_to_list(table)
-    print(lines)
-
-    # csv = lines_to_csv_string(lines, dialect="excel")
-    # tsv = lines_to_csv_string(lines, dialect="excel-tab")
-    #
-    # mime = QtCore.QMimeData()
-    # mime.setData("text/csv", QtCore.QByteArray(csv))
-    # mime.setData("text/tab-separated-values", QtCore.QByteArray(tsv))
-    # mime.setData("text/plain", QtCore.QByteArray(tsv))
-    # return mime
-
-
-def table_selection_to_list(table):
-    model = table.model()
-    indexes = table.selectedIndexes()
-
-    rows = sorted(set(index.row() for index in indexes))
-    columns = sorted(set(index.column() for index in indexes))
-
-    lines = []
-    for row in rows:
-        line = []
-        for col in columns:
-            val = model.index(row, col).data(Qt.DisplayRole)
-            line.append(str(val))
-        lines.append(line)
-
-    return lines
+            output = "\n".join([self.classifier.rule_list[int(i)].__str__()
+                                for i in actual_rows_indices])
+            print(output)
+            QApplication.clipboard().setText(output)
 
 
 class DistributionItemDelegate(QItemDelegate):
@@ -233,6 +199,7 @@ class MiddleAlignedFontDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         return super().sizeHint(option, index)
+
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
