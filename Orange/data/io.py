@@ -506,6 +506,7 @@ class FileFormat(metaclass=FileFormatMeta):
         # the file name to a reader.
         if isinstance(self.filename, str):
             result.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+        result.name = getattr(self, 'force_name', None) or result.name
         return result
 
     @staticmethod
@@ -716,6 +717,9 @@ class ExcelReader(FileFormat):
             self.first_row_idx = next(i for i in range(shet.nrows) if any(shet.row_values(i)))
             self.first_col_idx = next(i for i in range(shet.ncols) if shet.cell_value(self.first_row_idx, i))
             self.last_col_idx = shet.row_len(self.first_row_idx)
+            self.force_name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+            if self.sheet:
+                self.force_name = '-'.join((self.force_name, self.sheet))
         except Exception as e:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
 
