@@ -8,7 +8,6 @@ from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
-from Orange.data import Domain
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 

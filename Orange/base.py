@@ -211,10 +211,10 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     name = 'skl learner'
     preprocessors = default_preprocessors = [
-                    RemoveNaNClasses(),
-                    Continuize(),
-                    RemoveNaNColumns(),
-                    SklImpute()]
+        RemoveNaNClasses(),
+        Continuize(),
+        RemoveNaNColumns(),
+        SklImpute()]
 
     @property
     def params(self):
