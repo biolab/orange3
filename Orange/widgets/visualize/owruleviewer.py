@@ -42,7 +42,7 @@ class OWRuleViewer(widget.OWWidget):
     def __init__(self):
         self.classifier = None
 
-        self.model = PyTableModel(parent=self, editable=False)
+        self.model = CustomLabelPyTableModel(parent=self, editable=False)
         self.model.setHorizontalHeaderLabels(
             ["IF conditions", "", "THEN class",
              "Distribution", "Rule quality", "Rule length"])
@@ -120,6 +120,14 @@ class OWRuleViewer(widget.OWWidget):
                                 for i in actual_rows_indices])
             print(output)
             QApplication.clipboard().setText(output)
+
+
+class CustomLabelPyTableModel(PyTableModel):
+    def data(self, index, role=Qt.DisplayRole):
+        value = super().data(index, role)
+        if role == Qt.ToolTipRole:
+            value = value.replace(" AND ", " AND\n")
+        return value
 
 
 class DistributionItemDelegate(QItemDelegate):
