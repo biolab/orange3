@@ -148,8 +148,9 @@ class SparseTable(TableBase, pd.SparseDataFrame):
             Whether to mark the resulting domain as writable.
         Returns
         -------
-        scipy.sparse.coo_matrix
-            The sparse matrix of the selected and transformed table data.
+        scipy.sparse.coo_matrix | np.ndarray
+            The sparse matrix of the selected and transformed table data,
+            or a dense ndarray if the data contains any non-numeric entries.
 
         """
         cols = []
@@ -163,28 +164,40 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         if not cols:
             return sp.coo_matrix((len(self), 0), dtype=np.float64)
 
-        # adapted from https://stackoverflow.com/a/37417084
-        #  - does not handle dense columns (we have none)
-        # in a nutshell, gets the coo_matrix building components directly
-        # from each column of the SparseTable
-        result_data = []
-        result_row = []
-        result_col = []
-        for i, col in enumerate(cols):
-            column_index = self[col.name].sp_index
-            if isinstance(column_index, BlockIndex):
-                column_index = column_index.to_int_index()
-            result_data.append(self[col.name].sp_values)
-            result_row.append(column_index.indices)
-            result_col.append(len(self[col.name].sp_values) * [i])
-        return sp.coo_matrix((np.concatenate(result_data), (np.concatenate(result_row), np.concatenate(result_col))),
-                             (n_rows, len(cols)), dtype=np.float64)
+        if any(v.is_string or v.is_discrete and
+                any(not isinstance(val, Number) for val in v.values) for v in cols):
+            # if there are any textual features, we must return a dense matrix,
+            # as scipy.sparse only supports floats
+            # just use the default implementation here instead of duplicating code
+            return super()._to_numpy(X, Y, meta, writable)
+        else:
+            # the normal case, returning a sparse matrix
+            # adapted from https://stackoverflow.com/a/37417084
+            #  - does not handle dense columns (we have none)
+            # in a nutshell, gets the coo_matrix building components directly
+            # from each column of the SparseTable
+            result_data = []
+            result_row = []
+            result_col = []
+            for i, col in enumerate(cols):
+                column_index = self[col.name].sp_index
+                if isinstance(column_index, BlockIndex):
+                    column_index = column_index.to_int_index()
+                result_data.append(self[col.name].sp_values)
+                result_row.append(column_index.indices)
+                result_col.append(len(self[col.name].sp_values) * [i])
+            return sp.coo_matrix((np.concatenate(result_data), (np.concatenate(result_row), np.concatenate(result_col))),
+                                 (n_rows, len(cols)), dtype=np.float64)
 
     @property
     def Y(self):
-        # subscripting sparse matrices doesn't work, so get a copy
         result = self._to_numpy(Y=True)
-        return result.getcol(0).tocoo() if result.shape[1] == 1 else result
+        # see _to_numpy for why there are two cases
+        if sp.issparse(result):
+            # subscripting sparse matrices doesn't work, so get a copy
+            return result.getcol(0).tocoo() if result.shape[1] == 1 else result
+        else:
+            return result[:, 0] if result.shape[1] == 1 else result
 
     @classmethod
     def _coo_to_sparse_dataframe(cls, coo_matrix, column_index_start):
@@ -269,6 +282,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         """
         if domain is None:
             # legendary inference: everything is continuous! :D
+            # TODO: much better inference, maybe just reuse existing
             domain = Domain(
                 [ContinuousVariable("Feature " + str(i)) for i in list(range(X.shape[1] if X is not None else 0))],
                 [ContinuousVariable("Target " + str(i)) for i in list(range(Y.shape[1] if Y is not None else 0))],
@@ -280,9 +294,13 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         def _any_to_coo(mat):
             if mat is None or sp.isspmatrix_coo(mat):
                 return mat
+            elif mat.size == 0:
+                # we don't use this either way, might as well skip it altogether
+                return None
             elif not sp.issparse(mat):
-                # the result of this is always two-dimensional
-                return sp.coo_matrix(mat)
+                # the result of this is always two-dimensional,
+                # but we still need to ensure it's transposed correctly
+                return mat if len(mat.shape) == 2 else np.array([mat]).T
             else:
                 return mat.tocoo()
         X = _any_to_coo(X)
@@ -290,19 +308,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         metas = _any_to_coo(metas)
         weights = _any_to_coo(weights)
 
-        # sparse structures can't hold anything other than continuous variables, so limit
-        # the domain (also: isinstance(TimeVariable(), ContinuousVariable) == True)
-        columns = []
-        domain = Domain(domain.attributes, domain.class_vars, domain.metas)
-        for v in domain.attributes + domain.class_vars + domain.metas or []:
-            if isinstance(v, StringVariable):
-                raise ValueError("Sparse matrices do not support string variables.")
-            elif isinstance(v, DiscreteVariable) and any(not isinstance(i, Number) for i in v.values):
-                warnings.warn("Replacing discrete variable values with numbers! "
-                              "(sparse matrices can't hold anything but numerics)")
-                v.values = list(range(len(v.values)))
-            columns.append(v.name)
-
+        columns = [v.name for v in domain.attributes + domain.class_vars + domain.metas or []]
         partial_sdfs = []
         col_idx_start = 0
         for role_array in (X, Y, metas):
@@ -310,14 +316,17 @@ class SparseTable(TableBase, pd.SparseDataFrame):
                 continue
             # unstack to convert the 2-level index (one for each coordinate dimension)
             # into 2 indexes - rows and columns
-            partial_sdfs.append(cls._coo_to_sparse_dataframe(role_array, col_idx_start))
+            if sp.issparse(role_array):
+                partial_sdfs.append(cls._coo_to_sparse_dataframe(role_array, col_idx_start))
+            else:
+                partial_sdfs.append(pd.SparseDataFrame(role_array))
             col_idx_start += role_array.shape[1]
         # instruct pandas not to copy unnecessarily
         # and coerce SparseDataFrame into SparseTable
         result = cls(data=pd.concat(partial_sdfs, axis=1, copy=False))
         # rename the columns from column indices to proper names
         # and the rows into globally unique labels
-        result.columns = columns + [cls._WEIGHTS_COLUMN]
+        result.columns = columns + cls._INTERNAL_COLUMN_NAMES
         result.index = cls._new_id(len(result), force_list=True)
         result.domain = domain
         result.set_weights(weights or 1)  # weights can be None

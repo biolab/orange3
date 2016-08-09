@@ -47,9 +47,10 @@ class InterfaceTest(tabletests.InterfaceTest):
 
     def test_append_rows_modified(self):
         new_value = 2
-        new_row = [new_value] * (len(self.table.columns) - 1)  # -1 for weights
+        internals = len(self.table._INTERNAL_COLUMN_NAMES)
+        new_row = [new_value] * (len(self.table.columns) - internals)
         newt = self.table.append(new_row)
-        self.assertEqual(list(newt.iloc[-1][:-1]), new_row)  # :-1 for weights
+        self.assertEqual(list(newt.iloc[-1][:-internals]), new_row)
 
     def test_delete_rows(self):
         with self.assertRaises(ValueError):

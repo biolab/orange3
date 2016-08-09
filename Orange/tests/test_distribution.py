@@ -321,7 +321,7 @@ class TestDomainDistribution(unittest.TestCase):
 
     def test_sparse_get_distributions(self):
         domain = Domain(
-            [DiscreteVariable("d%i" % i, values=list("abc"))
+            [DiscreteVariable("d%i" % i, values=list([0, 1, 2]))
              for i in range(10)] +
             [ContinuousVariable("c%i" % i) for i in range(10)])
 

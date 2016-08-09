@@ -133,7 +133,7 @@ class TestDiscrete(unittest.TestCase):
     @staticmethod
     def _construct_sparse():
         domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=list("abc"))
+            [data.DiscreteVariable("d%i" % i, values=[0, 1, 2])
              for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)],
             data.DiscreteVariable("y", values=list("abc")))
@@ -156,7 +156,7 @@ class TestDiscrete(unittest.TestCase):
                    2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
-        Y = sp.coo_matrix(([1, 2, 1, 0, 0], (list(range(5)), [0] * 5)), shape=(5, 1))
+        Y = np.array([["b", "c", "b", "a", "a"]]).T
         return data.Table.from_numpy(domain, X, Y)
 
     def test_sparse(self):

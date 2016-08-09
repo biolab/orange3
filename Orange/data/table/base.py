@@ -23,6 +23,11 @@ class TableBase:
     # subclasses may override this to rename the column
     _WEIGHTS_COLUMN = "__weights__"
 
+    # a collection of all known internal column names
+    # use case: Corpus adds additional columns and we need to know
+    # of all available names
+    _INTERNAL_COLUMN_NAMES = [_WEIGHTS_COLUMN]
+
     # a counter for indexing rows, important for deterministically selecting rows
     # and keeping pandas indices sane
     _next_instance_id = 0
@@ -81,11 +86,11 @@ class TableBase:
             return super().__new__(cls)
 
         # pandas can call this constructor (through Table._constructor) internally
-        # when doing transformations: its signatures are either a BlockManager as the sole arg,
+        # when doing transformations: its signatures are either a BlockManager or dict as the sole arg,
         # or a ndarray as the sole arg, accompanied by at least one kwarg
         # this serves the purpose of transforming the first arg into its matching kwarg,
         # which will then be processed by the if clause a couple of lines above this
-        if len(args) == 1 and (isinstance(args[0], pd.core.internals.BlockManager)
+        if len(args) == 1 and (isinstance(args[0], (pd.core.internals.BlockManager, dict))
                                or (isinstance(args[0], np.ndarray) and len(kwargs) != 0 and all_kwargs_are_pandas)):
             return cls(data=args[0], **kwargs)
         ##### END PANDAS SUBCLASS COMPATIBILITY SECTION #####
@@ -245,6 +250,7 @@ class TableBase:
                 result = cls(data=source_table.iloc[row_indices]).copy()
                 # because we manually copy data, not the whole table
                 result._transfer_properties(source_table, transfer_domain=True)
+                return result
 
             result = cls()
             conversion = target_domain.get_conversion(source_table.domain)
@@ -428,12 +434,17 @@ class TableBase:
                 return np.atleast_2d(what).T
 
         # if anything is sparse, use the sparse version
+        from .impl import SparseTable
         if sp.issparse(X) or (Y is not None and sp.issparse(Y)) \
                           or (metas is not None and sp.issparse(metas)) \
-                          or (weights is not None and sp.issparse(weights)):
-            # explicitly construct a sparse table as this can be called from Table(...)
-            from .impl import SparseTable
-            return SparseTable._from_sparse_numpy(domain, X, Y, metas, weights)
+                          or (weights is not None and sp.issparse(weights))\
+                          or issubclass(cls, SparseTable):
+            # explicitly construct a sparse table as this can be called from Table(...),
+            # but allow subclasses to call correctly
+            if issubclass(cls, SparseTable):
+                return cls._from_sparse_numpy(domain, X, Y, metas, weights)
+            else:
+                return SparseTable._from_sparse_numpy(domain, X, Y, metas, weights)
 
         if domain is None:
             result = cls._from_data_inferred(X, Y, metas)
@@ -608,9 +619,6 @@ class TableBase:
         # preallocate result, we fill it in-place
         # we need a more general dtype for metas (commonly strings),
         # otherwise assignment fails later
-        dtype = object if meta else \
-            int if all(c.is_discrete for c in cols) else \
-                None
         result = np.zeros((n_rows, len(cols)), dtype=object if meta else None)
         # effectively a double for loop, see if this is a bottleneck later
         for i, col in enumerate(cols):
@@ -618,7 +626,8 @@ class TableBase:
                 # if this is used in TableSeries, we don't have a series but an element
                 result[:, i] = col.to_val(self[col])
             else:
-                result[:, i] = col.to_val(self[col]).values
+                vals = col.to_val(self[col]).values
+                result[:, i] = vals.values if hasattr(vals, 'values') else vals
         result.setflags(write=writable)
         return result
 
@@ -794,7 +803,7 @@ class TableBase:
         if isinstance(item, (Sequence, pd.Index)) and not isinstance(item, str) \
                 and all(isinstance(i, str) for i in item) \
                 and self._WEIGHTS_COLUMN not in item:
-            item = list(item) + [self._WEIGHTS_COLUMN]
+            item = list(item) + self._INTERNAL_COLUMN_NAMES
         return super().__getitem__(item)
 
     def __setitem__(self, key, value):
@@ -835,14 +844,15 @@ class TableBase:
             Provided for pandas API compatibility, ignored.
         verify_integrity : bool, optional, default False
             Provided for pandas API compatibility, ignored.
+
         Notes
         -----
         Overrides the pandas append functionality!
         """
         if not isinstance(other, pd.DataFrame):
-            other = pd.DataFrame(data=[other],
-                                 columns=[c for c in self.columns if c != self._WEIGHTS_COLUMN],
-                                 index=[0])
+            other = self._constructor(data=[other],
+                                      columns=[c for c in self.columns if c not in self._INTERNAL_COLUMN_NAMES],
+                                      index=[0])
         other.index = self._new_id(len(other), force_list=True)
         if self._WEIGHTS_COLUMN not in other.columns:
             other[self._WEIGHTS_COLUMN] = 1
@@ -932,7 +942,7 @@ class TableBase:
             result.index = new_index
         elif axis == CONCAT_COLS:
             # check for same name
-            columns = [v for v in flatten([list(t.columns) for t in tables]) if v != cls._WEIGHTS_COLUMN]
+            columns = [v for v in flatten([list(t.columns) for t in tables]) if v not in cls._INTERNAL_COLUMN_NAMES]
             if len(set(columns)) != len(columns):
                 raise ValueError("Cannot concatenate domains with same names.")
             if colstack:
