@@ -49,7 +49,7 @@ class Learner:
             model = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.weights
-            model = self.fit(X, Y, W)
+            model = self.fit(X, Y, W if data.has_weights else None)
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
@@ -243,7 +243,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         clf = self.__wraps__(**self.params)
         Y = Y.reshape(-1)
         # don't use weights if they don't exist, they aren't supported, or are all identical
-        if W is None or not self.supports_weights or len(np.unique(W)) == 1:
+        if W is None or not self.supports_weights or (W == W[0]).all() == 1:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 

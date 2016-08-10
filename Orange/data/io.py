@@ -202,37 +202,37 @@ class FileFormat(metaclass=FileFormatMeta):
     """
     Subclasses set the following attributes and override the following methods:
 
-        EXTENSIONS = ('.ext1', '.ext2', ...)
-        DESCRIPTION = 'human-readable file format description'
-        SUPPORT_COMPRESSED = False
+    EXTENSIONS = ('.ext1', '.ext2', ...)
+    DESCRIPTION = 'human-readable file format description'
+    SUPPORT_COMPRESSED = False
 
-        --------------------------
-        START CHOICE: Subclasses override either
+    --------------------------
+    START CHOICE: Subclasses override either
 
-        def read_header(self):
-            # read only the first 3 rows into a raw pd.DataFrame
-            # 3 because the header has {0, 1, 3} rows
+    def read_header(self):
+        # read only the first 3 rows into a raw pd.DataFrame
+        # 3 because the header has {0, 1, 3} rows
 
-        and
+    and
 
-        def read_contents(self, skiprows):
-            # read the whole file (with skipped rows) into a raw pd.DataFrame
-            # raw means that no rows ar treated as columns, no columns as indices etc
-            # skiprows determines how many rows to skip at the beginning of the file
+    def read_contents(self, skiprows):
+        # read the whole file (with skipped rows) into a raw pd.DataFrame
+        # raw means that no rows ar treated as columns, no columns as indices etc
+        # skiprows determines how many rows to skip at the beginning of the file
 
-        or, if the file format has no headers or is e.g. binary,
+    or, if the file format has no headers or is e.g. binary,
 
-        def read(self):
-            # return a complete, processed, pd.DataFrame/Table object
+    def read(self):
+        # return a complete, processed, pd.DataFrame/Table object
 
-        END CHOICE
-        --------------------------
+    END CHOICE
+    --------------------------
 
-        @classmethod
-        def write_file(cls, filename, data):
-            ...
-            self.write_headers(writer.write, data)
-            writer.writerows(data)
+    @classmethod
+    def write_file(cls, filename, data):
+        ...
+        self.write_headers(writer.write, data)
+        writer.writerows(data)
     """
 
     PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
@@ -488,17 +488,19 @@ class FileFormat(metaclass=FileFormatMeta):
 
                 role_vars[col_role].append(var)
                 # strip whitespace from string/string-like columns (np.object_ in pandas)
+                # important: not just object which is a superclass of everything probably,
+                # object_ is the one that only encloses 'real' object-like types
                 if np.issubdtype(contents[col_idx], np.object_):
                     result[var.name] = contents[col_idx].str.strip()
                 else:
                     result[var.name] = contents[col_idx]
 
             domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
-            result = Table.from_dataframe(result, domain, reindex=True, weights=weight_column)
+            result = Table.from_dataframe(domain, result, reindex=True, weights=weight_column)
         else:
             # there is no header, just read the file
             # and pass it to the proper constructor to infer columns
-            result = Table.from_dataframe(self.read_contents(skiprows=0))
+            result = Table.from_dataframe(None, self.read_contents(skiprows=0))
 
         # TODO: Name can be set unconditionally when/if
         # self.filename will always be a string with the file name.
@@ -511,7 +513,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @staticmethod
     def header_names(data):
-        return [data._WEIGHTS_COLUMN] + \
+        return ([data._WEIGHTS_COLUMN] if data.has_weights else []) + \
                [v.name for v in chain(data.domain.attributes,
                                       data.domain.class_vars,
                                       data.domain.metas)]
@@ -524,14 +526,14 @@ class FileFormat(metaclass=FileFormatMeta):
             elif var.is_discrete:
                 return Flags.join(var.values) if var.ordered else var.TYPE_HEADERS[0]
             raise NotImplementedError
-        return ['continuous'] + \
+        return (['continuous'] if data.has_weights else []) + \
                [_vartype(v) for v in chain(data.domain.attributes,
                                            data.domain.class_vars,
                                            data.domain.metas)]
 
     @staticmethod
     def header_flags(data):
-        return list(chain(['weight'],
+        return list(chain(['weight'] if data.has_weights else [],
                           (Flags.join([flag], *('{}={}'.format(*a)
                                                 for a in sorted(var.attributes.items())))
                            for flag, var in chain(zip(repeat(''),  data.domain.attributes),
@@ -548,12 +550,13 @@ class FileFormat(metaclass=FileFormatMeta):
     @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
-        vars = list(chain((ContinuousVariable(data._WEIGHTS_COLUMN),),
+        vars = list(chain((ContinuousVariable(data._WEIGHTS_COLUMN),) if data.has_weights else [],
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))
-        for idx, row in data[vars].iterrows():
-            write(list(row))
+        for idx, row in data.iterrows():
+            row_filtered = row[vars]
+            write(list(row_filtered))
 
 
 class CSVReader(FileFormat):

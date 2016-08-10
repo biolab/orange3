@@ -17,15 +17,19 @@ from Orange.util import flatten, deprecated
 # noinspection PyPep8Naming
 class TableBase:
     """An abstract base class for data storage structures in Orange."""
-    KNOWN_PANDAS_KWARGS = {}
+
+    # a list of all pandas kwargs for use in the pandas compatibility sections
+    # empty here, subclasses must override with the known kwargs of the
+    # parent pandas class
+    _KNOWN_PANDAS_KWARGS = {}
 
     # the default name for weights columns
     # subclasses may override this to rename the column
     _WEIGHTS_COLUMN = "__weights__"
 
     # a collection of all known internal column names
-    # use case: Corpus adds additional columns and we need to know
-    # of all available names
+    # use case: subclasses add additional columns (not only weights) and we need to know
+    # of all existing names to be able to process things without these internals
     _INTERNAL_COLUMN_NAMES = [_WEIGHTS_COLUMN]
 
     # a counter for indexing rows, important for deterministically selecting rows
@@ -33,13 +37,14 @@ class TableBase:
     _next_instance_id = 0
     _next_instance_lock = Lock()
 
-    conversion_cache = None
+    # the conversion cache for converting tables to different domains
+    _conversion_cache = None
 
     # custom properties, preserved through pandas manipulations
-    _metadata = ['name',
-                 'domain',
-                 'attributes',
-                 '__file__']
+    _metadata = ['name',  # the table name
+                 'domain',  # the domain assigned to the table
+                 'attributes',  # any custom attributes the table has
+                 '__file__']  # if read from a file, the filename of that file
 
     def __new__(cls, *args, **kwargs):
         """Create a new Table, the exact result type depends on the data passed.
@@ -67,13 +72,14 @@ class TableBase:
 
         Returns
         -------
+        Table | SparseTable
         A new Table or SparseTable, depending on the arguments passed and the calling class.
         """
         # Needed because we have two construction paths: Table() or Table.from_X,
         # complications arise from having a completely different signature from pandas.
 
         # is pandas is calling this as part of its transformations, pass it through
-        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(cls.KNOWN_PANDAS_KWARGS)) == 0
+        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(cls._KNOWN_PANDAS_KWARGS)) == 0
 
         ##### START PANDAS SUBCLASS COMPATIBILITY SECTION #####
         # this compatibility hack must exist because we override __new__ in a way incompatible
@@ -105,6 +111,8 @@ class TableBase:
                 return cls.from_file(args[0], **kwargs)
         elif isinstance(args[0], TableBase):
             return cls.from_table(args[0].domain, args[0])
+        elif isinstance(args[0], pd.DataFrame):
+            return cls.from_dataframe(None, args[0], **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
@@ -114,7 +122,7 @@ class TableBase:
             elif isinstance(args[0], list):
                 return cls.from_list(domain, *args)
             elif isinstance(args[0], pd.DataFrame):
-                return cls.from_dataframe(args[0], domain=domain, **kwargs)
+                return cls.from_dataframe(domain, args[0], **kwargs)
         else:
             domain = None
         return cls.from_numpy(domain, *args, **kwargs)
@@ -141,7 +149,7 @@ class TableBase:
         # only pass through things known to pandas, e.g.
         # Table(..., weights=1) passes weights to from_numpy, but would error
         # when passing to pandas upstream
-        super().__init__(**{k: v for k, v in kwargs.items() if k in self.KNOWN_PANDAS_KWARGS})
+        super().__init__(**{k: v for k, v in kwargs.items() if k in self._KNOWN_PANDAS_KWARGS})
 
         self.name = getattr(self, 'name', kwargs.get("name", "untitled"))
         self.attributes = getattr(self, 'attributes', kwargs.get("attributes", {}))
@@ -237,12 +245,12 @@ class TableBase:
             # to pandas df first to avoid adding a column/row of weights automatically
             source_table = cls(source_table.domain, pd.DataFrame(source_table).transpose())
 
-        new_cache = cls.conversion_cache is None
+        new_cache = cls._conversion_cache is None
         try:
             if new_cache:
-                cls.conversion_cache = {}
+                cls._conversion_cache = {}
             else:
-                cached = cls.conversion_cache.get((id(target_domain), id(source_table)))
+                cached = cls._conversion_cache.get((id(target_domain), id(source_table)))
                 if cached is not None:
                     return cached
             if target_domain == source_table.domain:
@@ -274,7 +282,7 @@ class TableBase:
                 result.index = source_table.index  # keep previous index
             result = result.iloc[row_indices]
 
-            cls.conversion_cache[(id(target_domain), id(source_table))] = result
+            cls._conversion_cache[(id(target_domain), id(source_table))] = result
 
             # transform any values we believe are null into actual null values
             result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
@@ -284,18 +292,18 @@ class TableBase:
             return result
         finally:
             if new_cache:
-                cls.conversion_cache = None
+                cls._conversion_cache = None
 
     @classmethod
-    def from_dataframe(cls, df, domain=None, reindex=False, weights=None):
+    def from_dataframe(cls, domain, df, reindex=False, weights=None):
         """Create a new Table from a pandas DataFrame.
 
         Parameters
         ----------
+        domain : Domain | None
+            The domain to use for the result. If None, the domain is inferred.
         df : pd.DataFrame
             The source pandas DataFrame.
-        domain : Domain, optional, default None
-            The domain to use for the result. If None, the domain is inferred.
         reindex : bool, default False
             Whether to override the original DataFrame's index with a new one.
         weights : anything TableBase.set_weights accepts, optional, default None
@@ -411,7 +419,7 @@ class TableBase:
 
         Parameters
         ----------
-        domain : Domain
+        domain : Domain | None
             If None, the domain is inferred from the data. Otherwise, specifies
             the column assignment to the new Table.
         X : np.ndarray
@@ -684,7 +692,7 @@ class TableBase:
 
         Parameters
         ----------
-        weight : Number or str or Sequence or np.ndarray or pd.Series
+        weight : Number | str | Sequence | np.ndarray | pd.Series
             If a number, all weights are set to that value.
             If a string, weights are set to whatever the column with that name's values are,
             but only if those values are all numbers and are not NA/NaN.
@@ -720,6 +728,19 @@ class TableBase:
             self[self._WEIGHTS_COLUMN] = list(weight)
         else:
             raise TypeError("Expected one of [Number, str, Sequence, SeriesBase].")
+
+    @property
+    def has_weights(self):
+        """Check if this Table has any weights.
+
+        Weight presence is determined by all weights not being identical.
+
+        Returns
+        -------
+        bool
+            True if the weights are not all identical, False otherwise.
+        """
+        return len(self) and len(self[self._WEIGHTS_COLUMN].unique()) != 1
 
     @classmethod
     def _new_id(cls, num=1, force_list=False):
@@ -868,7 +889,7 @@ class TableBase:
                                                      categories=self[column].cat.categories,
                                                      ordered=self[column].cat.ordered)
         # also coerce into the proper class
-        result = self.from_dataframe(super().append(other), self.domain)
+        result = self.from_dataframe(self.domain, super().append(other))
         # append doesn't transfer properties for some reason
         result._transfer_properties(self)
         return result
@@ -972,7 +993,7 @@ class TableBase:
         else:
             raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
         result._transfer_properties(tables[0])  # pd.concat does not do this by itself
-        return cls.from_dataframe(result, new_domain)
+        return cls.from_dataframe(new_domain, result)
 
     def _transfer_properties(self, from_table, transfer_domain=False):
         """Transfer properties (such as the name) to this table.

@@ -67,7 +67,7 @@ def filter_visible(feats):
     tuple
         A filtered tuple of features that are visible (i.e. not hidden).
     """
-    return (f for f in feats if not f.attributes.get('hidden', False))
+    return tuple(f for f in feats if not f.attributes.get('hidden', False))
 
 
 class Domain:

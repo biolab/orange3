@@ -8,9 +8,9 @@ from pandas.sparse.array import BlockIndex
 
 
 class Table(TableBase, pd.DataFrame):
-    """A dense implementation of an orange table."""
+    """A dense implementation of an Orange table."""
 
-    KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy"}
+    _KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy"}
 
     @property
     def _constructor(self):
@@ -84,9 +84,10 @@ class TablePanel(pd.Panel):
 
 
 class SparseTable(TableBase, pd.SparseDataFrame):
-    """A sparse implementation of an orange table."""
+    """A sparse implementation of an Orange table."""
+
     # this differs from Table.KNOWN_PANDAS_KWARGS by default_kind and default_fill_value
-    KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy", "default_kind", "default_fill_value"}
+    _KNOWN_PANDAS_KWARGS = {"data", "index", "columns", "dtype", "copy", "default_kind", "default_fill_value"}
 
     @property
     def _constructor(self):
