@@ -83,8 +83,7 @@ class OWRuleViewer(widget.OWWidget):
             presentation = [
                 ("TRUE" if not rule.selectors
                  else (" AND " if self.compact_view else " AND\n").join(
-                    [attributes[s.column].name +
-                     self.OPERATORS[s.op] +
+                    [attributes[s.column].name + self.OPERATORS[s.op] +
                      (str(attributes[s.column].values[int(s.value)])
                       if attributes[s.column].is_discrete
                       else str(s.value)) for s in rule.selectors]),
@@ -109,7 +108,7 @@ class OWRuleViewer(widget.OWWidget):
                     QHeaderView.ResizeToContents)
 
     def copy_to_clipboard(self):
-        if self.view is not None and self.view.selectionmodel().hasSelection():
+        if self.view is not None and self.view.selectionModel().hasSelection():
             highlighted_rows_indices = set(index.row() for index in
                                            self.view.selectedIndexes())
 

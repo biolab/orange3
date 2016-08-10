@@ -96,6 +96,7 @@ class PyTableModel(QAbstractTableModel):
         self._table = None
         self._roleData = None
         self.wrap(sequence or [])
+        self.view = None
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self)
@@ -160,6 +161,9 @@ class PyTableModel(QAbstractTableModel):
             return str(value)
 
     def sort(self, column, order=Qt.AscendingOrder):
+        selection_model = self.view.selectionModel()
+        selected_indexes = selection_model.selectedIndexes()
+
         self.beginResetModel()
         indices = sorted(range(len(self._table)),
                          key=lambda i: self._table[i][column],
@@ -178,6 +182,13 @@ class PyTableModel(QAbstractTableModel):
             vheaders = [vheaders[i] for i in indices]
             self._headers[Qt.Vertical] = vheaders
         self.endResetModel()
+
+        temp = {i: [j for j, x in enumerate(indices) if x == i][0]
+                for i in range(len(self._table))}
+
+        for ind in selected_indexes:
+            selection_model.select(self.index(temp[ind.row()], ind.column()),
+                                   selection_model.Select)
 
     def setHorizontalHeaderLabels(self, labels):
         self._headers[Qt.Horizontal] = labels

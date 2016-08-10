@@ -62,6 +62,10 @@ class TableView(QTableView):
         v.setVisible(False)
         v.setResizeMode(QHeaderView.ResizeToContents)
 
+    def setModel(self, model):
+        super().setModel(model)
+        model.view = self
+
     class BoldFontDelegate(QStyledItemDelegate):
         """Paints the text of associated cells in bold font.
 
