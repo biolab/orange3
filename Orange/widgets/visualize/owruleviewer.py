@@ -22,7 +22,15 @@ class OWRuleViewer(widget.OWWidget):
     icon = ""
     priority = 18
 
-    inputs = [("Classifier", _RuleClassifier, 'set_classifier')]
+    inputs = [("Data", Table, 'set_data'),
+              ("Classifier", _RuleClassifier, 'set_classifier')]
+
+    data_output_type = "Filtered data"
+    outputs = [(data_output_type, Table)]
+
+    want_basic_layout = True
+    want_main_area = True
+    want_control_area = False
 
     # ascii operators
     OPERATORS = {
@@ -32,15 +40,12 @@ class OWRuleViewer(widget.OWWidget):
         '>=': '≥'
     }
 
-    want_basic_layout = True
-    want_main_area = True
-    want_control_area = False
-
-    presentation = None
-    compact_view = False
-
     def __init__(self):
+        self.data = None
         self.classifier = None
+        self.presentation = None
+        self.selected = None
+        self.compact_view = False
 
         self.model = CustomLabelPyTableModel(parent=self, editable=False)
         self.model.setHorizontalHeaderLabels(
@@ -64,34 +69,45 @@ class OWRuleViewer(widget.OWWidget):
         gui.checkBox(widget=self.mainArea, master=self, value="compact_view",
                      label="Compact view", callback=self.on_update)
 
+    def set_data(self, data):
+        self.data = data
+        self.commit()
+
     def set_classifier(self, classifier):
         self.classifier = classifier
+        self.presentation = None
+        self.selected = None
         self.model.clear()
-        self.on_update()
 
-    def on_update(self):
-        if self.classifier is not None and hasattr(self.classifier, 'rule_list'):
+        if classifier is not None and hasattr(classifier, "rule_list"):
             self.model.setVerticalHeaderLabels(
-                [str(i) for i in range(len(self.classifier.rule_list))])
+                list(range(len(classifier.rule_list))))
 
             self.dist_item_delegate.color_schema = \
-                [QColor(*c) for c in self.classifier.domain.class_var.colors]
+                [QColor(*c) for c in classifier.domain.class_var.colors]
 
-            attributes = self.classifier.domain.attributes
-            class_var = self.classifier.domain.class_var
+            attributes = classifier.domain.attributes
+            class_var = classifier.domain.class_var
 
-            presentation = [
-                ("TRUE" if not rule.selectors
-                 else (" AND " if self.compact_view else " AND\n").join(
+            self.presentation = [
+                ["TRUE" if not rule.selectors else " AND ".join(
                     [attributes[s.column].name + self.OPERATORS[s.op] +
                      (str(attributes[s.column].values[int(s.value)])
                       if attributes[s.column].is_discrete
                       else str(s.value)) for s in rule.selectors]),
                  '→', class_var.name + "=" + class_var.values[rule.prediction],
-                 rule.curr_class_dist.tolist(), rule.quality, rule.length)
-                for rule in self.classifier.rule_list]
+                 rule.curr_class_dist.tolist(), rule.quality, rule.length]
+                for rule in classifier.rule_list]
 
-            self.model.wrap(presentation)
+        self.on_update()
+        self.commit()
+
+    def on_update(self):
+        if self.presentation is not None:
+            self._update_presentation()
+            self._save_selected()
+
+            self.model.wrap(self.presentation)
             self.view.resizeColumnsToContents()
             self.view.resizeRowsToContents()
 
@@ -107,18 +123,60 @@ class OWRuleViewer(widget.OWWidget):
                 self.view.horizontalHeader().setResizeMode(
                     QHeaderView.ResizeToContents)
 
+            self._load_selected()
+
+    def _update_presentation(self):
+        assert self.presentation is not None
+        for single_rule_str_list in self.presentation:
+            antecedent = single_rule_str_list[0]
+            to_replace = ((" AND\n", " AND ")
+                          if self.compact_view
+                          else (" AND ", " AND\n"))
+
+            single_rule_str_list[0] = antecedent.replace(*to_replace)
+
+    def _save_selected(self):
+        self.selected = None
+        if self.view.selectionModel().hasSelection():
+            visual_row_indices = sorted(set(index.row() for index in
+                                            self.view.selectedIndexes()))
+            actual_rows_indices = [self.model.headerData(i, Qt.Vertical)
+                                   for i in visual_row_indices]
+            self.selected = visual_row_indices, actual_rows_indices
+
+    def _load_selected(self):
+        if self.selected is not None:
+            selection_model = self.view.selectionModel()
+            for row in self.selected[0]:
+                selection_model.select(self.model.index(row, 0),
+                                       selection_model.Select |
+                                       selection_model.Rows)
+
     def copy_to_clipboard(self):
-        if self.view is not None and self.view.selectionModel().hasSelection():
-            highlighted_rows_indices = set(index.row() for index in
-                                           self.view.selectedIndexes())
-
-            actual_rows_indices = sorted([self.model.headerData(i, Qt.Vertical)
-                                          for i in highlighted_rows_indices])
-
-            output = "\n".join([self.classifier.rule_list[int(i)].__str__()
-                                for i in actual_rows_indices])
-            print(output)
+        self._save_selected()
+        if self.selected is not None:
+            output = "\n".join([self.classifier.rule_list[i].__str__()
+                                for i in self.selected[1]])
             QApplication.clipboard().setText(output)
+
+    def commit(self):
+        data_output = None
+        self._save_selected()
+
+        if (self.selected is not None and
+                self.data is not None and
+                self.classifier is not None and
+                self.data.domain.__eq__(self.classifier.domain)):
+
+            status = np.ones(self.data.X.shape[0], dtype=bool)
+            for i in self.selected[1]:
+                rule = self.classifier.rule_list[i]
+                status &= rule.evaluate_data(self.data.X)
+
+            # data_output = ..
+            print(np.sum(status))
+
+        self.send(OWRuleViewer.data_output_type, data_output)
 
 
 class CustomLabelPyTableModel(PyTableModel):

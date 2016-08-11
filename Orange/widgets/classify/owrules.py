@@ -113,6 +113,10 @@ class OWRuleLearner(OWBaseLearner):
     icon = ""
     priority = 19
 
+    want_main_area = False
+    resizing_enabled = False
+    auto_apply = Setting(False)
+
     LEARNER = CustomRuleLearner
 
     storage_orders = ["ordered", "unordered"]
@@ -137,12 +141,7 @@ class OWRuleLearner(OWBaseLearner):
     base_rules = None
     gamma_spin = None
 
-    want_main_area = False
-    resizing_enabled = False
-    auto_apply = Setting(False)
-
     def add_main_layout(self):
-
         # top-level control procedure
         top_box = gui.hBox(widget=self.controlArea, box=None, addSpace=2)
 
