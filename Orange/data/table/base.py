@@ -257,7 +257,7 @@ class TableBase:
             if len(result) != 0:
                 result.set_weights(source_table.weights)
                 result.index = source_table.index  # keep previous index
-            result = result.iloc[row_indices]
+                result = result.iloc[row_indices]
 
             cls._conversion_cache[(id(target_domain), id(source_table))] = result
 
@@ -410,10 +410,7 @@ class TableBase:
         """
         # if anything is sparse, use the sparse version
         from .impl import SparseTable
-        if sp.issparse(X) or (Y is not None and sp.issparse(Y)) \
-                          or (metas is not None and sp.issparse(metas)) \
-                          or (weights is not None and sp.issparse(weights))\
-                          or issubclass(cls, SparseTable):
+        if any(sp.issparse(arr) for arr in (X, Y, metas, weights)) or issubclass(cls, SparseTable):
             # explicitly construct a sparse table as this can be called from Table(...),
             # but allow subclasses to call correctly
             if issubclass(cls, SparseTable):
@@ -488,14 +485,10 @@ class TableBase:
                 raise ValueError("Inconsistent number of columns.")
 
         # check row lengths
-        # allow not specifying the class variable (but only that): set it to nan in all rows
         domain_columns = len(domain.variables) + len(domain.metas)
         for r in rows:
             if len(r) != domain_columns:
-                if len(r) == len(domain.attributes):
-                    r.extend([np.nan] * len(domain.class_vars))
-                else:
-                    raise ValueError("Data and domain column count mismatch. ")
+                raise ValueError("Data and domain column count mismatch. ")
 
         result = cls(data=rows,
                      columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
@@ -823,13 +816,14 @@ class TableBase:
         # we also need to set default weights, lest they be NA
         new_index_and_weights = len(self.index) == 0
 
-        # PANDAS CONTRACT BREAKAGE:
+        # SOMEWHAT PANDAS CONTRACT BREAKAGE:
         # the pandas default behaviour when adding a new column as a Series is that
         # the indexes are inner-joined: only the elements at the indices that exist
         # in the current table are actually set, other elements are NA
         # for easier handling of Orange behaviour, we effectively ignore the index
-        # on the series to just merge the column into the table
-        if isinstance(value, pd.Series) and not new_index_and_weights:
+        # on the series if the series is of the same length (like when adding a new column)
+        # to just merge the column into the table
+        if isinstance(value, pd.Series) and len(value) == len(self) and not new_index_and_weights:
             value.index = self.index
         super().__setitem__(key, value)
 
@@ -961,10 +955,12 @@ class TableBase:
 
     def approx_len(self):
         """Return the approximate length of the table."""
+        # TODO: solely for SQL compatibility, which would ideally be replaced with Spark
         return len(self)
 
     def exact_len(self):
         """Return the exact length of the table."""
+        # TODO: solely for SQL compatibility, which would ideally be replaced with Spark
         return len(self)
 
     def has_missing(self):

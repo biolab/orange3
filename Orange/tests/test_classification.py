@@ -208,8 +208,8 @@ class ClassfierListInputTest(unittest.TestCase):
     def test_discrete(self):
         table = Table("titanic")
         tree = Orange.classification.TreeLearner()(table)
-        strlist = [["crew", "adult", "male"],
-                   ["crew", "adult", None]]
+        strlist = [["crew", "adult", "male", None],
+                   ["crew", "adult", None, None]]
         for se in strlist:  # individual examples
             self.assertTrue(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         self.assertTrue(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
@@ -217,8 +217,8 @@ class ClassfierListInputTest(unittest.TestCase):
     def test_continuous(self):
         table = Table("iris")
         tree = Orange.classification.TreeLearner()(table)
-        strlist = [[2, 3, 4, 5],
-                   [1, 2, 3, 5]]
+        strlist = [[2, 3, 4, 5, None],
+                   [1, 2, 3, 5, None]]
         for se in strlist:  # individual examples
             self.assertTrue(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
         self.assertTrue(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
@@ -231,7 +231,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
     def test_unknown(self):
         table = Table("iris")
         tree = LogisticRegressionLearner()(table)
-        tree([1, 2, None, None])
+        tree([1, 2, None, None, None])
 
     def test_missing_class(self):
         table = Table(test_filename("adult_sample_missing"))
