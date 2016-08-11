@@ -665,9 +665,9 @@ class CreateTableWithData(TableTests):
                               ContinuousVariable(name="b")],
                              DiscreteVariable(name="y", values="abc"))
         table = Table(domain, [["m", 1, "c"],
-                                    ["f", 2, "?"],
-                                    ["m", 3, "a"],
-                                    ["?", "?", "c"]])
+                               ["f", 2, "?"],
+                               ["m", 3, "a"],
+                               ["?", "?", "c"]])
         self.assertIs(table.domain, domain)
         self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(
@@ -698,9 +698,9 @@ class CreateTableWithData(TableTests):
                               ContinuousVariable(name="b")],
                              DiscreteVariable(name="y", values="abc"))
         table = Table(domain, [["m", 1, "c"],
-                                    ["f", 2, "?"],
-                                    ["m", 3, "a"],
-                                    ["?", "?", "c"]], [1, 2, 3, 4])
+                               ["f", 2, "?"],
+                               ["m", 3, "a"],
+                               ["?", "?", "c"]], [1, 2, 3, 4])
         self.assertIs(table.domain, domain)
         self.assert_discretes_are_categoricals(table)
         np.testing.assert_almost_equal(

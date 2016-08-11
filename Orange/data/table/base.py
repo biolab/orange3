@@ -45,7 +45,8 @@ class TableBase:
     _metadata = ['name',  # the table name
                  'domain',  # the domain assigned to the table
                  'attributes',  # any custom attributes the table has
-                 '__file__']  # if read from a file, the filename of that file
+                 '__file__',  # if read from a file, the filename of that file
+                 '_already_inited']  # skip multiple constructor calls, see __init__
 
     def __new__(cls, *args, **kwargs):
         """Create a new Table, the exact result type depends on the data passed.
@@ -132,6 +133,13 @@ class TableBase:
         Filters the domain: retains only the columns actually in the table.
         Sets the weights if they are not set already.
         """
+        if getattr(self, '_already_inited', False):
+            # we may have already been initialized before
+            # e.g. __new__ constructs a complete, initialized object, which
+            # then passes through this __init__ again, unnecessarily
+            # avoid this by quickly exiting
+            return
+
         # see the comment in __new__ for the rationale here
         # also, another tidbit is that pandas has some internals that need to be set up
         # and expects its arguments to be set appropriately
@@ -151,9 +159,12 @@ class TableBase:
 
         # try to use defaults if they were already set,
         # e.g. in __new__, which constructs a complete table and passes it here
-        self.name = getattr(self, 'name', 'untitled')
-        self.attributes = getattr(self, 'attributes', kwargs.get('attributes', {}))
-        self.__file__ = getattr(self, '__file__', None)
+        #self.name = getattr(self, 'name', 'untitled')
+        #self.attributes = getattr(self, 'attributes', kwargs.get('attributes', {}))
+        #self.__file__ = getattr(self, '__file__', None)
+        self.name = 'untitled'
+        self.attributes = kwargs.get('attributes', {})
+        self.__file__ = None
 
         # we need to filter the domain to only include the columns present in the table
         # but we still need to allow constructing an empty table (with no domain)
@@ -174,6 +185,8 @@ class TableBase:
         # only set the weights if they aren't set already
         if self._WEIGHTS_COLUMN not in self.columns:
             self.set_weights(1)
+
+        self._already_inited = True
 
     @classmethod
     def from_domain(cls, domain):
