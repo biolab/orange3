@@ -261,8 +261,6 @@ class TableBase:
 
             cls._conversion_cache[(id(target_domain), id(source_table))] = result
 
-            # transform any values we believe are null into actual null values
-            result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
             result._transform_discrete_into_categorical()
             result._transform_timevariable_into_datetime()
 
@@ -297,8 +295,6 @@ class TableBase:
             result = cls(data=df)
             result.domain = domain
 
-        # transform any values we believe are null into actual null values
-        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
         result._transform_discrete_into_categorical()
         result._transform_timevariable_into_datetime()
 
@@ -449,8 +445,6 @@ class TableBase:
         if weights is not None:
             result.set_weights(weights)
 
-        # transform any values we believe are null into actual null values
-        result.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
         result._transform_discrete_values_to_descriptors()
         result._transform_discrete_into_categorical()
         result._transform_timevariable_into_datetime()
@@ -955,12 +949,14 @@ class TableBase:
 
     def approx_len(self):
         """Return the approximate length of the table."""
-        # TODO: solely for SQL compatibility, which would ideally be replaced with Spark
+        # TODO: remove, here solely for SQL compatibility, which would ideally be replaced with Spark
+        # https://github.com/biolab/orange3/wiki/pandas-migration#future-todos-and-architectural-wishlist
         return len(self)
 
     def exact_len(self):
         """Return the exact length of the table."""
-        # TODO: solely for SQL compatibility, which would ideally be replaced with Spark
+        # TODO: remove, here solely for SQL compatibility, which would ideally be replaced with Spark
+        # https://github.com/biolab/orange3/wiki/pandas-migration#future-todos-and-architectural-wishlist
         return len(self)
 
     def has_missing(self):

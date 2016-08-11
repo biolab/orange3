@@ -408,6 +408,9 @@ class FileFormat(metaclass=FileFormatMeta):
             if contents is None:
                 contents = pd.DataFrame(data=np.empty((0, len(header_df.columns))), columns=header_df.columns)
 
+            # transform any values we believe are null into actual null values
+            contents.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
+
             # data may be longer than the headers, extend headers with empty values
             names.extend([''] * (len(contents.columns) - len(names)))
             types.extend([''] * (len(contents.columns) - len(types)))
@@ -692,6 +695,7 @@ class BasketReader(FileFormat):
         table = Table.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
         table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+
         return table
 
 
