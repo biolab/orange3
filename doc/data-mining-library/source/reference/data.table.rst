@@ -79,7 +79,6 @@ The preferred way to construct a table is to invoke a named constructor.
 
 .. automethod:: Table.from_domain
 .. automethod:: Table.from_table
-.. automethod:: Table.from_table_rows
 .. automethod:: Table.from_numpy
 .. automethod:: Table.from_file
 

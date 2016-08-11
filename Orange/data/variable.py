@@ -206,12 +206,12 @@ class Variable(str, metaclass=VariableMeta):
 
         Parameters
         ----------
-        s : pd.Series | Number | str
+        s : pd.Series or Number or str
             The value(s) to generate a numeric representation for.
 
         Returns
         -------
-        pd.Series | Number | str
+        pd.Series or Number or str
             The (numeric) representation of the given values.
         """
         if not self.is_primitive():

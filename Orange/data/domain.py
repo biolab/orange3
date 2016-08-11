@@ -18,16 +18,16 @@ class DomainConversion:
 
     Attributes
     ----------
-    source : int | Callable
+    source : int or Callable
         The source domain. The destination is not stored since destination
         domain is the one which contains the instance of DomainConversion.
-    attributes : int | Callable
+    attributes : int or Callable
         Indices for attribute values.
-    class_vars : int | Callable
+    class_vars : int or Callable
         Indices for class variables.
-    variables : int | Callable
+    variables : int or Callable
         Indices for attributes and class variables (:obj:`attributes`+:obj:`class_vars`).
-    metas : int | Callable
+    metas : int or Callable
         Indices for meta attributes.
     """
     def __init__(self, source, destination):
@@ -64,10 +64,10 @@ def filter_visible(feats):
 
     Returns
     -------
-    tuple
-        A filtered tuple of features that are visible (i.e. not hidden).
+    generator
+        A filtered generator of features that are visible (i.e. not hidden).
     """
-    return tuple(f for f in feats if not f.attributes.get('hidden', False))
+    return (f for f in feats if not f.attributes.get('hidden', False))
 
 
 class Domain:
@@ -92,11 +92,11 @@ class Domain:
 
         Parameters
         ----------
-        attributes : list[str | Variable | int]
+        attributes : list[str or Variable or int]
             A list of attributes.
-        class_vars : list[str | Variable | int], optional, default None
+        class_vars : list[str or Variable or int], optional, default None
             A list of class variables.
-        metas : list[str | Variable | int], optional, default None
+        metas : list[str or Variable or int], optional, default None
             A list of meta attributes.
         source : Domain, optional, default None
             The source domain for the attributes.
@@ -164,7 +164,7 @@ class Domain:
 
         Parameters
         ----------
-        idx : str | Variable | int
+        idx : str or Variable or int
             A variable name, variable or domain index of the requested Variable.
 
         Returns
@@ -198,6 +198,7 @@ class Domain:
 
     def __iter__(self):
         """Return an iterator through variables (features and class attributes)."""
+        # TODO: make domain iterate over the whole domain - including metas
         return iter(self._variables)
 
     def __str__(self):
@@ -229,7 +230,7 @@ class Domain:
 
         Parameters
         ----------
-        var : str | Variable | int
+        var : str or Variable or int
 
         Returns
         -------
@@ -418,14 +419,14 @@ class Domain:
 
         Parameters
         ----------
-        column : SeriesBase | np.array
+        column : SeriesBase or np.array
             The column to check.
         discrete_max_values : int, optional, default 3
             The maximum number of discrete values to allow.
             3 = 2 + nan.
         Returns
         -------
-        set | bool
+        set or bool
             A set of unique values for the column if the variable can
             be considered discrete, False or none otherwise.
         """

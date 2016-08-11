@@ -45,7 +45,6 @@ class TestFSS(unittest.TestCase):
         t = self.iris
         for method in (Gini, Chi2):
             d1 = SelectBestFeatures(method=method)(self.iris)
-            # expected = (t['petal length'], t['petal width'], t['sepal length'], t['sepal width'])
             expected = ('petal length', 'petal width', 'sepal length', 'sepal width')
             self.assertSequenceEqual(d1.domain.attributes, expected)
 

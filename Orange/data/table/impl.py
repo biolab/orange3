@@ -149,7 +149,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
             Whether to mark the resulting domain as writable.
         Returns
         -------
-        scipy.sparse.coo_matrix | np.ndarray
+        scipy.sparse.coo_matrix or np.ndarray
             The sparse matrix of the selected and transformed table data,
             or a dense ndarray if the data contains any non-numeric entries.
 
@@ -267,13 +267,13 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         domain : Domain
             If None, the domain is inferred from the data. Otherwise, specifies
             the column assignment to the new SparseTable.
-        X : scipy.sparse.spmatrix | np.ndarray
+        X : scipy.sparse.spmatrix or np.ndarray
             The X component of the data (or undetermined, depending on the domain).
-        Y : scipy.sparse.spmatrix | np.ndarray, optional, default None
+        Y : scipy.sparse.spmatrix or np.ndarray, optional, default None
             The Y component of the data.
-        metas : scipy.sparse.spmatrix | np.ndarray, optional, default None
+        metas : scipy.sparse.spmatrix or np.ndarray, optional, default None
             The meta attributes of the data.
-        weights : scipy.sparse.spmatrix | np.ndarray, optional, default None
+        weights : scipy.sparse.spmatrix or np.ndarray, optional, default None
             The meta attributes of the data.
 
         Returns

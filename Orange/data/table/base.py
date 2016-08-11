@@ -18,9 +18,8 @@ from Orange.util import flatten, deprecated
 class TableBase:
     """An abstract base class for data storage structures in Orange."""
 
-    # a list of all pandas kwargs for use in the pandas compatibility sections
-    # empty here, subclasses must override with the known kwargs of the
-    # parent pandas class
+    # a list of all pandas constructor kwargs for use in the pandas compatibility sections
+    # empty here, subclasses must override with the known kwargs of the pandas parent class constructor
     _KNOWN_PANDAS_KWARGS = {}
 
     # the default name for weights columns
@@ -29,7 +28,9 @@ class TableBase:
 
     # a collection of all known internal column names
     # use case: subclasses add additional columns (not only weights) and we need to know
-    # of all existing names to be able to process things without these internals
+    # of all existing names to be able to process things wrt these internals,
+    # e.g. adding missing columns in the constructor, transparently passing them through
+    # when selecting a subset
     _INTERNAL_COLUMN_NAMES = [_WEIGHTS_COLUMN]
 
     # a counter for indexing rows, important for deterministically selecting rows
@@ -60,10 +61,12 @@ class TableBase:
             One of:
              - (str): create a Table from a file or URL
              - (TableBase): initialize from another TableBase,
-             - (np.ndarray | scipy.sparse): a dense or sparse matrix, resulting
+             - (pd.DataFrame): create a table based in an existing pandas DataFrame,
+               inferring the domain.
+             - (np.ndarray or scipy.sparse): a dense or sparse matrix, resulting
                Table data type depends on the type passed, infer a domain
                 - Up to four may be passed to fit into X/Y/metas/weights respectively.
-             - (Domain, np.ndarray | scipy.sparse): Same as above, without domain inference
+             - (Domain, np.ndarray or scipy.sparse): Same as above, without domain inference
              - (Domain, TableBase): convert another TableBase object to the passed domain
              - (Domain, list): create a Table based on a list of rows.
              - (Domain, pd.DataFrame): create a table based on an existing pandas DataFrame and Domain.
@@ -72,16 +75,14 @@ class TableBase:
 
         Returns
         -------
-        Table | SparseTable
+        Table or SparseTable
         A new Table or SparseTable, depending on the arguments passed and the calling class.
         """
-        # Needed because we have two construction paths: Table() or Table.from_X,
-        # complications arise from having a completely different signature from pandas.
-
-        # is pandas is calling this as part of its transformations, pass it through
-        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(cls._KNOWN_PANDAS_KWARGS)) == 0
+        # if pandas is calling this as part of its transformations, pass it through
+        all_kwargs_are_pandas = all(arg in cls._KNOWN_PANDAS_KWARGS for arg in kwargs)
 
         ##### START PANDAS SUBCLASS COMPATIBILITY SECTION #####
+        # needed because we have two construction paths: Table() or Table.from_X
         # this compatibility hack must exist because we override __new__ in a way incompatible
         # with pandas' subclassing scheme---hacks are needed for compatibility, read on
 
@@ -101,11 +102,8 @@ class TableBase:
             return cls(data=args[0], **kwargs)
         ##### END PANDAS SUBCLASS COMPATIBILITY SECTION #####
 
-        if 'filename' in kwargs:
-            args = [kwargs.pop('filename')]
-
         if isinstance(args[0], str):
-            if args[0].startswith('https://') or args[0].startswith('http://'):
+            if args[0].startswith(('ftp://', 'http://', 'https://')):
                 return cls.from_url(args[0], **kwargs)
             else:
                 return cls.from_file(args[0], **kwargs)
@@ -151,15 +149,17 @@ class TableBase:
         # when passing to pandas upstream
         super().__init__(**{k: v for k, v in kwargs.items() if k in self._KNOWN_PANDAS_KWARGS})
 
-        self.name = getattr(self, 'name', kwargs.get("name", "untitled"))
-        self.attributes = getattr(self, 'attributes', kwargs.get("attributes", {}))
-        self.__file__ = getattr(self, '__file__', kwargs.get("__file__"))
+        # try to use defaults if they were already set,
+        # e.g. in __new__, which constructs a complete table and passes it here
+        self.name = getattr(self, 'name', 'untitled')
+        self.attributes = getattr(self, 'attributes', kwargs.get('attributes', {}))
+        self.__file__ = getattr(self, '__file__', None)
 
         # we need to filter the domain to only include the columns present in the table
         # but we still need to allow constructing an empty table (with no domain)
         # also, we only set the domain if it has changed (==number of variables),
         # so in those cases, id(domain_before) == id(domain_after)
-        if hasattr(self, 'domain') and self.domain is not None:
+        if getattr(self, 'domain', None) is not None:
             new_domain = Domain(
                 [c for c in self.domain.attributes if c in self.columns],
                 [c for c in self.domain.class_vars if c in self.columns],
@@ -194,29 +194,6 @@ class TableBase:
         return result
 
     @classmethod
-    @deprecated("t.iloc[row_indices].copy()")
-    def from_table_rows(cls, source, row_indices):
-        """Construct a new Table as a copy of the selected rows (position indexing).
-
-        Parameters
-        ----------
-        source : TableBase
-            The source Table.
-        row_indices
-            The locations of the selected rows in any of the standard formats.
-        Returns
-        -------
-        TableBase
-            A subset of the original Table as a copy.
-        """
-        # don't just plain copy here: in case of subclasses of Table, a plain table is passed
-        # through the constructor and from_table to here, and expects to be converted
-        # into a proper subclass type
-        result = cls(data=source.iloc[row_indices]).copy()
-        result._transfer_properties(source, transfer_domain=True)  # because we manually copy data, not the whole table
-        return result
-
-    @classmethod
     def from_table(cls, target_domain, source_table, row_indices=slice(None)):
         """Create a new Table as a conversion from the source Table's domain to the new one.
 
@@ -231,7 +208,7 @@ class TableBase:
             from the original Table to the new one.
         source_table : TableBase
             The source table.
-        row_indices : slice | list[int] | list[bool], optional
+        row_indices : slice or list[int] or list[bool], optional
             The row indices to select a subset of the resulting table.
 
         Returns
@@ -255,7 +232,7 @@ class TableBase:
                     return cached
             if target_domain == source_table.domain:
                 # intentional casting to subclass
-                result = cls(data=source_table.iloc[row_indices]).copy()
+                result = cls(data=source_table.iloc[row_indices])
                 # because we manually copy data, not the whole table
                 result._transfer_properties(source_table, transfer_domain=True)
                 return result
@@ -275,7 +252,7 @@ class TableBase:
                     result[target_column.name] = np.atleast_1d(conversion(source_table))
             result.domain = target_domain
 
-            # if the new domain has 0 columns, the length of the table is also 0
+            # if the new domain has 0 columns, the length of the resulting table is also 0
             # and we can't set the previous weights or index (which are len(source_table))
             if len(result) != 0:
                 result.set_weights(source_table.weights)
@@ -300,7 +277,7 @@ class TableBase:
 
         Parameters
         ----------
-        domain : Domain | None
+        domain : Domain or None
             The domain to use for the result. If None, the domain is inferred.
         df : pd.DataFrame
             The source pandas DataFrame.
@@ -313,11 +290,6 @@ class TableBase:
         -------
         TableBase
             A new Table generated from the source DataFrame.
-        """
-
-        """
-        Convert a pandas.DataFrame object to a Table.
-        This can infer infers column variable types and roles, reindex and set weights.
         """
         if domain is None:
             result = cls._from_data_inferred(df)
@@ -360,7 +332,7 @@ class TableBase:
 
         Parameters
         ----------
-        X_or_data : np.ndarray | pd.DataFrame
+        X_or_data : np.ndarray or pd.DataFrame
             Either the X component of the data as a numpy ndarray or a complete pandas DataFrame.
             If this is the only data argument, the column roles are also inferred.
         Y : np.ndarray, optional, default None
@@ -393,17 +365,18 @@ class TableBase:
             infer_roles = False
 
         # process every input segment with its intended role
-        for df, initial_role in zip((X_df, Y_df, meta_df), ('x', 'y', 'meta')):
-            for column_name, column in ((c, df[c]) for c in df.columns):
-                t, r = Domain.infer_type_role(column, initial_role if not infer_roles else None)
-                name = Domain.infer_name(t, r, column_name,
+        for df, initial_role in ((X_df, 'x'), (Y_df, 'y'), (meta_df, 'meta')):
+            for column_name in df.columns:
+                column = df[column_name]
+                var_type, var_role = Domain.infer_type_role(column, initial_role if not infer_roles else None)
+                name = Domain.infer_name(var_type, var_role, column_name,
                                          role_vars['x'], role_vars['y'], role_vars['meta'])
-                if t is DiscreteVariable:
-                    var = t(name, values=DiscreteVariable.generate_unique_values(column))
+                if var_type is DiscreteVariable:
+                    var = var_type(name, values=DiscreteVariable.generate_unique_values(column))
                 else:
-                    var = t(name)
+                    var = var_type(name)
                 result[var.name] = column
-                role_vars[r].append(var)
+                role_vars[var_role].append(var)
         result.domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
         result.domain.anonymous = True
         result._transform_discrete_into_categorical()
@@ -419,7 +392,7 @@ class TableBase:
 
         Parameters
         ----------
-        domain : Domain | None
+        domain : Domain or None
             If None, the domain is inferred from the data. Otherwise, specifies
             the column assignment to the new Table.
         X : np.ndarray
@@ -435,12 +408,6 @@ class TableBase:
         TableBase
             A new Table constructed from the given data.
         """
-        def correct_shape(what):
-            if what is None or len(what.shape) == 2:
-                return what
-            else:
-                return np.atleast_2d(what).T
-
         # if anything is sparse, use the sparse version
         from .impl import SparseTable
         if sp.issparse(X) or (Y is not None and sp.issparse(Y)) \
@@ -461,13 +428,18 @@ class TableBase:
             return result
 
         # ensure correct shapes (but not sizes) so we can iterate
+        def correct_shape(what):
+            if what is None or what.ndim == 2:
+                return what
+            else:
+                return np.atleast_2d(what).T
+
         X = correct_shape(X)
         Y = correct_shape(Y)
         metas = correct_shape(metas)
 
         result = cls()
-        for role_array, variables in zip((X, Y, metas),
-                                         (domain.attributes, domain.class_vars, domain.metas)):
+        for role_array, variables in ((X, domain.attributes), (Y, domain.class_vars), (metas, domain.metas)):
             if role_array is None:
                 if variables:
                     raise ValueError("Variable and column count mismatch. ")
@@ -617,11 +589,15 @@ class TableBase:
             The numpy array of the selected and transformed table data.
         """
         cols = []
-        cols += self.domain.attributes if X else []
-        cols += self.domain.class_vars if Y else []
-        cols += self.domain.metas if meta else []
+        if X:
+            cols += self.domain.attributes
+        if Y:
+            cols += self.domain.class_vars
+        if meta:
+            cols += self.domain.metas
 
-        # support using this in TableSeries, whose len gives the number of columns
+        # support using this method in TableSeries, whose len gives the number of columns
+        # (because it's a row slice)
         n_rows = 1 if isinstance(self, SeriesBase) else len(self)
 
         # preallocate result, we fill it in-place
@@ -631,11 +607,11 @@ class TableBase:
         # effectively a double for loop, see if this is a bottleneck later
         for i, col in enumerate(cols):
             if isinstance(self, SeriesBase):
-                # if this is used in TableSeries, we don't have a series but an element
+                # if this is used in TableSeries, we don't have a series but an element,
+                # because we are iterating over a row
                 result[:, i] = col.to_val(self[col])
             else:
-                vals = col.to_val(self[col]).values
-                result[:, i] = vals.values if hasattr(vals, 'values') else vals
+                result[:, i] = col.to_val(self[col]).values
         result.setflags(write=writable)
         return result
 
@@ -680,19 +656,20 @@ class TableBase:
     @property
     def weights(self):
         """Get the weights as a 1D numpy array."""
-        val = self[self._WEIGHTS_COLUMN]
-        if hasattr(val, 'values'):
-            return val.values
-        else:
+        if isinstance(self, SeriesBase):
             # at least 1D when using this in TableSeries, which instead returns a 0D ndarray directly
-            return np.atleast_1d(val)
+            result = np.atleast_1d(self[self._WEIGHTS_COLUMN])
+        else:
+            result = self[self._WEIGHTS_COLUMN].values
+        # even if weights are set with an integer, we need to return a float
+        return result.astype(float)
 
     def set_weights(self, weight):
         """Set the weights for the instances in this table.
 
         Parameters
         ----------
-        weight : Number | str | Sequence | np.ndarray | pd.Series
+        weight : Number or str or Sequence or np.ndarray or pd.Series
             If a number, all weights are set to that value.
             If a string, weights are set to whatever the column with that name's values are,
             but only if those values are all numbers and are not NA/NaN.
@@ -701,33 +678,45 @@ class TableBase:
         Raises
         ------
         ValueError
-            If weights are nan, the column does not exist or the sequence lenght is mismatched.
+            If weights are nan, the column does not exist or the sequence length is mismatched.
         TypeError
             If an unrecognized type is passed.
         """
         if isinstance(weight, Number):
             if np.isnan(weight):
                 raise ValueError("Weights cannot be nan. ")
-            self[self._WEIGHTS_COLUMN] = weight
+            new_weights = weight
         elif isinstance(weight, str):
             if weight not in self.columns:
-                raise ValueError("{} is not a column.".format(weight))
+                raise ValueError("{} is not a column.".format(repr(weight)))
             if self[weight].isnull().any() and np.issubdtype(self[weight].dtype, Number):
                 raise ValueError("All values in the target column must be valid numbers.")
-            self[self._WEIGHTS_COLUMN] = self[weight].fillna(value=self[weight].median())
-        elif isinstance(weight, (Sequence, np.ndarray)):  # np.ndarray is not a Sequence
+            new_weights = self[weight].fillna(value=self[weight].median())
+        elif isinstance(weight, Sequence):
             if len(weight) != len(self):
                 raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
-            self[self._WEIGHTS_COLUMN] = weight
+            new_weights = weight
+        elif isinstance(weight, np.ndarray):  # np.ndarray is not a Sequence
+            # allow row or column vectors
+            if weight.ndim > 1 and not (weight.ndim == 2 and weight.shape[1] == 1):
+                raise ValueError("Dimension mismatch.")
+            new_weights = np.ravel(weight)
+            if len(weight) != len(self):
+                raise ValueError("There are {} weights, expected {}.".format(len(weight), len(self)))
         elif isinstance(weight, pd.Series):  # not only SeriesBase
             # drop everything but the values to uncomplicate things
             if weight.isnull().any():
                 raise ValueError("Weights cannot be nan. ")
-            self[self._WEIGHTS_COLUMN] = weight.values
+            new_weights = weight.values
         elif isinstance(weight, pd.Categorical):
-            self[self._WEIGHTS_COLUMN] = list(weight)
+            new_weights = list(weight)
         else:
             raise TypeError("Expected one of [Number, str, Sequence, SeriesBase].")
+
+        # final check that we're actually adding numbers as weights
+        if not (isinstance(new_weights, Number) or all(isinstance(w, Number) for w in new_weights)):
+            raise ValueError("All weight values must be numbers.")
+        self[self._WEIGHTS_COLUMN] = new_weights
 
     @property
     def has_weights(self):
@@ -821,14 +810,14 @@ class TableBase:
     def __getitem__(self, item):
         # if selecting a column subset, we need to transfer weights so they don't just disappear
         # only do this for multiple column selection, which returns a DataFrame by contract
-        if isinstance(item, (Sequence, pd.Index)) and not isinstance(item, str) \
+        if isinstance(item, (Sequence, pd.Index, np.ndarray)) and not isinstance(item, str) \
                 and all(isinstance(i, str) for i in item) \
-                and self._WEIGHTS_COLUMN not in item:
-            item = list(item) + self._INTERNAL_COLUMN_NAMES
+                and any(ic not in item for ic in self._INTERNAL_COLUMN_NAMES):
+            item = list(item) + [ic for ic in self._INTERNAL_COLUMN_NAMES if ic not in item]
         return super().__getitem__(item)
 
     def __setitem__(self, key, value):
-        # if the table has an empty index and we're inserting a new row,
+        # if the table has an empty index and we're inserting a the first row,
         # the index would be created by pandas automatically.
         # we want to maintain unique indices, so we override the index manually.
         # we also need to set default weights, lest they be NA
@@ -850,16 +839,12 @@ class TableBase:
             # super call because we'd otherwise recurse back into this
             super().__setitem__(self._WEIGHTS_COLUMN, 1)
 
-    def clear(self):
-        """Remove all rows from the table in-place."""
-        self.drop(self.index, inplace=True)
-
     def append(self, other, ignore_index=False, verify_integrity=False):
         """Append a new row to a table, returning a new Table.
 
         Parameters
         ----------
-        other : list[obj] | SeriesBase | TableBase.
+        other : list[obj] or SeriesBase or TableBase.
             A list-like of a single row, TableSeries (a single row slice) or a Table.
         ignore_index : bool, optional, default False
             Provided for pandas API compatibility, ignored.
@@ -868,7 +853,7 @@ class TableBase:
 
         Notes
         -----
-        Overrides the pandas append functionality!
+        Overrides the pandas.DataFrame.append() functionality!
         """
         if not isinstance(other, pd.DataFrame):
             other = self._constructor(data=[other],
@@ -1000,7 +985,7 @@ class TableBase:
 
         Parameters
         ----------
-        from_table : TableBase
+        from_table : TableBase or dict
             The table to source the attributes from.
         transfer_domain : bool, optional, default False
             Whether to transfer the domain.
@@ -1070,7 +1055,7 @@ class TableBase:
 
         Parameters
         ----------
-        index : int | str
+        index : int or str
             The index of the column or the column name.
 
         Returns
@@ -1089,7 +1074,7 @@ class TableBase:
 
         Parameters
         ----------
-        columns : list[str | Variable], optional, default None
+        columns : list[str or Variable], optional, default None
             A list of columns to compute the stats for, None selects all.
         include_metas : bool, optional, default False
             Whether to include meta attributes in the statistics computations.
@@ -1144,7 +1129,7 @@ class TableBase:
 
         Parameters
         ----------
-        columns : list[str | Variable], optional, default None
+        columns : list[str or Variable], optional, default None
             A list of columns to compute the stats for, None selects all.
 
         Returns
@@ -1183,16 +1168,16 @@ class TableBase:
 
         Parameters
         ----------
-        col_vars : list[str | Variable], optional, default None
+        col_vars : list[str or Variable], optional, default None
             The variables whose values will correspond to columns in the result items.
             If None, selects all attributes from the domain.
-        row_var : str | DiscreteVariable, optional, default None
+        row_var : str or DiscreteVariable, optional, default None
             The variable whose values will correspond to rows in the result.
             Limited to discrete variables.
 
         Returns
         -------
-        (list[(np.ndarray | (list[Number], np.ndarray), np.ndarray)], int)
+        (list[(np.ndarray or (list[Number], np.ndarray), np.ndarray)], int)
             The result is a tuple of (list of contingencies, num missing row_var values).
 
             The list of contingencies contains a pair for each column variable.

@@ -80,7 +80,7 @@ class SqlTable(Table):
         # We do not (yet) need the magic of the Table.__new__, so we call it
         # with no parameters.
         # see Table for explanation
-        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(Table._KNOWN_PANDAS_KWARGS)) == 0
+        all_kwargs_are_pandas = all(arg in cls._KNOWN_PANDAS_KWARGS for arg in kwargs)
         if not args and (not kwargs or all_kwargs_are_pandas):
             return super().__new__(cls)
         if len(args) == 1 and (isinstance(args[0], pd.core.internals.BlockManager)
@@ -123,7 +123,7 @@ class SqlTable(Table):
         # whether we're being called from .copy(), a subscript etc
         # after this, __finalize__ will be called to copy over existing attributes in _metadata
         from_pandas_internals = False
-        all_kwargs_are_pandas = len(set(kwargs.keys()).difference(Table._KNOWN_PANDAS_KWARGS)) == 0
+        all_kwargs_are_pandas = all(arg in self._KNOWN_PANDAS_KWARGS for arg in kwargs)
         if len(args) == 0 and len(kwargs) != 0 and all_kwargs_are_pandas:
             super(SqlTable, self).__init__(**kwargs)
             from_pandas_internals = True
@@ -388,7 +388,7 @@ class SqlTable(Table):
 
         # we may have downloaded some data already, clear the table if so
         if len(self) != 0:
-            self.clear()
+            self.drop(self.index, inplace=True)
 
         X = [np.empty((0, len(self.domain.attributes)))]
         Y = [np.empty((0, len(self.domain.class_vars)))]

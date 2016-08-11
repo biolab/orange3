@@ -202,37 +202,37 @@ class FileFormat(metaclass=FileFormatMeta):
     """
     Subclasses set the following attributes and override the following methods:
 
-    EXTENSIONS = ('.ext1', '.ext2', ...)
-    DESCRIPTION = 'human-readable file format description'
-    SUPPORT_COMPRESSED = False
+        EXTENSIONS = ('.ext1', '.ext2', ...)
+        DESCRIPTION = 'human-readable file format description'
+        SUPPORT_COMPRESSED = False
 
     --------------------------
     START CHOICE: Subclasses override either
 
-    def read_header(self):
-        # read only the first 3 rows into a raw pd.DataFrame
-        # 3 because the header has {0, 1, 3} rows
+        def read_header(self):
+            # read only the first 3 rows into a raw pd.DataFrame
+            # 3 because the header has {0, 1, 3} rows
 
     and
 
-    def read_contents(self, skiprows):
-        # read the whole file (with skipped rows) into a raw pd.DataFrame
-        # raw means that no rows ar treated as columns, no columns as indices etc
-        # skiprows determines how many rows to skip at the beginning of the file
+        def read_contents(self, skiprows):
+            # read the whole file (with skipped rows) into a raw pd.DataFrame
+            # raw means that no rows ar treated as columns, no columns as indices etc
+            # skiprows determines how many rows to skip at the beginning of the file
 
     or, if the file format has no headers or is e.g. binary,
 
-    def read(self):
-        # return a complete, processed, pd.DataFrame/Table object
+        def read(self):
+            # return a complete, processed, pd.DataFrame/Table object
 
     END CHOICE
     --------------------------
 
-    @classmethod
-    def write_file(cls, filename, data):
-        ...
-        self.write_headers(writer.write, data)
-        writer.writerows(data)
+        @classmethod
+        def write_file(cls, filename, data):
+            ...
+            self.write_headers(writer.write, data)
+            writer.writerows(data)
     """
 
     PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
@@ -365,12 +365,9 @@ class FileFormat(metaclass=FileFormatMeta):
         """
         def tryparse_int_float(item):
             try:
-                return int(item)
+                return float(item)
             except ValueError:
-                try:
-                    return float(item)
-                except ValueError:
-                    return None
+                return None
 
         # Second row items are type identifiers
         def header_test2(items):
@@ -384,18 +381,21 @@ class FileFormat(metaclass=FileFormatMeta):
         header_df = self.read_header()
         is_small = len(header_df) < 3
 
-        # the header can have 0, 1 or 3 columns
-        # is a three-row header if the second and third columns match,
+        # the header can have 0, 1 or 3 rows
+        # it is a three-row header if the second and third columns match the regex,
         # the first one can then be anything
-        three_row_header = not is_small and header_test2([str(i) for i in header_df.iloc[1].fillna('')]) \
-                           and header_test3([str(i) for i in header_df.iloc[2].fillna('')])
+        three_row_header = not is_small and header_test2(header_df.iloc[1].fillna('').astype(str)) \
+                           and header_test3(header_df.iloc[2].fillna('').astype(str))
         # a one-row header has something that doesn't parse as a float in the first row
         one_row_header = not all(tryparse_int_float(i) is not None for i in header_df.iloc[0])
         if one_row_header or three_row_header:
             if three_row_header:
                 names, types, flags = [list(header_df.iloc[i].fillna('')) for i in range(3)]
                 contents = self.read_contents(skiprows=3)
-            else:  # one_row_header
+            else:
+                # one row header format either:
+                #   1) delimited column names
+                #   2) -||- with type and flags prepended, separated by #, e.g. d#sex,c#age,cC#IQ
                 HEADER1_FLAG_SEP = '#'
                 ft_combo, names = zip(*[i.split(HEADER1_FLAG_SEP, 1) if HEADER1_FLAG_SEP in i else ('', i)
                                         for i in header_df.iloc[0].fillna('')])

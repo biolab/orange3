@@ -71,20 +71,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(0.2, t['petal width'].iloc[22])
         self.assertTrue((t.weights == 1).all())
 
-    def test_bool(self):
-        d = Table("iris")
-        self.assertFalse(d.empty)
-        d.clear()
-        self.assertTrue(d.empty)
-
-        d = Table("test3")
-        self.assertTrue(d.empty)
-
-        d = Table("iris")
-        self.assertFalse(d.empty)
-        d.clear()
-        self.assertTrue(d.empty)
-
     def test_checksum(self):
         d = Table("zoo")
         d.iloc[42, 3] = 0
@@ -117,7 +103,7 @@ class TableTestCase(unittest.TestCase):
         self.assertAlmostEqual(d.weights.sum(), 0.5)
         d.drop(10, axis=0, inplace=True)
         self.assertAlmostEqual(d.weights.sum(), 0.3)
-        d.clear()
+        d.drop(d.index, inplace=True)
         self.assertAlmostEqual(d.weights.sum(), 0)
 
     def test_set_weights_list(self):
@@ -644,7 +630,7 @@ class CreateTableWithFilename(TableTests):
     @patch("Orange.data.Table.from_file")
     def test_calling_new_with_keyword_argument_filename_calls_read_data(
             self, read_data):
-        Table(filename=self.filename)
+        Table(self.filename)
 
         read_data.assert_called_with(self.filename)
 
@@ -979,13 +965,6 @@ class CreateTableWithData(TableTests):
         self.assert_discretes_are_categoricals(table_1)
         assert_equal(table, table_1)
 
-    def test_from_table_rows(self):
-        domain = self.create_domain(self.attributes)
-        table = Table(domain, self.data)
-        with warnings.catch_warnings(record=True) as w:
-            s = Table.from_table_rows(table, [0, 1, 2])
-            self.assertTrue(any(w))
-
     def test_from_numpy_mismatched_columns(self):
         domain = self.create_domain(self.attributes, self.class_vars)
         with self.assertRaises(ValueError):
@@ -1255,12 +1234,6 @@ class InterfaceTest(unittest.TestCase):
             self.table = self.table.iloc[1:]
             for j in range(len(self.table)):
                 self.assertEqual(list(self.table.iloc[j][cols_wo_weights(self.table)]), self.data[i + j + 1])
-
-    def test_clear(self):
-        self.table.clear()
-        self.assertEqual(len(self.table), 0)
-        for i in self.table.iterrows():
-            self.fail("Table should not contain any rows.")
 
     def test_subclasses(self):
         from pathlib import Path
