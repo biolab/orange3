@@ -839,46 +839,6 @@ class TableBase:
             # super call because we'd otherwise recurse back into this
             super().__setitem__(self._WEIGHTS_COLUMN, 1)
 
-    def append(self, other, ignore_index=False, verify_integrity=False):
-        """Append a new row to a table, returning a new Table.
-
-        Parameters
-        ----------
-        other : list[obj] or SeriesBase or TableBase.
-            A list-like of a single row, TableSeries (a single row slice) or a Table.
-        ignore_index : bool, optional, default False
-            Provided for pandas API compatibility, ignored.
-        verify_integrity : bool, optional, default False
-            Provided for pandas API compatibility, ignored.
-
-        Notes
-        -----
-        Overrides the pandas.DataFrame.append() functionality!
-        """
-        if not isinstance(other, pd.DataFrame):
-            other = self._constructor(data=[other],
-                                      columns=[c for c in self.columns if c not in self._INTERNAL_COLUMN_NAMES],
-                                      index=[0])
-        other.index = self._new_id(len(other), force_list=True)
-        if self._WEIGHTS_COLUMN not in other.columns:
-            other[self._WEIGHTS_COLUMN] = 1
-
-        # coerce incompatibilities: this happens when appending a list
-        #  - category dtypes must match, coerce them
-        for i, column in enumerate(self.columns):
-            if self.dtypes[i].name == 'category':
-                new_cats = [v for v in set(other[column]) if v not in self[column].cat.categories and v not in Variable.MISSING_VALUES]
-                self[column] = self[column].cat.add_categories(new_cats)
-                self.domain[column].values += new_cats
-                other[column] = other[column].astype('category',
-                                                     categories=self[column].cat.categories,
-                                                     ordered=self[column].cat.ordered)
-        # also coerce into the proper class
-        result = self.from_dataframe(self.domain, super().append(other))
-        # append doesn't transfer properties for some reason
-        result._transfer_properties(self)
-        return result
-
     @classmethod
     def concatenate(cls, tables, axis=1, reindex=True, colstack=True, rowstack=False):
         """Concatenate tables by rows or columns.

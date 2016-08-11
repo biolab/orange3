@@ -41,17 +41,6 @@ class InterfaceTest(tabletests.InterfaceTest):
             # _modified versions of tests below exist because of this
             values = s[['x0', 'x1']]
 
-    def test_append_rows(self):
-        with self.assertRaises(Exception):
-            super().test_append_rows()
-
-    def test_append_rows_modified(self):
-        new_value = 2
-        internals = len(self.table._INTERNAL_COLUMN_NAMES)
-        new_row = [new_value] * (len(self.table.columns) - internals)
-        newt = self.table.append(new_row)
-        self.assertEqual(list(newt.iloc[-1][:-internals]), new_row)
-
     def test_delete_rows(self):
         with self.assertRaises(ValueError):
             super().test_delete_rows()

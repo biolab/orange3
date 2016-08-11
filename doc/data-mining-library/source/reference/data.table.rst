@@ -92,7 +92,6 @@ Inspection
 Row manipulation
 ----------------
 
-.. automethod:: Table.append
 .. automethod:: Table.clear
 .. automethod:: Table.shuffle
 

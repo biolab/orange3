@@ -229,30 +229,6 @@ class TableTestCase(unittest.TestCase):
                 return False
         return True
 
-    def test_append(self):
-        d = Table("test3")
-        d = d.append(["?"] * 5)
-        self.assertEqual(1, len(d))
-        self.assertEqual(5, d.iloc[0].isnull().sum())  # the weight is not null
-
-        d = d.append([np.nan, 42.0, "0", "?", np.nan])
-        self.assertEqual(2, len(d))
-        np.testing.assert_array_equal(list(d.iloc[1]), [np.nan, 42.0, "0", np.nan, np.nan] + [1])
-
-        assert_array_nanequal(d.metas, np.array([[v.Unknown for v in d.domain.metas]] * 2, dtype=object))
-
-    def test_append2(self):
-        d = Table("iris")
-        d = d.shuffle()
-        l1 = len(d)
-        d = d.append([1, 2, 3, 4, 0])
-        self.assertEqual(len(d), l1 + 1)
-        self.assertEqual(list(d.iloc[-1]), [1, 2, 3, 4, 0] + [1])  # + weight
-
-        x = d.iloc[:50]
-        with self.assertRaises(IndexError):
-            d.append(x.iloc[50])
-
     def test_copy_sparse(self):
         data = Table("iris")
         t = Table(
@@ -365,19 +341,6 @@ class TableTestCase(unittest.TestCase):
                                        [2, 4],
                                        [1, np.nan],
                                        [2, np.nan]])
-
-    def test_convert_through_append(self):
-        d = Table("iris")
-        dom2 = Domain([d.domain[0], d.domain[2], d.domain[4]])
-        d2 = Table(dom2)
-        dom3 = Domain([d.domain[1], d.domain[2]], None)
-        d3 = Table(dom3)
-        for _, e in d.iloc[:5].iterrows():
-            d2.append(e)
-            d3.append(e)
-        for (_, e), (_, e2), (_, e3) in zip(d.iterrows(), d2.iterrows(), d3.iterrows()):
-            self.assertEqual(list(e.iloc[0]), list(e2.iloc[0]))
-            self.assertEqual(list(e.iloc[1]), list(e3.iloc[0]))
 
     def test_pickle(self):
         import pickle
@@ -1222,12 +1185,6 @@ class InterfaceTest(unittest.TestCase):
             new_row = [2, 3, 1, "value2", 1, 1] + [1]  # additional item: weight
             self.table.iloc[i] = new_row
             self.assertEqual(list(self.table.iloc[i]), new_row)
-
-    def test_append_rows(self):
-        new_value = 2
-        new_row = [new_value] * (len(self.table.columns) - 1)  # -1 for weights
-        newt = self.table.append(new_row)
-        self.assertEqual(list(newt.iloc[-1][cols_wo_weights(newt)]), new_row)
 
     def test_delete_rows(self):
         for i in range(self.nrows):

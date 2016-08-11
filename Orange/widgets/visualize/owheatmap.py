@@ -56,12 +56,10 @@ def vstack_by_subdomain(data, sub_domains):
     domain = sub_domains[0]
     newtable = Table(domain)
 
+    table_list = []
     for sub_dom in sub_domains:
-        sub_data = data.from_table(sub_dom, data)
-        # TODO: improve O(N ** 2)
-        newtable.append(sub_data)
-
-    return newtable
+        table_list.append(data.from_table(sub_dom, data))
+    return Table.concatenate(table_list, axis=0, reindex=False)
 
 
 def select_by_class(data, class_):

@@ -45,7 +45,7 @@ class KMeansModel(Projection):
         # convert to a table so everything works the same
         if isinstance(data, TableSeries):
             new_table = Table(data.domain)
-            new_table = new_table.append(data)
+            new_table = Table.concatenate([new_table, data], axis=0, reindex=False)
             data = new_table
 
         if isinstance(data, Table):

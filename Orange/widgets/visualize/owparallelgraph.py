@@ -289,93 +289,93 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def draw_statistics(self):
         """Draw lines that represent standard deviation or quartiles"""
-        return # TODO: Implement using BasicStats
-        if self.show_statistics and self.have_data:
-            data = []
-            for attr_idx in self.attribute_indices:
-                if not self.data_domain[attr_idx].is_continuous:
-                    data.append([()])
-                    continue  # only for continuous attributes
-
-                if not self.data_has_class or self.data_has_continuous_class:    # no class
-                    if self.show_statistics == MEANS:
-                        m = self.domain_data_stat[attr_idx].mean
-                        dev = self.domain_data_stat[attr_idx].var
-                        data.append([(m - dev, m, m + dev)])
-                    elif self.show_statistics == MEDIAN:
-                        data.append([(0, 0, 0)]); continue
-
-                        sorted_array = np.sort(attr_values)
-                        if len(sorted_array) > 0:
-                            data.append([(sorted_array[int(len(sorted_array) / 4.0)],
-                                          sorted_array[int(len(sorted_array) / 2.0)],
-                                          sorted_array[int(len(sorted_array) * 0.75)])])
-                        else:
-                            data.append([(0, 0, 0)])
-                else:
-                    curr = []
-                    class_values = get_variable_values_sorted(self.data_domain.class_var)
-
-                    for c in range(len(class_values)):
-                        attr_values = self.data[attr_idx, self.data[self.data_class_index] == c]
-                        attr_values = attr_values[~np.isnan(attr_values)]
-
-                        if len(attr_values) == 0:
-                            curr.append((0, 0, 0))
-                            continue
-                        if self.show_statistics == MEANS:
-                            m = attr_values.mean()
-                            dev = attr_values.std()
-                            curr.append((m - dev, m, m + dev))
-                        elif self.show_statistics == MEDIAN:
-                            sorted_array = np.sort(attr_values)
-                            curr.append((sorted_array[int(len(attr_values) / 4.0)],
-                                         sorted_array[int(len(attr_values) / 2.0)],
-                                         sorted_array[int(len(attr_values) * 0.75)]))
-                    data.append(curr)
-
-            # draw vertical lines
-            for i in range(len(data)):
-                for c in range(len(data[i])):
-                    if data[i][c] == ():
-                        continue
-                    x = i - 0.03 * (len(data[i]) - 1) / 2.0 + c * 0.03
-                    col = QColor(self.discrete_palette[c])
-                    col.setAlpha(self.alpha_value_2)
-                    self.add_curve("", col, col, 3, OWCurve.Lines, OWPoint.NoSymbol, xData=[x, x, x],
-                                   yData=[data[i][c][0], data[i][c][1], data[i][c][2]], lineWidth=4)
-                    self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
-                                   yData=[data[i][c][0], data[i][c][0]], lineWidth=4)
-                    self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
-                                   yData=[data[i][c][1], data[i][c][1]], lineWidth=4)
-                    self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
-                                   yData=[data[i][c][2], data[i][c][2]], lineWidth=4)
-
-            # draw lines with mean/median values
-            if not self.data_has_class or self.data_has_continuous_class:
-                class_count = 1
-            else:
-                class_count = len(self.data_domain.class_var.values)
-            for c in range(class_count):
-                diff = - 0.03 * (class_count - 1) / 2.0 + c * 0.03
-                ys = []
-                xs = []
-                for i in range(len(data)):
-                    if data[i] != [()]:
-                        ys.append(data[i][c][1])
-                        xs.append(i + diff)
-                    else:
-                        if len(xs) > 1:
-                            col = QColor(self.discrete_palette[c])
-                            col.setAlpha(self.alpha_value_2)
-                            self.add_curve("", col, col, 1, OWCurve.Lines,
-                                           OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
-                        xs = []
-                        ys = []
-                col = QColor(self.discrete_palette[c])
-                col.setAlpha(self.alpha_value_2)
-                self.add_curve("", col, col, 1, OWCurve.Lines,
-                               OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
+        return  # TODO: Implement using BasicStats
+        # if self.show_statistics and self.have_data:
+        #     data = []
+        #     for attr_idx in self.attribute_indices:
+        #         if not self.data_domain[attr_idx].is_continuous:
+        #             data.append([()])
+        #             continue  # only for continuous attributes
+        #
+        #         if not self.data_has_class or self.data_has_continuous_class:    # no class
+        #             if self.show_statistics == MEANS:
+        #                 m = self.domain_data_stat[attr_idx].mean
+        #                 dev = self.domain_data_stat[attr_idx].var
+        #                 data.append([(m - dev, m, m + dev)])
+        #             elif self.show_statistics == MEDIAN:
+        #                 data.append([(0, 0, 0)]); continue
+        #
+        #                 sorted_array = np.sort(attr_values)
+        #                 if len(sorted_array) > 0:
+        #                     data.append([(sorted_array[int(len(sorted_array) / 4.0)],
+        #                                   sorted_array[int(len(sorted_array) / 2.0)],
+        #                                   sorted_array[int(len(sorted_array) * 0.75)])])
+        #                 else:
+        #                     data.append([(0, 0, 0)])
+        #         else:
+        #             curr = []
+        #             class_values = get_variable_values_sorted(self.data_domain.class_var)
+        #
+        #             for c in range(len(class_values)):
+        #                 attr_values = self.data[attr_idx, self.data[self.data_class_index] == c]
+        #                 attr_values = attr_values[~np.isnan(attr_values)]
+        #
+        #                 if len(attr_values) == 0:
+        #                     curr.append((0, 0, 0))
+        #                     continue
+        #                 if self.show_statistics == MEANS:
+        #                     m = attr_values.mean()
+        #                     dev = attr_values.std()
+        #                     curr.append((m - dev, m, m + dev))
+        #                 elif self.show_statistics == MEDIAN:
+        #                     sorted_array = np.sort(attr_values)
+        #                     curr.append((sorted_array[int(len(attr_values) / 4.0)],
+        #                                  sorted_array[int(len(attr_values) / 2.0)],
+        #                                  sorted_array[int(len(attr_values) * 0.75)]))
+        #             data.append(curr)
+        #
+        #     # draw vertical lines
+        #     for i in range(len(data)):
+        #         for c in range(len(data[i])):
+        #             if data[i][c] == ():
+        #                 continue
+        #             x = i - 0.03 * (len(data[i]) - 1) / 2.0 + c * 0.03
+        #             col = QColor(self.discrete_palette[c])
+        #             col.setAlpha(self.alpha_value_2)
+        #             self.add_curve("", col, col, 3, OWCurve.Lines, OWPoint.NoSymbol, xData=[x, x, x],
+        #                            yData=[data[i][c][0], data[i][c][1], data[i][c][2]], lineWidth=4)
+        #             self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
+        #                            yData=[data[i][c][0], data[i][c][0]], lineWidth=4)
+        #             self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
+        #                            yData=[data[i][c][1], data[i][c][1]], lineWidth=4)
+        #             self.add_curve("", col, col, 1, OWCurve.Lines, OWPoint.NoSymbol, xData=[x - 0.03, x + 0.03],
+        #                            yData=[data[i][c][2], data[i][c][2]], lineWidth=4)
+        #
+        #     # draw lines with mean/median values
+        #     if not self.data_has_class or self.data_has_continuous_class:
+        #         class_count = 1
+        #     else:
+        #         class_count = len(self.data_domain.class_var.values)
+        #     for c in range(class_count):
+        #         diff = - 0.03 * (class_count - 1) / 2.0 + c * 0.03
+        #         ys = []
+        #         xs = []
+        #         for i in range(len(data)):
+        #             if data[i] != [()]:
+        #                 ys.append(data[i][c][1])
+        #                 xs.append(i + diff)
+        #             else:
+        #                 if len(xs) > 1:
+        #                     col = QColor(self.discrete_palette[c])
+        #                     col.setAlpha(self.alpha_value_2)
+        #                     self.add_curve("", col, col, 1, OWCurve.Lines,
+        #                                    OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
+        #                 xs = []
+        #                 ys = []
+        #         col = QColor(self.discrete_palette[c])
+        #         col.setAlpha(self.alpha_value_2)
+        #         self.add_curve("", col, col, 1, OWCurve.Lines,
+        #                        OWPoint.NoSymbol, xData=xs, yData=ys, lineWidth=4)
 
     def draw_distributions(self):
         """Draw distributions with discrete attributes"""
