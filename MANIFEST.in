@@ -1,6 +1,6 @@
 
 recursive-include Orange *.pyx *.py *.c *.cpp README* LICENSE
-recursive-include Orange/datasets *.tab *.basket *.info
+recursive-include Orange/datasets *.tab *.basket *.info *.dst
 
 recursive-include Orange/tests *.tab *.basket *.xlsx
 
