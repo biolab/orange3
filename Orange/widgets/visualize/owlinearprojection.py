@@ -1604,7 +1604,7 @@ class plotutils:
         # TODO: This should already be a part of palette
         color_index = numpy.vstack((color_index, [[128, 128, 128]]))
 
-        color_indices = data.apply(variable.to_val).astype(int).fillna(len(variable.values)).values
+        color_indices = data
         return color_index[color_indices]
 
     @staticmethod

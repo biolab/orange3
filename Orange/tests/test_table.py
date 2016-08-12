@@ -1264,6 +1264,11 @@ class TestPandasInteraction(unittest.TestCase):
         s = self.b.iloc[0]
         np.testing.assert_almost_equal(s.weights, self.b.weights[0])
 
+    def test_merge(self):
+        merged = self.a.merge(self.b, left_on=self.a.domain[0], right_on=self.b.domain[0])
+        self.assertEqual(len(merged.columns), len(self.a.columns) + len(self.b.columns) - 1)  # -1 internal dup
+        self.assertEqual(len(self.a.domain) + len(self.b.domain), len(merged.columns) - 1)
+
 if __name__ == "__main__":
     unittest.main()
 

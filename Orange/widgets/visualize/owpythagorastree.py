@@ -30,7 +30,7 @@ from PyQt4 import QtGui
 
 from Orange.base import Tree
 from Orange.classification.tree import TreeClassifier
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.regression.tree import TreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator

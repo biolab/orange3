@@ -993,6 +993,9 @@ class TableBase:
             s = set()
             return [item for item in iterable if not (item.name in s or s.add(item.name))]
 
+        def copy_rename_vars(vars, suffix):
+            return [v.copy(new_name=v.name + suffix) for v in vars]
+
         if not tables:
             raise ValueError('Need at least one table to concatenate.')
         if len(tables) == 1:
@@ -1058,6 +1061,71 @@ class TableBase:
         result.__finalize__(tables[0])  # pd.concat does not do this by itself
         result.domain = tmpdomain  # we don't want to transfer the domain, specifically
         return cls.from_dataframe(new_domain, result)
+
+    def merge(self, right, *args, **kwargs):
+        """Merge two Tables. pd.DataFrame.merge wrapper.
+
+        Handles internal columns and domain merging. Renames duplicates appropriately.
+
+        Parameters
+        ----------
+        right : TableBase
+            The other Table to merge.
+        args
+        kwargs
+
+        Returns
+        -------
+        TableBase
+            A new, merged Table.
+
+        See Also
+        --------
+        pd.DataFrame.merge
+        """
+        # rename default suffixes
+        suffix_left, suffix_right = kwargs.get('suffixes', ('_left', '_right'))
+        kwargs['suffixes'] = (suffix_left, suffix_right)
+        # let pandas do its thing
+        result = super().merge(right, *args, **kwargs)
+
+        # transfer attrs from self
+        result.__finalize__(self)
+
+        # fix multiple identical columns
+        for icn in self._INTERNAL_COLUMN_NAMES:
+            # duplicated cols are appended with _x and _y by default
+            matching_columns = [c for c in result.columns if icn in c]
+            first_col = result[matching_columns[0]]
+            result.drop(matching_columns, axis=1, inplace=True)
+            result[icn] = first_col
+
+        # process a list of variables, appending suffix if not found in the
+        # resulting columns (that means it was a dup)
+        def suffix_dups(varlist, suffix):
+            return [v if v in result.columns else v.copy(new_name=v.name + suffix) for v in varlist]
+
+        # dedup because the target join valriable doesn't get renamed and there is
+        # only one column, wehile without this, the domain would have two
+        def dedup_inorder(varlist):
+            s = set()
+            return [x for x in varlist if not (x in s or s.add(x))]
+
+        # merge domain
+        new_domain = Domain(
+            dedup_inorder(suffix_dups(self.domain.attributes, suffix_left) +
+                          suffix_dups(right.domain.attributes, suffix_right)),
+            dedup_inorder(suffix_dups(self.domain.class_vars, suffix_left) +
+                          suffix_dups(right.domain.class_vars, suffix_right)),
+            dedup_inorder(suffix_dups(self.domain.metas, suffix_left) +
+                          suffix_dups(right.domain.metas, suffix_right))
+        )
+        result.domain = new_domain
+
+        # always reindex
+        result.index = self._new_id(len(result), force_list=True)
+
+        return result
 
     def approx_len(self):
         """Return the approximate length of the table."""
