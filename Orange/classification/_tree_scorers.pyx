@@ -8,13 +8,24 @@
 import numpy as np
 cimport numpy as np
 
-from libc.math cimport log
+from libc.math cimport log, isnan
 
 cdef extern from "numpy/npy_math.h":
     bint npy_isnan(double x) nogil
 
 cpdef enum:
     NULL_BRANCH = -1
+
+def contingency(double[:] x, int nx, double[:] y, int ny):
+    cdef:
+        np.ndarray[np.uint32_t, ndim=2] cont = np.zeros((ny, nx), dtype=np.uint32)
+        int n = len(x), yi, xi
+
+    for i in range(n):
+        if not isnan(x[i]) and not isnan(y[i]):
+            yi, xi = int(y[i]), int(x[i])
+            cont[yi, xi] += 1
+    return cont
 
 def find_threshold_entropy(double[:] x, double[:] y, long[:] idx,
                            int n_classes, int min_leaf):

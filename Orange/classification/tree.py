@@ -78,7 +78,10 @@ class TreeLearner(Learner):
             n_values = len(attr.values)
             if n_values < 2:
                 return REJECT_ATTRIBUTE
-            cont = contingency.Discrete(data, attr)
+
+            x = data.X[:, attr_no].flatten()
+            cont = _tree_scorers.contingency(x, len(data.domain.attributes[attr_no].values),
+                                             data.Y, len(data.domain.class_var.values))
             attr_distr = np.sum(cont, axis=0)
             null_nodes = attr_distr <= self.min_samples_leaf
             # This is just for speed. If there is only a single non-null-node,
@@ -98,7 +101,7 @@ class TreeLearner(Learner):
             cont_entr = np.sum(cont * np.log(cont))
             score = (class_entr - attr_entr + cont_entr) / n / np.log(2)
             score *= n / len(data)  # punishment for missing values
-            branches = data[:, attr].X.flatten()
+            branches = x
             branches[np.isnan(branches)] = -1
             if score == 0:
                 return REJECT_ATTRIBUTE
