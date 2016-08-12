@@ -49,6 +49,7 @@ requirements:
     - joblib
     - python.app    # [osx]
     - dill          # pickle anything
+    - commonmark
 
 test:
   # Python imports

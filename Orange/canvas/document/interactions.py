@@ -188,6 +188,12 @@ class UserInteraction(QObject):
         """
         return False
 
+    def contextMenuEvent(self, event):
+        """
+        Handle a `QGraphicsScene.contextMenuEvent`
+        """
+        return False
+
 
 class NoPossibleLinksError(ValueError):
     pass
@@ -1262,7 +1268,7 @@ class ResizeTextAnnotation(UserInteraction):
 
     def mousePressEvent(self, event):
         pos = event.scenePos()
-        if self.item is None:
+        if event.button() & Qt.LeftButton and self.item is None:
             item = self.scene.item_at(pos, items.TextAnnotation)
             if item is not None and not item.hasFocus():
                 self.editItem(item)
@@ -1317,7 +1323,7 @@ class ResizeTextAnnotation(UserInteraction):
             self.control.setRect(rect)
 
     def cancel(self, reason=UserInteraction.OtherReason):
-        log.debug("ResizeArrowAnnotation.cancel(%s)", reason)
+        log.debug("ResizeTextAnnotation.cancel(%s)", reason)
         if self.item is not None and self.savedRect is not None:
             self.item.setGeometry(self.savedRect)
 

@@ -170,18 +170,22 @@ class RenameNodeCommand(QUndoCommand):
 
 
 class TextChangeCommand(QUndoCommand):
-    def __init__(self, scheme, annotation, old, new, parent=None):
+    def __init__(self, scheme, annotation,
+                 old_content, old_content_type,
+                 new_content, new_content_type, parent=None):
         QUndoCommand.__init__(self, "Change text", parent)
         self.scheme = scheme
         self.annotation = annotation
-        self.old = old
-        self.new = new
+        self.old_content = old_content
+        self.old_content_type = old_content_type
+        self.new_content = new_content
+        self.new_content_type = new_content_type
 
     def redo(self):
-        self.annotation.text = self.new
+        self.annotation.set_content(self.new_content, self.new_content_type)
 
     def undo(self):
-        self.annotation.text = self.old
+        self.annotation.set_content(self.old_content, self.old_content_type)
 
 
 class SetAttrCommand(QUndoCommand):
