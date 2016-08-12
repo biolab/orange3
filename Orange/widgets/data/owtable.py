@@ -9,6 +9,7 @@ from collections import OrderedDict, namedtuple
 from math import isnan
 
 import numpy
+from Orange.data import TableBase
 from scipy.sparse import issparse
 
 from PyQt4 import QtCore
@@ -359,9 +360,9 @@ class OWDataTable(widget.OWWidget):
 
     buttons_area_orientation = Qt.Vertical
 
-    inputs = [("Data", Table, "set_dataset", widget.Multiple)]
-    outputs = [("Selected Data", Table, widget.Default),
-               ("Other Data", Table)]
+    inputs = [("Data", TableBase, "set_dataset", widget.Multiple)]
+    outputs = [("Selected Data", TableBase, widget.Default),
+               ("Other Data", TableBase)]
 
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))

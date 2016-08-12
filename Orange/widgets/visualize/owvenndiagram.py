@@ -22,7 +22,7 @@ from PyQt4.QtGui import (
 from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF
 from PyQt4.QtCore import pyqtSignal as Signal
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable, TableBase
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.sql import check_sql_input
@@ -42,8 +42,8 @@ class OWVennDiagram(widget.OWWidget):
     icon = "icons/VennDiagram.svg"
     priority = 410
 
-    inputs = [("Data", Table, "setData", widget.Multiple)]
-    outputs = [("Selected Data", Table)]
+    inputs = [("Data", TableBase, "setData", widget.Multiple)]
+    outputs = [("Selected Data", TableBase)]
 
     # Selected disjoint subset indices
     selection = settings.Setting([])

@@ -21,7 +21,7 @@ class OWLearningCurveA(widget.OWWidget):
     priority = 1000
 
 # [start-snippet-1]
-    inputs = [("Data", Orange.data.Table, "set_dataset"),
+    inputs = [("Data", Orange.data.TableBase, "set_dataset"),
               ("Learner", Orange.classification.Learner, "set_learner",
                widget.Multiple + widget.Default)]
 # [end-snippet-1]

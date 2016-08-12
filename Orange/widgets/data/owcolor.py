@@ -284,8 +284,8 @@ class OWColor(widget.OWWidget):
 
     name = "Color"
     icon = "icons/Colors.svg"
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     settingsHandler = settings.PerfectDomainContextHandler()
     disc_data = settings.ContextSetting([])

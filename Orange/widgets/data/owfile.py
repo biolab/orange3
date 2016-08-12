@@ -7,7 +7,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import QSizePolicy as Policy
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import Domain, DiscreteVariable, StringVariable, Table, get_sample_datasets_dir
+from Orange.data import Domain, DiscreteVariable, StringVariable, Table, get_sample_datasets_dir, TableBase
 from Orange.data.io import FileFormat, UrlReader
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
@@ -74,7 +74,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     category = "Data"
     keywords = ["data", "file", "load", "read"]
     outputs = [widget.OutputSignal(
-        "Data", Table,
+        "Data", TableBase,
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False

@@ -78,7 +78,7 @@ class OWConfusionMatrix(widget.OWWidget):
     priority = 1001
 
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
-    outputs = [("Selected Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.TableBase)]
 
     quantities = ["Number of instances",
                   "Proportion of predicted",

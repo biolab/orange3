@@ -11,8 +11,8 @@ class OWDataSamplerA(widget.OWWidget):
     icon = "icons/DataSamplerA.svg"
     priority = 10
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Sampled Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Sampled Data", Orange.data.TableBase)]
 
     want_main_area = False
 

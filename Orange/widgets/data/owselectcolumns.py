@@ -9,7 +9,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import *
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.widgets.utils import itemmodels, vartype
 import Orange
 
@@ -295,8 +295,8 @@ class OWSelectAttributes(widget.OWWidget):
                   "data features, classes or meta variables."
     icon = "icons/SelectColumns.svg"
     priority = 100
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data", Table), ("Features", widget.AttributeList)]
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Data", TableBase), ("Features", widget.AttributeList)]
 
     want_main_area = False
     want_control_area = True

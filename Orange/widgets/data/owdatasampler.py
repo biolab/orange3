@@ -9,7 +9,7 @@ import sklearn.cross_validation as skl_cross_validation
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable
 from Orange.widgets.widget import Msg, OWWidget
 
@@ -22,9 +22,9 @@ class OWDataSampler(OWWidget):
     priority = 100
     category = "Data"
     keywords = ["data", "sample"]
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data Sample", Table, widget.Default),
-               ("Remaining Data", Table)]
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Data Sample", TableBase, widget.Default),
+               ("Remaining Data", TableBase)]
 
     want_main_area = False
     resizing_enabled = False

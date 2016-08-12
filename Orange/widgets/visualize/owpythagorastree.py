@@ -30,7 +30,7 @@ from PyQt4 import QtGui
 
 from Orange.base import Tree
 from Orange.classification.tree import TreeClassifier
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.regression.tree import TreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
@@ -57,7 +57,7 @@ class OWPythagorasTree(OWWidget):
     priority = 610
 
     inputs = [('Tree', Tree, 'set_tree')]
-    outputs = [('Selected Data', Table)]
+    outputs = [('Selected Data', TableBase)]
 
     # Enable the save as feature
     graph_name = 'scene'

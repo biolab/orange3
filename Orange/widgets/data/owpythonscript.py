@@ -352,7 +352,7 @@ class OWPythonScript(widget.OWWidget):
     icon = "icons/PythonScript.svg"
     priority = 3150
 
-    inputs = [("in_data", Orange.data.Table, "setExampleTable",
+    inputs = [("in_data", Orange.data.TableBase, "setExampleTable",
                widget.Default),
 #               ("in_distance", Orange.misc.SymMatrix, "setDistanceMatrix",
 #                widget.Default),
@@ -362,7 +362,7 @@ class OWPythonScript(widget.OWWidget):
                widget.Default),
               ("in_object", object, "setObject")]
 
-    outputs = [("out_data", Orange.data.Table, ),
+    outputs = [("out_data", Orange.data.TableBase, ),
 #                ("out_distance", Orange.misc.SymMatrix, ),
                ("out_learner", Learner, ),
                ("out_classifier", Model, widget.Dynamic),

@@ -763,8 +763,8 @@ class OWPaintData(OWWidget):
     priority = 15
     keywords = ["data", "paint", "create"]
 
-    outputs = [("Data", Orange.data.Table)]
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    outputs = [("Data", Orange.data.TableBase)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 
     autocommit = Setting(False)
     table_name = Setting("Painted data")

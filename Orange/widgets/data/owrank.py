@@ -61,10 +61,10 @@ class OWRank(OWWidget):
 
     buttons_area_orientation = Qt.Vertical
 
-    inputs = [("Data", Orange.data.Table, "setData"),
+    inputs = [("Data", Orange.data.TableBase, "setData"),
               ("Scorer", score.Scorer, "set_learner", widget.Multiple)]
-    outputs = [("Reduced Data", Orange.data.Table, widget.Default),
-               ("Scores", Orange.data.Table)]
+    outputs = [("Reduced Data", Orange.data.TableBase, widget.Default),
+               ("Scores", Orange.data.TableBase)]
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 

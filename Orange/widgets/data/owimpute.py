@@ -54,9 +54,9 @@ class OWImpute(OWWidget):
     icon = "icons/Impute.svg"
     priority = 2130
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Orange.data.TableBase, "set_data"),
               ("Learner", Learner, "set_learner")]
-    outputs = [("Data", Orange.data.Table)]
+    outputs = [("Data", Orange.data.TableBase)]
 
     DEFAULT_LEARNER = SimpleTreeLearner()
     METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),

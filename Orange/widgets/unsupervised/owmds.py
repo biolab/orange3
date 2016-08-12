@@ -96,12 +96,12 @@ class OWMDS(OWWidget):
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
     icon = "icons/MDS.svg"
-    inputs = [("Data", Orange.data.Table, "set_data", widget.Default),
+    inputs = [("Data", Orange.data.TableBase, "set_data", widget.Default),
               ("Distances", Orange.misc.DistMatrix, "set_disimilarity"),
-              ("Data Subset", Orange.data.Table, "set_subset_data")]
+              ("Data Subset", Orange.data.TableBase, "set_subset_data")]
 
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.TableBase, widget.Default),
+               ("Data", Orange.data.TableBase)]
 
     #: Initialization type
     PCA, Random = 0, 1

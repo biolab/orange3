@@ -323,8 +323,8 @@ class OWFeatureConstructor(OWWidget):
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input data set."
     icon = "icons/FeatureConstructor.svg"
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "setData")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     want_main_area = False
 

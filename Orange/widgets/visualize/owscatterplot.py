@@ -7,7 +7,7 @@ from sklearn.metrics import r2_score
 
 import Orange
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
-    DiscreteVariable
+    DiscreteVariable, TableBase
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
@@ -93,13 +93,13 @@ class OWScatterPlot(OWWidget):
     icon = "icons/ScatterPlot.svg"
     priority = 210
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Data Subset", Table, "set_subset_data"),
+    inputs = [("Data", TableBase, "set_data", Default),
+              ("Data Subset", TableBase, "set_subset_data"),
               ("Features", AttributeList, "set_shown_attributes")]
 
-    outputs = [("Selected Data", Table, Default),
-               ("Other Data", Table),
-               ("Features", Table)]
+    outputs = [("Selected Data", TableBase, Default),
+               ("Other Data", TableBase),
+               ("Features", TableBase)]
 
     settingsHandler = DomainContextHandler()
 

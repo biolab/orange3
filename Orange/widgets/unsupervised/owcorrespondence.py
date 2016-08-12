@@ -48,7 +48,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     description = "Correspondence analysis for categorical multivariate data."
     icon = "icons/CorrespondenceAnalysis.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 
     Invalidate = QEvent.registerEventType()
 

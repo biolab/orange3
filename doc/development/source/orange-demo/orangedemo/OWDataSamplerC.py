@@ -11,10 +11,10 @@ class OWDataSamplerC(widget.OWWidget):
     icon = "icons/DataSamplerC.svg"
     priority = 30
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 # [start-snippet-1]
-    outputs = [("Sampled Data", Orange.data.Table),
-               ("Other Data", Orange.data.Table)]
+    outputs = [("Sampled Data", Orange.data.TableBase),
+               ("Other Data", Orange.data.TableBase)]
 # [end-snippet-1]
     proportion = settings.Setting(50)
     commitOnChange = settings.Setting(0)

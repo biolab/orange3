@@ -9,7 +9,7 @@ from PyQt4.QtCore import Qt
 
 from Orange.widgets.classify.owtreeviewer2d import *
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.classification.tree import TreeClassifier
 from Orange.preprocess.transformation import Indicator
 
@@ -19,7 +19,7 @@ from Orange.widgets import gui
 
 class OWTreeGraph(OWTreeViewer2D):
     priority = 35
-    outputs = [("Data", Table)]
+    outputs = [("Data", TableBase)]
 
     def __init__(self):
         super().__init__()

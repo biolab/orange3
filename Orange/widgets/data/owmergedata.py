@@ -24,10 +24,10 @@ class OWMergeData(widget.OWWidget):
     icon = "icons/MergeData.svg"
     priority = 1110
 
-    inputs = [("Data A", Orange.data.Table, "setDataA", widget.Default),
-              ("Data B", Orange.data.Table, "setDataB")]
-    outputs = [("Merged Data A+B", Orange.data.Table, ),
-               ("Merged Data B+A", Orange.data.Table, )]
+    inputs = [("Data A", Orange.data.TableBase, "setDataA", widget.Default),
+              ("Data B", Orange.data.TableBase, "setDataB")]
+    outputs = [("Merged Data A+B", Orange.data.TableBase, ),
+               ("Merged Data B+A", Orange.data.TableBase, )]
 
     attr_a = settings.Setting('', schema_only=True)
     attr_b = settings.Setting('', schema_only=True)

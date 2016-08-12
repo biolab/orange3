@@ -21,7 +21,7 @@ from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import pyqtgraph.graphicsItems.ScatterPlotItem
 import pyqtgraph as pg
 
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, TableBase
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
@@ -220,11 +220,11 @@ class OWLinearProjection(widget.OWWidget):
     icon = "icons/LinearProjection.svg"
     priority = 420
 
-    inputs = [("Data", Table, "set_data", widget.Default),
-              ("Data Subset", Table, "set_subset_data")]
+    inputs = [("Data", TableBase, "set_data", widget.Default),
+              ("Data Subset", TableBase, "set_subset_data")]
 #              #TODO: Allow for axes to be supplied from an external source.
 #               ("Projection", numpy.ndarray, "set_axes"),]
-    outputs = [("Selected Data", Table)]
+    outputs = [("Selected Data", TableBase)]
 
     settingsHandler = settings.DomainContextHandler()
 

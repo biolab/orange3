@@ -18,8 +18,8 @@ class OWContinuize(widget.OWWidget):
     category = "Data"
     keywords = ["data", "continuize"]
 
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "setData")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical

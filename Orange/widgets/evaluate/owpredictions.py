@@ -36,10 +36,10 @@ class OWPredictions(widget.OWWidget):
     icon = "icons/Predictions.svg"
     priority = 200
     description = "Display the predictions of models for an input data set."
-    inputs = [("Data", Orange.data.Table, "set_data"),
+    inputs = [("Data", Orange.data.TableBase, "set_data"),
               ("Predictors", Model,
                "set_predictor", widget.Multiple)]
-    outputs = [("Predictions", Orange.data.Table),
+    outputs = [("Predictions", Orange.data.TableBase),
                ("Evaluation Results", Orange.evaluation.Results)]
 
     settingsHandler = settings.ClassValuesContextHandler()

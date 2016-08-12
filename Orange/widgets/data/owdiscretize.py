@@ -127,9 +127,9 @@ class OWDiscretize(widget.OWWidget):
     name = "Discretize"
     description = "Discretize the numeric data features."
     icon = "icons/Discretize.svg"
-    inputs = [InputSignal("Data", Orange.data.Table, "set_data",
+    inputs = [InputSignal("Data", Orange.data.TableBase, "set_data",
                           doc="Input data table")]
-    outputs = [OutputSignal("Data", Orange.data.Table,
+    outputs = [OutputSignal("Data", Orange.data.TableBase,
                             doc="Table with discretized features")]
 
     settingsHandler = settings.DomainContextHandler()

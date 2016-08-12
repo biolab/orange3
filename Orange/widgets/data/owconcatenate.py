@@ -27,11 +27,11 @@ class OWConcatenate(widget.OWWidget):
     priority = 1111
     icon = "icons/Concatenate.svg"
 
-    inputs = [("Primary Data", Orange.data.Table,
+    inputs = [("Primary Data", Orange.data.TableBase,
                "set_primary_data", widget.Default),
-              ("Additional Data", Orange.data.Table,
+              ("Additional Data", Orange.data.TableBase,
                "set_more_data", widget.Multiple)]
-    outputs = [("Data", Orange.data.Table)]
+    outputs = [("Data", Orange.data.TableBase)]
 
     #: Domain merging operations
     MergeUnion, MergeIntersection = 0, 1

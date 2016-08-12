@@ -7,7 +7,7 @@ from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
     QGraphicsScene, QColor, QPen, QBrush, QSizePolicy, QGraphicsLineItem)
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -60,9 +60,9 @@ class OWSieveDiagram(OWWidget):
     icon = "icons/SieveDiagram.svg"
     priority = 310
 
-    inputs = [("Data", Table, "set_data", Default),
+    inputs = [("Data", TableBase, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
-    outputs = [("Selection", Table)]
+    outputs = [("Selection", TableBase)]
 
     graph_name = "canvas"
 

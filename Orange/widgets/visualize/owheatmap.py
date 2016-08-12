@@ -16,7 +16,7 @@ from PyQt4.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
-from Orange.data import Domain, Table, DiscreteVariable, StringVariable
+from Orange.data import Domain, Table, DiscreteVariable, StringVariable, TableBase
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
@@ -376,8 +376,8 @@ class OWHeatMap(widget.OWWidget):
     icon = "icons/Heatmap.svg"
     priority = 330
 
-    inputs = [("Data", Table, "set_dataset")]
-    outputs = [("Selected Data", Table, widget.Default)]
+    inputs = [("Data", TableBase, "set_dataset")]
+    outputs = [("Selected Data", TableBase, widget.Default)]
 
     settingsHandler = settings.DomainContextHandler()
 

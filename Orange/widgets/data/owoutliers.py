@@ -5,7 +5,7 @@ from PyQt4 import QtGui
 
 from Orange.base import SklLearner
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table, Domain, ContinuousVariable, TableBase
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -19,8 +19,8 @@ class OWOutliers(widget.OWWidget):
     category = "Data"
     keywords = ["data", "outlier", "inlier"]
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Inliers", Table), ("Outliers", Table)]
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Inliers", TableBase), ("Outliers", TableBase)]
 
     want_main_area = False
 

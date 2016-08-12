@@ -457,7 +457,7 @@ class OWScatterMap(widget.OWWidget):
     icon = "icons/Scattermap.svg"
     priority = 500
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 
     settingsHandler = settings.DomainContextHandler()
 

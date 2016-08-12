@@ -862,8 +862,8 @@ class OWImageViewer(widget.OWWidget):
     icon = "icons/ImageViewer.svg"
     priority = 4050
 
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table, )]
+    inputs = [("Data", Orange.data.TableBase, "setData")]
+    outputs = [("Data", Orange.data.TableBase, )]
 
     settingsHandler = settings.DomainContextHandler()
 

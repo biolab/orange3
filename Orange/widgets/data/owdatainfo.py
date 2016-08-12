@@ -3,7 +3,7 @@ import threading
 
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 from Orange.canvas import report
 try:
@@ -21,7 +21,7 @@ class OWDataInfo(widget.OWWidget):
     priority = 80
     category = "Data"
     keywords = ["data", "info"]
-    inputs = [("Data", Table, "data")]
+    inputs = [("Data", TableBase, "data")]
 
     want_main_area = False
 

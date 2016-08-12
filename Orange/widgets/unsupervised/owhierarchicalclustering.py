@@ -709,8 +709,8 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
 
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.TableBase, widget.Default),
+               ("Other Data", Orange.data.TableBase)]
 
     #: Selected linkage
     linkage = settings.Setting(1)

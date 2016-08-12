@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 import scipy
 
-from Orange.data import Table, TableSeries
+from Orange.data import Table, TableSeries, TableBase, SeriesBase
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -95,7 +95,7 @@ class Model:
             return self.predict_storage(table)
 
     def predict_storage(self, data):
-        if isinstance(data, (Table, TableSeries)):
+        if isinstance(data, (TableBase, SeriesBase)):
             return self.predict(data.X)
         raise TypeError("Unrecognized argument (instance of '{}')"
                         .format(type(data).__name__))
@@ -111,7 +111,7 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, (Table, TableSeries)):
+        elif isinstance(data, (TableBase, SeriesBase)):
             if data.domain != self.domain:
                 data = Table.from_table(self.domain, data)
             prediction = self.predict_storage(data)

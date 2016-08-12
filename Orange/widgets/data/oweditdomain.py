@@ -353,8 +353,8 @@ class OWEditDomain(widget.OWWidget):
     icon = "icons/EditDomain.svg"
     priority = 3125
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     settingsHandler = settings.DomainContextHandler()
 

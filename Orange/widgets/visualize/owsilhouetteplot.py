@@ -31,9 +31,9 @@ class OWSilhouettePlot(widget.OWWidget):
     icon = "icons/SilhouettePlot.svg"
     priority = 510
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Selected Data", Orange.data.TableBase, widget.Default),
+               ("Other Data", Orange.data.TableBase)]
 
     replaces = [
         "orangecontrib.prototypes.widgets.owsilhouetteplot.OWSilhouettePlot",

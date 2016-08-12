@@ -10,7 +10,7 @@ from PyQt4.QtGui import (
     QColor, QGraphicsScene, QPainter, QPen,
     QGraphicsLineItem)
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -31,9 +31,9 @@ class OWMosaicDisplay(OWWidget):
     icon = "icons/MosaicDisplay.svg"
     priority = 320
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Data Subset", Table, "set_subset_data")]
-    outputs = [("Selected Data", Table)]
+    inputs = [("Data", TableBase, "set_data", Default),
+              ("Data Subset", TableBase, "set_subset_data")]
+    outputs = [("Selected Data", TableBase)]
 
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)

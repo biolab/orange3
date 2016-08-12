@@ -6,7 +6,7 @@ from PyQt4.QtGui import QGridLayout, QSizePolicy, \
 from PyQt4.QtCore import Qt, QTimer
 
 from Orange.clustering import KMeans
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, TableBase
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -19,9 +19,9 @@ class OWKMeans(widget.OWWidget):
     icon = "icons/KMeans.svg"
     priority = 2100
 
-    inputs = [("Data", Table, "set_data")]
+    inputs = [("Data", TableBase, "set_data")]
 
-    outputs = [("Annotated Data", Table, widget.Default),
+    outputs = [("Annotated Data", TableBase, widget.Default),
                ("Centroids", Table)]
 
     INIT_KMEANS, INIT_RANDOM = range(2)

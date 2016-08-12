@@ -13,7 +13,7 @@ from PyQt4.QtGui import (
 )
 from PyQt4.QtCore import Qt, QSize
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
 import Orange.classification
@@ -132,11 +132,11 @@ class OWTestLearners(OWWidget):
     priority = 100
 
     inputs = [("Learner", Learner, "set_learner", widget.Multiple),
-              ("Data", Table, "set_train_data", widget.Default),
-              ("Test Data", Table, "set_test_data"),
+              ("Data", TableBase, "set_train_data", widget.Default),
+              ("Test Data", TableBase, "set_test_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
-    outputs = [("Predictions", Table),
+    outputs = [("Predictions", TableBase),
                ("Evaluation Results", Results)]
 
     settingsHandler = settings.ClassValuesContextHandler()

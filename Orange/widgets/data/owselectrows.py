@@ -7,7 +7,7 @@ from PyQt4.QtCore import Qt
 import numpy as np
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
-                         Table, TimeVariable)
+                         Table, TimeVariable, TableBase)
 from Orange.data.domain import filter_visible
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
@@ -98,8 +98,8 @@ class OWSelectRows(widget.OWWidget):
     icon = "icons/SelectRows.svg"
     priority = 100
     category = "Data"
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Matching Data", Table, widget.Default), ("Unmatched Data", Table)]
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Matching Data", TableBase, widget.Default), ("Unmatched Data", TableBase)]
 
     want_main_area = False
 
