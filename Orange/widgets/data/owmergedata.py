@@ -135,7 +135,7 @@ class OWMergeData(widget.OWWidget):
 
     def commit(self):
         AB, BA = None, None
-        if (self.attr_a and self.attr_b and self.dataA is not None and self.dataB is not None):
+        if self.attr_a and self.attr_b and self.dataA is not None and self.dataB is not None:
             varA = (self.attr_a if self.attr_a in (INDEX, INSTANCEID) else
                     self.dataA.domain[self.attr_a])
             varB = (self.attr_b if self.attr_b in (INDEX, INSTANCEID) else
@@ -144,8 +144,8 @@ class OWMergeData(widget.OWWidget):
                 # temporarily ignore index, this is bad, mmkay?
                 ai = self.dataA.index
                 bi = self.dataB.index
-                self.dataA.index = list(range(len(self.dataA)))
-                self.dataB.index = list(range(len(self.dataB)))
+                self.dataA.reset_index(drop=True, inplace=True)
+                self.dataB.reset_index(drop=True, inplace=True)
                 AB = self.dataA.merge(self.dataB, left_index=True, right_index=True)
                 BA = self.dataB.merge(self.dataA, left_index=True, right_index=True)
                 self.dataA.index = ai

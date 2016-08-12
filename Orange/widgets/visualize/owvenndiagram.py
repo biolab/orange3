@@ -31,7 +31,6 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.data.owmergedata import INSTANCEID, INDEX
 
 
-
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
 _ItemSet = namedtuple("_ItemSet", ["key", "name", "title", "items"])
 

@@ -531,7 +531,7 @@ class PyListModel(QAbstractListModel):
         if isinstance(indexList, int):
             indexList = [indexList]
 
-        #TODO: group indexes into ranges
+        # TODO: group indexes into ranges
         for ind in indexList:
             self.dataChanged.emit(self.index(ind), self.index(ind))
 
@@ -789,7 +789,7 @@ class TableModel(QAbstractTableModel):
             return str(instance[var])
 
         def make_basket_formater(vars, density, role):
-            formater = (format_sparse if not self.table_is_dense
+            formater = (format_sparse if not self.source.is_sparse
                         else format_sparse_bool)
             if role == TableModel.Attribute:
                 getter = operator.attrgetter("sparse_x")
@@ -812,12 +812,12 @@ class TableModel(QAbstractTableModel):
             )
 
         columns = []
-        if self.table_is_dense:
-            coldesc = make_basket(domain.class_vars, self.table_is_dense, TableModel.ClassVar)
+        if self.source.is_sparse:
+            coldesc = make_basket(domain.class_vars, self.source.is_sparse, TableModel.ClassVar)
             columns.append(coldesc)
-            coldesc = make_basket(domain.metas, self.table_is_dense, TableModel.Meta)
+            coldesc = make_basket(domain.metas, self.source.is_sparse, TableModel.Meta)
             columns.append(coldesc)
-            coldesc = make_basket(domain.attributes, self.table_is_dense, TableModel.Attribute)
+            coldesc = make_basket(domain.attributes, self.source.is_sparse, TableModel.Attribute)
             columns.append(coldesc)
         else:
             columns += [make_column(var, TableModel.ClassVar) for var in domain.class_vars]
