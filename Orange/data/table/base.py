@@ -871,6 +871,28 @@ class TableBase:
             # super call because we'd otherwise recurse back into this
             super().__setitem__(self._WEIGHTS_COLUMN, 1)
 
+    def __iter__(self):
+        """Iterate over the rows of this TableBase as SeriesBase, breaking the pandas contract.
+
+        Returns
+        -------
+        generator
+            A generator of rows as SeriesBase objects.
+
+        Examples
+        --------
+            >>> iris = Table('iris')
+            >>> for row in iris.iloc[:5]:
+            >>>     print(row)
+
+        Notes
+        -----
+        This breaks the pandas contract! Pandas iterates over column names by default.
+        However, this only breaks __str__ and __repr__, which are reimplemented anyway.
+        """
+        for _, row in self.iterrows():
+            yield row
+
     def __str__(self):
         """Override the pandas representation to provide a more Orange-friendly one."""
         max_displayed_rows = 30
