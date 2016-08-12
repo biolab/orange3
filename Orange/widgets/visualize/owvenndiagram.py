@@ -27,6 +27,10 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.sql import check_sql_input
 
+# TODO: fix this, group_table_indices was previously imported from owmergedata, very bad
+from Orange.widgets.data.owmergedata import INSTANCEID, INDEX
+
+
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
 _ItemSet = namedtuple("_ItemSet", ["key", "name", "title", "items"])
@@ -784,7 +788,28 @@ def unique(seq):
             yield item
             seen.add(item)
 
-from Orange.widgets.data.owmergedata import group_table_indices
+
+def group_table_indices(table, key_vars, exclude_unknown=False):
+    """
+    Group table indices based on values of selected columns (`key_vars`).
+
+    Return a dictionary mapping all unique value combinations (keys)
+    into a list of indices in the table where they are present.
+
+    :param Orange.data.Table table:
+    :param list-of-Orange.data.FeatureDescriptor] key_vars:
+    :param bool exclude_unknown:
+
+    """
+    groups = defaultdict(list)
+    for i, (idx, row) in enumerate(table.iterrows()):
+        key = [idx if a == INSTANCEID else i if a == INDEX else row[a]
+               for a in key_vars]
+        if exclude_unknown and any(math.isnan(k) for k in key):
+            continue
+        key = tuple([str(k) for k in key])
+        groups[key].append(i)
+    return groups
 
 
 def varying_between(table, idvarlist):

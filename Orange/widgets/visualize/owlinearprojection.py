@@ -815,7 +815,7 @@ class OWLinearProjection(widget.OWWidget):
                     color_data, None, *color_var.colors)
             else:
                 color_data = plotutils.discrete_colors(
-                    self.data[color_var], len(color_var.values),
+                    color_var.to_val(self.data[color_var]).values, len(color_var.values),
                     color_index=color_var.colors,
                     variable=color_var
                 )
