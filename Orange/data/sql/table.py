@@ -113,7 +113,7 @@ class SqlTable(Table):
 
         If inspect_values parameter is set to True, all column values are
         inspected and int/string columns with less than 21 values are
-        intepreted as discrete features.
+        interpreted as discrete features.
 
         Domains can be constructed by the caller and passed in
         type_hints parameter. Variables from the domain are used for
@@ -156,6 +156,10 @@ class SqlTable(Table):
                 self.name = table
             else:
                 super().__init__(data=[])
+
+    def __finalize__(self, from_table, **kwargs):
+        # don't filter the domain here. it doesn't work well with SQL.
+        return pd.DataFrame.__finalize__(self, from_table, **kwargs)
 
     def create_connection_pool(self):
         self.connection_pool = psycopg2.pool.ThreadedConnectionPool(

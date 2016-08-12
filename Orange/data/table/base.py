@@ -157,36 +157,65 @@ class TableBase:
         # when passing to pandas upstream
         super().__init__(**{k: v for k, v in kwargs.items() if k in self._KNOWN_PANDAS_KWARGS})
 
-        # try to use defaults if they were already set,
-        # e.g. in __new__, which constructs a complete table and passes it here
-        #self.name = getattr(self, 'name', 'untitled')
-        #self.attributes = getattr(self, 'attributes', kwargs.get('attributes', {}))
-        #self.__file__ = getattr(self, '__file__', None)
+        # these won't override things that are already set, as we have
+        # the _already_inited short-circuit in place
         self.name = 'untitled'
+        self.domain = None
         self.attributes = kwargs.get('attributes', {})
         self.__file__ = None
-
-        # we need to filter the domain to only include the columns present in the table
-        # but we still need to allow constructing an empty table (with no domain)
-        # also, we only set the domain if it has changed (==number of variables),
-        # so in those cases, id(domain_before) == id(domain_after)
-        if getattr(self, 'domain', None) is not None:
-            new_domain = Domain(
-                [c for c in self.domain.attributes if c in self.columns],
-                [c for c in self.domain.class_vars if c in self.columns],
-                [c for c in self.domain.metas if c in self.columns]
-            )
-            if len(new_domain.variables) + len(new_domain.metas) != \
-                            len(self.domain.variables) + len(self.domain.metas):
-                self.domain = new_domain
-        else:
-            self.domain = None
 
         # only set the weights if they aren't set already
         if self._WEIGHTS_COLUMN not in self.columns:
             self.set_weights(1)
 
         self._already_inited = True
+
+    def __finalize__(self, from_table, **kwargs):
+        """Transfer properties from _metadata and filter the domain.
+
+        This extends the pandas __finalize__ which transfers attributes from _metadata,
+        and adds filtering the domain. See the examples for more.
+
+        Parameters
+        ----------
+        from_table : TableBase or dict
+            The table to source the attributes from.
+
+        Examples
+        --------
+            >>> from Orange.data import Table
+            >>> i = Table('iris')
+            >>> i.attributes["attr"] = "val"
+            >>> i.domain
+            [sepal length, sepal width, petal length, petal width | iris]
+            >>> sub = i[['sepal length', 'iris']]
+            >>> sub.domain
+            [sepal length | iris]
+            >>> sub.attributes
+            {'attr': 'val'}
+
+        Notes
+        -----
+        This is automatically called by pandas internally *almost* every time
+        a new object is constructed, e.g. when slicing rows, but not when things are
+        ambiguous, like concatenation.
+
+        This does not work with Series (rows or columns).
+        """
+        result = super(TableBase, self).__finalize__(from_table, **kwargs)
+        if self.domain is not None:
+            var_filter = lambda vars: [var for var in vars if var in result.columns]
+            filtered_domain = Domain(
+                var_filter(result.domain.attributes),
+                var_filter(result.domain.class_vars),
+                var_filter(result.domain.metas)
+            )
+            # we only want to set the domain if it has changed (==number of variables),
+            # so in those cases, id(domain_before) == id(domain_after)
+            if len(filtered_domain.variables) + len(filtered_domain.metas) != \
+                            len(result.domain.variables) + len(result.domain.metas):
+                result.domain = filtered_domain
+        return result
 
     @classmethod
     def from_domain(cls, domain):
@@ -247,7 +276,7 @@ class TableBase:
                 # intentional casting to subclass
                 result = cls(data=source_table.iloc[row_indices])
                 # because we manually copy data, not the whole table
-                result._transfer_properties(source_table, transfer_domain=True)
+                result.__finalize__(source_table)
                 return result
 
             result = cls()
@@ -766,7 +795,7 @@ class TableBase:
                 # could act as a variable value index
                 # otherwise we're dealing with numeric discretes
                 is_values = self[var.name].apply(lambda v: isinstance(v, Number) and
-                                                           (isinstance(v, int) or v.is_integer()) and
+                                                           (isinstance(v, int) or float(v).is_integer()) and
                                                            v < len(var.values)).all()
                 if is_values:
                     self[var.name] = self[var.name].apply(lambda v: var.values[int(v)])
@@ -938,27 +967,10 @@ class TableBase:
                 result.index = new_index
         else:
             raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
-        result._transfer_properties(tables[0])  # pd.concat does not do this by itself
+        tmpdomain = result.domain
+        result.__finalize__(tables[0])  # pd.concat does not do this by itself
+        result.domain = tmpdomain  # we don't want to transfer the domain, specifically
         return cls.from_dataframe(new_domain, result)
-
-    def _transfer_properties(self, from_table, transfer_domain=False):
-        """Transfer properties (such as the name) to this table.
-
-        Parameters
-        ----------
-        from_table : TableBase or dict
-            The table to source the attributes from.
-        transfer_domain : bool, optional, default False
-            Whether to transfer the domain.
-
-        Notes
-        -----
-        This should normally not be used, but it is used when these properties
-        are not automatically transferred on manipulation, in particular when using pd.concat.
-        """
-        for name in self._metadata:
-            if hasattr(from_table, name) and (transfer_domain or name != "domain"):
-                setattr(self, name, getattr(from_table, name))
 
     def approx_len(self):
         """Return the approximate length of the table."""
