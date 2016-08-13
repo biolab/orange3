@@ -4,7 +4,7 @@
 import unittest
 import numpy as np
 from Orange.data import Table
-from Orange.classification import TreeLearner
+from Orange.classification import SklTreeLearner
 from Orange.regression import TreeRegressionLearner
 from Orange.ensembles import SklAdaBoostLearner, SklAdaBoostRegressionLearner
 from Orange.evaluation import CrossValidation, CA, RMSE
@@ -25,8 +25,8 @@ class TestSklAdaBoostLearner(unittest.TestCase):
 
     def test_adaboost_base_estimator(self):
         np.random.seed(0)
-        stump_estimator = TreeLearner(max_depth=1)
-        tree_estimator = TreeLearner()
+        stump_estimator = SklTreeLearner(max_depth=1)
+        tree_estimator = SklTreeLearner()
         stump = SklAdaBoostLearner(base_estimator=stump_estimator)
         tree = SklAdaBoostLearner(base_estimator=tree_estimator)
         results = CrossValidation(self.iris, [stump, tree], k=4)

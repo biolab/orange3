@@ -450,14 +450,14 @@ class OWTreeViewer2D(OWWidget):
             return
 
         model = self.model
-        root_instances = model.num_instances(model.root)
+        root_instances = len(model.instances)
         width = 3
         for edge in self.scene.edges():
-            num_inst = model.num_instances(edge.node2.node_id)
+            num_inst = len(edge.node2.node_inst.subset)
             if self.line_width_method == 1:
                 width = 8 * num_inst / root_instances
             elif self.line_width_method == 2:
-                width = 8 * num_inst / model.num_instances(edge.node1.node_id)
+                width = 8 * num_inst / len(edge.node1.node_inst.subset)
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 

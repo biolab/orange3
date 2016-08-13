@@ -6,8 +6,8 @@ import unittest
 import numpy as np
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
-from Orange.tree import \
-    Tree, OrangeTreeModel, Node, DiscreteNode, MappedDiscreteNode, NumericNode
+from Orange.classification.tree import \
+    TreeModel, Node, DiscreteNode, MappedDiscreteNode, NumericNode
 
 
 class TestTree:
@@ -18,32 +18,31 @@ class TestTree:
     @classmethod
     def all_nodes(cls, node):
         yield node
-        if node.children:
-            for child in node.children:
-                yield from cls.all_nodes(child)
+        for child in node.children:
+            yield from cls.all_nodes(child)
 
     @classmethod
     def depth(cls, node):
-        return 0 if node.children is None else \
+        return 0 if not node.children else \
             1 + max(cls.depth(child) for child in node.children)
 
     def test_get_tree(self):
-        learn = self.OrangeTreeLearner()
+        learn = self.TreeLearner()
         clf = learn(self.data)
-        self.assertIsInstance(clf, OrangeTreeModel)
+        self.assertIsInstance(clf, TreeModel)
 
     def test_full_tree(self):
         table = self.data
-        learn = self.OrangeTreeLearner(**self.no_pruning_args)
+        learn = self.TreeLearner(**self.no_pruning_args)
         clf = learn(table)
         pred = clf(table)
         self.assertTrue(np.all(table.Y.flatten() == pred))
 
     def test_min_samples_split(self):
-        clf = self.OrangeTreeLearner(
+        clf = self.TreeLearner(
             min_samples_split=10, **self.no_pruning_args)(self.data)
         self.assertTrue(
-            all(node.children is None or len(node.subset) >= 10
+            all(not node.children or len(node.subset) >= 10
                 for node in self.all_nodes(clf.root)))
 
     def test_min_samples_leaf(self):
@@ -53,20 +52,20 @@ class TestTree:
         for lim in (1, 2, 30):
             args = dict(min_samples_split=2, min_samples_leaf=lim)
             args.update(self.no_pruning_args)
-            clf = self.OrangeTreeLearner(**args)(self.data_mixed)
+            clf = self.TreeLearner(**args)(self.data_mixed)
             self.assertTrue(all(len(node.subset) >= lim
                                 for node in self.all_nodes(clf.root)))
-            clf = self.OrangeTreeLearner(binarize=True, **args)(self.data_mixed)
+            clf = self.TreeLearner(binarize=True, **args)(self.data_mixed)
             self.assertTrue(all(len(node.subset) >= lim
                                 for node in self.all_nodes(clf.root)))
 
     def test_max_depth(self):
         for i in (1, 2, 5):
-            tree = self.OrangeTreeLearner(max_depth=i)(self.data)
+            tree = self.TreeLearner(max_depth=i)(self.data)
             self.assertEqual(self.depth(tree.root), i)
 
     def test_refuse_binarize_too_many_values(self):
-        clf = self.OrangeTreeLearner(binarize=True)
+        clf = self.TreeLearner(binarize=True)
         lim = clf.MAX_BINARIZATION
 
         domain = Domain(
@@ -87,7 +86,7 @@ class TestTree:
         clf(data)
 
     def test_find_mapping(self):
-        clf = self.OrangeTreeLearner()
+        clf = self.TreeLearner()
 
         domain = Domain([DiscreteVariable("x", values="abcdefgh"),
                          ContinuousVariable("r1"),
@@ -118,7 +117,7 @@ class TestTree:
             self.assertIsInstance(root.children[1], Node)
 
     def test_find_threshold(self):
-        clf = self.OrangeTreeLearner()
+        clf = self.TreeLearner()
 
         domain = Domain([ContinuousVariable("x"),
                          DiscreteVariable("r1", values="abcd"),
@@ -141,7 +140,7 @@ class TestTree:
         self.assertIsInstance(root.children[1], Node)
 
     def test_no_data(self):
-        clf = self.OrangeTreeLearner()
+        clf = self.TreeLearner()
 
         domain = Domain([DiscreteVariable("r1", values="ab"),
                          DiscreteVariable("r2", values="abcd"),
@@ -155,7 +154,7 @@ class TestTree:
                                        self.blind_prediction)
 
     def test_all_values_missing(self):
-        clf = self.OrangeTreeLearner()
+        clf = self.TreeLearner()
 
         domain = Domain([DiscreteVariable("r1", values="ab"),
                          DiscreteVariable("r2", values="abcd"),
@@ -173,7 +172,7 @@ class TestTree:
                 self.prediction_on_0_1)
 
     def test_single_valued_attr(self):
-        clf = self.OrangeTreeLearner()
+        clf = self.TreeLearner()
         domain = Domain([DiscreteVariable("r1", values="a")],
                         self.class_var)
         data = Table(domain, np.array([[0, 0], [0, 1]]))
@@ -189,7 +188,7 @@ class TestTree:
                         self.class_var)
         xy = np.array([[0, 0, 0, 0], [0, 1, 1, 0], [1, 0, 0, 1], [1, 1, 1, 1]])
         data = Table(domain, xy)
-        clf = self.OrangeTreeLearner(binarize=False)
+        clf = self.TreeLearner(binarize=False)
         tree = clf(data)
         root = tree.root
         self.assertIsInstance(root, DiscreteNode)
@@ -201,7 +200,7 @@ class TestTree:
 
 
 class TestClassifier(TestTree, unittest.TestCase):
-    from Orange.classification import OrangeTreeLearner
+    from Orange.classification import TreeLearner
 
     @classmethod
     def setUpClass(cls):
@@ -218,7 +217,7 @@ class TestClassifier(TestTree, unittest.TestCase):
 
 
 class TestRegressor(TestTree, unittest.TestCase):
-    from Orange.regression import OrangeTreeLearner
+    from Orange.regression import TreeLearner
 
     @classmethod
     def setUpClass(cls):
@@ -237,24 +236,6 @@ class TestRegressor(TestTree, unittest.TestCase):
         cls.prediction_on_0_1 = 0.5
 
 
-class TestTreeMixin(unittest.TestCase):
-    def test_not_implemented(self):
-        # pylint: disable=pointless-statement
-        tree = Tree()
-        with self.assertRaises(NotImplementedError):
-            tree.node_count
-        with self.assertRaises(NotImplementedError):
-            tree.leaf_count
-        with self.assertRaises(NotImplementedError):
-            tree.root
-        for m in (
-                tree.children, tree.is_leaf, tree.num_instances, tree.attribute,
-                tree.rule, tree.get_value, tree.get_instances,
-                tree.data_attribute):
-            self.assertRaises(NotImplementedError, m, None)
-        self.assertRaises(NotImplementedError,
-                          tree.split_condition, None, None)
-
 class TestNodes(unittest.TestCase):
     def test_node(self):
         var = ContinuousVariable("y")
@@ -262,7 +243,7 @@ class TestNodes(unittest.TestCase):
         self.assertEqual(node.attr, var)
         self.assertEqual(node.attr_idx, 42)
         self.assertEqual(node.value, "foo")
-        self.assertIsNone(node.children)
+        self.assertEqual(node.children, [])
         np.testing.assert_equal(node.subset, np.array([], dtype=np.int32))
 
         self.assertTrue(np.isnan(node.descend([])))
@@ -273,12 +254,11 @@ class TestNodes(unittest.TestCase):
         self.assertEqual(node.attr, var)
         self.assertEqual(node.attr_idx, 2)
         self.assertEqual(node.value, "foo")
-        self.assertIsNone(node.children)
+        self.assertEqual(node.children, [])
         np.testing.assert_equal(node.subset, np.array([], dtype=np.int32))
 
         self.assertEqual(node.descend([3, 4, 1, 6]), 1)
         self.assertTrue(np.isnan(node.descend([3, 4, float("nan"), 6])))
-        self.assertEqual(node.describe_branch(1), "b")
 
     def test_mapped_node(self):
         var = DiscreteVariable("y", values="abc")
@@ -286,15 +266,13 @@ class TestNodes(unittest.TestCase):
         self.assertEqual(node.attr, var)
         self.assertEqual(node.attr_idx, 2)
         self.assertEqual(node.value, "foo")
-        self.assertIsNone(node.children)
+        self.assertEqual(node.children, [])
         np.testing.assert_equal(node.subset, np.array([], dtype=np.int32))
 
         self.assertEqual(node.descend([3, 4, 0, 6]), 1)
         self.assertEqual(node.descend([3, 4, 1, 6]), 1)
         self.assertEqual(node.descend([3, 4, 2, 6]), 0)
         self.assertTrue(np.isnan(node.descend([3, 4, float("nan"), 6])))
-        self.assertEqual(node.describe_branch(0), "c")
-        self.assertEqual(node.describe_branch(1), "a or b")
 
         mapping, branches = MappedDiscreteNode.branches_from_mapping(
             np.array([2, 3, 1, 1, 0, 1, 4, 2]), int("1001", 2), 6)
@@ -309,15 +287,13 @@ class TestNodes(unittest.TestCase):
         self.assertEqual(node.attr, var)
         self.assertEqual(node.attr_idx, 2)
         self.assertEqual(node.value, "foo")
-        self.assertIsNone(node.children)
+        self.assertEqual(node.children, [])
         np.testing.assert_equal(node.subset, np.array([], dtype=np.int32))
 
         self.assertEqual(node.descend([3, 4, 0, 6]), 0)
         self.assertEqual(node.descend([3, 4, 42, 6]), 0)
         self.assertEqual(node.descend([3, 4, 42.1, 6]), 1)
         self.assertTrue(np.isnan(node.descend([3, 4, float("nan"), 6])))
-        self.assertEqual(node.describe_branch(0), "≤ 42")
-        self.assertEqual(node.describe_branch(1), "> 42")
 
 
 class TestTreeModel(unittest.TestCase):
@@ -330,6 +306,7 @@ class TestTreeModel(unittest.TestCase):
         self.domain = Domain([v1, v2, v3], y)
         self.data = Table(self.domain, np.arange(40).reshape(10, 4))
         self.root = NumericNode(v1, 0, 13, np.array([0., 42]))
+        self.root.subset = np.array([], dtype=np.int32)
         left = DiscreteNode(v2, 1, np.array([1, 42]))
         left.children = [Node(None, None, np.array([x, 42])) for x in [2, 3, 4]]
         right = MappedDiscreteNode(v3, 2, np.array([1, 1, 0]),
@@ -340,7 +317,7 @@ class TestTreeModel(unittest.TestCase):
     def test_compile_and_run_cont(self):
         # I investigate, I have a warrant
         # pylint: disable=protected-access
-        model = OrangeTreeModel(self.data, self.root)
+        model = TreeModel(self.data, self.root)
         expected_values = np.vstack((np.arange(8), [42] * 8)).T
         np.testing.assert_equal(model._values, expected_values)
         self.assertEqual(model._thresholds[0], 13)
@@ -376,7 +353,7 @@ class TestTreeModel(unittest.TestCase):
         right.children = [Node(None, None, np.array([x, 42])) for x in [6, 7]]
         root.children = [left, right]
 
-        model = OrangeTreeModel(data, root)
+        model = TreeModel(data, root)
         normalized = \
             expected_values / np.sum(expected_values, axis=1)[:, np.newaxis]
         np.testing.assert_equal(model.predict(x), normalized)
@@ -389,36 +366,20 @@ class TestTreeModel(unittest.TestCase):
         values = np.array([[42., 43], [44, 45]])
         root = DiscreteNode(a, 0, values[1])
         root.children = [Node(None, -1, values[0]), None]
-        model = OrangeTreeModel(data, root)
+        model = TreeModel(data, root)
         x = np.array([[0.], [1]])
         np.testing.assert_equal(model.get_values(x), values)
         np.testing.assert_equal(model.get_values_in_python(x), values)
         np.testing.assert_equal(model.get_values_by_nodes(x), values)
 
     def test_methods(self):
-        model = OrangeTreeModel(self.data, self.root)
-        self.assertEqual(model.node_count, 8)
-        self.assertEqual(model.leaf_count, 5)
+        model = TreeModel(self.data, self.root)
+        self.assertEqual(model.node_count(), 8)
+        self.assertEqual(model.leaf_count(), 5)
         self.assertIs(model.root, self.root)
 
-        left, right = model.children(self.root)
-        self.assertIsInstance(left, DiscreteNode)
-        self.assertIsInstance(right, MappedDiscreteNode)
-        self.assertEqual(model.children(model.children(left)[2]), [])
-
-        self.assertIs(model.attribute(self.root), self.v1)
-        self.assertIs(model.attribute(left), self.v2)
-
-        self.assertEqual(model.split_condition(self.root, None), "")
-        self.assertEqual(model.split_condition(left, self.root), "≤ 13")
-        self.assertEqual(model.split_condition(right, self.root), "> 13")
-
-        self.assertIsInstance(model.rule(self.root), str)
-        np.testing.assert_equal(model.get_value(self.root), np.array([0., 42]))
-
+        left = self.root.children[0]
         left.subset = np.array([2, 3])
-        self.assertEqual(model.num_instances(self.root), 0)
-        self.assertEqual(model.num_instances(left), 2)
         subset = model.get_instances([self.root, left])
         self.assertIsInstance(subset, Table)
         self.assertEqual(len(subset), 2)
@@ -426,12 +387,12 @@ class TestTreeModel(unittest.TestCase):
         np.testing.assert_equal(subset.Y, np.array([11, 15]))
 
     def test_print(self):
-        model = OrangeTreeModel(self.data, self.root)
-        self.assertEqual(model.print_tree(), """             [ 1 42] v1 ≤ 13
+        model = TreeModel(self.data, self.root)
+        self.assertEqual(model.print_tree(), """             [ 1 42] v1 ≤ 13.000
              [ 2 42]     v2 a
              [ 3 42]     v2 b
              [ 4 42]     v2 c
-             [ 5 42] v1 > 13
+             [ 5 42] v1 > 13.000
              [ 6 42]     v3 f
              [ 7 42]     v3 d or e
 """)

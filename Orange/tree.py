@@ -1,98 +1,10 @@
 """Tree model used by Orange inducers, and Tree interface"""
 
-from functools import lru_cache
+from collections import OrderedDict
 
 import numpy as np
 
 from Orange.base import Model
-
-
-class Tree:
-    """Interface for tree based models.
-
-    Defines members needed for drawing of the tree.
-
-    The API is based on the notion of node indices. Node index can be of
-    an arbitrary type; for instances ints, like in skl trees, or node instances,
-    like in Orange trees.
-    """
-
-    #: Domain of data the tree was built from
-    domain = None
-
-    #: Data the tree was built from (Optional)
-    instances = None
-
-    @property
-    def node_count(self):
-        """Return the number of nodes"""
-        raise NotImplementedError()
-
-    @property
-    def leaf_count(self):
-        """Return the number of leaves"""
-        raise NotImplementedError()
-
-    @property
-    def root(self):
-        """Return root index"""
-        raise NotImplementedError()
-
-    def children(self, node_index):
-        """Return indices of child nodes"""
-        raise NotImplementedError()
-
-    def is_leaf(self, node_index):
-        """True if the node is a leaf"""
-        return not self.children(node_index)
-
-    def num_instances(self, node_index):
-        """The number of training instances at the node"""
-        raise NotImplementedError()
-
-    def attribute(self, node_index):
-        """Attribute whose value determines the branch"""
-        raise NotImplementedError()
-
-    def data_attribute(self, node_index):
-        """The original data attribute; unless indicators are used,
-        this is tha same as `attribute`"""
-        return self.attribute(node_index)
-
-    def split_condition(self, node_index, parent_index):
-        """Human-readable branch description, e.g. '< 42' or 'male'"""
-        raise NotImplementedError()
-
-    def rule(self, index_path):
-        """Human-readable rule with the conjunction of conditions along the
-        given path
-
-        Args:
-            index_path (list): a list of node indices starting at the root"""
-        raise NotImplementedError()
-
-    def get_value(self, node_index):
-        """Value stored in the node; distributions for classification,
-        mean and variance for regression"""
-        raise NotImplementedError()
-
-    def get_instances(self, node_indices):
-        """Get indices of training instances belonging to the node"""
-        raise NotImplementedError()
-
-
-class RandomForest:
-    """Interface for random forest models
-    """
-
-    @property
-    def trees(self):
-        """Return a list of Trees in the forest
-
-        Returns
-        -------
-        List[Tree]
-        """
 
 
 class Node:
@@ -109,12 +21,17 @@ class Node:
         self.attr = attr
         self.attr_idx = attr_idx
         self.value = value
-        self.children = None
+        self.children = []
         self.subset = np.array([], dtype=np.int32)
+        self.description = ""
+        self.condition = ()
 
     def descend(self, inst):
         """Return the child for the given data instance"""
         return np.nan
+
+    def _set_child_descriptions(self, child, child_idx):
+        raise NotImplementedError
 
 
 class DiscreteNode(Node):
@@ -126,8 +43,9 @@ class DiscreteNode(Node):
         val = inst[self.attr_idx]
         return np.nan if np.isnan(val) else int(val)
 
-    def describe_branch(self, i):
-        return self.attr.values[i]
+    def _set_child_descriptions(self, child, child_idx, _):
+        child.condition = {child_idx}
+        child.description = self.attr.values[child_idx]
 
 
 class MappedDiscreteNode(Node):
@@ -143,13 +61,6 @@ class MappedDiscreteNode(Node):
     def descend(self, inst):
         val = inst[self.attr_idx]
         return np.nan if np.isnan(val) else self.mapping[int(val)]
-
-    def describe_branch(self, i):
-        values = [self.attr.values[j]
-                  for j, v in enumerate(self.mapping) if v == i]
-        if len(values) == 1:
-            return values[0]
-        return "{} or {}".format(", ".join(values[:-1]), values[-1])
 
     @staticmethod
     def branches_from_mapping(col_x, bit_mapping, n_values):
@@ -174,6 +85,20 @@ class MappedDiscreteNode(Node):
         col_x[np.isnan(col_x)] = n_values
         return mapping[:-1], mapping[col_x.astype(np.int16)]
 
+    def _set_child_descriptions(self, child, child_idx, conditions):
+        attr = self.attr
+        in_brnch = {j for j, v in enumerate(self.mapping) if v == child_idx}
+        if attr in conditions:
+            child.condition = conditions[attr] & in_brnch
+        else:
+            child.condition = in_brnch
+        vals = [attr.values[j] for j in sorted(child.condition)]
+        if not vals:
+            child.description = "(unreachable)"
+        else:
+            child.description = vals[0] if len(vals) == 1 else \
+                "{} or {}".format(", ".join(vals[:-1]), vals[-1])
+
 
 class NumericNode(Node):
     """Node for numeric attributes
@@ -190,11 +115,20 @@ class NumericNode(Node):
         val = inst[self.attr_idx]
         return np.nan if np.isnan(val) else val > self.threshold
 
-    def describe_branch(self, i):
-        return "{} {}".format(("≤", ">")[i], self.threshold)
+    def _set_child_descriptions(self, child, child_idx, conditions):
+        attr = self.attr
+        threshold = self.threshold
+        lower, upper = conditions.get(attr, (None, None))
+        if child_idx == 0 and (lower is None or threshold > lower):
+            lower = threshold
+        elif child_idx == 1 and (upper is None or threshold < upper):
+            upper = threshold
+        child.condition = (upper, lower)
+        child.description = \
+            "{} {}".format("≤>"[child_idx], attr.str_val(threshold))
 
 
-class OrangeTreeModel(Model, Tree):
+class TreeModel(Model):
     """
     Tree classifier with proper handling of nominal attributes and binarization
     and the interface API for visualization.
@@ -203,13 +137,14 @@ class OrangeTreeModel(Model, Tree):
     def __init__(self, data, root):
         super().__init__(data.domain)
         self.instances = data
-        self._root = root
+        self.root = root
 
         self._values = self._thresholds = self._code = None
         self._compile()
+        self._compute_descriptions()
 
     def _prepare_predictions(self, n):
-        rootval = self._root.value
+        rootval = self.root.value
         return np.empty((n,) + rootval.shape, dtype=rootval.dtype)
 
     def get_values_by_nodes(self, X):
@@ -218,7 +153,7 @@ class OrangeTreeModel(Model, Tree):
         y = self._prepare_predictions(n)
         for i in range(n):
             x = X[i]
-            node = self._root
+            node = self.root
             while True:
                 child_idx = node.descend(x)
                 if np.isnan(child_idx):
@@ -271,67 +206,34 @@ class OrangeTreeModel(Model, Tree):
             # sums[zeros] = predictions.shape[1]
             return predictions / sums[:, np.newaxis]
 
-    @property
-    @lru_cache(10)
     def node_count(self):
         def _count(node):
-            return 1 + sum(_count(c) for c in self.children(node) if c)
-        return _count(self._root)
+            return 1 + sum(_count(c) for c in node.children if c)
+        return _count(self.root)
 
-    @property
-    @lru_cache(10)
     def leaf_count(self):
         def _count(node):
             return not node.children or \
                    sum(_count(c) if c else 1 for c in node.children)
-        return _count(self._root)
-
-    @property
-    def root(self):
-        return self._root
-
-    @staticmethod
-    def children(node):
-        return node.children or []
-
-    @staticmethod
-    def attribute(node):
-        return node.attr
-
-    @staticmethod
-    def split_condition(node, parent):
-        if parent is None:
-            return ""
-        return parent.describe_branch(parent.children.index(node))
-
-    @staticmethod
-    def rule(index_path):
-        return ""
-
-    @staticmethod
-    def num_instances(node):
-        return len(node.subset)
-
-    @staticmethod
-    def get_value(node):
-        return node.value
+        return _count(self.root)
 
     def get_instances(self, nodes):
         subsets = [node.subset for node in nodes]
         if subsets:
             return self.instances[np.unique(np.hstack(subsets))]
 
+    def rule(self, path):
+        return ""
+
     def print_tree(self, node=None, level=0):
         """String representation of tree for debug purposees"""
         if node is None:
             node = self.root
-        if node.children is None:
-            return ""
         res = ""
         for branch_no, child in enumerate(node.children):
             res += ("{:>20} {}{} {}\n".format(
                 str(child.value), "    " * level, node.attr.name,
-                node.describe_branch(branch_no)))
+                child.description))
             res += self.print_tree(child, level + 1)
         return res
 
@@ -408,3 +310,22 @@ class OrangeTreeModel(Model, Tree):
 
         code_ptr = node_idx = 0
         _compile_node(self.root)
+
+    def _compute_descriptions(self):
+        def _compute_subtree(node):
+            for i, child in enumerate(node.children):
+                if child is None:
+                    continue
+                # These classes are friends
+                # pylint: disable=protected-access
+                node._set_child_descriptions(child, i, conditions)
+                old_cond = conditions.get(node.attr)
+                conditions[node.attr] = child.condition
+                _compute_subtree(child)
+                if old_cond is not None:
+                    conditions[node.attr] = old_cond
+                else:
+                    del conditions[node.attr]
+
+        conditions = OrderedDict()
+        _compute_subtree(self.root)

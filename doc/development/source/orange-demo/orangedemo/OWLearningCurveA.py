@@ -280,7 +280,7 @@ def main(argv=sys.argv):
     l2.name = 'Logistic Regression'
     ow.set_learner(l2, 2)
 
-    l4 = Orange.classification.TreeLearner()
+    l4 = Orange.classification.SklTreeLearner()
     l4.name = "Decision Tree"
     ow.set_learner(l4, 3)
 

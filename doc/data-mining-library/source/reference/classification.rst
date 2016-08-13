@@ -136,7 +136,7 @@ One Class Support Vector Machines
 
 Classification Tree
 -------------------
-.. autoclass:: TreeLearner
+.. autoclass:: SklTreeLearner
    :members:
 
 

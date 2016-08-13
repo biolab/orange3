@@ -28,10 +28,9 @@ from Orange.widgets.visualize.utils.view import (
 )
 from PyQt4 import QtGui
 
-from Orange.base import Tree
-from Orange.classification.tree import TreeClassifier
+from Orange.classification.tree import SklTreeClassifier
 from Orange.data.table import Table
-from Orange.regression.tree import TreeRegressor
+from Orange.regression.tree import SklTreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import (
@@ -56,7 +55,7 @@ class OWPythagorasTree(OWWidget):
 
     priority = 1000
 
-    inputs = [('Tree', Tree, 'set_tree')]
+    inputs = [('Tree', SklTreeClassifier, 'set_tree')]
     outputs = [('Selected Data', Table)]
 
     # Enable the save as feature
@@ -170,9 +169,9 @@ class OWPythagorasTree(OWWidget):
         if model is not None:
             # We need to know what kind of tree we have in order to properly
             # show colors and tooltips
-            if isinstance(model, TreeClassifier):
+            if isinstance(model, SklTreeClassifier):
                 self.tree_type = self.CLASSIFICATION
-            elif isinstance(model, TreeRegressor):
+            elif isinstance(model, SklTreeRegressor):
                 self.tree_type = self.REGRESSION
             else:
                 self.tree_type = self.GENERAL

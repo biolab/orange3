@@ -3,14 +3,14 @@ import numpy as np
 import sklearn.tree as skl_tree
 
 from Orange.tree import Node, DiscreteNode, MappedDiscreteNode, \
-    NumericNode, OrangeTreeModel
+    NumericNode, TreeModel
 from Orange.regression import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
 
-__all__ = ["TreeRegressionLearner", "OrangeTreeLearner"]
+__all__ = ["TreeRegressionLearner", "TreeLearner"]
 
 
-class OrangeTreeLearner(Learner):
+class TreeLearner(Learner):
     """
     Tree inducer with proper handling of nominal attributes and binarization.
 
@@ -36,7 +36,7 @@ class OrangeTreeLearner(Learner):
     Returns:
         instance of OrangeTreeModel
     """
-    __returns__ = OrangeTreeModel
+    __returns__ = TreeModel
 
     # Binarization is exhaustive, so we set a limit on the number of values
     MAX_BINARIZATION = 16
@@ -151,18 +151,16 @@ class OrangeTreeLearner(Learner):
                              "attributes with more than {} values".
                              format(self.MAX_BINARIZATION))
 
-        active_inst = np.nonzero(~np.isnan(data.Y))[0]
+        active_inst = np.nonzero(~np.isnan(data.Y))[0].astype(np.int32)
         root = self.build_tree(data, active_inst)
         if root is None:
             root = Node(None, 0, np.array([0., 0.]))
         root.subset = active_inst
-        model = OrangeTreeModel(data, root)
+        model = TreeModel(data, root)
         return model
 
 
-
-
-class TreeRegressor(SklModel):
+class SklTreeRegressor(SklModel):
     @property
     def tree(self):
         return self.skl_model.tree_
@@ -170,7 +168,7 @@ class TreeRegressor(SklModel):
 
 class TreeRegressionLearner(SklLearner):
     __wraps__ = skl_tree.DecisionTreeRegressor
-    __returns__ = TreeRegressor
+    __returns__ = SklTreeRegressor
     name = 'regression tree'
 
     def __init__(self, criterion="mse", splitter="best", max_depth=None,

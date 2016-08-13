@@ -6,7 +6,7 @@ import numpy as np
 
 from Orange.data import DiscreteVariable, Domain
 from Orange.data import Table
-from Orange.classification import LogisticRegressionLearner, TreeLearner, NaiveBayesLearner,\
+from Orange.classification import LogisticRegressionLearner, SklTreeLearner, NaiveBayesLearner,\
                                   MajorityLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
     Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
@@ -86,7 +86,7 @@ class TestAUC(unittest.TestCase):
         cls.iris = Table('iris')
 
     def test_tree(self):
-        tree = TreeLearner()
+        tree = SklTreeLearner()
         res = CrossValidation(self.iris, [tree], k=2)
         self.assertGreater(AUC(res)[0], 0.8)
         self.assertLess(AUC(res)[0], 1.)

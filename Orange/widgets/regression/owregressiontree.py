@@ -1,6 +1,6 @@
 """Widget for induction of regression trees"""
 
-from Orange.regression.tree import OrangeTreeLearner
+from Orange.regression.tree import TreeLearner
 from Orange.widgets.classify.owclassificationtree import OWTreeLearner
 
 
@@ -10,7 +10,7 @@ class OWRegressionTree(OWTreeLearner):
     icon = "icons/RegressionTree.svg"
     priority = 30
 
-    LEARNER = OrangeTreeLearner
+    LEARNER = TreeLearner
 
 
 def _test():

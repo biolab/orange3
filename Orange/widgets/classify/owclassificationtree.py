@@ -5,7 +5,7 @@ from collections import OrderedDict
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table
-from Orange.classification.tree import OrangeTreeLearner
+from Orange.classification.tree import TreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -74,7 +74,7 @@ class OWClassificationTree(OWTreeLearner):
     icon = "icons/ClassificationTree.svg"
     priority = 30
 
-    LEARNER = OrangeTreeLearner
+    LEARNER = TreeLearner
 
     limit_majority = Setting(True)
     sufficient_majority = Setting(95)

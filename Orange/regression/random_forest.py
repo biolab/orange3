@@ -1,10 +1,10 @@
 import sklearn.ensemble as skl_ensemble
 
-from Orange.tree import RandomForest
+from Orange.base import RandomForest
 from Orange.regression import SklLearner, SklModel
 from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess.score import LearnerScorer
-from Orange.regression.tree import TreeRegressor
+from Orange.regression.tree import SklTreeRegressor
 
 __all__ = ["RandomForestRegressionLearner"]
 
@@ -22,7 +22,7 @@ class RandomForestRegressor(SklModel, RandomForest):
     @property
     def trees(self):
         def wrap(tree, i):
-            t = TreeRegressor(tree)
+            t = SklTreeRegressor(tree)
             t.domain = self.domain
             t.supports_multiclass = self.supports_multiclass
             t.name = "{} - tree {}".format(self.name, i)

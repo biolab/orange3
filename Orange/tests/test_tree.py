@@ -8,14 +8,14 @@ import sklearn.tree as skl_tree
 from sklearn.tree._tree import TREE_LEAF, Tree
 
 from Orange.data import Table
-from Orange.classification import TreeLearner
+from Orange.classification import SklTreeLearner
 from Orange.regression import TreeRegressionLearner
 
 
 class TestTreeLearner(unittest.TestCase):
     def test_classification(self):
         table = Table('iris')
-        learn = TreeLearner()
+        learn = SklTreeLearner()
         clf = learn(table)
         Z = clf(table)
         self.assertTrue(np.all(table.Y.flatten() == Z))

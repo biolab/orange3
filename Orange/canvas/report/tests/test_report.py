@@ -6,8 +6,8 @@ from PyQt4.QtGui import QFont, QBrush
 from PyQt4.QtCore import Qt
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
-from Orange.classification.tree import OrangeTreeLearner
-from Orange.regression.tree import OrangeTreeLearner as RegressionTreeLearner
+from Orange.classification.tree import TreeLearner
+from Orange.regression.tree import TreeLearner as RegressionTreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
 from Orange.canvas.report.owreport import OWReport
@@ -140,7 +140,7 @@ class TestReportWidgets(WidgetTest):
         widgets = self.clas_widgets
 
         w = self.create_widget(OWTreeGraph)
-        clf = OrangeTreeLearner(max_depth=3)(data)
+        clf = TreeLearner(max_depth=3)(data)
         clf.instances = data
         w.ctree(clf)
         w.create_report_html()

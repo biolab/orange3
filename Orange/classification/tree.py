@@ -6,12 +6,12 @@ from Orange.classification import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
 from Orange.statistics import distribution, contingency
 from Orange.tree import Node, DiscreteNode, MappedDiscreteNode, \
-    NumericNode, OrangeTreeModel
+    NumericNode, TreeModel
 
-__all__ = ["TreeLearner", "OrangeTreeLearner"]
+__all__ = ["SklTreeLearner", "TreeLearner"]
 
 
-class OrangeTreeLearner(Learner):
+class TreeLearner(Learner):
     """
     Tree inducer with proper handling of nominal attributes and binarization.
 
@@ -40,7 +40,7 @@ class OrangeTreeLearner(Learner):
     Returns:
         instance of OrangeTreeModel
     """
-    __returns__ = OrangeTreeModel
+    __returns__ = TreeModel
 
     # Binarization is exhaustive, so we set a limit on the number of values
     MAX_BINARIZATION = 16
@@ -189,7 +189,7 @@ class OrangeTreeLearner(Learner):
                              "attributes with more than {} values".
                              format(self.MAX_BINARIZATION))
 
-        active_inst = np.nonzero(~np.isnan(data.Y))[0]
+        active_inst = np.nonzero(~np.isnan(data.Y))[0].astype(np.int32)
         root = self.build_tree(data, active_inst)
         if root is None:
             distr = distribution.Discrete(data, data.domain.class_var)
@@ -197,11 +197,11 @@ class OrangeTreeLearner(Learner):
                 distr[:] = 1
             root = Node(None, 0, distr)
         root.subset = active_inst
-        model = OrangeTreeModel(data, root)
+        model = TreeModel(data, root)
         return model
 
 
-class TreeClassifier(SklModel):
+class SklTreeClassifier(SklModel):
     """Wrapper for SKL's tree classifier with the interface API for
     visualizations"""
     def __init__(self, *args, **kwargs):
@@ -209,10 +209,10 @@ class TreeClassifier(SklModel):
         self._cached_sample_assignments = None
 
 
-class TreeLearner(SklLearner):
+class SklTreeLearner(SklLearner):
     """Wrapper for SKL's tree inducer"""
     __wraps__ = skl_tree.DecisionTreeClassifier
-    __returns__ = TreeClassifier
+    __returns__ = SklTreeClassifier
     name = 'tree'
 
     def __init__(self, criterion="gini", splitter="best", max_depth=None,
