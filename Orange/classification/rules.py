@@ -424,8 +424,8 @@ class TopDownSearchStrategy(SearchStrategy):
     instances is developed. The hypothesis space of possible rules is
     then searched repeatedly by specialising candidate rules.
     """
-    def __init__(self, bound_continuous=False):
-        self.bound_continuous = bound_continuous
+    def __init__(self, constrain_continuous=False):
+        self.constrain_continuous = constrain_continuous
         self.storage = None
 
     def initialise_rule(self, X, Y, W, target_class, base_rules, domain,
@@ -528,7 +528,7 @@ class TopDownSearchStrategy(SearchStrategy):
             elif attribute.is_continuous:
                 # discretise if True
                 values = (self.discretise(X[:, i], Y, W, domain)
-                          if self.bound_continuous
+                          if self.constrain_continuous
                           else np.unique(X[:, i]))
                 # for each unique value, generate all possible selectors
                 for val in values:
@@ -1456,7 +1456,7 @@ def main():
     # data = Table('iris.tab')
     # learner = CN2UnorderedLearner()
     # learner.rule_finder.search_algorithm.beam_width = 10
-    # learner.rule_finder.search_strategy.bound_continuous = True
+    # learner.rule_finder.search_strategy.constrain_continuous = True
     # learner.rule_finder.general_validator.min_covered_examples = 10
     # classifier = learner(data)
     # for rule in classifier.rule_list:
@@ -1487,7 +1487,7 @@ def main():
     # learner.rule_finder.general_validator.max_rule_length = 5
     # learner.rule_finder.general_validator.min_covered_examples = 100
     # learner.rule_finder.search_algorithm.beam_width = 10
-    # learner.rule_finder.search_strategy.bound_continuous = True
+    # learner.rule_finder.search_strategy.constrain_continuous = True
     # classifier = learner(data)
     # for rule in classifier.rule_list:
     #     print(rule, rule.curr_class_dist.tolist(), rule.quality)

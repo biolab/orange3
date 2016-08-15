@@ -12,15 +12,13 @@ from Orange.classification.rules import WeightedRelativeAccuracyEvaluator
 
 
 class CustomRuleClassifier(_RuleClassifier):
-    """
-    # TODO: hi
-    """
-    def __init__(self, domain=None, rule_list=None, rule_ordering="unordered",
-                 covering_algorithm="exclusive"):
-
+    def __init__(self, domain, rule_list, params):
         super().__init__(domain, rule_list)
-        self.rule_ordering = rule_ordering
-        self.covering_algorithm = covering_algorithm
+        assert params is not None
+
+        self.rule_ordering = params["Rule ordering"]
+        self.covering_algorithm = params["Covering algorithm"]
+        self.params = params
 
     def predict(self, X):
         if (self.rule_ordering == "ordered" and
@@ -33,38 +31,32 @@ class CustomRuleClassifier(_RuleClassifier):
 
 
 class CustomRuleLearner(_RuleLearner):
-    """
-    # TODO: hi
-    """
     name = 'Custom rule inducer'
     __returns__ = CustomRuleClassifier
 
-    def __init__(self, preprocessors=None, base_rules=None,
-                 rule_ordering="unordered", covering_algorithm="exclusive",
-                 gamma=1.0, evaluation_measure="laplace", beam_width=10,
-                 min_covered_examples=10, max_rule_length=5, default_alpha=1.0,
-                 parent_alpha=1.0):
-
+    def __init__(self, preprocessors, base_rules, params):
         super().__init__(preprocessors, base_rules)
+        assert params is not None
 
         # top-level control procedure (rule ordering)
-        self.rule_ordering = rule_ordering
+        self.rule_ordering = params["Rule ordering"]
 
         # top-level control procedure (covering algorithm)
-        if covering_algorithm == "exclusive":
+        self.covering_algorithm = params["Covering algorithm"]
+        if self.covering_algorithm == "exclusive":
             self.cover_and_remove = self.exclusive_cover_and_remove
-        elif covering_algorithm == "weighted":
-            self.gamma = gamma
+        elif self.covering_algorithm == "weighted":
+            self.gamma = params["Gamma"]
             self.cover_and_remove = self.weighted_cover_and_remove
-        self.covering_algorithm = covering_algorithm
 
         # bottom-level search procedure (search algorithm)
-        self.rule_finder.search_algorithm.beam_width = beam_width
+        self.rule_finder.search_algorithm.beam_width = params["Beam width"]
 
         # bottom-level search procedure (search strategy)
-        self.rule_finder.search_strategy.discretise_continuous = True
+        self.rule_finder.search_strategy.constrain_continuous = True
 
         # bottom-level search procedure (search heuristics)
+        evaluation_measure = params["Evaluation measure"]
         if evaluation_measure == "entropy":
             evaluator = EntropyEvaluator()
         elif evaluation_measure == "laplace":
@@ -74,13 +66,18 @@ class CustomRuleLearner(_RuleLearner):
         self.rule_finder.quality_evaluator = evaluator
 
         # bottom-level search procedure (over-fitting avoidance heuristics)
-        min_rule_cov = min_covered_examples
+        min_rule_cov = params["Minimum rule coverage"]
+        max_rule_length = params["Maximum rule length"]
         self.rule_finder.general_validator.min_covered_examples = min_rule_cov
         self.rule_finder.general_validator.max_rule_length = max_rule_length
 
         # bottom-level search procedure (over-fitting avoidance heuristics)
+        default_alpha = params["Default alpha"]
+        parent_alpha = params["Parent alpha"]
         self.rule_finder.significance_validator.default_alpha = default_alpha
         self.rule_finder.significance_validator.parent_alpha = parent_alpha
+
+        self.params = params
 
     def fit(self, X, Y, W=None):
         Y = Y.astype(dtype=int)
@@ -103,8 +100,7 @@ class CustomRuleLearner(_RuleLearner):
             rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
 
         return CustomRuleClassifier(domain=self.domain, rule_list=rule_list,
-                                    rule_ordering=self.rule_ordering,
-                                    covering_algorithm=self.covering_algorithm)
+                                    params=self.params)
 
 
 class OWRuleLearner(OWBaseLearner):
@@ -216,22 +212,14 @@ class OWRuleLearner(OWBaseLearner):
     def settings_changed(self, *args, **kwargs):
         self.gamma_spin.setDisabled(
             self.storage_covers[self.covering_algorithm] != "weighted")
-        super().settings_changed(args, kwargs)
+        super().settings_changed(*args, **kwargs)
 
     def create_learner(self):
+        params = {key: value for key, value in self.get_learner_parameters()}
         return self.LEARNER(
+            preprocessors=None,
             base_rules=self.base_rules,
-            rule_ordering=self.storage_orders[self.rule_ordering],
-            covering_algorithm=self.storage_covers[self.covering_algorithm],
-            gamma=self.gamma,
-            evaluation_measure=self.storage_measures[self.evaluation_measure],
-            beam_width=self.beam_width,
-            min_covered_examples=self.min_covered_examples,
-            max_rule_length=self.max_rule_length,
-            default_alpha=(1.0 if not self.checked_default_alpha
-                           else self.default_alpha),
-            parent_alpha=(1.0 if not self.checked_parent_alpha
-                          else self.parent_alpha)
+            params=params
         )
 
     def get_learner_parameters(self):

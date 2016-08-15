@@ -96,7 +96,6 @@ class PyTableModel(QAbstractTableModel):
         self._table = None
         self._roleData = None
         self.wrap(sequence or [])
-        self.view = None
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self)

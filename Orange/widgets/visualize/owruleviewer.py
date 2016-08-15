@@ -22,8 +22,8 @@ class OWRuleViewer(widget.OWWidget):
     inputs = [("Data", Table, 'set_data'),
               ("Classifier", _RuleClassifier, 'set_classifier')]
 
-    data_output_type = "Filtered data"
-    outputs = [(data_output_type, Table)]
+    data_output_identifier = "Filtered data"
+    outputs = [(data_output_identifier, Table)]
 
     autocommit = settings.Setting(False)
     compact_view = settings.Setting(False)
@@ -204,10 +204,13 @@ class OWRuleViewer(widget.OWWidget):
             data_output = self.data.from_table_rows(
                 self.data, status.nonzero()[0])
 
-        self.send(OWRuleViewer.data_output_type, data_output)
+        self.send(OWRuleViewer.data_output_identifier, data_output)
 
     def send_report(self):
-        pass
+        if self.classifier is not None:
+            self.report_domain("Data domain", self.classifier.original_domain)
+            self.report_items("Rule induction algorithm", self.classifier.params)
+            self.report_table("Induced rules", self.view)
 
 
 class CustomLabelPyTableModel(PyTableModel):
