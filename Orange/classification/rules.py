@@ -661,12 +661,12 @@ class Rule:
         """
         return self.general_validator.validate_rule(self)
 
-    def is_significant(self, _default=False):
+    def is_significant(self, *args, **kwargs):
         """
         Return True if the rule passes the significance validator's
         requirements (is significant in regard to its parent).
         """
-        return self.significance_validator.validate_rule(self, _default)
+        return self.significance_validator.validate_rule(self, *args, **kwargs)
 
     def do_evaluate(self):
         """
