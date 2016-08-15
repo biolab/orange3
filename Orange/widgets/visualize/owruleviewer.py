@@ -7,13 +7,10 @@ from Orange.classification.rules import _RuleClassifier
 
 from PyQt4 import QtGui
 
-from PyQt4.QtCore import Qt, QSize, pyqtSignal, QRectF, QLineF, QLocale, QRect
-from PyQt4.QtGui import (QApplication, QLabel, QTableView, QStandardItem,
-                         QStandardItemModel, QSortFilterProxyModel, QAction,
-                         QMainWindow, QMouseEvent, QGraphicsView, QPainter,
-                         QPen, QBrush, QColor, QAbstractItemView, QStyle,
+from PyQt4.QtCore import Qt, QLineF
+from PyQt4.QtGui import (QSortFilterProxyModel, QPainter, QPen, QBrush, QColor,
                          QItemDelegate, QStyledItemDelegate, QHeaderView,
-                         QFontMetrics, QTextOption)
+                         QPushButton)
 
 
 class OWRuleViewer(widget.OWWidget):
@@ -27,6 +24,9 @@ class OWRuleViewer(widget.OWWidget):
 
     data_output_type = "Filtered data"
     outputs = [(data_output_type, Table)]
+
+    autocommit = settings.Setting(False)
+    compact_view = settings.Setting(False)
 
     want_basic_layout = True
     want_main_area = True
@@ -45,17 +45,17 @@ class OWRuleViewer(widget.OWWidget):
         self.classifier = None
         self.presentation = None
         self.selected = None
-        self.compact_view = False
 
         self.model = CustomLabelPyTableModel(parent=self, editable=False)
         self.model.setHorizontalHeaderLabels(
-            ["IF conditions", "", "THEN class",
-             "Distribution", "Rule quality", "Rule length"])
+            ["IF conditions", "", "THEN class", "Distribution",
+             "Probabilities", "Quality", "Length"])
 
         self.view = gui.TableView(self)
+        self.view.setModel(self.model)
         self.view.verticalHeader().setVisible(True)
         self.view.horizontalHeader().setStretchLastSection(False)
-        self.view.setModel(self.model)
+        self.view.selectionModel().selectionChanged.connect(self.commit)
 
         self.bold_item_delegate = BoldMiddleAlignedFontDelegate(self)
         self.dist_item_delegate = DistributionItemDelegate(self)
@@ -64,9 +64,26 @@ class OWRuleViewer(widget.OWWidget):
         self.view.setItemDelegateForColumn(1, self.bold_item_delegate)
         self.view.setItemDelegateForColumn(2, self.middle_item_delegate)
         self.view.setItemDelegateForColumn(3, self.dist_item_delegate)
+        self.view.setItemDelegateForColumn(4, self.middle_item_delegate)
 
+        self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
         self.mainArea.layout().addWidget(self.view)
-        gui.checkBox(widget=self.mainArea, master=self, value="compact_view",
+
+        bottom_box = gui.hBox(widget=self.mainArea, box=None,
+                              margin=0, spacing=0)
+
+        original_order_button = QPushButton(
+            "Restore original order", autoDefault=False)
+        original_order_button.setFixedWidth(180)
+        bottom_box.layout().addWidget(original_order_button)
+        original_order_button.clicked.connect(self.restore_original_order)
+
+        gui.separator(bottom_box, width=5, height=0)
+        self.report_button.setFixedWidth(180)
+        bottom_box.layout().addWidget(self.report_button)
+
+        gui.separator(bottom_box, width=5, height=0)
+        gui.checkBox(widget=bottom_box, master=self, value="compact_view",
                      label="Compact view", callback=self.on_update)
 
     def set_data(self, data):
@@ -96,8 +113,11 @@ class OWRuleViewer(widget.OWWidget):
                       if attributes[s.column].is_discrete
                       else str(s.value)) for s in rule.selectors]),
                  '→', class_var.name + "=" + class_var.values[rule.prediction],
-                 rule.curr_class_dist.tolist(), rule.quality, rule.length]
-                for rule in classifier.rule_list]
+                 [float('{:.1f}'.format(x)) for x in rule.curr_class_dist]
+                 if rule.curr_class_dist.dtype == float
+                 else rule.curr_class_dist.tolist(),
+                 tuple(float('{:.2f}'.format(x)) for x in rule.probabilities),
+                 rule.quality, rule.length] for rule in classifier.rule_list]
 
         self.on_update()
         self.commit()
@@ -123,7 +143,7 @@ class OWRuleViewer(widget.OWWidget):
                 self.view.horizontalHeader().setResizeMode(
                     QHeaderView.ResizeToContents)
 
-            self._load_selected()
+            self._restore_selected()
 
     def _update_presentation(self):
         assert self.presentation is not None
@@ -135,54 +155,64 @@ class OWRuleViewer(widget.OWWidget):
 
             single_rule_str_list[0] = antecedent.replace(*to_replace)
 
-    def _save_selected(self):
+    def _save_selected(self, actual=False):
         self.selected = None
         if self.view.selectionModel().hasSelection():
-            visual_row_indices = sorted(set(index.row() for index in
-                                            self.view.selectedIndexes()))
-            actual_rows_indices = [self.model.headerData(i, Qt.Vertical)
-                                   for i in visual_row_indices]
-            self.selected = visual_row_indices, actual_rows_indices
+            visual_indices = sorted(set(index.row() for index in
+                                        self.view.selectedIndexes()))
+            actual_indices = [self.model.headerData(i, Qt.Vertical)
+                              for i in visual_indices]
+            self.selected = actual_indices if actual else visual_indices
 
-    def _load_selected(self):
+    def _restore_selected(self):
         if self.selected is not None:
             selection_model = self.view.selectionModel()
-            for row in self.selected[0]:
+            for row in self.selected:
                 selection_model.select(self.model.index(row, 0),
                                        selection_model.Select |
                                        selection_model.Rows)
 
+    def restore_original_order(self):
+        self._save_selected(actual=True)
+        temp = self.selected
+        self.set_classifier(self.classifier)
+        self.selected = temp
+        self._restore_selected()
+
     def copy_to_clipboard(self):
-        self._save_selected()
+        self._save_selected(actual=True)
         if self.selected is not None:
             output = "\n".join([self.classifier.rule_list[i].__str__()
-                                for i in self.selected[1]])
+                                for i in self.selected])
             QApplication.clipboard().setText(output)
 
     def commit(self):
         data_output = None
-        self._save_selected()
+        self._save_selected(actual=True)
 
         if (self.selected is not None and
                 self.data is not None and
                 self.classifier is not None and
-                self.data.domain.__eq__(self.classifier.domain)):
+                self.data.domain.__eq__(self.classifier.original_domain)):
 
             status = np.ones(self.data.X.shape[0], dtype=bool)
-            for i in self.selected[1]:
+            for i in self.selected:
                 rule = self.classifier.rule_list[i]
                 status &= rule.evaluate_data(self.data.X)
 
-            # data_output = ..
-            print(np.sum(status))
+            data_output = self.data.from_table_rows(
+                self.data, status.nonzero()[0])
 
         self.send(OWRuleViewer.data_output_type, data_output)
+
+    def send_report(self):
+        pass
 
 
 class CustomLabelPyTableModel(PyTableModel):
     def data(self, index, role=Qt.DisplayRole):
         value = super().data(index, role)
-        if role == Qt.ToolTipRole:
+        if role == Qt.ToolTipRole and index.column() == 0:
             value = value.replace(" AND ", " AND\n")
         return value
 
@@ -264,7 +294,6 @@ class MiddleAlignedFontDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         return super().sizeHint(option, index)
-
 
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
