@@ -10,7 +10,7 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, QLineF
 from PyQt4.QtGui import (QSortFilterProxyModel, QPainter, QPen, QBrush, QColor,
                          QItemDelegate, QStyledItemDelegate, QHeaderView,
-                         QPushButton)
+                         QPushButton, QApplication)
 
 
 class OWRuleViewer(widget.OWWidget):
@@ -51,8 +51,11 @@ class OWRuleViewer(widget.OWWidget):
             ["IF conditions", "", "THEN class", "Distribution",
              "Probabilities", "Quality", "Length"])
 
+        self.proxy_model = QSortFilterProxyModel(parent=self)
+        self.proxy_model.setSourceModel(self.model)
+
         self.view = gui.TableView(self)
-        self.view.setModel(self.model)
+        self.view.setModel(self.proxy_model)
         self.view.verticalHeader().setVisible(True)
         self.view.horizontalHeader().setStretchLastSection(False)
         self.view.selectionModel().selectionChanged.connect(self.commit)
@@ -157,12 +160,14 @@ class OWRuleViewer(widget.OWWidget):
 
     def _save_selected(self, actual=False):
         self.selected = None
-        if self.view.selectionModel().hasSelection():
-            visual_indices = sorted(set(index.row() for index in
-                                        self.view.selectedIndexes()))
-            actual_indices = [self.model.headerData(i, Qt.Vertical)
-                              for i in visual_indices]
-            self.selected = actual_indices if actual else visual_indices
+        selection_model = self.view.selectionModel()
+        if selection_model.hasSelection():
+            selection = (selection_model.selection() if not actual
+                         else self.proxy_model.mapSelectionToSource(
+                                selection_model.selection()))
+
+            self.selected = sorted(set(index.row() for index
+                                       in selection.indexes()))
 
     def _restore_selected(self):
         if self.selected is not None:
@@ -173,11 +178,7 @@ class OWRuleViewer(widget.OWWidget):
                                        selection_model.Rows)
 
     def restore_original_order(self):
-        self._save_selected(actual=True)
-        temp = self.selected
-        self.set_classifier(self.classifier)
-        self.selected = temp
-        self._restore_selected()
+        self.proxy_model.sort(-1)
 
     def copy_to_clipboard(self):
         self._save_selected(actual=True)
