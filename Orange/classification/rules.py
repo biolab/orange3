@@ -655,12 +655,23 @@ class Rule:
                                         self.domain)
 
     def is_valid(self):
+        """
+        Return True if the rule passes the general validator's
+        requirements.
+        """
         return self.general_validator.validate_rule(self)
 
-    def is_significant(self):
-        return self.significance_validator.validate_rule(self)
+    def is_significant(self, _default=False):
+        """
+        Return True if the rule passes the significance validator's
+        requirements (is significant in regard to its parent).
+        """
+        return self.significance_validator.validate_rule(self, _default)
 
     def do_evaluate(self):
+        """
+        Evaluate the rule's quality and complexity.
+        """
         self.quality = self.quality_evaluator.evaluate_rule(self)
         self.complexity = self.complexity_evaluator.evaluate_rule(self)
 
@@ -701,7 +712,7 @@ class Rule:
 
     def create_model(self):
         """
-        Determine predicted class probabilities.
+        Determine prediction class probabilities.
         """
         # laplace class probabilities
         self.probabilities = ((self.curr_class_dist + 1) /
@@ -721,19 +732,8 @@ class Rule:
                 self.significance_validator, self.general_validator)
 
     def __eq__(self, other):
-        # if self.length == other.length:
-        #     for s in self.selectors:
-        #         if s not in other.selectors:
-        #             if self.domain.attributes[s[0]].is_continuous:
-        #                 return False
-        #             if len(self.domain.attributes[s[0]].values) == 2:
-        #                 op = "==" if s[1] == "!=" else "!="
-        #                 value = int(not s[2])
-        #                 if Selector(s[0], op, value) not in other.selectors:
-        #                     return False
-        #     return True
-        # return False
-        return self.selectors == other.selectors
+        return np.array_equal(self.covered_examples, other.covered_examples)
+        # return self.selectors == other.selectors
 
     def __str__(self):
         attributes = self.domain.attributes
@@ -811,9 +811,10 @@ class RuleHunter:
         best_rule = rules[0]
 
         while len(rules) > 0:
-            cand_rules, rules = self.search_algorithm.select_candidates(rules)
-            for cand_rule in cand_rules:
-                new_rules = self.search_strategy.refine_rule(X, Y, W, cand_rule)
+            candidates, rules = self.search_algorithm.select_candidates(rules)
+            for candidate_rule in candidates:
+                new_rules = self.search_strategy.refine_rule(
+                    X, Y, W,candidate_rule)
                 rules.extend(new_rules)
                 for new_rule in new_rules:
                     if (new_rule.quality > best_rule.quality and
@@ -825,7 +826,7 @@ class RuleHunter:
             rules = self.search_algorithm.filter_rules(rules)
 
         best_rule.create_model()
-        return best_rule
+        return best_rule if best_rule not in existing_rules else None
 
 
 class _RuleLearner(Learner):
@@ -925,7 +926,8 @@ class _RuleLearner(Learner):
             new_rule = self.rule_finder(X, Y, W, target_class, base_rules,
                                         domain, initial_class_dist, rule_list)
 
-            # if new_rule is null, general validator made it so
+            # None when no new, unique rules that pass
+            # the general requirements can be found
             if new_rule is None or self.rule_stopping(new_rule):
                 break
 
@@ -968,7 +970,8 @@ class _RuleLearner(Learner):
         num_possible = dist[tc] if tc is not None else dist.sum()
         return num_possible < general_validator.min_covered_examples
 
-    def lrs_significance_rule_stopping(self, new_rule):
+    @staticmethod
+    def lrs_significance_rule_stopping(new_rule):
         """
         Rule stopping.
 
@@ -992,8 +995,7 @@ class _RuleLearner(Learner):
         res : bool
             Whether or not rule induction will be stopped.
         """
-        significance_validator = self.rule_finder.significance_validator
-        return not significance_validator.validate_rule(new_rule, _default=True)
+        return not new_rule.is_significant(_default=True)
 
     @staticmethod
     def exclusive_cover_and_remove(X, Y, W, new_rule):
@@ -1332,7 +1334,8 @@ class CN2SDLearner(_RuleLearner):
         Y = Y.astype(dtype=int)
         rule_list = self.find_rules(X, Y, np.copy(W) if W is not None else None,
                                     None, self.base_rules, self.domain)
-        # add the default rule
+        # add the default rule, any other
+        # TRUE rules are insufficient
         rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
         return CN2SDClassifier(domain=self.domain, rule_list=rule_list)
 
@@ -1441,33 +1444,42 @@ class CN2SDUnorderedClassifier(_RuleClassifier):
 
 
 def main():
-    data = Table('titanic')
-    learner = CN2Learner()
-    # learner.rule_finder.significance_validator.default_alpha = 0.15
-    learner.rule_finder.general_validator.min_covered_examples = 10
-    classifier = learner(data)
-    for rule in classifier.rule_list:
-        print(rule.curr_class_dist.tolist(), rule, rule.quality)
-    print()
+    # data = Table('titanic')
+    # learner = CN2Learner()
+    # # learner.rule_finder.significance_validator.default_alpha = 0.15
+    # learner.rule_finder.general_validator.min_covered_examples = 10
+    # classifier = learner(data)
+    # for rule in classifier.rule_list:
+    #     print(rule.curr_class_dist.tolist(), rule, rule.quality)
+    # print()
+    #
+    # data = Table('iris.tab')
+    # learner = CN2UnorderedLearner()
+    # learner.rule_finder.search_algorithm.beam_width = 10
+    # learner.rule_finder.search_strategy.bound_continuous = True
+    # learner.rule_finder.general_validator.min_covered_examples = 10
+    # classifier = learner(data)
+    # for rule in classifier.rule_list:
+    #     print(rule, rule.curr_class_dist.tolist())
+    # print()
+    #
+    # data = Table('titanic')
+    # learner = CN2UnorderedLearner()
+    # learner.rule_finder.search_algorithm.beam_width = 10
+    # learner.rule_finder.general_validator.min_covered_examples = 1
+    # classifier = learner(data)
+    # for rule in classifier.rule_list:
+    #     print(rule.curr_class_dist.tolist(), rule, rule.quality)
+    # print()
+    # print(len(classifier.rule_list))
 
-    data = Table('iris.tab')
-    learner = CN2UnorderedLearner()
-    learner.rule_finder.search_algorithm.beam_width = 10
-    learner.rule_finder.search_strategy.bound_continuous = True
-    learner.rule_finder.general_validator.min_covered_examples = 10
-    classifier = learner(data)
-    for rule in classifier.rule_list:
-        print(rule, rule.curr_class_dist.tolist())
-    print()
-
     data = Table('titanic')
-    learner = CN2UnorderedLearner()
+    learner = CN2SDLearner()
     learner.rule_finder.search_algorithm.beam_width = 10
     learner.rule_finder.general_validator.min_covered_examples = 1
     classifier = learner(data)
     for rule in classifier.rule_list:
         print(rule.curr_class_dist.tolist(), rule, rule.quality)
-    print()
     print(len(classifier.rule_list))
 
     # data = Table('adult')
