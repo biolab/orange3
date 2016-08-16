@@ -19,14 +19,16 @@ COMPLETE = "complete"
 WEIGHTED = "weighted"
 WARD = "ward"
 
+# Does scipy implement a O(n**2) NN chain algorithm?
+_HAS_NN_CHAIN = hasattr(scipy.cluster.hierarchy, "_hierarchy") and \
+                hasattr(scipy.cluster.hierarchy._hierarchy, "nn_chain")
 
 # Prior to 0.18 scipy.cluster.hierarchical's python interface disallowed
 # ward clustering from a precomputed distance matrix even though it's cython
 # implementation allowed it and was documented to support it (scipy issue 5220)
 _HAS_WARD_LINKAGE_FROM_DIST = \
     _LooseVersion(scipy.__version__) >= _LooseVersion("0.18") and \
-    hasattr(scipy.cluster.hierarchy, "_hierarchy") and \
-    hasattr(scipy.cluster.hierarchy._hierarchy, "nn_chain")
+    _HAS_NN_CHAIN
 
 
 def condensedform(X, mode="upper"):

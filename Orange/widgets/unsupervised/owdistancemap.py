@@ -263,7 +263,10 @@ class OWDistanceMap(widget.OWWidget):
     graph_name = "grid_widget"
 
     # Disable clustering for inputs bigger than this
-    _MaxClustering = 3000
+    if hierarchical._HAS_NN_CHAIN:
+        _MaxClustering = 25000
+    else:
+        _MaxClustering = 3000
 
     # Disable cluster leaf ordering for inputs bigger than this
     _MaxOrderedClustering = 1000
