@@ -795,11 +795,13 @@ class TableBase:
                 # only transform the values if all of them appear to be integers and
                 # could act as a variable value index
                 # otherwise we're dealing with numeric discretes
-                is_values = self[var.name].apply(lambda v: isinstance(v, Number) and
-                                                           (isinstance(v, int) or float(v).is_integer()) and
-                                                           v < len(var.values)).all()
-                if is_values:
-                    self[var.name] = self[var.name].apply(lambda v: var.values[int(v)])
+                values = self[var.name].values
+                try:
+                    ints = values.astype(np.uint16)
+                except ValueError:
+                    continue
+                if (ints == values).all() and ints.max() < len(var.values):
+                    self[var.name] = np.asanyarray(var.values)[ints]
 
     def _transform_discrete_into_categorical(self):
         """Transform columns with discrete variables into pandas' categoricals.
