@@ -225,7 +225,8 @@ class ClassfierListInputTest(unittest.TestCase):
 
 
 class UnknownValuesInPrediction(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         Variable._clear_all_caches()
 
     def test_unknown(self):
@@ -248,8 +249,8 @@ class UnknownValuesInPrediction(unittest.TestCase):
 
 
 class LearnerAccessibility(unittest.TestCase):
-
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         Variable._clear_all_caches()
 
     def all_learners(self):

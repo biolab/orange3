@@ -9,8 +9,9 @@ from Orange.statistics.basic_stats import DomainBasicStats, BasicStats
 
 
 class TestBasicStats(TestCase):
-    def setUp(self):
-        self.zoo = Table("zoo")
+    @classmethod
+    def setUpClass(cls):
+        cls.zoo = Table("zoo")
 
     def test_domain_basic_stats(self):
         domain = self.zoo.domain

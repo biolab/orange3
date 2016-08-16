@@ -114,9 +114,10 @@ class TestEntropyMDL(TestCase):
 
 # noinspection PyPep8Naming
 class TestDiscretizer(TestCase):
-    def setUp(self):
-        self.var = Mock(data.ContinuousVariable, number_of_decimals=1)
-        self.var.name = "x"
+    @classmethod
+    def setUpClass(cls):
+        cls.var = Mock(data.ContinuousVariable, number_of_decimals=1)
+        cls.var.name = "x"
 
     def test_create_discretized_var(self):
         dvar = discretize.Discretizer.create_discretized_var(

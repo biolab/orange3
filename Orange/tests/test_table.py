@@ -477,19 +477,20 @@ def column_sizes(table):
 
 
 class TableTests(unittest.TestCase):
-    def setUp(self):
-        self.attributes = ["Feature %i" % i for i in range(10)]
-        self.class_vars = ["Class %i" % i for i in range(1)]
-        self.metas = ["Meta %i" % i for i in range(5)]
-        self.nrows = 10
-        self.row_indices = (1, 5, 7, 9)
+    @classmethod
+    def setUpClass(cls):
+        cls.attributes = ["Feature %i" % i for i in range(10)]
+        cls.class_vars = ["Class %i" % i for i in range(1)]
+        cls.metas = ["Meta %i" % i for i in range(5)]
+        cls.nrows = 10
+        cls.row_indices = (1, 5, 7, 9)
 
-        self.data = np.random.random((self.nrows, len(self.attributes)))
-        self.class_data = np.random.random((self.nrows, len(self.class_vars)))
-        if len(self.class_vars) == 1:
-            self.class_data = self.class_data.flatten()
-        self.meta_data = np.random.randint(0, 5, (self.nrows, len(self.metas)))
-        self.weight_data = np.random.random((self.nrows, 1))
+        cls.data = np.random.random((cls.nrows, len(cls.attributes)))
+        cls.class_data = np.random.random((cls.nrows, len(cls.class_vars)))
+        if len(cls.class_vars) == 1:
+            cls.class_data = cls.class_data.flatten()
+        cls.meta_data = np.random.randint(0, 5, (cls.nrows, len(cls.metas)))
+        cls.weight_data = np.random.random((cls.nrows, 1))
 
     def mock_domain(self, with_classes=False, with_metas=False):
         attributes = [ContinuousVariable(name=a) for a in self.attributes]
@@ -1195,11 +1196,12 @@ class InterfaceTest(unittest.TestCase):
 
 
 class TestPandasInteraction(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         # test assertions: a must bot have weight set here
-        self.a = Table([[1, 2, 3], [3, 4, 5]])
-        self.b = Table([[1, 2], [3, 4], [5, 6]])
-        self.b.set_weights(np.random.random(len(self.b)))
+        cls.a = Table([[1, 2, 3], [3, 4, 5]])
+        cls.b = Table([[1, 2], [3, 4], [5, 6]])
+        cls.b.set_weights(np.random.random(len(cls.b)))
 
     def test_unique_index_across_tables(self):
         self.assertEqual(len(self.a) + len(self.b), len(set(self.a.index).union(set(self.b.index))))

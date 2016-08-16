@@ -403,8 +403,9 @@ class TestDomainInit(unittest.TestCase):
 
 
 class TestDomainFilter(unittest.TestCase):
-    def setUp(self):
-        self.iris = Table('iris')
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
 
     def test_filter_visible(self):
         n_feats = len(self.iris.domain.attributes)

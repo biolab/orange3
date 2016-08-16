@@ -68,8 +68,9 @@ class VariableTest:
 
 
 class TestVariable(unittest.TestCase):
-    def setUp(self):
-        self.var = Variable("x")
+    @classmethod
+    def setUpClass(cls):
+        cls.var = Variable("x")
 
     def test_name(self):
         self.assertEqual(repr(self.var), "Variable('x')")
@@ -107,7 +108,6 @@ class TestVariable(unittest.TestCase):
         self.assertFalse(a.is_discrete)
         self.assertTrue(a.is_string)
         self.assertFalse(a.is_primitive())
-
 
     def test_strange_eq(self):
         a = ContinuousVariable()
@@ -281,6 +281,8 @@ class TestTimeVariable(VariableTest):
         ('2015-10-12T14:13:11.81+0200', 1444651991.81, '2015-10-12 14:13:11.810000+02:00'),
         ('2015-10-12 14:13:11+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
         ('2015-10-12T14:13:11+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
+        ('2015-10-12T14:13:11.81', 1444659191.81, '2015-10-12 14:13:11.810000'),
+        ('2015-10-12 14:13:11.81', 1444659191.81, '2015-10-12 14:13:11.810000'),
         ('20151012T141311+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
         ('20151012141311+0200', 1444651991, '2015-10-12 14:13:11+02:00'),
         ('2015-10-12 14:13:11', 1444659191, '2015-10-12 14:13:11'),

@@ -42,9 +42,6 @@ class Variable(str, metaclass=VariableMeta):
     ----------
     name : str
         The name of the variable.
-    unknown_str : set
-        A set of values that represent unknowns in conversion from textual
-        formats. Default is Variable.MISSING_VALUES.
     compute_value : Callable
         A function for computing the variable's value when converting from
         another domain which does not contain this variable. The base class
@@ -72,7 +69,6 @@ class Variable(str, metaclass=VariableMeta):
         super().__init__()
         self.name = name
         self._compute_value = compute_value
-        self.unknown_str = Variable.MISSING_VALUES
         self.source_variable = None
         self.attributes = {}
         self.master = self
@@ -216,7 +212,7 @@ class Variable(str, metaclass=VariableMeta):
         """
         if not self.is_primitive():
             return s
-        if s in self.unknown_str:
+        if s in self.MISSING_VALUES:
             return Unknown
         raise RuntimeError(
             "primitive variable descriptors must overload to_val()")
@@ -711,6 +707,7 @@ class TimeVariable(ContinuousVariable):
             # handle missing values like they don't exist
             if val in Variable.MISSING_VALUES or (isinstance(val, Number) and np.isnan(val)):
                 continue
+            # for multiple timezones, use the last one for display
             self.timezone = TimeVariable._detect_timezone(val) if not np.issubdtype(column.dtype, np.number) else None
             # if any value doesn't have a timezone, permanently strip display timezones for the column
             if self.timezone is None:

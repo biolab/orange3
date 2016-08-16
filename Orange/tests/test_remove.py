@@ -10,8 +10,9 @@ from Orange.tests import test_filename
 
 
 class TestRemover(unittest.TestCase):
-    def setUp(self):
-        self.test8 = Table(test_filename('test8.tab'))
+    @classmethod
+    def setUpClass(cls):
+        cls.test8 = Table(test_filename('test8.tab'))
 
     def test_remove(self):
         data = Table("iris").iloc[:5]

@@ -298,7 +298,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         return result
 
     def _compute_distributions(self, columns=None):
-        # this needs reimplementing because of possible columns without values
+        # FIXME: this needs reimplementing because of possible columns without values
         if columns is None:
             columns = self.domain.attributes + self.domain.class_vars + self.domain.metas
         distributions = []

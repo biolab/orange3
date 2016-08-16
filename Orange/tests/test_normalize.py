@@ -22,8 +22,9 @@ class TestNormalizer(unittest.TestCase):
         self.assertEqual([attr.name for attr in dataNorm.domain.class_vars],
                          ["cl1", "cl2"])
 
-    def setUp(self):
-        self.data = Table(test_filename("test5.tab"))
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table(test_filename("test5.tab"))
 
     def test_normalize_default(self):
         normalizer = Normalize()

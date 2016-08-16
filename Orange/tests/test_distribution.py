@@ -11,11 +11,13 @@ from Orange.statistics import distribution
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain, Variable
 from Orange.tests import test_filename
 
+
 class Distribution_DiscreteTestCase(unittest.TestCase):
-    def setUp(self):
-        self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
-        s = sum(self.freqs)
-        self.rfreqs = [x/s for x in self.freqs]
+    @classmethod
+    def setUpClass(cls):
+        cls.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
+        s = sum(cls.freqs)
+        cls.rfreqs = [x/s for x in cls.freqs]
 
     def test_from_table(self):
         d = Table("zoo")
@@ -191,9 +193,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table("iris")
-
-    def setUp(self):
-        self.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
+        cls.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
                                (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
                                (3.3, 2), (3.5, 2), (3.6, 1), (3.7, 1), (3.8, 1),
                                (3.9, 3), (4.0, 5), (4.1, 3), (4.2, 4), (4.3, 2),

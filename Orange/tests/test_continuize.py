@@ -12,9 +12,10 @@ from Orange.tests import test_filename
 
 
 class TestDomainContinuizer(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         Variable._clear_all_caches()
-        self.data = Table(test_filename("test4"))
+        cls.data = Table(test_filename("test4"))
 
     def test_default(self):
         for inp in (self.data, self.data.domain):

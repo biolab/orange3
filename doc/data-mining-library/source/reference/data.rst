@@ -5,7 +5,7 @@ Data model (``data``)
 #####################
 
 Orange stores data in :obj:`Orange.data.TableBase` classes. The most commonly used
-storage is :obj:`Orange.data.Table`, which stores all data in a dense pandas DataFrame.
+storage is :obj:`Orange.data.Table`, which stores all data in a dense :obj:`pandas.DataFrame`.
 
 Indexing Orange tables works exactly like it does in `pandas`.
 That means the fourth row of the table is fetched with `t.iloc[3]` and the

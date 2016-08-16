@@ -22,13 +22,14 @@ from Orange.util import OrangeDeprecationWarning
 
 def tables_equal(tab1, tab2):
     # catch none
-    return (tab1 is None and tab1 == tab2) or tab1.equals(tab2)
+    return (tab1 is None and tab1 is tab2) or tab1.equals(tab2)
 
 
 class TestDistMatrix(TestCase):
-    def setUp(self):
-        self.iris = Table('iris')
-        self.dist = Euclidean(self.iris)
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.dist = Euclidean(cls.iris)
 
     def test_submatrix(self):
         sub = self.dist.submatrix([2, 3, 4])
@@ -173,10 +174,11 @@ class TestDistMatrix(TestCase):
 
 
 class TestEuclidean(TestCase):
-    def setUp(self):
-        self.iris = Table('iris')
-        self.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
-        self.dist = Euclidean
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.dist = Euclidean
 
     def test_euclidean_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.iris.iloc[0]), np.array([[0]]))
@@ -241,10 +243,11 @@ class TestEuclidean(TestCase):
 
 
 class TestManhattan(TestCase):
-    def setUp(self):
-        self.iris = Table('iris')
-        self.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
-        self.dist = Manhattan
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.dist = Manhattan
 
     def test_manhattan_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.iris.iloc[0]), np.array([[0]]))
@@ -308,10 +311,11 @@ class TestManhattan(TestCase):
 
 
 class TestCosine(TestCase):
-    def setUp(self):
-        self.iris = Table('iris')
-        self.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
-        self.dist = Cosine
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.dist = Cosine
 
     def test_cosine_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.iris.iloc[0]), np.array([[0]]))
@@ -375,9 +379,10 @@ class TestCosine(TestCase):
 
 
 class TestJaccard(TestCase):
-    def setUp(self):
-        self.titanic = Table('titanic')[173:177]
-        self.dist = Jaccard
+    @classmethod
+    def setUpClass(cls):
+        cls.titanic = Table('titanic')[173:177]
+        cls.dist = Jaccard
 
     def test_jaccard_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.titanic.iloc[0]), np.array([[0]]))
@@ -428,9 +433,10 @@ class TestJaccard(TestCase):
 
 
 class TestSpearmanR(TestCase):
-    def setUp(self):
-        self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = SpearmanR
+    @classmethod
+    def setUpClass(cls):
+        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.dist = SpearmanR
 
     def test_spearmanr_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.breast.iloc[0]), np.array([[0]]))
@@ -506,9 +512,10 @@ class TestSpearmanR(TestCase):
 
 
 class TestSpearmanRAbsolute(TestCase):
-    def setUp(self):
-        self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = SpearmanRAbsolute
+    @classmethod
+    def setUpClass(cls):
+        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.dist = SpearmanRAbsolute
 
     def test_spearmanrabsolute_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.breast.iloc[0]), np.array([[0]]))
@@ -582,9 +589,10 @@ class TestSpearmanRAbsolute(TestCase):
 
 
 class TestPearsonR(TestCase):
-    def setUp(self):
-        self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = PearsonR
+    @classmethod
+    def setUpClass(cls):
+        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.dist = PearsonR
 
     def test_pearsonr_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.breast.iloc[0]), np.array([[0]]))
@@ -655,9 +663,10 @@ class TestPearsonR(TestCase):
 
 
 class TestPearsonRAbsolute(TestCase):
-    def setUp(self):
-        self.breast = Table("breast-cancer-wisconsin-cont")
-        self.dist = PearsonRAbsolute
+    @classmethod
+    def setUpClass(cls):
+        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.dist = PearsonRAbsolute
 
     def test_pearsonrabsolute_distance_one_example(self):
         np.testing.assert_almost_equal(self.dist(self.breast.iloc[0]), np.array([[0]]))
@@ -726,11 +735,12 @@ class TestPearsonRAbsolute(TestCase):
 
 
 class TestMahalanobis(TestCase):
-    def setUp(self):
-        self.n, self.m = 10, 5
-        self.X = np.random.rand(self.n, self.m)
-        self.x1 = np.random.rand(self.m)
-        self.x2 = np.random.rand(self.m)
+    @classmethod
+    def setUpClass(cls):
+        cls.n, cls.m = 10, 5
+        cls.X = np.random.rand(cls.n, cls.m)
+        cls.x1 = np.random.rand(cls.m)
+        cls.x2 = np.random.rand(cls.m)
 
     def test_correctness(self):
         mah = MahalanobisDistance(self.X)
@@ -769,8 +779,9 @@ class TestMahalanobis(TestCase):
 
 
 class TestDistances(TestCase):
-    def setUp(self):
-        self.test5 = Table(test_filename('test5.tab'))
+    @classmethod
+    def setUpClass(cls):
+        cls.test5 = Table(test_filename('test5.tab'))
 
     def test_preprocess(self):
         domain = Domain([ContinuousVariable("c"),
