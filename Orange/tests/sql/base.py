@@ -168,7 +168,7 @@ class PostgresTest(unittest.TestCase):
         assert SqlTable.connection_pool is not None
 
         table_name = self._create_sql_table(data)
-        yield SqlTable(connection_params(), table_name,
+        yield SqlTable(connection_params=connection_params(), table_or_sql=table_name,
                        inspect_values=guess_values)
         self.drop_sql_table(table_name)
 

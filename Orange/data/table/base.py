@@ -20,9 +20,9 @@ from Orange.util import flatten, deprecated
 class TableBase:
     """An abstract base class for data storage structures in Orange."""
 
-    # a list of all pandas constructor kwargs for use in the pandas compatibility sections
-    # empty here, subclasses must override with the known kwargs of the pandas parent class constructor
-    _KNOWN_PANDAS_KWARGS = {}
+    # a list of all kwargs supported by this class,
+    # used for proper compatibility with pandas' constructors
+    _ORANGE_KWARG_NAMES = {"weights", "attributes"}
 
     # the default name for weights columns
     # subclasses may override this to rename the column
@@ -50,6 +50,40 @@ class TableBase:
                  '__file__',  # if read from a file, the filename of that file
                  '_already_inited']  # skip multiple constructor calls, see __init__
 
+    @classmethod
+    def _is_orange_construction_path(cls, *args, **kwargs):
+        """Determine whether the constructor was called as part of the Orange construction path.
+
+        This exists for pandas compatibility: we need to know whether we are being
+        called by pandas internals (through _constructor) or by Orange directly.
+
+        Uses cls._ORANGE_KWARG_NAMES to filter kwargs.
+
+        Parameters
+        ----------
+        args : tuple
+            The args passed to the constructor.
+        kwargs : dict
+            The kwargs passed to the constructor.
+
+        Returns
+        -------
+        bool
+            Whether we are being called by Orange directly, not pandas internals.
+        """
+        # all pandas kwargs to determine what construction path to take
+        non_orange_kwargs = {k: v for k, v in kwargs.items() if k not in cls._ORANGE_KWARG_NAMES}
+
+        single_arg_types = (str, TableBase, pd.DataFrame, np.ndarray, sp.spmatrix, list)
+        after_domain_arg_types = (TableBase, pd.DataFrame, np.ndarray, sp.spmatrix, list)
+
+        # to preserve compatibility with pandas' constructor, we except our own behaviour here
+        # this is done solely on the basis of args, because we've stripped the known kwargs
+        single_argument = len(args) > 0 and isinstance(args[0], single_arg_types)
+        multi_argument = ((len(args) == 1 and isinstance(args[0], Domain)) or
+                          (len(args) > 1 and (args[0] is None or isinstance(args[1], after_domain_arg_types))))
+        return len(non_orange_kwargs) == 0 and (single_argument or multi_argument)
+
     def __new__(cls, *args, **kwargs):
         """Create a new Table, the exact result type depends on the data passed.
 
@@ -63,6 +97,8 @@ class TableBase:
         args
             One of:
              - (str): create a Table from a file or URL
+             - (list): create a table based on a list of rows, infer the domain.
+             - (Domain): create an empty table with the domain
              - (TableBase): initialize from another TableBase,
              - (pd.DataFrame): create a table based in an existing pandas DataFrame,
                inferring the domain.
@@ -81,52 +117,31 @@ class TableBase:
         Table or SparseTable
         A new Table or SparseTable, depending on the arguments passed and the calling class.
         """
-        # if pandas is calling this as part of its transformations, pass it through
-        all_kwargs_are_pandas = all(arg in cls._KNOWN_PANDAS_KWARGS for arg in kwargs)
-
-        ##### START PANDAS SUBCLASS COMPATIBILITY SECTION #####
-        # needed because we have two construction paths: Table() or Table.from_X
-        # this compatibility hack must exist because we override __new__ in a way incompatible
-        # with pandas' subclassing scheme---hacks are needed for compatibility, read on
-
-        # if we called the constructor without arguments, create empty
-        # all possible pandas kwargs will be passed to __init__, where
-        # pandas will be able to process them
-        if not args and (not kwargs or all_kwargs_are_pandas):
-            return super().__new__(cls)
-
-        # pandas can call this constructor (through Table._constructor) internally
-        # when doing transformations: its signatures are either a BlockManager or dict as the sole arg,
-        # or a ndarray as the sole arg, accompanied by at least one kwarg
-        # this serves the purpose of transforming the first arg into its matching kwarg,
-        # which will then be processed by the if clause a couple of lines above this
-        if len(args) == 1 and (isinstance(args[0], (pd.core.internals.BlockManager, dict))
-                               or (isinstance(args[0], np.ndarray) and len(kwargs) != 0 and all_kwargs_are_pandas)):
-            return cls(data=args[0], **kwargs)
-        ##### END PANDAS SUBCLASS COMPATIBILITY SECTION #####
-
-        if isinstance(args[0], str):
-            if args[0].startswith(('ftp://', 'http://', 'https://')):
-                return cls.from_url(args[0], **kwargs)
-            else:
-                return cls.from_file(args[0], **kwargs)
-        elif isinstance(args[0], TableBase):
-            return cls.from_table(args[0].domain, args[0])
-        elif isinstance(args[0], pd.DataFrame):
-            return cls.from_dataframe(None, args[0], **kwargs)
-        elif isinstance(args[0], Domain):
-            domain, args = args[0], args[1:]
-            if not args:
-                return cls.from_domain(domain, **kwargs)
-            if isinstance(args[0], TableBase):
-                return cls.from_table(domain, *args)
-            elif isinstance(args[0], list):
-                return cls.from_list(domain, *args)
+        if cls._is_orange_construction_path(*args, **kwargs):
+            if isinstance(args[0], str):
+                if args[0].startswith(('ftp://', 'http://', 'https://')):
+                    return cls.from_url(args[0], **kwargs)
+                else:
+                    return cls.from_file(args[0], **kwargs)
+            elif isinstance(args[0], TableBase):
+                return cls.from_table(args[0].domain, args[0], **kwargs)
             elif isinstance(args[0], pd.DataFrame):
-                return cls.from_dataframe(domain, args[0], **kwargs)
+                return cls.from_dataframe(None, args[0], **kwargs)
+            elif isinstance(args[0], Domain):
+                domain, args = args[0], args[1:]
+                if not args:
+                    return cls.from_domain(domain, **kwargs)
+                if isinstance(args[0], TableBase):
+                    return cls.from_table(domain, *args, **kwargs)
+                elif isinstance(args[0], list):
+                    return cls.from_list(domain, *args, **kwargs)
+                elif isinstance(args[0], pd.DataFrame):
+                    return cls.from_dataframe(domain, args[0], **kwargs)
+            else:
+                domain = None
+            return cls.from_numpy(domain, *args, **kwargs)
         else:
-            domain = None
-        return cls.from_numpy(domain, *args, **kwargs)
+            return super().__new__(cls)
 
     def __init__(self, *args, **kwargs):
         """Initialize the object.
@@ -142,22 +157,7 @@ class TableBase:
             # avoid this by quickly exiting
             return
 
-        # see the comment in __new__ for the rationale here
-        # also, another tidbit is that pandas has some internals that need to be set up
-        # and expects its arguments to be set appropriately
-        # because we override the constructor arguments in a completely incompatible way,
-        # we need to pass ourselves as the data object if we have already set things up
-        # previously by e.g. creating an empty Table via the __new__ hack in from_X
-        # functions, then filling up with columns.
-        # to check for this, we check for domain existence because tables without domains
-        # can't really be used in Orange in any meaningful way
-        if hasattr(self, 'domain'):
-            kwargs['data'] = self
-
-        # only pass through things known to pandas, e.g.
-        # Table(..., weights=1) passes weights to from_numpy, but would error
-        # when passing to pandas upstream
-        super().__init__(**{k: v for k, v in kwargs.items() if k in self._KNOWN_PANDAS_KWARGS})
+        super().__init__(*args, **kwargs)
 
         # these won't override things that are already set, as we have
         # the _already_inited short-circuit in place
@@ -562,8 +562,7 @@ class TableBase:
         reader = FileFormat.get_reader(absolute_filename)
         data = reader.read()
 
-        # Readers return plain table. Make sure to cast it to appropriate
-        # (subclass) type
+        # Readers return plain table. Make sure to cast it to appropriate (subclass) type
         if cls != data.__class__:
             data = cls(data)
 

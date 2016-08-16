@@ -12,11 +12,12 @@ import numpy as np
 import pandas as pd
 
 from Orange.data import Domain, Table, DiscreteVariable, ContinuousVariable, StringVariable, \
-    TimeVariable, TableSeries, TablePanel
+    TimeVariable, TableSeries, TablePanel, TableBase
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.compat import filter
 from Orange.data.sql.compat import Instance
 import Orange.misc
+
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
@@ -29,12 +30,14 @@ sql_log.debug("Logging started: {}".format(strftime("%Y-%m-%d %H:%M:%S")))
 
 
 class SqlTable(Table):
+    _ORANGE_KWARG_NAMES = Table._ORANGE_KWARG_NAMES.union({"connection_params", "table_or_sql",
+                                                           "type_hints", "inspect_values"})
+
     _metadata = Table._metadata + ['connection_pool', 'table_name', 'row_filters',
                                    'connection_params', 'downloaded_data']
 
     connection_pool = None
     table_name = None
-    #domain = None
     row_filters = ()
     _cached__len__ = None
 
@@ -76,19 +79,19 @@ class SqlTable(Table):
     def _constructor_expanddim(self):
         return SqlTablePanel
 
-    def __new__(cls, *args, **kwargs):
-        # We do not (yet) need the magic of the Table.__new__, so we call it
-        # with no parameters.
-        # see Table for explanation
-        all_kwargs_are_pandas = all(arg in cls._KNOWN_PANDAS_KWARGS for arg in kwargs)
-        if not args and (not kwargs or all_kwargs_are_pandas):
-            return super().__new__(cls)
-        if len(args) == 1 and (isinstance(args[0], pd.core.internals.BlockManager)
-                               or (isinstance(args[0], np.ndarray) and len(kwargs) != 0 and all_kwargs_are_pandas)):
-            return cls(data=args[0], **kwargs)
-        return super().__new__(cls)
+    @classmethod
+    def _is_orange_construction_path(cls, *args, **kwargs):
+        # override for different signature
+        orange_kwargs = {k: v for k, v in kwargs.items() if k in cls._ORANGE_KWARG_NAMES}
+        return orange_kwargs or (len(args) > 0 and isinstance(args[0], (str, dict)))
 
-    def __init__(self, connection_params=None, table_or_sql=None, type_hints=None, inspect_values=False, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
+        # We do not (yet) need the magic of the Table.__new__, so we call it with no parameters.
+        if cls._is_orange_construction_path(*args, **kwargs):
+            return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
         """
         Create a new proxy for sql table.
 
@@ -103,7 +106,6 @@ class SqlTable(Table):
         be used instead of the database name. For documentation about
         connection parameters, see:
         http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
-
 
         Data domain is inferred from the columns of the table/query.
 
@@ -122,18 +124,18 @@ class SqlTable(Table):
         """
         # whether we're being called from .copy(), a subscript etc
         # after this, __finalize__ will be called to copy over existing attributes in _metadata
-        from_pandas_internals = False
-        all_kwargs_are_pandas = all(arg in self._KNOWN_PANDAS_KWARGS for arg in kwargs)
-        if len(args) == 0 and len(kwargs) != 0 and all_kwargs_are_pandas:
-            super(SqlTable, self).__init__(**kwargs)
-            from_pandas_internals = True
+        from_pandas_internals = not self._is_orange_construction_path(*args, **kwargs)
 
-        # block manager as first parameter from pandas internal calls
-        if len(args) == 0 and len(kwargs) == 0 and connection_params is not None and table_or_sql is None and \
-                isinstance(connection_params, pd.core.internals.BlockManager):
-            super(SqlTable, self).__init__(data=connection_params)
-            connection_params = None
-            from_pandas_internals = True
+        connection_params = kwargs.pop("connection_params", None)
+        table_or_sql = kwargs.pop("table_or_sql", None)
+        type_hints = kwargs.pop("type_hints", None)
+        inspect_values = kwargs.pop("inspect_values", None)
+
+        # except the common case where the first two args are connection_params and table_or_sql
+        if len(args) >= 2 and isinstance(args[0], (str, dict)) and isinstance(args[1], (str, TableBase)):
+            connection_params, table_or_sql, args = args[0], args[1], args[2:]
+
+        super().__init__(*args, **kwargs)
 
         self.downloaded_data = False
         if isinstance(connection_params, str):
@@ -151,11 +153,10 @@ class SqlTable(Table):
                 else:
                     table = self.quote_identifier(table_or_sql)
                 self.table_name = table
-                super().__init__(data=[])
                 self.domain = self.get_domain(type_hints, inspect_values)
                 self.name = table
             else:
-                super().__init__(data=[])
+                pass
 
     def __finalize__(self, from_table, **kwargs):
         # don't filter the domain here. it doesn't work well with SQL.
