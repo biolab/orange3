@@ -1444,54 +1444,22 @@ class CN2SDUnorderedClassifier(_RuleClassifier):
 
 
 def main():
-    # data = Table('titanic')
-    # learner = CN2Learner()
-    # # learner.rule_finder.significance_validator.default_alpha = 0.15
-    # learner.rule_finder.general_validator.min_covered_examples = 10
-    # classifier = learner(data)
-    # for rule in classifier.rule_list:
-    #     print(rule.curr_class_dist.tolist(), rule, rule.quality)
-    # print()
-    #
-    # data = Table('iris.tab')
-    # learner = CN2UnorderedLearner()
-    # learner.rule_finder.search_algorithm.beam_width = 10
-    # learner.rule_finder.search_strategy.constrain_continuous = True
-    # learner.rule_finder.general_validator.min_covered_examples = 10
-    # classifier = learner(data)
-    # for rule in classifier.rule_list:
-    #     print(rule, rule.curr_class_dist.tolist())
-    # print()
-    #
-    # data = Table('titanic')
-    # learner = CN2UnorderedLearner()
-    # learner.rule_finder.search_algorithm.beam_width = 10
-    # learner.rule_finder.general_validator.min_covered_examples = 1
-    # classifier = learner(data)
-    # for rule in classifier.rule_list:
-    #     print(rule.curr_class_dist.tolist(), rule, rule.quality)
-    # print()
-    # print(len(classifier.rule_list))
-
     data = Table('titanic')
-    learner = CN2SDLearner()
-    learner.rule_finder.search_algorithm.beam_width = 10
-    learner.rule_finder.general_validator.min_covered_examples = 1
+    learner = CN2Learner()
     classifier = learner(data)
     for rule in classifier.rule_list:
-        print(rule.curr_class_dist.tolist(), rule, rule.quality)
-    print(len(classifier.rule_list))
+        print(rule.curr_class_dist.tolist(), rule)
+    print()
 
-    # data = Table('adult')
-    # learner = CN2UnorderedLearner()
-    # learner.rule_finder.general_validator.max_rule_length = 5
-    # learner.rule_finder.general_validator.min_covered_examples = 100
-    # learner.rule_finder.search_algorithm.beam_width = 10
-    # learner.rule_finder.search_strategy.constrain_continuous = True
-    # classifier = learner(data)
-    # for rule in classifier.rule_list:
-    #     print(rule, rule.curr_class_dist.tolist(), rule.quality)
-    # print()
+    data = Table('iris.tab')
+    learner = CN2UnorderedLearner()
+    learner.rule_finder.search_algorithm.beam_width = 10
+    learner.rule_finder.search_strategy.constrain_continuous = True
+    learner.rule_finder.general_validator.min_covered_examples = 10
+    classifier = learner(data)
+    for rule in classifier.rule_list:
+        print(rule, rule.curr_class_dist.tolist())
+    print()
 
 if __name__ == "__main__":
     main()
