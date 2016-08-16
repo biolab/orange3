@@ -1125,16 +1125,6 @@ class TableBase:
         # TODO: inconsistent when dtype=object
         return hash(bytes(self.values))
 
-    def shuffle(self):
-        """Shuffle the rows of the table.
-
-        Returns
-        -------
-        TableBase
-            A new table with the same index, but the rows shuffled.
-        """
-        return self.sample(frac=1)
-
     @deprecated('pandas-style column access: t[["colname1", "colname2"]]')
     def get_column_view(self, index):
         """Get a single column view of the table.

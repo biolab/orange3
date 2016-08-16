@@ -122,7 +122,7 @@ if __name__ == '__main__':
     d = Orange.data.Table('housing')
     d.domain = Domain(d.domain.attributes + ["newcol"], d.domain.class_vars, d.domain.metas)
     d["newcol"] = 1
-    d = d.shuffle()
+    d = d.sample(frac=1)
 
 #    m = LinearRegressionLearner(lambda_=1.0)
 #    print(m(d)(d))

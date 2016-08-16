@@ -92,7 +92,6 @@ Row manipulation
 ----------------
 
 .. automethod:: Table.clear
-.. automethod:: Table.shuffle
 
 Weights
 -------
