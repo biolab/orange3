@@ -13,6 +13,7 @@ import pandas as pd
 
 from Orange.data import Domain, Table, DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable, TableSeries, TablePanel, TableBase
+from Orange.data.table.base import _transferer
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.compat import filter
 from Orange.data.sql.compat import Instance
@@ -57,23 +58,7 @@ class SqlTable(Table):
         This enables TableSeries to use .X/.Y/.metas because it has a Domain.
         """
         attrs = {k: getattr(self, k, None) for k in Table._metadata}
-
-        class _transferer:
-            # this is a class and not a function because sometimes, pandas
-            # wants _constructor_sliced.from_array
-            def from_array(self, *args, **kwargs):
-                return _transferer._attr_setter(SqlTableSeries.from_array(*args, **kwargs))
-
-            def __call__(self, *args, **kwargs):
-                return _transferer._attr_setter(SqlTableSeries(*args, **kwargs))
-
-            @staticmethod
-            def _attr_setter(target):
-                for k, v in attrs.items():
-                    setattr(target, k, v)
-                return target
-
-        return _transferer()
+        return _transferer(SqlTableSeries, attrs)
 
     @property
     def _constructor_expanddim(self):

@@ -1,6 +1,7 @@
 import warnings
 
 from Orange.data import ContinuousVariable, Domain, StringVariable, DiscreteVariable
+from Orange.data.table.base import _transferer
 
 from .base import *
 import pandas as pd
@@ -26,23 +27,7 @@ class Table(TableBase, pd.DataFrame):
         This enables TableSeries to use .X/.Y/.metas because it has a Domain.
         """
         attrs = {k: getattr(self, k, None) for k in Table._metadata}
-
-        class _transferer:
-            # this is a class and not a function because sometimes, pandas
-            # wants _constructor_sliced.from_array
-            def from_array(self, *args, **kwargs):
-                return _transferer._attr_setter(TableSeries.from_array(*args, **kwargs))
-
-            def __call__(self, *args, **kwargs):
-                return _transferer._attr_setter(TableSeries(*args, **kwargs))
-
-            @staticmethod
-            def _attr_setter(target):
-                for k, v in attrs.items():
-                    setattr(target, k, v)
-                return target
-
-        return _transferer()
+        return _transferer(TableSeries, attrs)
 
     @property
     def _constructor_expanddim(self):
@@ -99,24 +84,8 @@ class SparseTable(TableBase, pd.SparseDataFrame):
 
         This enables TableSeries to use .X/.Y/.metas because it has a Domain.
         """
-        attrs = {k: getattr(self, k, None) for k in Table._metadata}
-
-        class _transferer:
-            # this is a class and not a function because sometimes, pandas
-            # wants _constructor_sliced.from_array
-            def from_array(self, *args, **kwargs):
-                return _transferer._attr_setter(SparseTableSeries.from_array(*args, **kwargs))
-
-            def __call__(self, *args, **kwargs):
-                return _transferer._attr_setter(SparseTableSeries(*args, **kwargs))
-
-            @staticmethod
-            def _attr_setter(target):
-                for k, v in attrs.items():
-                    setattr(target, k, v)
-                return target
-
-        return _transferer()
+        attrs = {k: getattr(self, k, None) for k in self._metadata}
+        return _transferer(SparseTableSeries, attrs)
 
     @property
     def _constructor_expanddim(self):

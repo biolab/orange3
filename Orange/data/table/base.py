@@ -16,6 +16,26 @@ from Orange.data import Domain, StringVariable, ContinuousVariable, \
 from Orange.util import flatten, deprecated
 
 
+class _transferer:
+    """A 'minor' hack for transferring attributes to TableSeries in _constructor_sliced."""
+    def __init__(self, cls, attrs):
+        self.cls = cls
+        self.attrs = attrs
+
+    # this is a class and not a function because sometimes, pandas
+    # wants _constructor_sliced.from_array
+    def from_array(self, *args, **kwargs):
+        return self._attr_setter(self.cls.from_array(*args, **kwargs))
+
+    def __call__(self, *args, **kwargs):
+        return self._attr_setter(self.cls(*args, **kwargs))
+
+    def _attr_setter(self, target):
+        for k, v in self.attrs.items():
+            setattr(target, k, v)
+        return target
+
+
 # noinspection PyPep8Naming
 class TableBase:
     """An abstract base class for data storage structures in Orange."""
