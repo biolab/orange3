@@ -894,67 +894,31 @@ class TableBase:
             yield row
 
     def __str__(self):
-        """Override the pandas representation to provide a more Orange-friendly one."""
-        max_displayed_rows = 30
-        sep = "\t\t"
-        sep_small = "\t"
+        """Augment the pandas representation to provide a more Orange-friendly one.
 
-        table_over_limit = len(self) > max_displayed_rows
+        This means including domain information in the output.
+        """
+        # get only visible columns, also in the proper x-y-metas order
         attrs = list(filter_visible(self.domain.attributes))
         class_vars = list(filter_visible(self.domain.class_vars))
         metas = list(filter_visible(self.domain.metas))
-        cols = attrs + class_vars + metas
-        roles = ["attr"] * len(attrs) + ["class"] * len(class_vars) + ["meta"] * len(metas)
+        visible_cols = attrs + class_vars + metas
+        roles = ["attribute"] * len(attrs) + ["class"] * len(class_vars) + ["meta"] * len(metas)
 
-        if table_over_limit:
-            indices = list(range(0, max_displayed_rows // 2)) + \
-                      list(range(len(self) - (max_displayed_rows // 2), len(self)))
-            displayed_part = self.iloc[indices]
-            ellipsis_row = max_displayed_rows / 2 - 1
-        else:
-            indices = range(len(self))
-            displayed_part = self
-            ellipsis_row = None
+        index_tuples = [(col, str(type(self.domain[col]))[:-len("Variable")].lower(), role, str(self[col].dtype))
+                        for col, role in zip(visible_cols, roles)]
+        index_tuples += [(icn, "", "", str(self[icn].dtype)) for icn in self._INTERNAL_COLUMN_NAMES]
+        display_index = pd.MultiIndex.from_tuples(index_tuples, names=("name", "type", "role", "dtype"))
 
-        # efficient string concatenation
-        with StringIO() as s:
-            # header, names
-            s.write("i" + sep_small + "idx" + sep_small)
-            for var in cols:
-                s.write(var.name + sep_small)
-            s.write("\n")
+        # overwriting columns for display_df also overwrites them for self
+        # to solve this without copying, we just replace them with the correct ones in the end
+        saved_columns = self.columns
+        display_df = super()._constructor(data=self)  # need supertype to avoid recursing back
+        display_df.columns = display_index  # overwrite the index in-place, no reindexing
+        result = str(display_df)
+        display_df.columns = saved_columns
+        return result
 
-            # header, types
-            s.write(sep)
-            for var in cols:
-                s.write(str(type(var))[:-(len("Variable"))].lower() + sep_small)
-            s.write("\n")
-
-            # header, roles
-            s.write(sep)
-            for role in roles:
-                s.write(role + sep_small)
-            s.write("\n")
-
-            # values
-            for i, (idx, row) in zip(indices, displayed_part.iterrows()):
-                s.write(str(i) + sep_small + str(idx) + sep_small)
-                for var in cols:
-                    s.write(var.repr_val(row[var]) + sep_small)
-                if i == ellipsis_row:
-                    s.write("\n" + (sep + "..." + sep) * (len(cols) // 2 + 1))
-                s.write("\n")
-
-            # footer, dtypes
-            s.write(sep)
-            for dtype in displayed_part.dtypes[cols]:
-                s.write(str(dtype) + sep_small)
-            s.write("\n")
-            s.seek(0)
-            return s.read()
-
-    def __repr__(self):
-        return str(self)
 
     @classmethod
     def concatenate(cls, tables, axis=1, reindex=True, colstack=True, rowstack=False):
