@@ -71,26 +71,22 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(0.2, t['petal width'].iloc[22])
         self.assertTrue((t.weights == 1).all())
 
-    def test_checksum(self):
+    def test_hash(self):
         d = Table("zoo")
         d.iloc[42, 3] = 0
-        crc1 = d.checksum(False)
+        crc1 = hash(d)
         d.iloc[42, 3] = 1
-        crc2 = d.checksum(False)
+        crc2 = hash(d)
         self.assertNotEqual(crc1, crc2)
         d.iloc[42, 3] = 0
-        crc3 = d.checksum(False)
+        crc3 = hash(d)
         self.assertEqual(crc1, crc3)
         _ = d.iloc[42].loc["name"]
         d.iloc[42].loc["name"] = "non-animal"
-        crc4 = d.checksum(False)
+        crc4 = hash(d)
         self.assertEqual(crc1, crc4)
-        crc4 = d.checksum(True)
-        crc5 = d.checksum(1)
-        crc6 = d.checksum(False)
-        self.assertNotEqual(crc1, crc4)
-        self.assertNotEqual(crc1, crc5)
-        self.assertEqual(crc1, crc6)
+        crc5 = hash(d)
+        self.assertEqual(crc1, crc5)
 
     def test_total_weight(self):
         d = Table("zoo")
@@ -179,27 +175,6 @@ class TableTestCase(unittest.TestCase):
         d = Table("test3")
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
-
-    def test_shuffle(self):
-        d = Table("zoo")
-        crc = d.checksum()
-        names = set(str(x["name"]) for _, x in d.iterrows())
-
-        d = d.shuffle()
-        self.assertNotEqual(crc, d.checksum())
-        self.assertSetEqual(names, set(str(x["name"]) for _, x in d.iterrows()))
-        crc2 = d.checksum()
-
-        x = d.iloc[2:10]
-        crcx = x.checksum()
-        d = d.shuffle()
-        self.assertNotEqual(crc2, d.checksum())
-        self.assertEqual(crcx, x.checksum())
-
-        crc2 = d.checksum()
-        x = x.shuffle()
-        self.assertNotEqual(crcx, x.checksum())
-        self.assertEqual(crc2, d.checksum())
 
     @staticmethod
     def not_less_ex(ex1, ex2):
@@ -351,16 +326,11 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d.attributes, d2.attributes)
         self.assertTrue(d.iloc[0].equals(d2.iloc[0]))
 
-        self.assertEqual(d.checksum(include_metas=False),
-                         d2.checksum(include_metas=False))
-
         d = Table("iris")
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
         self.assertEqual(d.name, d2.name)
         self.assertTrue(d.iloc[0].equals(d2.iloc[0]))
-        self.assertEqual(d.checksum(include_metas=False),
-                         d2.checksum(include_metas=False))
 
     def test_saveTab(self):
         d = Table("iris").iloc[:3]

@@ -1120,18 +1120,9 @@ class TableBase:
         for item in gen:
             yield (item[0], self._constructor_sliced(item[1]))
 
-    @deprecated
-    def checksum(self, include_metas=True):
-        """Return a checksum over X, Y, metas and W."""
-        # TODO: zlib.adler32 does not work for numpy arrays with dtype object
-        # (after pickling and unpickling such arrays, checksum changes)
-        # Why, and should we fix it or remove it?
-        cs = zlib.adler32(np.ascontiguousarray(self.X))
-        cs = zlib.adler32(np.ascontiguousarray(self.Y), cs)
-        if include_metas:
-            cs = zlib.adler32(np.ascontiguousarray(self.metas), cs)
-        cs = zlib.adler32(np.ascontiguousarray(self.weights), cs)
-        return cs
+    def __hash__(self):
+        # TODO: inconsistent when dtype=object
+        return hash(bytes(self.values))
 
     def shuffle(self):
         """Shuffle the rows of the table.

@@ -399,9 +399,6 @@ class Domain:
             col_idx = self.index(attr)
         return [attr], np.array([col_idx])
 
-    def checksum(self):
-        return hash(self)
-
     def __eq__(self, other):
         if not isinstance(other, Domain):
             return False

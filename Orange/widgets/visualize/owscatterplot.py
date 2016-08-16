@@ -296,12 +296,12 @@ class OWScatterPlot(OWWidget):
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
         if self.data is not None and data is not None \
-                and self.data.checksum() == data.checksum():
+                and hash(self.data) == hash(data):
             return
 
         self.closeContext()
         same_domain = (self.data is not None and data is not None and
-                       data.domain.checksum() == self.data.domain.checksum())
+                       hash(data.domain) == hash(self.data.domain))
         self.data = data
         self.data_metas_X = self.move_primitive_metas_to_X(data)
 
