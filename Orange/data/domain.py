@@ -10,6 +10,7 @@ import numpy as np
 from Orange.data import (
     Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
 )
+from Orange.util import deprecated
 
 __all__ = ["DomainConversion", "Domain"]
 
@@ -419,6 +420,7 @@ class Domain:
             col_idx = self.index(attr)
         return [attr], np.array([col_idx])
 
+    @deprecated('hash(domain)')
     def checksum(self):
         return hash(self)
 

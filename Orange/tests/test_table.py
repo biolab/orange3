@@ -475,26 +475,20 @@ class TableTestCase(unittest.TestCase):
         d.clear()
         self.assertFalse(d)
 
-    def test_checksum(self):
-        d = data.Table("zoo")
-        d[42, 3] = 0
-        crc1 = d.checksum(False)
-        d[42, 3] = 1
-        crc2 = d.checksum(False)
+    def test_hash(self):
+        d = Table("zoo")
+        d.iloc[42, 3] = 0
+        crc1 = hash(d)
+        d.iloc[42, 3] = 1
+        crc2 = hash(d)
         self.assertNotEqual(crc1, crc2)
-        d[42, 3] = 0
-        crc3 = d.checksum(False)
+        d.iloc[42, 3] = 0
+        crc3 = hash(d)
         self.assertEqual(crc1, crc3)
-        _ = d[42, "name"]
-        d[42, "name"] = "non-animal"
-        crc4 = d.checksum(False)
-        self.assertEqual(crc1, crc4)
-        crc4 = d.checksum(True)
-        crc5 = d.checksum(1)
-        crc6 = d.checksum(False)
-        self.assertNotEqual(crc1, crc4)
-        self.assertNotEqual(crc1, crc5)
-        self.assertEqual(crc1, crc6)
+        _ = d.iloc[42].loc["name"]
+        d.iloc[42].loc["name"] = "non-animal"
+        crc4 = hash(d)
+        self.assertNotEqual(crc1, crc4)  # Metas influence hash too!
 
     def test_total_weight(self):
         d = data.Table("zoo")
@@ -529,24 +523,24 @@ class TableTestCase(unittest.TestCase):
 
     def test_shuffle(self):
         d = data.Table("zoo")
-        crc = d.checksum()
+        crc = hash(d)
         names = set(str(x["name"]) for x in d)
 
         d.shuffle()
-        self.assertNotEqual(crc, d.checksum())
+        self.assertNotEqual(crc, hash(d))
         self.assertSetEqual(names, set(str(x["name"]) for x in d))
-        crc2 = d.checksum()
+        crc2 = hash(d)
 
-        x = d[2:10]
-        crcx = x.checksum()
+        x = d.iloc[2:10]
+        crcx = hash(x)
         d.shuffle()
-        self.assertNotEqual(crc2, d.checksum())
-        self.assertEqual(crcx, x.checksum())
+        self.assertNotEqual(crc2, hash(d))
+        self.assertEqual(crcx, hash(x))
 
-        crc2 = d.checksum()
+        crc2 = hash(d)
         x.shuffle()
-        self.assertNotEqual(crcx, x.checksum())
-        self.assertEqual(crc2, d.checksum())
+        self.assertNotEqual(crcx, hash(x))
+        self.assertEqual(crc2, hash(d))
 
     @staticmethod
     def not_less_ex(ex1, ex2):
@@ -708,19 +702,12 @@ class TableTestCase(unittest.TestCase):
         import pickle
 
         d = data.Table("zoo")
-        s = pickle.dumps(d)
-        d2 = pickle.loads(s)
-        self.assertEqual(d[0], d2[0])
+        d2 = pickle.loads(pickle.dumps(d))
+        self.assertEqual(hash(d), hash(d2))
 
-        self.assertEqual(d.checksum(include_metas=False),
-                         d2.checksum(include_metas=False))
-
-        d = data.Table("iris")
-        s = pickle.dumps(d)
-        d2 = pickle.loads(s)
-        self.assertEqual(d[0], d2[0])
-        self.assertEqual(d.checksum(include_metas=False),
-                         d2.checksum(include_metas=False))
+        d = Table("iris")
+        d2 = pickle.loads(pickle.dumps(d))
+        self.assertEqual(hash(d), hash(d2))
 
     def test_translate_through_slice(self):
         d = data.Table("iris")

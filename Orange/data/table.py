@@ -1,6 +1,5 @@
 import operator
 import os
-import zlib
 
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
@@ -21,7 +20,7 @@ from Orange.data import (
 )
 from Orange.data.util import SharedComputeValue
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from Orange.util import flatten
+from Orange.util import flatten, deprecated
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
@@ -1033,17 +1032,17 @@ class Table(MutableSequence, Storage):
         """Return `True` if there are any missing class values."""
         return bn.anynan(self._Y)
 
+    @deprecated('hash(table)')
     def checksum(self, include_metas=True):
-        # TODO: zlib.adler32 does not work for numpy arrays with dtype object
-        # (after pickling and unpickling such arrays, checksum changes)
-        # Why, and should we fix it or remove it?
-        """Return a checksum over X, Y, metas and W."""
-        cs = zlib.adler32(np.ascontiguousarray(self.X))
-        cs = zlib.adler32(np.ascontiguousarray(self._Y), cs)
-        if include_metas:
-            cs = zlib.adler32(np.ascontiguousarray(self.metas), cs)
-        cs = zlib.adler32(np.ascontiguousarray(self.W), cs)
-        return cs
+        return hash(self)
+
+    def __hash__(self):
+        # NOTE: doesn't work well with dtype=object
+        return (hash(self.domain) ^
+                hash(self.X.data.tobytes()) ^
+                hash(self.Y.data.tobytes()) ^
+                hash(tuple(self.metas.flat if not sp.issparse(self.metas) else
+                           self.metas.data)))
 
     def shuffle(self):
         """Randomly shuffle the rows of the table."""
