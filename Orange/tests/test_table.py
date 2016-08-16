@@ -1239,6 +1239,30 @@ class TestPandasInteraction(unittest.TestCase):
         self.assertEqual(len(merged.columns), len(self.a.columns) + len(self.b.columns) - 1)  # -1 internal dup
         self.assertEqual(len(self.a.domain) + len(self.b.domain), len(merged.columns) - 1)
 
+    def test_iterrows_wrapper_needed(self):
+        # see TableBase.iterrows, remove the wrapper and this test when this fails
+        class DFS(pd.DataFrame):
+            @property
+            def _constructor(self):
+                return DFS
+
+            @property
+            def _constructor_sliced(self):
+                return SS
+
+        class SS(pd.Series):
+            @property
+            def _constructor(self):
+                return SS
+
+            @property
+            def _constructor_expanddim(self):
+                return DFS
+
+        dfs = DFS([[1, 2, 3], [4, 5, 6]])
+        _, row = next(dfs.iterrows())
+        self.assertEqual(row.__class__, pd.Series)  # proper behaviour is SS
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -1115,6 +1115,7 @@ class TableBase:
 
     def iterrows(self):
         """An override to return TableSeries instead of Series (pandas doesn't do that by default)."""
+        # TODO: remove this in next pandas release, when it works by default (pydata/pandas#13978)
         # super here is the next item in the MRO, e.g. pd.DataFrame or pd.SparseDataFrame
         gen = super().iterrows()
         for item in gen:
