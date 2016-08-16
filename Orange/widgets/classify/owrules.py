@@ -1,14 +1,15 @@
+from collections import OrderedDict
+import numpy as np
 from PyQt4.QtCore import Qt
 
-import numpy as np
 from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.classification.rules import _RuleLearner, _RuleClassifier
-from Orange.classification.rules import EntropyEvaluator
-from Orange.classification.rules import LaplaceAccuracyEvaluator
-from Orange.classification.rules import WeightedRelativeAccuracyEvaluator
+from Orange.classification.rules import (WeightedRelativeAccuracyEvaluator,
+                                         LaplaceAccuracyEvaluator,
+                                         EntropyEvaluator, _RuleClassifier,
+                                         _RuleLearner)
 
 
 class CustomRuleClassifier(_RuleClassifier):
@@ -117,7 +118,7 @@ class OWRuleLearner(OWBaseLearner):
 
     storage_orders = ["ordered", "unordered"]
     storage_covers = ["exclusive", "weighted"]
-    storage_measures = ["laplace", "entropy", "wracc"]
+    storage_measures = ["entropy", "laplace", "wracc"]
 
     # default parameter values
     learner_name = Setting("CN2 rule inducer")
@@ -161,7 +162,8 @@ class OWRuleLearner(OWBaseLearner):
         self.gamma_spin = gui.doubleSpin(
             widget=insert_gamma_box, master=self, value="gamma", minv=0.0,
             maxv=1.0, step=0.01, label="γ:", orientation=Qt.Horizontal,
-            callback=self.settings_changed, alignment=Qt.AlignRight)
+            callback=self.settings_changed, alignment=Qt.AlignRight,
+            enabled=self.storage_covers[self.covering_algorithm] == "weighted")
 
         # bottom-level search procedure (search bias)
         middle_box = gui.vBox(widget=self.controlArea, box="Rule search")
@@ -169,8 +171,8 @@ class OWRuleLearner(OWBaseLearner):
         evaluation_measure_box = gui.comboBox(
             widget=middle_box, master=self, value="evaluation_measure",
             label="Evaluation measure:", orientation=Qt.Horizontal,
-            items=("Laplace accuracy", "Entropy", "WRAcc"),
-            callback=self.settings_changed, contentsLength=4)
+            items=("Entropy", "Laplace accuracy", "WRAcc"),
+            callback=self.settings_changed, contentsLength=3)
 
         beam_width_box = gui.spin(
             widget=middle_box, master=self, value="beam_width", minv=1,
@@ -207,23 +209,20 @@ class OWRuleLearner(OWBaseLearner):
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_parent_alpha")
 
-        self.settings_changed()
-
     def settings_changed(self, *args, **kwargs):
         self.gamma_spin.setDisabled(
             self.storage_covers[self.covering_algorithm] != "weighted")
         super().settings_changed(*args, **kwargs)
 
     def create_learner(self):
-        params = {key: value for key, value in self.get_learner_parameters()}
         return self.LEARNER(
-            preprocessors=None,
+            preprocessors=self.preprocessors,
             base_rules=self.base_rules,
-            params=params
+            params=self.get_learner_parameters()
         )
 
     def get_learner_parameters(self):
-        return (
+        return OrderedDict([
             ("Rule ordering", self.storage_orders[self.rule_ordering]),
             ("Covering algorithm", self.storage_covers[self.covering_algorithm]),
             ("Gamma", self.gamma),
@@ -235,7 +234,7 @@ class OWRuleLearner(OWBaseLearner):
                                else self.default_alpha)),
             ("Parent alpha", (1.0 if not self.checked_parent_alpha
                               else self.parent_alpha))
-        )
+        ])
 
 if __name__ == "__main__":
     import sys

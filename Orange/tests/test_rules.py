@@ -7,12 +7,14 @@ from Orange.data import Table
 from Orange.preprocess import RemoveNaNClasses, Impute
 
 from Orange.classification.rules import main as rules_main
-from Orange.classification.rules import _RuleLearner, _RuleClassifier, \
-    RuleHunter, Rule, EntropyEvaluator, LaplaceAccuracyEvaluator,\
-    WeightedRelativeAccuracyEvaluator, argmaxrnd, hash_dist
+from Orange.classification.rules import (_RuleLearner, _RuleClassifier,
+                                         RuleHunter, Rule, EntropyEvaluator,
+                                         LaplaceAccuracyEvaluator,
+                                         WeightedRelativeAccuracyEvaluator,
+                                         argmaxrnd, hash_dist)
 
-from Orange.classification import CN2Learner, CN2UnorderedLearner, \
-    CN2SDLearner, CN2SDUnorderedLearner
+from Orange.classification import (CN2Learner, CN2UnorderedLearner,
+                                   CN2SDLearner, CN2SDUnorderedLearner)
 
 
 class TestRuleInduction(unittest.TestCase):
