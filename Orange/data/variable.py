@@ -639,6 +639,8 @@ class TimeVariable(ContinuousVariable):
         super().__init__(*args, **kwargs)
         # None if no timezone, pytz object if any timezone
         self.timezone = None
+        # True if the time component exists (and will be displayed), parsing in column_to_datetime
+        self.has_time_component = True
 
     @staticmethod
     def column_looks_like_time(column):
@@ -725,11 +727,23 @@ class TimeVariable(ContinuousVariable):
         # .apply(str) because parsing a float discards the fractional part for some reason
         # utc=True: make timezone aware
         # .values: return a DatetimeIndex so we can actually localize to UTC
-        return pd.to_datetime(column.apply(str).values, errors='raise', exact=True, utc=True,
-                              infer_datetime_format=True, **kwargs)
+        result = pd.to_datetime(column.apply(str).values, errors='raise', exact=True, utc=True,
+                                infer_datetime_format=True, **kwargs)
+
+        # determine whether we should display the time part (HH:MM:SS.MS)
+        # only display it when hours, minutes and seconds are all 0 in all cases
+        # this is the most robust way as it doesn't depend on regexes
+        # (we might not even have strings as inputs) and offloads any parsing to pandas
+        # addition works because everything is non-negative
+        self.has_time_component = (result.hour + result.minute + result.second + result.microsecond).sum() != 0
+        return result
 
     def repr_val(self, val):
-        return str(val.tz_convert(self.timezone)) if val is not pd.NaT else "?"
+        if val is pd.NaT:
+            return "?"
+        else:
+            tzval = val.tz_convert(self.timezone)
+            return str(tzval) if self.has_time_component else tzval.strftime("%Y-%m-%d")
 
     str_val = repr_val
 
