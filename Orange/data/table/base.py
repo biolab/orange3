@@ -903,8 +903,15 @@ class TableBase:
         Examples
         --------
             >>> iris = Table('iris')
-            >>> for row in iris.iloc[:5]:
-            >>>     print(row)
+            >>> for row in iris.iloc[[0]]:
+            ...     print(row)
+            sepal length            5.1
+            sepal width             3.5
+            petal length            1.4
+            petal width             0.2
+            iris            Iris-setosa
+            __weights__               1
+            Name: iris, dtype: object
 
         Notes
         -----
