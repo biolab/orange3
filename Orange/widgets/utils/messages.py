@@ -326,16 +326,21 @@ class WidgetMessagesMixin(MessagesMixin):
             self._hide_message_bar()
             return
         else:
+            font_size = self.message_bar.fontInfo().pixelSize()
             group = messages[0].group
             text = str(messages[0]) if len(messages) == 1 \
                 else "{} problems during execution".format(len(messages))
             # TODO: fix tooltip background color - it is not white
-            tooltip = '<div style="background-color: #ffffff;">{}</div>'.format(
-                ''.join(
-                    '<p style="background-color: {}; padding: 5">'
-                    '<nobr>{}</nobr></p>'.format(
-                        msg.group.bar_background, str(msg))
-                    for msg in messages))
+            tooltip = ''.join(
+                '''<p style="background-color: {}; margin: 0;">
+                <span style="font-size:9pt"><br></span>
+                <nobr style="font-size: {}px;">&nbsp;&nbsp;&nbsp;
+                {}
+                &nbsp;&nbsp;&nbsp;</nobr>
+                <span style="font-size:9pt"><br></span>
+                </p>'''.
+                format(msg.group.bar_background, font_size, str(msg))
+                for msg in messages)
             self._set_message_bar(group, text, tooltip)
 
     def insert_message_bar(self):
@@ -372,8 +377,9 @@ class WidgetMessagesMixin(MessagesMixin):
         self.message_icon.setPixmap(
             style.standardIcon(group.bar_icon).pixmap(14, 14))
         self.message_bar.setStyleSheet(
-            "background-color: {}; color: black;"
-            "padding: 3px; padding-left: 6px; vertical-align: center".
+            "QWidget {{ background-color: {}; color: black;"
+            "padding: 3px; padding-left: 6px; vertical-align: center }}\n"
+            "QToolTip {{ background-color: white; }}".
             format(group.bar_background))
         self.message_label.setText(text)
         self.message_bar.setToolTip(tooltip)
