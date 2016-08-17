@@ -5,8 +5,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.classification.rules import _RuleClassifier
 
-from PyQt4 import QtGui
-
 from PyQt4.QtCore import Qt, QLineF
 from PyQt4.QtGui import (QSortFilterProxyModel, QPainter, QPen, QBrush, QColor,
                          QItemDelegate, QStyledItemDelegate, QHeaderView,
@@ -25,7 +23,6 @@ class OWRuleViewer(widget.OWWidget):
     data_output_identifier = "Filtered data"
     outputs = [(data_output_identifier, Table)]
 
-    autocommit = settings.Setting(False)
     compact_view = settings.Setting(False)
 
     want_basic_layout = True
@@ -173,7 +170,7 @@ class OWRuleViewer(widget.OWWidget):
         if self.selected is not None:
             selection_model = self.view.selectionModel()
             for row in self.selected:
-                selection_model.select(self.model.index(row, 0),
+                selection_model.select(self.proxy_model.index(row, 0),
                                        selection_model.Select |
                                        selection_model.Rows)
 
@@ -194,7 +191,8 @@ class OWRuleViewer(widget.OWWidget):
         if (self.selected is not None and
                 self.data is not None and
                 self.classifier is not None and
-                self.data.domain.__eq__(self.classifier.original_domain)):
+                self.data.domain.attributes ==
+                self.classifier.original_domain.attributes):
 
             status = np.ones(self.data.X.shape[0], dtype=bool)
             for i in self.selected:

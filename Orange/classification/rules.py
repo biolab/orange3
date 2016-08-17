@@ -551,8 +551,9 @@ class TopDownSearchStrategy(SearchStrategy):
 
 
 class Selector(namedtuple('Selector', 'column, op, value')):
-    # define a single rule condition
-
+    """
+    Define a single rule condition.
+    """
     OPERATORS = {
         # discrete, nominal variables
         '==': operator.eq,
@@ -564,9 +565,35 @@ class Selector(namedtuple('Selector', 'column, op, value')):
     }
 
     def filter_instance(self, x):
+        """
+        Filter a single instance.
+
+        Parameters
+        ----------
+        x : ndarray
+            Evaluate this instance.
+
+        Returns
+        -------
+        res : bool
+            True, if the rule covers 'x'.
+        """
         return Selector.OPERATORS[self[1]](x[self[0]], self[2])
 
     def filter_data(self, X):
+        """
+        Filter several instances concurrently.
+
+        Parameters
+        ----------
+        X : ndarray
+            Evaluate this data.
+
+        Returns
+        -------
+        res : ndarray, bool
+            Array of evaluations.
+        """
         return Selector.OPERATORS[self[1]](X[:, self[0]], self[2])
 
 
