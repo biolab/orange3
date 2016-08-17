@@ -7,7 +7,10 @@ import numpy as np
 
 import Orange
 from Orange.data import Domain, Table, DiscreteVariable
-from Orange.preprocess import RemoveNaNClasses
+from Orange.preprocess import *
+from Orange.preprocess.discretize import *
+from Orange.preprocess.fss import *
+from Orange.preprocess.impute import *
 
 
 class TestPreprocess(unittest.TestCase):
@@ -78,3 +81,17 @@ class TestRemoveNanClass(unittest.TestCase):
         self.assertTrue(not np.isnan(table).any())
         self.assertEqual(table.domain, domain)
         self.assertEqual(len(table), 1)
+
+
+class TestReprs(unittest.TestCase):
+    def test_reprs(self):
+        preprocs = [Continuize, Discretize, Impute, SklImpute, Normalize,
+            Randomize, RemoveNaNClasses, ProjectPCA, ProjectCUR, Scaling,
+            EqualFreq, EqualWidth, EntropyMDL, SelectBestFeatures,
+            SelectRandomFeatures, RemoveNaNColumns, DoNotImpute, DropInstances,
+            Average, Default]
+
+        for preproc in preprocs:
+            repr_str = repr(preproc())
+            new_preproc = eval(repr_str)
+            self.assertEqual(repr(new_preproc), repr_str)

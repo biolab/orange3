@@ -8,11 +8,17 @@ import unittest
 
 import traceback
 import numpy as np
+import Orange
 from Orange.base import SklLearner
 
 import Orange.classification
 from Orange.classification import (Learner, Model, NaiveBayesLearner,
-                                   LogisticRegressionLearner, NuSVMLearner)
+    LogisticRegressionLearner, NuSVMLearner, MajorityLearner, RandomForestLearner,
+    SimpleTreeLearner, SoftmaxRegressionLearner, SVMLearner, LinearSVMLearner,
+    OneClassSVMLearner, TreeLearner, KNNLearner, SimpleRandomForestLearner,
+    EllipticEnvelopeLearner)
+from Orange.preprocess import (RemoveNaNClasses, Continuize,
+    RemoveNaNColumns, SklImpute, Discretize, Normalize)
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
 from Orange.evaluation import CrossValidation
@@ -313,3 +319,28 @@ class LearnerAccessibility(unittest.TestCase):
             except TypeError as err:
                 traceback.print_exc()
                 continue
+
+class LearnerReprs(unittest.TestCase):
+    def test_reprs(self):
+        lr = LogisticRegressionLearner(tol=0.0002)
+        m = MajorityLearner()
+        nb = NaiveBayesLearner()
+        rf = RandomForestLearner(bootstrap=False, n_jobs=3)
+        st = SimpleTreeLearner(seed=1, bootstrap=True)
+        sm = SoftmaxRegressionLearner()
+        svm = SVMLearner(shrinking=False)
+        lsvm = LinearSVMLearner(tol=0.022, dual=False)
+        nsvm = NuSVMLearner(tol=0.003, cache_size=190)
+        osvm = OneClassSVMLearner(degree=2)
+        tl = TreeLearner(max_leaf_nodes=3, min_samples_split=1)
+        knn = KNNLearner(n_neighbors=4)
+        el = EllipticEnvelopeLearner(store_precision=False)
+        srf = SimpleRandomForestLearner(n_estimators=20)
+
+        learners = [lr, m, nb, rf, st, sm, svm,
+            lsvm, nsvm, osvm, tl, knn, el, srf]
+
+        for l in learners:
+            repr_str = repr(l)
+            new_l = eval(repr_str)
+            self.assertEqual(repr(new_l), repr_str)

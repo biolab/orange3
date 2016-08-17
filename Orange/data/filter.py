@@ -30,7 +30,7 @@ class Filter:
             self.__class__.__name__,
             ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
                 arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
-        )
+                if self.__class__.__init__.__defaults__ is not None else "")
 
 
 class IsDefined(Filter):
@@ -185,6 +185,13 @@ class SameValue(Filter):
                      bool, len(data))
         return data[retain]
 
+    def __repr__(self):
+        return "SameValue({}, {}{})".format(
+            repr(self.column),
+            repr(self.value),
+            ", negate=True" if self.negate else ""
+        )
+
 
 class Values(Filter):
     """
@@ -232,6 +239,13 @@ class Values(Filter):
             sel = np.logical_not(sel)
         return data[sel]
 
+    def __repr__(self):
+        return "Values({}{}{})".format(
+            repr(self.conditions),
+            ", conjunction=False" if not self.conjunction else "",
+            ", negate=True" if self.negate else ""
+        )
+
 
 class ValueFilter(Filter):
     """
@@ -257,6 +271,9 @@ class ValueFilter(Filter):
         super().__init__()
         self.column = column
         self.last_domain = None
+
+    def __repr__(self):
+        return "ValueFilter({})".format(repr(self.column))
 
     def cache_position(self, domain):
         self.pos_cache = domain.index(self.column)
@@ -291,6 +308,11 @@ class FilterDiscrete(ValueFilter):
             return not isnan(value)
         else:
             return value in self.values
+
+    def __repr__(self):
+        return "FilterDiscrete({}, {})".format(
+            repr(self.column),
+            repr(self.values))
 
 
 class FilterContinuous(ValueFilter):
@@ -329,6 +351,7 @@ class FilterContinuous(ValueFilter):
         self.ref = ref
         self.max = max
         self.oper = oper
+        self.position = position
 
     @property
     def min(self):
@@ -385,6 +408,16 @@ class FilterContinuous(ValueFilter):
             return "{} is defined".format(column)
         return "invalid operator"
 
+    def __repr__(self):
+        return "FilterContinuous({}, {}{}{})".format(
+            repr(self.position),
+            "FilterContinuous.{}".format(self.oper),
+            ", ref={}".format(repr(self.ref)) if self.ref
+                is not None else "",
+            ", max={}".format(repr(self.max)) if self.max
+                is not None else ""
+        )
+
 
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
@@ -437,6 +470,7 @@ class FilterString(ValueFilter):
         self.max = max
         self.oper = oper
         self.case_sensitive = case_sensitive
+        self.position = position
 
     @property
     def min(self):
@@ -482,6 +516,17 @@ class FilterString(ValueFilter):
         if self.oper == self.Outside:
             return not refval <= value <= high
         raise ValueError("invalid operator")
+
+    def __repr__(self):
+        return "FilterString({}, {}{}{}{})".format(
+            repr(self.position),
+            "FilterString.{}".format(self.oper),
+            ", ref={}".format(repr(self.ref)) if self.ref
+                is not None else "",
+            ", max={}".format(repr(self.max)) if self.max
+                is not None else "",
+            ", case_sensitive=False" if not self.case_sensitive else ""
+        )
 
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
@@ -537,12 +582,29 @@ class FilterStringList(ValueFilter):
         else:
             return value.lower() in self.values_lower
 
+    def __repr__(self):
+        return "FilterStringList({}, {}{})".format(
+            repr(self.column),
+            repr(self.values),
+            ", case_sensitive=False" if not self.case_sensitive else ""
+        )
+
 
 class FilterRegex(ValueFilter):
     """Filter that checks whether the values match the regular expression."""
     def __init__(self, column, pattern, flags=0):
         super().__init__(column)
         self._re = re.compile(pattern, flags)
+        self.column = column
+        self.pattern = pattern
+        self.flags = flags
 
     def __call__(self, inst):
         return bool(self._re.search(inst or ''))
+
+    def __repr__(self):
+        return "FilterRegex({}, {}{})".format(
+            repr(self.column),
+            repr(self.pattern),
+            ", flags={}".format(repr(self.flags)) if self.flags != 0 else ""
+        )
