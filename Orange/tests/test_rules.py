@@ -99,10 +99,8 @@ class TestRuleInduction(unittest.TestCase):
                         EntropyEvaluator)
 
         # test that the learning requirements are relaxed by default
-        self.assertTrue(
-            learner.rule_finder.general_validator.max_rule_length >= 5)
-        self.assertTrue(
-            learner.rule_finder.general_validator.min_covered_examples == 1)
+        self.assertTrue(learner.rule_finder.general_validator.max_rule_length >= 5)
+        self.assertTrue(learner.rule_finder.general_validator.min_covered_examples == 1)
 
         classifier = learner(self.titanic)
         self.assertEqual(classifier.original_domain, self.titanic.domain)
@@ -130,15 +128,12 @@ class TestRuleInduction(unittest.TestCase):
                         LaplaceAccuracyEvaluator)
 
         # test that the learning requirements are relaxed by default
-        self.assertTrue(
-            learner.rule_finder.general_validator.max_rule_length >= 5)
-        self.assertTrue(
-            learner.rule_finder.general_validator.min_covered_examples == 1)
+        self.assertTrue(learner.rule_finder.general_validator.max_rule_length >= 5)
+        self.assertTrue(learner.rule_finder.general_validator.min_covered_examples == 1)
 
         # by default, continuous variables are not
         # constrained by the learning algorithm
-        self.assertFalse(
-            learner.rule_finder.search_strategy.constrain_continuous)
+        self.assertFalse(learner.rule_finder.search_strategy.constrain_continuous)
 
         classifier = learner(self.iris)
         self.assertEqual(classifier.original_domain, self.iris.domain)

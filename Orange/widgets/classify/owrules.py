@@ -152,12 +152,12 @@ class CustomRuleLearner(_RuleLearner):
             rule_list.append(new_rule)
 
             # update progress
-            progress = (((temp_class_dist[target_class]
-                          - get_dist(Y, W, domain)[target_class])
+            progress = (((temp_class_dist[target_class] -
+                          get_dist(Y, W, domain)[target_class])
                          / initial_class_dist[target_class]
-                         * progress_amount) if target_class is not None
-                        else ((temp_class_dist - get_dist(Y, W, domain)).sum()
-                              / initial_class_dist.sum() * progress_amount))
+                         * progress_amount) if target_class is not None else
+                        ((temp_class_dist - get_dist(Y, W, domain)).sum()
+                         / initial_class_dist.sum() * progress_amount))
             self.widget.progressBarAdvance(progress)
 
         return rule_list
@@ -194,7 +194,7 @@ class CustomRuleLearner(_RuleLearner):
 class OWRuleLearner(OWBaseLearner):
     name = "Rule Induction"
     description = "Induce rules from data."
-    icon = ""
+    icon = "icons/CN2RuleInduction.svg"
     priority = 19
 
     want_main_area = False

@@ -316,14 +316,14 @@ class SearchAlgorithm:
 
         Parameters
         ----------
-        rules : Rule list
+        rules : list of Rule
             An ordered list of rules (best come first).
 
         Returns
         -------
-        candidate_rules : Rule list
+        candidate_rules : list of Rule
             Chosen rules.
-        rules : Rule list
+        rules : list of Rule
             Rules not chosen, i.e. the remainder.
         """
         raise NotImplementedError
@@ -334,12 +334,12 @@ class SearchAlgorithm:
 
         Parameters
         ----------
-        rules : Rule list
+        rules : list of Rule
             An ordered list of rules (best come first).
 
         Returns
         -------
-        rules : Rule list
+        rules : list of Rule
             Rules kept in play.
         """
         raise NotImplementedError
@@ -374,7 +374,7 @@ class SearchStrategy:
             Learning data.
         target_class : int
             Index of the class to model.
-        base_rules : Rule list
+        base_rules : list of Rule
             An optional list of initial rules to constrain the search.
         domain : Orange.data.domain.Domain
             Data domain, used to calculate class distributions.
@@ -393,7 +393,7 @@ class SearchStrategy:
 
         Returns
         -------
-        rules : Rule list
+        rules : list of Rule
             First rules developed in the process of learning a single
             rule.
         """
@@ -412,7 +412,7 @@ class SearchStrategy:
 
         Returns
         -------
-        rules : Rule list
+        rules : list of Rule
             Descendant rules of 'candidate_rule'.
         """
         raise NotImplementedError
@@ -526,7 +526,7 @@ class TopDownSearchStrategy(SearchStrategy):
                     possible_selectors.extend([s1, s2])
             # if continuous variable
             elif attribute.is_continuous:
-                # discretise if True
+                # discretise if constrain_continuous is True
                 values = (self.discretise(X[:, i], Y, W, domain)
                           if self.constrain_continuous
                           else np.unique(X[:, i]))
@@ -616,7 +616,7 @@ class Rule:
 
         Parameters
         ----------
-        selectors : Selector list
+        selectors : list of Selector
             Rule conditions.
         parent_rule : Rule
             Reference to the parent rule.
@@ -759,8 +759,8 @@ class Rule:
                 self.significance_validator, self.general_validator)
 
     def __eq__(self, other):
-        return np.array_equal(self.covered_examples, other.covered_examples)
         # return self.selectors == other.selectors
+        return np.array_equal(self.covered_examples, other.covered_examples)
 
     def __str__(self):
         attributes = self.domain.attributes
@@ -807,13 +807,13 @@ class RuleHunter:
             Learning data.
         target_class : int
             Index of the class to model.
-        base_rules : Rule list
+        base_rules : list of Rule
             An optional list of initial rules to constrain the search.
         domain : Orange.data.domain.Domain
             Data domain, used to calculate class distributions.
         initial_class_dist : ndarray
             Data class distribution in regard to the whole learning set.
-        existing_rules : Rule list
+        existing_rules : list of Rule
             Rules found in previous iterations (to avoid duplicates).
 
         Returns
@@ -897,7 +897,10 @@ class _RuleLearner(Learner):
 
         Parameters
         ----------
-        base_rules : Rule list
+        preprocessors : list of Preprocess
+            A sequence of data preprocessors to apply on data prior to
+            fitting the model.
+        base_rules : list of Rule
             An optional list of initial rules to constrain the search.
         """
         super().__init__(preprocessors=preprocessors)
@@ -931,14 +934,14 @@ class _RuleLearner(Learner):
             Learning data.
         target_class : int
             Index of the class to model.
-        base_rules : Rule list
+        base_rules : list of Rule
             An optional list of initial rules to constrain the search.
         domain : Orange.data.domain.Domain
             Data domain, used to calculate class distributions.
 
         Returns
         -------
-        rule_list : Rule list
+        rule_list : list of Rule
             Induced rules.
         """
         initial_class_dist = get_dist(Y, W, domain)
@@ -949,7 +952,7 @@ class _RuleLearner(Learner):
         # after finding a rule, remove the instances covered
         while not self.data_stopping(X, Y, W, target_class):
 
-            # generate a new rule which hasn't been seen before
+            # generate a new rule that has not been seen before
             new_rule = self.rule_finder(X, Y, W, target_class, base_rules,
                                         domain, initial_class_dist, rule_list)
 
@@ -1361,7 +1364,7 @@ class CN2SDLearner(_RuleLearner):
         Y = Y.astype(dtype=int)
         rule_list = self.find_rules(X, Y, np.copy(W) if W is not None else None,
                                     None, self.base_rules, self.domain)
-        # add the default rule, any other
+        # add the default rule, other
         # TRUE rules are insufficient
         rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
         return CN2SDClassifier(domain=self.domain, rule_list=rule_list)

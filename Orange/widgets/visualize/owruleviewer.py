@@ -14,7 +14,7 @@ from PyQt4.QtGui import (QSortFilterProxyModel, QPainter, QPen, QBrush, QColor,
 class OWRuleViewer(widget.OWWidget):
     name = "Rule Viewer"
     description = "Review rules induced from data."
-    icon = ""
+    icon = "icons/CN2RuleViewer.svg"
     priority = 18
 
     inputs = [("Data", Table, 'set_data'),
@@ -43,13 +43,14 @@ class OWRuleViewer(widget.OWWidget):
         self.presentation = None
         self.selected = None
 
-        self.model = CustomLabelPyTableModel(parent=self, editable=False)
+        self.model = CustomRuleViewerPyTableModel(parent=self, editable=False)
         self.model.setHorizontalHeaderLabels(
             ["IF conditions", "", "THEN class", "Distribution",
              "Probabilities", "Quality", "Length"])
 
         self.proxy_model = QSortFilterProxyModel(parent=self)
         self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.setSortRole(self.model.SortRole)
 
         self.view = gui.TableView(self)
         self.view.setModel(self.proxy_model)
@@ -97,6 +98,7 @@ class OWRuleViewer(widget.OWWidget):
         self.model.clear()
 
         if classifier is not None and hasattr(classifier, "rule_list"):
+            self.model.domain = self.classifier.domain
             self.model.setVerticalHeaderLabels(
                 list(range(len(classifier.rule_list))))
 
@@ -116,7 +118,7 @@ class OWRuleViewer(widget.OWWidget):
                  [float('{:.1f}'.format(x)) for x in rule.curr_class_dist]
                  if rule.curr_class_dist.dtype == float
                  else rule.curr_class_dist.tolist(),
-                 tuple(float('{:.2f}'.format(x)) for x in rule.probabilities),
+                 [float('{:.2f}'.format(x)) for x in rule.probabilities],
                  rule.quality, rule.length] for rule in classifier.rule_list]
 
         self.on_update()
@@ -147,12 +149,12 @@ class OWRuleViewer(widget.OWWidget):
 
     def _update_presentation(self):
         assert self.presentation is not None
+        to_replace = ((" AND\n", " AND ")
+                      if self.compact_view
+                      else (" AND ", " AND\n"))
+
         for single_rule_str_list in self.presentation:
             antecedent = single_rule_str_list[0]
-            to_replace = ((" AND\n", " AND ")
-                          if self.compact_view
-                          else (" AND ", " AND\n"))
-
             single_rule_str_list[0] = antecedent.replace(*to_replace)
 
     def _save_selected(self, actual=False):
@@ -211,11 +213,37 @@ class OWRuleViewer(widget.OWWidget):
             self.report_table("Induced rules", self.view)
 
 
-class CustomLabelPyTableModel(PyTableModel):
+class CustomRuleViewerPyTableModel(PyTableModel):
+    SortRole = Qt.UserRole + 1
+
     def data(self, index, role=Qt.DisplayRole):
-        value = super().data(index, role)
-        if role == Qt.ToolTipRole and index.column() == 0:
+        column = index.column()
+        # tooltip: each selector in its own line
+        if role == Qt.ToolTipRole and column == 0:
+            value = super().data(index, role)
             value = value.replace(" AND ", " AND\n")
+        # tooltip: distribution column
+        elif role == Qt.ToolTipRole and column == 3:
+            value = super().data(index, Qt.EditRole)
+            value = self.domain.class_var.name + "\n" + "\n".join(
+                (str(curr_class) + ": " + str(value[i]) for i, curr_class
+                 in enumerate(self.domain.class_var.values)))
+        # tooltip: probabilities column '{:.2f}'.format(x)
+        elif role == Qt.ToolTipRole and column == 4:
+            value = super().data(index, Qt.EditRole)
+            value = self.domain.class_var.name + "\n" + "\n".join(
+                (str(curr_class) + ": " + str(int(value[i]*100)) + "%"
+                 for i, curr_class in enumerate(self.domain.class_var.values)))
+        # display: probabilities column
+        elif role == Qt.DisplayRole and column == 4:
+            value = super().data(index, Qt.EditRole)
+            value = " : ".join(str(x) for x in value)
+        # summation to sort the distribution column (total coverage)
+        elif role == self.SortRole:
+            value = (sum(super().data(index, Qt.EditRole)) if column == 3
+                     else super().data(index, Qt.DisplayRole))
+        else:
+            value = super().data(index, role)
         return value
 
 
