@@ -9,10 +9,14 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.classification.rules import (WeightedRelativeAccuracyEvaluator,
                                          LaplaceAccuracyEvaluator,
                                          EntropyEvaluator, _RuleClassifier,
-                                         _RuleLearner)
+                                         _RuleLearner, get_dist)
 
 
 class CustomRuleClassifier(_RuleClassifier):
+    """
+    Custom rule induction classifier. Instances are classifier following
+    either an unordered set of rules or a decision list.
+    """
     def __init__(self, domain, rule_list, params):
         super().__init__(domain, rule_list)
         assert params is not None
@@ -32,10 +36,20 @@ class CustomRuleClassifier(_RuleClassifier):
 
 
 class CustomRuleLearner(_RuleLearner):
+    """
+    Custom CN2 inducer that construct either a list of ordered rules or
+    a set of unordered rules. Returns a CustomRuleClassifier if called
+    with data.
+
+    See Also
+    --------
+    For more information about function calls and the algorithm, refer
+    to the base rule induction learner.
+    """
     name = 'Custom rule inducer'
     __returns__ = CustomRuleClassifier
 
-    def __init__(self, preprocessors, base_rules, params):
+    def __init__(self, preprocessors, base_rules, params, widget):
         super().__init__(preprocessors, base_rules)
         assert params is not None
 
@@ -79,27 +93,100 @@ class CustomRuleLearner(_RuleLearner):
         self.rule_finder.significance_validator.parent_alpha = parent_alpha
 
         self.params = params
+        self.widget = widget
+
+    def find_rules_and_measure_progress(self, X, Y, W, target_class,
+                                        base_rules, domain, progress_amount):
+        """
+        The top-level control procedure of the separate-and-conquer
+        algorithm. For given data and target class (may be None), return
+        a list of rules which all must strictly adhere to the
+        requirements of rule finder's validators.
+
+        To induce decision lists (ordered rules), set target class to
+        None. To induce rule sets (unordered rules), learn rules for
+        each class individually, in regard to the original learning
+        data.
+
+        Parameters
+        ----------
+        X, Y, W : ndarray
+            Learning data.
+        target_class : int
+            Index of the class to model.
+        base_rules : list of Rule
+            An optional list of initial rules to constrain the search.
+        domain : Orange.data.domain.Domain
+            Data domain, used to calculate class distributions.
+        progress_amount: int, percentage
+            Amount of the learning algorithm covered by this function
+            call.
+
+        Returns
+        -------
+        rule_list : list of Rule
+            Induced rules.
+        """
+        initial_class_dist = get_dist(Y, W, domain)
+        rule_list = []
+
+        # while data allows, continuously find new rules,
+        # break the loop if min. requirements cannot be met,
+        # after finding a rule, remove the instances covered
+        while not self.data_stopping(X, Y, W, target_class):
+
+            # remember the distribution to correctly update progress
+            temp_class_dist = get_dist(Y, W, domain)
+
+            # generate a new rule that has not been seen before
+            new_rule = self.rule_finder(X, Y, W, target_class, base_rules,
+                                        domain, initial_class_dist, rule_list)
+
+            # None when no new, unique rules that pass
+            # the general requirements can be found
+            if new_rule is None or self.rule_stopping(new_rule):
+                break
+
+            # exclusive or weighted
+            X, Y, W = self.cover_and_remove(X, Y, W, new_rule)
+            rule_list.append(new_rule)
+
+            # update progress
+            progress = (((temp_class_dist[target_class]
+                          - get_dist(Y, W, domain)[target_class])
+                         / initial_class_dist[target_class]
+                         * progress_amount) if target_class is not None
+                        else ((temp_class_dist - get_dist(Y, W, domain)).sum()
+                              / initial_class_dist.sum() * progress_amount))
+            self.widget.progressBarAdvance(progress)
+
+        return rule_list
 
     def fit(self, X, Y, W=None):
+        # init & show progress bar
+        self.widget.progressBarInit()
+
+        rule_list = []
         Y = Y.astype(dtype=int)
         if self.rule_ordering == "ordered":
-            rule_list = self.find_rules(
-                X, Y, np.copy(W) if W is not None else None,
-                None, self.base_rules, self.domain)
+            rule_list = self.find_rules_and_measure_progress(
+                X, Y, np.copy(W) if W is not None else None, None,
+                self.base_rules, self.domain, progress_amount=100)
             # add the default rule, if required
             if (not rule_list or rule_list and rule_list[-1].length > 0 or
                     self.covering_algorithm == "weighted"):
-                default_rule = self.generate_default_rule(X, Y, W, self.domain)
-                rule_list.append(default_rule)
+                rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
 
         elif self.rule_ordering == "unordered":
-            rule_list = []
             for curr_class in range(len(self.domain.class_var.values)):
-                rule_list.extend(self.find_rules(X, Y, W, curr_class,
-                                                 self.base_rules, self.domain))
+                rule_list.extend(self.find_rules_and_measure_progress(
+                    X, Y, W, curr_class, self.base_rules, self.domain,
+                    progress_amount=100/len(self.domain.class_var.values)))
             # add the default rule
             rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
 
+        # hide progress bar
+        self.widget.progressBarFinished()
         return CustomRuleClassifier(domain=self.domain, rule_list=rule_list,
                                     params=self.params)
 
@@ -218,7 +305,8 @@ class OWRuleLearner(OWBaseLearner):
         return self.LEARNER(
             preprocessors=self.preprocessors,
             base_rules=self.base_rules,
-            params=self.get_learner_parameters()
+            params=self.get_learner_parameters(),
+            widget=self
         )
 
     def get_learner_parameters(self):
