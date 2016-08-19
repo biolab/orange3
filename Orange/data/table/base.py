@@ -7,6 +7,7 @@ from itertools import chain
 import numpy as np
 import scipy.sparse as sp
 import pandas as pd
+import bottleneck as bn
 
 from Orange.data import Domain, DiscreteVariable, Variable, TimeVariable, filter_visible
 from Orange.util import flatten, deprecated
@@ -723,40 +724,28 @@ class TableBase:
             If an unrecognized type is passed.
         """
         if isinstance(weight, Number):
-            if np.isnan(weight):
-                raise ValueError("Weights cannot be nan. ")
-            new_weights = weight
+            weights = weight
         elif isinstance(weight, str):
             if weight not in self.columns:
-                raise ValueError("{} is not a column.".format(repr(weight)))
-            if self[weight].isnull().any() and np.issubdtype(self[weight].dtype, Number):
-                raise ValueError("All values in the target column must be valid numbers.")
-            new_weights = self[weight].fillna(value=self[weight].median())
-        elif isinstance(weight, Sequence):
-            if len(weight) != len(self):
-                raise ValueError("The sequence has length {}, expected length {}.".format(len(weight), len(self)))
-            new_weights = weight
-        elif isinstance(weight, np.ndarray):  # np.ndarray is not a Sequence
-            # allow row or column vectors
-            if weight.ndim > 1 and not (weight.ndim == 2 and weight.shape[1] == 1):
-                raise ValueError("Dimension mismatch.")
-            new_weights = np.ravel(weight)
-            if len(weight) != len(self):
-                raise ValueError("There are {} weights, expected {}.".format(len(weight), len(self)))
-        elif isinstance(weight, pd.Series):  # not only SeriesBase
-            # drop everything but the values to uncomplicate things
-            if weight.isnull().any():
-                raise ValueError("Weights cannot be nan. ")
-            new_weights = weight.values
+                raise ValueError("{!r} is not a column.".format(weight))
+            weights = self[weight].values
+        elif isinstance(weight, (np.ndarray, Sequence)):
+            weights = np.asanyarray(weight)
+        elif isinstance(weight, pd.Series):
+            weights = weight.values
         elif isinstance(weight, pd.Categorical):
-            new_weights = list(weight)
+            weights = np.asanyarray(weight)
         else:
             raise TypeError("Expected one of [Number, str, Sequence, SeriesBase].")
 
-        # final check that we're actually adding numbers as weights
-        if not (isinstance(new_weights, Number) or all(isinstance(w, Number) for w in new_weights)):
-            raise ValueError("All weight values must be numbers.")
-        self[self._WEIGHTS_COLUMN] = new_weights
+        if not isinstance(weights, Number):
+            weights = np.ravel(weights)
+            if len(weights) != len(self):
+                raise ValueError("The sequence has length {}, expected length {}.".format(len(weights), len(self)))
+
+        if bn.anynan(weights):
+            raise ValueError("Weights cannot be nan.")
+        self[self._WEIGHTS_COLUMN] = weights
 
     @property
     def has_weights(self):
