@@ -3,6 +3,13 @@ from Orange.data import Table
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 
+# noinspection PyBroadException
+try:
+    from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
+except:
+    # legacy only
+    pass
+
 
 # noinspection PyStatementEffect
 class BenchBasic(Benchmark):
@@ -33,8 +40,16 @@ class BenchBasic(Benchmark):
 
     @pandas_only
     @benchmark(number=20)
-    def bench_adult_filter(self):
+    def bench_adult_filter_pandas(self):
         self.adult[(self.adult.age > 30) & (self.adult.workclass == 'Private')]
+
+    @non_pandas_only
+    @benchmark(number=20)
+    def bench_adult_filter_pre_pandas(self):
+        age_filter = FilterContinuous(self.adult.domain["age"], FilterContinuous.Greater, 30)
+        workclass_filter = FilterDiscrete(self.adult.domain["workclass"], [0])
+        combined = Values([age_filter, workclass_filter])
+        combined(self.adult)
 
     @benchmark(number=50)
     def bench_iris_basic_stats(self):
