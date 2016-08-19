@@ -80,12 +80,11 @@ class OWRuleViewer(widget.OWWidget):
         original_order_button.clicked.connect(self.restore_original_order)
 
         gui.separator(bottom_box, width=5, height=0)
-        self.report_button.setFixedWidth(180)
-        bottom_box.layout().addWidget(self.report_button)
-
-        gui.separator(bottom_box, width=5, height=0)
         gui.checkBox(widget=bottom_box, master=self, value="compact_view",
                      label="Compact view", callback=self.on_update)
+
+        self.report_button.setFixedWidth(180)
+        bottom_box.layout().addWidget(self.report_button)
 
     def set_data(self, data):
         self.data = data
@@ -95,6 +94,7 @@ class OWRuleViewer(widget.OWWidget):
         self.classifier = classifier
         self.presentation = None
         self.selected = None
+        self.model.domain = None
         self.model.clear()
 
         if classifier is not None and hasattr(classifier, "rule_list"):
@@ -118,7 +118,7 @@ class OWRuleViewer(widget.OWWidget):
                  [float('{:.1f}'.format(x)) for x in rule.curr_class_dist]
                  if rule.curr_class_dist.dtype == float
                  else rule.curr_class_dist.tolist(),
-                 [float('{:.2f}'.format(x)) for x in rule.probabilities],
+                 [float('{:.3f}'.format(x)) for x in rule.probabilities],
                  rule.quality, rule.length] for rule in classifier.rule_list]
 
         self.on_update()
@@ -218,7 +218,7 @@ class CustomRuleViewerPyTableModel(PyTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         column = index.column()
-        # tooltip: each selector in its own line
+        # tooltip: conditions column, each selector in its own line
         if role == Qt.ToolTipRole and column == 0:
             value = super().data(index, role)
             value = value.replace(" AND ", " AND\n")
@@ -228,16 +228,16 @@ class CustomRuleViewerPyTableModel(PyTableModel):
             value = self.domain.class_var.name + "\n" + "\n".join(
                 (str(curr_class) + ": " + str(value[i]) for i, curr_class
                  in enumerate(self.domain.class_var.values)))
-        # tooltip: probabilities column '{:.2f}'.format(x)
+        # tooltip: probabilities column
         elif role == Qt.ToolTipRole and column == 4:
             value = super().data(index, Qt.EditRole)
             value = self.domain.class_var.name + "\n" + "\n".join(
-                (str(curr_class) + ": " + str(int(value[i]*100)) + "%"
+                (str(curr_class) + ": " + '{:.1f}'.format(value[i]*100) + "%"
                  for i, curr_class in enumerate(self.domain.class_var.values)))
         # display: probabilities column
         elif role == Qt.DisplayRole and column == 4:
             value = super().data(index, Qt.EditRole)
-            value = " : ".join(str(x) for x in value)
+            value = " : ".join('{:.2f}'.format(x) for x in value)
         # summation to sort the distribution column (total coverage)
         elif role == self.SortRole:
             value = (sum(super().data(index, Qt.EditRole)) if column == 3
