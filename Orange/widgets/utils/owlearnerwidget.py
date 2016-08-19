@@ -206,7 +206,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         if model_parameters:
             self.report_items("Model parameters", model_parameters)
 
-        if self.data:
+        if self.data is not None:
             self.report_data("Data", self.data)
 
     # GUI

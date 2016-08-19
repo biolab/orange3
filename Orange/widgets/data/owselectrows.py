@@ -315,7 +315,7 @@ class OWSelectRows(widget.OWWidget):
                 self.cond_list.setCellWidget(oper_combo.row, 2, button)
             else:
                 combo = QtGui.QComboBox()
-                combo.addItems([""] + var.values)
+                combo.addItems([""] + [str(v) for v in var.values])
                 if lc[0]:
                     combo.setCurrentIndex(int(var.to_val(lc[0])))
                 else:
@@ -455,7 +455,7 @@ class OWSelectRows(widget.OWWidget):
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
     def send_report(self):
-        if not self.data:
+        if self.data is None:
             self.report_paragraph("No data.")
             return
 

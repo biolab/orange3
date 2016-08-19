@@ -286,7 +286,7 @@ class OWSieveDiagram(OWWidget):
         """Update the graph."""
 
         def text(txt, *args, **kwargs):
-            return CanvasText(self.canvas, "", html_text=to_html(txt),
+            return CanvasText(self.canvas, "", html_text=to_html(str(txt)),
                               *args, **kwargs)
 
         def width(txt):
@@ -359,7 +359,7 @@ class OWSieveDiagram(OWWidget):
                 "<b>{attrX}{xeq}{xval_name}</b>: {obs_x}/{n} ({p_x:.0f} %)".
                 format(attrX=to_html(attr_x),
                        xeq=_oper(attr_x, xval_name),
-                       xval_name=to_html(xval_name),
+                       xval_name=to_html(str(xval_name)),
                        obs_x=fmt(chi.probs_x[x] * n),
                        n=int(n),
                        p_x=100 * chi.probs_x[x]) +
@@ -367,7 +367,7 @@ class OWSieveDiagram(OWWidget):
                 "<b>{attrY}{yeq}{yval_name}</b>: {obs_y}/{n} ({p_y:.0f} %)".
                 format(attrY=to_html(attr_y),
                        yeq=_oper(attr_y, yval_name),
-                       yval_name=to_html(yval_name),
+                       yval_name=to_html(str(yval_name)),
                        obs_y=fmt(chi.probs_y[y] * n),
                        n=int(n),
                        p_y=100 * chi.probs_y[y]) +
@@ -393,7 +393,7 @@ class OWSieveDiagram(OWWidget):
 
         chi = ChiSqStats(self.discrete_data, attr_x, attr_y)
         n = chi.n
-        max_ylabel_w = max((width(val) for val in disc_y.values), default=0)
+        max_ylabel_w = max((width(str(val)) for val in disc_y.values), default=0)
         max_ylabel_w = min(max_ylabel_w, 200)
         x_off = width(attr_x) + max_ylabel_w
         y_off = 15

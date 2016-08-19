@@ -465,7 +465,7 @@ class OWDistributions(widget.OWWidget):
             scvar = cont.sum(axis=1)
             #a cvar with sum=0 with allways have distribution counts 0,
             #therefore we can divide it by anything
-            scvar[scvar==0] = 1
+            scvar[scvar == 0] = 1
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 maxh = max(maxh, max(dist))
                 maxrh = max(maxrh, max(dist/scvar))
@@ -484,9 +484,9 @@ class OWDistributions(widget.OWWidget):
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
                 tooltip = "\n".join("%s: %.*f" % (n, 3 if self.relative_freq else 1,  v)
-                    for n,v in zip(cvar_values, dist/scvar if self.relative_freq else dist ))
+                    for n,v in zip(cvar_values, dist/scvar if self.relative_freq else dist))
                 item.tooltip = ("Normalized frequency " if self.relative_freq else "Frequency ") \
-                    + "(" + cvar.name + "=" + value + "):" \
+                    + "(" + cvar.name + "=" + str(value) + "):" \
                     + "\n" + tooltip
                 self.tooltip_items.append((self.plot, item))
 

@@ -1,18 +1,14 @@
 import os
-import zlib
 from collections import Sequence
 from threading import Lock
 from numbers import Number
-from io import StringIO
 
 from itertools import chain
 import numpy as np
 import scipy.sparse as sp
 import pandas as pd
-import pandas.core.internals
 
-from Orange.data import Domain, StringVariable, ContinuousVariable, \
-    DiscreteVariable, Variable, TimeVariable, filter_visible
+from Orange.data import Domain, DiscreteVariable, Variable, TimeVariable, filter_visible
 from Orange.util import flatten, deprecated
 
 
@@ -538,15 +534,9 @@ class TableBase:
             raise ValueError("Mismatching number of instances and weights.")
         # check dimensions, pandas raises a very nondescript error
         row_width = len(rows[0])
-        for r in rows:
-            if len(r) != row_width:
-                raise ValueError("Inconsistent number of columns.")
-
-        # check row lengths
         domain_columns = len(domain.variables) + len(domain.metas)
-        for r in rows:
-            if len(r) != domain_columns:
-                raise ValueError("Data and domain column count mismatch. ")
+        if row_width != domain_columns or any(len(r) != domain_columns for r in rows):
+            raise ValueError("Inconsistent number of columns.")
 
         result = cls(data=rows,
                      columns=[a.name for a in chain(domain.attributes, domain.class_vars, domain.metas)])
@@ -1054,7 +1044,7 @@ class TableBase:
         result.domain = tmpdomain  # we don't want to transfer the domain, specifically
         return cls.from_dataframe(new_domain, result)
 
-    def merge(self, right, *args, **kwargs):
+    def merge(self, right, *args, suffixes=('_left', '_right'), **kwargs):
         """Merge two Tables. pd.DataFrame.merge wrapper.
 
         Handles internal columns and domain merging. Renames duplicates appropriately.
@@ -1063,8 +1053,12 @@ class TableBase:
         ----------
         right : TableBase
             The other Table to merge.
-        args
-        kwargs
+        args : tuple
+            Other pandas.DataFrame.merge arguments.
+        suffixes : tuple
+            Overrides the pandas.DataFrame.merge duplicate column suffixes with _left and _right.
+        kwargs : dict
+            Other pandas.DataFrame.merge keyword arguments.
 
         Returns
         -------
@@ -1075,11 +1069,8 @@ class TableBase:
         --------
         pd.DataFrame.merge
         """
-        # rename default suffixes
-        suffix_left, suffix_right = kwargs.get('suffixes', ('_left', '_right'))
-        kwargs['suffixes'] = (suffix_left, suffix_right)
         # let pandas do its thing
-        result = super().merge(right, *args, **kwargs)
+        result = super().merge(right, *args, suffixes=suffixes, **kwargs)
 
         # transfer attrs from self
         result.__finalize__(self)
@@ -1095,7 +1086,7 @@ class TableBase:
         # process a list of variables, appending suffix if not found in the
         # resulting columns (that means it was a dup)
         def suffix_dups(varlist, suffix):
-            return [v if v in result.columns else v.copy(new_name=v.name + suffix) for v in varlist]
+            return (v if v in result.columns else v.copy(new_name=v.name + suffix) for v in varlist)
 
         # dedup because the target join valriable doesn't get renamed and there is
         # only one column, wehile without this, the domain would have two
@@ -1105,12 +1096,12 @@ class TableBase:
 
         # merge domain
         new_domain = Domain(
-            dedup_inorder(suffix_dups(self.domain.attributes, suffix_left) +
-                          suffix_dups(right.domain.attributes, suffix_right)),
-            dedup_inorder(suffix_dups(self.domain.class_vars, suffix_left) +
-                          suffix_dups(right.domain.class_vars, suffix_right)),
-            dedup_inorder(suffix_dups(self.domain.metas, suffix_left) +
-                          suffix_dups(right.domain.metas, suffix_right))
+            dedup_inorder(chain(suffix_dups(self.domain.attributes, suffixes[0]),
+                                suffix_dups(right.domain.attributes, suffixes[1]))),
+            dedup_inorder(chain(suffix_dups(self.domain.class_vars, suffixes[0]),
+                                suffix_dups(right.domain.class_vars, suffixes[1]))),
+            dedup_inorder(chain(suffix_dups(self.domain.metas, suffixes[0]),
+                                suffix_dups(right.domain.metas, suffixes[1])))
         )
         result.domain = new_domain
 
@@ -1150,7 +1141,7 @@ class TableBase:
 
     def __hash__(self):
         # TODO: inconsistent when dtype=object
-        return hash(bytes(self.values))
+        return hash(bytes(self._to_numpy(X=True, Y=True)))
 
     @deprecated('pandas-style column access: t[["colname1", "colname2"]]')
     def get_column_view(self, index):

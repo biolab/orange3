@@ -719,7 +719,7 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
             rect.setToolTip(tooltip)
-            text = QtGui.QGraphicsTextItem(attr.values[i])
+            text = QtGui.QGraphicsTextItem(str(attr.values[i]))
             box.addToGroup(text)
             cum += v
         return box

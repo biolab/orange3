@@ -157,7 +157,7 @@ class OWPurgeDomain(widget.OWWidget):
             ("Features", list_opts(self.feature_options)),
             ("Classes", list_opts(self.class_options)),
             ("Metas", list_opts(self.meta_options))))
-        if self.data:
+        if self.data is not None:
             self.report_items("Statistics", (
                 (label, getattr(self, value))
                 for label, value in self.stat_labels

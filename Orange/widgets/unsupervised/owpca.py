@@ -371,8 +371,7 @@ class OWPCA(widget.OWWidget):
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T
-            components = Table(dom, self._pca.components_[:self.ncomponents],
-                               metas=metas)
+            components = Table(dom, self._pca.components_[:self.ncomponents], None, metas)
             components.name = 'components'
 
         self._pca_projector.component = self.ncomponents

@@ -502,7 +502,7 @@ class OWRank(OWWidget):
         )
 
     def send_report(self):
-        if not self.data:
+        if self.data is None:
             return
         self.report_domain("Input", self.data.domain)
         self.report_table("Ranks", self.ranksView, num_format="{:.3f}")
@@ -542,7 +542,7 @@ class OWRank(OWWidget):
         # Reshape to 2d array as Table does not like 1d arrays
         feature_names = feature_names[:, None]
 
-        table = Orange.data.Table(domain, scores, metas=feature_names)
+        table = Orange.data.Table(domain, scores, None, feature_names)
         table.name = "Feature Scores"
         return table
 

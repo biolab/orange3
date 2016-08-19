@@ -504,6 +504,7 @@ class FileFormat(metaclass=FileFormatMeta):
             # there is no header, just read the file
             # and pass it to the proper constructor to infer columns
             result = Table.from_dataframe(None, self.read_contents(skiprows=0))
+        result.consolidate(inplace=True)
 
         # TODO: Name can be set unconditionally when/if
         # self.filename will always be a string with the file name.

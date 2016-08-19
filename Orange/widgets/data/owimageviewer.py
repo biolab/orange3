@@ -987,7 +987,7 @@ class OWImageViewer(widget.OWWidget):
 
     def setupScene(self):
         self.error()
-        if self.data:
+        if self.data is not None:
             attr = self.stringAttrs[self.imageAttr]
             titleAttr = self.allAttrs[self.titleAttr]
             instances = [inst for inst in self.data
@@ -1090,7 +1090,7 @@ class OWImageViewer(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        if self.data:
+        if self.data is not None:
             if self.selectedIndices:
                 selected = self.data[self.selectedIndices]
             else:
