@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
+from pandas.tseries.tools import _guess_datetime_format
 
 from Orange.util import Registry, color_to_hex, hex_to_color
 
@@ -639,8 +640,10 @@ class TimeVariable(ContinuousVariable):
         super().__init__(*args, **kwargs)
         # None if no timezone, pytz object if any timezone
         self.timezone = None
-        # True if the time component exists (and will be displayed), parsing in column_to_datetime
+        # True if the time/date component exists (and will be displayed), parsing in column_to_datetime
         self.has_time_component = True
+        self.has_month_component = True
+        self.has_day_component = True
 
     @staticmethod
     def column_looks_like_time(column):
@@ -736,6 +739,8 @@ class TimeVariable(ContinuousVariable):
         # (we might not even have strings as inputs) and offloads any parsing to pandas
         # addition works because everything is non-negative
         self.has_time_component = (result.hour + result.minute + result.second + result.microsecond).sum() != 0
+        self.has_month_component = result.month.sum() != len(result)  # all 1
+        self.has_day_component = result.day.sum() != len(result)  # all 1
         return result
 
     def repr_val(self, val):
@@ -743,7 +748,14 @@ class TimeVariable(ContinuousVariable):
             return "?"
         else:
             tzval = val.tz_convert(self.timezone)
-            return str(tzval) if self.has_time_component else tzval.strftime("%Y-%m-%d")
+            if self.has_time_component:
+                return str(tzval)
+            elif self.has_day_component:
+                return tzval.strftime("%Y-%m-%d")
+            elif self.has_month_component:
+                return tzval.strftime("%Y-%m")
+            else:
+                return tzval.strftime("%Y")
 
     str_val = repr_val
 
