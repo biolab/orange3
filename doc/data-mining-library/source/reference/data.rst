@@ -24,26 +24,23 @@ variable's name, symbolic values, number of decimals in printouts and similar.
 
 The data is divided into attributes (features, independent variables), class
 variables (classes, targets, outcomes, dependent variables) and meta
-attributes. This division applies to domain descriptions, data storages that
-contain separate arrays for each of the three parts of the data and data
-instances.
+attributes. This division applies to domain descriptions, which logically separate
+a :obj:`Orange.data.Table` into three parts, corresponding to the roles.
 
 Attributes and classes are represented with numeric values and are used in
 modelling. Meta attributes contain additional data which may be of any type.
 (Currently, only string values are supported in addition to continuous and
 numeric.)
 
-In indexing, columns can be referred to by their names,
-descriptors or an integer index. For example, if `inst` is a data instance
-and `var` is a descriptor of type :obj:`~Orange.data.Continuous`, referring to
-the first column in the data, which is also names "petal length", then
-`inst[var]`, `inst[0]` and `inst["petal length"]` refer to the first value
-of the instance. Negative indices are used for meta attributes, starting with
--1.
+Indexing is inherited from :obj:`pandas`. This means using `.loc` and `.iloc`
+to access rows and slice the table, the same as :obj:`pandas` does. The only
+difference is that Orange uses globally unique indexing, where different instances
+of :obj:`Orange.data.Table` have different :obj:`pandas` indices, used with `.loc`.
+Columns are accessed either with domain variables or their names.
 
-Continuous and discrete values can be represented by any numerical type; by
-default, Orange uses double precision (64-bit) floats. Discrete values are
-represented by whole numbers.
+Orange stores data directly in the :obj:`Orange.data.Table` exactly like `pandas` does,
+and the `.X`, `.Y` and `.metas` descriptors convert the raw data into a float format,
+suitable for learning. Columns with :obj:`Orange.data.StringVariable` remain as strings.
 
 .. toctree::
     :maxdepth: 2
