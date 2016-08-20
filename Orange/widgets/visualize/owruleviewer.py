@@ -95,7 +95,7 @@ class OWRuleViewer(widget.OWWidget):
         self.model.set_compact_view(self.compact_view)
         if self.compact_view:
             self.view.horizontalHeader().setResizeMode(
-                0, QHeaderView.Stretch)  # QHeaderView.Interactive
+                0, QHeaderView.Interactive)  # QHeaderView.Stretch
         else:
             self.view.horizontalHeader().setResizeMode(
                 QHeaderView.ResizeToContents)
@@ -129,7 +129,7 @@ class OWRuleViewer(widget.OWWidget):
     def copy_to_clipboard(self):
         self._save_selected(actual=True)
         if self.selected is not None:
-            output = "\n".join([self.classifier.rule_list[i].__str__()
+            output = "\n".join([str(self.classifier.rule_list[i])
                                 for i in self.selected])
             QApplication.clipboard().setText(output)
 
@@ -233,8 +233,7 @@ class CustomRuleViewerTableModel(QAbstractTableModel):
             if column == 2:
                 return class_var.name + "=" + class_var.values[rule.prediction]
             if column == 3:
-                # curr_class_dist is of type ndarray
-                # DistributionItemDelegate is set for this column
+                # type(curr_class_dist) = ndarray
                 return ([float(format(x, '.1f')) for x in rule.curr_class_dist]
                         if rule.curr_class_dist.dtype == float
                         else rule.curr_class_dist.tolist())
@@ -242,15 +241,30 @@ class CustomRuleViewerTableModel(QAbstractTableModel):
                 return " : ".join(str(int(round(100 * x)))
                                   for x in rule.probabilities)
             if column == 5:
-                return float(rule.quality)
+                value = rule.quality
+                absval = abs(value)
+                strlen = len(str(int(absval)))
+                return '{:.{}{}}'.format(value,
+                                         2 if absval < .001 else
+                                         3 if strlen < 2 else
+                                         1 if strlen < 5 else
+                                         0 if strlen < 6 else
+                                         3,
+                                         'f' if (absval == 0 or
+                                                 absval >= .001 and
+                                                 strlen < 6)
+                                         else 'e')
             if column == 6:
                 return rule.length
 
         def _tooltip_role():
             if column == 0:
                 return _display_role().replace(" AND ", " AND\n")
+            if column == 1:
+                return
             if column == 3:
-                curr_class_dist = _display_role()  # list of int or float
+                # list of int, float
+                curr_class_dist = _display_role()
                 return class_var.name + "\n" + "\n".join(
                     (str(curr_class) + ": " + str(curr_class_dist[i])
                      for i, curr_class in enumerate(class_var.values)))
