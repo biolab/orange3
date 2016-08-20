@@ -192,7 +192,7 @@ class CustomRuleLearner(_RuleLearner):
 
 
 class OWRuleLearner(OWBaseLearner):
-    name = "Rule Induction"
+    name = "CN2 Rule Induction"
     description = "Induce rules from data using CN2 algorithm."
     icon = "icons/CN2RuleInduction.svg"
     priority = 19

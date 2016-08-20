@@ -762,6 +762,9 @@ class Rule:
         # return self.selectors == other.selectors
         return np.array_equal(self.covered_examples, other.covered_examples)
 
+    def __len__(self):
+        return len(self.selectors)
+
     def __str__(self):
         attributes = self.domain.attributes
         class_var = self.domain.class_var

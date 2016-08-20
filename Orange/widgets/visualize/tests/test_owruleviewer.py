@@ -40,14 +40,14 @@ class TestOWRuleViewer(WidgetTest):
 
     def test_set_classifier(self):
         # classifier must be None before assignment
+        self.assertIsNone(self.widget.data)
         self.assertIsNone(self.widget.classifier)
-        self.assertIsNone(self.widget.presentation)
         self.assertIsNone(self.widget.selected)
 
         # assign the classifier
         self.send_signal("Classifier", self.classifier)
+        self.assertIsNone(self.widget.data)
         self.assertIsNotNone(self.widget.classifier)
-        self.assertIsNotNone(self.widget.presentation)
         self.assertIsNone(self.widget.selected)
 
         # without data also set, the output should be None
@@ -100,7 +100,7 @@ class TestOWRuleViewer(WidgetTest):
         q_index = self.widget.proxy_model.index(bottom_row, 0)
         self.assertEqual(bottom_row, q_index.row())
 
-        # translate to PyTableModel QIndex
+        # translate to TableModel QIndex
         q_index = self.widget.proxy_model.mapToSource(q_index)
 
         # the row indices do NOT match
@@ -113,7 +113,7 @@ class TestOWRuleViewer(WidgetTest):
         q_index = self.widget.proxy_model.index(bottom_row, 0)
         self.assertEqual(bottom_row, q_index.row())
 
-        # translate to PyTableModel QIndex
+        # translate to TableModel QIndex
         q_index = self.widget.proxy_model.mapToSource(q_index)
 
         # the row indices now match

@@ -9,8 +9,8 @@ from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
 
 class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(
-            OWRuleLearner, stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(OWRuleLearner,
+                                         stored_settings={"auto_apply": False})
         self.init()
 
         self.radio_button_groups = self.widget.findChildren(QtGui.QButtonGroup)
