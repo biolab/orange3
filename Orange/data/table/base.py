@@ -729,12 +729,10 @@ class TableBase:
             if weight not in self.columns:
                 raise ValueError("{!r} is not a column.".format(weight))
             weights = self[weight].values
-        elif isinstance(weight, (np.ndarray, Sequence)):
+        elif isinstance(weight, (np.ndarray, Sequence, pd.Categorical)):
             weights = np.asanyarray(weight)
         elif isinstance(weight, pd.Series):
             weights = weight.values
-        elif isinstance(weight, pd.Categorical):
-            weights = np.asanyarray(weight)
         else:
             raise TypeError("Expected one of [Number, str, Sequence, SeriesBase].")
 
@@ -742,6 +740,10 @@ class TableBase:
             weights = np.ravel(weights)
             if len(weights) != len(self):
                 raise ValueError("The sequence has length {}, expected length {}.".format(len(weights), len(self)))
+            try:
+                weights = np.asanyarray(weights, dtype=float)
+            except ValueError:
+                raise ValueError("Weight values must be numbers or convertible to numbers") from None
 
         if bn.anynan(weights):
             raise ValueError("Weights cannot be nan.")
