@@ -129,8 +129,7 @@ class SparseTable(TableBase, pd.SparseDataFrame):
         if not cols:
             return sp.coo_matrix((len(self), 0), dtype=np.float64)
 
-        if any(v.is_string or v.is_discrete and
-                any(not isinstance(val, Number) for val in v.values) for v in cols):
+        if any(v.is_string for v in cols):
             # if there are any textual features, we must return a dense matrix,
             # as scipy.sparse only supports floats
             # just use the default implementation here instead of duplicating code
@@ -148,7 +147,11 @@ class SparseTable(TableBase, pd.SparseDataFrame):
                 column_index = self[col.name].sp_index
                 if isinstance(column_index, BlockIndex):
                     column_index = column_index.to_int_index()
-                result_data.append(self[col.name].sp_values)
+                # transform discretes
+                if col.is_discrete:
+                    result_data.append(col.to_val(self[col.name]).sp_values)
+                else:
+                    result_data.append(self[col.name].sp_values)
                 result_row.append(column_index.indices)
                 result_col.append(len(self[col.name].sp_values) * [i])
             return sp.coo_matrix((np.concatenate(result_data), (np.concatenate(result_row), np.concatenate(result_col))),

@@ -91,14 +91,19 @@ class TableBase:
         # all pandas kwargs to determine what construction path to take
         non_orange_kwargs = {k: v for k, v in kwargs.items() if k not in cls._ORANGE_KWARG_NAMES}
 
-        single_arg_types = (str, TableBase, pd.DataFrame, np.ndarray, sp.spmatrix, list)
-        after_domain_arg_types = (TableBase, pd.DataFrame, np.ndarray, sp.spmatrix, list)
+        raw_data_containers = (np.ndarray, sp.spmatrix, list)
+        single_arg_types = (str, TableBase, pd.DataFrame) + raw_data_containers
+        after_domain_arg_types = (TableBase, pd.DataFrame) + raw_data_containers
 
         # to preserve compatibility with pandas' constructor, we except our own behaviour here
         # this is done solely on the basis of args, because we've stripped the known kwargs
         single_argument = len(args) > 0 and isinstance(args[0], single_arg_types)
         multi_argument = ((len(args) == 1 and isinstance(args[0], Domain)) or
-                          (len(args) > 1 and (args[0] is None or isinstance(args[1], after_domain_arg_types))))
+                          # allow domain being None
+                          (len(args) > 1 and (args[0] is None or isinstance(args[1], after_domain_arg_types))) or
+                          # allow only passing Y/meta (others as None)
+                          (len(args) > 2 and isinstance(args[2], raw_data_containers)) or
+                          (len(args) > 3 and isinstance(args[3], raw_data_containers)))
         return len(non_orange_kwargs) == 0 and (single_argument or multi_argument)
 
     def __new__(cls, *args, **kwargs):
