@@ -119,14 +119,14 @@ class OWPredictions(widget.OWWidget):
             childrenCollapsible=False,
             handleWidth=2,
         )
-        self.dataview = QtGui.QTableView(
+        self.dataview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
             selectionMode=QtGui.QTableView.NoSelection,
             focusPolicy=Qt.StrongFocus
         )
-        self.predictionsview = QtGui.QTableView(
+        self.predictionsview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
@@ -756,6 +756,52 @@ class _TableModel(QtCore.QAbstractTableModel):
             return None
 
 PredictionsModel = _TableModel
+
+
+class TableView(QtGui.QTableView):
+    MaxSizeHintSamples = 1000
+
+    def sizeHintForColumn(self, column):
+        """
+        Reimplemented from `QTableView.sizeHintForColumn`
+
+        Note: This does not match the QTableView's implementation,
+        in particular size hints from editor/index widgets are not taken
+        into account.
+
+        Parameters
+        ----------
+        column : int
+        """
+        # This is probably not needed in Qt5?
+        if self.model() is None:
+            return -1
+
+        self.ensurePolished()
+        model = self.model()
+        vheader = self.verticalHeader()
+        top = vheader.visualIndexAt(0)
+        bottom = vheader.visualIndexAt(self.viewport().height())
+        if bottom < 0:
+            bottom = self.rowCount(column)
+
+        options = self.viewOptions()
+        options.widget = self
+
+        width = 0
+        sample_count = 0
+
+        for row in range(top, bottom):
+            if not vheader.isSectionHidden(vheader.logicalIndex(row)):
+                index = model.index(row, column)
+                size = self.itemDelegate(index).sizeHint(options, index)
+                width = max(size.width(), width)
+                sample_count += 1
+
+            if sample_count >= TableView.MaxSizeHintSamples:
+                break
+
+        return width + 1 if self.showGrid() else width
 
 
 class TableSortProxyModel(QtGui.QSortFilterProxyModel):
