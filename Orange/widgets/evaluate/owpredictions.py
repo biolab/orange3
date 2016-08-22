@@ -286,7 +286,13 @@ class OWPredictions(widget.OWWidget):
         predmodel.setDynamicSortFilter(True)
         self.predictionsview.setItemDelegate(PredictionsItemDelegate())
         self.predictionsview.setModel(predmodel)
-        self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
+        hheader = self.predictionsview.horizontalHeader()
+        hheader.setSortIndicatorShown(False)
+        # SortFilterProxyModel is slow due to large abstraction overhead
+        # (every comparison triggers multiple `model.index(...)`,
+        # model.rowCount(...), `model.parent`, ... calls)
+        hheader.setClickable(predmodel.rowCount() < 20000)
+
         predmodel.layoutChanged.connect(self._update_data_sort_order)
         self._update_data_sort_order()
         self.predictionsview.resizeColumnsToContents()
