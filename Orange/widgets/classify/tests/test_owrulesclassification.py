@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 from PyQt4 import QtGui
 
-from Orange.widgets.classify.owrules import OWRuleLearner, CustomRuleLearner
+from Orange.widgets.classify.owrules import OWRuleLearner
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
 

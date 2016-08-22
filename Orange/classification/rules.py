@@ -424,7 +424,7 @@ class TopDownSearchStrategy(SearchStrategy):
     instances is developed. The hypothesis space of possible rules is
     then searched repeatedly by specialising candidate rules.
     """
-    def __init__(self, constrain_continuous=False):
+    def __init__(self, constrain_continuous=True):
         self.constrain_continuous = constrain_continuous
         self.storage = None
 
@@ -526,8 +526,8 @@ class TopDownSearchStrategy(SearchStrategy):
                     possible_selectors.extend([s1, s2])
             # if continuous variable
             elif attribute.is_continuous:
-                # discretise if constrain_continuous is True
-                values = (self.discretise(X[:, i], Y, W, domain)
+                # choose best thresholds if constrain_continuous is True
+                values = (self.discretize(X[:, i], Y, W, domain)
                           if self.constrain_continuous
                           else np.unique(X[:, i]))
                 # for each unique value, generate all possible selectors
@@ -543,7 +543,7 @@ class TopDownSearchStrategy(SearchStrategy):
         return possible_selectors
 
     @staticmethod
-    def discretise(X, Y, W, domain):
+    def discretize(X, Y, W, domain):
         values, counts, _ = _contingency.contingency_floatarray(
             X, Y.astype(dtype=np.int8), len(domain.class_var.values), W)
         cut_ind = np.array(EntropyMDL._entropy_discretize_sorted(counts.T, True))
@@ -927,9 +927,11 @@ class _RuleLearner(Learner):
         requirements of rule finder's validators.
 
         To induce decision lists (ordered rules), set target class to
-        None. To induce rule sets (unordered rules), learn rules for
-        each class individually, in regard to the original learning
-        data.
+        None. Best rule conditions are found and the majority class is
+        assigned in the rule head.
+
+        To induce rule sets (unordered rules), learn rules for each
+        class individually, in regard to the original learning data.
 
         Parameters
         ----------
@@ -1211,16 +1213,31 @@ class _RuleClassifier(Model):
         return probabilities
 
 
+class _BaseCN2Learner(_RuleLearner):
+    """
+    Base CN2 Learner used to extend CN2 rule induction algorithms.
+    """
+    def __init__(self, preprocessors=None, base_rules=None, beam_width=5,
+                 constrain_continuous=True, min_covered_examples=1,
+                 max_rule_length=5, default_alpha=1.0, parent_alpha=1.0):
+        super().__init__(preprocessors, base_rules)
+        rf = self.rule_finder
+        rf.search_algorithm.beam_width = beam_width
+        rf.search_strategy.constrain_continuous = constrain_continuous
+        rf.general_validator.min_covered_examples = min_covered_examples
+        rf.general_validator.max_rule_length = max_rule_length
+        rf.significance_validator.default_alpha = default_alpha
+        rf.significance_validator.parent_alpha = parent_alpha
+
+    def fit(self, X, Y, W=None):
+        raise NotImplementedError
+
+
 class CN2Learner(_RuleLearner):
     """
     Classic CN2 inducer that constructs a list of ordered rules. To
     evaluate found hypotheses, entropy measure is used. Returns a
     CN2Classifier if called with data.
-
-    See Also
-    --------
-    For more information about function calls and the algorithm, refer
-    to the base rule induction learner.
 
     References
     ----------
@@ -1273,11 +1290,6 @@ class CN2UnorderedLearner(_RuleLearner):
     regard to the original learning data. When a rule has been found,
     only covered examples of that class are removed. This is because now
     each rule must independently stand against all negatives.
-
-    See Also
-    --------
-    For more information about function calls and the algorithm, refer
-    to the base rule induction learner.
 
     References
     ----------
@@ -1344,11 +1356,6 @@ class CN2SDLearner(_RuleLearner):
     The algorithm demonstrates how classification rule learning
     (predictive induction) can be adapted to subgroup discovery, a task
     at the intersection of predictive and descriptive induction.
-
-    See Also
-    --------
-    For more information about function calls and the algorithm, refer
-    to the base rule induction learner.
 
     References
     ----------
@@ -1419,11 +1426,6 @@ class CN2SDUnorderedLearner(_RuleLearner):
     (predictive induction) can be adapted to subgroup discovery, a task
     at the intersection of predictive and descriptive induction.
 
-    See Also
-    --------
-    For more information about function calls and the algorithm, refer
-    to the base rule induction learner.
-
     References
     ----------
     .. [1] "Subgroup Discovery with CN2-SD", Nada Lavrač et al., Journal
@@ -1481,13 +1483,12 @@ def main():
     learner = CN2Learner()
     classifier = learner(data)
     for rule in classifier.rule_list:
-        print(rule.curr_class_dist.tolist(), rule)
+        print(rule.curr_class_dist.tolist(), rule, rule.quality)
     print()
 
     data = Table('iris.tab')
     learner = CN2UnorderedLearner()
-    learner.rule_finder.search_algorithm.beam_width = 10
-    learner.rule_finder.search_strategy.constrain_continuous = True
+    learner.rule_finder.general_validator.max_rule_length = 2
     learner.rule_finder.general_validator.min_covered_examples = 10
     classifier = learner(data)
     for rule in classifier.rule_list:

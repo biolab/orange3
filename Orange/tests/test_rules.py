@@ -131,9 +131,9 @@ class TestRuleInduction(unittest.TestCase):
         self.assertTrue(learner.rule_finder.general_validator.max_rule_length >= 5)
         self.assertTrue(learner.rule_finder.general_validator.min_covered_examples == 1)
 
-        # by default, continuous variables are not
+        # by default, continuous variables are
         # constrained by the learning algorithm
-        self.assertFalse(learner.rule_finder.search_strategy.constrain_continuous)
+        self.assertTrue(learner.rule_finder.search_strategy.constrain_continuous)
 
         classifier = learner(self.iris)
         self.assertEqual(classifier.original_domain, self.iris.domain)
