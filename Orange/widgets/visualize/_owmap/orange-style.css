@@ -1,0 +1,43 @@
+.orange-marker {
+    font-size: 20pt;
+    color: red;
+    opacity: .8;
+}
+.orange-marker span {
+    font-size: 10pt;
+    overflow: visible;
+    white-space: nowrap;
+    color: black;
+    background: #ddd;
+    border-radius: 5px;
+    position: relative;
+    top: 4px;
+    z-index: inherit;
+}
+.orange-marker:before {
+    text-shadow:
+        -.5px -.5px 0 black,
+        .5px -.5px 0 black,
+        -.5px .5px 0 black,
+        .5px .5px 0 black;
+}
+.orange-marker-selected:before {
+    text-shadow:
+        -2.3px -2.3px 0 lime,
+        2.3px -2.3px 0 lime,
+        -2.3px 2.3px 0 lime,
+        2.3px 2.3px 0 lime;
+}
+
+.orange-marker-circle:before       { content: '●'; position:relative; top:2px; }
+.orange-marker-cross:before        { content: '×'; font-weight:bold; position:relative; top:2px; }
+.orange-marker-triangle:before     { content: '▲'; font-size:70%; }
+.orange-marker-plus:before         { content: '+'; font-weight:bold; position:relative; top:2px; }
+.orange-marker-diamond:before      { content: '◆'; font-size:70%; }
+.orange-marker-square:before       { content: '■'; }
+.orange-marker-downtriangle:before { content: '▼'; font-size:70%; }
+.orange-marker-star:before         { content: '★'; font-size:85%; }
+.orange-marker-bowtie:before       { content: '⧓'; font-size:60%; position:relative; left:1px; }
+.orange-marker-heart:before        { content: '♥'; position:relative; top:1px;}
+.orange-marker-shogi:before        { content: '☗'; font-size:65%; }
+.orange-marker-sweet:before        { content: '\0FD5'; font-weight:bold; font-size:60%; }
