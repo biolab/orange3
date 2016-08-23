@@ -68,8 +68,8 @@ class XlsContextHandler(ContextHandler):
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
-    description = "Read a data from an input file or network " \
-                  "and send the data table to the output."
+    description = "Read data from an input file or network " \
+                  "and send a data table to the output."
     icon = "icons/File.svg"
     priority = 10
     category = "Data"

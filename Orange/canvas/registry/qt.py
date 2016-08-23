@@ -335,15 +335,11 @@ def whats_this_helper(desc, include_more_link=False):
         help_url = "help://search?" + urlencode({"id": desc.qualified_name})
 
     description = desc.description
-    long_description = desc.long_description
 
     template = ["<h3>{0}</h3>".format(escape(title))]
 
     if description:
         template.append("<p>{0}</p>".format(escape(description)))
-
-    if long_description:
-        template.append("<p>{0}</p>".format(escape(long_description[:100])))
 
     if help_url and include_more_link:
         template.append("<a href='{0}'>more...</a>".format(escape(help_url)))
