@@ -781,6 +781,13 @@ class Rule:
         return "IF {} THEN {} ".format(cond, outcome)
 
 
+class RuleHuntress:
+    """
+    An experimental implementation of the CN2-R algorithm.
+    """
+    pass
+
+
 class RuleHunter:
     def __init__(self):
         self.search_algorithm = BeamSearchAlgorithm()
@@ -844,7 +851,7 @@ class RuleHunter:
             candidates, rules = self.search_algorithm.select_candidates(rules)
             for candidate_rule in candidates:
                 new_rules = self.search_strategy.refine_rule(
-                    X, Y, W,candidate_rule)
+                    X, Y, W, candidate_rule)
                 rules.extend(new_rules)
                 for new_rule in new_rules:
                     if (new_rule.quality > best_rule.quality and
@@ -1052,7 +1059,7 @@ class _RuleLearner(Learner):
         X, Y, W : ndarray
             Learning data subset.
         """
-        examples_to_keep = new_rule.covered_examples
+        examples_to_keep = new_rule.covered_examples.copy()
         if new_rule.target_class is not None:
             examples_to_keep &= Y == new_rule.target_class
         examples_to_keep = np.logical_not(examples_to_keep)
@@ -1084,7 +1091,7 @@ class _RuleLearner(Learner):
         X, Y, W : ndarray
             Adjusted learning data.
         """
-        examples_to_weigh = new_rule.covered_examples
+        examples_to_weigh = new_rule.covered_examples.copy()
         if new_rule.target_class is not None:
             examples_to_weigh &= Y == new_rule.target_class
         if W is None:
