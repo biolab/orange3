@@ -4,11 +4,11 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans
 
 from Orange.data import Table
-class TestOWKMeans(WidgetTest):
 
+
+class TestOWKMeans(WidgetTest):
     def setUp(self):
-        self.widget = self.create_widget(OWKMeans,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(OWKMeans, stored_settings={"auto_apply": False})
         self.iris = Table("iris")
 
     def test_optimization_report_display(self):
@@ -27,8 +27,8 @@ class TestOWKMeans(WidgetTest):
         # Connect iris to widget
         self.send_signal("Data", self.iris)
         self.widget.apply_button.button.click()
-        self.assertNotEqual(self.widget.data, None)
+        self.assertIsNotNone(self.widget.data)
         # Disconnect the data
         self.send_signal("Data", None)
         # removing data should have cleared the output
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
