@@ -707,11 +707,12 @@ class TableBase:
             result = np.atleast_1d(self[self._WEIGHTS_COLUMN])
         else:
             result = self[self._WEIGHTS_COLUMN].values
-        # even if weights are set with an integer, we need to return a float
-        return result.astype(float)
+        return result
 
     def set_weights(self, weight):
         """Set the weights for the instances in this table.
+
+        Weights are always cast to floats, even if integers are passed.
 
         Parameters
         ----------
@@ -741,7 +742,9 @@ class TableBase:
         else:
             raise TypeError("Expected one of [Number, str, Sequence, SeriesBase].")
 
-        if not isinstance(weights, Number):
+        if isinstance(weights, Number):
+            weights = float(weights)
+        else:
             weights = np.ravel(weights)
             if len(weights) != len(self):
                 raise ValueError("The sequence has length {}, expected length {}.".format(len(weights), len(self)))
@@ -876,7 +879,7 @@ class TableBase:
             new_id = self._new_id(len(self), force_list=True)
             self.index = new_id
             # super call because we'd otherwise recurse back into this
-            super().__setitem__(self._WEIGHTS_COLUMN, 1)
+            super().__setitem__(self._WEIGHTS_COLUMN, 1.0)
 
     def __str__(self):
         """Augment the pandas representation to provide a more Orange-friendly one.
