@@ -49,9 +49,11 @@ class CustomRuleLearner(_RuleLearner):
     name = 'Custom rule inducer'
     __returns__ = CustomRuleClassifier
 
-    def __init__(self, preprocessors, base_rules, params, widget):
+    def __init__(self, preprocessors, base_rules, params):
         super().__init__(preprocessors, base_rules)
+        self.progress_advance_callback = None
         assert params is not None
+        self.params = params
 
         # top-level control procedure (rule ordering)
         self.rule_ordering = params["Rule ordering"]
@@ -92,8 +94,21 @@ class CustomRuleLearner(_RuleLearner):
         self.rule_finder.significance_validator.default_alpha = default_alpha
         self.rule_finder.significance_validator.parent_alpha = parent_alpha
 
-        self.params = params
-        self.widget = widget
+    def set_progress_advance_callback(self, f):
+        """
+        Assign callback to update the corresponding widget's progress
+        bar after each generated rule. Callback is used to ensure that
+        the progress bar is always accessed correctly (additional
+        widgets may however use the generated learner).
+        """
+        self.progress_advance_callback = f
+
+    def clear_progress_advance_callback(self):
+        """
+        Make sure to clear the callback function immediately after the
+        classifier is trained.
+        """
+        self.progress_advance_callback = None
 
     def find_rules_and_measure_progress(self, X, Y, W, target_class,
                                         base_rules, domain, progress_amount):
@@ -119,7 +134,7 @@ class CustomRuleLearner(_RuleLearner):
         domain : Orange.data.domain.Domain
             Data domain, used to calculate class distributions.
         progress_amount: int, percentage
-            Amount of the learning algorithm covered by this function
+            Part of the learning algorithm covered by this function
             call.
 
         Returns
@@ -152,26 +167,24 @@ class CustomRuleLearner(_RuleLearner):
             rule_list.append(new_rule)
 
             # update progress
-            progress = (((temp_class_dist[target_class] -
-                          get_dist(Y, W, domain)[target_class])
-                         / initial_class_dist[target_class]
-                         * progress_amount) if target_class is not None else
-                        ((temp_class_dist - get_dist(Y, W, domain)).sum()
-                         / initial_class_dist.sum() * progress_amount))
-            self.widget.progressBarAdvance(progress)
+            if self.progress_advance_callback is not None:
+                progress = (((temp_class_dist[target_class] -
+                              get_dist(Y, W, domain)[target_class])
+                             / initial_class_dist[target_class]
+                             * progress_amount) if target_class is not None else
+                            ((temp_class_dist - get_dist(Y, W, domain)).sum()
+                             / initial_class_dist.sum() * progress_amount))
+                self.progress_advance_callback(progress)
 
         return rule_list
 
     def fit(self, X, Y, W=None):
-        # init & show progress bar
-        self.widget.progressBarInit()
-
         rule_list = []
         Y = Y.astype(dtype=int)
         if self.rule_ordering == "ordered":
             rule_list = self.find_rules_and_measure_progress(
                 X, Y, np.copy(W) if W is not None else None, None,
-                self.base_rules, self.domain, progress_amount=100)
+                self.base_rules, self.domain, progress_amount=1)
             # add the default rule, if required
             if (not rule_list or rule_list and rule_list[-1].length > 0 or
                     self.covering_algorithm == "weighted"):
@@ -180,13 +193,12 @@ class CustomRuleLearner(_RuleLearner):
         elif self.rule_ordering == "unordered":
             for curr_class in range(len(self.domain.class_var.values)):
                 rule_list.extend(self.find_rules_and_measure_progress(
-                    X, Y, W, curr_class, self.base_rules, self.domain,
-                    progress_amount=100/len(self.domain.class_var.values)))
+                    X, Y, np.copy(W) if W is not None else None,
+                    curr_class, self.base_rules, self.domain,
+                    progress_amount=1/len(self.domain.class_var.values)))
             # add the default rule
             rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
 
-        # hide progress bar
-        self.widget.progressBarFinished()
         return CustomRuleClassifier(domain=self.domain, rule_list=rule_list,
                                     params=self.params)
 
@@ -199,7 +211,7 @@ class OWRuleLearner(OWBaseLearner):
 
     want_main_area = False
     resizing_enabled = False
-    auto_apply = Setting(False)
+    auto_apply = Setting(True)
 
     LEARNER = CustomRuleLearner
 
@@ -301,12 +313,29 @@ class OWRuleLearner(OWBaseLearner):
             self.storage_covers[self.covering_algorithm] != "weighted")
         super().settings_changed(*args, **kwargs)
 
+    def update_model(self):
+        """
+        Ensure that the progress bar is updated only if the generated
+        learner is used within this widget (for example, it must not be
+        accessed from test&score widget).
+        """
+        if self.check_data():
+            with self.progressBar() as progress:
+                self.learner.set_progress_advance_callback(progress.advance)
+                self.model = self.learner(self.data)
+                self.learner.clear_progress_advance_callback()
+            self.model.name = self.learner_name
+            self.model.instances = self.data
+            self.valid_data = True
+        else:
+            self.model = None
+        self.send(self.OUTPUT_MODEL_NAME, self.model)
+
     def create_learner(self):
         return self.LEARNER(
             preprocessors=self.preprocessors,
             base_rules=self.base_rules,
-            params=self.get_learner_parameters(),
-            widget=self
+            params=self.get_learner_parameters()
         )
 
     def get_learner_parameters(self):
