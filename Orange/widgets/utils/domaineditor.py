@@ -48,10 +48,16 @@ class VarTableModel(QtCore.QAbstractTableModel):
                     return False
             return False
 
+        def discrete_value_display(value_list):
+            result = ", ".join(str(v) for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
+            if len(value_list) > VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT:
+                result += ", ..."
+            return result
+
         self.modelAboutToBeReset.emit()
         self.variables[:] = self.original = [
             [var.name, type(var), place,
-             ", ".join(var.values[:self.DISCRETE_VALUE_DISPLAY_LIMIT]) if var.is_discrete else "",
+             discrete_value_display(var.values) if var.is_discrete else "",
              may_be_numeric(var)]
             for place, vars in enumerate(
                 (domain.attributes, domain.class_vars, domain.metas))
