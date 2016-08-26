@@ -1037,7 +1037,7 @@ class TableModel(QAbstractTableModel):
             return instance[coldesc.var]
         elif role == _ClassValueRole:
             try:
-                return instance.get_class()
+                return instance.domain.class_var, instance[instance.domain.class_var]
             except TypeError:
                 return None
         elif role == _VariableRole and isinstance(coldesc, TableModel.Column):

@@ -2775,10 +2775,10 @@ class TableBarItem(QtGui.QItemDelegate):
 
         color = self.color
         if self.color_schema is not None and ratio is not None:
-            class_ = index.data(TableClassValueRole)
-            if class_.variable.is_discrete and \
-                    not math.isnan(class_):
-                color = self.color_schema[int(class_)]
+            class_var, class_desc = index.data(TableClassValueRole)
+            class_val = class_var.to_val(class_desc)
+            if class_var.is_discrete and not math.isnan(class_val):
+                color = self.color_schema[int(class_val)]
 
         rect = option.rect
         if ratio is not None:
