@@ -168,7 +168,7 @@ PACKAGES = find_packages()
 # hierarchy
 PACKAGE_DATA = {
     "Orange": ["datasets/*.{}".format(ext)
-               for ext in ["tab", "csv", "basket", "info"]],
+               for ext in ["tab", "csv", "basket", "info", "dst"]],
     "Orange.canvas": ["icons/*.png", "icons/*.svg"],
     "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
     "Orange.canvas.application.workflows": ["*.ows"],
