@@ -600,9 +600,9 @@ class CSVReader(FileFormat):
                 with open(self.filename, encoding='utf-8') as f:
                     delimiter = sniffer.sniff(f.read(4096)).delimiter
         except csv.Error:
-            # sometimes sniffing fails, fall back to tab
+            # sometimes sniffing fails, fall back to the default delimiter
             # (pandas won't solve this as it uses the same internally)
-            delimiter = "\t"
+            delimiter = self.DELIMITERS[0]
 
         # only allow a delimiter that is in the delimiters
         if delimiter not in self.DELIMITERS:

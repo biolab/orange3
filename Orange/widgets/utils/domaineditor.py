@@ -49,7 +49,7 @@ class VarTableModel(QtCore.QAbstractTableModel):
         self.modelAboutToBeReset.emit()
         self.variables[:] = self.original = [
             [var.name, type(var), place,
-             ", ".join(var.values) if var.is_discrete else "",
+             ", ".join(str(v) for v in var.values) if var.is_discrete else "",
              may_be_numeric(var)]
             for place, vars in enumerate(
                 (domain.attributes, domain.class_vars, domain.metas))
