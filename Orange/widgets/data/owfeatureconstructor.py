@@ -901,12 +901,12 @@ class FeatureFunc:
         self.values = values
         self.func = make_lambda(expression, [name for name, _ in args], values)
 
-    def __call__(self, instance, *_):
-        if isinstance(instance, Orange.data.Table):
-            return [self(inst) for _, inst in instance.iterrows()]
-        else:
-            args = [instance[var] for _, var in self.args]
-            return self.func(*args)
+    def __call__(self, table, *_):
+        # pandas is column oriented, this is much faster than iterrows
+        # first get the columns (free in pandas), then zip into rows
+        # to then apply the function to
+        rows = zip(*[table[var] for var_name, var in self.args])
+        return [self.func(*row) for row in rows]
 
 
 def unique(seq):
