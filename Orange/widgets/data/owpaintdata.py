@@ -763,8 +763,8 @@ class OWPaintData(OWWidget):
     priority = 15
     keywords = ["data", "paint", "create"]
 
-    outputs = [("Data", Orange.data.Table)]
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    outputs = [("Data", Orange.data.TableBase)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 
     autocommit = Setting(False)
     table_name = Setting("Painted data")
@@ -1003,8 +1003,10 @@ class OWPaintData(OWWidget):
             return
 
         X = np.array([scale(vals) for vals in data.X[:, :2].T]).T
+        yi = -1
         try:
             y = next(cls for cls in data.domain.class_vars if cls.is_discrete)
+            yi += 1
         except StopIteration:
             if data.domain.class_vars:
                 self.Warning.continuous_target()
@@ -1012,7 +1014,7 @@ class OWPaintData(OWWidget):
             y = np.zeros(len(data))
         else:
             self.input_classes = y.values
-            y = data[:, y].Y
+            y = data.Y if data.domain.class_var else data.Y[:, yi]
 
         self.input_has_attr2 = len(data.domain.attributes) >= 2
         if not self.input_has_attr2:

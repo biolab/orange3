@@ -104,8 +104,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
     def test_predict_on_instance(self):
         lr = LogisticRegressionLearner()
         m = lr(self.zoo)
-        probs = m(self.zoo[50], m.Probs)
-        probs2 = m(self.zoo[50, :], m.Probs)
+        probs = m(self.zoo.iloc[50], m.Probs)
+        probs2 = m(self.zoo.iloc[50, :], m.Probs)
         np.testing.assert_almost_equal(probs, probs2)
 
     def test_single_class(self):
@@ -113,8 +113,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         self.assertEqual(len(np.unique(t.Y)), 1)
         learn = LogisticRegressionLearner()
         model = learn(t)
-        self.assertEqual(model(t[0]), 1)
-        self.assertTrue(np.all(model(t[0], ret=Model.Probs) == [0, 1, 0]))
+        self.assertEqual(model(t.iloc[0]), 1)
+        self.assertTrue(np.all(model(t.iloc[0], ret=Model.Probs) == [0, 1, 0]))
         self.assertTrue(np.all(model(t) == 1))
 
     def test_sklearn_single_class(self):

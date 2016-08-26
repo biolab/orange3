@@ -16,7 +16,7 @@ from PyQt4.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
-from Orange.data import Domain, Table, DiscreteVariable, StringVariable
+from Orange.data import Domain, Table, DiscreteVariable, StringVariable, TableBase
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
@@ -56,12 +56,10 @@ def vstack_by_subdomain(data, sub_domains):
     domain = sub_domains[0]
     newtable = Table(domain)
 
+    table_list = []
     for sub_dom in sub_domains:
-        sub_data = data.from_table(sub_dom, data)
-        # TODO: improve O(N ** 2)
-        newtable.extend(sub_data)
-
-    return newtable
+        table_list.append(data.from_table(sub_dom, data))
+    return Table.concatenate(table_list, axis=0, reindex=False)
 
 
 def select_by_class(data, class_):
@@ -378,8 +376,8 @@ class OWHeatMap(widget.OWWidget):
     icon = "icons/Heatmap.svg"
     priority = 330
 
-    inputs = [("Data", Table, "set_dataset")]
-    outputs = [("Selected Data", Table, widget.Default)]
+    inputs = [("Data", TableBase, "set_dataset")]
+    outputs = [("Selected Data", TableBase, widget.Default)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -1042,12 +1040,16 @@ class OWHeatMap(widget.OWWidget):
                 row_ix = parts.rows[i].indices
                 col_ix = parts.columns[j].indices
                 hw = GraphicsHeatmapWidget(parent=widget)
-                X_part = data[row_ix, col_ix].X
+
+                # transform domain indices to column indices
+                tf_col_ix = [data.columns.get_loc(v) for v in data.domain[col_ix]]
+
+                X_part = data.iloc[row_ix, tf_col_ix].X
 
                 if sort_i[i] is not None:
-                    X_part = X_part[sort_i[i]]
+                    X_part = X_part.iloc[sort_i[i]]
                 if sort_j[j] is not None:
-                    X_part = X_part[:, sort_j[j]]
+                    X_part = X_part.iloc[:, sort_j[j]]
 
                 hw.set_levels(parts.levels)
                 hw.set_color_table(palette)

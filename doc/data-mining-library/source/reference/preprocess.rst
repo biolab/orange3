@@ -169,9 +169,9 @@ Continuization
            For the 15th row, the variable "status=first" has value 1 and the
            values of the other three variables are 0::
 
-               >>> print(titanic[15])
+               >>> print(titanic.iloc[15])
                [first, adult, male | yes]
-               >>> print(titanic1[15])
+               >>> print(titanic1.iloc[15])
                [0.000, 1.000, 0.000, 0.000, 1.000, 0.000, 0.000, 1.000 | yes]
 
 
@@ -235,9 +235,9 @@ Continuization
 
                 >>> continuizer.multinomial_treatment = continuizer.AsOrdinal
                 >>> titanic1 = continuizer(titanic)
-                >>> titanic[700]
+                >>> titanic.iloc[700]
                 [third, adult, male | no]
-                >>> titanic1[700]
+                >>> titanic1.iloc[700]
                 [3.000, 0.000, 1.000 | no]
 
        ``Continuize.AsNormalizedOrdinal``
@@ -246,9 +246,9 @@ Continuization
 
                 >>> continuizer.multinomial_treatment = continuizer.AsNormalizedOrdinal
                 >>> titanic1 = continuizer(titanic)
-                >>> titanic1[700]
+                >>> titanic1.iloc[700]
                 [1.000, 0.000, 1.000 | no]
-                >>> titanic1[15]
+                >>> titanic1.iloc[15]
                 [0.333, 0.000, 1.000 | yes]
 
     .. attribute:: transform_class

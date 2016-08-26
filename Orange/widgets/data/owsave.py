@@ -3,7 +3,7 @@ from operator import attrgetter
 
 from PyQt4 import QtGui
 
-from Orange.data.table import Table
+from Orange.data import Table, TableBase
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.data.io import FileFormat
@@ -17,7 +17,7 @@ class OWSave(widget.OWWidget):
     category = "Data"
     keywords = ["data", "save"]
 
-    inputs = [("Data", Table, "dataset")]
+    inputs = [("Data", TableBase, "dataset")]
 
     want_main_area = False
     resizing_enabled = False

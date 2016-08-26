@@ -5,5 +5,5 @@ classifier = Orange.classification.LogisticRegressionLearner(data)
 target_class = 1
 print("Probabilities for %s:" % data.domain.class_var.values[target_class])
 probabilities = classifier(data, 1)
-for p, d in zip(probabilities[5:8], data[5:8]):
-    print(p[target_class], d.get_class())
+for p, (idx, r) in zip(probabilities[5:8], data.iloc[5:8].iterrows()):
+    print(p[target_class], r[r.domain.class_var])

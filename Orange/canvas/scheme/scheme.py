@@ -351,8 +351,7 @@ class Scheme(QObject):
 
         if not self.compatible_channels(link):
             raise IncompatibleChannelTypeError(
-                    "Cannot connect %r to %r." \
-                    % (link.source_channel.type, link.sink_channel.type)
+                    "Cannot connect %r to %r." % (link.source_channel.type, link.sink_channel.type)
                 )
 
         links = self.find_links(source_node=link.source_node,

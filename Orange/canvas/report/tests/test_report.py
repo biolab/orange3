@@ -4,7 +4,7 @@ import warnings
 
 from PyQt4.QtGui import QFont, QBrush
 from PyQt4.QtCore import Qt
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
 from Orange.regression.tree import TreeRegressionLearner

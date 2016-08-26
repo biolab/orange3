@@ -157,7 +157,7 @@ Domain conversion
     In a typical scenario, we may want to discretize some continuous data before
     inducing a model. Discretizers (:mod:`Orange.preprocess`)
     construct a new data table with attribute descriptors
-    (:class:`Orange.data.variable`), that include the corresponding functions
+    (:class:`Orange.data.Variable`), that include the corresponding functions
     for conversion from continuous to discrete values. The trained model stores
     this domain descriptor and uses it to convert instances from the original
     domain to the discretized one at prediction phase.

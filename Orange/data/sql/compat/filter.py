@@ -3,10 +3,11 @@ import random
 import re
 from math import isnan
 
-from ..misc.enum import Enum
 import numpy as np
 import bottleneck as bn
-from Orange.data import Instance, Storage, Variable
+from Orange.data.sql.compat import Instance
+from Orange.data import Variable, Table
+from Orange.misc.enum import Enum
 
 
 class Filter:
@@ -51,7 +52,7 @@ class IsDefined(Filter):
     def __call__(self, data):
         if isinstance(data, Instance):
             return self.negate == bn.anynan(data._x)
-        if isinstance(data, Storage):
+        if isinstance(data, Table):
             try:
                 return data._filter_is_defined(self.columns, self.negate)
             except NotImplementedError:
@@ -76,50 +77,9 @@ class HasClass(Filter):
     def __call__(self, data):
         if isinstance(data, Instance):
             return self.negate == bn.anynan(data._y)
-        if isinstance(data, Storage):
-            try:
-                return data._filter_has_class(self.negate)
-            except NotImplementedError:
-                pass
-
-        r = np.fromiter((not bn.anynan(inst._y) for inst in data), bool, len(data))
-        if self.negate:
-            r = np.logical_not(r)
-        return data[r]
-
-
-class Random(Filter):
-    """
-    Return a random selection of data instances.
-
-    .. attribute:: prob
-
-        The proportion (if below 1) or the probability (if 1 or above) of
-        selected instances
-    """
-
-    def __init__(self, prob=None, negate=False):
-        super().__init__(negate)
-        self.prob = prob
-
-    def __call__(self, data):
-        if isinstance(data, Instance):
-            return self.negate != (random.random() < self.prob)
-        if isinstance(data, Storage):
-            try:
-                return data._filter_random(self.prob, self.negate)
-            except NotImplementedError:
-                pass
-
-        retain = np.zeros(len(data), dtype=bool)
-        n = int(self.prob) if self.prob >= 1 else int(self.prob * len(data))
-        if self.negate:
-            retain[n:] = True
-        else:
-            retain[:n] = True
-        np.random.shuffle(retain)
-        return data[retain]
-
+        if isinstance(data, Table):
+            return data._filter_has_class(self.negate)
+        raise NotImplementedError
 
 class SameValue(Filter):
     """
@@ -143,39 +103,9 @@ class SameValue(Filter):
     def __call__(self, data):
         if isinstance(data, Instance):
             return self.negate != (data[self.column] == self.value)
-        if isinstance(data, Storage):
-            try:
-                return data._filter_same_value(self.column, self.value, self.negate)
-            except NotImplementedError:
-                pass
-
-        column = data.domain.index(self.column)
-        if (data.domain[column].is_primitive() and
-                not isinstance(self.value, Real)):
-            value = data.domain[column].to_val(self.value)
-        else:
-            value = self.value
-
-        if column >= 0:
-            if self.negate:
-                retain = np.fromiter(
-                    (inst[column] != value for inst in data),
-                     bool, len(data))
-            else:
-                retain = np.fromiter(
-                    (inst[column] == value for inst in data),
-                     bool, len(data))
-        else:
-            column = -1 - column
-            if self.negate:
-                retain = np.fromiter(
-                    (inst._metas[column] != value for inst in data),
-                     bool, len(data))
-            else:
-                retain = np.fromiter(
-                    (inst._metas[column] == value for inst in data),
-                     bool, len(data))
-        return data[retain]
+        if isinstance(data, Table):
+            return data._filter_same_value(self.column, self.value, self.negate)
+        raise NotImplementedError
 
 
 class Values(Filter):
@@ -208,21 +138,9 @@ class Values(Filter):
         if isinstance(data, Instance):
             agg = all if self.conjunction else any
             return self.negate != agg(cond(data) for cond in self.conditions)
-        if isinstance(data, Storage):
-            try:
-                return data._filter_values(self)
-            except NotImplementedError:
-                pass
-        N = len(data)
-        if self.conjunction:
-            sel, agg = np.ones(N, bool), np.logical_and
-        else:
-            sel, agg = np.zeros(N, bool), np.logical_or
-        for cond in self.conditions:
-            sel = agg(sel, np.fromiter((cond(inst) for inst in data), bool, count=N))
-        if self.negate:
-            sel = np.logical_not(sel)
-        return data[sel]
+        if isinstance(data, Table):
+            return data._filter_values(self)
+        raise NotImplementedError
 
 
 class ValueFilter(Filter):

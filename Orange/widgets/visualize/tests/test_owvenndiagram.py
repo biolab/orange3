@@ -2,12 +2,12 @@ import unittest
 import numpy as np
 
 from Orange.data import (Table, Domain, StringVariable,
-                         DiscreteVariable, ContinuousVariable, dataset_dirs)
+                         DiscreteVariable, ContinuousVariable)
 from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
-                                                    table_concat,
                                                     varying_between,
                                                     drop_columns)
 from Orange.tests import test_filename
+
 
 class TestOWVennDiagram(unittest.TestCase):
     def add_metas(self, table, meta_attrs, meta_data):
@@ -18,24 +18,28 @@ class TestOWVennDiagram(unittest.TestCase):
         return Table(domain, table.X, table.Y, metas)
 
     def test_reshape_wide(self):
-        class_var = DiscreteVariable("c", values=["x"])
+        class_var = DiscreteVariable("c", values=list("abcdefghij"))
         item_id_var = StringVariable("item_id")
         source_var = StringVariable("source")
         c1, c, item_id, ca, cb = np.random.randint(10, size=5)
+        c = class_var.values[c]
+        ca = class_var.values[ca]
+        cb = class_var.values[cb]
         data = Table(Domain([ContinuousVariable("c1")], [class_var],
                             [DiscreteVariable("c(a)", class_var.values),
                              DiscreteVariable("c(b)", class_var.values),
                              source_var, item_id_var]),
-                     np.array([[c1], [c1]], dtype=object),
-                     np.array([[c], [c]], dtype=object),
+                     np.array([[c1], [c1]]),
+                     np.array([[c], [c]]),
                      np.array([[ca, np.nan, "a", item_id],
                                [np.nan, cb, "b", item_id]], dtype=object))
 
         data = reshape_wide(data, [], [item_id_var], [source_var])
         self.assertFalse(any(np.isnan(data.metas.astype(np.float32)[0])))
         self.assertEqual(len(data), 1)
-        np.testing.assert_equal(data.metas, np.array([[ca, cb, item_id]],
-                                                     dtype=object))
+        np.testing.assert_equal(data.metas, np.array([[class_var.values.index(ca),
+                                                       class_var.values.index(cb),
+                                                       str(item_id)]], dtype=object))
 
     def test_reshape_wide_missing_vals(self):
         data = Table(test_filename("test9.tab"))
@@ -70,7 +74,7 @@ class TestOWVennDiagram(unittest.TestCase):
             temp_table = self.add_metas(temp_table, temp_d, temp_m)
             tables.append(temp_table)
 
-        data = table_concat(tables)
+        data = Table.concatenate(tables, axis=0)
         varying = varying_between(data, [item_id_var])
         if source_var in varying:
             varying.remove(source_var)
@@ -84,10 +88,21 @@ class TestOWVennDiagram(unittest.TestCase):
                            [table.metas[4, 0], np.nan, np.nan, cv[2, 2]]],
                           dtype=object)
 
+        # modify domain so metas work in the same order
+        newd = Domain(
+            data.domain.attributes,
+            data.domain.class_vars,
+            [data.domain["name"],
+             data.domain["type(SVM Learner)"],
+             data.domain["type(Naive Bayes)"],
+             data.domain["type(Random Forest)"]]
+        )
+        data.domain = newd
+
         for i in range(len(result)):
             for j in range(len(result[0])):
-                val = result[i][j]
+                val = result[i, j]
                 if isinstance(val, float) and np.isnan(val):
-                    self.assertTrue(np.isnan(data.metas[i][j]))
+                    self.assertTrue(np.isnan(data.metas[i, j]))
                 else:
-                    np.testing.assert_equal(data.metas[i][j], result[i][j])
+                    np.testing.assert_equal(data.metas[i, j], result[i, j])

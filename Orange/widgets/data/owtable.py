@@ -9,6 +9,7 @@ from collections import OrderedDict, namedtuple
 from math import isnan
 
 import numpy
+from Orange.data import TableBase
 from scipy.sparse import issparse
 
 from PyQt4 import QtCore
@@ -20,8 +21,7 @@ from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
 import Orange.data
-from Orange.data.storage import Storage
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
@@ -360,9 +360,9 @@ class OWDataTable(widget.OWWidget):
 
     buttons_area_orientation = Qt.Vertical
 
-    inputs = [("Data", Table, "set_dataset", widget.Multiple)]
-    outputs = [("Selected Data", Table, widget.Default),
-               ("Other Data", Table)]
+    inputs = [("Data", TableBase, "set_dataset", widget.Multiple)]
+    outputs = [("Selected Data", TableBase, widget.Default),
+               ("Other Data", TableBase)]
 
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
@@ -898,7 +898,7 @@ def table_summary(table):
         len_future = concurrent.futures.Future()
 
         def _len():
-            len_future.set_result(len(table))
+            len_future.set_result(table.exact_len())
         threading.Thread(target=_len).start()  # KILL ME !!!
 
         return ApproxSummary(approx_len, len_future, table.domain,
@@ -916,24 +916,17 @@ def table_summary(table):
             dist, numpy.cumsum([len(domain.attributes),
                                 len(domain.class_vars)]))
 
-        def parts(array, density, col_dist):
-            array = numpy.atleast_2d(array)
+        def parts(array, is_dense, col_dist):
             nans = sum([dist.nans for dist in col_dist])
             non_nans = sum([dist.non_nans for dist in col_dist])
-            if density == Storage.DENSE:
+            if is_dense:
                 return DenseArray(nans, non_nans, col_dist)
-            elif density == Storage.SPARSE:
-                return SparseArray(nans, non_nans, col_dist)
-            elif density == Storage.SPARSE_BOOL:
-                return SparseBoolArray(nans, non_nans, col_dist)
-            elif density == Storage.MISSING:
-                return NotAvailable()
             else:
-                assert False
+                return SparseArray(nans, non_nans, col_dist)
 
-        X_part = parts(table.X, table.X_density(), X_dist)
-        Y_part = parts(table.Y, table.Y_density(), Y_dist)
-        M_part = parts(table.metas, table.metas_density(), M_dist)
+        X_part = parts(table.X, table.is_dense, X_dist)
+        Y_part = parts(table.Y, table.is_dense, Y_dist)
+        M_part = parts(table.metas, table.is_dense, M_dist)
         return Summary(n_instances, domain, X_part, Y_part, M_part)
 
 

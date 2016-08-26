@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 import scipy
 
-from Orange.data import Table, Storage, Instance, Value
+from Orange.data import Table, TableSeries, TableBase, SeriesBase
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -31,16 +31,12 @@ class Learner:
             "Descendants of Learner must overload method fit")
 
     def fit_storage(self, data):
-        return self.fit(data.X, data.Y, data.W)
+        return self.fit(data.X, data.Y, data.weights)
 
     def __call__(self, data):
         if not self.check_learner_adequacy(data.domain):
             raise ValueError(self.learner_adequacy_err_msg)
-
         origdomain = data.domain
-
-        if isinstance(data, Instance):
-            data = Table(data.domain, [data])
         data = self.preprocess(data)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
@@ -52,8 +48,8 @@ class Learner:
         if type(self).fit is Learner.fit:
             model = self.fit_storage(data)
         else:
-            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            model = self.fit(X, Y, W)
+            X, Y, W = data.X, data.Y, data.weights
+            model = self.fit(X, Y, W if data.has_weights else None)
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
@@ -99,10 +95,8 @@ class Model:
             return self.predict_storage(table)
 
     def predict_storage(self, data):
-        if isinstance(data, Storage):
+        if isinstance(data, (TableBase, SeriesBase)):
             return self.predict(data.X)
-        elif isinstance(data, Instance):
-            return self.predict(np.atleast_2d(data.x))
         raise TypeError("Unrecognized argument (instance of '{}')"
                         .format(type(data).__name__))
 
@@ -117,14 +111,9 @@ class Model:
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Instance):
+        elif isinstance(data, (TableBase, SeriesBase)):
             if data.domain != self.domain:
-                data = Instance(self.domain, data)
-            data = Table(data.domain, [data])
-            prediction = self.predict_storage(data)
-        elif isinstance(data, Table):
-            if data.domain != self.domain:
-                data = data.from_table(self.domain, data)
+                data = Table.from_table(self.domain, data)
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
             if not isinstance(data[0], (list, tuple)):
@@ -168,8 +157,7 @@ class Model:
         # Return what we need to
         if ret == Model.Probs:
             return probs
-        if isinstance(data, Instance) and not multitarget:
-            value = Value(self.domain.class_var, value[0])
+
         if ret == Model.Value:
             return value
         else:  # ret == Model.ValueProbs
@@ -254,7 +242,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
         Y = Y.reshape(-1)
-        if W is None or not self.supports_weights:
+        # don't use weights if they don't exist, they aren't supported, or are all identical
+        if W is None or not self.supports_weights or (W == W[0]).all() == 1:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 

@@ -26,7 +26,7 @@ class TestKNNLearner(unittest.TestCase):
     def test_predict_single_instance(self):
         lrn = KNNLearner()
         clf = lrn(self.iris)
-        for ins in self.iris[::20]:
+        for _, ins in self.iris.iloc[::20].iterrows():
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
 
@@ -41,7 +41,7 @@ class TestKNNLearner(unittest.TestCase):
                 ContinuousVariable('Feature 3'),
                 ContinuousVariable('Feature 4'),
                 ContinuousVariable('Feature 5'))
-        class_vars = (DiscreteVariable('Target 1'),)
+        class_vars = (DiscreteVariable('Target 1', values=[-2, -1, 0, 1, 2]),)
         domain = Domain(attr, class_vars)
         t = Table(domain, x1, y1)
         lrn = KNNLearner()

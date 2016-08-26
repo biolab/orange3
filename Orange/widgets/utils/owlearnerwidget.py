@@ -2,7 +2,7 @@ import numpy as np
 from PyQt4.QtCore import QTimer, Qt
 
 from Orange.classification.base_classification import LearnerClassification
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -70,7 +70,7 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
 
     @classmethod
     def default_inputs(cls, attrib):
-        return [("Data", Table, "set_data"), ("Preprocessor", Preprocess, "set_preprocessor")]
+        return [("Data", TableBase, "set_data"), ("Preprocessor", Preprocess, "set_preprocessor")]
 
     @classmethod
     def default_outputs(cls, attrib):
@@ -206,7 +206,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         if model_parameters:
             self.report_items("Model parameters", model_parameters)
 
-        if self.data:
+        if self.data is not None:
             self.report_data("Data", self.data)
 
     # GUI

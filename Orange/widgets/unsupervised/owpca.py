@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt, QTimer
 import numpy
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain, StringVariable, TableBase
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
 from Orange.projection import PCA
@@ -23,9 +23,9 @@ class OWPCA(widget.OWWidget):
     icon = "icons/PCA.svg"
     priority = 3050
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Transformed data", Table),
-               ("Components", Table),
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Transformed data", TableBase),
+               ("Components", TableBase),
                ("PCA", PCA)]
 
     ncomponents = settings.Setting(2)
@@ -371,8 +371,7 @@ class OWPCA(widget.OWWidget):
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T
-            components = Table(dom, self._pca.components_[:self.ncomponents],
-                               metas=metas)
+            components = Table(dom, self._pca.components_[:self.ncomponents], None, metas)
             components.name = 'components'
 
         self._pca_projector.component = self.ncomponents

@@ -1766,9 +1766,9 @@ class OWPreprocess(widget.OWWidget):
     icon = "icons/Preprocess.svg"
     priority = 2105
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
     outputs = [("Preprocessor", preprocess.preprocess.Preprocess),
-               ("Preprocessed Data", Orange.data.Table)]
+               ("Preprocessed Data", Orange.data.TableBase)]
 
     storedsettings = settings.Setting({})
     autocommit = settings.Setting(False)

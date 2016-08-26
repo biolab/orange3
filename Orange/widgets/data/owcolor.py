@@ -284,8 +284,8 @@ class OWColor(widget.OWWidget):
 
     name = "Color"
     icon = "icons/Colors.svg"
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     settingsHandler = settings.PerfectDomainContextHandler()
     disc_data = settings.ContextSetting([])
@@ -429,7 +429,7 @@ class OWColor(widget.OWWidget):
                     format(name, values)
             return rows
 
-        if not self.data:
+        if self.data is None:
             return
         domain = self.data.domain
         orig_domain = self.orig_domain

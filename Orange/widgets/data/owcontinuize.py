@@ -4,7 +4,7 @@ from PyQt4.QtCore import Qt
 import Orange.data
 from Orange.statistics import distribution
 from Orange.preprocess import Continuize, Normalize
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -18,8 +18,8 @@ class OWContinuize(widget.OWWidget):
     category = "Data"
     keywords = ["data", "continuize"]
 
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "setData")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
@@ -138,7 +138,7 @@ class OWContinuize(widget.OWWidget):
 
 
 from Orange.preprocess.transformation import \
-    Identity, Indicator, Indicator1, Normalizer
+    Identity, Indicator, Indicator1, Normalizer, Ordinalize
 
 from functools import reduce
 
@@ -167,34 +167,27 @@ class WeightedIndicator_1(Indicator1):
         return t
 
 
-def make_indicator_var(source, value_ind, weight=None, zero_based=True):
+def make_indicator_var(source, value, weight=None, zero_based=True):
     if zero_based and weight is None:
-        indicator = Indicator(source, value=value_ind)
+        indicator = Indicator(source, value=value)
     elif zero_based:
-        indicator = WeightedIndicator(source, value=value_ind, weight=weight)
+        indicator = WeightedIndicator(source, value=value, weight=weight)
     elif weight is None:
-        indicator = Indicator1(source, value=value_ind)
+        indicator = Indicator1(source, value=value)
     else:
-        indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
-    return Orange.data.ContinuousVariable(
-        "{}={}".format(source.name, source.values[value_ind]),
-        compute_value=indicator
-    )
+        indicator = WeightedIndicator_1(source, value=value, weight=weight)
+    return Orange.data.ContinuousVariable("{}={}".format(source.name, value), compute_value=indicator)
 
 
 def dummy_coding(var, base_value=-1, zero_based=True):
-    N = len(var.values)
     if base_value == -1:
-        base_value = var.base_value if var.base_value >= 0 else 0
+        base_value = var.values[var.base_value] if var.base_value >= 0 else var.values[0]
     assert 0 <= base_value < len(var.values)
-    return [make_indicator_var(var, i, zero_based=zero_based)
-            for i in range(N) if i != base_value]
+    return [make_indicator_var(var, v, zero_based=zero_based) for v in var.values if v != base_value]
 
 
 def one_hot_coding(var, zero_based=True):
-    N = len(var.values)
-    return [make_indicator_var(var, i, zero_based=zero_based)
-            for i in range(N)]
+    return [make_indicator_var(var, v, zero_based=zero_based) for v in var.values]
 
 
 def continuize_domain(data_or_domain,
@@ -209,7 +202,7 @@ def continuize_domain(data_or_domain,
         data, domain = data_or_domain, data_or_domain.domain
 
     def needs_dist(var, mtreat, ctreat):
-        "Does the `var` need a distribution given specified flags"
+        """Does the `var` need a distribution given specified flags"""
         if var.is_discrete:
             return mtreat == Continuize.FrequentAsBase
         elif var.is_continuous:
@@ -217,20 +210,16 @@ def continuize_domain(data_or_domain,
         else:
             raise ValueError
 
-    # Compute the column indices which need a distribution.
-    attr_needs_dist = [needs_dist(var, multinomial_treatment,
-                                  continuous_treatment)
-                       for var in domain.attributes]
-    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave)
-                      for var in domain.class_vars]
+    # Compute the columns which need a distribution.
+    attr_needs_dist = [needs_dist(var, multinomial_treatment, continuous_treatment) for var in domain.attributes]
+    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave) for var in domain.class_vars]
+    dist_columns = [v for v, nd in zip(domain.attributes, attr_needs_dist) if nd] + \
+                   [v for v, nd in zip(domain.class_vars, cls_needs_dist) if nd]
 
-    columns = [i for i, needs in enumerate(attr_needs_dist + cls_needs_dist)
-               if needs]
-
-    if columns:
+    if dist_columns:
         if data is None:
-            raise TypeError("continuizer requires data")
-        dist = distribution.get_distributions_for_columns(data, columns)
+            raise TypeError("Continuizer requires data.")
+        dist = distribution.get_distributions_for_columns(data, dist_columns)
     else:
         dist = []
 
@@ -303,20 +292,18 @@ def _ensure_dist(var, data_or_dist):
         if not var.is_continuous:
             raise TypeError
         return data_or_dist
-    elif isinstance(data_or_dist, Orange.data.Storage):
+    elif isinstance(data_or_dist, Orange.data.Table):
         return distribution.get_distribution(data_or_dist, var)
     else:
         raise ValueError("Need a distribution or data.")
 
 
 def normalized_var(var, translate, scale):
-    return Orange.data.ContinuousVariable(var.name,
-                                          compute_value=Normalizer(var, translate, scale))
+    return Orange.data.ContinuousVariable(var.name, compute_value=Normalizer(var, translate, scale))
 
 
 def ordinal_to_continuous(var):
-    return Orange.data.ContinuousVariable(var.name,
-                                          compute_value=Identity(var))
+    return Orange.data.ContinuousVariable(var.name, compute_value=Ordinalize(var))
 
 
 def ordinal_to_normalized_continuous(var, zero_based=True):
@@ -370,7 +357,7 @@ class DomainContinuizer:
             raise ValueError("Domain has multinomial attributes")
 
         newdomain = continuize_domain(
-            data or domain,
+            data if data is not None else domain,
             self.multinomial_treatment,
             self.continuous_treatment,
             self.class_treatment,

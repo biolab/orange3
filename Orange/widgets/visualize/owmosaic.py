@@ -4,12 +4,13 @@ from itertools import product, chain
 from math import sqrt, log
 from operator import mul
 
+import numpy as np
 from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
     QColor, QGraphicsScene, QPainter, QPen,
     QGraphicsLineItem)
 
-from Orange.data import Table, filter
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -30,9 +31,9 @@ class OWMosaicDisplay(OWWidget):
     icon = "icons/MosaicDisplay.svg"
     priority = 320
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Data Subset", Table, "set_subset_data")]
-    outputs = [("Selected Data", Table)]
+    inputs = [("Data", TableBase, "set_data", Default),
+              ("Data Subset", TableBase, "set_subset_data")]
+    outputs = [("Selected Data", TableBase)]
 
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)
@@ -151,7 +152,7 @@ class OWMosaicDisplay(OWWidget):
         self.closeContext()
         self.data = data
         self.init_combos(self.data)
-        if not self.data:
+        if self.data is None:
             self.discrete_data = None
             return
         if any(attr.is_continuous for attr in data.domain):
@@ -226,17 +227,12 @@ class OWMosaicDisplay(OWWidget):
         if self.discrete_data is not self.data:
             if isinstance(self.data, SqlTable):
                 self.Warning.no_cont_selection_sql()
+        selection_filter_bools = np.repeat(False, len(self.discrete_data))
         for i in self.selection:
             cols, vals, area = self.areas[i]
-            filters.append(
-                filter.Values(
-                    filter.FilterDiscrete(col, [val])
-                    for col, val in zip(cols, vals)))
-        if len(filters) > 1:
-            filters = filter.Values(filters, conjunction=False)
-        else:
-            filters = filters[0]
-        selection = filters(self.discrete_data)
+            for col, val in zip(cols, vals):
+                selection_filter_bools |= self.discrete_data[col] == val
+        selection = self.discrete_data[selection_filter_bools]
         if self.discrete_data is not self.data:
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
@@ -629,12 +625,16 @@ class OWMosaicDisplay(OWWidget):
             sql = type(data) == SqlTable
             name = not sql and data.name
             # save class_var because it is removed in the next line
-            data = data[:, attr_list + [class_var]]
+            if class_var not in attr_list:
+                temp_attr_list = attr_list + [class_var]
+            else:
+                temp_attr_list = attr_list
+            data = data.loc[:, temp_attr_list]
             data.domain.class_var = class_var
             if not sql:
                 data.name = name
         else:
-            data = data[:, attr_list]
+            data = data.loc[:, attr_list]
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
         if len(data) == 0:
@@ -726,14 +726,11 @@ def get_conditional_distribution(data, attrs):
         else:
             for indices in product(*(range(len(a.values)) for a in attr)):
                 vals = []
-                conditions = []
+                data_filter_bools = np.repeat(True, len(data))
                 for k, ind in enumerate(indices):
                     vals.append(attr[k].values[ind])
-                    fd = filter.FilterDiscrete(
-                            column=attr[k], values=[attr[k].values[ind]])
-                    conditions.append(fd)
-                filt = filter.Values(conditions)
-                filtdata = filt(data)
+                    data_filter_bools &= data[attr[k]] == attr[k].values[ind]
+                filtdata = data[data_filter_bools]
                 cond_dist['-'.join(vals)] = len(filtdata)
                 dist[vals[-1]] += len(filtdata)
     return cond_dist, dist

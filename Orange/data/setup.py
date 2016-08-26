@@ -13,20 +13,8 @@ def configuration(parent_package='', top_path=None):
         libraries.append('m')
 
     config = Configuration('data', parent_package, top_path)
-    config.add_extension('_valuecount',
-                         sources=['_valuecount.c'],
-                         include_dirs=[numpy.get_include()],
-                         libraries=libraries)
-    config.add_extension('_contingency',
-                         sources=['_contingency.c'],
-                         include_dirs=[numpy.get_include()],
-                         libraries=libraries)
     config.add_extension('_io',
                          sources=['_io.c'],
-                         include_dirs=[numpy.get_include()],
-                         libraries=libraries)
-    config.add_extension('_variable',
-                         sources=['_variable.c'],
                          include_dirs=[numpy.get_include()],
                          libraries=libraries)
     return config

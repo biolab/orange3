@@ -2,7 +2,7 @@ import numpy as np
 import sklearn.cluster as skl_cluster
 from sklearn.metrics import silhouette_score
 
-from Orange.data import Table, DiscreteVariable, Domain, Instance
+from Orange.data import Table, TableSeries, DiscreteVariable, Domain
 from Orange.projection import SklProjector, Projection
 from Orange.distance import Euclidean
 
@@ -42,21 +42,17 @@ class KMeansModel(Projection):
         self.centroids = self.proj.cluster_centers_
 
     def __call__(self, data):
+        # convert to a table so everything works the same
+        if isinstance(data, TableSeries):
+            new_table = Table(data.domain)
+            new_table = Table.concatenate([new_table, data], axis=0, reindex=False)
+            data = new_table
+
         if isinstance(data, Table):
             if data.domain is not self.pre_domain:
                 data = Table(self.pre_domain, data)
             c = DiscreteVariable(name='Cluster id', values=range(self.k))
             domain = Domain([c])
-            return Table(
-                domain,
-                self.proj.predict(data.X).astype(int).reshape((len(data), 1)))
-        elif isinstance(data, Instance):
-            if data.domain is not self.pre_domain:
-                data = Instance(self.pre_domain, data)
-            c = DiscreteVariable(name='Cluster id', values=range(self.k))
-            domain = Domain([c])
-            return Table(
-                domain,
-                np.atleast_2d(self.proj.predict(data._x)).astype(int))
+            return Table(domain, self.proj.predict(data.X).astype(int).reshape((len(data), 1)))
         else:
             return self.proj.predict(data).reshape((len(data), 1))

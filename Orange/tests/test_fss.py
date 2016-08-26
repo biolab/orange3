@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, Domain
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
     Chi2
 from Orange.preprocess import SelectBestFeatures, Impute, RemoveNaNColumns, SelectRandomFeatures
@@ -42,17 +42,16 @@ class TestFSS(unittest.TestCase):
             s(self.wine)
 
     def test_discrete_scores_on_continuous_features(self):
-        c = self.iris.columns
+        t = self.iris
         for method in (Gini, Chi2):
             d1 = SelectBestFeatures(method=method)(self.iris)
-            expected = \
-                (c.petal_length, c.petal_width, c.sepal_length, c.sepal_width)
+            expected = ('petal length', 'petal width', 'sepal length', 'sepal width')
             self.assertSequenceEqual(d1.domain.attributes, expected)
 
             scores = method(d1)
             self.assertEqual(len(scores), 4)
 
-            score = method(d1, c.petal_length)
+            score = method(d1, 'petal length')
             self.assertIsInstance(score, float)
 
     def test_continuous_scores_on_discrete_features(self):
@@ -76,24 +75,28 @@ class TestFSS(unittest.TestCase):
 class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering(self):
         data = Table("iris")
-        data.X[:, (1, 3)] = np.NaN
+        data.iloc[:, [1, 3]] = np.NaN
 
         new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes) - 2)
 
         data = Table("iris")
-        data.X[0, 0] = np.NaN
+        data.loc[data.index[0], data.domain.attributes[0]] = np.NaN
         new_data = RemoveNaNColumns(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
 
     def test_column_filtering_sparse(self):
         data = Table("iris")
-        data.X = csr_matrix(data.X)
+        data_sparse = Table(
+            Domain(data.domain.attributes),
+            csr_matrix(data.X)
+        )
 
-        new_data = RemoveNaNColumns(data)
-        self.assertEqual(data, new_data)
+        new_data = RemoveNaNColumns(data_sparse)
+        self.assertEqual(data_sparse.domain, new_data.domain)
+        np.testing.assert_array_equal(data_sparse.values, new_data.values)
 
 
 class TestSelectRandomFeatures(unittest.TestCase):

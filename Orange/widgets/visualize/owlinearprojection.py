@@ -21,7 +21,7 @@ from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import pyqtgraph.graphicsItems.ScatterPlotItem
 import pyqtgraph as pg
 
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, TableBase
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
@@ -220,11 +220,11 @@ class OWLinearProjection(widget.OWWidget):
     icon = "icons/LinearProjection.svg"
     priority = 420
 
-    inputs = [("Data", Table, "set_data", widget.Default),
-              ("Data Subset", Table, "set_subset_data")]
+    inputs = [("Data", TableBase, "set_data", widget.Default),
+              ("Data Subset", TableBase, "set_subset_data")]
 #              #TODO: Allow for axes to be supplied from an external source.
 #               ("Projection", numpy.ndarray, "set_axes"),]
-    outputs = [("Selected Data", Table)]
+    outputs = [("Selected Data", TableBase)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -815,8 +815,9 @@ class OWLinearProjection(widget.OWWidget):
                     color_data, None, *color_var.colors)
             else:
                 color_data = plotutils.discrete_colors(
-                    color_data, len(color_var.values),
-                    color_index=color_var.colors
+                    color_var.to_val(self.data[color_var]).values, len(color_var.values),
+                    color_index=color_var.colors,
+                    variable=color_var
                 )
             if mask is not None:
                 color_data = color_data[mask]
@@ -1594,7 +1595,7 @@ class plotutils:
         return colors
 
     @staticmethod
-    def discrete_colors(data, nvalues, palette=None, color_index=None):
+    def discrete_colors(data, nvalues, palette=None, color_index=None, variable=None):
         if color_index is None:
             if palette is None or nvalues >= palette.number_of_colors:
                 palette = colorpalette.ColorPaletteGenerator(nvalues)
@@ -1603,9 +1604,8 @@ class plotutils:
         # TODO: This should already be a part of palette
         color_index = numpy.vstack((color_index, [[128, 128, 128]]))
 
-        data = numpy.where(numpy.isnan(data), nvalues, data)
-        data = data.astype(int)
-        return color_index[data]
+        color_indices = data
+        return color_index[color_indices]
 
     @staticmethod
     def normalized(a):

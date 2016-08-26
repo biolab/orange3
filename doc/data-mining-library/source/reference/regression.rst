@@ -24,12 +24,12 @@ Example
     >>> from Orange.regression.linear import LinearRegressionLearner
     >>> mpg = Orange.data.Table('auto-mpg')
     >>> mean_ = LinearRegressionLearner()
-    >>> model = mean_(mpg[40:110])
+    >>> model = mean_(mpg.iloc[40:110])
     >>> print(model)
     LinearModel LinearRegression(copy_X=True, fit_intercept=True, normalize=False)
-    >>> mpg[20]
+    >>> mpg.iloc[20]
     Value('mpg', 25.0)
-    >>> model(mpg[0])
+    >>> model(mpg.iloc[0])
     Value('mpg', 24.6)
 
 .. autoclass:: Orange.regression.linear.LinearRegressionLearner
@@ -73,7 +73,7 @@ Example
     >>> model = learner(data)
     >>> print(model)
     MeanModel(23.51457286432161)
-    >>> model(data[:4])
+    >>> model(data.iloc[:4])
     array([ 23.51457286,  23.51457286,  23.51457286,  23.51457286])
 
 .. autoclass:: MeanLearner

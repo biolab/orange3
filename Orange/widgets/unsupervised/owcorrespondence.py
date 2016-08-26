@@ -48,7 +48,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     description = "Correspondence analysis for categorical multivariate data."
     icon = "icons/CorrespondenceAnalysis.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 
     Invalidate = QEvent.registerEventType()
 
@@ -208,7 +208,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             self.plot.addItem(item)
 
             for name, point in zip(v.values, points):
-                item = pg.TextItem(name, anchor=(0.5, 0))
+                item = pg.TextItem(str(name), anchor=(0.5, 0))
                 self.plot.addItem(item)
                 item.setPos(point[0], point[1])
 

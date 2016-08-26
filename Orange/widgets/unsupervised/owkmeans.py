@@ -6,7 +6,7 @@ from PyQt4.QtGui import QGridLayout, QSizePolicy, \
 from PyQt4.QtCore import Qt, QTimer
 
 from Orange.clustering import KMeans
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, TableBase
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -19,9 +19,9 @@ class OWKMeans(widget.OWWidget):
     icon = "icons/KMeans.svg"
     priority = 2100
 
-    inputs = [("Data", Table, "set_data")]
+    inputs = [("Data", TableBase, "set_data")]
 
-    outputs = [("Annotated Data", Table, widget.Default),
+    outputs = [("Annotated Data", TableBase, widget.Default),
                ("Centroids", Table)]
 
     INIT_KMEANS, INIT_RANDOM = range(2)
@@ -246,7 +246,7 @@ class OWKMeans(widget.OWWidget):
 
     def run(self):
         self.clear_messages()
-        if not self.data:
+        if self.data is None:
             return
         if self.optimize_k:
             self.run_optimization()
@@ -319,17 +319,19 @@ class OWKMeans(widget.OWWidget):
             km = self.optimization_runs[row][1]
         else:
             km = self.km
-        if not self.data or not km:
+        if self.data is None or not km:
             self.send("Annotated Data", None)
             self.send("Centroids", None)
             return
 
-        clust_var = DiscreteVariable(
-            self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
+        clust_var = DiscreteVariable(self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
         clust_ids = km(self.data)
         domain = self.data.domain
-        attributes, classes = domain.attributes, domain.class_vars
-        meta_attrs = domain.metas
+        attributes, classes, meta_attrs = domain.attributes, domain.class_vars, domain.metas
+
+        # manually construct a new column because we have no compute_value for the new table
+        domain = Domain(attributes, classes, meta_attrs)
+        new_table = Table(domain, self.data)
         if self.place_cluster_ids == self.OUTPUT_CLASS:
             if classes:
                 meta_attrs += classes
@@ -338,13 +340,12 @@ class OWKMeans(widget.OWWidget):
             attributes += (clust_var, )
         else:
             meta_attrs += (clust_var, )
-
-        domain = Domain(attributes, classes, meta_attrs)
-        new_table = Table.from_table(domain, self.data)
-        new_table.get_column_view(clust_var)[0][:] = clust_ids.X.ravel()
+        new_table[self.output_name] = clust_ids["Cluster id"]\
+            .apply(lambda val: "C" + str(val + 1))\
+            .cat.set_categories(clust_var.values)
+        new_table.domain = Domain(attributes, classes, meta_attrs)
 
         centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
-
         self.send("Annotated Data", new_table)
         self.send("Centroids", centroids)
 
@@ -374,7 +375,7 @@ class OWKMeans(widget.OWWidget):
                  self.output_name,
                  self.OUTPUT_METHODS[self.place_cluster_ids].lower()))
         ))
-        if self.data:
+        if self.data is not None:
             self.report_data("Data", self.data)
             if self.optimize_k:
                 self.report_table(

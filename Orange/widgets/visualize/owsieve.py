@@ -7,7 +7,7 @@ from PyQt4.QtCore import Qt, QSize
 from PyQt4.QtGui import (
     QGraphicsScene, QColor, QPen, QBrush, QSizePolicy, QGraphicsLineItem)
 
-from Orange.data import Table, filter
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -60,9 +60,9 @@ class OWSieveDiagram(OWWidget):
     icon = "icons/SieveDiagram.svg"
     priority = 310
 
-    inputs = [("Data", Table, "set_data", Default),
+    inputs = [("Data", TableBase, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
-    outputs = [("Selection", Table)]
+    outputs = [("Selection", TableBase)]
 
     graph_name = "canvas"
 
@@ -259,26 +259,20 @@ class OWSieveDiagram(OWWidget):
             self.send("Selection", None)
             return
 
-        filts = []
+        filters = []
+        selection_filter = np.repeat(False, len(self.data))
         for i, area in enumerate(self.areas):
             if i in self.selection:
                 width = 4
                 val_x, val_y = area.value_pair
-                filts.append(
-                    filter.Values([
-                        filter.FilterDiscrete(self.attrX, [val_x]),
-                        filter.FilterDiscrete(self.attrY, [val_y])
-                    ]))
+                selection_filter |= self.data[self.attrX == val_x]
+                selection_filter |= self.data[self.attrY == val_y]
             else:
                 width = 1
             pen = area.pen()
             pen.setWidth(width)
             area.setPen(pen)
-        if len(filts) == 1:
-            filts = filts[0]
-        else:
-            filts = filter.Values(filts, conjunction=False)
-        selection = filts(self.discrete_data)
+        selection = self.data[selection_filter]
         if self.discrete_data is not self.data:
             idset = set(selection.ids)
             sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
@@ -292,7 +286,7 @@ class OWSieveDiagram(OWWidget):
         """Update the graph."""
 
         def text(txt, *args, **kwargs):
-            return CanvasText(self.canvas, "", html_text=to_html(txt),
+            return CanvasText(self.canvas, "", html_text=to_html(str(txt)),
                               *args, **kwargs)
 
         def width(txt):
@@ -365,7 +359,7 @@ class OWSieveDiagram(OWWidget):
                 "<b>{attrX}{xeq}{xval_name}</b>: {obs_x}/{n} ({p_x:.0f} %)".
                 format(attrX=to_html(attr_x),
                        xeq=_oper(attr_x, xval_name),
-                       xval_name=to_html(xval_name),
+                       xval_name=to_html(str(xval_name)),
                        obs_x=fmt(chi.probs_x[x] * n),
                        n=int(n),
                        p_x=100 * chi.probs_x[x]) +
@@ -373,7 +367,7 @@ class OWSieveDiagram(OWWidget):
                 "<b>{attrY}{yeq}{yval_name}</b>: {obs_y}/{n} ({p_y:.0f} %)".
                 format(attrY=to_html(attr_y),
                        yeq=_oper(attr_y, yval_name),
-                       yval_name=to_html(yval_name),
+                       yval_name=to_html(str(yval_name)),
                        obs_y=fmt(chi.probs_y[y] * n),
                        n=int(n),
                        p_y=100 * chi.probs_y[y]) +
@@ -399,7 +393,7 @@ class OWSieveDiagram(OWWidget):
 
         chi = ChiSqStats(self.discrete_data, attr_x, attr_y)
         n = chi.n
-        max_ylabel_w = max((width(val) for val in disc_y.values), default=0)
+        max_ylabel_w = max((width(str(val)) for val in disc_y.values), default=0)
         max_ylabel_w = min(max_ylabel_w, 200)
         x_off = width(attr_x) + max_ylabel_w
         y_off = 15

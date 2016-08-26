@@ -32,7 +32,7 @@ class TestKMeans(unittest.TestCase):
     def test_predict_single_instance(self):
         kmeans = KMeans()
         c = kmeans(self.iris)
-        inst = self.iris[0]
+        inst = self.iris.iloc[0]
         p = c(inst)
 
     def test_predict_table(self):

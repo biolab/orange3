@@ -39,8 +39,8 @@ class TestDiscrete(unittest.TestCase):
 
     def test_discrete_missing(self):
         d = data.Table("zoo")
-        d.Y[25] = float("nan")
-        d[0][0] = float("nan")
+        d.loc[d.index[25], d.domain.class_vars] = float("nan")
+        d.loc[d.index[0], d.domain[0]] = float("nan")
         cont = contingency.Discrete(d, 0)
         np.testing.assert_almost_equal(cont["amphibian"], [3, 0])
         np.testing.assert_almost_equal(cont,
@@ -50,8 +50,8 @@ class TestDiscrete(unittest.TestCase):
         self.assertEqual(cont.unknown_rows, 1)
 
         d = data.Table("zoo")
-        d.Y[2] = float("nan")
-        d[2]["predator"] = float("nan")
+        d.loc[d.index[2], d.domain.class_vars] = float("nan")
+        d.loc[d.index[2], "predator"] = float("nan")
         cont = contingency.Discrete(d, "predator")
         np.testing.assert_almost_equal(cont["fish"], [4, 8])
         np.testing.assert_almost_equal(cont,
@@ -61,7 +61,7 @@ class TestDiscrete(unittest.TestCase):
 
     def test_discrete_with_fallback(self):
         d = data.Table("zoo")
-        d.Y[25] = None
+        d.loc[d.index[25], d.domain.class_vars] = None
         default = contingency.Discrete(d, 0)
 
         d._compute_contingency = Mock(side_effect=NotImplementedError)
@@ -89,7 +89,7 @@ class TestDiscrete(unittest.TestCase):
 
     def test_continuous_missing(self):
         d = data.Table("iris")
-        d[1][1] = float("nan")
+        d.iloc[1, 1] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
         correct = [[2.3, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7,
                     3.8, 3.9, 4.0, 4.1, 4.2, 4.4],
@@ -98,7 +98,7 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont["Iris-setosa"], correct)
         self.assertEqual(cont.unknown_rows, 0)
 
-        d.Y[0] = float("nan")
+        d.loc[d.index[0], d.domain.class_vars] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
         correct = [[2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8],
                    [1, 4, 2, 4, 8, 2, 12, 4, 5, 3, 2, 1, 2]]
@@ -106,7 +106,7 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont.unknowns, [1, 0, 0])
         self.assertEqual(cont.unknown_rows, 1)
 
-        d.Y[1] = float("nan")
+        d.loc[d.index[1], d.domain.class_vars] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
         np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0])
         self.assertEqual(cont.unknown_rows, 2)
@@ -118,13 +118,13 @@ class TestDiscrete(unittest.TestCase):
                                  zoo.domain.metas + zoo.domain.attributes[:2])
         t = Orange.data.Table(dom, zoo)
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
-        np.testing.assert_almost_equal(cont["1"], [38, 5])
+        np.testing.assert_almost_equal(cont[1], [38, 5])
         np.testing.assert_almost_equal(cont, [[4, 54],
                                               [38, 5]])
-        zoo[25][t.domain.metas[1]] = float("nan")
-        zoo[0][2] = float("nan")
+        zoo.loc[zoo.index[25], t.domain.metas[1]] = float("nan")
+        zoo.loc[zoo.index[0], zoo.domain[2]] = float("nan")
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
-        np.testing.assert_almost_equal(cont["1"], [37, 5])
+        np.testing.assert_almost_equal(cont[1], [37, 5])
         np.testing.assert_almost_equal(cont, [[4, 53],
                                               [37, 5]])
         np.testing.assert_almost_equal(cont.unknowns, [0, 1])
@@ -133,7 +133,7 @@ class TestDiscrete(unittest.TestCase):
     @staticmethod
     def _construct_sparse():
         domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=list("abc"))
+            [data.DiscreteVariable("d%i" % i, values=[0, 1, 2])
              for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)],
             data.DiscreteVariable("y", values=list("abc")))
@@ -156,58 +156,49 @@ class TestDiscrete(unittest.TestCase):
                    2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
-        Y = np.array([[1, 2, 1, 0, 0]]).T
+        Y = np.array([["b", "c", "b", "a", "a"]]).T
         return data.Table.from_numpy(domain, X, Y)
-
 
     def test_sparse(self):
         d = self._construct_sparse()
         cont = contingency.Discrete(d, 5)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont[1], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
         cont = contingency.Continuous(d, 14)
         np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[1], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
         cont = contingency.Continuous(d, "c3")
         np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[], []])
-
-        d[4].set_class(1)
-        cont = contingency.Continuous(d, 13)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1, 1.1], [1, 1]])
+        np.testing.assert_almost_equal(cont[1], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[], []])
 
         cont = contingency.Continuous(d, 12)
         np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[], []])
+        np.testing.assert_almost_equal(cont[1], [[], []])
         np.testing.assert_almost_equal(cont[2], [[], []])
-
 
     def test_get_contingency(self):
         d = self._construct_sparse()
         cont = contingency.get_contingency(d, 5)
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont[1], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
         cont = contingency.get_contingency(d, "c4")
         self.assertIsInstance(cont, contingency.Continuous)
         np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[1], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
         cont = contingency.get_contingency(d, d.domain[13])
         self.assertIsInstance(cont, contingency.Continuous)
         np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[], []])
+        np.testing.assert_almost_equal(cont[1], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[], []])
 
     def test_get_contingencies(self):
@@ -218,30 +209,30 @@ class TestDiscrete(unittest.TestCase):
 
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont[1], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
         cont = conts[14]
         self.assertIsInstance(cont, contingency.Continuous)
         np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[1], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
-        conts = contingency.get_contingencies(d, skipDiscrete=True)
+        conts = contingency.get_contingencies(d, skip_discrete=True)
         self.assertEqual(len(conts), 10)
         cont = conts[4]
         self.assertIsInstance(cont, contingency.Continuous)
         np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
+        np.testing.assert_almost_equal(cont[1], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
-        conts = contingency.get_contingencies(d, skipContinuous=True)
+        conts = contingency.get_contingencies(d, skip_continuous=True)
         self.assertEqual(len(conts), 10)
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
+        np.testing.assert_almost_equal(cont[0], [1, 0, 0])
+        np.testing.assert_almost_equal(cont[1], [0, 1, 1])
         np.testing.assert_almost_equal(cont[2], [1, 0, 0])
 
     def test_compute_contingency_metas(self):
@@ -251,3 +242,30 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],
                                               [0, 0, 2], [0, 1, 0]])
 
+    def test_discrete_normalize(self):
+        cont1 = contingency.Discrete(self.zoo, 0)
+        cont2 = contingency.Discrete(self.zoo, 0)
+        cont1.normalize()
+        np.testing.assert_array_equal(cont1, cont2 / np.sum(cont2))
+
+    def test_continuous_normalize(self):
+        d = data.Table("iris")
+        cont = contingency.Continuous(d, "sepal width")
+        # assert not throws
+        cont.normalize()
+        cont.normalize(axis=1)
+        with self.assertRaises(ValueError):
+            cont.normalize(axis=0)
+
+    def test_setitem_not_implemented(self):
+        d = data.Table("iris")
+        cont = contingency.Continuous(d, "sepal width")
+        with self.assertRaises(NotImplementedError):
+            cont[1] = [1, 34, 4, 3, 1]
+
+    def test_equality(self):
+        d1 = data.Table("iris")
+        cont1 = contingency.Continuous(d1, "sepal width")
+        d2 = data.Table("iris")
+        cont2 = contingency.Continuous(d2, "sepal width")
+        self.assertTrue(cont1 == cont2)

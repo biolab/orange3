@@ -353,8 +353,8 @@ class OWEditDomain(widget.OWWidget):
     icon = "icons/EditDomain.svg"
     priority = 3125
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -508,9 +508,10 @@ class OWEditDomain(widget.OWWidget):
 
         # Replace the variable in the 'Domain Features' view/model
         old_var = self.input_vars[self.selected_index]
-        new_var = editor.get_data().copy(compute_value=Orange.preprocess.transformation.Identity(old_var))
+        edited_var = editor.get_data()
+        new_var = edited_var.copy(compute_value=Orange.preprocess.transformation.Lookup(
+            old_var, {before: after for before, after in zip(old_var.values, edited_var.values)}))
         self.domain_model[self.selected_index] = new_var
-
 
         # Store the transformation hint.
         self.domain_change_hints[variable_description(old_var)] = \

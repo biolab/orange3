@@ -31,9 +31,9 @@ class OWSilhouettePlot(widget.OWWidget):
     icon = "icons/SilhouettePlot.svg"
     priority = 510
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
+    outputs = [("Selected Data", Orange.data.TableBase, widget.Default),
+               ("Other Data", Orange.data.TableBase)]
 
     replaces = [
         "orangecontrib.prototypes.widgets.owsilhouetteplot.OWSilhouettePlot",
@@ -227,8 +227,7 @@ class OWSilhouettePlot(widget.OWWidget):
             self._matrix = numpy.asarray(metric(self._effective_data))
 
         labelvar = self.cluster_var_model[self.cluster_var_idx]
-        labels, _ = self.data.get_column_view(labelvar)
-        labels = labels.astype(int)
+        labels = self.data[labelvar].apply(labelvar.to_val).astype(int).values
         _, counts = numpy.unique(labels, return_counts=True)
         if numpy.count_nonzero(counts) >= 2:
             self.Error.need_two_clusters.clear()

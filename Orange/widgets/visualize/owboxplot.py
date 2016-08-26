@@ -94,7 +94,7 @@ class OWBoxPlot(widget.OWWidget):
     description = "Visualize the distribution of feature values in a box plot."
     icon = "icons/BoxPlot.svg"
     priority = 100
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
 
     #: Comparison types for continuous variables
     CompareNone, CompareMedians, CompareMeans = 0, 1, 2
@@ -209,8 +209,7 @@ class OWBoxPlot(widget.OWWidget):
 
     # noinspection PyTypeChecker
     def set_data(self, dataset):
-        if dataset is not None and (
-                not bool(dataset) or not len(dataset.domain)):
+        if dataset is not None and (not len(dataset) or not len(dataset.domain)):
             dataset = None
         self.closeContext()
         self.dataset = dataset
@@ -219,7 +218,7 @@ class OWBoxPlot(widget.OWWidget):
         self.attributes_select = []
         self.attr_list_box.clear()
         self.group_list_box.clear()
-        if dataset:
+        if dataset is not None:
             domain = dataset.domain
             self.attributes = [(a.name, vartype(a)) for a in domain.variables +
                                domain.metas if a.is_primitive()]
@@ -720,7 +719,7 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
             rect.setToolTip(tooltip)
-            text = QtGui.QGraphicsTextItem(attr.values[i])
+            text = QtGui.QGraphicsTextItem(str(attr.values[i]))
             box.addToGroup(text)
             cum += v
         return box

@@ -11,6 +11,8 @@ matrix:
           addons: { apt: { packages: [] } }
           cache: {}
         - python: '3.4'
+        - python: '3.4'
+          env: PANDAS_GIT=true
         - python: '3.5'
         - python: 'nightly'
     allow_failures:

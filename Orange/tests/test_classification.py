@@ -60,7 +60,7 @@ class ModelTest(unittest.TestCase):
         learn = NaiveBayesLearner()
         clf = learn(table)
         pred = []
-        for row in table:
+        for _, row in table.iterrows():
             pred.append(clf(row))
 
     def test_learner_adequacy(self):
@@ -193,7 +193,7 @@ class SklTest(unittest.TestCase):
 
     def test_nan_columns(self):
         data = Orange.data.Table("iris")
-        data.X[:, (1, 3)] = np.NaN
+        data.loc[:, [data.domain[1], data.domain[3]]] = np.NaN
         lr = LogisticRegressionLearner()
         res = CrossValidation(data, [lr], k=2, store_models=True)
         self.assertEqual(len(res.models[0][0].domain.attributes), 2)
@@ -208,30 +208,31 @@ class ClassfierListInputTest(unittest.TestCase):
     def test_discrete(self):
         table = Table("titanic")
         tree = Orange.classification.TreeLearner()(table)
-        strlist = [["crew", "adult", "male"],
-                   ["crew", "adult", None]]
-        for se in strlist: #individual examples
-            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
-        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+        strlist = [["crew", "adult", "male", None],
+                   ["crew", "adult", None, None]]
+        for se in strlist:  # individual examples
+            self.assertTrue(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
+        self.assertTrue(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
 
     def test_continuous(self):
         table = Table("iris")
         tree = Orange.classification.TreeLearner()(table)
-        strlist = [[2, 3, 4, 5],
-                   [1, 2, 3, 5]]
-        for se in strlist: #individual examples
-            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
-        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+        strlist = [[2, 3, 4, 5, None],
+                   [1, 2, 3, 5, None]]
+        for se in strlist:  # individual examples
+            self.assertTrue(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
+        self.assertTrue(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
 
 
 class UnknownValuesInPrediction(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         Variable._clear_all_caches()
 
     def test_unknown(self):
         table = Table("iris")
         tree = LogisticRegressionLearner()(table)
-        tree([1, 2, None])
+        tree([1, 2, None, None, None])
 
     def test_missing_class(self):
         table = Table(test_filename("adult_sample_missing"))
@@ -248,8 +249,8 @@ class UnknownValuesInPrediction(unittest.TestCase):
 
 
 class LearnerAccessibility(unittest.TestCase):
-
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         Variable._clear_all_caches()
 
     def all_learners(self):

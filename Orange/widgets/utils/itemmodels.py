@@ -20,7 +20,7 @@ from PyQt4.QtGui import (
 
 import numpy
 
-from Orange.data import Variable, Storage
+from Orange.data import Variable, Table
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -531,7 +531,7 @@ class PyListModel(QAbstractListModel):
         if isinstance(indexList, int):
             indexList = [indexList]
 
-        #TODO: group indexes into ranges
+        # TODO: group indexes into ranges
         for ind in indexList:
             self.dataChanged.emit(self.index(ind), self.index(ind))
 
@@ -774,10 +774,7 @@ class TableModel(QAbstractTableModel):
         super().__init__(parent)
         self.source = sourcedata
         self.domain = domain = sourcedata.domain
-
-        self.X_density = sourcedata.X_density()
-        self.Y_density = sourcedata.Y_density()
-        self.M_density = sourcedata.metas_density()
+        self.table_is_dense = sourcedata.is_dense
 
         def format_sparse(vars, datagetter, instance):
             data = datagetter(instance)
@@ -792,7 +789,7 @@ class TableModel(QAbstractTableModel):
             return str(instance[var])
 
         def make_basket_formater(vars, density, role):
-            formater = (format_sparse if density == Storage.SPARSE
+            formater = (format_sparse if not self.source.is_sparse
                         else format_sparse_bool)
             if role == TableModel.Attribute:
                 getter = operator.attrgetter("sparse_x")
@@ -815,30 +812,17 @@ class TableModel(QAbstractTableModel):
             )
 
         columns = []
-
-        if self.Y_density != Storage.DENSE:
-            coldesc = make_basket(domain.class_vars, self.Y_density,
-                                  TableModel.ClassVar)
+        if self.source.is_sparse:
+            coldesc = make_basket(domain.class_vars, self.source.is_sparse, TableModel.ClassVar)
+            columns.append(coldesc)
+            coldesc = make_basket(domain.metas, self.source.is_sparse, TableModel.Meta)
+            columns.append(coldesc)
+            coldesc = make_basket(domain.attributes, self.source.is_sparse, TableModel.Attribute)
             columns.append(coldesc)
         else:
-            columns += [make_column(var, TableModel.ClassVar)
-                        for var in domain.class_vars]
-
-        if self.M_density != Storage.DENSE:
-            coldesc = make_basket(domain.metas, self.M_density,
-                                  TableModel.Meta)
-            columns.append(coldesc)
-        else:
-            columns += [make_column(var, TableModel.Meta)
-                        for var in domain.metas]
-
-        if self.X_density != Storage.DENSE:
-            coldesc = make_basket(domain.attributes, self.X_density,
-                                  TableModel.Attribute)
-            columns.append(coldesc)
-        else:
-            columns += [make_column(var, TableModel.Attribute)
-                        for var in domain.attributes]
+            columns += [make_column(var, TableModel.ClassVar) for var in domain.class_vars]
+            columns += [make_column(var, TableModel.Meta) for var in domain.metas]
+            columns += [make_column(var, TableModel.Attribute) for var in domain.attributes]
 
         #: list of all domain variables (class_vars + metas + attrs)
         self.vars = domain.class_vars + domain.metas + domain.attributes
@@ -850,9 +834,15 @@ class TableModel(QAbstractTableModel):
                    [set(var.attributes) for var in self.vars],
                    set()))
 
-        @lru_cache(maxsize=1000)
-        def row_instance(index):
-            return self.source[int(index)]
+        if hasattr(self.source, '_fetch_row'):
+            # override for SQL tables: their length
+            @lru_cache(maxsize=1000)
+            def row_instance(index):
+                return self.source[int(index)]
+        else:
+            @lru_cache(maxsize=1000)
+            def row_instance(index):
+                return self.source.iloc[int(index)]
         self._row_instance = row_instance
 
         # column basic statistics (VariableStatsRole), computed when
@@ -1028,6 +1018,8 @@ class TableModel(QAbstractTableModel):
         except IndexError:
             self.layoutAboutToBeChanged.emit()
             self.beginRemoveRows(self.parent(), row, max(self.rowCount(), row))
+            # resize table on index errors:
+            # e.g. SQL table not completely downloaded
             self.__rowCount = min(row, self.__rowCount)
             self.endRemoveRows()
             self.layoutChanged.emit()
@@ -1045,7 +1037,7 @@ class TableModel(QAbstractTableModel):
             return instance[coldesc.var]
         elif role == _ClassValueRole:
             try:
-                return instance.get_class()
+                return instance.domain.class_var, instance[instance.domain.class_var]
             except TypeError:
                 return None
         elif role == _VariableRole and isinstance(coldesc, TableModel.Column):
@@ -1061,7 +1053,7 @@ class TableModel(QAbstractTableModel):
         row, col = self.__sortIndInv[index.row()], index.column()
         if role == Qt.EditRole:
             try:
-                self.source[row, col] = value
+                self.source.iloc[row, col] = value
             except (TypeError, IndexError):
                 return False
             else:

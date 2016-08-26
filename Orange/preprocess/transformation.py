@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.data import Instance, Table
+from Orange.data import Table
 
 
 class Transformation:
@@ -21,7 +21,6 @@ class Transformation:
         Return transformed column from the data by extracting the column view
         from the data and passing it to the `transform` method.
         """
-        inst = isinstance(data, Instance)
         if self._last_domain != data.domain:
             try:
                 self.attr_index = data.domain.index(self.variable)
@@ -33,13 +32,9 @@ class Transformation:
             self._last_domain = data.domain
         if self.attr_index is None:
             data = self.variable.compute_value(data)
-        elif inst:
-            data = np.array([float(data[self.attr_index])])
         else:
-            data = data.get_column_view(self.attr_index)[0]
+            data = data[data.domain[self.attr_index]]
         transformed = self.transform(data)
-        if inst and isinstance(transformed, np.ndarray) and transformed.shape:
-            transformed = transformed[0]
         return transformed
 
     def transform(self, c):
@@ -56,6 +51,14 @@ class Identity(Transformation):
     """
     def transform(self, c):
         return c
+
+
+class Ordinalize(Transformation):
+    """
+    Used for discrete variables; return the value as it appears in e.g. t.X.
+    """
+    def transform(self, c):
+        return c.apply(self.variable.to_val).astype(int)
 
 
 class Indicator(Transformation):
@@ -75,7 +78,7 @@ class Indicator(Transformation):
         self.value = value
 
     def transform(self, c):
-        return c == self.value
+        return (c == self.value) * 1
 
 
 class Indicator1(Transformation):
@@ -118,7 +121,13 @@ class Normalizer(Transformation):
         self.factor = factor
 
     def transform(self, c):
-        return (c - self.offset) * self.factor
+        # we need to map the values to their numerical representation,
+        # only then can we do numerical computations
+        # on c.apply(...), the categorical persists, but the categories
+        # automatically change (so we don't need to worry about that)
+        # we then need to use a number dtype (because we got indices)
+        # to support mathematical operations
+        return (c.apply(self.variable.to_val).astype(float) - self.offset) * self.factor
 
 
 class Lookup(Transformation):
@@ -136,4 +145,4 @@ class Lookup(Transformation):
         self.lookup_table = lookup_table
 
     def transform(self, c):
-        return self.lookup_table[c]
+        return c.apply(lambda val: self.lookup_table[val])

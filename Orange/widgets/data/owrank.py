@@ -61,10 +61,10 @@ class OWRank(OWWidget):
 
     buttons_area_orientation = Qt.Vertical
 
-    inputs = [("Data", Orange.data.Table, "setData"),
+    inputs = [("Data", Orange.data.TableBase, "setData"),
               ("Scorer", score.Scorer, "set_learner", widget.Multiple)]
-    outputs = [("Reduced Data", Orange.data.Table, widget.Default),
-               ("Scores", Orange.data.Table)]
+    outputs = [("Reduced Data", Orange.data.TableBase, widget.Default),
+               ("Scores", Orange.data.TableBase)]
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 
@@ -311,7 +311,7 @@ class OWRank(OWWidget):
         indicating what measures should be recomputed.
 
         """
-        if not self.data:
+        if self.data is None:
             return
         if self.data.has_missing():
             self.information("Missing values have been imputed.")
@@ -374,8 +374,7 @@ class OWRank(OWWidget):
         Update the rankModel.
         """
         values = []
-        for i in range(self.ranksModel.columnCount() - 1,
-                       len(self.measure_scores), -1):
+        for i in range(self.ranksModel.columnCount() - 1, len(self.measure_scores), -1):
             self.ranksModel.removeColumn(i)
 
         for i, scores in enumerate(self.measure_scores):
@@ -503,7 +502,7 @@ class OWRank(OWWidget):
         )
 
     def send_report(self):
-        if not self.data:
+        if self.data is None:
             return
         self.report_domain("Input", self.data.domain)
         self.report_table("Ranks", self.ranksView, num_format="{:.3f}")
@@ -512,7 +511,7 @@ class OWRank(OWWidget):
 
     def commit(self):
         selected = self.selectedAttrs()
-        if not self.data or not selected:
+        if self.data is None or not selected:
             self.send("Reduced Data", None)
             self.out_domain_desc = None
         else:
@@ -523,7 +522,7 @@ class OWRank(OWWidget):
             self.out_domain_desc = report.describe_domain(data.domain)
 
     def selectedAttrs(self):
-        if self.data:
+        if self.data is not None:
             inds = self.ranksView.selectionModel().selectedRows(0)
             source = self.ranksProxyModel.mapToSource
             inds = map(source, inds)
@@ -543,7 +542,7 @@ class OWRank(OWWidget):
         # Reshape to 2d array as Table does not like 1d arrays
         feature_names = feature_names[:, None]
 
-        table = Orange.data.Table(domain, scores, metas=feature_names)
+        table = Orange.data.Table(domain, scores, None, feature_names)
         table.name = "Feature Scores"
         return table
 

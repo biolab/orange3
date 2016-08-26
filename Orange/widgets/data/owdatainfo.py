@@ -3,7 +3,7 @@ import threading
 
 from PyQt4 import QtGui, QtCore
 from Orange.widgets import widget, gui
-from Orange.data.table import Table
+from Orange.data import Table, TableBase
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 from Orange.canvas import report
 try:
@@ -21,7 +21,7 @@ class OWDataInfo(widget.OWWidget):
     priority = 80
     category = "Data"
     keywords = ["data", "info"]
-    inputs = [("Data", Table, "data")]
+    inputs = [("Data", TableBase, "data")]
 
     want_main_area = False
 
@@ -74,9 +74,9 @@ class OWDataInfo(widget.OWWidget):
             self.data_desc = None
             return
 
-        sparses = [s for s, m in (("features", data.X_density),
-                                  ("meta attributes", data.metas_density),
-                                  ("targets", data.Y_density)) if m() > 1]
+        sparses = [s for s, m in (("features", data.is_sparse),
+                                  ("meta attributes", data.is_sparse),
+                                  ("targets", data.is_sparse)) if m]
         if sparses:
             sparses = "<p>Sparse representation: %s</p>" % ", ".join(sparses)
         else:

@@ -7,7 +7,7 @@ from sklearn.metrics import r2_score
 
 import Orange
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
-    DiscreteVariable
+    DiscreteVariable, TableBase
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
@@ -93,13 +93,13 @@ class OWScatterPlot(OWWidget):
     icon = "icons/ScatterPlot.svg"
     priority = 210
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Data Subset", Table, "set_subset_data"),
+    inputs = [("Data", TableBase, "set_data", Default),
+              ("Data Subset", TableBase, "set_subset_data"),
               ("Features", AttributeList, "set_shown_attributes")]
 
-    outputs = [("Selected Data", Table, Default),
-               ("Other Data", Table),
-               ("Features", Table)]
+    outputs = [("Selected Data", TableBase, Default),
+               ("Other Data", TableBase),
+               ("Features", TableBase)]
 
     settingsHandler = DomainContextHandler()
 
@@ -295,12 +295,13 @@ class OWScatterPlot(OWWidget):
 
         if data is not None and (len(data) == 0 or len(data.domain) == 0):
             data = None
-        if self.data and data and self.data.checksum() == data.checksum():
+        if self.data is not None and data is not None \
+                and hash(self.data) == hash(data):
             return
 
         self.closeContext()
-        same_domain = (self.data and data and
-                       data.domain.checksum() == self.data.domain.checksum())
+        same_domain = (self.data is not None and data is not None and
+                       hash(data.domain) == hash(self.data.domain))
         self.data = data
         self.data_metas_X = self.move_primitive_metas_to_X(data)
 
@@ -319,7 +320,7 @@ class OWScatterPlot(OWWidget):
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
-        if self.data and len(self.data) > 2000:
+        if self.data is not None and len(self.data) > 2000:
             return self.__timer.stop()
         data_sample = self.sql_data.sample_time(time, no_cache=True)
         if data_sample:
@@ -393,7 +394,7 @@ class OWScatterPlot(OWWidget):
         self.cb_attr_size.clear()
         self.cb_attr_size.addItem("(Same size)")
         self.graph.attr_size = None
-        if not self.data:
+        if self.data is None:
             return
 
         for var in self.data.domain.metas:
@@ -506,7 +507,7 @@ class OWScatterPlot(OWWidget):
 
     def send_report(self):
         disc_attr = False
-        if self.data:
+        if self.data is not None:
             domain = self.data.domain
             disc_attr = domain[self.attr_x].is_discrete or \
                         domain[self.attr_y].is_discrete

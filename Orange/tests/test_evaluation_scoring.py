@@ -68,13 +68,14 @@ class TestCA(unittest.TestCase):
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
         t = Table(x, y)
-        t = Discretize(
-            method=discretize.EqualWidth(n=3))(t)
+        t = Discretize(method=discretize.EqualWidth(n=3))(t)
         nb = NaiveBayesLearner()
         res = TestOnTrainingData(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
 
-        t.Y[-20:] = 1 - t.Y[-20:]
+        tmp = t.Y.copy()
+        tmp[-20:] = 1 - t.Y[-20:]
+        t[t.domain.class_vars[0]] = tmp
         res = TestOnTrainingData(t, [nb])
         self.assertGreaterEqual(CA(res)[0], 0.75)
         self.assertLess(CA(res)[0], 1)

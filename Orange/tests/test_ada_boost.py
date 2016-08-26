@@ -15,6 +15,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def setUpClass(cls):
         cls.iris = Table("iris")
         cls.housing = Table("housing")
+        cls.titanic = Table("titanic")
 
     def test_adaboost(self):
         learn = SklAdaBoostLearner()
@@ -29,14 +30,14 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         tree_estimator = TreeLearner()
         stump = SklAdaBoostLearner(base_estimator=stump_estimator)
         tree = SklAdaBoostLearner(base_estimator=tree_estimator)
-        results = CrossValidation(self.iris, [stump, tree], k=4)
+        results = CrossValidation(self.titanic, [stump, tree], k=4)
         ca = CA(results)
         self.assertLess(ca[0], ca[1])
 
     def test_predict_single_instance(self):
         learn = SklAdaBoostLearner()
         m = learn(self.iris)
-        ins = self.iris[0]
+        ins = self.iris.iloc[0]
         m(ins)
         _, _ = m(ins, m.ValueProbs)
 
@@ -73,7 +74,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def test_predict_single_instance_reg(self):
         learn = SklAdaBoostRegressionLearner()
         m = learn(self.housing)
-        ins = self.housing[0]
+        ins = self.housing.iloc[0]
         pred = m(ins)
         self.assertGreaterEqual(pred, 0)
 

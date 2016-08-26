@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import numpy as np
 
 from Orange.data import Table, Variable
 from Orange.preprocess.continuize import DomainContinuizer
@@ -11,9 +12,10 @@ from Orange.tests import test_filename
 
 
 class TestDomainContinuizer(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         Variable._clear_all_caches()
-        self.data = Table(test_filename("test4"))
+        cls.data = Table(test_filename("test4"))
 
     def test_default(self):
         for inp in (self.data, self.data.domain):
@@ -28,10 +30,10 @@ class TestDomainContinuizer(unittest.TestCase):
             self.assertIsInstance(dom[2].compute_value, transformation.Indicator)
 
             dat2 = Table(dom, self.data)
-            # c1 c2  d2    d3       cl1
-            self.assertEqual(dat2[0], [1, -2, 1, 0, 1, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 0, 1, 0, 1, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 0, 1, 0, 0, 1, "c"])
+            # __weights__ c1 c2  d2    d3       cl1
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 1, 0, 1, 0, 0, "a"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 0, 1, 0, 1, 0, "b"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 0, 1, 0, 0, 1, "c"], dtype=object))
 
     def test_continuous_transform_class(self):
         for inp in (self.data, self.data.domain):
@@ -46,10 +48,10 @@ class TestDomainContinuizer(unittest.TestCase):
             self.assertIsInstance(dom[2].compute_value, transformation.Indicator)
 
             dat2 = Table(dom, self.data)
-            # c1   c2  d2    d3       cl1
-            self.assertEqual(dat2[0], [1, -2, 1, 0, 1, 0, 0, 1, 0, 0])
-            self.assertEqual(dat2[1], [0, 0, 0, 1, 0, 1, 0, 0, 1, 0])
-            self.assertEqual(dat2[2], [2, 2, 0, 1, 0, 0, 1, 0, 0, 1])
+            # __weights__ c1   c2  d2    d3       cl1
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 1, 0, 1, 0, 0, 1, 0, 0], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 0, 1, 0, 0, 1, 0, 0, 1], dtype=object))
 
     def test_multi_indicators(self):
         for inp in (self.data, self.data.domain):
@@ -67,10 +69,10 @@ class TestDomainContinuizer(unittest.TestCase):
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
-            # c1 c2  d2    d3       cl1
-            self.assertEqual(dat2[0], [1, -2, 1, 0, 1, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 0, 1, 0, 1, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 0, 1, 0, 0, 1, "c"])
+            # __weights__ c1 c2  d2    d3       cl1
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 1, 0, 1, 0, 0, "a"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 0, 1, 0, 1, 0, "b"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 0, 1, 0, 0, 1, "c"], dtype=object))
 
     def test_multi_lowest_base(self):
         for inp in (self.data, self.data.domain):
@@ -87,10 +89,10 @@ class TestDomainContinuizer(unittest.TestCase):
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
-            # c1 c2  d2 d3     cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 1, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 0, 1, "c"])
+            # __weights__ c1 c2  d2 d3     cl1
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 0, 0, 0, "a"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 1, 1, 0, "b"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 1, 0, 1, "c"], dtype=object))
 
     def test_multi_lowest_base_base(self):
         self.data.domain[4].base_value = 1
@@ -108,10 +110,10 @@ class TestDomainContinuizer(unittest.TestCase):
                                   transformation.Indicator)
 
             dat2 = Table(dom, self.data)
-            # c1 c2  d2 d3    cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 1, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 0, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 0, 1, "c"])
+            # __weights__ c1 c2  d2 d3    cl1
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 0, 1, 0, "a"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 1, 0, 0, "b"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 1, 0, 1, "c"], dtype=object))
 
     def test_multi_ignore(self):
         dom = DomainContinuizer(self.data.domain,
@@ -160,8 +162,7 @@ class TestDomainContinuizer(unittest.TestCase):
 
     def test_as_ordinal(self):
         for inp in (self.data, self.data.domain):
-            dom = DomainContinuizer(
-                inp, multinomial_treatment=Continuize.AsOrdinal)
+            dom = DomainContinuizer(inp, multinomial_treatment=Continuize.AsOrdinal)
             self.assertTrue(all(attr.is_continuous
                                 for attr in dom.attributes))
             self.assertIs(dom.class_var, self.data.domain.class_var)
@@ -171,10 +172,10 @@ class TestDomainContinuizer(unittest.TestCase):
                              ["c1", "c2", "d2", "d3", "cl1"])
 
             dat2 = Table(dom, self.data)
-            # c1 c2  d2 d3  cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 1, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 2, "c"])
+            # __weights__ c1 c2  d2 d3  cl1
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 0, 0, "a"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 1, 1, "b"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 1, 2, "c"], dtype=object))
 
     def test_as_ordinal_class(self):
         for inp in (self.data, self.data.domain):
@@ -191,9 +192,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2 d3  cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, 0])
-            self.assertEqual(dat2[1], [0, 0, 1, 1, 1])
-            self.assertEqual(dat2[2], [2, 2, 1, 2, 2])
+            np.testing.assert_array_equal(dat2.iloc[0], np.array([1, 1, -2, 0, 0, 0], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1], np.array([1, 0, 0, 1, 1, 1], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2], np.array([1, 2, 2, 1, 2, 2], dtype=object))
 
     def test_as_normalized_ordinal(self):
         for inp in (self.data, self.data.domain):
@@ -208,7 +209,7 @@ class TestDomainContinuizer(unittest.TestCase):
                              ["c1", "c2", "d2", "d3", "cl1"])
 
             dat2 = Table(dom, self.data)
-            # c1 c2  d2 d3  cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 0.5, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 1, "c"])
+            # __weights__ c1 c2  d2 d3  cl1
+            np.testing.assert_array_equal(dat2.iloc[0].values, np.array([1, 1, -2, 0, 0, "a"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[1].values, np.array([1, 0, 0, 1, 0.5, "b"], dtype=object))
+            np.testing.assert_array_equal(dat2.iloc[2].values, np.array([1, 2, 2, 1, 1, "c"], dtype=object))

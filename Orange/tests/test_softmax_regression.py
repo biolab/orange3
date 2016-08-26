@@ -22,8 +22,8 @@ class TestSoftmaxRegressionLearner(unittest.TestCase):
 
     def test_SoftmaxRegressionPreprocessors(self):
         table = self.iris.copy()
-        table.X[:, 2] = table.X[:, 2] * 0.001
-        table.X[:, 3] = table.X[:, 3] * 0.001
+        table.loc[:, table.domain[2]] = table.loc[:, table.domain[2]] * 0.001
+        table.loc[:, table.domain[3]] = table.loc[:, table.domain[3]] * 0.001
         learners = [SoftmaxRegressionLearner(preprocessors=[]),
                     SoftmaxRegressionLearner()]
         results = CrossValidation(table, learners, k=10)

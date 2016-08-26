@@ -1,7 +1,7 @@
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.preprocess.remove import Remove
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -16,8 +16,8 @@ class OWPurgeDomain(widget.OWWidget):
     category = "Data"
     keywords = ["data", "purge", "domain"]
 
-    inputs = [("Data", Table, "setData")]
-    outputs = [("Data", Table)]
+    inputs = [("Data", TableBase, "setData")]
+    outputs = [("Data", TableBase)]
 
     removeValues = Setting(1)
     removeAttributes = Setting(1)
@@ -157,7 +157,7 @@ class OWPurgeDomain(widget.OWWidget):
             ("Features", list_opts(self.feature_options)),
             ("Classes", list_opts(self.class_options)),
             ("Metas", list_opts(self.meta_options))))
-        if self.data:
+        if self.data is not None:
             self.report_items("Statistics", (
                 (label, getattr(self, value))
                 for label, value in self.stat_labels

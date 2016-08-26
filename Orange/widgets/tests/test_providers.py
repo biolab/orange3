@@ -1,7 +1,7 @@
 import unittest
 
 from Orange.classification import KNNLearner
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -14,7 +14,7 @@ class TestProviderMetaClass(unittest.TestCase):
                          set(i[0] for i in second), msg)
 
     def test_inputs(self):
-        inputs = [("Data", Table, "set_data"),
+        inputs = [("Data", TableBase, "set_data"),
                   ("Preprocessor", Preprocess, "set_preprocessor")]
 
         class OWTestProvider(OWBaseLearner):

@@ -78,7 +78,7 @@ class OWConfusionMatrix(widget.OWWidget):
     priority = 1001
 
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
-    outputs = [("Selected Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.TableBase)]
 
     quantities = ["Number of instances",
                   "Proportion of predicted",
@@ -354,7 +354,7 @@ class OWConfusionMatrix(widget.OWWidget):
             X = self.data.X[row_indices]
             Y = self.data.Y[row_indices]
             M = self.data.metas[row_indices]
-            row_ids = self.data.ids[row_indices]
+            row_ids = self.data.index[row_indices]
 
             M = numpy.hstack((M,) + tuple(extra))
             domain = Orange.data.Domain(

@@ -16,7 +16,7 @@ class TestSVMLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Table('ionosphere')
-        cls.data.shuffle()
+        cls.data = cls.data.sample(frac=1)
 
     def test_SVM(self):
         learn = SVMLearner()

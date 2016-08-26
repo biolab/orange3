@@ -709,8 +709,8 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
 
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.TableBase, widget.Default),
+               ("Other Data", Orange.data.TableBase)]
 
     #: Selected linkage
     linkage = settings.Setting(1)
@@ -1082,7 +1082,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
-        if not items:
+        if items is None:
             # nothing to commit
             return
 

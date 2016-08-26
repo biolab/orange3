@@ -183,7 +183,7 @@ We can also construct a (classless) data set from a numpy array::
 
 If we want to provide meaninful names to attributes, we need to construct an appropriate data domain::
 
-    >>> domain = Orange.data.Domain([Orange.data.ContinuousVariable("lenght"), 
+    >>> domain = Orange.data.Domain([Orange.data.ContinuousVariable("length"),
                                      Orange.data.ContinuousVariable("width")])
     >>> data = Orange.data.Table(domain, X)
     >>> data.domain
@@ -250,9 +250,9 @@ Consider the following exploration of the data set on votes of the US senate::
     >>> data = Orange.data.Table("voting.tab")
     >>> data[2]
     [?, y, y, ?, y, ... | democrat]
-    >>> np.isnan(data[2][0])
+    >>> np.isnan(data.iloc[2, 0])
     True
-    >>> np.isnan(data[2][1])
+    >>> np.isnan(data.iloc[2, 1])
     False
 
 The particular data instance included missing data (represented with '?') for the first and the fourth attribute. In the original data set file, the missing values are, by default, represented with a blank space. We can now examine each attribute and report on proportion of data instances for which this feature was undefined:
@@ -311,5 +311,5 @@ or randomly sample the attributes:
     >>> atts = random.sample(data.domain.attributes, 2)
     >>> domain = Orange.data.Domain(atts, data.domain.class_var)
     >>> new_data = Orange.data.Table(domain, data)
-    >>> new_data[0]
+    >>> new_data.iloc[0]
     [5.100, 1.400 | Iris-setosa]

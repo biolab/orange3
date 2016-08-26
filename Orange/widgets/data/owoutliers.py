@@ -5,7 +5,7 @@ from PyQt4 import QtGui
 
 from Orange.base import SklLearner
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table, Domain, ContinuousVariable, TableBase
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -19,8 +19,8 @@ class OWOutliers(widget.OWWidget):
     category = "Data"
     keywords = ["data", "outlier", "inlier"]
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Inliers", Table), ("Outliers", Table)]
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Inliers", TableBase), ("Outliers", TableBase)]
 
     want_main_area = False
 
@@ -127,7 +127,7 @@ class OWOutliers(widget.OWWidget):
             self.in_out_info_label.setText(' ')
 
         self.enable_covariance()
-        if self.data and len(self.data.domain.attributes) > 1500:
+        if self.data is not None and len(self.data.domain.attributes) > 1500:
             self.disable_covariance()
 
         self.commit()
@@ -180,8 +180,9 @@ class OWOutliers(widget.OWWidget):
             new_metas = list(self.data.domain.metas) + \
                         [ContinuousVariable(name="Mahalanobis")]
             self.new_domain = Domain(attrs, classes, new_metas)
-            self.new_data = Table(self.new_domain, self.data)
-            self.new_data.metas = np.hstack((self.data.metas, mahal))
+            self.new_data = self.data.copy()
+            self.new_data["Mahalanobis"] = mahal
+            self.new_data.domain = self.new_domain
         else:
             self.new_domain = self.data.domain
             self.new_data = self.data

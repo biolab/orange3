@@ -2,7 +2,6 @@
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
 from contextlib import contextmanager
-import functools
 from itertools import islice
 import logging
 import re
@@ -10,14 +9,18 @@ import threading
 from time import time, strftime
 
 import numpy as np
+import pandas as pd
 
+from Orange.data import Domain, Table, DiscreteVariable, ContinuousVariable, StringVariable, \
+    TimeVariable, TableSeries, TablePanel, TableBase
+from Orange.data.table.base import _transferer
+from Orange.data.sql import filter as sql_filter
+from Orange.data.sql.compat import filter
+from Orange.data.sql.compat import Instance
 import Orange.misc
+
 psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
-
-from .. import domain, variable, table, instance, filter,\
-    DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
-from Orange.data.sql import filter as sql_filter
 
 
 LARGE_TABLE = 100000
@@ -27,20 +30,53 @@ sql_log = logging.getLogger('sql_log')
 sql_log.debug("Logging started: {}".format(strftime("%Y-%m-%d %H:%M:%S")))
 
 
-class SqlTable(table.Table):
+class SqlTable(Table):
+    _ORANGE_KWARG_NAMES = Table._ORANGE_KWARG_NAMES.union({"connection_params", "table_or_sql",
+                                                           "type_hints", "inspect_values"})
+
+    _metadata = Table._metadata + ['connection_pool', 'table_name', 'row_filters',
+                                   'connection_params', 'downloaded_data']
+
     connection_pool = None
     table_name = None
-    domain = None
     row_filters = ()
+    _cached__len__ = None
+
+    @property
+    def _constructor(self):
+        """Proper pandas extension as per http://pandas.pydata.org/pandas-docs/stable/internals.html"""
+        return SqlTable
+
+    @property
+    def _constructor_sliced(self):
+        """
+        An ugly workaround for the fact that pandas doesn't transfer _metadata to Series objects.
+        Where this property should return a constructor callable, we instead return a
+        proxy function, which sets the necessary properties from _metadata using a closure
+        to ensure thread-safety.
+
+        This enables TableSeries to use .X/.Y/.metas because it has a Domain.
+        """
+        attrs = {k: getattr(self, k, None) for k in Table._metadata}
+        return _transferer(SqlTableSeries, attrs)
+
+    @property
+    def _constructor_expanddim(self):
+        return SqlTablePanel
+
+    @classmethod
+    def _is_orange_construction_path(cls, *args, **kwargs):
+        # override for different signature
+        orange_kwargs = {k: v for k, v in kwargs.items() if k in cls._ORANGE_KWARG_NAMES}
+        return orange_kwargs or (len(args) > 0 and isinstance(args[0], (str, dict)))
 
     def __new__(cls, *args, **kwargs):
-        # We do not (yet) need the magic of the Table.__new__, so we call it
-        # with no parameters.
-        return super().__new__(cls)
+        # We do not (yet) need the magic of the Table.__new__, so we call it with no parameters.
+        if cls._is_orange_construction_path(*args, **kwargs):
+            return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
 
-    def __init__(
-            self, connection_params, table_or_sql,
-            type_hints=None, inspect_values=False):
+    def __init__(self, *args, **kwargs):
         """
         Create a new proxy for sql table.
 
@@ -56,7 +92,6 @@ class SqlTable(table.Table):
         connection parameters, see:
         http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
 
-
         Data domain is inferred from the columns of the table/query.
 
         The (very quick) default setting is to treat all numeric columns as
@@ -65,28 +100,52 @@ class SqlTable(table.Table):
 
         If inspect_values parameter is set to True, all column values are
         inspected and int/string columns with less than 21 values are
-        intepreted as discrete features.
+        interpreted as discrete features.
 
         Domains can be constructed by the caller and passed in
         type_hints parameter. Variables from the domain are used for
         the columns with the matching names; for columns without the matching
         name in the domain, types are inferred as described above.
         """
+        # whether we're being called from .copy(), a subscript etc
+        # after this, __finalize__ will be called to copy over existing attributes in _metadata
+        from_pandas_internals = not self._is_orange_construction_path(*args, **kwargs)
+
+        connection_params = kwargs.pop("connection_params", None)
+        table_or_sql = kwargs.pop("table_or_sql", None)
+        type_hints = kwargs.pop("type_hints", None)
+        inspect_values = kwargs.pop("inspect_values", None)
+
+        # except the common case where the first two args are connection_params and table_or_sql
+        if len(args) >= 2 and isinstance(args[0], (str, dict)) and isinstance(args[1], (str, TableBase)):
+            connection_params, table_or_sql, args = args[0], args[1], args[2:]
+
+        super().__init__(*args, **kwargs)
+
+        self.downloaded_data = False
         if isinstance(connection_params, str):
             connection_params = dict(database=connection_params)
         self.connection_params = connection_params
 
-        if self.connection_pool is None:
+        if self.connection_pool is None and not from_pandas_internals:
             self.create_connection_pool()
 
-        if table_or_sql is not None:
-            if "SELECT" in table_or_sql.upper():
-                table = "(%s) as my_table" % table_or_sql.strip("; ")
+        # no further init is needed, everything will be set by pandas in __finalize__
+        if not from_pandas_internals:
+            if table_or_sql is not None:
+                if "SELECT" in table_or_sql.upper():
+                    table = "(%s) as my_table" % table_or_sql.strip("; ")
+                else:
+                    table = self.quote_identifier(table_or_sql)
+                self.table_name = table
+                self.domain = self.get_domain(type_hints, inspect_values)
+                self.name = table
             else:
-                table = self.quote_identifier(table_or_sql)
-            self.table_name = table
-            self.domain = self.get_domain(type_hints, inspect_values)
-            self.name = table
+                pass
+
+    def __finalize__(self, from_table, **kwargs):
+        # don't filter the domain here. it doesn't work well with SQL.
+        return pd.DataFrame.__finalize__(self, from_table, **kwargs)
 
     def create_connection_pool(self):
         self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
@@ -94,7 +153,7 @@ class SqlTable(table.Table):
 
     def get_domain(self, type_hints=None, guess_values=False):
         if type_hints is None:
-            type_hints = domain.Domain([])
+            type_hints = Domain([])
 
         fields = []
         query = "SELECT * FROM %s LIMIT 0" % self.table_name
@@ -132,7 +191,7 @@ class SqlTable(table.Table):
                 else:
                     attrs.append(var)
 
-        return domain.Domain(attrs, class_vars, metas)
+        return Domain(attrs, class_vars, metas)
 
     def get_variable(self, field_name, type_code, inspect_values=False):
         FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
@@ -148,8 +207,6 @@ class SqlTable(table.Table):
 
         if type_code in TIME_TYPES + DATE_TYPES:
             tv = TimeVariable(field_name)
-            tv.have_date |= type_code in DATE_TYPES
-            tv.have_time |= type_code in TIME_TYPES
             return tv
 
         if type_code in INT_TYPES:  # bigint, int, smallint
@@ -194,6 +251,10 @@ class SqlTable(table.Table):
         A new SqlTable with appropriate filters is constructed and returned
         otherwise.
         """
+        # column selector, pandas
+        if isinstance(key, str):
+            return super(SqlTable, self).__getitem__(key)
+
         if isinstance(key, int):
             # one row
             return self._fetch_row(key)
@@ -210,10 +271,7 @@ class SqlTable(table.Table):
             try:
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                return variable.Value(
-                    var,
-                    next(self._query([var], rows=[row_idx]))[0]
-                )
+                return next(self._query([var], rows=[row_idx]))[0]
             except TypeError:
                 pass
 
@@ -233,7 +291,8 @@ class SqlTable(table.Table):
         # table.limit_rows(row_idx)
         return table
 
-    @functools.lru_cache(maxsize=128)
+    # TODO: dataframes are mutable, this doesn't work, fix
+    # @functools.lru_cache(maxsize=128)
     def _fetch_row(self, row_index):
         attributes = self.domain.variables + self.domain.metas
         rows = [row_index]
@@ -256,8 +315,7 @@ class SqlTable(table.Table):
         if attributes is not None:
             fields = []
             for attr in attributes:
-                assert hasattr(attr, 'to_sql'), \
-                    "Cannot use ordinary attributes with sql backend"
+                assert hasattr(attr, 'to_sql'), "Cannot use ordinary attributes with sql backend"
                 field_str = '(%s) AS "%s"' % (attr.to_sql(), attr.name)
                 fields.append(field_str)
             if not fields:
@@ -287,38 +345,19 @@ class SqlTable(table.Table):
                     break
                 yield row
 
-    def copy(self):
-        """Return a copy of the SqlTable"""
-        table = SqlTable.__new__(SqlTable)
-        table.connection_pool = self.connection_pool
-        table.domain = self.domain
-        table.row_filters = self.row_filters
-        table.table_name = self.table_name
-        table.name = self.name
-        table.connection_params = self.connection_params
-        return table
-
-    def __bool__(self):
-        """Return True if the SqlTable is not empty."""
-        query = self._sql_query(["1"], limit=1)
+    def _count_rows(self):
+        query = self._sql_query(["COUNT(*)"])
         with self._execute_sql_query(query) as cur:
-            return cur.fetchone() is not None
+            self._cached__len__ = cur.fetchone()[0]
+        return self._cached__len__
 
-    _cached__len__ = None
-
-    def __len__(self):
+    def exact_len(self):
         """
         Return number of rows in the table. The value is cached so it is
         computed only the first time the length is requested.
         """
         if self._cached__len__ is None:
             return self._count_rows()
-        return self._cached__len__
-
-    def _count_rows(self):
-        query = self._sql_query(["COUNT(*)"])
-        with self._execute_sql_query(query) as cur:
-            self._cached__len__ = cur.fetchone()[0]
         return self._cached__len__
 
     def approx_len(self, get_exact=False):
@@ -329,19 +368,18 @@ class SqlTable(table.Table):
             s = ''.join(row[0] for row in cur.fetchall())
         alen = int(re.findall('rows=(\d*)', s)[0])
         if get_exact:
-            threading.Thread(target=len, args=(self,)).start()
+            threading.Thread(target=SqlTable._count_rows, args=(self,)).start()
         return alen
-
-    _X = None
-    _Y = None
-    _metas = None
-    _W = None
-    _ids = None
 
     def download_data(self, limit=None, partial=False):
         """Download SQL data and store it in memory as numpy matrices."""
         if limit and not partial and self.approx_len() > limit:
             raise ValueError("Too many rows to download the data into memory.")
+
+        # we may have downloaded some data already, clear the table if so
+        if len(self) != 0:
+            self.drop(self.index, inplace=True)
+
         X = [np.empty((0, len(self.domain.attributes)))]
         Y = [np.empty((0, len(self.domain.class_vars)))]
         metas = [np.empty((0, len(self.domain.metas)))]
@@ -349,59 +387,48 @@ class SqlTable(table.Table):
             X.append(row._x)
             Y.append(row._y)
             metas.append(row._metas)
-        self._X = np.vstack(X).astype(np.float64)
-        self._Y = np.vstack(Y).astype(np.float64)
-        self._metas = np.vstack(metas).astype(object)
-        self._W = np.empty((self._X.shape[0], 0))
-        self._init_ids(self)
-        if not partial or limit and self._X.shape[0] < limit:
-            self._cached__len__ = self._X.shape[0]
+
+        _X = np.vstack(X).astype(np.float64)
+        _Y = np.vstack(Y).astype(np.float64)
+        _metas = np.vstack(metas).astype(object)
+        for data_matrix, domainthing in zip((_X, _Y, _metas),
+                                            (self.domain.attributes, self.domain.class_vars, self.domain.metas)):
+            for column, var in zip(data_matrix.T, domainthing):
+                if var.is_discrete:
+                    self[var.name] = [var.values[c.astype(int)] if not pd.isnull(c) else np.nan for c in column]
+                else:
+                    self[var.name] = column
+
+        if not partial or limit and len(self) < limit:
+            self._cached__len__ = _X.shape[0]
+        self.downloaded_data = True
 
     @property
     def X(self):
         """Numpy array with attribute values."""
-        if self._X is None:
+        if not self.downloaded_data:
             self.download_data(AUTO_DL_LIMIT)
-        return self._X
+        return super(SqlTable, self).X
 
     @property
     def Y(self):
         """Numpy array with class values."""
-        if self._Y is None:
+        if not self.downloaded_data:
             self.download_data(AUTO_DL_LIMIT)
-        return self._Y
+        return super(SqlTable, self).Y
 
     @property
     def metas(self):
-        """Numpy array with class values."""
-        if self._metas is None:
+        """Numpy array with meta values."""
+        if not self.downloaded_data:
             self.download_data(AUTO_DL_LIMIT)
-        return self._metas
+        return super(SqlTable, self).metas
 
     @property
-    def W(self):
-        """Numpy array with class values."""
-        if self._W is None:
+    def weights(self):
+        if not self.downloaded_data:
             self.download_data(AUTO_DL_LIMIT)
-        return self._W
-
-    @property
-    def ids(self):
-        """Numpy array with class values."""
-        if self._ids is None:
-            self.download_data(AUTO_DL_LIMIT)
-        return self._ids
-
-    @ids.setter
-    def ids(self, value):
-        self._ids = value
-
-    @ids.deleter
-    def ids(self):
-        del self._ids
-
-    def has_weights(self):
-        return False
+        return super(SqlTable, self).weights
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_var=False):
@@ -527,18 +554,9 @@ class SqlTable(table.Table):
         conts = np.zeros((len(row.values), len(column.values)))
         for row_value, col_value, count in data:
             row_index = row.to_val(row_value)
-            col_index = column.to_val(col_value)
+            col_index = col_value
             conts[row_index, col_index] = count
         return conts
-
-    def X_density(self):
-        return self.DENSE
-
-    def Y_density(self):
-        return self.DENSE
-
-    def metas_density(self):
-        return self.DENSE
 
     # Filters
     def _filter_is_defined(self, columns=None, negate=False):
@@ -561,13 +579,11 @@ class SqlTable(table.Table):
         if value is None:
             pass
         elif var.is_discrete:
-            value = var.to_val(value)
             value = "'%s'" % var.repr_val(value)
         else:
             pass
         t2 = self.copy()
-        t2.row_filters += \
-            (sql_filter.SameValueSql(var.to_sql(), value, negate),)
+        t2.row_filters += (sql_filter.SameValueSql(var.to_sql(), value, negate),)
         return t2
 
     def _filter_values(self, f):
@@ -578,7 +594,7 @@ class SqlTable(table.Table):
                 if cond.values is None:
                     values = None
                 else:
-                    values = ["'%s'" % var.repr_val(var.to_val(v))
+                    values = ["'%s'" % var.repr_val(v)
                               for v in cond.values]
                 new_condition = sql_filter.FilterDiscreteSql(
                     column=var.to_sql(),
@@ -612,11 +628,11 @@ class SqlTable(table.Table):
         return t2
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=...):
+    def from_table(cls, target_domain, source_table, row_indices=...):
         assert row_indices is ...
 
-        table = source.copy()
-        table.domain = domain
+        table = source_table.copy()
+        table.domain = target_domain
         return table
 
     # sql queries
@@ -739,17 +755,30 @@ class SqlTable(table.Table):
         self.create_connection_pool()
 
 
-class SqlRowInstance(instance.Instance):
+class SqlTableSeries(TableSeries):
     """
-    Extends :obj:`Orange.data.Instance` to correctly handle values of meta
-    attributes.
+    A subclass of pandas' Series to properly override constructors to avoid problems.
     """
+    @property
+    def _constructor(self):
+        return SqlTableSeries
 
-    def __init__(self, domain, data=None):
-        nvar = len(domain.variables)
-        super().__init__(domain, data[:nvar])
-        if len(data) > nvar:
-            self._metas = np.asarray(data[nvar:], dtype=object)
+    @property
+    def _constructor_expanddim(self):
+        return SqlTable
+
+
+class SqlTablePanel(TablePanel):
+    """
+    A subclass of pandas' Panel to properly override constructors to avoid problems.
+    """
+    @property
+    def _constructor(self):
+        return SqlTablePanel
+
+    @property
+    def _constructor_sliced(self):
+        return SqlTable
 
 
 class ToSql:
@@ -758,3 +787,15 @@ class ToSql:
 
     def __call__(self):
         return self.sql
+
+
+class SqlRowInstance(Instance):
+    """
+    Extends :obj:`Orange.data.Instance` to correctly handle values of meta
+    attributes.
+    """
+    def __init__(self, domain, data=None):
+        nvar = len(domain.variables)
+        super().__init__(domain, data[:nvar])
+        if len(data) > nvar:
+            self._metas = np.asarray(data[nvar:], dtype=object)

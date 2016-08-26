@@ -41,6 +41,13 @@ StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
 
 def make_variable(descriptor, compute_value):
+    def make_discrete_value(v):
+        try:
+            thing = float(v)
+            return int(v) if thing.is_integer() else thing
+        except ValueError:
+            return str(v)
+
     if isinstance(descriptor, ContinuousDescriptor):
         return Orange.data.ContinuousVariable(
             descriptor.name,
@@ -49,7 +56,7 @@ def make_variable(descriptor, compute_value):
     elif isinstance(descriptor, DiscreteDescriptor):
         return Orange.data.DiscreteVariable(
             descriptor.name,
-            values=descriptor.values,
+            values=[make_discrete_value(v) for v in descriptor.values],
             ordered=descriptor.ordered,
             base_value=descriptor.base_value,
             compute_value=compute_value)
@@ -316,8 +323,8 @@ class OWFeatureConstructor(OWWidget):
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input data set."
     icon = "icons/FeatureConstructor.svg"
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+    inputs = [("Data", Orange.data.TableBase, "setData")]
+    outputs = [("Data", Orange.data.TableBase)]
 
     want_main_area = False
 
@@ -455,7 +462,7 @@ class OWFeatureConstructor(OWWidget):
             desc = self.featuremodel[min(index, len(self.featuremodel) - 1)]
             editor = self.editors[type(desc)]
             self.editorstack.setCurrentWidget(editor)
-            editor.setEditorData(desc, self.data.domain if self.data else None)
+            editor.setEditorData(desc, self.data.domain if self.data is not None else None)
         self.editorstack.setEnabled(index >= 0)
         self.duplicateaction.setEnabled(index >= 0)
         self.removebutton.setEnabled(index >= 0)
@@ -542,8 +549,7 @@ class OWFeatureConstructor(OWWidget):
     def check_attrs_values(self, attr, data):
         for i in range(len(data)):
             for var in attr:
-                if not math.isnan(data[i, var]) \
-                        and int(data[i, var]) >= len(var.values):
+                if data.loc[data.index[i], var] not in var.values:
                     return var.name
         return None
 
@@ -829,6 +835,12 @@ def make_lambda(expression, args, values):
         else:
             return ast.Name(id=arg, ctx=ast.Param(), lineno=1, col_offset=0)
 
+    def make_value(v):
+        try:
+            return ast.Num(float(v))
+        except ValueError:
+            return ast.Str(str(v))
+
     lambda_ = ast.Lambda(
         args=ast.arguments(
             args=[make_arg(arg) for arg in args + values],
@@ -837,7 +849,7 @@ def make_lambda(expression, args, values):
             kwonlyargs=[],
             kwarg=None,
             kwargannotation=None,
-            defaults=[ast.Num(i) for i in range(len(values))],
+            defaults=[make_value(v) for v in values],
             kw_defaults=[]),
         body=expression.body,
     )
@@ -889,12 +901,12 @@ class FeatureFunc:
         self.values = values
         self.func = make_lambda(expression, [name for name, _ in args], values)
 
-    def __call__(self, instance, *_):
-        if isinstance(instance, Orange.data.Table):
-            return [self(inst) for inst in instance]
-        else:
-            args = [instance[var] for _, var in self.args]
-            return self.func(*args)
+    def __call__(self, table, *_):
+        # pandas is column oriented, this is much faster than iterrows
+        # first get the columns (free in pandas), then zip into rows
+        # to then apply the function to
+        rows = zip(*[table[var] for var_name, var in self.args])
+        return [self.func(*row) for row in rows]
 
 
 def unique(seq):

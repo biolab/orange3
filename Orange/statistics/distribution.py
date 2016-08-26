@@ -1,7 +1,7 @@
 import random
 import zlib
 import math
-from numbers import Real
+from numbers import Real, Number
 import numpy as np
 from Orange import data
 
@@ -11,8 +11,7 @@ def _get_variable(dat, variable, expected_type=None, expected_name=""):
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
-            raise ValueError("variable does not match the variable"
-                             "in the data")
+            raise ValueError("Variable does not match the variable in the data.")
     elif hasattr(dat, "domain"):
         variable = dat.domain[variable]
     elif hasattr(dat, "variable"):
@@ -22,20 +21,19 @@ def _get_variable(dat, variable, expected_type=None, expected_name=""):
     if failed or (expected_type is not None
                   and not isinstance(variable, expected_type)):
         if isinstance(variable, data.Variable):
-            raise ValueError(
-                "expected %s variable not %s" % (expected_name, variable))
+            raise ValueError("Expected %s variable not %s." % (expected_name, variable))
         else:
-            raise ValueError("expected %s, not '%s'" %
+            raise ValueError("Expected %s, not '%s.'" %
                              (expected_type.__name__, type(variable).__name__))
     return variable
 
 
 class Discrete(np.ndarray):
     def __new__(cls, dat, variable=None, unknowns=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, data.Table):
             if unknowns is not None:
                 raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                    "incompatible arguments (data table and 'unknowns'")
             return cls.from_data(dat, variable)
 
         if variable is not None:
@@ -63,27 +61,20 @@ class Discrete(np.ndarray):
             dist, unknowns = data._compute_distributions([variable])[0]
             self = super().__new__(cls, len(dist))
             self[:] = dist
+            self.variable = variable
             self.unknowns = unknowns
         except NotImplementedError:
             self = super().__new__(cls, len(variable.values))
             self[:] = np.zeros(len(variable.values))
+            self.variable = variable
             self.unknowns = 0
-            if data.has_weights():
-                for val, w in zip(data[:, variable], data.W):
-                    if not math.isnan(val):
-                        self[val] += w
-                    else:
-                        self.unknowns += w
-            else:
-                for inst in data:
-                    val = inst[variable]
-                    if val == val:
-                        self[val] += 1
-                    else:
-                        self.unknowns += 1
+            for val, w in zip(data.loc[:, variable], data.weights):
+                if not isinstance(val, Number) or not math.isnan(val):
+                    self[val] += w
+                else:
+                    self.unknowns += w
         self.variable = variable
         return self
-
 
     def __eq__(self, other):
         return np.array_equal(self, other) and (
@@ -97,40 +88,33 @@ class Discrete(np.ndarray):
             index = self.variable.to_val(index)
         return super().__getitem__(index)
 
-
     def __setitem__(self, index, value):
         if isinstance(index, str):
             index = self.variable.to_val(index)
         super().__setitem__(index, value)
 
-
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
-
 
     def __add__(self, other):
         s = super().__add__(other)
         s.unknowns = self.unknowns + getattr(other, "unknowns", 0)
         return s
 
-
     def __iadd__(self, other):
         super().__iadd__(other)
         self.unknowns += getattr(other, "unknowns", 0)
         return self
-
 
     def __sub__(self, other):
         s = super().__sub__(other)
         s.unknowns = self.unknowns - getattr(other, "unknowns", 0)
         return s
 
-
     def __isub__(self, other):
         super().__isub__(other)
         self.unknowns -= getattr(other, "unknowns", 0)
         return self
-
 
     def __mul__(self, other):
         s = super().__mul__(other)
@@ -138,27 +122,23 @@ class Discrete(np.ndarray):
             s.unknowns = self.unknowns / other
         return s
 
-
     def __imul__(self, other):
         super().__imul__(other)
         if isinstance(other, Real):
             self.unknowns *= other
         return self
 
-
-    def __div__(self, other):
-        s = super().__mul__(other)
+    def __truediv__(self, other):
+        s = super().__truediv__(other)
         if isinstance(other, Real):
             s.unknowns = self.unknowns / other
         return s
 
-
-    def __idiv__(self, other):
-        super().__imul__(other)
+    def __itruediv__(self, other):
+        super().__itruediv__(other)
         if isinstance(other, Real):
             self.unknowns /= other
         return self
-
 
     def normalize(self):
         t = np.sum(self)
@@ -168,12 +148,8 @@ class Discrete(np.ndarray):
         elif self.shape[0]:
             self[:] = 1 / self.shape[0]
 
-
     def modus(self):
-        val = np.argmax(self)
-        return data.Value(self.variable,
-                          val) if self.variable is not None else val
-
+        return self.variable.values[np.argmax(self)]
 
     def random(self):
         v = random.random() * np.sum(self)
@@ -182,15 +158,14 @@ class Discrete(np.ndarray):
             s += e
             if s > v:
                 break
-        return data.Value(self.variable, i) if self.variable is not None else i
+        return i
 
 
 class Continuous(np.ndarray):
     def __new__(cls, dat, variable=None, unknowns=None):
-        if isinstance(dat, data.Storage):
+        if isinstance(dat, data.Table):
             if unknowns is not None:
-                raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                raise TypeError("incompatible arguments (data table and 'unknowns'")
             return cls.from_data(variable, dat)
         if isinstance(dat, int):
             self = super().__new__(cls, (2, dat))
@@ -209,23 +184,7 @@ class Continuous(np.ndarray):
     @classmethod
     def from_data(cls, variable, data):
         variable = _get_variable(data, variable)
-        try:
-            dist, unknowns = data._compute_distributions([variable])[0]
-        except NotImplementedError:
-            col = data[:, variable]
-            dtype = col.dtype
-            if data.has_weights():
-                if not "float" in dtype.name and "float" in col.dtype.name:
-                    dtype = col.dtype.name
-                dist = np.empty((2, len(col)), dtype=dtype)
-                dist[0, :] = col
-                dist[1, :] = data.W
-            else:
-                dist = np.ones((2, len(col)), dtype=dtype)
-                dist[0, :] = col
-            dist.sort(axis=0)
-            dist = np.array(_orange.valuecount(dist))
-            unknowns = len(col) - dist.shape[1]
+        dist, unknowns = data._compute_distributions([variable])[0]
 
         self = super().__new__(cls, dist.shape)
         self[:] = dist
@@ -240,6 +199,9 @@ class Continuous(np.ndarray):
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
 
+    def __getitem__(self, item):
+        return super().__getitem__(item)
+
     def normalize(self):
         t = np.sum(self[1, :])
         if t > 1e-6:
@@ -252,7 +214,6 @@ class Continuous(np.ndarray):
         val = np.argmax(self[1, :])
         return self[0, val]
 
-    # TODO implement __getitem__ that will return a normal array, not Continuous
     def min(self):
         return self[0, 0]
 
@@ -278,14 +239,13 @@ class Continuous(np.ndarray):
         return math.sqrt(self.variance())
 
 
-
 def class_distribution(data):
     if data.domain.class_var:
         return get_distribution(data, data.domain.class_var)
     elif data.domain.class_vars:
         return [get_distribution(cls, data) for cls in data.domain.class_vars]
     else:
-        raise ValueError("domain has no class attribute")
+        raise ValueError("Domain has no class attribute.")
 
 
 def get_distribution(dat, variable, unknowns=None):
@@ -295,17 +255,16 @@ def get_distribution(dat, variable, unknowns=None):
     elif variable.is_continuous:
         return Continuous(dat, variable, unknowns)
     else:
-        raise TypeError("cannot compute distribution of '%s'" %
-                        type(variable).__name__)
+        raise TypeError("Cannot compute distribution of '%s.'" % type(variable).__name__)
 
 
-def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
+def get_distributions(dat, skip_discrete=False, skip_continuous=False):
     vars = dat.domain.variables
-    if skipDiscrete:
-        if skipContinuous:
+    if skip_discrete:
+        if skip_continuous:
             return []
         columns = [i for i, var in enumerate(vars) if var.is_continuous]
-    elif skipContinuous:
+    elif skip_continuous:
         columns = [i for i, var in enumerate(vars) if var.is_discrete]
     else:
         columns = None
@@ -331,19 +290,14 @@ def get_distributions_for_columns(data, columns):
     :param list columns:
         List of column indices into the `data.domain` (indices can be
         :class:`int` or instances of `Orange.data.Variable`)
-
     """
-    domain = data.domain
-    # Normailze the columns to int indices
-    columns = [col if isinstance(col, int) else domain.index(col)
-               for col in columns]
     try:
-        # Try the optimized code path (query the table|storage directly).
+        # Try the optimized code path (query the table directly).
         dist_unks = data._compute_distributions(columns)
     except NotImplementedError:
         # Use default slow(er) implementation.
         return [get_distribution(data, i) for i in columns]
     else:
         # dist_unkn is a list of (values, unknowns)
-        return [get_distribution(dist, domain[col], unknown)
+        return [get_distribution(dist, data.domain[col], unknown)
                 for col, (dist, unknown) in zip(columns, dist_unks)]

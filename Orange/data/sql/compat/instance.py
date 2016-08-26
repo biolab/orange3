@@ -1,8 +1,9 @@
 from itertools import chain
 from numbers import Real, Integral
-from ..data.variable import Value, Unknown
 from math import isnan
 import numpy as np
+
+from Orange.data import Unknown
 
 
 class Instance:
@@ -25,8 +26,7 @@ class Instance:
         if data is None:
             self._x = np.repeat(Unknown, len(domain.attributes))
             self._y = np.repeat(Unknown, len(domain.class_vars))
-            self._metas = np.array([var.Unknown for var in domain.metas],
-                                   dtype=object)
+            self._metas = np.array([var.Unknown for var in domain.metas], dtype=object)
             self._weight = 1
         elif isinstance(data, Instance) and data.domain == domain:
             self._x = np.array(data._x)
@@ -41,7 +41,7 @@ class Instance:
             self.id = id
         else:
             from Orange.data import Table
-            self.id = Table.new_id()
+            self.id = Table._new_id()
 
     @property
     def domain(self):
@@ -116,7 +116,7 @@ class Instance:
             value = self._y[key - len(self.domain.attributes)]
         else:
             value = self._metas[-1 - key]
-        return Value(self._domain[key], value)
+        return value
 
     #TODO Should we return an instance of `object` if we have a meta attribute
     #     that is not Discrete or Continuous? E.g. when we have strings, we'd
@@ -174,8 +174,7 @@ class Instance:
         return chain(iter(self._x), iter(self._y))
 
     def values(self):
-        return (Value(var, val)
-                for var, val in zip(self.domain.variables, self))
+        return [val for val in self]
 
     def __len__(self):
         return len(self._x) + len(self._y)
@@ -201,15 +200,14 @@ class Instance:
         Throws an exception if there are multiple classes.
         """
         self._check_single_class()
-        return Value(self._domain.class_var, self._y[0])
+        return self._y[0]
 
     def get_classes(self):
         """
         Return the class value as a list of instances of
         :obj:`Orange.data.Value`.
         """
-        return (Value(var, value)
-                for var, value in zip(self._domain.class_vars, self._y))
+        return self._y
 
     def set_class(self, value):
         """

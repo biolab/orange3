@@ -23,11 +23,11 @@ class OWParallelCoordinates(OWVisWidget):
     description = "Parallel coordinates display of multi-dimensional data."
     icon = "icons/ParallelCoordinates.svg"
     priority = 100
-    inputs = [("Data", Orange.data.Table, 'set_data', Default),
-              ("Data Subset", Orange.data.Table, 'set_subset_data'),
+    inputs = [("Data", Orange.data.TableBase, 'set_data', Default),
+              ("Data Subset", Orange.data.TableBase, 'set_subset_data'),
               ("Features", AttributeList, 'set_shown_attributes')]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table),
+    outputs = [("Selected Data", Orange.data.TableBase, widget.Default),
+               ("Other Data", Orange.data.TableBase),
                ("Features", AttributeList)]
 
     settingsHandler = DomainContextHandler()
@@ -146,7 +146,7 @@ class OWParallelCoordinates(OWVisWidget):
 
         self.__ignore_updates = True
         self.closeContext()
-        same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
+        same_domain = self.data and data and hash(data.domain) == hash(self.data.domain) # preserve attribute choice if the domain is the same
         self.data = data
 
         if not same_domain:

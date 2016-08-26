@@ -27,7 +27,7 @@ class OWDistances(OWWidget):
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    inputs = [("Data", Orange.data.TableBase, "set_data")]
     outputs = [("Distances", Orange.misc.DistMatrix)]
 
     axis = settings.Setting(0)

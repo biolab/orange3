@@ -137,7 +137,7 @@ class CURModel(Projection):
         elif axis == 1:
             Y = data.Y[self.proj.samples_]
             metas = data.metas[self.proj.samples_]
-            transformed_data = Orange.data.Table(data.domain, Xt, Y, metas=metas)
+            transformed_data = Orange.data.Table(data.domain, Xt, Y, metas)
         else:
             raise TypeError('CUR can select either columns '
                             '(axis = 0) or rows (axis = 1).')

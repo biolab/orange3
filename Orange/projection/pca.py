@@ -127,7 +127,7 @@ class IncrementalPCA(SklProjector):
 
 class IncrementalPCAModel(PCAModel):
     def partial_fit(self, data):
-        if isinstance(data, Orange.data.Storage):
+        if isinstance(data, Orange.data.Table):
             if data.domain != self.pre_domain:
                 data = data.from_table(self.pre_domain, data)
             self.proj.partial_fit(data.X)
@@ -158,7 +158,7 @@ class RemotePCA:
         percent = batch / n * 100 if n else 100
         for i in range(max_iter):
             data_sample = data.sample_percentage(percent, no_cache=True)
-            if not data_sample:
+            if data_sample.exact_len() == 0:
                 continue
             data_sample.download_data(1000000)
             data_sample = Orange.data.Table.from_numpy(

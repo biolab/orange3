@@ -1,8 +1,8 @@
-import numpy
+import numpy as np
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
-from .transformation import Transformation, Lookup
+from .transformation import Transformation, Lookup as tLookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", 'DropInstances',
            "Model", "AsValue", "Random", "Default"]
@@ -24,7 +24,26 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        return numpy.where(numpy.isnan(c), self.value, c)
+        # if this is a categorical, expand its values if needed (pandas limitation)
+        if hasattr(c, 'cat') and self.value not in c.cat.categories:
+            c = c.cat.add_categories([self.value])
+        return c.fillna(self.value)
+
+
+class ReplaceKnownsUnknowns(Transformation):
+    """
+    A column transformation which replaces both known and unknown values
+    with two specified values.
+    """
+    def __init__(self, variable, value_known, value_unknown):
+        super(ReplaceKnownsUnknowns, self).__init__(variable)
+        self.value_known = value_known
+        self.value_unknown = value_unknown
+
+    def transform(self, c):
+        mask = c.isnull()
+        return c.fillna(self.value_unknown).where(mask, self.value_known)\
+            .astype('category', categories=[self.value_known, self.value_unknown])
 
 
 class BaseImputeMethod:
@@ -76,8 +95,7 @@ class DropInstances(BaseImputeMethod):
     description = ""
 
     def __call__(self, data, variable):
-        index = data.domain.index(variable)
-        return numpy.isnan(data[:, index]).reshape(-1)
+        return data[variable].isnull()
 
 
 class Average(BaseImputeMethod):
@@ -147,22 +165,23 @@ class ReplaceUnknownsModel:
         self.model = model
 
     def __call__(self, data):
-        if isinstance(data, Orange.data.Instance):
-            column = numpy.array([float(data[self.variable])])
-        else:
-            column = numpy.array(data.get_column_view(self.variable)[0],
-                                 copy=True)
+        column = data[self.variable]
 
-        mask = numpy.isnan(column)
-        if not numpy.any(mask):
+        mask = column.isnull().values
+        if not mask.any():
             return column
 
-        if isinstance(data, Orange.data.Instance):
-            predicted = self.model(data)
-        else:
-            predicted = self.model(data[mask])
-        column[mask] = predicted
-        return column
+        # transform discretes into actual values, not ordinal indices
+        predicted = [self.variable.values[p] if self.variable.is_discrete else p
+                     for p in self.model(data[mask])]
+
+        # pandas has some problems filling categorical only-nulls, therefore workaround
+        # sorry, but this is prettier than other solutions
+        result = column.copy()
+        for i, m in enumerate(mask):
+            if m:
+                result.iloc[i] = predicted.pop(0)
+        return result
 
 
 class Model(BaseImputeMethod):
@@ -218,24 +237,7 @@ def domain_with_class_var(domain, class_var):
 
 class IsDefined(Transformation):
     def transform(self, c):
-        return ~numpy.isnan(c)
-
-
-class Lookup(Lookup):
-    def __init__(self, variable, lookup_table, unknown=None):
-        super().__init__(variable, lookup_table)
-        self.unknown = unknown
-
-    def transform(self, column):
-        if self.unknown is None:
-            unknown = numpy.nan
-        else:
-            unknown = self.unknown
-
-        mask = numpy.isnan(column)
-        column_valid = numpy.where(mask, 0, column)
-        values = self.lookup_table[numpy.array(column_valid, dtype=int)]
-        return numpy.where(mask, unknown, values)
+        return ~np.isnan(c)
 
 
 class AsValue(BaseImputeMethod):
@@ -252,11 +254,8 @@ class AsValue(BaseImputeMethod):
                 fmt.format(var=variable),
                 values=variable.values + [value],
                 base_value=variable.base_value,
-                compute_value=Lookup(
-                    variable,
-                    numpy.arange(len(variable.values), dtype=int),
-                    unknown=len(variable.values))
-                )
+                compute_value=ReplaceUnknowns(variable, value)
+            )
             return var
 
         elif variable.is_continuous:
@@ -264,7 +263,7 @@ class AsValue(BaseImputeMethod):
             indicator_var = Orange.data.DiscreteVariable(
                 fmt.format(var=variable),
                 values=("undef", "def"),
-                compute_value=IsDefined(variable))
+                compute_value=ReplaceKnownsUnknowns(variable, "def", "undef"))
             stats = basic_stats.BasicStats(data, variable)
             return (variable.copy(compute_value=ReplaceUnknowns(variable,
                                                                 stats.mean)),
@@ -292,32 +291,31 @@ class ReplaceUnknownsRandom(Transformation):
         self.distribution = distribution
 
         if variable.is_discrete:
-            counts = numpy.array(distribution)
+            counts = np.array(distribution)
         elif variable.is_continuous:
-            counts = numpy.array(distribution)[1, :]
+            counts = np.array(distribution)[1, :]
         else:
             raise TypeError("Only discrete and continuous "
                             "variables are supported")
-        csum = numpy.sum(counts)
+        csum = np.sum(counts)
         if csum > 0:
             self.sample_prob = counts / csum
         else:
-            self.sample_prob = numpy.ones_like(counts) / len(counts)
+            self.sample_prob = np.ones_like(counts) / len(counts)
 
     def transform(self, c):
-        c = numpy.array(c, copy=True)
-        nanindices = numpy.flatnonzero(numpy.isnan(c))
+        c = c.copy()
+        nanindices = np.flatnonzero(c.isnull())
 
         if self.variable.is_discrete:
-            sample = numpy.random.choice(
-                len(self.variable.values), size=len(nanindices),
-                replace=True, p=self.sample_prob)
+            sample = np.random.choice(self.variable.values, size=len(nanindices),
+                                      replace=True, p=self.sample_prob)
         else:
-            sample = numpy.random.choice(
-                numpy.asarray(self.distribution)[0, :], size=len(nanindices),
-                replace=True, p=self.sample_prob)
+            sample = np.random.choice(np.asarray(self.distribution)[0, :], size=len(nanindices),
+                                      replace=True, p=self.sample_prob)
 
-        c[nanindices] = sample
+        # also transform into actual values
+        c.iloc[nanindices] = sample
         return c
 
 
@@ -339,9 +337,9 @@ class Random(BaseImputeMethod):
             raise ValueError("'{}' has an unknown distribution"
                              .format(variable))
 
-        if variable.is_discrete and numpy.sum(dist) == 0:
+        if variable.is_discrete and np.sum(dist) == 0:
             dist += 1 / len(dist)
-        elif variable.is_continuous and numpy.sum(dist[1, :]) == 0:
+        elif variable.is_continuous and np.sum(dist[1, :]) == 0:
             dist[1, :] += 1 / dist.shape[1]
         return variable.copy(
             compute_value=ReplaceUnknownsRandom(variable, dist))

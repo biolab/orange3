@@ -111,7 +111,7 @@ class OWBaseSVM(OWBaseLearner):
 
         sv = None
         if self.valid_data:
-            sv = self.data[self.model.skl_model.support_]
+            sv = self.data.iloc[self.model.skl_model.support_]
         self.send("Support vectors", sv)
 
 

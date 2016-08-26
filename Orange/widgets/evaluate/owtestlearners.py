@@ -13,7 +13,7 @@ from PyQt4.QtGui import (
 )
 from PyQt4.QtCore import Qt, QSize
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
 import Orange.classification
@@ -132,11 +132,11 @@ class OWTestLearners(OWWidget):
     priority = 100
 
     inputs = [("Learner", Learner, "set_learner", widget.Multiple),
-              ("Data", Table, "set_train_data", widget.Default),
-              ("Test Data", Table, "set_test_data"),
+              ("Data", TableBase, "set_train_data", widget.Default),
+              ("Test Data", TableBase, "set_test_data"),
               ("Preprocessor", Preprocess, "set_preprocessor")]
 
-    outputs = [("Predictions", Table),
+    outputs = [("Predictions", TableBase),
                ("Evaluation Results", Results)]
 
     settingsHandler = settings.ClassValuesContextHandler()
@@ -275,7 +275,7 @@ class OWTestLearners(OWWidget):
         Set the input training dataset.
         """
         self.Information.data_sampled.clear()
-        if data and not data.domain.class_var:
+        if data is not None and not data.domain.class_var:
             self.Error.class_required()
             data = None
         else:
@@ -311,7 +311,7 @@ class OWTestLearners(OWWidget):
         Set the input separate testing dataset.
         """
         self.Information.test_data_sampled.clear()
-        if data and not data.domain.class_var:
+        if data is not None and not data.domain.class_var:
             self.Error.class_required()
             data = None
         else:
@@ -557,7 +557,7 @@ class OWTestLearners(OWWidget):
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
         self.class_selection_combo.clear()
-        if not self.data:
+        if self.data is None:
             return
 
         if self.data.domain.has_discrete_class:
@@ -627,7 +627,7 @@ class OWTestLearners(OWWidget):
 
     def send_report(self):
         """Report on the testing schema and results"""
-        if not self.data or not self.learners:
+        if self.data is None or not self.learners:
             return
         if self.resampling == self.KFold:
             stratified = 'Stratified ' if self.cv_stratified else ''

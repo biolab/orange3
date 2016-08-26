@@ -6,7 +6,7 @@ from PyQt4 import QtGui
 from PyQt4.QtCore import Qt, QTimer
 from PyQt4.QtGui import QApplication, QCursor, QMessageBox
 
-from Orange.data import Table
+from Orange.data import Table, TableBase
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -30,7 +30,7 @@ class OWSql(OWWidget):
     category = "Data"
     keywords = ["data", "file", "load", "read"]
     outputs = [OutputSignal(
-        "Data", Table,
+        "Data", TableBase,
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False

@@ -21,16 +21,14 @@ from urllib.request import urlopen
 
 import bottleneck as bn
 import numpy as np
+import pandas as pd
 from chardet.universaldetector import UniversalDetector
 
 from Orange.data import (
-    _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
-    DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
+    _io, Table, Domain, Variable, DiscreteVariable,
+    StringVariable, ContinuousVariable, TimeVariable,
 )
 from Orange.util import Registry, flatten, namegen
-
-
-_IDENTITY = lambda i: i
 
 
 class Compression:
@@ -151,7 +149,6 @@ _RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format('|'.join(flatten(filter(None, 
 
 
 class FileFormatMeta(Registry):
-
     def __new__(cls, name, bases, attrs):
         newcls = super().__new__(cls, name, bases, attrs)
 
@@ -209,18 +206,33 @@ class FileFormat(metaclass=FileFormatMeta):
         DESCRIPTION = 'human-readable file format description'
         SUPPORT_COMPRESSED = False
 
+    --------------------------
+    START CHOICE: Subclasses override either
+
+        def read_header(self):
+            # read only the first 3 rows into a raw pd.DataFrame
+            # 3 because the header has {0, 1, 3} rows
+
+    and
+
+        def read_contents(self, skiprows):
+            # read the whole file (with skipped rows) into a raw pd.DataFrame
+            # raw means that no rows ar treated as columns, no columns as indices etc
+            # skiprows determines how many rows to skip at the beginning of the file
+
+    or, if the file format has no headers or is e.g. binary,
+
         def read(self):
-            ...  # load headers, data, ...
-            return self.data_table(data, headers)
+            # return a complete, processed, pd.DataFrame/Table object
+
+    END CHOICE
+    --------------------------
 
         @classmethod
         def write_file(cls, filename, data):
             ...
             self.write_headers(writer.write, data)
             writer.writerows(data)
-
-    Wrapper FileFormat.data_table() returns Orange.data.Table from `data`
-    iterable (list (rows) of lists of values (cols)).
     """
 
     PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
@@ -337,248 +349,175 @@ class FileFormat(metaclass=FileFormatMeta):
         """
         return open_compressed(filename, *args, **kwargs)
 
-    @staticmethod
-    def parse_headers(data):
-        """Return (header rows, rest of data) as discerned from `data`"""
+    def read_header(self):
+        """Subclasses may override this according to the details in FileFormat."""
+        raise NotImplementedError()
 
-        def is_number(item):
-            try: float(item)
-            except ValueError: return False
-            return True
+    def read_contents(self, skiprows):
+        """Subclasses may override this according to the details in FileFormat."""
+        raise NotImplementedError()
+
+    def read(self):
+        """
+        Subclasses may override this according to the details in FileFormat.
+        If this is not overridden, it uses FileFormat.read_header and FileFormat.read_contents
+        to construct a Table from headers and data.
+        """
+        def tryparse_int_float(item):
+            try:
+                return float(item)
+            except ValueError:
+                return None
+
         # Second row items are type identifiers
         def header_test2(items):
             return all(map(_RE_TYPES.match, items))
+
         # Third row items are flags and column attributes (attr=value)
         def header_test3(items):
             return all(map(_RE_FLAGS.match, items))
 
-        data = iter(data)
-        header_rows = []
+        # read and parse the header before reading the rest of the file
+        header_df = self.read_header()
+        is_small = len(header_df) < 3
 
-        # Try to parse a three-line header
-        lines = []
-        try:
-            lines.append(list(next(data)))
-            lines.append(list(next(data)))
-            lines.append(list(next(data)))
-        except StopIteration:
-            lines, data = [], chain(lines, data)
-        if lines:
-            l1, l2, l3 = lines
-            # Three-line header if line 2 & 3 match (1st line can be anything)
-            if header_test2(l2) and header_test3(l3):
-                header_rows = [l1, l2, l3]
+        # the header can have 0, 1 or 3 rows
+        # it is a three-row header if the second and third columns match the regex,
+        # the first one can then be anything
+        three_row_header = not is_small and header_test2(header_df.iloc[1].fillna('').astype(str)) \
+                           and header_test3(header_df.iloc[2].fillna('').astype(str))
+        # a one-row header has something that doesn't parse as a float in the first row
+        one_row_header = not all(tryparse_int_float(i) is not None for i in header_df.iloc[0])
+        if one_row_header or three_row_header:
+            if three_row_header:
+                names, types, flags = [list(header_df.iloc[i].fillna('')) for i in range(3)]
+                contents = self.read_contents(skiprows=3)
             else:
-                lines, data = [], chain((l1, l2, l3), data)
-
-        # Try to parse a single-line header
-        if not header_rows:
-            try: lines.append(list(next(data)))
-            except StopIteration: pass
-            if lines:
-                # Header if none of the values in line 1 parses as a number
-                if not all(is_number(i) for i in lines[0]):
-                    header_rows = [lines[0]]
-                else:
-                    data = chain(lines, data)
-
-        return header_rows, data
-
-    @classmethod
-    def data_table(self, data, headers=None):
-        """
-        Return Orange.data.Table given rows of `headers` (iterable of iterable)
-        and rows of `data` (iterable of iterable; if ``numpy.ndarray``, might
-        as well **have it sorted column-major**, e.g. ``order='F'``).
-
-        Basically, the idea of subclasses is to produce those two iterables,
-        however they might.
-
-        If `headers` is not provided, the header rows are extracted from `data`,
-        assuming they precede it.
-        """
-        if not headers:
-            headers, data = self.parse_headers(data)
-
-        # Consider various header types (single-row, two-row, three-row, none)
-        if 3 == len(headers):
-            names, types, flags = map(list, headers)
-        else:
-            if 1 == len(headers):
-                HEADER1_FLAG_SEP = '#'
-                # First row format either:
+                # one row header format either:
                 #   1) delimited column names
-                #   2) -||- with type and flags prepended, separated by #,
-                #      e.g. d#sex,c#age,cC#IQ
-                _flags, names = zip(*[i.split(HEADER1_FLAG_SEP, 1) if HEADER1_FLAG_SEP in i else ('', i)
-                                      for i in headers[0]])
+                #   2) -||- with type and flags prepended, separated by #, e.g. d#sex,c#age,cC#IQ
+                HEADER1_FLAG_SEP = '#'
+                ft_combo, names = zip(*[i.split(HEADER1_FLAG_SEP, 1) if HEADER1_FLAG_SEP in i else ('', i)
+                                        for i in header_df.iloc[0].fillna('')])
                 names = list(names)
-            elif 2 == len(headers):
-                names, _flags = map(list, headers)
-            else:
-                # Use heuristics for everything
-                names, _flags = [], []
-            types = [''.join(filter(str.isupper, flag)).lower() for flag in _flags]
-            flags = [Flags.join(filter(str.islower, flag)) for flag in _flags]
+                types = [''.join(filter(str.isupper, flag)).lower() for flag in ft_combo]
+                flags = [Flags.join(filter(str.islower, flag)) for flag in ft_combo]
+                contents = self.read_contents(skiprows=1)
 
-        # Determine maximum row length
-        rowlen = max(map(len, (names, types, flags)))
+            # we may have no data, so construct an empty df to satisfy later needs
+            if contents is None:
+                contents = pd.DataFrame(data=np.empty((0, len(header_df.columns))), columns=header_df.columns)
 
-        def _equal_length(lst):
-            lst.extend(['']*(rowlen - len(lst)))
-            return lst
+            # transform any values we believe are null into actual null values
+            contents.replace(to_replace=list(Variable.MISSING_VALUES), value=np.nan, inplace=True)
 
-        # Ensure all data is of equal width in a column-contiguous array
-        data = np.array([_equal_length(list(row)) for row in data if any(row)],
-                        copy=False, dtype=object, order='F')
+            # data may be longer than the headers, extend headers with empty values
+            names.extend([''] * (len(contents.columns) - len(names)))
+            types.extend([''] * (len(contents.columns) - len(types)))
+            flags.extend([''] * (len(contents.columns) - len(flags)))
 
-        # Data may actually be longer than headers were
-        try: rowlen = data.shape[1]
-        except IndexError: pass
-        else:
-            for lst in (names, types, flags):
-                _equal_length(lst)
+            result = pd.DataFrame()
+            weight_column = None  # separate, because it doesn't fit into the domain
+            role_vars = {'x': [], 'y': [], 'meta': []}
+            for col_idx, (name, typef, flag) in enumerate(zip(names, types, flags)):
+                typef = typef.strip()
+                flag = Flags(Flags.split(flag))
+                col_type_kwargs = {}
 
-        NAMEGEN = namegen('Feature ', 1)
-        Xcols, attrs = [], []
-        Mcols, metas = [], []
-        Ycols, clses = [], []
-        Wcols = []
+                # some columns can be ignored
+                if flag.i:
+                    continue
 
-        # Iterate through the columns
-        for col in range(rowlen):
-            flag = Flags(Flags.split(flags[col]))
-            if flag.i: continue
-
-            type_flag = types and types[col].strip()
-            try:
-                orig_values = [np.nan if i in MISSING_VALUES else i
-                               for i in (i.strip() for i in data[:, col])]
-            except IndexError:
-                # No data instances leads here
-                orig_values = []
-                # In this case, coltype could be anything. It's set as-is
-                # only to satisfy test_table.TableTestCase.test_append
-                coltype = DiscreteVariable
-
-            coltype_kwargs = {}
-            valuemap = []
-            values = orig_values
-
-            if type_flag in StringVariable.TYPE_HEADERS:
-                coltype = StringVariable
-            elif type_flag in ContinuousVariable.TYPE_HEADERS:
-                coltype = ContinuousVariable
-                try:
-                    values = [float(i) for i in orig_values]
-                except ValueError:
-                    for row, num in enumerate(orig_values):
-                        try: float(num)
-                        except ValueError: break
-                    raise ValueError('Non-continuous value in (1-based) '
-                                     'line {}, column {}'.format(row + len(headers) + 1,
-                                                                 col + 1))
-
-            elif type_flag in TimeVariable.TYPE_HEADERS:
-                coltype = TimeVariable
-
-            elif (type_flag in DiscreteVariable.TYPE_HEADERS or
-                  _RE_DISCRETE_LIST.match(type_flag)):
-                if _RE_DISCRETE_LIST.match(type_flag):
-                    valuemap = Flags.split(type_flag)
-                    coltype_kwargs.update(ordered=True)
+                # determine column role
+                if flag.m or typef in StringVariable.TYPE_HEADERS:
+                    col_role = 'meta'
+                elif flag.w:
+                    # special execution path because this type is special
+                    weight_column = contents[col_idx]
+                    continue
+                elif flag.c:
+                    col_role = 'y'
                 else:
-                    valuemap = sorted(set(orig_values) - {np.nan})
+                    col_role = 'x'
 
-            else:
-                # No known type specified, use heuristics
-                is_discrete = is_discrete_values(orig_values)
-                if is_discrete:
-                    valuemap = sorted(is_discrete)
+                # determine column type from header
+                if typef in StringVariable.TYPE_HEADERS:
+                    col_type = StringVariable
+                elif typef in ContinuousVariable.TYPE_HEADERS:
+                    col_type = ContinuousVariable
+                elif typef in TimeVariable.TYPE_HEADERS:
+                    col_type = TimeVariable
+                elif typef in DiscreteVariable.TYPE_HEADERS:
+                    col_type = DiscreteVariable
+                elif _RE_DISCRETE_LIST.match(typef):
+                    col_type = DiscreteVariable
+                    # if possible, we want these to be numbers (as they will be in the table)
+                    # but only do this if every value is parsed to a number, otherwise elements
+                    # will be upcast to strings in the table and they won't actually be the same thing
+                    raws = Flags.split(typef)
+                    nums = [tryparse_int_float(a) for a in raws]
+                    all_parsed = all(num is not None for num in nums)
+                    col_type_kwargs.update(values=[num if num is not None and all_parsed else raw
+                                                   for raw, num in zip(raws, nums)],
+                                           ordered=True)
                 else:
-                    try: values = [float(i) for i in orig_values]
-                    except ValueError:
-                        tvar = TimeVariable('_')
-                        try: values = [tvar.parse(i) for i in orig_values]
-                        except ValueError:
-                            coltype = StringVariable
-                        else:
-                            coltype = TimeVariable
-                    else:
-                        coltype = ContinuousVariable
+                    # infer from data
+                    # if the initial role was x (not specified), allow this to modify it
+                    col_type, col_role = Domain.infer_type_role(contents[col_idx],
+                                                                force_role=col_role if col_role != 'x' else None)
 
-            if valuemap:
-                # Map discrete data to ints
-                def valuemap_index(val):
-                    try: return valuemap.index(val)
-                    except ValueError: return np.nan
+                if col_type is DiscreteVariable and 'values' not in col_type_kwargs:
+                    # for discrete variables that haven't specified their values in the header
+                    col_type_kwargs.update(values=DiscreteVariable.generate_unique_values(contents[col_idx]))
+                elif col_type is ContinuousVariable and typef in ContinuousVariable.TYPE_HEADERS:
+                    # guard against reading non-continuous data into continuous columns
+                    # (this happens when the column is specified manually, therefore typef check)
+                    # this doesn't catch timevariable errors, even though they are continuous,
+                    # even though timevariables are also continuous
+                    if not np.issubdtype(contents[col_idx].dtype, np.number):
+                        raise ValueError("Non-continuous data read into a continuous column "
+                                         "(column {}: {}).".format(col_idx + 1, name))
 
-                values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
-                coltype = DiscreteVariable
-                coltype_kwargs.update(values=valuemap)
-
-            if coltype is StringVariable:
-                values = ['' if i is np.nan else i
-                          for i in orig_values]
-
-            if flag.m or coltype is StringVariable:
-                append_to = (Mcols, metas)
-            elif flag.w:
-                append_to = (Wcols, None)
-            elif flag.c:
-                append_to = (Ycols, clses)
-            else:
-                append_to = (Xcols, attrs)
-
-            cols, domain_vars = append_to
-            cols.append(col)
-            if domain_vars is not None:
-                if names and names[col]:
-                    # Use existing variable if available
-                    var = coltype.make(names[col].strip(), **coltype_kwargs)
+                # use an existing variable if available, otherwise get a brand new one
+                # with a brand new name
+                new_name = Domain.infer_name(col_type, col_role, name,
+                                             role_vars['x'], role_vars['y'], role_vars['meta'])
+                if name == new_name:
+                    var = col_type.make(new_name, **col_type_kwargs)
                 else:
-                    # Never use existing for un-named variables
-                    var = coltype(next(NAMEGEN), **coltype_kwargs)
+                    var = col_type(new_name, **col_type_kwargs)
+                # also store any attributes in the third row (beside the role declaration)
                 var.attributes.update(flag.attributes)
-                domain_vars.append(var)
 
-                # Reorder discrete values to match existing variable
-                if var.is_discrete and not var.ordered:
-                    new_order, old_order = var.values, coltype_kwargs.get('values', var.values)
-                    if new_order != old_order:
-                        offset = len(new_order)
-                        column = values if data.ndim > 1 else data
-                        column += offset
-                        for i, val in enumerate(var.values):
-                            try: oldval = old_order.index(val)
-                            except ValueError: continue
-                            bn.replace(column, offset + oldval, new_order.index(val))
+                role_vars[col_role].append(var)
+                # strip whitespace from string/string-like columns (np.object_ in pandas)
+                # important: not just object which is a superclass of everything probably,
+                # object_ is the one that only encloses 'real' object-like types
+                if np.issubdtype(contents[col_idx], np.object_):
+                    result[var.name] = contents[col_idx].str.strip()
+                else:
+                    result[var.name] = contents[col_idx]
 
-            if coltype is TimeVariable:
-                # Re-parse the values because only now after coltype.make call
-                # above, variable var is the correct one
-                values = [var.parse(i) for i in orig_values]
+            domain = Domain(role_vars['x'], role_vars['y'], role_vars['meta'])
+            result = Table.from_dataframe(domain, result, reindex=True, weights=weight_column)
+        else:
+            # there is no header, just read the file
+            # and pass it to the proper constructor to infer columns
+            result = Table.from_dataframe(None, self.read_contents(skiprows=0))
+        result.consolidate(inplace=True)
 
-            # Write back the changed data. This is needeed to pass the
-            # correct, converted values into Table.from_numpy below
-            try: data[:, col] = values
-            except IndexError: pass
-
-        domain = Domain(attrs, clses, metas)
-
-        if not data.size:
-            return Table.from_domain(domain, 0)
-
-        table = Table.from_numpy(domain,
-                                 data[:, Xcols].astype(float, order='C'),
-                                 data[:, Ycols].astype(float, order='C'),
-                                 data[:, Mcols].astype(object, order='C'),
-                                 data[:, Wcols].astype(float, order='C'))
-        return table
+        # TODO: Name can be set unconditionally when/if
+        # self.filename will always be a string with the file name.
+        # Currently, some tests pass StringIO instead of
+        # the file name to a reader.
+        if isinstance(self.filename, str):
+            result.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+        result.name = getattr(self, 'force_name', None) or result.name
+        return result
 
     @staticmethod
     def header_names(data):
-        return ['weights'] * data.has_weights() + \
+        return ([data._WEIGHTS_COLUMN] if data.has_weights else []) + \
                [v.name for v in chain(data.domain.attributes,
                                       data.domain.class_vars,
                                       data.domain.metas)]
@@ -591,14 +530,14 @@ class FileFormat(metaclass=FileFormatMeta):
             elif var.is_discrete:
                 return Flags.join(var.values) if var.ordered else var.TYPE_HEADERS[0]
             raise NotImplementedError
-        return ['continuous'] * data.has_weights() + \
+        return (['continuous'] if data.has_weights else []) + \
                [_vartype(v) for v in chain(data.domain.attributes,
                                            data.domain.class_vars,
                                            data.domain.metas)]
 
     @staticmethod
     def header_flags(data):
-        return list(chain(['weight'] * data.has_weights(),
+        return list(chain(['weight'] if data.has_weights else [],
                           (Flags.join([flag], *('{}={}'.format(*a)
                                                 for a in sorted(var.attributes.items())))
                            for flag, var in chain(zip(repeat(''),  data.domain.attributes),
@@ -615,80 +554,94 @@ class FileFormat(metaclass=FileFormatMeta):
     @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
-        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+        vars = list(chain((ContinuousVariable(data._WEIGHTS_COLUMN),) if data.has_weights else [],
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))
-        for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                       data.X,
-                       data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                       data.metas):
-            write(['' if isinstance(val, Number) and isnan(val) else
-                   var.values[int(val)] if var.is_discrete else
-                   var.repr_val(val) if isinstance(var, TimeVariable) else
-                   val
-                   for var, val in zip(vars, flatten(row))])
+        for idx, row in data.iterrows():
+            row_filtered = row[vars]
+            write(list(row_filtered))
 
 
 class CSVReader(FileFormat):
     """Reader for comma separated files"""
-
     EXTENSIONS = ('.csv',)
     DESCRIPTION = 'Comma-separated values'
     DELIMITERS = ',;:\t$ '
     SUPPORT_COMPRESSED = True
     PRIORITY = 20
 
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.actual_delimiter = None
+
+    def sniff_delimiter(self):
+        """Sniff a delimiter from a limited sample of the data.
+
+        Can cache already-sniffed delimiters and falls back to "\t" if unable to sniff.
+
+        Returns
+        -------
+        str
+            The sniffed delimiter.
+        """
+        if self.actual_delimiter is not None:
+            return self.actual_delimiter
+
+        # sniff the separator for efficiency (inferring with pandas forces the python engine)
+        sniffer = csv.Sniffer()
+        try:
+            if hasattr(self.filename, 'read'):  # if a file-like object is passed
+                self.filename.seek(0)
+                sample = self.filename.read(4096)
+                self.filename.seek(0)
+                delimiter = sniffer.sniff(sample).delimiter
+            else:
+                with open(self.filename, encoding='utf-8') as f:
+                    delimiter = sniffer.sniff(f.read(4096)).delimiter
+        except csv.Error:
+            # sometimes sniffing fails, fall back to the default delimiter
+            # (pandas won't solve this as it uses the same internally)
+            delimiter = self.DELIMITERS[0]
+
+        # only allow a delimiter that is in the delimiters
+        if delimiter not in self.DELIMITERS:
+            delimiter = self.DELIMITERS[0]
+        self.actual_delimiter = delimiter
+        return delimiter
+
+    def read_header(self):
+        # restrict to cls.delimiters, this also stabilizes some weird behaviour
+        # when there is not a lot of data to infer the delimiter
+        # don't skip blank lines on case of an empty third header line
+        return pd.read_table(self.filename,
+                             sep=self.sniff_delimiter(), header=None, index_col=False, skipinitialspace=True,
+                             skip_blank_lines=False, parse_dates=False,
+                             compression='infer', engine='python', nrows=3)
+
+    def read_contents(self, skiprows):
+        # be sure
+        if hasattr(self.filename, 'read'):
+            self.filename.seek(0)
+        try:
+            # don't parse dates, we want more control over timezones
+            # see TimeVariable.column_to_datetime
+            # fix the sniffed delimiter,
+            # skip blank lines here, we're not interested in them
+            return pd.read_table(self.filename,
+                                 sep=self.sniff_delimiter(), header=None, index_col=False, skipinitialspace=True,
+                                 skip_blank_lines=True, parse_dates=False,
+                                 compression='infer', skiprows=skiprows, na_values=Variable.MISSING_VALUES)
+        except pd.io.common.EmptyDataError:
+            # if there is only the header, signal no data
+            return None
+
     def read(self):
-        for encoding in (lambda: ('us-ascii', None),                 # fast
-                         lambda: (detect_encoding(self.filename), None),  # precise
-                         lambda: (locale.getpreferredencoding(False), None),
-                         lambda: (sys.getdefaultencoding(), None),   # desperate
-                         lambda: ('utf-8', None),                    # ...
-                         lambda: ('utf-8', 'ignore')):               # fallback
-            encoding, errors = encoding()
-            # Clear the error flag for all except the last check, because
-            # the error of second-to-last check is stored and shown as warning in owfile
-            if errors != 'ignore':
-                error = ''
-            with self.open(self.filename, mode='rt', newline='',
-                           encoding=encoding, errors=errors) as file:
-                # Sniff the CSV dialect (delimiter, quotes, ...)
-                try:
-                    dialect = csv.Sniffer().sniff(file.read(1024), self.DELIMITERS)
-                except UnicodeDecodeError as e:
-                    error = e
-                    continue
-                except csv.Error:
-                    dialect = csv.excel()
-                    dialect.delimiter = self.DELIMITERS[0]
+        """Apart from reading the table, this sets metadata. """
+        res = super(CSVReader, self).read()
+        self.set_table_metadata(self.filename, res)
+        return res
 
-                file.seek(0)
-                dialect.skipinitialspace = True
-
-                try:
-                    reader = csv.reader(file, dialect=dialect)
-                    data = self.data_table(reader)
-
-                    # TODO: Name can be set unconditionally when/if
-                    # self.filename will always be a string with the file name.
-                    # Currently, some tests pass StringIO instead of
-                    # the file name to a reader.
-                    if isinstance(self.filename, str):
-                        data.name = os.path.splitext(
-                            os.path.split(self.filename)[-1])[0]
-                    if error and isinstance(error, UnicodeDecodeError):
-                        pos, endpos = error.args[2], error.args[3]
-                        warning = ('Skipped invalid byte(s) in position '
-                                   '{}{}').format(pos,
-                                                  ('-' + str(endpos)) if (endpos - pos) > 1 else '')
-                        warnings.warn(warning)
-                    self.set_table_metadata(self.filename, data)
-                    return data
-                except Exception as e:
-                    error = e
-                    continue
-        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error))
 
     @classmethod
     def write_file(cls, filename, data):
@@ -743,17 +696,18 @@ class BasketReader(FileFormat):
         table = Table.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
         table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+
         return table
 
 
 class ExcelReader(FileFormat):
     """Reader for excel files"""
     EXTENSIONS = ('.xls', '.xlsx')
-    DESCRIPTION = 'Mircosoft Excel spreadsheet'
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
 
     def __init__(self, filename):
         super().__init__(filename)
-
+        # still need to open this to get a list of sheets
         from xlrd import open_workbook
         self.workbook = open_workbook(self.filename)
 
@@ -762,28 +716,32 @@ class ExcelReader(FileFormat):
     def sheets(self):
         return self.workbook.sheet_names()
 
-    def read(self):
-        import xlrd
-        wb = xlrd.open_workbook(self.filename, on_demand=True)
-        if self.sheet:
-            ss = wb.sheet_by_name(self.sheet)
-        else:
-            ss = wb.sheet_by_index(0)
+    def read_header(self):
+        # we can't read just the header, we must read the entire file
+        # pandas also doesn't automatically recognize the area the data is in
+        # and starts reading from the top left: we need to specify the area manually
         try:
-            first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
-            first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
-            row_len = ss.row_len(first_row)
-            cells = filter(any,
-                           [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
-                             for col in range(first_col, row_len)]
-                            for row in range(first_row, ss.nrows)])
-            table = self.data_table(cells)
-            table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+            shet = self.workbook.sheet_by_name(self.sheet) if self.sheet else self.workbook.sheet_by_index(0)
+            self.first_row_idx = next(i for i in range(shet.nrows) if any(shet.row_values(i)))
+            self.first_col_idx = next(i for i in range(shet.ncols) if shet.cell_value(self.first_row_idx, i))
+            self.last_col_idx = shet.row_len(self.first_row_idx)
+            self.force_name = os.path.splitext(os.path.split(self.filename)[-1])[0]
             if self.sheet:
-                table.name = '-'.join((table.name, self.sheet))
-        except Exception:
+                self.force_name = '-'.join((self.force_name, self.sheet))
+        except Exception as e:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
-        return table
+
+        raw_data = pd.read_excel(self.workbook, sheetname=self.sheet or 0,
+                                 header=None, index_col=None, engine='xlrd', skiprows=self.first_row_idx,
+                                 parse_cols=range(self.first_col_idx, self.last_col_idx))
+        return raw_data.iloc[:3]
+
+    def read_contents(self, skiprows):
+        # reading again so pandas correctly determines data types of columns (without the header)
+        raw_data = pd.read_excel(self.workbook, sheetname=self.sheet or 0,
+                                 header=None, index_col=None, engine='xlrd', skiprows=self.first_row_idx + skiprows,
+                                 parse_cols=range(self.first_col_idx, self.last_col_idx))
+        return raw_data
 
 
 class DotReader(FileFormat):

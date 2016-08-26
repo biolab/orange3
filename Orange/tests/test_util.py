@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 import numpy as np
 
@@ -20,11 +21,13 @@ class TestUtil(unittest.TestCase):
         @deprecated
         def identity(x): return x
 
-        with self.assertWarns(DeprecationWarning) as cm:
+        with warnings.catch_warnings(record=True) as w:
             x = identity(10)
+            self.assertTrue(any(w))
+            self.assertTrue('deprecated' in w[0].message.args[0])
+            self.assertTrue('identity' in w[0].message.args[0])
         self.assertEqual(x, 10)
-        self.assertTrue('deprecated' in cm.warning.args[0])
-        self.assertTrue('identity' in cm.warning.args[0])
+
 
     def test_try_(self):
         self.assertTrue(try_(lambda: np.ones(3).any()))

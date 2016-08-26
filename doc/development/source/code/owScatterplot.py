@@ -33,8 +33,8 @@ class OWScatterPlot(widget.OWWidget):
     description = 'An example scatter plot visualization using Highcharts.'
     icon = "icons/ScatterPlot.svg"
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Selected Data", Table)]
+    inputs = [("Data", TableBase, "set_data")]
+    outputs = [("Selected Data", TableBase)]
 
     attr_x = settings.Setting('')
     attr_y = settings.Setting('')
