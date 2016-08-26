@@ -39,7 +39,7 @@ class OWKMeans(widget.OWWidget):
 
     resizing_enabled = False
 
-    k = Setting(8)
+    k = Setting(3)
     k_from = Setting(2)
     k_to = Setting(8)
     optimize_k = Setting(False)
@@ -50,7 +50,7 @@ class OWKMeans(widget.OWWidget):
     append_cluster_ids = Setting(True)
     place_cluster_ids = Setting(OUTPUT_CLASS)
     output_name = Setting("Cluster")
-    auto_run = Setting(False)
+    auto_run = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -61,7 +61,7 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Number of Clusters")
         layout = QGridLayout()
-        bg = gui.radioButtonsInBox(
+        self.n_clusters = bg = gui.radioButtonsInBox(
             box, self, "optimize_k", [], orientation=layout,
             callback=self.update)
         layout.addWidget(
@@ -132,7 +132,7 @@ class OWKMeans(widget.OWWidget):
                      callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
-        gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
+        self.apply_button = gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)
