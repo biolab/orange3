@@ -14,13 +14,9 @@ except:
 # noinspection PyStatementEffect
 class BenchBasic(Benchmark):
     def setUp(self):
-        self.setup_test_string = "sttss"
         self.iris = Table('iris')
         self.adult = Table('adult')
         self.discretizer = Discretize(EqualFreq(n=3))
-
-    def function_setup(self):
-        self.func_setup_str = "fsstr"
 
     @benchmark(number=100)
     def bench_iris_read(self):
