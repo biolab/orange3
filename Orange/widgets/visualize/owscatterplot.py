@@ -34,7 +34,7 @@ def font_resize(font, factor, minsize=None, maxsize=None):
 
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
-    captionTitle = "Score plots"
+    captionTitle = "Score Plots"
     K = 10
 
     def check_preconditions(self):
