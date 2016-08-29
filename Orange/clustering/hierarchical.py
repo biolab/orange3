@@ -392,12 +392,11 @@ def top_clusters(tree, k):
     heap = [item(tree)]
 
     while len(heap) < k:
-        key, cl = heapq.heappop(heap)
+        _, cl = heap[0]  # peek
         if cl.is_leaf:
             assert all(n.is_leaf for _, n in heap)
-            heapq.heappush(heap, (key, cl))
             break
-
+        key, cl = heapq.heappop(heap)
         left, right = cl.left, cl.right
         heapq.heappush(heap, item(left))
         heapq.heappush(heap, item(right))

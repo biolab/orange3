@@ -77,6 +77,9 @@ class TestHierarchical(unittest.TestCase):
         self.assertEqual(len(top), len(self.matrix))
         self.assertTrue(all(n.is_leaf for n in top))
 
+        top1 = hierarchical.top_clusters(self.cluster, len(self.matrix) + 1)
+        self.assertEqual(top1, top)
+
     def test_form(self):
         m = [[0, 2, 3, 4],
              [2, 0, 6, 7],
