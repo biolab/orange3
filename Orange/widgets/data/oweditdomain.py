@@ -46,18 +46,20 @@ def variable_description(var):
 
     """
     var_type = type(var)
+    attrs = tuple((k, tuple(v) if isinstance(v, list) else v)
+                  for k, v in sorted(var.attributes.items()))
     if var.is_discrete:
         return (var_type.__module__,
                 var_type.__name__,
                 var.name,
                 (("values", tuple(var.values)),),
-                tuple(sorted(var.attributes.items())))
+                attrs)
     else:
         return (var_type.__module__,
                 var_type.__name__,
                 var.name,
                 (),
-                tuple(sorted(var.attributes.items())))
+                attrs)
 
 
 def variable_from_description(description, compute_value=None):
@@ -104,8 +106,12 @@ class DictItemsModel(QStandardItemModel):
         dict = {}
         for row in range(self.rowCount()):
             key_item = self.item(row, 0)
-            value_item = self.item(row, 1)
-            dict[str(key_item.text())] = str(value_item.text())
+            value_item = self.item(row, 1).text()
+            try:
+                value = eval(value_item)
+            except NameError:
+                value = value_item
+            dict[str(key_item.text())] = value
         return dict
 
 

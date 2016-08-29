@@ -447,6 +447,8 @@ class OWColor(widget.OWWidget):
 
 
 if __name__ == "__main__":
+    from PyQt4.QtGui import QApplication
+
     a = QApplication([])
     WIDGET = OWColor()
     WIDGET.set_data(Orange.data.Table("heart_disease.tab"))
