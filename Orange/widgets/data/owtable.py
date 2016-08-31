@@ -15,7 +15,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 from PyQt4.QtGui import (QIdentityProxyModel, QTableView, QItemSelectionModel,
-                         QItemSelection)
+                         QItemSelection, QSortFilterProxyModel)
 from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
 from PyQt4.QtCore import pyqtSlot as Slot
 
@@ -32,7 +32,7 @@ from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.itemmodels import TableModel
 
 
-class RichTableDecorator(QIdentityProxyModel):
+class RichTableDecorator(QSortFilterProxyModel):
     """A proxy model for a TableModel with some bells and whistles
 
     (adds support for gui.BarRole, include variable labels and icons
@@ -40,6 +40,7 @@ class RichTableDecorator(QIdentityProxyModel):
     """
     #: Rich header data flags.
     Name, Labels, Icon = 1, 2, 4
+    IntSortRole = next(gui.OrangeUserRole)
 
     def __init__(self, source, parent=None):
         super().__init__(parent)
@@ -92,6 +93,9 @@ class RichTableDecorator(QIdentityProxyModel):
                 return None
         elif role == Qt.TextAlignmentRole and self._continuous[index.column()]:
             return Qt.AlignRight | Qt.AlignVCenter
+        elif role == self.IntSortRole:
+            val = super().data(index, Qt.DisplayRole)
+            return int(val) if val.isdigit() else -1
         else:
             return super().data(index, role)
 
@@ -136,6 +140,11 @@ class RichTableDecorator(QIdentityProxyModel):
     def richHeaderFlags(self):
         return self._header_flags
 
+    def _int_discrete_var(self, column):
+        var = self.sourceModel().vars[column]
+        return isinstance(var, Orange.data.DiscreteVariable) and \
+            all(map(str.isdigit, var.values))
+
     if QT_VERSION < 0xFFFFFF:  # TODO: change when QTBUG-44143 is fixed
         def sort(self, column, order):
             # Preempt the layout change notification
@@ -144,15 +153,23 @@ class RichTableDecorator(QIdentityProxyModel):
             # TODO: Are any other signals emitted during a sort?
             self.blockSignals(True)
             try:
+                if self._int_discrete_var(column):
+                    self.setSortRole(self.IntSortRole)
                 rval = self.sourceModel().sort(column, order)
             finally:
                 self.blockSignals(False)
+                self.setSortRole(Qt.DisplayRole)
             # Tidy up.
             self.layoutChanged.emit()
             return rval
     else:
         def sort(self, column, order):
-            return self.sourceModel().sort(column, order)
+            try:
+                if self._int_discrete_var(column):
+                    self.setSortRole(self.IntSortRole)
+                return self.sourceModel().sort(column, order)
+            finally:
+                self.setSortRole(Qt.DisplayRole)
 
 
 class TableSliceProxy(QIdentityProxyModel):
@@ -299,9 +316,8 @@ def ranges(indices):
     >>> [(1, 4), (5, 6), (3, 5)]
 
     """
-    g = itertools.groupby(enumerate(indices),
-                          key=lambda t: t[1] - t[0])
-    for _, range_ind in g:
+    groups = itertools.groupby(enumerate(indices), key=lambda t: t[1] - t[0])
+    for _, range_ind in groups:
         range_ind = list(range_ind)
         _, start = range_ind[0]
         _, end = range_ind[-1]
@@ -952,6 +968,7 @@ def format_summary(summary):
             text[-1] += " (no missing values)"
 
     def format_part(part):
+        # pylint: disable=missing-docstring
         if isinstance(part, NotAvailable):
             return ""
         elif part.nans + part.non_nans == 0:
@@ -971,7 +988,8 @@ def format_summary(summary):
             # MISSING, N/A
             return ""
 
-    def sp(n):
+    def plural(n):
+        # pylint: disable=missing-docstring
         if n == 0:
             return "No", "s"
         elif n == 1:
@@ -979,23 +997,23 @@ def format_summary(summary):
         else:
             return str(n), 's'
 
-    text += [("%s feature%s" % sp(len(summary.domain.attributes)))
+    text += [("%s feature%s" % plural(len(summary.domain.attributes)))
              + format_part(summary.X)]
 
     if not summary.domain.class_vars:
         text += ["No target variable."]
     else:
         if len(summary.domain.class_vars) > 1:
-            c_text = "%s outcome%s" % sp(len(summary.domain.class_vars))
+            c_text = "%s outcome%s" % plural(len(summary.domain.class_vars))
         elif summary.domain.has_continuous_class:
             c_text = "Continuous target variable"
         else:
-            c_text = "Discrete class with %s value%s" % sp(
+            c_text = "Discrete class with %s value%s" % plural(
                 len(summary.domain.class_var.values))
         c_text += format_part(summary.Y)
         text += [c_text]
 
-    text += [("%s meta attribute%s" % sp(len(summary.domain.metas)))
+    text += [("%s meta attribute%s" % plural(len(summary.domain.metas)))
              + format_part(summary.M)]
 
     return text
