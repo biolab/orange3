@@ -670,7 +670,10 @@ class _Scaling(preprocess.preprocess.Preprocess):
     @staticmethod
     def mean(dist):
         values, counts = numpy.array(dist)
-        return numpy.average(values, weights=counts)
+        if numpy.sum(counts) > 0:
+            return numpy.average(values, weights=counts)
+        else:
+            return numpy.nan
 
     @staticmethod
     def median(dist):
@@ -691,9 +694,12 @@ class _Scaling(preprocess.preprocess.Preprocess):
     @staticmethod
     def std(dist):
         values, counts = numpy.array(dist)
-        mean = numpy.average(values, weights=counts)
-        diff = values - mean
-        return numpy.sqrt(numpy.average(diff ** 2, weights=counts))
+        if numpy.sum(counts) > 0:
+            mean = numpy.average(values, weights=counts)
+            diff = values - mean
+            return numpy.sqrt(numpy.average(diff ** 2, weights=counts))
+        else:
+            return numpy.nan
 
     def __init__(self, center=mean, scale=std):
         self.center = center
@@ -705,6 +711,13 @@ class _Scaling(preprocess.preprocess.Preprocess):
 
         def transform(var):
             dist = distribution.get_distribution(data, var)
+            if dist.size == 0:
+                warnings.warn(
+                    ("Empty/null distribution for '{}' (no scaling done)"
+                     .format(var)),
+                    RuntimeWarning)
+                return var
+
             if self.center:
                 c = self.center(dist)
                 dist[0, :] -= c

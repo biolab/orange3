@@ -1,3 +1,6 @@
+import sys
+import warnings
+
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
@@ -329,6 +332,12 @@ def ordinal_to_normalized_continuous(var, zero_based=True):
 
 def normalize_by_span(var, data_or_dist, zero_based=True):
     dist = _ensure_dist(var, data_or_dist)
+    if dist.size == 0:
+        warnings.warn(
+            "Empty distribution for '{}' (will not be normalized)".format(var),
+            RuntimeWarning)
+        return var
+
     v_max, v_min = dist.max(), dist.min()
     span = v_max - v_min
     if span < 1e-15:
@@ -342,6 +351,12 @@ def normalize_by_span(var, data_or_dist, zero_based=True):
 
 def normalize_by_sd(var, data_or_dist):
     dist = _ensure_dist(var, data_or_dist)
+    if dist.size == 0:
+        warnings.warn(
+            "Empty distribution for '{}' (will not be normalized)".format(var),
+            RuntimeWarning)
+        return var
+
     mean, sd = dist.mean(), dist.standard_deviation()
     return normalized_var(var, mean, 1 / sd)
 
@@ -379,12 +394,26 @@ class DomainContinuizer:
         return newdomain
 
 
-if __name__ == "__main__":
-    import sys
-    a = QtGui.QApplication(sys.argv)
+def main(argv=sys.argv):
+    argv = list(argv)
+    app = QtGui.QApplication(argv)
+    argv = app.argv()
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "lenses"
+
     ow = OWContinuize()
-    data = Table("lenses")
+    data = Table(filename)
     ow.setData(data)
+    ow.handleNewSignals()
     ow.show()
-    a.exec_()
+    rval = app.exec_()
+    ow.setData(None)
+    ow.handleNewSignals()
     ow.saveSettings()
+    ow.onDeleteWidget()
+    return rval
+
+if __name__ == "__main__":
+    sys.exit(main())
