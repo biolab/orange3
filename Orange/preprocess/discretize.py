@@ -98,6 +98,14 @@ class Discretization:
             "Subclasses of 'Discretization' need to implement "
             "the call operator")
 
+    def __repr__(self):
+        args = self.__class__.__init__.__code__.co_varnames
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
+                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
+        )
+
 
 class EqualFreq(Discretization):
     """Discretization into bins with approximately equal number of data
@@ -126,7 +134,6 @@ class EqualFreq(Discretization):
             points = _discretize.split_eq_freq(d, self.n)
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
-
 
 class EqualWidth(Discretization):
     """Discretization into a fixed number of bins with equal widths.

@@ -8,7 +8,6 @@ from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
-from Orange.data import Domain
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
@@ -89,6 +88,15 @@ class SelectBestFeatures:
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+    def __repr__(self):
+        args = self.__class__.__init__.__code__.co_varnames
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
+                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
+        )
+
+
     def score_only_nice_features(self, data, method):
         mask = np.array([isinstance(a, method.feature_type)
                          for a in data.domain.attributes])
@@ -127,6 +135,8 @@ class SelectRandomFeatures:
             data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+    __repr__ = SelectBestFeatures.__repr__
+
 
 class RemoveNaNColumns(Preprocess):
     """
@@ -155,3 +165,5 @@ class RemoveNaNColumns(Preprocess):
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
+
+    __repr__ = SelectBestFeatures.__repr__

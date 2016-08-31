@@ -210,10 +210,11 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     _params = {}
 
     name = 'skl learner'
-    preprocessors = [RemoveNaNClasses(),
-                     Continuize(),
-                     RemoveNaNColumns(),
-                     SklImpute()]
+    preprocessors = default_preprocessors = [
+        RemoveNaNClasses(),
+        Continuize(),
+        RemoveNaNColumns(),
+        SklImpute()]
 
     @property
     def params(self):
@@ -262,9 +263,14 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return '{} {}'.format(self.name, self.params)
 
     def __repr__(self):
-        return '{}({})'.format(type(self).__name__,
-                               ", ".join("{}={}".format(k, v)
-                                         for k, v in self.params.items()))
+        return '{}({}{})'.format(type(self).__name__,
+                               ", ".join("{}={}".format(k, repr(v))
+                                         for k, v in self.params.items()),
+                                "{}preprocessors={}".format(
+                                    ", " if len(self.params.items()) > 0
+                                        else "",
+                                    repr(self.preprocessors)
+                                ))
 
     @property
     def supports_weights(self):

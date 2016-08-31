@@ -58,6 +58,14 @@ class Scorer:
 
         return self.score_data(data, feature)
 
+    def __repr__(self):
+        args = self.__class__.__init__.__code__.co_varnames
+        return "{}({})".format(
+            self.__class__.__name__,
+            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
+                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
+        )
+
     def score_data(self, data, feature):
         raise NotImplementedError
 
