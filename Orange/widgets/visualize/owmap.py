@@ -54,6 +54,12 @@ class LeafletMap(WebviewWidget):
     def set_map_provider(self, provider):
         self.evalJS('set_map_provider("{}");'.format(provider))
 
+    def set_clustering(self, cluster_points):
+        self.evalJS('''
+            window.cluster_points = {};
+            set_cluster_points();
+        '''.format(int(cluster_points)))
+
     def set_jittering(self, jittering):
         """ In percent, i.e. jittering=3 means 3% of screen height and width """
         self.evalJS('''
@@ -204,6 +210,7 @@ class OWMap(widget.OWWidget):
     shape_attr = settings.Setting('')
     size_attr = settings.Setting('')
     jittering = settings.Setting(0)
+    cluster_points = settings.Setting(False)
 
     JITTER_SIZES = [0, 1, 3, 6, 9]
     TILE_PROVIDERS = OrderedDict((
@@ -305,6 +312,9 @@ class OWMap(widget.OWWidget):
             labelFormat=' %.1f%%', ticks=True,
             callback=lambda: self.map.set_jittering(self.jittering)
         )
+        self._clustering_check = gui.checkBox(
+            box, self, 'cluster_points', label='Cluster points',
+            callback=lambda: self.map.set_clustering(self.cluster_points))
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.controlArea, self, 'autocommit', 'Send Selection')
@@ -351,6 +361,9 @@ class OWMap(widget.OWWidget):
         self._combo_size.setCurrentIndex(0)
         self._combo_label.setCurrentIndex(0)
         self._combo_class.setCurrentIndex(0)
+
+        if len(data) > 1000:
+            self._clustering_check.setCheckState(Qt.Checked)
 
     def set_model(self, model):
         self.map.set_model(model)

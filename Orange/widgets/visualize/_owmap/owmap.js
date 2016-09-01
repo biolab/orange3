@@ -16,8 +16,9 @@ var _DEFAULT_COLOR = 'red',
 var tileLayer = L.tileLayer.provider('OpenStreetMap.BlackAndWhite');
 
 var markers = [],
-    markersLayer = L.featureGroup([]),
-    jittering_offsets = [];
+    markersLayer = L.featureGroup(),
+    jittering_offsets = [],
+    cluster_points = false;
 
 var color_attr = {},
     shape_attr = {},
@@ -153,8 +154,8 @@ function add_markers(latlon_data) {
         marker.on(markerEvents);
 
         markers.push(marker);
-        markersLayer.addLayer(marker);
     }
+    set_cluster_points();
     set_jittering();
     map.fitBounds(markersLayer.getBounds().pad(.1));
 }
@@ -258,6 +259,19 @@ function set_marker_labels(labels) {
     for (var i = 0; i < labels.length; ++i) {
         markers[i]._icon.firstChild.innerHTML = labels[i];
     }
+}
+
+
+function set_cluster_points() {
+    var old_markersLayer = markersLayer;
+    if (cluster_points) {
+        markersLayer = L.markerClusterGroup();
+        markersLayer.addLayers(markers);
+    } else {
+        markersLayer = L.featureGroup(markers);
+    }
+    old_markersLayer.removeFrom(map);
+    markersLayer.addTo(map);
 }
 
 
