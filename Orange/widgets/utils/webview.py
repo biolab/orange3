@@ -21,6 +21,9 @@ from AnyQt.QtCore import QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QSizePolicy, QWidget, qApp
 
+from Orange.util import inherit_docstrings
+
+
 try:
     from AnyQt.QtWebKitWidgets import QWebView
     HAVE_WEBKIT = True
@@ -356,6 +359,7 @@ if HAVE_WEBKIT:
         def pop_object(self, constant=True):
             return self._obj
 
+    @inherit_docstrings
     class WebviewWidget(_WebViewBase, WebKitView):
         def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
             WebKitView.__init__(self, parent, bridge, debug=debug, **kwargs)
@@ -433,6 +437,7 @@ elif HAVE_WEBENGINE:
     _NOTSET = object()
 
 
+    @inherit_docstrings
     class WebviewWidget(_WebViewBase, WebEngineView):
         _html = _NOTSET
         _result = _NOTSET
