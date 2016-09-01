@@ -1,5 +1,5 @@
 from itertools import chain
-from PyQt4.QtGui import QLayout
+from PyQt4.QtGui import QLayout, QSizePolicy
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -70,11 +70,14 @@ class OWLinearRegression(OWBaseLearner):
             intOnly=False, ticks=0.1, createLabel=False,
             step=0.01, callback=self._l1_ratio_changed)
         gui.widgetLabel(box5, "L2")
+        self.l1_ratio_label = gui.widgetLabel(
+            box4, "",
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        self.l1_ratio_label.setAlignment(Qt.AlignCenter)
 
     def add_bottom_buttons(self):
         box5 = gui.hBox(self.controlArea)
         box5.layout().setAlignment(Qt.AlignCenter)
-        self.l1_ratio_label = gui.widgetLabel(box5, "")
         self._set_l1_ratio_label()
 
         auto_commit = gui.auto_commit(
