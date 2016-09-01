@@ -82,7 +82,8 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         relief = ReliefF if isinstance(dom.class_var, DiscreteVariable) \
             else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.K)(data)
-        attrs = sorted(zip(weights, mdomain.attributes), reverse=True)
+        attrs = sorted(zip(weights, mdomain.attributes),
+                       key=lambda x: (-x[0], x[1].name))
         return [a for _, a in attrs]
 
 
