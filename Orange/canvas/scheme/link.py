@@ -4,6 +4,7 @@ Scheme Link
 ===========
 
 """
+import enum
 
 from PyQt4.QtCore import QObject
 from PyQt4.QtCore import pyqtSignal as Signal
@@ -76,6 +77,23 @@ class SchemeLink(QObject):
     #: The link dynamic enabled state has changed.
     dynamic_enabled_changed = Signal(bool)
 
+    #: Runtime link state has changed
+    state_changed = Signal(int)
+
+    class State(enum.IntEnum):
+        """
+        Flags indicating the runtime state of a link
+        """
+        #: A link is empty when it has no value on it
+        Empty = 0
+        #: A link is active when the source node provides a value on output
+        Active = 1
+        #: A link is pending when it's sink node has not yet been notified
+        #: of a change (note that Empty|Pending is a valid state)
+        Pending = 2
+
+    Empty, Active, Pending = State
+
     def __init__(self, source_node, source_channel,
                  sink_node, sink_channel, enabled=True, properties=None,
                  parent=None):
@@ -108,6 +126,7 @@ class SchemeLink(QObject):
 
         self.__enabled = enabled
         self.__dynamic_enabled = False
+        self.__state = SchemeLink.Empty
         self.__tool_tip = ""
         self.properties = properties or {}
 
@@ -165,6 +184,26 @@ class SchemeLink(QObject):
 
     dynamic_enabled = Property(bool, fget=dynamic_enabled,
                                fset=set_dynamic_enabled)
+
+    def set_runtime_state(self, state):
+        """
+        Set the link's runtime state.
+
+        Parameters
+        ----------
+        state : SchemeLink.State
+        """
+        if self.__state != state:
+            self.__state = state
+            self.state_changed.emit(state)
+
+    def runtime_state(self):
+        """
+        Returns
+        -------
+        state : SchemeLink.State
+        """
+        return self.__state
 
     def set_tool_tip(self, tool_tip):
         """

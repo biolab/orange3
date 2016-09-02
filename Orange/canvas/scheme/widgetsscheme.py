@@ -33,7 +33,7 @@ from PyQt4.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
 from PyQt4.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
-from .scheme import Scheme, SchemeNode
+from .scheme import Scheme, SchemeNode, SchemeLink
 from .node import UserMessage
 from ..utils import name_lookup
 from ..resources import icon_loader

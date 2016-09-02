@@ -17,6 +17,8 @@ from PyQt4.QtCore import Qt, QPointF, QEvent
 from .nodeitem import SHADOW_COLOR
 from .utils import stroke_path
 
+from ...scheme import SchemeLink
+
 
 class LinkCurveItem(QGraphicsPathItem):
     """
@@ -117,21 +119,30 @@ class LinkAnchorIndicator(QGraphicsEllipseItem):
     """
     def __init__(self, *args):
         QGraphicsEllipseItem.__init__(self, *args)
-        self.setRect(-3, -3, 6, 6)
+        self.setRect(-3.5, -3.5, 7., 7.)
         self.setPen(QPen(Qt.NoPen))
-        self.normalBrush = QBrush(QColor("#9CACB4"))
-        self.hoverBrush = QBrush(QColor("#7D7D7D"))
-        self.setBrush(self.normalBrush)
         self.__hover = False
+        self.__brush = QBrush(QColor("#9CACB4"))
+        super().setBrush(self.__brush)
 
     def setHoverState(self, state):
         """The hover state is set by the LinkItem.
         """
         self.__hover = state
         if state:
-            self.setBrush(self.hoverBrush)
+            brush = QBrush(self.__brush.color().darker(110))
         else:
-            self.setBrush(self.normalBrush)
+            brush = self.__brush
+        super().setBrush(brush)
+
+    def setBrush(self, brush):
+        brush = QBrush(brush)
+        if self.__brush != brush:
+            self.__brush = brush
+            super().setBrush(brush)
+
+    def brush(self):
+        return QBrush(self.__brush)
 
 
 class LinkItem(QGraphicsObject):
@@ -150,6 +161,17 @@ class LinkItem(QGraphicsObject):
 
     #: Z value of the item
     Z_VALUE = 0
+
+    #: Runtime link state value
+    #: These are pulled from SchemeLink.State for ease of binding to it's
+    #: state
+    State = SchemeLink.State
+    #: Link is empty; the source node does not have any value on output
+    Empty = SchemeLink.Empty
+    #: Link is active; the source node has a valid value on output
+    Active = SchemeLink.Active
+    #: The link is pending; the sink node is scheduled for update
+    Pending = SchemeLink.Pending
 
     def __init__(self, *args):
         self.__boundingRect = None
@@ -179,7 +201,7 @@ class LinkItem(QGraphicsObject):
 
         self.__dynamic = False
         self.__dynamicEnabled = False
-
+        self.__state = LinkItem.Empty
         self.hover = False
 
         self.prepareGeometryChange()
@@ -499,6 +521,32 @@ class LinkItem(QGraphicsObject):
         Is the link dynamic.
         """
         return self.__dynamic
+
+    def setRuntimeState(self, state):
+        """
+        Style the link appropriate to the LinkItem.State
+
+        Parameters
+        ----------
+        state : LinkItem.State
+        """
+        if self.__state != state:
+            self.__state = state
+
+            if state & LinkItem.Active:
+                self.sourceIndicator.setBrush(QBrush(Qt.green))
+            else:
+                self.sourceIndicator.setBrush(QBrush(Qt.gray))
+
+            if state & LinkItem.Pending:
+                self.sinkIndicator.setBrush(QBrush(Qt.yellow))
+            elif state & LinkItem.Active:
+                self.sinkIndicator.setBrush(QBrush(Qt.green))
+            else:
+                self.sinkIndicator.setBrush(QBrush(Qt.gray))
+
+    def runtimeState(self):
+        return self.__state
 
     def __updatePen(self):
         self.prepareGeometryChange()
