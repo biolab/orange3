@@ -303,7 +303,7 @@ class Table(MutableSequence, Storage):
                         if row_indices is not ...:
                             a[:, i] = col(source)[row_indices]
                         else:
-                            a[:, i] = col(source)
+                             a[:, i] = col(source)
                 elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
                 elif col < n_src_attrs:

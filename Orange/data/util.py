@@ -31,12 +31,12 @@ def scale(values, min=0, max=1):
 
 
 class SharedComputeValue:
-    """Structures compute_value functions that repeat parts of computation
+    """A base class that separates compute_value computation
     for different variables into shared and specific parts.
 
     Parameters
     ----------
-    compute_shared: a callable that takes a Orange.data.Table
+    compute_shared: Callable[[Orange.data.Table], object]
         A callable that performs computation that is shared between
         multiple variables. Variables sharing computation need to set
         the same instance.
