@@ -28,3 +28,30 @@ def scale(values, min=0, max=1):
     if ptp == 0:
         return np.clip(values, min, max)
     return (-minval + values) / ptp * (max - min) + min
+
+
+class SharedComputeValue:
+    """Structures compute_value functions that repeat parts of computation
+    for different variables into shared and specific parts.
+
+    Parameters
+    ----------
+    compute_shared: a callable that takes a Orange.data.Table
+        A callable that performs computation that is shared between
+        multiple variables. Variables sharing computation need to set
+        the same instance.
+    """
+
+    def __init__(self, compute_shared):
+        self.compute_shared = compute_shared
+
+    def __call__(self, data, shared_data=None):
+        """Fallback if common parts are not passed."""
+        if shared_data is None:
+            shared_data = self.compute_shared(data)
+        return self.compute(data, shared_data)
+
+    def compute(self, data, shared_data):
+        """Given precomputed shared data, perform variable-specific
+        part of computation and return new variable values."""
+        raise NotImplementedError

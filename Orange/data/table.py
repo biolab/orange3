@@ -23,6 +23,7 @@ from Orange.data import Domain, Variable, StringVariable
 from Orange.data.storage import Storage
 from . import _contingency
 from . import _valuecount
+from .util import SharedComputeValue
 
 
 def get_sample_datasets_dir():
@@ -285,14 +286,24 @@ class Table(MutableSequence, Storage):
                                  [x - n_src_attrs for x in src_cols])
 
             a = np.empty((n_rows, len(src_cols)), dtype=dtype)
+            shared_cache = {}
             for i, col in enumerate(src_cols):
                 if col is None:
                     a[:, i] = Unknown
                 elif not isinstance(col, Integral):
-                    if row_indices is not ...:
-                        a[:, i] = col(source)[row_indices]
+                    if isinstance(col, SharedComputeValue):
+                        if id(col.compute_shared) not in shared_cache:
+                            shared_cache[id(col.compute_shared)] = col.compute_shared(source)
+                        shared = shared_cache[id(col.compute_shared)]
+                        if row_indices is not ...:
+                            a[:, i] = col(source, shared_data=shared)[row_indices]
+                        else:
+                            a[:, i] = col(source, shared_data=shared)
                     else:
-                        a[:, i] = col(source)
+                        if row_indices is not ...:
+                            a[:, i] = col(source)[row_indices]
+                        else:
+                            a[:, i] = col(source)
                 elif col < 0:
                     a[:, i] = source.metas[row_indices, -1 - col]
                 elif col < n_src_attrs:
