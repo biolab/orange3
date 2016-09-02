@@ -5,7 +5,7 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot, QTimer
 
-from Orange.base import Model
+from Orange.base import Learner
 from Orange.data.util import scale
 from Orange.data import Table, Domain
 from Orange.widgets import gui, widget, settings
@@ -46,6 +46,7 @@ class LeafletMap(WebviewWidget):
             window.latlon_data = latlon_data.data;
             add_markers(latlon_data);
         ''')
+        self.reset_heatmap()
 
     @pyqtSlot('QVariantList')
     def _selected_indices(self, indices):
@@ -175,10 +176,10 @@ class LeafletMap(WebviewWidget):
         try:
             predictions = self.model(table)
         except Exception as e:
-            self._owwidget.Error.model_prediction(e)
+            self._owwidget.Error.model_error(e)
             return
         else:
-            self._owwidget.Error.model_prediction.clear()
+            self._owwidget.Error.model_error.clear()
         predictions = scale(np.round(predictions, 7))  # Avoid small errors
         self.exposeObject('model_predictions', dict(data=predictions))
         self.evalJS('draw_heatmap()')
@@ -193,7 +194,7 @@ class OWMap(widget.OWWidget):
     icon = "icons/Map.svg"
 
     inputs = [("Data", Table, "set_data", widget.Default),
-              ("Model", Model, "set_model")]
+              ("Learner", Learner, "set_learner")]
 
     outputs = [("Selected Data", Table, widget.Default)]
 
@@ -205,6 +206,7 @@ class OWMap(widget.OWWidget):
     tile_provider = settings.Setting('Black and white')
     lat_attr = settings.Setting('')
     lon_attr = settings.Setting('')
+    class_attr = settings.Setting('')
     color_attr = settings.Setting('')
     label_attr = settings.Setting('')
     shape_attr = settings.Setting('')
@@ -228,7 +230,9 @@ class OWMap(widget.OWWidget):
     ))
 
     class Error(widget.OWWidget.Error):
-        model_prediction = widget.Msg("Model couldn't predict: {}")
+        model_error = widget.Msg("Error predicting: {}")
+        missing_learner = widget.Msg('No input learner to model with')
+        learner_error = widget.Msg("Error modelling: {}")
 
     UserAdviceMessages = [
         widget.Message(
@@ -245,6 +249,7 @@ class OWMap(widget.OWWidget):
         self.mainArea.layout().addWidget(map)
         self.selection = None
         self.data = None
+        self.learner = None
 
         def selectionChanged(indices):
             self.selection = self.data[indices] if self.data is not None and indices else None
@@ -261,6 +266,7 @@ class OWMap(widget.OWWidget):
                      callback=lambda: self.map.set_map_provider(self.TILE_PROVIDERS[self.tile_provider]))
 
         self._latlon_model = VariableListModel(parent=self)
+        self._class_model = VariableListModel(parent=self)
         self._color_model = VariableListModel(parent=self)
         self._shape_model = VariableListModel(parent=self)
         self._size_model = VariableListModel(parent=self)
@@ -268,6 +274,7 @@ class OWMap(widget.OWWidget):
 
         def _set_lat_long():
             self.map.set_data(self.data, self.lat_attr, self.lon_attr)
+            self.train_model()
 
         self._combo_lat = combo = gui.comboBox(
             box, self, 'lat_attr', orientation=Qt.Horizontal,
@@ -277,6 +284,19 @@ class OWMap(widget.OWWidget):
             box, self, 'lon_attr', orientation=Qt.Horizontal,
             label='Longitude:', sendSelectedValue=True, callback=_set_lat_long)
         combo.setModel(self._latlon_model)
+
+        def _set_class_attr():
+            if not self.learner and self.class_attr != '(None)':
+                self.Error.missing_learner()
+            else:
+                self.train_model()
+
+        box = gui.vBox(self.controlArea, 'Heatmap')
+        self._combo_class = combo = gui.comboBox(
+            box, self, 'class_attr', orientation=Qt.Horizontal,
+            label='Target:', sendSelectedValue=True, callback=_set_class_attr
+        )
+        combo.setModel(self._class_model)
 
         box = gui.vBox(self.controlArea, 'Points')
         self._combo_color = combo = gui.comboBox(
@@ -335,6 +355,7 @@ class OWMap(widget.OWWidget):
         discrete_vars = [var for var in all_vars if var.is_discrete]
         primitive_vars = [var for var in all_vars if var.is_primitive()]
         self._latlon_model.wrap(continuous_vars)
+        self._class_model.wrap(['(None)'] + continuous_vars)
         self._color_model.wrap(['(Same color)'] + primitive_vars)
         self._shape_model.wrap(['(Same shape)'] + discrete_vars)
         self._size_model.wrap(['(Same size)'] + continuous_vars)
@@ -355,6 +376,8 @@ class OWMap(widget.OWWidget):
         if lat or lon:
             self._combo_lat.setCurrentIndex(-1 if lat is None else continuous_vars.index(lat))
             self._combo_lon.setCurrentIndex(-1 if lat is None else continuous_vars.index(lon))
+            self.lat_attr = lat.name
+            self.lon_attr = lon.name
             self.map.set_data(self.data, lat, lon)
         self._combo_color.setCurrentIndex(0)
         self._combo_shape.setCurrentIndex(0)
@@ -365,18 +388,45 @@ class OWMap(widget.OWWidget):
         if len(data) > 1000:
             self._clustering_check.setCheckState(Qt.Checked)
 
-    def set_model(self, model):
+        self.train_model()
+
+    def set_learner(self, learner):
+        self.learner = learner
+        self.train_model()
+
+    def train_model(self):
+        model = None
+        self.Error.clear()
+        if self.data is not None and self.class_attr and self.class_attr != '(None)':
+            if self.learner is None:
+                self.Error.missing_learner()
+            else:
+                self.Error.missing_learner.clear()
+
+                domain = self.data.domain
+                if self.lat_attr and self.lon_attr and self.class_attr in domain:
+                    domain = Domain([domain[self.lat_attr], domain[self.lon_attr]],
+                                    [domain[self.class_attr]])  # I am retarded
+                    train = Table.from_table(domain, self.data)
+                    try:
+                        model = self.learner(train)
+                    except Exception as e:
+                        self.Error.learner_error(e)
+                    else:
+                        self.Error.learner_error.clear()
         self.map.set_model(model)
 
     def clear(self):
         self.map.set_data(None, '', '')
         self._latlon_model.wrap([])
+        self._class_model.wrap([])
         self._color_model.wrap(['(Same color)'])
         self._shape_model.wrap(['(Same shape)'])
         self._size_model.wrap(['(Same size)'])
         self._label_model.wrap(['(No labels)'])
-        self.lat_attr = self.lon_attr = self.color_attr = \
+        self.lat_attr = self.lon_attr = self.class_attr = self.color_attr = \
         self.label_attr = self.shape_attr = self.size_attr = ''
+        self.train_model()
 
 
 def test_main():
