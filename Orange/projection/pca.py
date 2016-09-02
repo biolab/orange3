@@ -11,6 +11,7 @@ except ImportError:
         pass
 
 import Orange.data
+from Orange.data.util import SharedComputeValue
 from Orange.data import Variable
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
@@ -89,11 +90,27 @@ class _LinearCombination:
             for a, m, w in zip(self.attrs, self.mean, self.weights))
 
 
+class _PCATransformDomain:
+    """Computation common for all PCA variables."""
+
+    def __init__(self, pca):
+        self.pca = pca
+
+    def __call__(self, data):
+        if data.domain != self.pca.pre_domain:
+            data = data.from_table(self.pca.pre_domain, data)
+        return self.pca.transform(data.X)
+
+
 class PCAModel(Projection, metaclass=WrapperMeta):
+
     def __init__(self, proj, domain):
+        pca_transform = _PCATransformDomain(self)
+
         def pca_variable(i):
             v = Orange.data.ContinuousVariable(
-                'PC%d' % (i + 1), compute_value=Projector(self, i))
+                'PC%d' % (i + 1),
+                compute_value= Projector(self, i, pca_transform))
             v.to_sql = _LinearCombination(
                 domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))
@@ -137,16 +154,17 @@ class IncrementalPCAModel(PCAModel):
         return self
 
 
-class Projector:
-    def __init__(self, projection, feature):
+class Projector(SharedComputeValue):
+    """Transform into a given PCA component."""
+
+    def __init__(self, projection, feature, pca_transform):
+        super().__init__(pca_transform)
         self.projection = projection
         self.feature = feature
         self.transformed = None
 
-    def __call__(self, data):
-        if data.domain != self.projection.pre_domain:
-            data = data.from_table(self.projection.pre_domain, data)
-        return self.projection.transform(data.X)[:, self.feature]
+    def compute(self, data, pca_space):
+        return pca_space[:, self.feature]
 
 
 class RemotePCA:
