@@ -2,9 +2,10 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.visualize.owscatterplot import OWScatterPlot
+from Orange.widgets.visualize.owscatterplot import \
+    OWScatterPlot, ScatterPlotVizRank
 
 
 class TestOWScatterPlot(WidgetTest):
@@ -45,3 +46,13 @@ class TestOWScatterPlot(WidgetTest):
 
         self.assertEqual(self.widget.attr_x, self.iris.domain[2].name)
         self.assertEqual(self.widget.attr_y, self.iris.domain[3].name)
+
+    def test_score_heuristics(self):
+        domain = Domain([ContinuousVariable(c) for c in "abcd"],
+                        DiscreteVariable("c", values="ab"))
+        a = np.arange(10).reshape((10, 1))
+        data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
+        self.send_signal("Data", data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        self.assertEqual([x.name for x in vizrank.score_heuristic()],
+                         list("abcd"))
