@@ -56,3 +56,16 @@ class TestOWScatterPlot(WidgetTest):
         vizrank = ScatterPlotVizRank(self.widget)
         self.assertEqual([x.name for x in vizrank.score_heuristic()],
                          list("abcd"))
+
+    def test_optional_combos(self):
+        domain = self.iris.domain
+        d1 = Domain(domain.attributes[:2], domain.class_var,
+                   [domain.attributes[2]])
+        t1 = Table(d1, self.iris)
+        self.send_signal("Data", t1)
+        self.widget.graph.attr_size = domain.attributes[2].name
+
+        d2 = Domain(domain.attributes[:2], domain.class_var,
+                    [domain.attributes[3]])
+        t2 = Table(d2, self.iris)
+        self.send_signal("Data", t2)
