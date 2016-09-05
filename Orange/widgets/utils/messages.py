@@ -326,7 +326,7 @@ class WidgetMessagesMixin(MessagesMixin):
         if not messages:
             self._hide_message_bar()
             return
-        else:
+        elif self.message_bar is not None:
             font_size = self.message_bar.fontInfo().pixelSize()
             group = messages[0].group
             text = str(messages[0]) if len(messages) == 1 \
@@ -357,22 +357,19 @@ class WidgetMessagesMixin(MessagesMixin):
         gui.rubber(self.message_bar)
         self.message_bar.setVisible(False)
 
-    def _check_has_message_bar(self):
-        if self.message_bar is None:
-            raise RuntimeError(
-                "Did you forget to call WidgetMessagesMixin.insert_message_bar "
-                "for {} (or one of its parent classes)?".
-                format(type(self).__name__))
-
     def _hide_message_bar(self):
-        self._check_has_message_bar()
+        if self.message_bar is None:
+            return
+
         if not self.message_bar.isHidden():
             new_height = self.height() - self.message_bar.height()
             self.message_bar.setVisible(False)
             self.resize(self.width(), new_height)
 
     def _set_message_bar(self, group, text=None, tooltip=None):
-        self._check_has_message_bar()
+        if self.message_bar is None:
+            return
+
         current_height = self.height()
         style = QApplication.instance().style()
         self.message_icon.setPixmap(
