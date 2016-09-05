@@ -427,7 +427,7 @@ class Variable(metaclass=VariableMeta):
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
     def copy(self, compute_value):
-        var = Variable(self.name, compute_value)
+        var = type(self)(self.name, compute_value=compute_value)
         var.attributes = dict(self.attributes)
         return var
 
@@ -524,7 +524,7 @@ class ContinuousVariable(Variable):
     str_val = repr_val
 
     def copy(self, compute_value=None):
-        var = ContinuousVariable(self.name, self.number_of_decimals, compute_value)
+        var = type(self)(self.name, self.number_of_decimals, compute_value)
         var.attributes = dict(self.attributes)
         return var
 
@@ -904,6 +904,12 @@ class TimeVariable(ContinuousVariable):
         super().__init__(*args, **kwargs)
         self.have_date = 0
         self.have_time = 0
+
+    def copy(self, compute_value=None):
+        copy = super().copy(compute_value=compute_value)
+        copy.have_date = self.have_date
+        copy.have_time = self.have_time
+        return copy
 
     @staticmethod
     def _tzre_sub(s, _subtz=re.compile(r'([+-])(\d\d):(\d\d)$').sub):
