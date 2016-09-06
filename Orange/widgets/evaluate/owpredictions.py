@@ -789,7 +789,7 @@ class TableView(QtGui.QTableView):
         top = vheader.visualIndexAt(0)
         bottom = vheader.visualIndexAt(self.viewport().height())
         if bottom < 0:
-            bottom = self.rowCount(column)
+            bottom = self.model().rowCount()
 
         options = self.viewOptions()
         options.widget = self
