@@ -1013,6 +1013,8 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     elif focusInCallback or callback and not callbackOnType:
         if not hasHBox:
             outer = hBox(b, addToLayout=(b is not widget))
+            if b is widget:
+                b = outer
         else:
             outer = b
         ledit = LineEditWFocusOut(outer, callback, focusInCallback,
