@@ -26,7 +26,8 @@ from Orange.widgets.widget import Msg
 
 class OWSilhouettePlot(widget.OWWidget):
     name = "Silhouette Plot"
-    description = "Silhouette Plot"
+    description = "Visually assess cluster quality and " \
+                  "the degree of cluster membership."
 
     icon = "icons/SilhouettePlot.svg"
     priority = 510

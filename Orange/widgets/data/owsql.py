@@ -21,10 +21,7 @@ EXTENSIONS = ('tsm_system_time', 'quantile')
 class OWSql(OWWidget):
     name = "SQL Table"
     id = "orange.widgets.data.sql"
-    description = """
-    Load dataset from SQL."""
-    long_description = """
-    Sql widget connects to server and opens data from there. """
+    description = "Load data set from SQL."
     icon = "icons/SQLTable.svg"
     priority = 10
     category = "Data"

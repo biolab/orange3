@@ -88,8 +88,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     #: Short widget description (:class:`str` optional), displayed in
     #: canvas help tooltips.
     description = None
-    #: A longer widget description (:class:`str` optional)
-    long_description = None
     #: Widget icon path relative to the defining module
     icon = "icons/Unknown.png"
     #: Widget priority used for sorting within a category

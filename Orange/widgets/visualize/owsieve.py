@@ -52,11 +52,9 @@ class SieveRank(VizRankDialogAttrPair):
 
 
 class OWSieveDiagram(OWWidget):
-    """
-    A two-way contingency table providing information on the relation
-    between the observed and expected frequencies of a combination of values
-    """
     name = "Sieve Diagram"
+    description = "Visualize the observed and expected frequencies " \
+                  "for a combination of values."
     icon = "icons/SieveDiagram.svg"
     priority = 310
 
