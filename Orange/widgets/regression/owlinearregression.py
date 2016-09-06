@@ -66,8 +66,8 @@ class OWLinearRegression(OWBaseLearner):
         box5 = gui.hBox(box4)
         gui.widgetLabel(box5, "L1")
         self.l1_ratio_slider = gui.hSlider(
-            box5, self, "l1_ratio", minValue=0.01, maxValue=1,
-            intOnly=False, ticks=0.1, createLabel=False,
+            box5, self, "l1_ratio", minValue=0.01, maxValue=0.99,
+            intOnly=False, ticks=0.1, createLabel=False, width=120,
             step=0.01, callback=self._l1_ratio_changed)
         gui.widgetLabel(box5, "L2")
         self.l1_ratio_label = gui.widgetLabel(
