@@ -7,6 +7,7 @@ import numpy as np
 
 import Orange
 from Orange.data import Domain, Table, DiscreteVariable
+from Orange.statistics import distribution
 from Orange.preprocess import *
 from Orange.preprocess.discretize import *
 from Orange.preprocess.fss import *
@@ -82,6 +83,15 @@ class TestRemoveNanClass(unittest.TestCase):
         self.assertEqual(table.domain, domain)
         self.assertEqual(len(table), 1)
 
+
+class TestScaling(unittest.TestCase):
+    def test_scaling_x(self):
+        table = Table("iris")
+        dist1 = distribution.get_distribution(table, table.domain.attributes[0])
+        self.assertTrue(Scaling.mean(dist1) > 5)
+        table = Scaling(center=Scaling.mean, scale=None)(table)
+        dist2 = distribution.get_distribution(table, table.domain.attributes[0])
+        self.assertTrue(abs(Scaling.mean(dist2)) < 1e-12)
 
 class TestReprs(unittest.TestCase):
     def test_reprs(self):

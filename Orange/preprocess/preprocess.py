@@ -411,7 +411,8 @@ class ProjectCUR(Preprocess):
 
 class Scaling(Preprocess):
     """
-    Scale data preprocessor.
+    Scale data preprocessor.  Scales data so that its distribution remains the same
+    but its location on the axis changes.
     """
     @staticmethod
     def mean(dist):
