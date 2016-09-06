@@ -256,6 +256,7 @@ class OWSieveDiagram(OWWidget):
         Filter and output the data.
         """
         if self.areas is None or not self.selection:
+            self._selection = None
             self.send("Selection", None)
             return
 
@@ -460,6 +461,7 @@ class OWSieveDiagram(OWWidget):
     def init_code_gen(self):
         def run():
             ow.set_data(input_data)
+            ow.update_selection()
             try:
                 ow.set_input_features(input_features)
             except:

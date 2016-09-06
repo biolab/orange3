@@ -101,7 +101,7 @@ class OWContinuize(widget.OWWidget):
             self.unconditional_commit()
 
     def constructContinuizer(self):
-        conzer = DomainContinuizer(
+        conzer = _DomainContinuizer(
             zero_based=self.zero_based,
             multinomial_treatment=self.multinomial_treats[self.multinomial_treatment][1],
             continuous_treatment=self.continuous_treats[self.continuous_treatment][1],
@@ -135,7 +135,7 @@ class OWContinuize(widget.OWWidget):
                 data = None
 
         gen = self.code_gen()
-        gen.add_import([Table, DomainContinuizer, Continuize])
+        gen.add_import([Table, _DomainContinuizer, Continuize])
         gen.add_init("continuizer", repr(self.constructContinuizer()), iscode=True)
         gen.add_output("data", "data", iscode=True)
         gen.set_main(run)
@@ -361,7 +361,7 @@ def normalize_by_sd(var, data_or_dist):
     return normalized_var(var, mean, 1 / sd)
 
 
-class DomainContinuizer:
+class _DomainContinuizer:
     def __new__(cls, data=None, zero_based=True,
                 multinomial_treatment=Continuize.Indicators,
                 continuous_treatment=Continuize.Leave,
@@ -394,14 +394,14 @@ class DomainContinuizer:
         return newdomain
 
     def __repr__(self):
-        return "DomainContinuizer({}{}{}{})".format(
+        return "_DomainContinuizer({}{}{}{})".format(
             "zero_based=False, ".format(self.zero_based) if not
                 self.zero_based else "",
             "multinomial_treatment=Continuize.{}, ".format(repr(self.multinomial_treatment)) if
                 self.multinomial_treatment != Continuize.Indicators else "",
             "continuous_treatment=Continuize.{}, ".format(repr(self.continuous_treatment)) if
                 self.continuous_treatment != Continuize.Leave else "",
-            "class_treatment=Continuize.{}, ".format(repr(self.class_treatment)) if
+            "class_treatment=Continuize.{}".format(repr(self.class_treatment)) if
                 self.class_treatment != Continuize.Leave else ""
         )
 

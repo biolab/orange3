@@ -181,8 +181,8 @@ class OWOutliers(widget.OWWidget):
                 except:
                     print("Error during outlier detection: Singular Covariance Matrix")
                 else:
-                    inliers_ind = np.where(y_pred == 1)[0]
-                    outliers_ind = np.where(y_pred == -1)[0]
+                    inliers_ind = numpy.where(y_pred == 1)[0]
+                    outliers_ind = numpy.where(y_pred == -1)[0]
                     inliers = Table(new_domain, new_data, inliers_ind)
                     outliers = Table(new_domain, new_data, outliers_ind)
 
