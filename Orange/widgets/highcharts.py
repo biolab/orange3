@@ -325,6 +325,12 @@ class Highchart(WebView):
         self._selection_callback([np.sort(selected).astype(int)
                                   for selected in points])
 
+    def svg(self):
+        """ Return SVG string of the first SVG element on the page, or
+        raise ValueError if not any. """
+        html = self.frame.toHtml()
+        return html[html.index('<div id="container"'):html.rindex('</div>') + 6]
+
 
 def main():
     """ A simple test. """
