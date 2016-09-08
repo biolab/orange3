@@ -688,7 +688,7 @@ class CSVReader(FileFormat):
                 except Exception as e:
                     error = e
                     continue
-        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error))
+        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error)) from error
 
     @classmethod
     def write_file(cls, filename, data):
