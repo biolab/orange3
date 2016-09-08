@@ -83,6 +83,17 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
 
+        path = "/path/to/somewhere"
+        c1.attributes["path"] = path
+        outf = io.StringIO()
+        outf.close = lambda: None
+        TabReader.write_file(outf, table)
+        outf.seek(0)
+
+        table = read_tab_file(outf)
+        f1, f2, c1, c2 = table.domain.variables
+        self.assertEqual(c1.attributes["path"], path)
+
     def test_read_data_oneline_header(self):
         samplefile = """\
         data1\tdata2\tdata3
