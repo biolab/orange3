@@ -1,6 +1,7 @@
 import numpy
 from PyQt4.QtCore import Qt
 from scipy.sparse import issparse
+import bottleneck as bn
 
 import Orange.data
 import Orange.misc
@@ -44,6 +45,7 @@ class OWDistances(OWWidget):
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring discrete features")
+        imputing_data = Msg("Imputing missing values")
 
     def __init__(self):
         super().__init__()
@@ -121,6 +123,8 @@ class OWDistances(OWWidget):
             if numpy.product(shape) == 0:
                 self.Error.empty_data(shape)
             else:
+                if bn.anynan(data.X):
+                    self.Warning.imputing_data()
                 distances = metric(data, data, 1 - self.axis, impute=True)
 
         self.send("Distances", distances)
