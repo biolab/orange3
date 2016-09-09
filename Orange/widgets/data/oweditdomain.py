@@ -37,7 +37,7 @@ def get_qualified(module, name):
     return getattr(module, name)
 
 
-def variable_description(var):
+def variable_description(var, skip_attributes=False):
     """Return a variable descriptor.
 
     A descriptor is a hashable tuple which should uniquely define
@@ -46,18 +46,21 @@ def variable_description(var):
 
     """
     var_type = type(var)
+    attributes = ()
+    if not skip_attributes:
+        attributes = tuple(sorted(var.attributes.items()))
     if var.is_discrete:
         return (var_type.__module__,
                 var_type.__name__,
                 var.name,
                 (("values", tuple(var.values)),),
-                tuple(sorted(var.attributes.items())))
+                attributes)
     else:
         return (var_type.__module__,
                 var_type.__name__,
                 var.name,
                 (),
-                tuple(sorted(var.attributes.items())))
+                attributes)
 
 
 def variable_from_description(description, compute_value=None):
@@ -423,7 +426,7 @@ class OWEditDomain(widget.OWWidget):
         ind = self.selected_var_index()
         if ind >= 0:
             var = self.input_vars[ind]
-            desc = variable_description(var)
+            desc = variable_description(var, skip_attributes=True)
             if desc in self.domain_change_hints:
                 del self.domain_change_hints[desc]
 
@@ -454,7 +457,7 @@ class OWEditDomain(widget.OWWidget):
     def _restore(self):
         # Restore the variable states from saved settings.
         def transform(var):
-            vdesc = variable_description(var)
+            vdesc = variable_description(var, skip_attributes=True)
             if vdesc in self.domain_change_hints:
                 return variable_from_description(
                     self.domain_change_hints[vdesc],
@@ -513,8 +516,8 @@ class OWEditDomain(widget.OWWidget):
 
 
         # Store the transformation hint.
-        self.domain_change_hints[variable_description(old_var)] = \
-                    variable_description(new_var)
+        old_var_desc = variable_description(old_var, skip_attributes=True)
+        self.domain_change_hints[old_var_desc] = variable_description(new_var)
 
         self._invalidate()
 
