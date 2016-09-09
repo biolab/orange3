@@ -132,7 +132,10 @@ class OWKMeans(widget.OWWidget):
                      callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
-        self.apply_button = gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
+        self.apply_button = gui.auto_commit(
+            self.buttonsArea, self, "auto_run", "Apply", box=None,
+            commit=self.commit
+        )
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)
@@ -253,7 +256,8 @@ class OWKMeans(widget.OWWidget):
         else:
             self.cluster()
 
-    commit = run
+    def commit(self):
+        self.run()
 
     def show_results(self):
         minimize = self.SCORING_METHODS[self.scoring][2]
@@ -353,6 +357,8 @@ class OWKMeans(widget.OWWidget):
         self.data = data
         if data is None:
             self.table_model.setRowCount(0)
+            self.send("Annotated Data", None)
+            self.send("Centroids", None)
         else:
             self.data = data
             self.run()
