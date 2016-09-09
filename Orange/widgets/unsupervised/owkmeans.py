@@ -353,6 +353,8 @@ class OWKMeans(widget.OWWidget):
         self.data = data
         if data is None:
             self.table_model.setRowCount(0)
+            self.send("Annotated Data", None)
+            self.send("Centroids", None)
         else:
             self.data = data
             self.run()
