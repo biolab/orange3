@@ -122,9 +122,13 @@ class Flags:
             if self._RE_ALL.match(flag):
                 if '=' in flag:
                     k, v = flag.split('=', 1)
-                    self.attributes[k] = (v if Flags._RE_ATTR_UNQUOTED_STR(v) else
-                                          literal_eval(v) if v else
-                                          '')
+                    if not Flags._RE_ATTR_UNQUOTED_STR(v):
+                        try:
+                            v = literal_eval(v)
+                        except SyntaxError:
+                            # If parsing failed, treat value as string
+                            pass
+                    self.attributes[k] = v
                 else:
                     setattr(self, flag, True)
                     setattr(self, self.ALL.get(flag, ''), True)
@@ -688,7 +692,7 @@ class CSVReader(FileFormat):
                 except Exception as e:
                     error = e
                     continue
-        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error))
+        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error)) from error
 
     @classmethod
     def write_file(cls, filename, data):
