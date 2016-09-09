@@ -86,7 +86,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
     settingsHandler = settings.ClassValuesContextHandler()
 
-    selected_learner = settings.Setting(0)
+    selected_learner = settings.Setting([0], schema_only=True)
     selection = settings.ContextSetting(set())
     selected_quantity = settings.Setting(0)
     append_predictions = settings.Setting(True)
@@ -101,8 +101,6 @@ class OWConfusionMatrix(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        if isinstance(self.selected_learner, list):
-            self.selected_learner = (self.selected_learner + [0])[0]
 
         self.data = None
         self.results = None
@@ -214,7 +212,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def set_results(self, results):
         """Set the input results."""
 
-        prev_sel_learner = self.selected_learner
+        prev_sel_learner = self.selected_learner.copy()
         self.clear()
         self.warning()
         self.closeContext()
@@ -252,11 +250,10 @@ class OWConfusionMatrix(widget.OWWidget):
 
             self._init_table(len(class_values))
             self.openContext(data.domain.class_var)
-            if prev_sel_learner is None or \
-                    prev_sel_learner >= len(self.learners):
-                self.selected_learner = 0
+            if not prev_sel_learner or prev_sel_learner[0] >= len(self.learners):
+                self.selected_learner[:] = [0]
             else:
-                self.selected_learner = prev_sel_learner
+                self.selected_learner[:] = prev_sel_learner
             self._update()
             self._set_selection()
             self.unconditional_commit()
@@ -319,12 +316,12 @@ class OWConfusionMatrix(widget.OWWidget):
     def commit(self):
         """Output data instances corresponding to selected cells"""
         if self.results is not None and self.data is not None \
-                and self.selected_learner is not None:
+                and self.selected_learner:
             indices = self.tableview.selectedIndexes()
             indices = {(ind.row() - 2, ind.column() - 2) for ind in indices}
             actual = self.results.actual
-            learner_name = self.learners[self.selected_learner]
-            predicted = self.results.predicted[self.selected_learner]
+            learner_name = self.learners[self.selected_learner[0]]
+            predicted = self.results.predicted[self.selected_learner[0]]
             selected = [i for i, t in enumerate(zip(actual, predicted))
                         if t in indices]
             row_indices = self.results.row_indices[selected]
@@ -344,7 +341,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
             if self.append_probabilities and \
                     self.results.probabilities is not None:
-                probs = self.results.probabilities[self.selected_learner,
+                probs = self.results.probabilities[self.selected_learner[0],
                                                    selected]
                 extra.append(numpy.array(probs, dtype=object))
                 pvars = [Orange.data.ContinuousVariable("p({})".format(value))
@@ -395,8 +392,8 @@ class OWConfusionMatrix(widget.OWWidget):
             return isnan(x) or isinf(x)
 
         # Update the displayed confusion matrix
-        if self.results is not None and self.selected_learner is not None:
-            cmatrix = confusion_matrix(self.results, self.selected_learner)
+        if self.results is not None and self.selected_learner:
+            cmatrix = confusion_matrix(self.results, self.selected_learner[0])
             colsum = cmatrix.sum(axis=0)
             rowsum = cmatrix.sum(axis=1)
             n = len(cmatrix)
@@ -459,10 +456,10 @@ class OWConfusionMatrix(widget.OWWidget):
 
     def send_report(self):
         """Send report"""
-        if self.results is not None and self.selected_learner is not None:
+        if self.results is not None and self.selected_learner:
             self.report_table(
                 "Confusion matrix for {} (showing {})".
-                format(self.learners[self.selected_learner],
+                format(self.learners[self.selected_learner[0]],
                        self.quantities[self.selected_quantity].lower()),
                 self.tableview)
 

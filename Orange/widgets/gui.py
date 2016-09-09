@@ -2253,7 +2253,7 @@ class ControlledList(list):
     selection in the list box.
     """
     def __init__(self, content, listBox=None):
-        super().__init__(content)
+        super().__init__(content if content is not None else [])
         self.listBox = listBox
 
     def __reduce__(self):
