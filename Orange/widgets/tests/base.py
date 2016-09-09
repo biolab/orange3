@@ -416,18 +416,18 @@ class WidgetLearnerTestMixin:
         """Check learner and model for various values of all parameters"""
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
-            for val, set_val in zip(parameter.values, parameter.values):
+            for value in parameter.values:
                 self.send_signal("Data", self.data)
-                parameter.set_value(set_val)
+                parameter.set_value(value)
                 self.widget.apply_button.button.click()
                 param = self.widget.learner.params.get(parameter.name)
                 self.assertEqual(param, parameter.get_value())
-                self.assertEqual(param, val)
+                self.assertEqual(param, value)
                 param = self.get_output("Learner").params.get(parameter.name)
-                self.assertEqual(param, val)
+                self.assertEqual(param, value)
                 model = self.get_output(self.model_name)
                 if model is not None:
-                    self.assertEqual(model.params.get(parameter.name), val)
+                    self.assertEqual(model.params.get(parameter.name), value)
                     self.assertFalse(self.widget.Error.active)
                 else:
                     self.assertTrue(self.widget.Error.active)
