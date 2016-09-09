@@ -27,6 +27,7 @@ from Orange.widgets.io import FileFormat
 
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
+
 from Orange.widgets.widget import Msg
 
 
@@ -398,7 +399,10 @@ class OWHeatMap(widget.OWWidget):
         (OrderedClustering, "Clustering with leaf ordering")
     ]
     # Disable clustering for inputs bigger than this
-    _MaxClustering = 3000
+    if hierarchical._HAS_NN_CHAIN:
+        _MaxClustering = 25000
+    else:
+        _MaxClustering = 3000
 
     # Disable cluster leaf ordering for inputs bigger than this
     _MaxOrderedClustering = 1000
