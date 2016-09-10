@@ -8,6 +8,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
+from .reprable import Reprable
 
 
 __all__ = ["Chi2",
@@ -21,7 +22,7 @@ __all__ = ["Chi2",
            "FCBF"]
 
 
-class Scorer:
+class Scorer(Reprable):
     feature_type = None
     class_type = None
     supports_sparse_data = None
@@ -57,14 +58,6 @@ class Scorer:
             raise ValueError('Only %ss are supported' % self.feature_type)
 
         return self.score_data(data, feature)
-
-    def __repr__(self):
-        args = self.__class__.__init__.__code__.co_varnames
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
-                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
-        )
 
     def score_data(self, data, feature):
         raise NotImplementedError

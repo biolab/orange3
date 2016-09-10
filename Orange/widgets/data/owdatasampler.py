@@ -11,6 +11,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
+from Orange.preprocess.reprable import Reprable
 
 
 class OWDataSampler(widget.OWWidget):
@@ -249,16 +250,16 @@ class OWDataSampler(widget.OWWidget):
                       type(self.data) == Table and
                       self.data.domain.has_discrete_class)
         if self.sampling_type == self.FixedSize:
-            self.indice_gen = sample_random_n(
+            self.indice_gen = SampleRandomN(
                 size, stratified=stratified, replace=self.replacement,
                 random_state=rnd)
         elif self.sampling_type == self.FixedProportion:
-            self.indice_gen = sample_random_p(
+            self.indice_gen = SampleRandomP(
                 self.sampleSizePercentage / 100, stratified=stratified, random_state=rnd)
         elif self.sampling_type == self.Bootstrap:
-            self.indice_gen = sample_bootstrap(data_length, random_state=rnd)
+            self.indice_gen = SampleBootstrap(data_length, random_state=rnd)
         else:
-            self.indice_gen = sample_fold_indices(
+            self.indice_gen = SampleFoldIndices(
                 self.number_of_folds, stratified=stratified, random_state=rnd)
         self.indices = self.indice_gen(self.data)
 
@@ -293,13 +294,18 @@ class OWDataSampler(widget.OWWidget):
         self.report_items(items)
 
 
-class sample_fold_indices():
+class SampleFoldIndices(Reprable):
     def __init__(self, folds=10, stratified=False, random_state=None):
-        """
-        :param int folds: Number of folds
-        :param bool stratified: Return stratified indices (if applicable).
-        :param Random random_state:
-        :rval tuple-of-arrays: A tuple of array indices one for each fold.
+        """Samples data based on a number of folds.
+
+        Args:
+            folds (int): Number of folds
+            stratified (bool): Return stratified indices (if applicable).
+            random_state (Random): An initial state for replicable random behavior
+
+        Returns:
+            tuple-of-arrays: A tuple of array indices one for each fold.
+
         """
         self.folds = folds
         self.stratified = stratified
@@ -315,17 +321,9 @@ class sample_fold_indices():
                 len(table), self.folds, shuffle=True, random_state=self.random_state)
         return tuple(ind)
 
-    def __repr__(self):
-        args = self.__class__.__init__.__code__.co_varnames
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
-                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
-        )
 
-
-class sample_random_n():
-    def __init__(self, n, stratified=False, replace=False,
+class SampleRandomN(Reprable):
+    def __init__(self, n=0, stratified=False, replace=False,
                     random_state=None):
         self.n = n
         self.stratified = stratified
@@ -356,24 +354,20 @@ class sample_random_n():
 
         return next(iter(ind))
 
-    __repr__ =  sample_fold_indices.__repr__
 
-
-class sample_random_p():
-    def __init__(self, p, stratified=False, random_state=None):
+class SampleRandomP(Reprable):
+    def __init__(self, p=0, stratified=False, random_state=None):
         self.p = p
         self.stratified = stratified
         self.random_state = random_state
 
     def __call__(self, table):
         n = int(math.ceil(len(table) * self.p))
-        return sample_random_n(n, self.stratified, self.random_state)(table)
-
-    __repr__ = sample_fold_indices.__repr__
+        return SampleRandomN(n, self.stratified, self.random_state)(table)
 
 
-def sample_bootstrap():
-    def __init__(self, size, random_state=None):
+class SampleBootstrap(Reprable):
+    def __init__(self, size=0, random_state=None):
         self.size = size
         self.random_state = random_state
 
@@ -385,8 +379,6 @@ def sample_bootstrap():
         insample[sample] = False
         remaining = np.flatnonzero(insample)
         return remaining, sample
-
-    __repr__ = sample_fold_indices.__repr__
 
 
 def test_main():

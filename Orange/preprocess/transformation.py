@@ -1,9 +1,10 @@
 import numpy as np
 
 from Orange.data import Instance, Table
+from .reprable import Reprable
 
 
-class Transformation:
+class Transformation():
     """
     Base class for simple transformations of individual variables. Derived
     classes are used in continuization, imputation, discretization...

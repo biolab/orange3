@@ -73,9 +73,7 @@ def Enum(*names):
         EnumType = property(lambda self: EnumType)
 
         def __repr__(self):
-            return str(names[self])
-
-        __str__ = __repr__
+            return self.__str__()
 
         def __reduce__(self):
             return enum_value_unpickler, (names, int(self))

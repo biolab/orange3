@@ -10,16 +10,16 @@ import bottleneck as bn
 import Orange.data
 from Orange.data import Table
 from Orange.statistics import distribution
-from . import impute, discretize, transformation
+from . import impute, discretize, transformation, reprable
 from ..misc.enum import Enum
 
 
-__all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
-           "Normalize", "Randomize", "RemoveNaNClasses",
-           "ProjectPCA", "ProjectCUR", "Scaling"]
+__all__ = ["Continuize", "Discretize", "Impute",
+           "SklImpute", "Normalize", "Randomize",
+           "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scaling"]
 
 
-class Preprocess:
+class Preprocess(reprable.Reprable):
     """
     A generic preprocessor class. All preprocessors need to inherit this
     class. Preprocessors can be instantiated without the data set to return
@@ -43,14 +43,6 @@ class Preprocess:
 
     def __call__(self, data):
         raise NotImplementedError("Subclasses need to implement __call__")
-
-    def __repr__(self):
-        args = self.__class__.__init__.__code__.co_varnames
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
-                arg not in ("self") and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
-        )
 
 
 class Continuize(Preprocess):
@@ -242,9 +234,6 @@ class RemoveNaNClasses(Preprocess):
             nan_cls = np.isnan(data.Y)
         return Table(data.domain, data, np.where(nan_cls == False))
 
-    def __repr__(self):
-        return "RemoveNaNClasses()"
-
 
 class Normalize(Preprocess):
     """
@@ -409,42 +398,51 @@ class ProjectCUR(Preprocess):
         )(data)
         return cur(data)
 
+
+class WrappedFunc:
+    def __init__(self):
+        return None
+
+    def __repr__(self):
+        return "Scaling." + self.__class__.__name__
+
+
 class Scaling(Preprocess):
     """
     Scale data preprocessor.  Scales data so that its distribution remains the same
     but its location on the axis changes.
     """
-    @staticmethod
-    def mean(dist):
-        values, counts = np.array(dist)
-        return np.average(values, weights=counts)
+    class mean(WrappedFunc):
+        def __call__(self, dist):
+            values, counts = np.array(dist)
+            return np.average(values, weights=counts)
 
-    @staticmethod
-    def median(dist):
-        values, counts = np.array(dist)
-        cumdist = np.cumsum(counts)
-        if cumdist[-1] > 0:
-            cumdist /= cumdist[-1]
+    class median(WrappedFunc):
+        def __call__(self, dist):
+            values, counts = np.array(dist)
+            cumdist = np.cumsum(counts)
+            if cumdist[-1] > 0:
+                cumdist /= cumdist[-1]
 
-        return np.interp(0.5, cumdist, values)
+            return np.interp(0.5, cumdist, values)
 
-    @staticmethod
-    def span(dist):
-        values = np.array(dist[0])
-        minval = np.min(values)
-        maxval = np.max(values)
-        return maxval - minval
+    class span(WrappedFunc):
+        def __call__(self, dist):
+            values = np.array(dist[0])
+            minval = np.min(values)
+            maxval = np.max(values)
+            return maxval - minval
 
-    @staticmethod
-    def std(dist):
-        values, counts = np.array(dist)
-        mean = np.average(values, weights=counts)
-        diff = values - mean
-        return np.sqrt(np.average(diff ** 2, weights=counts))
+    class std(WrappedFunc):
+        def __call__(self, dist):
+            values, counts = np.array(dist)
+            mean = np.average(values, weights=counts)
+            diff = values - mean
+            return np.sqrt(np.average(diff ** 2, weights=counts))
 
-    def __init__(self, center=mean.__func__, scale=std.__func__):
-        self.center = center
-        self.scale = scale
+    def __init__(self, center=mean, scale=std):
+        self.center = center() if center is not None else None
+        self.scale = scale() if scale is not None else None
 
     def __call__(self, data):
         if self.center is None and self.scale is None:
@@ -478,7 +476,7 @@ class Scaling(Preprocess):
         return data.from_table(domain, data)
 
 
-class PreprocessorList:
+class PreprocessorList(reprable.Reprable):
     """
     Store a list of preprocessors and on call apply them to the data set.
 
@@ -488,7 +486,7 @@ class PreprocessorList:
         A list of preprocessors.
     """
 
-    def __init__(self, preprocessors):
+    def __init__(self, preprocessors=[]):
         self.preprocessors = list(preprocessors)
 
     def __call__(self, data):
@@ -503,10 +501,3 @@ class PreprocessorList:
         for pp in self.preprocessors:
             data = pp(data)
         return data
-
-    def __repr__(self):
-        repstr = "PreprocessorList(["
-        for preproc in self.preprocessors:
-            repstr +=  repr(preproc) + ", "
-        repstr += "])"
-        return repstr

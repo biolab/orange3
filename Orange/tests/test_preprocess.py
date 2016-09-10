@@ -7,7 +7,6 @@ import numpy as np
 
 import Orange
 from Orange.data import Domain, Table, DiscreteVariable
-from Orange.statistics import distribution
 from Orange.preprocess import *
 from Orange.preprocess.discretize import *
 from Orange.preprocess.fss import *
@@ -85,13 +84,29 @@ class TestRemoveNanClass(unittest.TestCase):
 
 
 class TestScaling(unittest.TestCase):
-    def test_scaling_x(self):
-        table = Table("iris")
-        dist1 = distribution.get_distribution(table, table.domain.attributes[0])
-        self.assertTrue(Scaling.mean(dist1) > 5)
-        table = Scaling(center=Scaling.mean, scale=None)(table)
-        dist2 = distribution.get_distribution(table, table.domain.attributes[0])
-        self.assertTrue(abs(Scaling.mean(dist2)) < 1e-12)
+    @classmethod
+    def setUpClass(cls):
+        cls.table = Table([
+            [1, 2, 3],[2, 3, 4],[3, 4, 5],[4, 5, 6]
+        ])
+
+    def test_scaling_mean_span(self):
+        table = Scaling(center=Scaling.mean, scale=Scaling.span)(self.table)
+        self.assertEqual(np.max(table), 0.5)
+        self.assertEqual(np.min(table), -0.5)
+        self.assertLess(abs(np.mean(table)), 1e-12)
+
+    def test_scaling_median_stddev(self):
+        table = Scaling(center=Scaling.median, scale=Scaling.std)(self.table)
+        # Can't compare directly due to floating point error
+        # Make sure error is very, very small instead
+        float_max = 4/np.sqrt(5)
+        self.assertLess(abs(np.max(table) - float_max), 1e-12)
+        float_min = -2/np.sqrt(5)
+        self.assertLess(abs(np.min(table) - float_min), 1e-12)
+        float_mean = 1/np.sqrt(5)
+        self.assertLess(abs(np.mean(table) - float_mean), 1e-12)
+
 
 class TestReprs(unittest.TestCase):
     def test_reprs(self):

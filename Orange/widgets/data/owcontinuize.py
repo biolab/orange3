@@ -3,7 +3,7 @@ from PyQt4.QtCore import Qt
 
 import Orange.data
 from Orange.statistics import distribution
-from Orange.preprocess import Continuize, Normalize
+from Orange.preprocess import Continuize, Normalize, Reprable
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -346,17 +346,16 @@ def normalize_by_sd(var, data_or_dist):
     return normalized_var(var, mean, 1 / sd)
 
 
-class DomainContinuizer:
-    def __new__(cls, data=None, zero_based=True,
+class DomainContinuizer(Reprable):
+    def __init__(self, zero_based=True,
                 multinomial_treatment=Continuize.Indicators,
                 continuous_treatment=Continuize.Leave,
                 class_treatment=Continuize.Leave):
-        self = super().__new__(cls)
+        # self = super().__new__(cls)
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
         self.continuous_treatment = continuous_treatment
         self.class_treatment = class_treatment
-        return self if data is None else self(data)
 
     def __call__(self, data):
         treat = self.multinomial_treatment
@@ -377,18 +376,6 @@ class DomainContinuizer:
             self.zero_based
         )
         return newdomain
-
-    def __repr__(self):
-        return "DomainContinuizer({}{}{}{})".format(
-            "zero_based=False, ".format(self.zero_based) if not
-                self.zero_based else "",
-            "multinomial_treatment=Continuize.{}, ".format(repr(self.multinomial_treatment)) if
-                self.multinomial_treatment != Continuize.Indicators else "",
-            "continuous_treatment=Continuize.{}, ".format(repr(self.continuous_treatment)) if
-                self.continuous_treatment != Continuize.Leave else "",
-            "class_treatment=Continuize.{}, ".format(repr(self.class_treatment)) if
-                self.class_treatment != Continuize.Leave else ""
-        )
 
 
 if __name__ == "__main__":

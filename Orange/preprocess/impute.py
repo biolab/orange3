@@ -3,6 +3,7 @@ import numpy
 import Orange.data
 from Orange.statistics import distribution, basic_stats
 from .transformation import Transformation, Lookup
+from .reprable import Reprable
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
            "Model", "AsValue", "Random", "Default"]
@@ -27,7 +28,7 @@ class ReplaceUnknowns(Transformation):
         return numpy.where(numpy.isnan(c), self.value, c)
 
 
-class BaseImputeMethod:
+class BaseImputeMethod(Reprable):
     name = ""
     short_name = ""
     description = ""
@@ -69,9 +70,6 @@ class DoNotImpute(BaseImputeMethod):
     def __call__(self, data, variable):
         return variable
 
-    def __repr__(self):
-        return "DoNotImpute()"
-
 
 class DropInstances(BaseImputeMethod):
     name = "Remove instances with unknown values"
@@ -81,9 +79,6 @@ class DropInstances(BaseImputeMethod):
     def __call__(self, data, variable):
         index = data.domain.index(variable)
         return numpy.isnan(data[:, index]).reshape(-1)
-
-    def __repr__(self):
-        return "DropInstances()"
 
 
 class Average(BaseImputeMethod):
@@ -107,20 +102,14 @@ class Average(BaseImputeMethod):
         a.to_sql = ImputeSql(variable, value)
         return a
 
-    def __repr__(self):
-        return "Average()"
 
-
-class ImputeSql:
+class ImputeSql(Reprable):
     def __init__(self, var, default):
         self.var = var
         self.default = default
 
     def __call__(self):
         return 'coalesce(%s, %s)' % (self.var.to_sql(), str(self.default))
-
-    def __repr__(self):
-        return "ImputeSql()"
 
 
 class Default(BaseImputeMethod):
@@ -141,11 +130,8 @@ class Default(BaseImputeMethod):
     def copy(self):
         return Default(self.default)
 
-    def __repr__(self):
-        return "Default()"
 
-
-class ReplaceUnknownsModel:
+class ReplaceUnknownsModel(Reprable):
     """
     Replace unknown values with predicted values using a `Orange.base.Model`
 
@@ -178,9 +164,6 @@ class ReplaceUnknownsModel:
             predicted = self.model(data[mask])
         column[mask] = predicted
         return column
-
-    def __repr__(self):
-        return "ReplaceUnknownsModel()"
 
 
 class Model(BaseImputeMethod):

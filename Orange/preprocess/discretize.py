@@ -5,6 +5,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from Orange.statistics.basic_stats import BasicStats
 from .transformation import Transformation
+from .reprable import Reprable
 from . import _discretize
 
 __all__ = ["EqualFreq", "EqualWidth", "EntropyMDL", "DomainDiscretizer"]
@@ -85,7 +86,7 @@ class SingleValueSql:
         return "'%s'" % self.value
 
 
-class Discretization:
+class Discretization(Reprable):
     """Abstract base class for discretization classes."""
     def __call__(self, data, variable):
         """
