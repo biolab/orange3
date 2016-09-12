@@ -1005,7 +1005,23 @@ class OWImageViewer(widget.OWWidget):
                 thumbnail.instance = inst
                 self.thumbnailView.addThumbnail(thumbnail)
 
-                if url.isValid():
+                if url.isValid() and url.isLocalFile():
+                    reader = QImageReader(url.toLocalFile())
+                    image = reader.read()
+                    if image.isNull():
+                        error = reader.errorString()
+                        thumbnail.setToolTip(
+                            thumbnail.toolTip() + "\n" + error)
+                        self._errcount += 1
+                    else:
+                        pixmap = QPixmap.fromImage(image)
+                        thumbnail.setPixmap(pixmap)
+                        self._successcount += 1
+
+                    future = Future()
+                    future.set_result(image)
+                    future._reply = None
+                elif url.isValid():
                     future = self.loader.get(url)
 
                     @future.add_done_callback
@@ -1025,13 +1041,17 @@ class OWImageViewer(widget.OWWidget):
 
                         thumb.setPixmap(pixmap)
 
-                        self._updateStatus(future)
-
+                        self._noteCompleted(future)
                 else:
                     future = None
+
                 self.items.append(_ImageItem(i, thumbnail, url, future))
 
-            self.info.setText("Retrieving...\n")
+            if any(it.future is not None and not it.future.done()
+                   for it in self.items):
+                self.info.setText("Retrieving...\n")
+            else:
+                self._updateStatus()
 
     def urlFromValue(self, value):
         variable = value.variable
@@ -1099,7 +1119,8 @@ class OWImageViewer(widget.OWWidget):
         else:
             self.send("Data", None)
 
-    def _updateStatus(self, future):
+    def _noteCompleted(self, future):
+        # Note the completed future's state
         if future.cancelled():
             return
 
@@ -1109,6 +1130,9 @@ class OWImageViewer(widget.OWWidget):
         else:
             self._successcount += 1
 
+        self._updateStatus()
+
+    def _updateStatus(self):
         count = len([item for item in self.items if item.future is not None])
         self.info.setText(
             "Retrieving:\n" +
