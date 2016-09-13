@@ -286,15 +286,15 @@ class Table(MutableSequence, Storage):
                                  [x - n_src_attrs for x in src_cols])
 
             a = np.empty((n_rows, len(src_cols)), dtype=dtype)
-            shared_cache = {}
+            shared_cache = cls.conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
                     a[:, i] = Unknown
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
-                        if id(col.compute_shared) not in shared_cache:
-                            shared_cache[id(col.compute_shared)] = col.compute_shared(source)
-                        shared = shared_cache[id(col.compute_shared)]
+                        if (id(col.compute_shared), id(source)) not in shared_cache:
+                            shared_cache[id(col.compute_shared), id(source)] = col.compute_shared(source)
+                        shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
                             a[:, i] = col(source, shared_data=shared)[row_indices]
                         else:
