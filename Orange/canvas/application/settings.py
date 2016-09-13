@@ -357,60 +357,19 @@ class UserSettingsDialog(QMainWindow):
                         self.tr("Warn"),
                         self.tr("Info"),
                         self.tr("Debug")])
-
-        cb = QCheckBox(self.tr("Show output on 'Error'"),
-                       objectName="focus-on-error")
-
         self.bind(combo, "currentIndex", "logging/level")
-        self.bind(cb, "checked", "output/show-on-error")
-
         layout.addWidget(combo)
-        layout.addWidget(cb)
         box.setLayout(layout)
-
         form.addRow(self.tr("Logging"), box)
 
         box = QWidget()
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-
-        cb1 = QCheckBox(self.tr("Stay on top"),
-                        objectName="stay-on-top")
-
-        cb2 = QCheckBox(self.tr("Dockable"),
-                        objectName="output-dockable")
-
-        self.bind(cb1, "checked", "output/stay-on-top")
-        self.bind(cb2, "checked", "output/dockable")
-
-        layout.addWidget(cb1)
-        layout.addWidget(cb2)
-        box.setLayout(layout)
-
-        form.addRow(self.tr("Output window"), box)
-
-        box = QWidget()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-
         cb1 = QCheckBox(self.tr("Open in external browser"),
                         objectName="open-in-external-browser")
-
-        cb2 = QCheckBox(self.tr("Stay on top"),
-                        objectName="help-stay-on-top")
-
-        cb3 = QCheckBox(self.tr("Dockable"),
-                        objectName="help-dockable")
-
         self.bind(cb1, "checked", "help/open-in-external-browser")
-        self.bind(cb2, "checked", "help/stay-on-top")
-        self.bind(cb3, "checked", "help/dockable")
-
         layout.addWidget(cb1)
-        layout.addWidget(cb2)
-        layout.addWidget(cb3)
         box.setLayout(layout)
-
         form.addRow(self.tr("Help window"), box)
 
         tab.setLayout(form)
