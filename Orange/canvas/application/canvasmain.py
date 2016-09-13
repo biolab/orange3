@@ -322,7 +322,7 @@ class CanvasMainWindow(QMainWindow):
             self._on_dock_location_changed
         )
 
-        self.output_dock = DockWidget(self.tr("Output"), self,
+        self.output_dock = DockWidget(self.tr("Log"), self,
                                       objectName="output-dock",
                                       allowedAreas=Qt.BottomDockWidgetArea)
         # Set widget before calling addDockWidget, otherwise the dock
@@ -505,13 +505,14 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.show_output_action = \
-            QAction(self.tr("Show Output View"), self,
-                    toolTip=self.tr("Show application output."),
-                    triggered=self.show_output_view,
+            QAction(self.tr("&Log"), self,
+                    toolTip=self.tr("Show application standard output."),
+                    checkable=True,
+                    triggered=lambda checked: self.output_dock.setVisible(checked),
                     )
 
         self.show_report_action = \
-            QAction(self.tr("Show Report View"), self,
+            QAction(self.tr("&Report"), self,
                     triggered=self.show_report_view,
                     shortcut=QKeySequence(Qt.ShiftModifier | Qt.Key_R)
                     )
@@ -623,6 +624,8 @@ class CanvasMainWindow(QMainWindow):
             QActionGroup(self, objectName="toolbox-menu-group")
 
         self.view_menu.addAction(self.toggle_tool_dock_expand)
+        self.view_menu.addAction(self.show_output_action)
+        self.view_menu.addAction(self.show_report_action)
 
         self.view_menu.addSeparator()
         self.view_menu.addAction(self.toogle_margins_action)
@@ -630,8 +633,6 @@ class CanvasMainWindow(QMainWindow):
 
         # Options menu
         self.options_menu = QMenu(self.tr("&Options"), self)
-        self.options_menu.addAction(self.show_output_action)
-        self.options_menu.addAction(self.show_report_action)
 #        self.options_menu.addAction("Add-ons")
 #        self.options_menu.addAction("Developers")
 #        self.options_menu.addAction("Run Discovery")
@@ -687,6 +688,8 @@ class CanvasMainWindow(QMainWindow):
         self.toogle_margins_action.setChecked(
             settings.value("scheme-margins-enabled", False, type=bool)
         )
+        self.show_output_action.setChecked(
+            settings.value("output-dock/is-visible", False, type=bool))
 
         default_dir = QDesktopServices.storageLocation(
             QDesktopServices.DocumentsLocation
@@ -1595,11 +1598,6 @@ class CanvasMainWindow(QMainWindow):
                 message_information(
                     "Settings will still be reset at next application start",
                     parent=self)
-
-    def show_output_view(self):
-        """Show a window with application output.
-        """
-        self.output_dock.show()
 
     def show_report_view(self):
         doc = self.current_document()
