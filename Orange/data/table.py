@@ -35,6 +35,12 @@ def get_sample_datasets_dir():
 dataset_dirs = ['', get_sample_datasets_dir()]
 
 
+"""Domain conversion cache used in Table.from_table. It is global so that
+chaining of domain conversions also works with caching even with descendants
+of Table."""
+_conversion_cache = None
+
+
 class RowInstance(Instance):
     sparse_x = None
     sparse_y = None
@@ -238,8 +244,6 @@ class Table(MutableSequence, Storage):
         self.attributes = {}
         return self
 
-    conversion_cache = None
-
     @classmethod
     def from_table(cls, domain, source, row_indices=...):
         """
@@ -259,6 +263,8 @@ class Table(MutableSequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+
+        global _conversion_cache
 
         def sparse_to_flat(x):
             if sp.issparse(x):
@@ -286,7 +292,7 @@ class Table(MutableSequence, Storage):
                                  [x - n_src_attrs for x in src_cols])
 
             a = np.empty((n_rows, len(src_cols)), dtype=dtype)
-            shared_cache = cls.conversion_cache
+            shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
                     a[:, i] = Unknown
@@ -312,12 +318,12 @@ class Table(MutableSequence, Storage):
                     a[:, i] = source._Y[row_indices, col - n_src_attrs]
             return a
 
-        new_cache = cls.conversion_cache is None
+        new_cache = _conversion_cache is None
         try:
             if new_cache:
-                cls.conversion_cache = {}
+                _conversion_cache = {}
             else:
-                cached = cls.conversion_cache.get((id(domain), id(source)))
+                cached = _conversion_cache.get((id(domain), id(source)))
                 if cached:
                     return cached
             if domain == source.domain:
@@ -358,11 +364,11 @@ class Table(MutableSequence, Storage):
             else:
                 cls._init_ids(self)
             self.attributes = getattr(source, 'attributes', {})
-            cls.conversion_cache[(id(domain), id(source))] = self
+            _conversion_cache[(id(domain), id(source))] = self
             return self
         finally:
             if new_cache:
-                cls.conversion_cache = None
+                _conversion_cache = None
 
     @classmethod
     def from_table_rows(cls, source, row_indices):
