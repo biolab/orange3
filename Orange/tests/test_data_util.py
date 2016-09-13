@@ -26,6 +26,9 @@ class DummyPlus(SharedComputeValue):
         return data.X[:,0] + shared_data
 
 
+class DummyTable(Orange.data.Table): pass
+
+
 class TestSharedComputeValue(unittest.TestCase):
 
     def test_compat_compute_value(self):
@@ -63,3 +66,6 @@ class TestSharedComputeValue(unittest.TestCase):
         c(data) #the new data should be converted with one call
         self.assertEqual(obj.compute_shared.call_count, 3)
 
+        #test with descendants of table
+        DummyTable.from_table(c.domain, data)
+        self.assertEqual(obj.compute_shared.call_count, 4)
