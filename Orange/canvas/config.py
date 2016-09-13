@@ -116,12 +116,6 @@ spec = \
 
      ("logging/dockable", bool, True, "Allow log window to be docked"),
 
-     ("output/redirect-stderr", bool, True,
-      "Redirect and display standard error output"),
-
-     ("output/redirect-stdout", bool, True,
-      "Redirect and display standard output"),
-
      ("help/open-in-external-browser", bool, False,
       "Open help in an external browser")
      ]

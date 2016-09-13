@@ -1,15 +1,13 @@
 """
 """
-import sys
 import traceback
 
-from functools import wraps
 from PyQt4.QtGui import (
     QWidget, QPlainTextEdit, QVBoxLayout, QTextCursor, QTextCharFormat,
     QFont, QSizePolicy
 )
 
-from PyQt4.QtCore import Qt, QObject, QEvent, QCoreApplication, QThread, QSize
+from PyQt4.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
 from PyQt4.QtCore import pyqtSignal as Signal
 
 
@@ -22,14 +20,8 @@ class TerminalView(QPlainTextEdit):
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
         font = self.font()
-        if hasattr(QFont, "Monospace"):
-            # Why is this not available on Debian squeeze
-            font.setStyleHint(QFont.Monospace)
-        else:
-            font.setStyleHint(QFont.Courier)
-
-        font.setFamily("Monaco")
-        font.setPointSize(12)
+        font.setStyleHint(QFont.Monospace)
+        font.setFamily("Monospace")
         self.setFont(font)
 
     def sizeHint(self):
@@ -201,67 +193,6 @@ class formater(object):
         self.charformat = None
 
 
-class QueuedCallEvent(QEvent):
-    QueuedCall = QEvent.registerEventType()
-
-    def __init__(self, function, args, kwargs):
-        QEvent.__init__(self, QueuedCallEvent.QueuedCall)
-        self.function = function
-        self.args = args
-        self.kwargs = kwargs
-        self._result = None
-        self._exc_info = None
-        self._state = 0
-
-    def call(self):
-        try:
-            self._result = self.function(*self.args, **self.kwargs)
-            self._state = 1
-        except Exception as ex:
-            self._exc_info = (type(ex), ex.args, None)
-            raise
-
-    def result(self):
-        if self._state == 1:
-            return self._result
-        elif self._exc_info:
-            raise self._exc_info[0](self._exc_info[1])
-        else:
-            # Should this block, add timeout?
-            raise RuntimeError("Result not yet ready")
-
-    def isready(self):
-        return self._state == 1 or self._exc_info
-
-
-def queued(method):
-    """
-    Run method from the event queue.
-    """
-    @wraps(method)
-    def delay_method_call(self, *args, **kwargs):
-        event = QueuedCallEvent(method.__get__(self), args, kwargs)
-        QCoreApplication.postEvent(self, event)
-
-    return delay_method_call
-
-
-def queued_blocking(method):
-    """
-    Run method from the event queue and wait until the event is processed.
-    Return the call's return value.
-
-    """
-    @wraps(method)
-    def delay_method_call(self, *args, **kwargs):
-        event = QueuedCallEvent(method, (self,) + args, kwargs)
-        QCoreApplication.postEvent(self, event)
-        QCoreApplication.sendPostedEvents()
-        return event.result()
-
-    return delay_method_call
-
-
 class TextStream(QObject):
     stream = Signal(str)
     flushed = Signal()
@@ -269,22 +200,14 @@ class TextStream(QObject):
     def __init__(self, parent=None):
         QObject.__init__(self, parent)
 
-    @queued
     def write(self, string):
         self.stream.emit(string)
 
-    @queued
     def writelines(self, lines):
         self.stream.emit("".join(lines))
 
-    @queued
     def flush(self):
         self.flushed.emit()
-
-    def customEvent(self, event):
-        if event.type() == QueuedCallEvent.QueuedCall:
-            event.call()
-            event.accept()
 
 
 class ExceptHook(QObject):
@@ -292,28 +215,16 @@ class ExceptHook(QObject):
 
     def __init__(self, parent=None, stream=None):
         QObject.__init__(self, parent)
-        self.stream = stream
+        self._stream = stream
 
     def __call__(self, exc_type, exc_value, tb):
-        text = traceback.format_exception(exc_type, exc_value, tb)
-        separator = "-" * 80 + "\n"
-        if QThread.currentThread() != QCoreApplication.instance().thread():
-            header = exc_type.__name__ + " (in non GUI thread)"
-        else:
-            header = exc_type.__name__
-
-        header_fmt = "%%%is\n"
-        if tb:
-            header += (header_fmt % (80 - len(header))) % text[0].strip()
-            del text[0]
-        else:
-            header
-
-        if self.stream is None:
-            stream = sys.stderr
-        else:
-            stream = self.stream
-
-        stream.writelines([separator, header] + text)
+        if self._stream:
+            header = exc_type.__name__ + ' Exception'
+            if QThread.currentThread() != QCoreApplication.instance().thread():
+                header += " (in non-GUI thread)"
+            text = traceback.format_exception(exc_type, exc_value, tb)
+            text.insert(0, '{:-^79}\n'.format(' ' + header + ' '))
+            text.append('-' * 79 + '\n')
+            self._stream.writelines(text)
 
         self.handledException.emit()

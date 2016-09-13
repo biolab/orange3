@@ -332,21 +332,6 @@ class UserSettingsDialog(QMainWindow):
                     toolTip="Output Redirection")
 
         form = QFormLayout()
-        box = QWidget(self, objectName="streams")
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        cb1 = QCheckBox(self.tr("Standard output"))
-        cb2 = QCheckBox(self.tr("Standard error"))
-
-        self.bind(cb1, "checked", "output/redirect-stdout")
-        self.bind(cb2, "checked", "output/redirect-stderr")
-
-        layout.addWidget(cb1)
-        layout.addWidget(cb2)
-        box.setLayout(layout)
-
-        form.addRow(self.tr("Redirect output"), box)
 
         box = QWidget()
         layout = QVBoxLayout()
