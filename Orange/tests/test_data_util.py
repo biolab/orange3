@@ -26,6 +26,9 @@ class DummyPlus(SharedComputeValue):
         return data.X[:,0] + shared_data
 
 
+class DummyTable(Orange.data.Table): pass
+
+
 class TestSharedComputeValue(unittest.TestCase):
 
     def test_compat_compute_value(self):
@@ -49,8 +52,20 @@ class TestSharedComputeValue(unittest.TestCase):
         self.assertEqual(obj.compute_shared.call_count, 0)
         data = Orange.data.Table("iris")
         domain = Orange.data.Domain([at.copy(compute_value=obj)
-                                     for at in data.domain.attributes])
+                                     for at in data.domain.attributes],
+                                    data.domain.class_vars)
+
         Orange.data.Table.from_table(domain, data)
         self.assertEqual(obj.compute_shared.call_count, 1)
-        Orange.data.Table.from_table(domain, data)
+        ndata = Orange.data.Table.from_table(domain, data)
         self.assertEqual(obj.compute_shared.call_count, 2)
+
+        #the learner performs imputation
+        c = Orange.classification.LogisticRegressionLearner()(ndata)
+        self.assertEqual(obj.compute_shared.call_count, 2)
+        c(data) #the new data should be converted with one call
+        self.assertEqual(obj.compute_shared.call_count, 3)
+
+        #test with descendants of table
+        DummyTable.from_table(c.domain, data)
+        self.assertEqual(obj.compute_shared.call_count, 4)

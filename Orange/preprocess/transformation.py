@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.data import Instance, Table
+from Orange.data import Instance, Table, Domain
 
 
 class Transformation:
@@ -22,23 +22,12 @@ class Transformation:
         from the data and passing it to the `transform` method.
         """
         inst = isinstance(data, Instance)
-        if self._last_domain != data.domain:
-            try:
-                self.attr_index = data.domain.index(self.variable)
-            except ValueError:
-                if self.variable.compute_value is None:
-                    raise ValueError("{} is not in domain".
-                                     format(self.variable.name))
-                self.attr_index = None
-            self._last_domain = data.domain
-        if self.attr_index is None:
-            data = self.variable.compute_value(data)
-        elif inst:
-            data = np.array([float(data[self.attr_index])])
-        else:
-            data = data.get_column_view(self.attr_index)[0]
-        transformed = self.transform(data)
-        if inst and isinstance(transformed, np.ndarray) and transformed.shape:
+        if inst:
+            data = Table(data.domain, [data])
+        domain = Domain([self.variable])
+        data = Table.from_table(domain, data)
+        transformed = self.transform(data.X.squeeze(axis=1))
+        if inst:
             transformed = transformed[0]
         return transformed
 
