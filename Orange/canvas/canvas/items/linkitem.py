@@ -12,7 +12,7 @@ from PyQt4.QtGui import (
     QPainterPath, QTransform
 )
 
-from PyQt4.QtCore import Qt, QPointF, QEvent
+from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF, QEvent
 
 from .nodeitem import SHADOW_COLOR
 from .utils import stroke_path
@@ -25,12 +25,8 @@ class LinkCurveItem(QGraphicsPathItem):
     Link curve item. The main component of a :class:`LinkItem`.
     """
     def __init__(self, parent):
-        QGraphicsPathItem.__init__(self, parent)
-        if not isinstance(parent, LinkItem):
-            raise TypeError("'LinkItem' expected")
-
+        super().__init__(parent)
         self.setAcceptedMouseButtons(Qt.NoButton)
-        self.__canvasLink = parent
         self.setAcceptHoverEvents(True)
 
         self.shadow = QGraphicsDropShadowEffect(
@@ -38,49 +34,51 @@ class LinkCurveItem(QGraphicsPathItem):
             offset=QPointF(0, 0)
         )
 
-        self.normalPen = QPen(QBrush(QColor("#9CACB4")), 2.0)
-        self.hoverPen = QPen(QBrush(QColor("#7D7D7D")), 2.1)
-        self.setPen(self.normalPen)
         self.setGraphicsEffect(self.shadow)
         self.shadow.setEnabled(False)
 
         self.__hover = False
         self.__enabled = True
         self.__shape = None
+        self.__curvepath = QPainterPath()
+        self.__curvepath_disabled = None
+        self.__pen = self.pen()
+        self.setPen(QPen(QBrush(QColor("#9CACB4")), 2.0))
 
-    def linkItem(self):
-        """
-        Return the :class:`LinkItem` instance this curve belongs to.
-        """
-        return self.__canvasLink
+    def setCurvePath(self, path):
+        if path != self.__curvepath:
+            self.prepareGeometryChange()
+            self.__curvepath = QPainterPath(path)
+            self.__curvepath_disabled = None
+            self.__shape = None
+            self.__update()
+
+    def curvePath(self):
+        return QPainterPath(self.__curvepath)
 
     def setHoverState(self, state):
         self.prepareGeometryChange()
-        self.__shape = None
         self.__hover = state
         self.__update()
 
     def setLinkEnabled(self, state):
         self.prepareGeometryChange()
-        self.__shape = None
         self.__enabled = state
         self.__update()
 
     def isLinkEnabled(self):
         return self.__enabled
 
-    def setCurvePenSet(self, pen, hoverPen):
-        self.prepareGeometryChange()
-        if pen is not None:
-            self.normalPen = pen
-        if hoverPen is not None:
-            self.hoverPen = hoverPen
-        self.__shape = None
-        self.__update()
+    def setPen(self, pen):
+        if self.__pen != pen:
+            self.prepareGeometryChange()
+            self.__pen = QPen(pen)
+            self.__shape = None
+            super().setPen(self.__pen)
 
     def shape(self):
         if self.__shape is None:
-            path = self.path()
+            path = self.curvePath()
             pen = QPen(QBrush(Qt.black),
                        max(self.pen().widthF(), 20),
                        Qt.SolidLine)
@@ -89,26 +87,154 @@ class LinkCurveItem(QGraphicsPathItem):
 
     def setPath(self, path):
         self.__shape = None
-        QGraphicsPathItem.setPath(self, path)
+        super().setPath(path)
 
     def __update(self):
         shadow_enabled = self.__hover
         if self.shadow.isEnabled() != shadow_enabled:
             self.shadow.setEnabled(shadow_enabled)
-
+        basecurve = self.__curvepath
         link_enabled = self.__enabled
         if link_enabled:
-            pen_style = Qt.SolidLine
+            path = basecurve
         else:
-            pen_style = Qt.DashLine
+            if self.__curvepath_disabled is None:
+                self.__curvepath_disabled = path_link_disabled(basecurve)
+            path = self.__curvepath_disabled
 
-        if self.__hover:
-            pen = self.hoverPen
-        else:
-            pen = self.normalPen
+        self.setPath(path)
 
-        pen.setStyle(pen_style)
-        self.setPen(pen)
+
+def bezier_subdivide(cp, t):
+    """
+    Subdivide a cubic bezier curve defined by the control points `cp`.
+
+    Parameters
+    ----------
+    cp : List[QPointF]
+        The control points for a cubic bezier curve.
+    t : float
+        The cut point; a value between 0 and 1.
+
+    Returns
+    -------
+    cp : Tuple[List[QPointF], List[QPointF]]
+        Two lists of new control points for the new left and right part
+        respectively.
+    """
+    # http://www.cs.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html
+    c00, c01, c02, c03 = cp
+
+    c10 = c00 * (1 - t) + c01 * t
+    c11 = c01 * (1 - t) + c02 * t
+    c12 = c02 * (1 - t) + c03 * t
+
+    c20 = c10 * (1 - t) + c11 * t
+    c21 = c11 * (1 - t) + c12 * t
+
+    c30 = c20 * (1 - t) + c21 * t
+
+    first = [c00, c10, c20, c30]
+    second = [c30, c21, c12, c03]
+    return first, second
+
+
+def qpainterpath_simple_split(path, t):
+    """
+    Split a QPainterPath defined simple curve.
+
+    The path must be either empty or composed of a single LineToElement or
+    CurveToElement.
+
+    Parameters
+    ----------
+    path : QPainterPath
+
+    t : float
+        Point where to split specified as a percentage along the path
+
+    Returns
+    -------
+    splitpath: Tuple[QPainterPath, QPainterPath]
+        A pair of QPainterPaths
+    """
+    assert path.elementCount() > 0
+    el0 = path.elementAt(0)
+    assert el0.type == QPainterPath.MoveToElement
+    if path.elementCount() == 1:
+        p1 = QPainterPath()
+        p1.moveTo(el0.x, el0.y)
+        return p1, QPainterPath(p1)
+
+    el1 = path.elementAt(1)
+    if el1.type == QPainterPath.LineToElement:
+        pointat = path.pointAtPercent(t)
+        l1 = QLineF(el0.x, el0.y, pointat.x(), pointat.y())
+        l2 = QLineF(pointat.x(), pointat.y(), el1.x, el1.y)
+        p1 = QPainterPath()
+        p2 = QPainterPath()
+        p1.addLine(l1)
+        p2.addLine(l2)
+        return p1, p2
+    elif el1.type == QPainterPath.CurveToElement:
+        c0, c1, c2, c3 = el0, el1, path.elementAt(2), path.elementAt(3)
+        assert all(el.type == QPainterPath.CurveToDataElement
+                   for el in [c2, c3])
+        cp = [QPointF(el.x, el.y) for el in [c0, c1, c2, c3]]
+        first, second = bezier_subdivide(cp, t)
+        p1, p2 = QPainterPath(), QPainterPath()
+        p1.moveTo(first[0])
+        p1.cubicTo(*first[1:])
+        p2.moveTo(second[0])
+        p2.cubicTo(*second[1:])
+        return p1, p2
+    else:
+        assert False
+
+
+def path_link_disabled(basepath):
+    """
+    Return a QPainterPath 'styled' to indicate a 'disabled' link.
+
+    A disabled link is displayed with a single disconnection symbol in the
+    middle (--||--)
+
+    Parameters
+    ----------
+    basepath : QPainterPath
+        The base path (a simple curve spine).
+
+    Returns
+    -------
+    path : QPainterPath
+        A 'styled' link path
+    """
+    segmentlen = basepath.length()
+    px = 5
+
+    if segmentlen < 10:
+        return QPainterPath(basepath)
+
+    t = (px / 2) / segmentlen
+    p1, _ = qpainterpath_simple_split(basepath, 0.50 - t)
+    _, p2 = qpainterpath_simple_split(basepath, 0.50 + t)
+
+    angle = -basepath.angleAtPercent(0.5) + 90
+    angler = math.radians(angle)
+    normal = QPointF(math.cos(angler), math.sin(angler))
+
+    end1 = p1.currentPosition()
+    start2 = QPointF(p2.elementAt(0).x, p2.elementAt(0).y)
+    p1.moveTo(start2.x(), start2.y())
+    p1.addPath(p2)
+
+    def QPainterPath_addLine(path, line):
+        path.moveTo(line.p1())
+        path.lineTo(line.p2())
+
+    QPainterPath_addLine(p1, QLineF(end1 - normal * 3, end1 + normal * 3))
+    QPainterPath_addLine(p1, QLineF(start2 - normal * 3, start2 + normal * 3))
+    return p1
 
 
 class LinkAnchorIndicator(QGraphicsEllipseItem):
@@ -121,28 +247,26 @@ class LinkAnchorIndicator(QGraphicsEllipseItem):
         QGraphicsEllipseItem.__init__(self, *args)
         self.setRect(-3.5, -3.5, 7., 7.)
         self.setPen(QPen(Qt.NoPen))
+        self.setBrush(QBrush(QColor("#9CACB4")))
         self.__hover = False
-        self.__brush = QBrush(QColor("#9CACB4"))
-        super().setBrush(self.__brush)
 
     def setHoverState(self, state):
-        """The hover state is set by the LinkItem.
         """
-        self.__hover = state
-        if state:
-            brush = QBrush(self.__brush.color().darker(110))
-        else:
-            brush = self.__brush
-        super().setBrush(brush)
+        The hover state is set by the LinkItem.
+        """
+        if self.__hover != state:
+            self.__hover = state
+            self.update()
 
-    def setBrush(self, brush):
-        brush = QBrush(brush)
-        if self.__brush != brush:
-            self.__brush = brush
-            super().setBrush(brush)
+    def paint(self, painter, option, widget=None):
+        brush = self.brush()
 
-    def brush(self):
-        return QBrush(self.__brush)
+        if self.__hover:
+            brush = QBrush(brush.color().darker(110))
+
+        painter.setBrush(brush)
+        painter.setPen(self.pen())
+        painter.drawEllipse(self.rect())
 
 
 class LinkItem(QGraphicsObject):
@@ -205,6 +329,7 @@ class LinkItem(QGraphicsObject):
         self.hover = False
 
         self.prepareGeometryChange()
+        self.__updatePen()
         self.__boundingRect = None
 
     def setSourceItem(self, item, anchor=None):
@@ -384,7 +509,7 @@ class LinkItem(QGraphicsObject):
                          sink_pos - QPointF(cp_offset, 0),
                          sink_pos)
 
-            self.curveItem.setPath(path)
+            self.curveItem.setCurvePath(path)
             self.sourceIndicator.setPos(source_pos)
             self.sinkIndicator.setPos(sink_pos)
             self.__updateText()
@@ -411,7 +536,7 @@ class LinkItem(QGraphicsObject):
 
         self.linkTextItem.setPlainText(text)
 
-        path = self.curveItem.path()
+        path = self.curveItem.curvePath()
         if not path.isEmpty():
             center = path.pointAtPercent(0.5)
             angle = path.angleAtPercent(0.5)
@@ -440,6 +565,7 @@ class LinkItem(QGraphicsObject):
             self.sinkIndicator.setHoverState(state)
             self.sourceIndicator.setHoverState(state)
             self.curveItem.setHoverState(state)
+            self.__updatePen()
 
     def hoverEnterEvent(self, event):
         # Hover enter event happens when the mouse enters any child object
@@ -533,17 +659,11 @@ class LinkItem(QGraphicsObject):
         if self.__state != state:
             self.__state = state
 
-            if state & LinkItem.Active:
-                self.sourceIndicator.setBrush(QBrush(Qt.green))
-            else:
-                self.sourceIndicator.setBrush(QBrush(Qt.gray))
-
             if state & LinkItem.Pending:
                 self.sinkIndicator.setBrush(QBrush(Qt.yellow))
-            elif state & LinkItem.Active:
-                self.sinkIndicator.setBrush(QBrush(Qt.green))
             else:
-                self.sinkIndicator.setBrush(QBrush(Qt.gray))
+                self.sinkIndicator.setBrush(QBrush(QColor("#9CACB4")))
+            self.__updatePen()
 
     def runtimeState(self):
         return self.__state
@@ -563,4 +683,17 @@ class LinkItem(QGraphicsObject):
             normal = QPen(QBrush(QColor("#9CACB4")), 2.0)
             hover = QPen(QBrush(QColor("#7D7D7D")), 2.1)
 
-        self.curveItem.setCurvePenSet(normal, hover)
+        if self.__state & LinkItem.Active:
+            pen_style = Qt.SolidLine
+        else:
+            pen_style = Qt.DashLine
+
+        normal.setStyle(pen_style)
+        hover.setStyle(pen_style)
+
+        if self.hover:
+            pen = hover
+        else:
+            pen = normal
+
+        self.curveItem.setPen(pen)
