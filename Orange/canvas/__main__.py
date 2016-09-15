@@ -346,7 +346,7 @@ def main(argv=None):
     if options.no_redirect or running_in_ipython():
         stderr_redirect = stdout_redirect = False
 
-    output_view = canvas_window.output_view()
+    output_view = canvas_window.log_view()
 
     if stdout_redirect:
         stdout = TextStream()
