@@ -24,6 +24,7 @@ from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.application.outputview import TextStream, ExceptHook
+from Orange.canvas.application.errorreporting import ErrorReporting
 
 from Orange.canvas.gui.splashscreen import SplashScreen
 from Orange.canvas.config import cache_dir
@@ -364,11 +365,12 @@ def main(argv=None):
         stderr.stream.connect(sys.stderr.write)
         stderr.flushed.connect(sys.stderr.flush)
 
-    sys.excepthook = ExceptHook(stream=stderr)
-
     log.info("Entering main event loop.")
     try:
-        with patch('sys.stderr', stderr),\
+        with patch('sys.excepthook',
+                   ExceptHook(stream=stderr, canvas=canvas_window,
+                              handledException=ErrorReporting.handle_exception)),\
+             patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
             status = app.exec_()
     except BaseException:
