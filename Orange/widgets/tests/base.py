@@ -151,7 +151,7 @@ class WidgetTest(GuiTest):
         widget.show()
         app.exec()
 
-    def send_signal(self, input_name, value, id=None, widget=None):
+    def send_signal(self, input_name, value, *args, widget=None):
         """ Send signal to widget by calling appropriate triggers.
 
         Parameters
@@ -167,7 +167,7 @@ class WidgetTest(GuiTest):
             widget = self.widget
         for input_signal in widget.inputs:
             if input_signal.name == input_name:
-                getattr(widget, input_signal.handler)(value)
+                getattr(widget, input_signal.handler)(value, *args)
                 break
         widget.handleNewSignals()
 
