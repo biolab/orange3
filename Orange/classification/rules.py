@@ -1,3 +1,12 @@
+"""
+Induction of rules works by finding a rule that covers some learning instances,
+removing these instances, and repeating this until all instances are covered.
+Rules are scored by heuristics such as impurity of class distribution of
+covered instances. The module includes common rule-learning algorithms,
+and allows for replacing rule search strategies, scoring and other
+components.
+"""
+
 import operator
 from copy import copy
 from hashlib import sha1
@@ -1287,16 +1296,16 @@ class CN2Classifier(_RuleClassifier):
 
 class CN2UnorderedLearner(_RuleLearner):
     """
-    Unordered CN2 inducer that constructs a set of unordered rules. To
-    evaluate found hypotheses, Laplace accuracy measure is used. Returns
-    a CN2UnorderedClassifier if called with data.
+    Construct a set of unordered rules.
 
-    Notes
-    -----
-    Rules are learnt for each class (target class) individually, in
-    regard to the original learning data. When a rule has been found,
-    only covered examples of that class are removed. This is because now
-    each rule must independently stand against all negatives.
+    Rules are learnt for each class individually and scored
+    by the relative frequency of the class corrected by the Laplace correction.
+    After adding a rule, only the covered examples of that class are removed.
+
+    The code below loads the *iris* data set (four continuous attributes
+    and a discrete class) and fits the learner.
+
+    .. literalinclude:: code/classification-cn2ruleinduction1.py
 
     References
     ----------

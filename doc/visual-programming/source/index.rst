@@ -61,6 +61,7 @@ Visualize
    widgets/visualize/sievediagram
    widgets/visualize/pythagoreantree
    widgets/visualize/pythagoreanforest
+   widgets/classify/cn2ruleviewer
 
 
 Classify
@@ -80,7 +81,6 @@ Classify
    widgets/classify/saveclassifier
    widgets/classify/svm
    widgets/classify/cn2ruleinduction
-   widgets/classify/cn2ruleviewer
 
 
 Regression
