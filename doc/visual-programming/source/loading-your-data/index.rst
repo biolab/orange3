@@ -6,19 +6,18 @@ also handle native Excel (.xlsx or .xls), comma- or tab-delimited data files. Th
 set is usually a table, with data instances (samples) in rows and
 data attributes in columns. Attributes can be of different type
 (continuous, discrete, and strings) and kind (input features, meta attributes, and class). Data attribute type and kind can be provided
-in the data table header. This can be changed later, after reading the
-data with :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
+in the data table header. They can also be subsequently changed in the :doc:`File<../widgets/data/file>` widget, 
+while data kind can also be modified with :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
 
 In a Nutshell
 -------------
 
 -   Orange can import any comma- or tab-delimited data file, or Excel's native files or Google Sheets document. Use :doc:`File<../widgets/data/file>`
-    widget and then, if needed, define the class and meta attributes in
-    :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
+    widget to load the data and, if needed, define the class and meta attributes.
 -   Attribute names in the column header
     can be preceded with a label followed by a hash. Use c for class
     and m for meta attribute, i to ignore a column, and C, D, S for
-    continuous, discrete and string attribute types. Examples: C\#mpg,
+    continuous, discrete and string attribute types. Examples: C\#mph,
     mS\#name, i\#dummy.
 -   An alternative to the hash notation is Orange's native format with three
     header rows: the first with attribute names, the second specifying
@@ -43,22 +42,39 @@ Let us start with a simple workflow that reads the data and displays it in a tab
 
 To load the data, open the File widget (double click on the icon of the widget), click on the file browser icon ("...") and locate the downloaded file (from :download:`sample.xlsx <sample.xlsx>`) on your disk:
 
-.. image:: loadingyourdata.png
+.. image:: File.png
     :width: 401 px
     :align: center
 
-The **File** widget sends the data to the **Data Table** widget. Double click the **Data Table** widget to see its contents:
+
+File Widget: Setting the Attribute Type and Kind
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **File** widget sends the data to the **Data Table**. Double click the **Data Table** to see its contents:
 
 .. image:: table-widget.png
     :width: 900 px
     :align: center
 
-Orange correctly assumed that a column with gene names is a meta information, which is displayed in **Data Table** in columns shaded with light-gray. It has wrongly guessed that `heat 20`, the last non-meta column in our data file, is a class column. To correct this in Orange, we can feed the data to the :doc:`Select Columns<../widgets/data/selectcolumns>` widget:
+Orange correctly assumed that a column with gene names is meta information, which is displayed in the **Data Table** in columns shaded with light-brown. It has not guessed that `function`, the first non-meta column in our data file, is a class column. To correct this in Orange, we can adjust attribute kind in the column display of File widget (below). Double-click the `feature` label in the `function` row and select `target` instead. This will set `function` attribute as our target (class) variable.
+
+.. image:: File-set-feature-kind.png
+    :align: center
+
+You can also change attribute type from nominal to numeric, from string to datetime, and so on. Naturally, data values have to suit the specified attribute type. Datetime accepts only values in ISO format, e.g. 2016-01-01 16:16:01. Orange would also assume the attribute is numeric if it has several different values, else it would be considered nominal. All other types are considered strings and are as such automatically categorized as meta attributes.
+
+Change of attribute kinds and types should be confirmed by clicking the **Apply** button.
+
+
+Select Columns: Setting the Attribute Kind
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another way to set the data kind is to feed the data to the :doc:`Select Columns<../widgets/data/selectcolumns>` widget:
 
 .. image:: select-columns-schema.png
     :align: center
 
-Opening the :doc:`Select Columns<../widgets/data/selectcolumns>` widget reveals Orange's classification of attributes. We would like all our continuous attributes to be data features, gene function to be our target variable and gene names considered as meta attributes. We can obtain this by dragging the attribute names around the boxes in **Select Columns**:
+Opening :doc:`Select Columns<../widgets/data/selectcolumns>` reveals Orange's classification of attributes. We would like all of our continuous attributes to be data features, gene function to be our target variable and gene names considered as meta attributes. We can obtain this by dragging the attribute names around the boxes in **Select Columns**:
 
 .. image:: select-columns-start.png
     :width: 413 px
@@ -144,8 +160,7 @@ Data from Google Sheets
 
 Orange can read data from Google Sheets, as long as it conforms to the data presentation rules we have presented above. In Google Sheets, copy the shareable link (Share button, then Get shareable link) and paste it in the `Data File / URL` box of the File widget. For a taste, here's one such link you can use: `http://bit.ly/1J12Tdp <http://bit.ly/1J12Tdp>`_, and the way we have entered it in the **File** widget:
 
-.. image:: file-google-sheets.png
-    :width: 402 px
+.. image:: File-Google-Sheet.png
     :align: center
 
 Data from LibreOffice
