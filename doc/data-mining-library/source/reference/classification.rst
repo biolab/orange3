@@ -4,7 +4,6 @@ Classification (``classification``)
 
 .. automodule:: Orange.classification
 
-
 .. index:: logistic regression
    pair: classification; logistic regression
 
@@ -168,4 +167,23 @@ Elliptic Envelope
 -----------------
 
 .. autoclass:: EllipticEnvelopeLearner
+   :members:
+
+
+.. index:: Rule induction
+   pair: classification; rules
+
+CN2 Rule Induction
+------------------
+
+.. autoclass:: CN2Learner
+   :members:
+
+.. autoclass:: CN2UnorderedLearner
+   :members:
+
+.. autoclass:: CN2SDLearner
+   :members:
+
+.. autoclass:: CN2SDUnorderedLearner
    :members:

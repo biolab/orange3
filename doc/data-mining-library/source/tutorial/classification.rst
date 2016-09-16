@@ -136,3 +136,57 @@ Logistic regression wins in area under ROC curve::
              tree knn  logreg
     Accuracy 0.79 0.47 0.78
     AUC      0.68 0.56 0.70
+
+
+Rule induction
+--------------
+
+To induce rules from examples, separate and conquer strategy is applied.
+In essence, learning instances are covered and removed following a
+chosen rule. The process is repeated while learning instances remain. To
+evaluate found hypotheses and to choose the best rule in each iteration,
+search heuristics are used (primarily, rule class distribution is the
+decisive determinant). The over-fitting of noisy data is avoided by
+preferring simpler, shorter rules even if the accuracy of more complex
+rules is higher.
+
+The use of the created module is straightforward. New rule induction
+algorithms can be easily introduced, by either utilising predefined
+components or developing new ones (these include various search
+algorithms, search strategies, evaluators, and others). Several
+well-known rule induction algorithms have already been included.
+
+Unordered CN2
++++++++++++++
+
+Unordered CN2 inducer (:any:`CN2UnorderedLearner`) constructs a set of
+unordered rules. Rules are learnt for each class individually, in regard
+to the original learning data. To evaluate found hypotheses, Laplace
+accuracy measure is used. Returns a CN2UnorderedClassifier if called
+with data.
+
+The code below loads the *iris* data set (four continuous attributes
+and a discrete class) and fits the learner.
+
+.. literalinclude:: code/classification-cn2ruleinduction1.py
+
+Having first initialised the learner, we then control the algorithm by
+modifying its parameters. The underlying components are available to us
+by accessing the rule finder. The search algorithm can additionally be
+constrained by forwarding base rules upon learner initialization (see
+code reference).
+
+The classifier is used to predict data instances.
+
+    >>> classifier(data.X[50:55])
+    [1 1 0 1 1]
+
+Induced rules can be quickly reviewed and interpreted. They are each of
+the form "if cond then predict class". That is, a conjunction of
+selectors followed by the predicted class.
+
+    >>> for rule in classifier.rule_list[:3]:
+    >>>     print(rule, rule.curr_class_dist.tolist())
+    IF petal length<=3.0 AND sepal width>=2.9 THEN iris=Iris-setosa  [49, 0, 0]
+    IF petal length>=3.0 AND petal length<=4.8 THEN iris=Iris-versicolor  [0, 46, 3]
+    IF petal width>=1.8 AND petal length>=4.9 THEN iris=Iris-virginica  [0, 0, 43]

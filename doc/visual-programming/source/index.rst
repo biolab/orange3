@@ -78,6 +78,8 @@ Classify
    widgets/classify/randomforest
    widgets/classify/saveclassifier
    widgets/classify/svm
+   widgets/classify/cn2ruleinduction
+   widgets/classify/cn2ruleviewer
 
 
 Regression

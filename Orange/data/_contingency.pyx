@@ -22,7 +22,7 @@ def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray
     cdef np.float64_t v
     cdef np.float64_t last = float("NaN")
     cdef Py_ssize_t i,j
-    cdef int weights = not W == None
+    cdef int weights = not W is None
     for i in range(ranks.shape[0]):
         i = ranks[i]
         v = col_data[i]
