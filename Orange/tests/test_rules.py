@@ -209,9 +209,5 @@ class TestRuleInduction(unittest.TestCase):
         self.assertEqual(argmaxrnd(temp, hash_dist(np.array([3, 4]))), 5)
         self.assertRaises(ValueError, argmaxrnd, np.ones((1, 1, 1)))
 
-    def testMain(self):
-        # test that the examples in rules.main raise no errors
-        rules_main()
-
 if __name__ == '__main__':
     unittest.main()
