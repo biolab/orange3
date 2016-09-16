@@ -13,6 +13,7 @@ from Orange.base import SklLearner
 import Orange.classification
 from Orange.classification import (Learner, Model, NaiveBayesLearner,
                                    LogisticRegressionLearner, NuSVMLearner)
+from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
 from Orange.evaluation import CrossValidation
@@ -240,6 +241,9 @@ class UnknownValuesInPrediction(unittest.TestCase):
                 learner = learner()
                 if isinstance(learner, NuSVMLearner):
                     learner.params["nu"] = 0.01
+                # Skip slow tests
+                if isinstance(learner, _RuleLearner):
+                    continue
                 model = learner(table)
                 model(table)
             except TypeError:
@@ -284,6 +288,9 @@ class LearnerAccessibility(unittest.TestCase):
             except Exception as err:
                 print('%s cannot be used with default parameters' % learner.__name__)
                 traceback.print_exc()
+                continue
+            # Skip slow tests
+            if isinstance(learner, _RuleLearner):
                 continue
 
             for ds in datasets:
