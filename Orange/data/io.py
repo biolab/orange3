@@ -169,39 +169,39 @@ class FileFormatMeta(Registry):
         return newcls
 
     @property
-    def formats(self):
-        return self.registry.values()
+    def formats(cls):
+        return cls.registry.values()
 
     @lru_cache(5)
-    def _ext_to_attr_if_attr2(self, attr, attr2):
+    def _ext_to_attr_if_attr2(cls, attr, attr2):
         """
         Return ``{ext: `attr`, ...}`` dict if ``cls`` has `attr2`.
         If `attr` is '', return ``{ext: cls, ...}`` instead.
         """
         return OrderedDict((ext, getattr(cls, attr, cls))
-                            for cls in self.registry.values()
-                            if hasattr(cls, attr2)
-                            for ext in getattr(cls, 'EXTENSIONS', []))
+                           for cls in cls.registry.values()
+                           if hasattr(cls, attr2)
+                           for ext in getattr(cls, 'EXTENSIONS', []))
 
     @property
-    def names(self):
-        return self._ext_to_attr_if_attr2('DESCRIPTION', '__class__')
+    def names(cls):
+        return cls._ext_to_attr_if_attr2('DESCRIPTION', '__class__')
 
     @property
-    def writers(self):
-        return self._ext_to_attr_if_attr2('', 'write_file')
+    def writers(cls):
+        return cls._ext_to_attr_if_attr2('', 'write_file')
 
     @property
-    def readers(self):
-        return self._ext_to_attr_if_attr2('', 'read')
+    def readers(cls):
+        return cls._ext_to_attr_if_attr2('', 'read')
 
     @property
-    def img_writers(self):
-        return self._ext_to_attr_if_attr2('', 'write_image')
+    def img_writers(cls):
+        return cls._ext_to_attr_if_attr2('', 'write_image')
 
     @property
-    def graph_writers(self):
-        return self._ext_to_attr_if_attr2('', 'write_graph')
+    def graph_writers(cls):
+        return cls._ext_to_attr_if_attr2('', 'write_graph')
 
 
 class FileFormat(metaclass=FileFormatMeta):
