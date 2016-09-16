@@ -1083,6 +1083,13 @@ class PerfectDomainContextHandler(DomainContextHandler):
         context.class_vars = class_vars
         return context
 
+    def clone_context(self, old_context, *args):
+        """Copy of context is always valid, since widgets are using
+        the same domain."""
+        context = self.new_context(*args)
+        context.values = copy.deepcopy(old_context.values)
+        return context
+
     def encode_domain(self, domain):
         """Encode domain into tuples (name, type)
         A tuple is returned for each of attributes, class_vars and metas.
