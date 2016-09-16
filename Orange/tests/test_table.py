@@ -1313,8 +1313,6 @@ class CreateTableWithUrl(TableTests):
     class _MockUrlOpen(MagicMock):
         headers = {'content-disposition': 'attachment; filename="Something-FormResponses.tsv"; '
                                           'filename*=UTF-8''Something%20%28Responses%29.tsv'}
-        url = 'https://docs.google.com/spreadsheets/d/ABCD/edit'
-
         def __enter__(self): return self
 
         def __exit__(self, *args, **kwargs): pass
@@ -1327,12 +1325,16 @@ a\tb\tc
     urlopen = _MockUrlOpen()
 
     @patch('Orange.data.io.urlopen', urlopen)
-    def test_google_sheets(self):
-        d = data.Table(self.urlopen.url)
-        self.urlopen.assert_called_with('https://docs.google.com/spreadsheets/d/ABCD/export?format=tsv',
-                                        timeout=10)
-        self.assertEqual(len(d), 2)
-        self.assertEqual(d.name, 'Something-FormResponses')
+    def test_trimmed_urls(self):
+        for url in ('https://docs.google.com/spreadsheets/d/ABCD/edit',
+                    'https://www.dropbox.com/s/ABCD/filename.csv'):
+            self._MockUrlOpen.url = url
+            d = data.Table(url)
+            request = self.urlopen.call_args[0][0]
+            self.assertNotEqual(url, request.full_url)
+            self.assertIn('Mozilla/5.0', request.headers.get('User-agent', ''))
+            self.assertEqual(len(d), 2)
+            self.assertEqual(d.name, 'Something-FormResponses')
 
 
 class CreateTableWithDomain(TableTests):

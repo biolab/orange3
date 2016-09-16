@@ -16,8 +16,8 @@ from numbers import Number
 from itertools import chain, repeat
 from functools import lru_cache
 from collections import OrderedDict
-from urllib.parse import urlparse, unquote as urlunquote
-from urllib.request import urlopen
+from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
+from urllib.request import urlopen, Request
 
 import bottleneck as bn
 import numpy as np
@@ -809,10 +809,17 @@ class DotReader(FileFormat):
 
 
 class UrlReader(FileFormat):
+    @staticmethod
+    def urlopen(url):
+        req = Request(
+            url,
+            # Avoid 403 error with servers that dislike scrapers
+            headers={'User-Agent': 'Mozilla/5.0 (X11; Linux) Gecko/20100101 Firefox/'})
+        return urlopen(req, timeout=10)
+
     def read(self):
         self.filename = self._trim(self._resolve_redirects(self.filename))
-
-        with contextlib.closing(urlopen(self.filename, timeout=10)) as response:
+        with contextlib.closing(self.urlopen(self.filename)) as response:
             name = self._suggest_filename(response.headers['content-disposition'])
             with NamedTemporaryFile(suffix=name, delete=False) as f:
                 f.write(response.read())
@@ -828,12 +835,14 @@ class UrlReader(FileFormat):
 
     def _resolve_redirects(self, url):
         # Resolve (potential) redirects to a final URL
-        with contextlib.closing(urlopen(url, timeout=10)) as response:
+        with contextlib.closing(self.urlopen(url)) as response:
             return response.url
 
-    def _trim(self, url):
+    @classmethod
+    def _trim(cls, url):
         URL_TRIMMERS = (
-            self._trim_googlesheet_url,
+            cls._trim_googlesheet,
+            cls._trim_dropbox,
         )
         for trim in URL_TRIMMERS:
             try:
@@ -844,7 +853,8 @@ class UrlReader(FileFormat):
                 break
         return url
 
-    def _trim_googlesheet_url(self, url):
+    @staticmethod
+    def _trim_googlesheet(url):
         match = re.match(r'(?:https?://)?(?:www\.)?'
                          'docs\.google\.com/spreadsheets/d/'
                          '(?P<workbook_id>[-\w_]+)'
@@ -860,6 +870,13 @@ class UrlReader(FileFormat):
         if sheet:
             url += '&gid=' + sheet
         return url
+
+    @staticmethod
+    def _trim_dropbox(url):
+        parts = urlsplit(url)
+        if not parts.netloc.endswith('dropbox.com'):
+            raise ValueError
+        return urlunsplit(parts._replace(query='dl=1'))
 
     def _suggest_filename(self, content_disposition):
         default_name = re.sub(r'[\\:/]', '_', urlparse(self.filename).path)
