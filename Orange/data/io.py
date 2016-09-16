@@ -855,9 +855,9 @@ class UrlReader(FileFormat):
     @staticmethod
     def _trim_googlesheet(url):
         match = re.match(r'(?:https?://)?(?:www\.)?'
-                         'docs\.google\.com/spreadsheets/d/'
-                         '(?P<workbook_id>[-\w_]+)'
-                         '(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
+                         r'docs\.google\.com/spreadsheets/d/'
+                         r'(?P<workbook_id>[-\w_]+)'
+                         r'(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
                          url, re.IGNORECASE)
         try:
             workbook, sheet = match.group('workbook_id'), match.group('sheet_id')

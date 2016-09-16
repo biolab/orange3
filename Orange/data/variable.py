@@ -883,12 +883,12 @@ class TimeVariable(ContinuousVariable):
     ]
     # The regex that matches all above formats
     REGEX = (r'^('
-             '\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
-             '\d{1,4}\d{2}\d{2}(T?\d{2}\d{2}\d{2}([+-]\d{4})?)?|'
-             '\d{2}:\d{2}(:\d{2}(\.\d+)?)?|'
-             '\d{2}\d{2}\d{2}\.\d+|'
-             '\d{1,4}(-?\d{2,3})?'
-             ')$')
+             r'\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
+             r'\d{1,4}\d{2}\d{2}(T?\d{2}\d{2}\d{2}([+-]\d{4})?)?|'
+             r'\d{2}:\d{2}(:\d{2}(\.\d+)?)?|'
+             r'\d{2}\d{2}\d{2}\.\d+|'
+             r'\d{1,4}(-?\d{2,3})?'
+             r')$')
     _matches_iso_format = re.compile(REGEX).match
 
     # UTC offset and associated timezone. If parsed datetime values provide an
