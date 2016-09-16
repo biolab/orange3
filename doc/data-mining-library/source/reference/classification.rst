@@ -176,6 +176,8 @@ Elliptic Envelope
 CN2 Rule Induction
 ------------------
 
+.. automodule:: Orange.classification.rules
+
 .. autoclass:: CN2Learner
    :members:
 
