@@ -39,7 +39,8 @@ def is_discrete_values(values):
     ----
     Assumes consistent type of items of `values`.
     """
-    if not len(values): return None
+    if not len(values):
+        return None
     # If the first few values are, or can be converted to, floats,
     # the type is numeric
     try:
@@ -65,14 +66,16 @@ def is_discrete_values(values):
                   not (isinstance(i, Number) and np.isnan(i)))}
 
     # All NaNs => indeterminate
-    if not unique: return None
+    if not unique:
+        return None
 
     # Strings with |values| < max_unique
     if not is_numeric:
         return unique
 
     # Handle numbers
-    try: unique_float = set(map(float, unique))
+    try:
+        unique_float = set(map(float, unique))
     except ValueError:
         # Converting all the values to floats resulted in an error.
         # Since the values have enough unique values, they are probably
@@ -986,11 +989,13 @@ class TimeVariable(ContinuousVariable):
         # Convert time to UTC timezone. In dates without timezone,
         # localtime is assumed. See also:
         # https://docs.python.org/3.4/library/datetime.html#datetime.datetime.timestamp
-        if dt.tzinfo: dt -= dt.utcoffset()
+        if dt.tzinfo:
+            dt -= dt.utcoffset()
         dt = dt.replace(tzinfo=timezone.utc)
 
         # Unix epoch is the origin, older dates are negative
-        try: return dt.timestamp()
+        try:
+            return dt.timestamp()
         except OverflowError:
             return -(self.UNIX_EPOCH - dt).total_seconds()
 

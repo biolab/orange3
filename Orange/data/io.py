@@ -436,8 +436,10 @@ class FileFormat(metaclass=FileFormatMeta):
                         copy=False, dtype=object, order='F')
 
         # Data may actually be longer than headers were
-        try: rowlen = data.shape[1]
-        except IndexError: pass
+        try:
+            rowlen = data.shape[1]
+        except IndexError:
+            pass
         else:
             for lst in (names, types, flags):
                 _equal_length(lst)
@@ -451,7 +453,8 @@ class FileFormat(metaclass=FileFormatMeta):
         # Iterate through the columns
         for col in range(rowlen):
             flag = Flags(Flags.split(flags[col]))
-            if flag.i: continue
+            if flag.i:
+                continue
 
             type_flag = types and types[col].strip()
             try:
@@ -476,8 +479,10 @@ class FileFormat(metaclass=FileFormatMeta):
                     values = [float(i) for i in orig_values]
                 except ValueError:
                     for row, num in enumerate(orig_values):
-                        try: float(num)
-                        except ValueError: break
+                        try:
+                            float(num)
+                        except ValueError:
+                            break
                     raise ValueError('Non-continuous value in (1-based) '
                                      'line {}, column {}'.format(row + len(headers) + 1,
                                                                  col + 1))
@@ -499,10 +504,12 @@ class FileFormat(metaclass=FileFormatMeta):
                 if is_discrete:
                     valuemap = sorted(is_discrete)
                 else:
-                    try: values = [float(i) for i in orig_values]
+                    try:
+                        values = [float(i) for i in orig_values]
                     except ValueError:
                         tvar = TimeVariable('_')
-                        try: values = [tvar.parse(i) for i in orig_values]
+                        try:
+                            values = [tvar.parse(i) for i in orig_values]
                         except ValueError:
                             coltype = StringVariable
                         else:
@@ -513,8 +520,10 @@ class FileFormat(metaclass=FileFormatMeta):
             if valuemap:
                 # Map discrete data to ints
                 def valuemap_index(val):
-                    try: return valuemap.index(val)
-                    except ValueError: return np.nan
+                    try:
+                        return valuemap.index(val)
+                    except ValueError:
+                        return np.nan
 
                 values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
                 coltype = DiscreteVariable
@@ -553,8 +562,10 @@ class FileFormat(metaclass=FileFormatMeta):
                         column = values if data.ndim > 1 else data
                         column += offset
                         for i, val in enumerate(var.values):
-                            try: oldval = old_order.index(val)
-                            except ValueError: continue
+                            try:
+                                oldval = old_order.index(val)
+                            except ValueError:
+                                continue
                             bn.replace(column, offset + oldval, new_order.index(val))
 
             if coltype is TimeVariable:
@@ -564,8 +575,10 @@ class FileFormat(metaclass=FileFormatMeta):
 
             # Write back the changed data. This is needeed to pass the
             # correct, converted values into Table.from_numpy below
-            try: data[:, col] = values
-            except IndexError: pass
+            try:
+                data[:, col] = values
+            except IndexError:
+                pass
 
         domain = Domain(attrs, clses, metas)
 
@@ -604,7 +617,7 @@ class FileFormat(metaclass=FileFormatMeta):
         return list(chain(['weight'] * data.has_weights(),
                           (Flags.join([flag], *('{}={}'.format(*a)
                                                 for a in sorted(var.attributes.items())))
-                           for flag, var in chain(zip(repeat(''),  data.domain.attributes),
+                           for flag, var in chain(zip(repeat(''), data.domain.attributes),
                                                   zip(repeat('class'), data.domain.class_vars),
                                                   zip(repeat('meta'), data.domain.metas)))))
 
