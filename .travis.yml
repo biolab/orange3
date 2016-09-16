@@ -12,9 +12,7 @@ matrix:
           cache: {}
         - python: '3.4'
         - python: '3.5'
-        - python: 'nightly'
     allow_failures:
-        - python: 'nightly'
         - *pylint
     fast_finish: true
 
