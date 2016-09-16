@@ -19,3 +19,11 @@ class TestOWColor(WidgetTest):
 
         w = self.create_widget(OWColor, reset_default_settings=False)
         self.send_signal("Data", self.iris, widget=w)
+
+    def test_invalid_input_colors(self):
+        a = ContinuousVariable("a")
+        a.attributes["colors"] = "invalid"
+        a.colors
+        t = Table(Domain([a]))
+
+        self.send_signal("Data", t)
