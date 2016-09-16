@@ -57,9 +57,10 @@ Visualize
    widgets/visualize/scatterplot
    widgets/visualize/venn-diagram
    widgets/visualize/linearprojection
-   widgets/visualize/modelmapprojectionrank
    widgets/visualize/scattermap
    widgets/visualize/sievediagram
+   widgets/visualize/pythagoreantree
+   widgets/visualize/pythagoreanforest
 
 
 Classify
