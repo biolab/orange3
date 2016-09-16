@@ -70,7 +70,9 @@ disable=
     standarderror-builtin,import-star-module-level,old-octal-literal,
     metaclass-assignment,reduce-builtin,indexing-exception,
     parameter-unpacking,long-suffix,cmp-method,using-cmp-argument,
-    useless-suppression
+    useless-suppression,import-error,
+    empty-docstring,missing-docstring,redefined-outer-name,redefined-builtin,
+    attribute-defined-outside-init
 
 
 [REPORTS]
@@ -210,61 +212,51 @@ include-naming-hint=yes
 # Regular expression matching correct method names
 # TODO: find a better way to allow long method names in test classes.
 method-rgx=[a-z_][a-zA-Z0-9_]{2,80}$
-
 # Naming hint for method names
 method-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Regular expression matching correct class names
-class-rgx=[A-Z_][a-zA-Z0-9]+$
-
+class-rgx=[A-Z_][a-zA-Z0-9]{2,30}$
 # Naming hint for class names
-class-name-hint=[A-Z_][a-zA-Z0-9]+$
+class-name-hint=[A-Z_][a-zA-Z0-9]{2,30}$
 
 # Regular expression matching correct module names
-module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
-
+module-rgx=([a-z_][a-z0-9_]{2,30})$
 # Naming hint for module names
-module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+module-name-hint=([a-z_][a-z0-9_]{2,30})$
 
 # Regular expression matching correct class attribute names
-class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
-
+class-attribute-rgx=[A-Za-z_][A-Za-z0-9_]{2,30}$
 # Naming hint for class attribute names
-class-attribute-name-hint=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+class-attribute-name-hint=[A-Za-z_][A-Za-z0-9_]{2,30}$
 
 # Regular expression matching correct constant names
-const-rgx=(([A-Z_][A-Za-z0-9_]*)|(__.*__))$
-
+const-rgx=[A-Za-z_][A-Za-z0-9_]+$
 # Naming hint for constant names
-const-name-hint=(([A-Z_][A-Za-z0-9_]*)|(__.*__))$
+const-name-hint=[A-Za-z_][A-Za-z0-9_]+$
 
 # Regular expression matching correct function names
 function-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
-
 # Naming hint for function names
 function-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Regular expression matching correct variable names
-variable-rgx=[a-zA-Z_][a-zA-Z0-9_]{1,30}$
-
+variable-rgx=[a-zA-Z_][a-zA-Z0-9_]{0,30}$
 # Naming hint for variable names
-variable-name-hint=[a-zA-Z_][a-zA-Z0-9_]{1,30}$
+variable-name-hint=[a-zA-Z_][a-zA-Z0-9_]{0,30}$
 
 # Regular expression matching correct attribute names
 attr-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
-
 # Naming hint for attribute names
 attr-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
 # Regular expression matching correct inline iteration names
 inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
-
 # Naming hint for inline iteration names
 inlinevar-name-hint=[A-Za-z_][A-Za-z0-9_]*$
 
 # Regular expression matching correct argument names
 argument-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
-
 # Naming hint for argument names
 argument-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
@@ -293,7 +285,7 @@ ignore-mixin-members=yes
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis. It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=numpy,PyQt4
+ignored-modules=numpy,PyQt4,scipy
 
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set). This supports can work
@@ -335,19 +327,19 @@ max-args=20
 
 # Argument names that match this expression will be ignored. Default to name
 # with leading underscore
-ignored-argument-names=_.*
+ignored-argument-names=^_
 
 # Maximum number of locals for function / method body
-max-locals=20
+max-locals=60
 
 # Maximum number of return / yield for function / method body
-max-returns=5
+max-returns=20
 
 # Maximum number of branch for function / method body
 max-branches=12
 
 # Maximum number of statements in function / method body
-max-statements=50
+max-statements=200
 
 # Maximum number of parents for a class (see R0901).
 max-parents=7
