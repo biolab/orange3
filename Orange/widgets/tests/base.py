@@ -368,10 +368,14 @@ class WidgetLearnerTestMixin:
 
     def test_output_learner(self):
         """Check if learner is on output after apply"""
-        self.assertIsNone(self.get_output("Learner"))
+        initial = self.get_output("Learner")
+        self.assertIsNotNone(initial, "Does not initialize the learner output")
         self.widget.apply_button.button.click()
-        self.assertIsNotNone(self.get_output("Learner"))
-        self.assertIsInstance(self.get_output("Learner"), self.widget.LEARNER)
+        newlearner = self.get_output("Learner")
+        self.assertIsNot(initial, newlearner,
+                         "Does not send a new learner instance on `Apply`.")
+        self.assertIsNotNone(newlearner)
+        self.assertIsInstance(newlearner, self.widget.LEARNER)
 
     def test_output_model(self):
         """Check if model is on output after sending data and apply"""
