@@ -342,6 +342,12 @@ class Results:
         mp_ctx = mp.get_context(
             'forkserver' if sys.platform == 'darwin' and n_jobs > 1 else None)
 
+        if n_jobs > 1 and mp_ctx.get_start_method() != 'fork' and train_data.X.size < 20e3:
+            n_jobs = 1
+            warnings.warn("Working with small-enough data; single-threaded "
+                          "sequential excecution will (probably) be faster. "
+                          "Setting n_jobs=1", OrangeWarning)
+
         try:
             # Use context-adapted Queue or just the regular Queue if no
             # multiprocessing (otherwise it shits itself at least on Windos)
