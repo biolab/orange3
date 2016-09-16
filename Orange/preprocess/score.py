@@ -205,9 +205,9 @@ def _entropy(D):
 
 def _gini(D):
     """Gini index of class-distribution matrix"""
-    P = D / np.sum(D, axis=0)
-    return sum((np.ones(1 if len(D.shape) == 1 else D.shape[1]) - np.sum(np.square(P), axis=0))
-               * 0.5 * np.sum(D, axis=0) / np.sum(D))
+    P = np.asarray(D / np.sum(D, axis=0))
+    return np.sum((1 - np.sum(P ** 2, axis=0)) *
+                  np.sum(D, axis=0) / np.sum(D))
 
 
 def _symmetrical_uncertainty(X, Y):
@@ -287,8 +287,9 @@ class GainRatio(ClassificationScorer):
 
 class Gini(ClassificationScorer):
     """
-    Gini index is the probability that two randomly chosen instances will have different
-    classes. See `Wikipedia entry on gini index <http://en.wikipedia.org/wiki/Gini_coefficient>`_.
+    Gini impurity is the probability that two randomly chosen instances will have different
+    classes. See `Wikipedia entry on Gini impurity
+    <https://en.wikipedia.org/wiki/Decision_tree_learning#Gini_impurity>`_.
     """
     def from_contingency(self, cont, nan_adjustment):
         return (_gini(np.sum(cont, axis=1)) - _gini(cont)) * nan_adjustment
