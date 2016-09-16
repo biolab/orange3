@@ -243,7 +243,6 @@ class OWRank(OWWidget):
         self.resetInternals()
 
         if data is not None and not data.domain.class_var:
-            data = None
             self.Error.no_target_var()
 
         self.data = data
@@ -253,12 +252,13 @@ class OWRank(OWWidget):
             self.usefulAttributes = [attr for attr in attrs
                                      if attr.is_discrete or attr.is_continuous]
 
-            if domain.has_continuous_class:
-                self.switchRanksMode(1)
-            elif domain.has_discrete_class:
-                self.switchRanksMode(0)
-            else:
-                self.Error.invalid_type(type(domain.class_var).__name__)
+            if domain.class_var is not None:
+                if domain.has_continuous_class:
+                    self.switchRanksMode(1)
+                elif domain.has_discrete_class:
+                    self.switchRanksMode(0)
+                else:
+                    self.Error.invalid_type(type(domain.class_var).__name__)
 
             if issparse(self.data.X):   # keep only measures supporting sparse data
                 self.measures = [m for m in self.measures
@@ -290,6 +290,9 @@ class OWRank(OWWidget):
         if learner is None and lid is not None:
             del self.learners[lid]
         elif learner is not None:
+            self.Error.no_target_var.clear()
+            self.Error.invalid_type.clear()
+
             self.learners[lid] = score_meta(
                 learner.name,
                 learner.name,
