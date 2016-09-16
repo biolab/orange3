@@ -4,10 +4,11 @@
 from unittest import TestCase
 import numpy as np
 
-from PyQt4.QtCore import QModelIndex
+from PyQt4.QtCore import QModelIndex, Qt
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Table
-from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain
+from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
+from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \
+    ContinuousVariableEditor
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest
 
@@ -114,3 +115,26 @@ class TestOWEditDomain(WidgetTest):
         self.send_signal("Data", owcolor_output)
         self.assertEqual(self.widget.data, owcolor_output)
         self.assertIsNotNone(self.widget.data.domain.class_vars[-1].colors)
+
+    def test_list_attributes_remain_lists(self):
+        a = ContinuousVariable("a")
+        a.attributes["list"] = [1, 2, 3]
+        d = Domain([a])
+        t = Table(d)
+
+        self.send_signal("Data", t)
+
+        assert isinstance(self.widget, OWEditDomain)
+        # select first variable
+        idx = self.widget.domain_view.model().index(0)
+        self.widget.domain_view.setCurrentIndex(idx)
+
+        # change first attribute value
+        editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
+        assert isinstance(editor, ContinuousVariableEditor)
+        idx = editor.labels_model.index(0, 1)
+        editor.labels_model.setData(idx, "[1, 2, 4]", Qt.EditRole)
+
+        self.widget.unconditional_commit()
+        t2 = self.get_output("Data")
+        self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])

@@ -104,12 +104,13 @@ class DictItemsModel(QStandardItemModel):
             self.appendRow([key_item, value_item])
 
     def get_dict(self):
-        dict = {}
-        for row in range(self.rowCount()):
-            key_item = self.item(row, 0)
-            value_item = self.item(row, 1)
-            dict[str(key_item.text())] = str(value_item.text())
-        return dict
+        # Use the same functionality that parses attributes
+        # when reading text files
+        return Orange.data.Flags([
+            "{}={}".format(self.item(row, 0).text(),
+                           self.item(row, 1).text())
+            for row in range(self.rowCount())
+        ]).attributes
 
 
 class VariableEditor(QWidget):
