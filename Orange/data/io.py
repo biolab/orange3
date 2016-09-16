@@ -1,21 +1,20 @@
 import contextlib
 import csv
 import locale
-import os
 import pickle
 import re
 import subprocess
 import sys
 import warnings
-from tempfile import NamedTemporaryFile
 
-from os import path, unlink
 from ast import literal_eval
+from collections import OrderedDict
+from functools import lru_cache
+from itertools import chain, repeat
 from math import isnan
 from numbers import Number
-from itertools import chain, repeat
-from functools import lru_cache
-from collections import OrderedDict
+from os import path, unlink
+from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
 from urllib.request import urlopen, Request
 
@@ -679,8 +678,8 @@ class CSVReader(FileFormat):
                     # Currently, some tests pass StringIO instead of
                     # the file name to a reader.
                     if isinstance(self.filename, str):
-                        data.name = os.path.splitext(
-                            os.path.split(self.filename)[-1])[0]
+                        data.name = path.splitext(
+                            path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
@@ -746,7 +745,7 @@ class BasketReader(FileFormat):
         domain = Domain(attrs, classes, meta_attrs)
         table = Table.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
-        table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+        table.name = path.splitext(path.split(self.filename)[-1])[0]
         return table
 
 
@@ -782,7 +781,7 @@ class ExcelReader(FileFormat):
                              for col in range(first_col, row_len)]
                             for row in range(first_row, ss.nrows)])
             table = self.data_table(cells)
-            table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+            table.name = path.splitext(path.split(self.filename)[-1])[0]
             if self.sheet:
                 table.name = '-'.join((table.name, self.sheet))
         except Exception:

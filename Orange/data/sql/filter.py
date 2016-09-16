@@ -1,4 +1,4 @@
-from .. import filter
+from Orange.data import filter
 
 
 class IsDefinedSql(filter.IsDefined):

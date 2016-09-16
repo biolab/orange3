@@ -1,16 +1,19 @@
-import re
-from numbers import Number, Real, Integral
-from math import isnan, floor, sqrt
-import numpy as np
-from pickle import PickleError
-import copy
-
 import collections
+import re
+
 from datetime import datetime, timedelta, timezone
+from numbers import Number, Real, Integral
+from math import isnan, floor
+from pickle import PickleError
 
-from . import _variable
+import numpy as np
 
+from Orange.data import _variable
 from Orange.util import Registry, color_to_hex, hex_to_color
+
+__all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
+           "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
+           "StringVariable", "TimeVariable"]
 
 
 # For storing unknowns

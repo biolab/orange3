@@ -1,11 +1,17 @@
+import weakref
+
 from math import log
 from collections import Iterable
 from itertools import chain
 from numbers import Integral
 
-import weakref
-from .variable import *
 import numpy as np
+
+from Orange.data import (
+    Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
+)
+
+__all__ = ["DomainConversion", "Domain"]
 
 
 class DomainConversion:
