@@ -3,7 +3,7 @@ Pythagorean Tree
 
 .. figure:: icons/pythagorean-tree.png
 
-Pythagorean tree for visualising classification trees.
+Pythagorean tree visualisation for classification or regression trees.
 
 Signals
 -------
@@ -12,36 +12,39 @@ Signals
 
 -  **Tree**
 
-A classification / regression tree model.
+A classification or regression tree model.
 
-**Selected Data**:
+- **Selected Data**
 
--  A subset of instances that the user has manually selected from the
-pythagorean tree.
+A subset of instances that the user has manually selected from the Pythagorean tree.
 
 Description
 -----------
 
-**Pythagorean Trees** are fractals that can be used to depict binary hierarchies as presented in an article by `Beck F. et al<http://publications.fbeck.com/ivapp14-pythagoras.pdf>`__. In our case, they're used for concisely visualizing tree models, such as :doc:`Classification Tree<../classify/classificationtree>` or :doc:`Regression Tree<../regression/regressiontree>`. 
+**Pythagorean Trees** are plane fractals that can be used to depict general tree hierarchies as presented in an article by `Fabian Beck and co-authors
+<http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In our case, they are used for visualizing and exploring tree models, such as 
+:doc:`Classification Tree<../classify/classificationtree>`.
 
 .. figure:: images/Pythagorean-Tree1-stamped.png
 
 1. Information on the input tree model.
 
-2. Parameters for display settings:
+2. Visualization parameters:
 
-    - _Depth_: set the depth to which the trees are grown.
-    - _Target class_: set the target class for coloring the trees. Nodes where the selected class if present will be colored by the class color. If _None_ is selected, the tree will be white.
-    - _Size_: set the size of the nodes. _Normal_ will keep nodes the size of the subset in the node. _Square root_ and _Logarithmic_ are the respective transformations of the node size.
-    - _Log scale factor_ is only enabled when _logarithmic_ transformation is selected. You can set the log factor between 1 and 10.
+    - *Depth*: set the depth of displayed trees.
+    - *Target class* (for classification trees): the intensity of the color for nodes of the tree will correspond to the probability of the target class. If *None* is selected, the color of the node will denote the most probable class.
+    - *Node color* (for regression trees): node colors can correspond to mean or standard deviation of class value of the training data instances in the node.
+    - *Size*: define a method to compute the size of the square representing the node. *Normal* will keep node sizes correspond to the size of training data subset in the node. *Square root* and *Logarithmic* are the respective transformations of the node size.
+    - *Log scale factor* is only enabled when *logarithmic* transformation is selected. You can set the log factor between 1 and 10.
 
 3. Plot properties:
 
-    - _Enable tooltips_: information on the node as displayed upon hovering.
-    - _Show legend_: shows color legend for the plot.
+    - *Enable tooltips*: display node information upon hovering.
+    - *Show legend*: shows color legend for the plot.
 
-4. _Save Image_: save the visualization to your computer as a *.svg* or *.png* file. 
-   _Report_: produce a report.
+4. Reporting:
+    - *Save Image*: save the visualization to a SVG or PNG file. 
+    - *Report*: add visualization to the report.
 
 Pythagorean Tree can visualize both classification and regression trees. Below is an example for regression tree. The only difference between the two is that regression tree doesn't enable coloring by class, but can color by class mean or standard deviation.
 
@@ -51,11 +54,25 @@ Pythagorean Tree can visualize both classification and regression trees. Below i
 Example
 -------
 
-In this example we demonstrate the difference between :doc:`Classification Tree Viewer<../classify/classificationtreeviewer>` and **Pythagorean Tree**. They both visualize :doc:`Classification Tree<../classify/classificationtree>` algorithm, but Pythagorean tree is much more concise, even for a small data set such as _Iris.tab_.
+The workflow from the screenshot below demonstrates the difference between 
+:doc:`Classification Tree Viewer<../classify/classificationtreeviewer>` and Pythagorean Tree. They can both visualize :doc:`Classification Tree<../classify/classificationtree>`, but Pythagorean visualization takes less space and is more compact, even for a small 
+`Iris flower <https://en.wikipedia.org/wiki/Iris_flower_data_set>`_
+data set. For both visualization widgets, we have hidden the control area on the left by clicking on the splitter between control and visualization area.
 
 .. figure:: images/Pythagorean-Tree-comparison.png
+
+Pythagorean Tree is interactive: click on any of the nodes (squares) to select training data instances that were associated with that node. The following workflow explores these feature. 
+
+.. figure:: images/Pythagorean-Tree-scatterplot-workflow.png
+    :scale: 80
+    :align: center 
+
+The selected data instances are shown as a subset in the :doc:`Scatter Plot <../visualize/scatterplot>`, sent to the :doc:`Data Table <../data/datatable>` and examined in the :doc:`Box Plot <../visualize/boxplot>`. We have used brown-selected data set in this example. The tree and scatter plot are shown below; the selected node in the tree has a black outline.
+
+.. figure:: images/Pythagorean-Tree-scatterplot.png
 
 References
 ----------
 
-Beck, F., Burch, M., Munz, T., Di Silvestro, L. and Weiskopf, D. (2014). Generalized Pythagoras Trees for Visualizing Hierarchies. In IVAPP '14 Proceedings of the 5th International Conference on Information Visualization Theory and Applications, 17-28.
+Beck, F., Burch, M., Munz, T., Di Silvestro, L. and Weiskopf, D. (2014). `Generalized Pythagoras Trees for Visualizing Hierarchies
+<http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In IVAPP '14 Proceedings of the 5th International Conference on Information Visualization Theory and Applications, 17-28.
