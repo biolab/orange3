@@ -123,7 +123,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.preprocessors = None
         self.outdated_settings = False
         self.setup_layout()
-        QTimer.singleShot(0, self.apply)
+        QTimer.singleShot(0, self.update_learner)
 
     def create_learner(self):
         """Creates a learner with current configuration.
