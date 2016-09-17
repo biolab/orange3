@@ -89,7 +89,7 @@ class WidgetTest(GuiTest):
             w.onDeleteWidget()
             sip.delete(w)
 
-    def create_widget(self, cls, stored_settings=None):
+    def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
         """Create a widget instance.
 
         Parameters
@@ -98,12 +98,16 @@ class WidgetTest(GuiTest):
             Widget class to instantiate
         stored_settings : dict
             Default values for settings
+        reset_default_settings : bool
+            If set, widget will start with default values for settings,
+            if not, values accumulated through the session will be used
 
         Returns
         -------
         Widget instance : cls
         """
-        self.reset_default_settings(cls)
+        if reset_default_settings:
+            self.reset_default_settings(cls)
         widget = cls.__new__(cls, signal_manager=self.signal_manager,
                              stored_settings=stored_settings)
         widget.__init__()
@@ -137,6 +141,15 @@ class WidgetTest(GuiTest):
         Needs to be called manually as QApplication.exec is never called.
         """
         app.processEvents()
+
+    def show(self, widget=None):
+        """Show widget in interactive mode.
+
+        Useful for debugging tests, as widget can be inspected manually.
+        """
+        widget = widget or self.widget
+        widget.show()
+        app.exec()
 
     def send_signal(self, input_name, value, id=None, widget=None):
         """ Send signal to widget by calling appropriate triggers.

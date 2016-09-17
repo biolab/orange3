@@ -471,10 +471,11 @@ class ContinuousVariable(Variable):
     @property
     def colors(self):
         if self._colors is None:
-            if "colors" in self.attributes:
+            try:
                 col1, col2, black = self.attributes["colors"]
                 self._colors = (hex_to_color(col1), hex_to_color(col2), black)
-            else:
+            except (KeyError, ValueError):
+                # Stored colors were not available or invalid, use defaults
                 self._colors = ((0, 0, 255), (255, 255, 0), False)
         return self._colors
 
