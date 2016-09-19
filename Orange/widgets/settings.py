@@ -659,7 +659,7 @@ class ContextHandler(SettingsHandler):
         of the context list."""
 
         # First search the contexts that were already used in this widget instance
-        best_context, best_score = self.find_context(widget.context_settings, args)
+        best_context, best_score = self.find_context(widget.context_settings, args, move_up=True)
         # If the exact data was used, reuse the context
         if best_score == self.PERFECT_MATCH:
             return best_context, False
@@ -675,7 +675,7 @@ class ContextHandler(SettingsHandler):
         self.add_context(widget.context_settings, context)
         return context, best_context is None
 
-    def find_context(self, known_contexts, args, best_score=0, best_context=None):
+    def find_context(self, known_contexts, args, best_score=0, best_context=None, move_up=False):
         """Search the given list of contexts and return the context
          which best matches the given args.
 
@@ -685,7 +685,8 @@ class ContextHandler(SettingsHandler):
         for i, context in enumerate(known_contexts):
             score = self.match(context, *args)
             if score == self.PERFECT_MATCH:
-                self.move_context_up(known_contexts, i)
+                if move_up:
+                    self.move_context_up(known_contexts, i)
                 return context, score
             if score > best_score:  # NO_MATCH is not OK!
                 best_context, best_score = context, score
