@@ -257,6 +257,8 @@ class Report:
 
             if has_horizontal_header:
                 stream.append('<tr>')
+                if has_vertical_header:
+                    stream.append('<th></th>')
                 stream.extend(item_html(None, col) for col in columns)
                 stream.append('</tr>')
 
