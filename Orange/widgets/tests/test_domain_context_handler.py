@@ -9,7 +9,7 @@ Continuous = vartype(ContinuousVariable())
 Discrete = vartype(DiscreteVariable())
 
 
-class DomainContextHandlerTestCase(TestCase):
+class TestDomainContextHandler(TestCase):
     def setUp(self):
         self.domain = Domain(
             attributes=[ContinuousVariable('c1'),
@@ -234,6 +234,26 @@ class DomainContextHandlerTestCase(TestCase):
                                   ('d2', Discrete), ('d3', Discrete),
                                   ('c2', Continuous), ('d4', Discrete)))
         self.assertEqual(context.values['text'], ('u', -2))
+
+    def test_filter_value(self):
+        setting = ContextSetting([])
+        setting.name = "value"
+
+        def test_filter(before_value, after_value):
+            data = dict(value=before_value)
+            self.handler.filter_value(setting, data, *self.args)
+            self.assertIn("value", data)
+            self.assertEqual(data["value"], after_value)
+
+        # filter list values
+        test_filter([], [])
+        # When list contains attributes asa tuple of (name, type),
+        # Attributes not present in domain should be filtered out
+        test_filter([("d1", Discrete), ("d1", Continuous),
+                     ("c1", Continuous), ("c1", Discrete)],
+                    [("d1", Discrete), ("c1", Continuous)])
+        # All other values in list should remain
+        test_filter([0, [1, 2, 3], "abcd", 5.4], [0, [1, 2, 3], "abcd", 5.4])
 
     def create_context(self, domain, values):
         if not domain:

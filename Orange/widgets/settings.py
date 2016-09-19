@@ -663,6 +663,7 @@ class ContextHandler(SettingsHandler):
         # If the exact data was used, reuse the context
         if best_score == self.PERFECT_MATCH:
             return best_context, False
+
         # Otherwise check if a better match is available in global_contexts
         best_context, best_score = self.find_context(self.global_contexts, args,
                                                      best_score, best_context)
