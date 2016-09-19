@@ -1035,6 +1035,8 @@ class DomainContextHandler(ContextHandler):
         Subclasses can override this method to checks data in alternative
         representations.
         """
+        if not isinstance(item, tuple):
+            return True
         return self._var_exists(setting, item, attrs, metas)
 
 
