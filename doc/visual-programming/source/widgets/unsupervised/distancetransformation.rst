@@ -12,13 +12,13 @@ Signals
 
 -  **Distances**
 
-A distance matrix
+   A distance matrix
 
 **Outputs**:
 
 -  **Distances**
 
-A distance matrix
+   A distance matrix
 
 Description
 -----------
@@ -48,10 +48,6 @@ The **Distances Transformation** widget is used for the normalization and invers
 Example
 -------
 
-In the snapshot below, you can see how transformation affects the distance matrix. We loaded the *Iris* data set and calculated the distances between rows with the help of the :doc:`Distances<../unsupervised/distances>` widget. In order to demonstrate how **Distance Transformation** affects the :doc:`Distance Matrix<../unsupervised/distancematrix>`, we created the worflow below and compared the transformed distance matrix with the "original" one. 
+In the snapshot below, you can see how transformation affects the distance matrix. We loaded the *Iris* data set and calculated the distances between rows with the help of the :doc:`Distances <../unsupervised/distances>` widget. In order to demonstrate how **Distance Transformation** affects the :doc:`Distance Matrix <../unsupervised/distancematrix>`, we created the worflow below and compared the transformed distance matrix with the "original" one. 
 
 .. figure:: images/DistanceTransformation-Example.png
-
-
-
-

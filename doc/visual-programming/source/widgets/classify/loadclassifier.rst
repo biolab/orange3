@@ -16,7 +16,7 @@ Signals
 
 -  **Classifier**
 
-A classifier with selected parameters.
+   A classifier with selected parameters.
 
 Description
 -----------
@@ -35,6 +35,6 @@ Example
 When you want to use a custom-set classifier that you've saved before,
 open the **Load Classifier** widget and select the desired file with the
 *Browse* icon. This widget loads the exisiting classifier into
-:doc:`Predictions<../evaluation/predictions>` widget for predicting classes.
+:doc:`Predictions <../evaluation/predictions>` widget for predicting classes.
 
 .. figure:: images/LoadClassifier-example.png

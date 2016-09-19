@@ -12,17 +12,17 @@ Signals
 
 -  **Distances**
 
-A distance matrix.
+   A distance matrix.
 
 **Outputs**:
 
 -  **Data**
 
-Instances corresponding to the selected elements of the matrix.
+   Instances corresponding to the selected elements of the matrix.
 
 -  **Features**
 
-Attributes corresponding to the selected elements of the matrix.
+   Attributes corresponding to the selected elements of the matrix.
 
 Description
 -----------
@@ -32,13 +32,13 @@ is the same as if we printed out a table of numbers, except that the
 numbers are replaced by colored spots.
 
 Distances are most often those between instances ("*rows*" in the
-:doc:`Distances<../unsupervised/distances>` widget) or attributes ("*columns*" in :doc:`Distances<../unsupervised/distances>`
-widget). The only suitable input for **Distance Map** is the :doc:`Distances<../unsupervised/distances>`
+:doc:`Distances <../unsupervised/distances>` widget) or attributes ("*columns*" in :doc:`Distances <../unsupervised/distances>`
+widget). The only suitable input for **Distance Map** is the :doc:`Distances <../unsupervised/distances>`
 widget. For the output, the user can select a region of the map and the
 widget will output the corresponding instances or attributes. Also note
 that the **Distances** widget ignores discrete values and calculates
 distances only for continuous data, thus it can only display distance map
-for discrete data if you :doc:`Continuize<../data/continuize>` them first.
+for discrete data if you :doc:`Continuize <../data/continuize>` them first.
 
 The snapshot shows distances between columns in the *heart disease*
 data, where smaller distances are represented with light and larger with
@@ -98,8 +98,8 @@ the distances between rows in **Distance Map**.
 .. figure:: images/DistanceMap-Example1.png
 
 In the second example, we use the *heart disease* data again and select a
-subset of women only from the :doc:`Scatter Plot<../visualize/scatterplot>`. Then, we visualize
-distances between columns in the **Distance Map**. Since the subset also contains some discrete data, the :doc:`Distances<../unsupervised/distances>` widget warns us it will
+subset of women only from the :doc:`Scatter Plot <../visualize/scatterplot>`. Then, we visualize
+distances between columns in the **Distance Map**. Since the subset also contains some discrete data, the :doc:`Distances <../unsupervised/distances>` widget warns us it will
 ignore the discrete features, thus we will see only continuous
 instances/attributes in the map.
 

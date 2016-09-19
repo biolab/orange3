@@ -12,19 +12,19 @@ Signals
 
 -  **Data**
 
-Attribute-valued data set.
+   Attribute-valued data set.
 
 **Outputs**:
 
 -  **Data**
 
-A data set with discretized values.
+   A data set with discretized values.
 
 Description
 -----------
 
 The **Discretize** widget
-`discretizes <https://en.wikipedia.org/wiki/Discretization>`__
+`discretizes <https://en.wikipedia.org/wiki/Discretization>`_
 continuous attributes with a selected method.
 
 .. figure:: images/Discretize-All-stamped.png
@@ -32,21 +32,21 @@ continuous attributes with a selected method.
 1. The basic version of the widget is rather simple. It allows choosing
    between three different discretizations.
 
--  `Entropy-MDL <http://ijcai.org/Past%20Proceedings/IJCAI-93-VOL2/PDF/022.pdf>`__,
-   invented by Fayyad and Irani is a top-down discretization, which
-   recursively splits the attribute at a cut maximizing information
-   gain, until the gain is lower than the minimal description length of
-   the cut. This discretization can result in an arbitrary number of
-   intervals, including a single interval, in which case the attribute is
-   discarded as useless (removed).
--  `Equal-frequency <http://www.saedsayad.com/unsupervised_binning.htm>`__
-   splits the attribute into a given number of intervals, so that
-   they each contain approximately the same number of instances.
--  `Equal-width <https://en.wikipedia.org/wiki/Data_binning>`__
-   evenly splits the range between the smallest and the largest observed
-   value. The *Number of intervals* can be set manually.
--  The widget can also be set to leave the attributes continuous or to
-   remove them.
+   -  `Entropy-MDL <http://ijcai.org/Past%20Proceedings/IJCAI-93-VOL2/PDF/022.pdf>`_,
+      invented by Fayyad and Irani is a top-down discretization, which
+      recursively splits the attribute at a cut maximizing information
+      gain, until the gain is lower than the minimal description length of
+      the cut. This discretization can result in an arbitrary number of
+      intervals, including a single interval, in which case the attribute is
+      discarded as useless (removed).
+   -  `Equal-frequency <http://www.saedsayad.com/unsupervised_binning.htm>`_
+      splits the attribute into a given number of intervals, so that
+      they each contain approximately the same number of instances.
+   -  `Equal-width <https://en.wikipedia.org/wiki/Data_binning>`_
+      evenly splits the range between the smallest and the largest observed
+      value. The *Number of intervals* can be set manually.
+   -  The widget can also be set to leave the attributes continuous or to
+      remove them.
 
 2. To treat attributes individually, go to **Individual Attribute
    Settings**. They show a specific discretization of each attribute and 
@@ -59,12 +59,14 @@ continuous attributes with a selected method.
    with several cut-offs. The final weight (fnlwgt), for instance, was
    left with a single interval and thus removed.
 
-On the right, we can select a specific discretization method for each
-attribute. Attribute *“fnlwgt”* would be removed by the MDL-based
-discretization, so to prevent its removal, we select the attribute and
-choose, for instance, **Equal-frequency discretization**. We could also
-choose to leave the attribute continuous.
+   On the right, we can select a specific discretization method for each
+   attribute. Attribute *“fnlwgt”* would be removed by the MDL-based
+   discretization, so to prevent its removal, we select the attribute and
+   choose, for instance, **Equal-frequency discretization**. We could also
+   choose to leave the attribute continuous.
+
 3. Produce a report.
+
 4. Tick *Apply automatically* for the widget to automatically commit changes. Alternatively, press *Apply*.
 
 Example

@@ -8,18 +8,21 @@ A graphical representation of consistency within clusters of data.
 Signals
 -------
 
-**Inputs**:
+**Inputs**
 
 -  **Data**
 
-A data set.
+   A data set.
 
-**Outputs**:
+**Outputs**
 
 -  **Selected Data**
 
+   A subset of instances that the user has manually selected from the plot.
+
 -  **Other Data**
 
+   Remaining data.
 
 Description
 -----------
@@ -30,10 +33,8 @@ The **Silhouette Plot** widget offers a graphical representation of consistency 
 
 1. Choose the distance metric. You can choose between:
 
-   -  `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`__
-      ("straight line", distance between two points)
-   -  `Manhattan <https://en.wiktionary.org/wiki/Manhattan_distance>`__
-      (the sum of absolute differences for all attributes)
+   -  `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_ ("straight line", distance between two points)
+   -  `Manhattan <https://en.wiktionary.org/wiki/Manhattan_distance>`_ (the sum of absolute differences for all attributes)
 
 2. Select the cluster label. You can decide whether to group the instances by cluster or not.
 3. Display options:
@@ -53,11 +54,8 @@ The **Silhouette Plot** widget offers a graphical representation of consistency 
 Example
 -------
 
-In the snapshot below, we have decided to use the **Silhoutte Plot** on the *Iris* data set. We selected data intances with low silhouette scores and passed them on as a subset to the :doc:`Scatter Plot<../visualize/scatterplot>` widget. This visualization only confirms the accuracy of the **Silhouette Plot** widget, as you can clearly see that the subset lies in the border between two clusters. 
+In the snapshot below, we have decided to use the **Silhoutte Plot** on the *iris* data set. We selected data intances with low silhouette scores and passed them on as a subset to the :doc:`Scatter Plot <../visualize/scatterplot>` widget. This visualization only confirms the accuracy of the **Silhouette Plot** widget, as you can clearly see that the subset lies in the border between two clusters. 
 
 .. figure:: images/SilhouettePlot-Example.png
 
 If you are interested in other uses of the **Silhouette Plot** widget, feel free to explore our `blog post <http://blog.biolab.si/2016/03/23/all-i-see-is-silhouette/>`_.
-
-
-

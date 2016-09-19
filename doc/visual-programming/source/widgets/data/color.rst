@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-An input data set. 
+   An input data set. 
 
 **Outputs**:
 
 - **Data**
 
-A data set with a new color legend. 
+   A data set with a new color legend. 
 
 Description
 -----------
@@ -32,8 +32,7 @@ emphasizing your results and offers a great variety of color options for present
 1. A list of discrete variables. You can set the color of each variable by double-clicking on it and opening the *Color palette* or the *Select color* window. The widget also enables text-editing. By clicking on a variable, you can change its name. 
 2. A list of continuous variables. You can customize the color gradients by double-clicking on them. The widget also enables text-editing. By clicking on a variable, you can change its name. If you hover over the right side side of the gradient, *Copy to all* appears. You can then apply your customized color gradient to all variables. 
 3. Produce a report.
-4. Apply changes. If *Apply automatically* is ticked, changes will be communicated automatically. 
-Alternatively, just click *Apply*. 
+4. Apply changes. If *Apply automatically* is ticked, changes will be communicated automatically. Alternatively, just click *Apply*. 
 
 Discrete variables
 ------------------

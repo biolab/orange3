@@ -10,13 +10,13 @@ Signals
 
 -  **Data**
 
-An input data set
+   An input data set
 
 **Outputs**:
 
 -  **Data**
 
-An edited output data set
+   An edited output data set
 
 Description
 -----------
@@ -49,6 +49,6 @@ Below, we demonstrate how to simply edit an existing domain. We selected the
 the original we had the values *myope* and *hypermetrope*, we changed it
 into *nearsightedness* and *farsightedness* instead. For an easier
 comparison, we fed both the original and edited data into the :doc:`Data
-Table<../data/datatable>` widget.
+Table <../data/datatable>` widget.
 
 .. figure:: images/EditDomain-Example.png

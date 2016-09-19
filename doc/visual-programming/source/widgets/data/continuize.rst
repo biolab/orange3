@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-Input data set
+   Input data set
 
 **Outputs**:
 
 -  **Data**
 
-Output data set
+   Output data set
 
 Description
 -----------
@@ -29,7 +29,7 @@ are replaced with continuous ones.
 
 .. figure:: images/Continuize-stamped.png
 
-1. `Continuization methods <https://en.wikipedia.org/wiki/Continuity_correction>`__, which define the treatment of multivalued discrete attributes. Say that we have a discrete attribute status with the values low, middle and high, listed in that order. Options for their transformation are:  
+1. `Continuization methods <https://en.wikipedia.org/wiki/Continuity_correction>`_, which define the treatment of multivalued discrete attributes. Say that we have a discrete attribute status with the values low, middle and high, listed in that order. Options for their transformation are:  
 
    - **Target or First value as base**: the attribute will be transformed into two continuous attributes, status=middle with values 0 or 1 signifying whether the original attribute had value middle on a particular example, and similarly, status=high. Hence, a three-valued attribute is transformed into two continuous attributes, corresponding to all except the first value of the attribute.
    - **Most frequent value as base**: similar to the above, except that the data is analyzed and the most frequent value is used as a base. So, if most examples have the value middle, the two newly constructed continuous attributes will be status=low and status=high.
@@ -60,9 +60,9 @@ Examples
 --------
 
 First, let's see what is the output of the **Continuize** widget. We feed the
-original data (the *Heart disease* data set) into the :doc:`Data Table<../data/datatable>` and see how they look like. Then
+original data (the *Heart disease* data set) into the :doc:`Data Table <../data/datatable>` and see how they look like. Then
 we continuize the discrete values and observe them in another :doc:`Data
-Table<../data/datatable>`.
+Table <../data/datatable>`.
 
 .. figure:: images/Continuize-Example1.png 
 

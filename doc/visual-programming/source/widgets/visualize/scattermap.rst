@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-An input data set
+   An input data set
 
 **Outputs**:
 
@@ -21,7 +21,7 @@ An input data set
 Description
 -----------
 
-A `Scatter map <https://en.wikipedia.org/wiki/Scatter_plot>`__ is a
+A `Scatter map <https://en.wikipedia.org/wiki/Scatter_plot>`_ is a
 graphical method for visualizing frequencies in a two-way matrix by
 color. The higher the occurrence of a certain value, the darker the
 represented color. By combining two values on x and y axes, we see where
@@ -35,9 +35,9 @@ instances.
 2. Color the plot by attribute. You can also select which attribute
    instances you wish to see in the visualization by clicking on them.
    At the bottom, you can select the color scale strength
-   (`linear <https://en.wikipedia.org/wiki/Linear_function_(calculus)>`__,
-   `square root <https://en.wikipedia.org/wiki/Square_root>`__ or
-   `logarithmic <https://en.wikipedia.org/wiki/Logarithm#Logarithmic_scale>`__).
+   (`linear <https://en.wikipedia.org/wiki/Linear_function_(calculus)>`_,
+   `square root <https://en.wikipedia.org/wiki/Square_root>`_ or
+   `logarithmic <https://en.wikipedia.org/wiki/Logarithm#Logarithmic_scale>`_).
 3. *Sampling* is enabled only when the widget is connected to the *SQL
    Table* widget. You can set the sampling time for large data to speed
    up the analysis. *Sharpen* works for all data types and it will

@@ -12,22 +12,22 @@ Signals
 
 -  **Data**
 
-A data set.
+   A data set.
 
 -  **Preprocessor**
 
-Preprocessed data.
+   Preprocessed data.
 
 **Outputs**:
 
 -  **Learner**
 
-A SVM learning algorithm with supplied parameters.
+   A SVM learning algorithm with supplied parameters.
 
 -  **Predictor**
 
-A trained regressor. Signal *Predictor* sends the regressor only if signal
-*Data* is present.
+   A trained regressor. Signal *Predictor* sends the regressor only if signal
+   *Data* is present.
 
 Description
 -----------
@@ -35,8 +35,7 @@ Description
 **SVM Regression** performs linear regression in a high dimension
 feature space using an ε-intensive loss. Its estimation accuracy depends
 on a good setting of C, ε and kernel parameters. The widget outputs
-class predictions based on a `SVM learning
-algorithm <https://en.wikipedia.org/wiki/Support_vector_machine#Regression>`__.
+class predictions based on a `SVM learning algorithm <https://en.wikipedia.org/wiki/Support_vector_machine#Regression>`_.
 
 .. figure:: images/svm-regression2-stamped.png
 
@@ -46,12 +45,12 @@ algorithm <https://en.wikipedia.org/wiki/Support_vector_machine#Regression>`__.
    feature space to fit the maximum-margin hyperplane, thus allowing the
    algorithm to create non-linear regressors. The first kernel in the
    list, however, is a
-   `Linear <https://en.wikipedia.org/wiki/Linear_model>`__ kernel that
+   `Linear <https://en.wikipedia.org/wiki/Linear_model>`_ kernel that
    does not require this trick, but all the others
-   (`Polynomial <https://en.wikipedia.org/wiki/Polynomial_kernel>`__,
-   `RBF <https://en.wikipedia.org/wiki/Radial_basis_function_kernel>`__
+   (`Polynomial <https://en.wikipedia.org/wiki/Polynomial_kernel>`_,
+   `RBF <https://en.wikipedia.org/wiki/Radial_basis_function_kernel>`_
    and
-   `Sigmoid <http://crsouza.com/2010/03/kernel-functions-for-machine-learning-applications/#sigmoid>`__)
+   `Sigmoid <http://crsouza.com/2010/03/kernel-functions-for-machine-learning-applications/#sigmoid>`_)
    do. 
    Functions that specify the kernel are presented beside their
    names, and the constants involved are:
@@ -71,6 +70,6 @@ Example
 -------
 
 Below, we use two regression models to compare predictions in the
-:doc:`Predictions<../evaluation/predictions>` widget. We used the *Housing* data set. 
+:doc:`Predictions <../evaluation/predictions>` widget. We used the *Housing* data set. 
 
 .. figure:: images/svm-regression-example1.png

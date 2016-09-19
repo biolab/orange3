@@ -12,23 +12,22 @@ Signals
 
 -  **Data**
 
-A data set.
+   A data set.
 
 **Outputs**:
 
 -  **Transformed Data**
 
-PCA transformed input data.
+   PCA transformed input data.
 
 -  **Components**
 
-`Eigenvectors <https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors>`__.
+   `Eigenvectors <https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors>`_.
 
 Description
 -----------
 
-`Principal Component
-Analysis <https://en.wikipedia.org/wiki/Principal_component_analysis>`__
+`Principal Component Analysis <https://en.wikipedia.org/wiki/Principal_component_analysis>`_
 (PCA) computes the PCA linear transformation of the input data. It
 outputs either a transformed data set with weights of individual
 instances or weights of principal components.
@@ -56,7 +55,7 @@ Examples
 
 **PCA** can be used to simplify visualizations of large data sets. Below,
 we used the *Iris* data set to show how we can improve the visualization of
-the data set with PCA. The transformed data in the :doc:`Scatter plot<../visualize/scatterplot>` show a
+the data set with PCA. The transformed data in the :doc:`Scatter Plot <../visualize/scatterplot>` show a
 much clearer distinction between classes than the default settings.
 
 .. figure:: images/PCAExample.png
@@ -64,7 +63,7 @@ much clearer distinction between classes than the default settings.
 The widget provides two outputs: transformed data and principal
 components. Transformed data are weights for individual instances in the
 new coordinate system, while components are the system descriptors
-(weights for princial components). When fed into the :doc:`Data Table<../data/datatable>`, we
+(weights for princial components). When fed into the :doc:`Data Table <../data/datatable>`, we
 can see both outputs in numerical form. We used two data tables in order to provide a more clean visualization of the workflow, 
 but you can also choose to edit the links in such a way that you display the data in just one data table. 
 You only need to create two links and connect the *Transformed data* and *Components* inputs to the *Data* output. 

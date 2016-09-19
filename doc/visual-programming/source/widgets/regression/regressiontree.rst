@@ -12,21 +12,21 @@ Signals
 
 -  **Data**
 
-A data set
+   A data set
 
 -  **Preprocessor**
 
-Preprocessed data.
+   Preprocessed data.
 
 **Outputs**:
 
 -  **Learner**
 
-A regression tree learning algorithm with settings as specified in the dialog.
+   A regression tree learning algorithm with settings as specified in the dialog.
 
 -  **Predictor**
 
-Trained regressor. 
+   Trained regressor. 
 
 
 Description
@@ -58,10 +58,10 @@ Examples
 
 There are two typical uses for this widget. First, you may want to
 induce a model and check what it looks like. You do it with the workflow
-below. To learn more about it, see the documentation on :doc:`Regression Tree Viewer<../regression/regressiontreeviewer>`.
+below. To learn more about it, see the documentation on :doc:`Regression Tree Viewer <../regression/regressiontreeviewer>`.
 
 .. figure:: images/Regression-Tree-Example1.png
 
-The second schema checks the accuracy of the algorithm. The selected tree node is presented in the :doc:`Scatter Plot<../visualize/scatterplot>` and we can see that the selected examples exhibit the same features. 
+The second schema checks the accuracy of the algorithm. The selected tree node is presented in the :doc:`Scatter Plot <../visualize/scatterplot>` and we can see that the selected examples exhibit the same features. 
 
 .. figure:: images/Regression-Tree-Example2.png

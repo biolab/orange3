@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-An input data set.
+   An input data set.
 
 **Outputs**:
 
@@ -21,8 +21,7 @@ An input data set.
 Description
 -----------
 
-The **Distributions** widget displays the `value
-distribution <https://en.wikipedia.org/wiki/Frequency_distribution>`__
+The **Distributions** widget displays the `value distribution <https://en.wikipedia.org/wiki/Frequency_distribution>`_
 of discrete or continuous attributes. If the data contains a class
 variable, distributions may be conditioned on the class.
 
@@ -61,4 +60,3 @@ intervals and displays averages of these intervals as histograms (see 2.
 above). We used the *Housing* data set. 
 
 .. figure:: images/Distributions-NoClass.png
-

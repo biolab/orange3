@@ -12,22 +12,22 @@ Signals
 
 -  **Data**
 
-A data set
+   A data set
 
 -  **Preprocessor**
 
-Preprocessed data
+   Preprocessed data
 
 **Outputs**:
 
 -  **Learner**
 
-A kNN learning algorithm with settings as specified in the dialog.
+   A kNN learning algorithm with settings as specified in the dialog.
 
 -  **kNN Classifier**
 
-Trained classifier (a subtype of Classifier). Signal **kNN Classifier**
-sends data only if the learning data (signal **Data** is present).
+   Trained classifier (a subtype of Classifier). Signal **kNN Classifier**
+   sends data only if the learning data (signal **Data** is present).
 
 Description
 -----------
@@ -35,15 +35,15 @@ Description
 .. figure:: images/k-NearestNeighbours-stamped.png
 
 1. A name under which it will appear in other widgets. The default name is
-   “kNN”.
+   "kNN".
 
 2. You can set the *Number of neighbors*. 
 3. The *Metrics* you can use are:
 
-   - `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`__
-   - `Manhattan <https://en.wikipedia.org/wiki/Taxicab_geometry>`__ (the sum of absolute differences for all attributes)
-   - `Chebyshev <https://en.wikipedia.org/wiki/Chebyshev_distance>`__ (the maximal difference between attributes)
-   - `Mahalanobis <https://en.wikipedia.org/wiki/Mahalanobis_distance>`__ (difference between an attribute and the mean).
+   - `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_
+   - `Manhattan <https://en.wikipedia.org/wiki/Taxicab_geometry>`_ (the sum of absolute differences for all attributes)
+   - `Chebyshev <https://en.wikipedia.org/wiki/Chebyshev_distance>`_ (the maximal difference between attributes)
+   - `Mahalanobis <https://en.wikipedia.org/wiki/Mahalanobis_distance>`_ (difference between an attribute and the mean).
 
 4. You can assign weight to the contributions of the neighbors. The *Weights* you can use are: 
 
@@ -58,8 +58,6 @@ Description
 Example
 -------
 
-This schema compares the results of `k-Nearest
-neighbors <https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm>`__
-with the default classifier, which always predicts the majority class.
+This schema compares the results of `k-Nearest neighbors <https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm>`_ with the default classifier, which always predicts the majority class.
 
 .. figure:: images/k-NearestNeighbours-Schema.png

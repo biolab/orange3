@@ -12,23 +12,23 @@ Signals
 
 -  **Data A**
 
-Attribute-valued data set.
+   Attribute-valued data set.
 
 -  **Data B**
 
-Attribute-valued data set.
+   Attribute-valued data set.
 
 **Outputs**:
 
 -  **Merged Data A+B**
 
-Instances from input data A to which attributes from input data B are
-added.
+   Instances from input data A to which attributes from input data B are
+   added.
 
 -  **Merged Data B+A**
 
-Instances from input data B to which attributes from input data A are
-added.
+   Instances from input data B to which attributes from input data A are
+   added.
 
 Description
 -----------
@@ -63,12 +63,12 @@ Example
 Merging two data sets results in appending new attributes to the
 original file, based on a selected common attribute. In the example
 below, we wanted to merge the **zoo.tab** file containing only factual
-data with :download:`zoo-only-image.tab <zoo-only-images.tab>` containing
+data with :download:`zoo-only-images.tab <../data/zoo-only-images.tab>` containing
 only images. Both files share a common string attribute *names*. Now, we
 create a workflow connecting the two files. The *zoo.tab* data is
 connected to **Data A** input of the **Merge Data** widget, and the
 *zoo-only-images.tab* data to the **Data B** input. Both outputs of the
-**Merge Data** widget are then connected to the :doc:`Data Table<../data/datatable>` widget.
+**Merge Data** widget are then connected to the :doc:`Data Table <../data/datatable>` widget.
 In the latter, the **Merged Data A+B** channels are shown, where image attributes
 are added to the original data.
 
@@ -83,4 +83,4 @@ consistency of the values of these attributes and report an error in
 case of non-matching values. In order to avoid the consistency checking,
 make sure that new attributes are created for each data set: you may use the
 '*Columns with the same name in different files represent different
-variables*' option in the :doc:`File<../data/file>` widget for loading the data.
+variables*' option in the :doc:`File <../data/file>` widget for loading the data.

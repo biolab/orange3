@@ -1,5 +1,5 @@
 Mosaic Display
-=============
+==============
 
 .. figure:: icons/mosaic-display.png
 
@@ -11,18 +11,23 @@ Signals
 **Inputs**:
 
 -  **Data**
+
+   An input data set.
+
 -  **Data subset**
 
-An input data set or subset. 
+   An input data subset. 
 
 **Outputs**:
 
 -  **Selected data**
 
+   A subset of instances that the user has manually selected from the plot.
+
 Description
 -----------
 
-The **Mosaic plot** is a graphical representation of a two-way frequency table or a contingency table. It is used for visualizing data from two or more qualitative variables and was introduced in 1981 by Hartigan and Kleiner and expanded and refined by Friendly in 1994. It provides the user with the means to more efficiently recognize relationships between different variables. If you wish to read up on the history of Mosaic Display, additional reading is available `here <http://www.datavis.ca/papers/moshist.pdf>`__.
+The **Mosaic plot** is a graphical representation of a two-way frequency table or a contingency table. It is used for visualizing data from two or more qualitative variables and was introduced in 1981 by Hartigan and Kleiner and expanded and refined by Friendly in 1994. It provides the user with the means to more efficiently recognize relationships between different variables. If you wish to read up on the history of Mosaic Display, additional reading is available `here <http://www.datavis.ca/papers/moshist.pdf>`_.
 
 .. figure:: images/Mosaic-Display-stamped.png
 
@@ -34,7 +39,7 @@ The **Mosaic plot** is a graphical representation of a two-way frequency table o
 Example
 -------
 
-We loaded the *Titanic* data set and connected it to the **Mosaic Display** widget. We decided to focus on two variables, namely status, sex and survival. We colored the interiors according to Pearson residuals in order to demonstrate the difference between observed and fitted values. 
+We loaded the *titanic* data set and connected it to the **Mosaic Display** widget. We decided to focus on two variables, namely status, sex and survival. We colored the interiors according to Pearson residuals in order to demonstrate the difference between observed and fitted values. 
 
 .. figure:: images/Mosaic-Display-Example.png
 

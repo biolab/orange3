@@ -12,11 +12,11 @@ Signals
 
 -  **Primary Data**
 
-A data set that defines the attribute set.
+   A data set that defines the attribute set.
 
 -  **Additional Data**
 
-An additional data set.
+   An additional data set.
 
 **Outputs**:
 
@@ -53,8 +53,8 @@ tables together. We use the **Concatenate** widget to merge the data sets by
 attributes (appending new rows under existing attributes).
 
 Below, we used a modified *Zoo* data set. In the
-:download:`first <../zoo-first.tab>` :doc:`File<../data/file>` widget, we loaded only the animals
-beginning with the letters A and B and in the :download:`second <../zoo-second.tab>` 
+:download:`first <../data/zoo-first.tab>` :doc:`File<../data/file>` widget, we loaded only the animals
+beginning with the letters A and B and in the :download:`second <../data/zoo-second.tab>` 
 one only the animals beginning with the letter C. Upon concatenation, we
 observe the new data in the :doc:`Data Table<../data/datatable>` widget, where we see the
 complete table with animals from A to C.

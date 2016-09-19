@@ -12,17 +12,17 @@ Signals
 
 -  **Data**
 
-A data set.
+   A data set.
 
 **Outputs**:
 
 -  **Preprocessor**
 
-A preprocessing method.
+   A preprocessing method.
 
 -  **Preprocessed Data**
 
-Data preprocessed with selected methods.
+   Data preprocessed with selected methods.
 
 Description
 -----------
@@ -57,7 +57,7 @@ data. We continuized discrete values (age, education and marital
 status...) as *one attribute per value*, we imputed missing values
 (replacing ? with average values), selected 10 most relevant attributes
 by *Information gain*, centered them by mean and scaled by span. We
-can observe the changes in the :doc:`Data Table<../data/datatable>` and compare it to the
+can observe the changes in the :doc:`Data Table <../data/datatable>` and compare it to the
 non-processed data.
 
 .. figure:: images/Preprocess-Example.png

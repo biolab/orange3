@@ -12,25 +12,24 @@ Signals
 
 -  **Distances**
 
-A distance matrix
+   A distance matrix
 
 **Outputs**:
 
 -  **Selected Data**
 
-A data subset
+   A data subset
 
 -  **Other Data**
 
-Remaining data
+   Remaining data
 
 Description
 -----------
 
-The widget computes `hierarchical
-clustering <https://en.wikipedia.org/wiki/Hierarchical_clustering>`__ of
+The widget computes `hierarchical clustering <https://en.wikipedia.org/wiki/Hierarchical_clustering>`_ of
 arbitrary types of objects from a matrix of distances and shows a
-corresponding `dendrogram <https://en.wikipedia.org/wiki/Dendrogram>`__.
+corresponding `dendrogram <https://en.wikipedia.org/wiki/Dendrogram>`_.
 
 .. figure:: images/HierarchicalClustering-stamped.png
 
@@ -42,7 +41,7 @@ corresponding `dendrogram <https://en.wikipedia.org/wiki/Dendrogram>`__.
    -  **Average linkage** computes the average distance between elements
       of the two clusters
    -  **Weighted linkage** uses the
-      `WPGMA <http://research.amnh.org/~siddall/methods/day1.html>`__
+      `WPGMA <http://research.amnh.org/~siddall/methods/day1.html>`_
       method
    -  **Complete linkage** computes the distance between the clusters' most
       distant elements
@@ -79,15 +78,15 @@ corresponding `dendrogram <https://en.wikipedia.org/wiki/Dendrogram>`__.
 Examples
 --------
 
-The workflow below shows the output of **Hierarchical Clustering** for the *Iris* data set in :doc:`Data Table<../data/datatable>` widget. We see that if we choose
+The workflow below shows the output of **Hierarchical Clustering** for the *Iris* data set in :doc:`Data Table <../data/datatable>` widget. We see that if we choose
 *Append cluster IDs* in hierarchical clustering, we can see an
-additional column in the :doc:`Data Table<../data/datatable>` named *Cluster*. This is a way
+additional column in the :doc:`Data Table <../data/datatable>` named *Cluster*. This is a way
 to check how hierarchical clustering clustered individual instances.
 
 .. figure:: images/HierarchicalClustering-Example.png
 
 In the second example, we loaded the *Iris* data set again, but this time
-we added the :doc:`Scatter Plot<../visualize/scatterplot>`, showing all the instances from the
+we added the :doc:`Scatter Plot <../visualize/scatterplot>`, showing all the instances from the
 :doc:`File<../data/file>` widget, while at the same time receiving the selected instances
 signal from **Hierarchical Clustering**. This way we can observe the
 position of the selected cluster(s) in the projection.

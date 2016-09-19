@@ -8,21 +8,21 @@ Shows classifiers' predictions on the data.
 Signals
 -------
 
-**Inputs**:
+**Inputs**
 
 -  **Data**
 
-A data set.
+   A data set.
 
 -  **Predictors**
 
-Predictors to be used on the data.
+   Predictors to be used on the data.
 
-**Outputs**:
+**Outputs**
 
 -  **Predictions**
 
-Original data with added predictions.
+   Original data with added predictions.
 
 Description
 -----------
@@ -41,9 +41,8 @@ and the predictions.
 6. Produce a report.
 
 Despite its simplicity, the widget allows for quite an interesting
-analysis of decisions of `predictive
-models <https://en.wikipedia.org/wiki/Predictive_modelling>`__; there is
-a simple demonstration at the bottom of the page. :doc:`Confusion Matrix<../evaluation/confusionmatrix>`
+analysis of decisions of `predictive models <https://en.wikipedia.org/wiki/Predictive_modelling>`_; there is
+a simple demonstration at the bottom of the page. :doc:`Confusion Matrix <../evaluation/confusionmatrix>`
 is a related widget and although many things can be done with any of
 them, there are tasks for which one of them might be much more
 convenient than the other.
@@ -57,20 +56,20 @@ Example
 .. figure:: images/Predictions-Schema.png
 
 We randomly split the data into two subsets. The larger subset,
-containing 70 % of data instances, is sent to :doc:`Naive Bayes<../classify/naivebayes>` and
-:doc:`Classification Tree<../classify/classificationtree>`, so they can produce the corresponding
+containing 70 % of data instances, is sent to :doc:`Naive Bayes <../classify/naivebayes>` and
+:doc:`Classification Tree <../classify/classificationtree>`, so they can produce the corresponding
 classifiers. Classifiers are then sent into **Predictions**, among with
 the remaining 30 % of the data. Predictions shows how these examples are
 classified.
 
-To save the predictions, we simply attach the :doc:`Save<../data/save>` widget to
+To save the predictions, we simply attach the :doc:`Save <../data/save>` widget to
 **Predictions**. The final file is a data table and can be saved as in a
 .tab or .tsv format.
 
 Finally, we can analyze the classifiers' predictions. For that, we first
-take :doc:`Select Columns<../data/selectcolumns>` with which we move the meta attributes with
+take :doc:`Select Columns <../data/selectcolumns>` with which we move the meta attributes with
 probability predictions to features. The transformed data is then given
-to the :doc:`Scatterplot<../visualize/scatterplot>`, which we set to use the attributes with
+to the :doc:`Scatterplot <../visualize/scatterplot>`, which we set to use the attributes with
 probabilities as the x and y axes, while the class is (already by
 default) used to color the data points.
 
@@ -89,4 +88,4 @@ conclusions may be ungrounded. Here is the entire workflow:
 .. figure:: images/Predictions-Example1.png
 
 Another example of using this widget is given in the documentation for the
-widget :doc:`Confusion Matrix<../evaluation/confusionmatrix>`.
+widget :doc:`Confusion Matrix <../evaluation/confusionmatrix>`.

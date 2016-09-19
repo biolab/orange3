@@ -12,26 +12,26 @@ Signals
 
 -  **Data**
 
-A data set. 
+   A data set. 
 
 -  **Preprocessor**
 
-Preprocessed data. 
+   Preprocessed data. 
 
 -  **Learner**
 
-A learning algorithm. 
+   A learning algorithm. 
 
 
 **Outputs**:
 
 -  **Learner**
 
-`AdaBoost <https://en.wikipedia.org/wiki/AdaBoost>`_ learning algorithm with settings as specified in the dialog.
+   `AdaBoost <https://en.wikipedia.org/wiki/AdaBoost>`_ learning algorithm with settings as specified in the dialog.
 
 -  **Classifier**
 
-Trained classifier (a subtype of Classifier). The *AdaBoost classifier* signal sends data only if the learning data (signal Data) is present.
+   Trained classifier (a subtype of Classifier). The *AdaBoost classifier* signal sends data only if the learning data (signal Data) is present.
 
 Description
 -----------
@@ -50,14 +50,13 @@ The **AdaBoost** (short for "Adaptive boosting") widget is a machine-learning al
 3. Produce a report.
 4. Click *Apply* after changing the settings. That will put the new learner in the output and, if the training examples are given, construct a new classifier and output it as well. To communicate changes automatically tick *Apply Automatically*. 
 
-Example
--------
+Examples
+--------
 
 For our first example, we loaded the *Iris* data set and compared the results of two different classification algorithms against the *AdaBoost* widget. 
 
 .. figure:: images/AdaBoost-Example1.png
 
-For our second example, we loaded the *Iris* data set, sent the data instances to several different classifiers (**AdaBoost**, :doc:`Classification Tree<../classify/classificationtree>`, :doc:`Logistic Regression<../classify/logisticregression>`) and output them in the :doc:`Predictions<../evaluation/predictions>` widget. 
+For our second example, we loaded the *Iris* data set, sent the data instances to several different classifiers (**AdaBoost**, :doc:`Classification Tree <../classify/classificationtree>`, :doc:`Logistic Regression <../classify/logisticregression>`) and output them in the :doc:`Predictions <../evaluation/predictions>` widget. 
 
 .. figure:: images/AdaBoost-Example2.png
-

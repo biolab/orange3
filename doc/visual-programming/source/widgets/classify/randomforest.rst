@@ -12,27 +12,27 @@ Signals
 
 -  **Data**
 
-A data set
+   A data set
 
 -  **Preprocessor**
 
-Preprocessed data
+   Preprocessed data
 
 **Outputs**:
 
 -  **Learner**
 
-A random forest learning algorithm with settings as specified in the
-dialog.
+   A random forest learning algorithm with settings as specified in the
+   dialog.
 
 -  **Random Forest Classifier**
 
-A trained classifier.
+   A trained classifier.
 
 Description
 -----------
 
-`Random forest <https://en.wikipedia.org/wiki/Random_forest>`__ is a
+`Random forest <https://en.wikipedia.org/wiki/Random_forest>`_ is a
 classification technique proposed by (Breiman, 2001). When given a set
 of class-labeled data, **Random Forest** builds a set of classification
 trees. Each tree is developed from a bootstrap sample from the training
@@ -68,8 +68,8 @@ forest.
 Example
 -------
 
-The example below shows a comparison schema of a random forest and a tree
-learner on a specific data set.
+The example below shows a comparison schema of a random forest and a :doc:`tree
+learner <../classify/classificationtree>` on a specific data set.
 
 .. figure:: images/RandomForest-Test.png
 
@@ -78,4 +78,4 @@ References
 
 Breiman, L. (2001). Random Forests. In Machine Learning, 45(1), 5-32.
 Available
-`here <http://download.springer.com/static/pdf/639/art%253A10.1023%252FA%253A1010933404324.pdf?originUrl=http%3A%2F%2Flink.springer.com%2Farticle%2F10.1023%2FA%3A1010933404324&token2=exp=1434636672~acl=%2Fstatic%2Fpdf%2F639%2Fart%25253A10.1023%25252FA%25253A1010933404324.pdf%3ForiginUrl%3Dhttp%253A%252F%252Flink.springer.com%252Farticle%252F10.1023%252FA%253A1010933404324*~hmac=93fc12faf46899d3cca65e325a946afa897da2a05495736982e04585f9ee6ff3>`__
+`here <http://download.springer.com/static/pdf/639/art%253A10.1023%252FA%253A1010933404324.pdf?originUrl=http%3A%2F%2Flink.springer.com%2Farticle%2F10.1023%2FA%3A1010933404324&token2=exp=1434636672~acl=%2Fstatic%2Fpdf%2F639%2Fart%25253A10.1023%25252FA%25253A1010933404324.pdf%3ForiginUrl%3Dhttp%253A%252F%252Flink.springer.com%252Farticle%252F10.1023%252FA%253A1010933404324*~hmac=93fc12faf46899d3cca65e325a946afa897da2a05495736982e04585f9ee6ff3>`_
