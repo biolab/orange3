@@ -326,8 +326,11 @@ class Highchart(WebView):
                                   for selected in points])
 
     def svg(self):
-        """ Return SVG string of the first SVG element on the page, or
-        raise ValueError if not any. """
+        """
+        Returns div that is container of a chart.
+        This method overrides svg method from WebView because
+        SVG itself does not contain chart labels (title, axis labels, ...)
+        """
         html = self.frame.toHtml()
         return html[html.index('<div id="container"'):html.rindex('</div>') + 6]
 
