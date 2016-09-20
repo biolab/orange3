@@ -330,6 +330,20 @@ class OWSilhouettePlot(widget.OWWidget):
         self.send("Selected Data", selected)
         self.send("Other Data", other)
 
+    def init_code_gen(self):
+        def run():
+            ow.set_data(input_data)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWSilhouettePlot)
+        gen.add_init("ow", "OWSilhouettePlot()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         self.report_plot()
         caption = "Silhouette plot ({} distance), clustered by '{}'".format(

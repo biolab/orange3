@@ -1324,6 +1324,20 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.setFont(font)
         self.__update_size_constraints()
 
+    def init_code_gen(self):
+        def run():
+            ow.set_distances(input_distances)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWHierarchicalClustering)
+        gen.add_init("ow", "OWHierarchicalClustering()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         annot = self.label_cb.currentText()
         if self.annotation_idx <= 1:

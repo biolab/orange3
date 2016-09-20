@@ -458,6 +458,20 @@ class OWConfusionMatrix(widget.OWWidget):
                 self._set_item(i + 2, n + 2, _sum_item(int(rowsum[i]), "l"))
             self._set_item(n + 2, n + 2, _sum_item(int(rowsum.sum())))
 
+    def init_code_gen(self):
+        def run():
+            ow.set_results(input_evaluation_results)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWConfusionMatrix)
+        gen.add_init("ow", "OWConfusionMatrix()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         """Send report"""
         if self.results is not None and self.selected_learner is not None:

@@ -189,6 +189,20 @@ class OWCalibrationPlot(widget.OWWidget):
     def _on_display_rug_changed(self):
         self._replot()
 
+    def init_code_gen(self):
+        def run():
+            ow.set_results(input_evaluation_results)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWCalibrationPlot)
+        gen.add_init("ow", "OWCalibrationPlot()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         if self.results is None:
             return

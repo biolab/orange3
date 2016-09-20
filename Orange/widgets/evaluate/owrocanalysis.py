@@ -614,6 +614,20 @@ class OWROCAnalysis(widget.OWWidget):
     def onDeleteWidget(self):
         self.clear()
 
+    def init_code_gen(self):
+        def run():
+            ow.set_results(input_evaluation_results)
+            ow.show()
+            ow.handleNewSignals()
+            qapp.exec_()
+
+        gen = self.code_gen(loadsettings=True, qapp=True)
+        gen.add_import(OWROCAnalysis)
+        gen.add_init("ow", "OWROCAnalysis()", iscode=True)
+        gen.set_widget(self)
+        gen.set_main(run)
+        return gen
+
     def send_report(self):
         if self.results is None:
             return
