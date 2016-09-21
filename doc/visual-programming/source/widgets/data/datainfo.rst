@@ -12,11 +12,11 @@ Signals
 
 -  **Data**
 
-A data set.
+   A data set.
 
 -  **Selected Data**
 
-A data subset.
+   A data subset.
 
 **Outputs**:
 
@@ -42,7 +42,7 @@ Example
 
 Below, we compare the basic statistics of two **Data Info** widgets - one
 with information on the entire data set and the other with
-information on the (manually) selected subset from the :doc:`Scatterplot<../visualize/scatterplot>`
+information on the (manually) selected subset from the :doc:`Scatterplot <../visualize/scatterplot>`
 widget. We used the *Iris* data set. 
 
 .. figure:: images/DataInfo-Example.png

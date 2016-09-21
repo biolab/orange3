@@ -12,13 +12,13 @@ Signals
 
 -  **Regression Tree**
 
-Regression tree
+   Regression tree
 
 **Outputs**:
 
 -  **Data**
 
-Data from a selected tree node
+   Data from a selected tree node
 
 Description
 -----------
@@ -48,14 +48,13 @@ This is a versatile widget with 2-D visualization of a `regression tree`_. The u
 Examples
 --------
 
-Below, is a simple schema, where we have read the data, constructed the regression tree and viewed it in our tree viewer. We loaded the *Housing* data set and limited the depth of the tree to only 4 levels because of the vastness of the data set. It is worth remembering that if both the viewer and :doc:`Regression Tree<../regression/regressiontree>` are open, any run of the tree induction algorithm will immediately affect the visualization. You can thus use this combination to explore how parameters of the induction algorithm influence the structure of the resulting tree.
+Below, is a simple schema, where we have read the data, constructed the regression tree and viewed it in our tree viewer. We loaded the *Housing* data set and limited the depth of the tree to only 4 levels because of the vastness of the data set. It is worth remembering that if both the viewer and :doc:`Regression Tree <../regression/regressiontree>` are open, any run of the tree induction algorithm will immediately affect the visualization. You can thus use this combination to explore how parameters of the induction algorithm influence the structure of the resulting tree.
 
 .. figure:: images/Regression-Tree-Example1.png
 
-Clicking on any node will output the related data instances. This is explored in the :doc:`Scatterplot<../visualize/scatterplot>`. Make sure that the tree data is passed as a data subset; this can be done by connecting the :doc:`Scatterplot<../visualize/scatterplot>` to the :doc:`File<../data/file>` widget first, and connecting it to the **Tree Viewer** widget next.
+Clicking on any node will output the related data instances. This is explored in the :doc:`Scatterplot <../visualize/scatterplot>`. Make sure that the tree data is passed as a data subset; this can be done by connecting the :doc:`Scatterplot <../visualize/scatterplot>` to the :doc:`File <../data/file>` widget first, and connecting it to the **Tree Viewer** widget next.
 
 .. figure:: images/Regression-Tree-Example2.png
 
 
 .. _regression tree: https://en.wikipedia.org/wiki/Decision_tree_learning
-.. _scatterplot: /widgets/visualize/scatterplot.html

@@ -11,11 +11,12 @@ Signals
 **Inputs**:
 
 -  **Data**
-A data set.
+
+   A data set.
 
 -  **Preprocessor**
 
-Preprocessed data.
+   Preprocessed data.
 
 **Outputs**:
 
@@ -25,15 +26,14 @@ A mean learning algorithm.
 
 -  **Predictor**
 
-A trained regressor. Signal *Predictor* sends the regressor only if signal
-*Data* is present.
+   A trained regressor. Signal *Predictor* sends the regressor only if signal *Data* is present.
 
 Description
 -----------
 
 This is the simplest learner widget for regression problems. It *learns*
 the mean of the class variable and returns a predictor with the same
-`mean value <https://en.wikipedia.org/wiki/Mean>`__. Due to its accuracy, this widget can
+`mean value <https://en.wikipedia.org/wiki/Mean>`_. Due to its accuracy, this widget can
 serve as a baseline for other regression models. 
 
 .. figure:: images/Mean-stamped.png
@@ -46,7 +46,7 @@ Examples
 --------
 
 In the first example, we use **Mean Learner** to construct a predictor
-and input it into the :doc:`Data Table<../data/datatable>`. We used the *Housing* data set. In the table, you can see an extra
+and input it into the :doc:`Data Table<../data/datatable>`. We used the *housing* data set. In the table, you can see an extra
 column *Mean Learner* with one (mean) value for all instances.
 
 .. figure:: images/mean-learner-example1.png

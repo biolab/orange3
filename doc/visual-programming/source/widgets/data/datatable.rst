@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-Attribute-valued data set.
+   Attribute-valued data set.
 
 **Outputs**:
 
 -  **Selected Data**
 
-Selected data instances.
+   Selected data instances.
 
 Description
 -----------
@@ -47,7 +47,7 @@ instances.
 Example
 -------
 
-We used two :doc:`File<../data/file>` widgets to read the *Iris* and *Glass* data set
+We used two :doc:`File <../data/file>` widgets to read the *Iris* and *Glass* data set
 (provided in Orange distribution), and send them to the **Data Table**
 widget.
 

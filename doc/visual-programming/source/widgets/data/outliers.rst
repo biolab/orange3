@@ -12,21 +12,21 @@ Signals
 
 -  **Data**
 
-A data set
+   A data set
 
 -  **Distances**
 
-A distance matrix
+   A distance matrix
 
 **Outputs**:
 
 -  **Outliers**
 
-A data set containing instances scored as outliers
+   A data set containing instances scored as outliers
 
 -  **Inliers**
 
-A data set containing instances not scored as outliers
+   A data set containing instances not scored as outliers
 
 Description
 -----------
@@ -70,8 +70,8 @@ Below, is a simple example of how to use this widget. We used the *Iris*
 data set to detect the outliers. We chose the *one class SVM with
 non-linear kernel (RBF)* method, with Nu set at 20% (less training
 errors, more support vectors). Then we observed the outliers in the
-:doc:`Data Table<../data/datatable>` widget, while we sent the inliers to the :doc:`Scatter
-Plot<../visualize/scatterplot>`.
+:doc:`Data Table <../data/datatable>` widget, while we sent the inliers to the :doc:`Scatter
+Plot <../visualize/scatterplot>`.
 
 .. figure:: images/Outliers-Example.png
  

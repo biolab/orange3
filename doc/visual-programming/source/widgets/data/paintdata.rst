@@ -9,15 +9,15 @@ use a brush to paint larger data sets.
 Signals
 -------
 
-**Inputs**:
+**Inputs**
 
 -  (None)
 
-**Outputs**:
+**Outputs**
 
 -  **Data**
 
-Attribute-valued data set created in the widget
+   Attribute-valued data set created in the widget
 
 Description
 -----------
@@ -36,7 +36,7 @@ supervised learning.
 2. Drawing tools. Paint data points with *Brush* (multiple data
    instances) or *Put* (individual data instance). Select data points
    with *Select* and remove them with the Delete/Backspace key. Reposition
-   data points with `Jitter <https://en.wikipedia.org/wiki/Jitter>`__
+   data points with `Jitter <https://en.wikipedia.org/wiki/Jitter>`_
    (spread) and *Magnet* (focus). Use *Zoom* and scroll to zoom in or
    out. Below, set the radius and intensity for Brush, Put, Jitter and
    Magnet tools.
@@ -47,15 +47,14 @@ supervised learning.
 6. Tick the box on the left to automatically commit changes to other
    widgets. Alternatively, press *Send* to apply them.
 
-
 Example
 -------
 
 In the example below, we have painted a data set with 4 classes. Such data set
 is great for demonstrating k-means and hierarchical clustering methods.
-In the screenshot, we see that k-means, overall, recognizes clusters
-better than hierarchical clustering. It returns a score rank, where the
-best score (the one with the highest value) means the most likely number
+In the screenshot, we see that :doc:`k-means <../unsupervised/kmeansclustering>`, overall, recognizes 
+clusters better than :doc:`hierarchical clustering <../unsupervised/hierarchicalclustering>`. 
+It returns a score rank, where the best score (the one with the highest value) means the most likely number
 of clusters. Hierarchical clustering, however, doesn’t group the right
 classes together. This is a great tool for learning and exploring
 statistical concepts.

@@ -32,7 +32,7 @@ Trained regressor.
 Description
 -----------
 
-`Random forest <https://en.wikipedia.org/wiki/Random_forest>`__ is an ensemble learning method used for classification, regression and other tasks. It was first proposed by Tin Kam Ho and further developed by Leo Breiman and Adele Cutler. 
+`Random forest <https://en.wikipedia.org/wiki/Random_forest>`_ is an ensemble learning method used for classification, regression and other tasks. It was first proposed by Tin Kam Ho and further developed by Leo Breiman and Adele Cutler. 
 When given a data set, **Random Forest** builds a set of regression trees. Each tree is developed from a bootstrap sample from the training data. When developing individual trees, an arbitrary subset of attributes is drawn (hence the term "Random") from which the best attribute for the split is selected. 
 
 .. figure:: images/RandomForestRegression-stamped.png
@@ -46,11 +46,11 @@ When given a data set, **Random Forest** builds a set of regression trees. Each 
 Example
 -------
 
-The example below compares different learnes, namely **Random Forest Regression**, :doc:`Linear Regression<../regression/linearregression>` and :doc:`Mean Learner<../regression/meanlearner>`, in the :doc:`Test&Score<../evaluation/testlearners>`widget. 
+The example below compares different learnes, namely **Random Forest Regression**, :doc:`Linear Regression <../regression/linear>` and :doc:`Mean Learner <../regression/mean>`, in the :doc:`Test&Score <../evaluation/testlearners>` widget. 
 
 .. figure:: images/RandomForestRegression-Example1.png
 
-In order to demonstrate how to use the *Predictor* output, we used the *Housing* data set and connected the *Random Forest Regression* widget with the :doc:`Predictions<../evaluation/predictions>` widget. The results are displayed in the appended data table. 
+In order to demonstrate how to use the *Predictor* output, we used the *Housing* data set and connected the *Random Forest Regression* widget with the :doc:`Predictions <../evaluation/predictions>` widget. The results are displayed in the appended data table. 
 
 .. figure:: images/RandomForestRegression-Example2.png
 

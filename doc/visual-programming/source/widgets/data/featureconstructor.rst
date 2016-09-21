@@ -28,18 +28,20 @@ into your data set. The new feature can be a computation of an existing
 one or a combination of several (addition, subtraction, etc.). You can
 choose what type of feature it will be (discrete, continuous or string)
 and what its parameters are (name, value, expression). For continuous
-variables you only have to construct an expression in Python. 
+variables you only have to construct an expression in Python.
+
 
 .. figure:: images/feature-constructor1-stamped.png
 
-   1. List of constructed variables 
-   2. Add or remove variables.   
-   3. New feature name
-   4. Expression in Python
-   5. Select a feature.
-   6. Select a function.
-   7. Produce a report. 
-   9. Press *Send* to communicate changes. 
+
+1. List of constructed variables 
+2. Add or remove variables.   
+3. New feature name
+4. Expression in Python
+5. Select a feature.
+6. Select a function.
+7. Produce a report.
+8. Press *Send* to communicate changes. 
 
 For discrete variables, however, there's a bit more work. First add or
 remove the values you want for the new feature. Then select the base
@@ -50,17 +52,19 @@ lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the
 other values. Notice that we use an underscore for the feature name
 (e.g. petal\_length).
 
+
 .. figure:: images/feature-constructor2-stamped.png
 
-   1. List of variable definitions 
-   2. Add or remove variables 
-   3. New feature name
-   4. Expression in Python
-   5. Select a feature.
-   6. Select a function.
-   7. Assign values. 
-   8. Produce a report. 
-   9. Press *Send* to communicate changes. 
+
+1. List of variable definitions 
+2. Add or remove variables 
+3. New feature name
+4. Expression in Python
+5. Select a feature.
+6. Select a function.
+7. Assign values. 
+8. Produce a report. 
+9. Press *Send* to communicate changes. 
 
 Example
 -------

@@ -12,24 +12,24 @@ Signals
 
 -  **Data**
 
-A data set
+   A data set
 
 -  **Preprocessor**
 
-Preprocessed data.
+   Preprocessed data.
 
 **Outputs**:
 
 -  **Learner**
 
-A classification tree learning algorithm with settings as specified in
-the dialog.
+   A classification tree learning algorithm with settings as specified in
+   the dialog.
 
 -  **Classification Tree**
 
-A trained classifier (a subtype of Classifier). The signal *Classification
-Tree* sends data only if the learning data (signal **Classified Data**)
-is present.
+   A trained classifier (a subtype of Classifier). The signal *Classification
+   Tree* sends data only if the learning data (signal **Classified Data**)
+   is present.
 
 Description
 -----------
@@ -37,14 +37,13 @@ Description
 .. figure:: images/ClassificationTree-stamped.png
 
 1. The learner can be given a name under which it will appear in other
-   widgets. The default name is “Classification Tree”.
+   widgets. The default name is "Classification Tree".
 
 2. In *Feature selection*, you can choose a measure for split selection:
 
-   -  `Entropy <http://www.saedsayad.com/decision_tree.htm>`__
+   -  `Entropy <http://www.saedsayad.com/decision_tree.htm>`_
       (measure of homogeneity)
-   -  `Gini
-      index <https://en.wikipedia.org/wiki/Gini_coefficient>`__
+   -  `Gini index <https://en.wikipedia.org/wiki/Gini_coefficient>`_
       (measure of dispersion)
 
 3. *Pruning* criteria:
@@ -69,7 +68,7 @@ Examples
 There are two typical uses for this widget. First, you may want to
 induce a model and check what it looks like. You do it with the schema
 below; to learn more about it, see the documentation on
-:doc:`Classification Tree Viewer <\classificationtreeviewer>`.
+:doc:`Classification Tree Viewer <classificationtreeviewer>`.
 
 .. figure:: images/ClassificationTreeViewer-SimpleSchema.png
 

@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-An input data set.
+   An input data set.
 
 **Outputs**:
 
 -  **Reduced Data**
 
-A data set whith selected attributes.
+   A data set whith selected attributes.
 
 Description
 -----------
@@ -40,12 +40,12 @@ Scoring methods
 ---------------
 
 1. Information Gain: the expected amount of information (reduction of entropy)
-2. Gain Ratio <https://en.wikipedia.org/wiki/Information_gain_ratio_: a ratio of the information gain and the attribute's intrinsic information, which reduces the bias towards multivalued features that occurs in information gain
-3. Gini <https://en.wikipedia.org/wiki/Gini_coefficient>_: the inequality among values of a frequency distribution
-4. ANOVA https://en.wikipedia.org/wiki/One-way_analysis_of_variance_: the difference between average vaules of the feature in different classes
-5. Chi2 <https://en.wikipedia.org/wiki/Chi-squared_distribution>_: dependence between the feature and the class as measure by the chi-square statistice
-6. ReliefF <https://en.wikipedia.org/wiki/Relief_(feature_selection)>_: the ability of an attribute to distinguish between classes on similar data instances
-7. FCBF (Fast Correlation Based Filter) <https://www.aaai.org/Papers/ICML/2003/ICML03-111.pdf>_: entropy-based measure, which also identifies redundancy due to pairwise correlations between features
+2. `Gain Ratio <https://en.wikipedia.org/wiki/Information_gain_ratio>`_: a ratio of the information gain and the attribute's intrinsic information, which reduces the bias towards multivalued features that occurs in information gain
+3. `Gini <https://en.wikipedia.org/wiki/Gini_coefficient>`_: the inequality among values of a frequency distribution
+4. `ANOVA <https://en.wikipedia.org/wiki/One-way_analysis_of_variance>`_: the difference between average vaules of the feature in different classes
+5. `Chi2 <https://en.wikipedia.org/wiki/Chi-squared_distribution>`_: dependence between the feature and the class as measure by the chi-square statistice
+6. `ReliefF <https://en.wikipedia.org/wiki/Relief_(feature_selection)>`_: the ability of an attribute to distinguish between classes on similar data instances
+7. `FCBF (Fast Correlation Based Filter) <https://www.aaai.org/Papers/ICML/2003/ICML03-111.pdf>`_: entropy-based measure, which also identifies redundancy due to pairwise correlations between features
 
 Example: Attribute Ranking and Selection
 ----------------------------------------
@@ -69,7 +69,7 @@ first split the data into a training set and a test set. In the upper branch, th
 training data passes through the **Rank** widget to select the most
 informative attributes, while in the lower branch there is no feature
 selection. Both feature selected and original data sets are passed to
-their own :doc:`Test&Score<../evaluate/testlearners>` widgets, which develop a *Naive Bayes*
+their own :doc:`Test & Score <../evaluation/testlearners>` widgets, which develop a *Naive Bayes*
 classifier and score it on a test set.
 
 .. figure:: images/Rank-and-Test.png

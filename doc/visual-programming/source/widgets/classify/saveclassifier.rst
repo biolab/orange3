@@ -12,7 +12,7 @@ Signals
 
 -  **Classifier**
 
-A classifier with selected parameters
+   A classifier with selected parameters
 
 **Outputs**:
 
@@ -37,7 +37,7 @@ Example
 
 When you want to save a custom-set classifier, select the desired
 parameters in the classification widget and connect it to :doc:`Save
-Classifier<../classify/saveclassifier>`. Name the classifier; load it later into workflows with
+Classifier <../classify/saveclassifier>`. Name the classifier; load it later into workflows with
 data sets containing compatible attributes.
 
 .. figure:: images/SaveClassifier-Example.png

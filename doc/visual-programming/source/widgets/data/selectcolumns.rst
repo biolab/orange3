@@ -12,20 +12,19 @@ Signals
 
 -  **Data**
 
-Attribute-valued data set.
+   Attribute-valued data set.
 
 **Outputs**:
 
 -  **Data**
 
-Attribute-valued data set composed using the domain specification from
-the widget.
+   Attribute-valued data set composed using the domain specification from
+   the widget.
 
 Description
 -----------
 
-The **Select Columns** widget is used to manually compose your `data
-domain <https://en.wikipedia.org/wiki/Data_domain>`__. The user can decide
+The **Select Columns** widget is used to manually compose your `data domain <https://en.wikipedia.org/wiki/Data_domain>`_. The user can decide
 which attributes will be used and how. Orange distinguishes between
 ordinary attributes, (optional) class attributes and meta attributes.
 For instance, for building a classification model, the domain would be
@@ -55,11 +54,11 @@ before the name of the attribute (D, C, S, respectively).
 Examples
 --------
 
-In the workflow below, the *Iris* data from the :doc:`File<../data/file>` widget is fed into
+In the workflow below, the *Iris* data from the :doc:`File <../data/file>` widget is fed into
 the **Select Columns** widget, where we select to output only two
 attributes (namely petal width and petal length). We view both the
 original data set and the data set with selected columns in the :doc:`Data
-Table<../data/datatable>` widget.
+Table <../data/datatable>` widget.
 
 .. figure:: images/SelectColumns-Example1.png 
 

@@ -12,17 +12,17 @@ Signals
 
 -  **Data**
 
-Data set.
+   Data set.
 
 **Outputs**:
 
 -  **Matching Data**
 
-Instances that match the conditions.
+   Instances that match the conditions.
 
 -  **Non-Matching Data**
 
-Instances that do not match the conditions.
+   Instances that do not match the conditions.
 
 Description
 -----------
@@ -60,17 +60,17 @@ change in the composition of the condition or any of its terms.
 Example
 -------
 
-In the workflow below, we used the *Zoo* data from the :doc:`File<../data/file>` widget and
+In the workflow below, we used the *Zoo* data from the :doc:`File <../data/file>` widget and
 fed it into the **Select Rows** widget. In the widget, we chose to output only
 two animal types, namely fish and reptiles. We can inspect both the
 original data set and the data set with selected rows in the :doc:`Data
-Table<../data/datatable>` widget.
+Table <../data/datatable>` widget.
 
 .. figure:: images/SelectRows-Example.png 
 
 In the next example, we used the data from the *Titanic* data set and
-similarly fed it into the :doc:`Box Plot<../visualize/boxplot>` widget. We first observed the
-entire data set based on survival. Then we selected only first class passengers in the **Select Rows** widget and fed it again into the :doc:`Box Plot<../visualize/boxplot>`.
+similarly fed it into the :doc:`Box Plot <../visualize/boxplot>` widget. We first observed the
+entire data set based on survival. Then we selected only first class passengers in the **Select Rows** widget and fed it again into the :doc:`Box Plot <../visualize/boxplot>`.
 There we could see all the first class passengers listed by their survival rate and grouped by gender. 
 
 .. figure:: images/SelectRows-Workflow.png

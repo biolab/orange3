@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-A data set.
+   A data set.
 
 **Outputs**:
 
@@ -38,7 +38,7 @@ name is set or the user pushes the *Save* button.
 Example
 -------
 
-In the workflow below, we used the *Zoo* data set. We loaded the data into the :doc:`Scatter Plot<../visualize/scatterplot>` widget, with which
+In the workflow below, we used the *Zoo* data set. We loaded the data into the :doc:`Scatter Plot <../visualize/scatterplot>` widget, with which
 we selected a subset of data instances and pushed them to the
 **Save Data** widget to store them in a file.
 

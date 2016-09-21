@@ -12,18 +12,18 @@ Signals
 
 -  **Data**
 
-Input data set to be sampled.
+   Input data set to be sampled.
 
 **Outputs**:
 
 -  **Data Sample**
 
-A set of sampled data instances.
+   A set of sampled data instances.
 
 -  **Remaining Data**
 
-All other data instances from the input data set, which are not included in
-the sample.
+   All other data instances from the input data set, which are not included in
+   the sample.
 
 Description
 -----------
@@ -45,8 +45,7 @@ provided and *Sample Data* is pressed.
       with a chance to set *Sample with replacement*, which always samples
       from the entire data set (does not subtract instances already in
       the subset)
-   -  `Cross
-      Validation <https://en.wikipedia.org/wiki/Cross-validation_(statistics)>`__
+   -  `Cross Validation <https://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_
       partitions data instances into complementary subsets, where you can
       select the number of folds (subsets) and which fold you want to
       use as a sample. 
@@ -62,17 +61,17 @@ Examples
 --------
 
 First, let's see how the **Data Sampler** works. Let's look at the
-information on the original data set in the :doc:`Data Info<../data/datainfo>` widget. We see
+information on the original data set in the :doc:`Data Info <../data/datainfo>` widget. We see
 there are 24 instances in the data (we used *lenses.tab*). We sampled
 the data with the **Data Sampler** widget and we chose to go with a fixed
 sample size of 5 instances for simplicity. We can observe the sampled
-data in the :doc:`Data Table<../data/datatable>` widget. The second :doc:`Data Table<../data/datatable>` shows the
+data in the :doc:`Data Table <../data/datatable>` widget. The second :doc:`Data Table <../data/datatable>` shows the
 remaining 19 instances that weren't in the sample.
 
 .. figure:: images/DataSampler-Example1.png 
 
 In the workflow below, we have sampled 10 data instances from the *Iris*
-data set and sent the original data and the sample to :doc:`Scatter Plot<../visualize/scatterplot>`
+data set and sent the original data and the sample to :doc:`Scatter Plot <../visualize/scatterplot>`
 widget for exploratory data analysis. The sampled data instances are plotted
 with filled circles, while the original data set is represented with
 empty circles.

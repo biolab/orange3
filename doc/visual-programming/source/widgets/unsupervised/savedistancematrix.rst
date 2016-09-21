@@ -12,7 +12,7 @@ Signals
 
 -  **Distances**
 
-A distance matrix. 
+   A distance matrix. 
 
 **Outputs**:
 
@@ -30,8 +30,7 @@ Description
 Example
 -------
 
-In the snapshot below, we used the :doc:`Distance Transformation<../unsupervised/distancetransformation>` widget to transform the distances in the *Iris* data set. We then chose to save the transformed version to our computer, so we could use it later on. We decided to output all data instances. You can choose to output just a minor subset of the data matrix. Pairs are marked automatically. 
-If you wish to know what happened to our changed file, go :doc:`here<../unsupervised/distancefile>`
+In the snapshot below, we used the :doc:`Distance Transformation <../unsupervised/distancetransformation>` widget to transform the distances in the *Iris* data set. We then chose to save the transformed version to our computer, so we could use it later on. We decided to output all data instances. You can choose to output just a minor subset of the data matrix. Pairs are marked automatically. 
+If you wish to know what happened to our changed file, go :doc:`here <../unsupervised/distancefile>`
 
 .. figure:: images/SaveDistanceMatrix-Example.png
-

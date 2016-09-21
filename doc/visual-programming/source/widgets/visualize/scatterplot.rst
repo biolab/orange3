@@ -13,26 +13,26 @@ Signals
 
 -  **Data**
 
-An input data set.
+   An input data set.
 
 -  **Data Subset**
 
-A subset of instances from the input data set.
+   A subset of instances from the input data set.
 
 -  **Features**
 
-A list of attributes.
+   A list of attributes.
 
 **Outputs**:
 
 -  **Selected Data**
 
-A subset of instances that the user manually selected from the
-scatterplot.
+   A subset of instances that the user manually selected from the
+   scatterplot.
 
 -  **Unselected Data**
 
-All other data (instances not included in the user's selection).
+   All other data (instances not included in the user's selection).
 
 Description
 -----------
@@ -53,7 +53,7 @@ the left side of the widget. A snapshot below shows the scatterplot of the
    Projections**. This feature scores attribute pairs by average
    classification accuracy and returns the top scoring pair with a
    simultaneous visualization update. Set
-   `jittering <https://en.wikipedia.org/wiki/Jitter>`__ to prevent the
+   `jittering <https://en.wikipedia.org/wiki/Jitter>`_ to prevent the
    dots overlapping. If *Jitter continuous values* is ticked, continuous
    instances will be dispersed.
 2. Set the color of the displayed points (you will get colors for discrete
@@ -123,7 +123,7 @@ chosen rectangular area. *Pan* enables you to move the scatterplot
 around the pane. With *Zoom* you can zoom in and out of the pane with a
 mouse scroll, while *Reset zoom* resets the visualization to its optimal
 size. An example of a simple schema, where we selected data instances
-from a rectangular region and sent them to the :doc:`Data Table<../data/datatable>` widget, is
+from a rectangular region and sent them to the :doc:`Data Table <../data/datatable>` widget, is
 shown below. Notice that the scatterplot doesn't show all 52 data
 instances, because some data instances overlap (they have the same
 values for both attributes used).
@@ -135,7 +135,7 @@ Example
 
 The **Scatterplot** can be combined with any widget that outputs a list of
 selected data instances. In the example below, we combine
-:doc:`Classification Tree<../classify/classificationtree>` and **Scatterplot** to display instances taken
+:doc:`Classification Tree <../classify/classificationtree>` and **Scatterplot** to display instances taken
 from a chosen classification tree node (clicking on any node of the
 classification tree will send a set of selected data instances to the
 scatterplot and mark selected instances with filled symbols).

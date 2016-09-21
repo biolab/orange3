@@ -12,18 +12,17 @@ Signals
 
 -  **Distances**
 
-A distance matrix.
+   A distance matrix.
 
 **Outputs**:
 
 -  **Distances**
 
-A distance matrix.
+   A distance matrix.
 
 -  **Table**
 
-Distance measures in a distance matrix.
-
+   Distance measures in a distance matrix.
 
 Description
 -----------
@@ -37,8 +36,8 @@ The **Distance Matrix** widget creates a distance matrix, which is a two-dimensi
 3. Produce a report.
 4. Click *Send* to communicate changes to other widgets. Alternatively, tick the box in front of the *Send* button and changes will be communicated automatically (*Send Automatically*). 
 
-The only two suitable inputs for **Distance Matrix** are the :doc:`Distances<../unsupervised/distances>`
-widget and the :doc:`Distance Transformation<../unsupervised/distancetransformation>` widget. The output of the widget is a data table containing the distance matrix. The user can decide how to label the table and the distance matrix (or instances in the distance matrix) can then be visualized or displayed in a separate data table. 
+The only two suitable inputs for **Distance Matrix** are the :doc:`Distances <../unsupervised/distances>`
+widget and the :doc:`Distance Transformation <../unsupervised/distancetransformation>` widget. The output of the widget is a data table containing the distance matrix. The user can decide how to label the table and the distance matrix (or instances in the distance matrix) can then be visualized or displayed in a separate data table. 
 
 Example
 --------
@@ -47,6 +46,3 @@ The example below displays a very standard use of the **Distance Matrix**
 widget. We compute the distances between rows in the sample from the *Iris* data set and output them in the **Distance Matrix**. It comes as no surprise that Iris Virginica and Iris Setosa are the furthest apart. 
 
 .. figure:: images/DistanceMatrix-Example.png
-
-
-

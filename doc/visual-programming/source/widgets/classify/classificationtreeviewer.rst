@@ -12,19 +12,20 @@ Signals
 
 -  **Classification Tree**
 
-A classification tree.
+   A classification tree.
 
 **Outputs**:
 
 -  **Data**
 
-Data from a selected tree node.
+   Data from a selected tree node.
 
 Description
 -----------
 
 This is a versatile widget with 2-D visualization of a `classification
-tree`_. The user can select a node, instructing the widget to output the
+tree <https://en.wikipedia.org/wiki/Decision_tree_learning>`_. The user 
+can select a node, instructing the widget to output the
 data associated with the node, thus enabling explorative data analysis.
 
 .. figure:: images/ClassificationTreeViewer-stamped.png
@@ -50,6 +51,7 @@ data associated with the node, thus enabling explorative data analysis.
    -  Define the target class, which you can change based on classes in the data. 
 
 3. Press *Save image* to save the created classification tree graph to your computer as a *.svg* or *.png* file. 
+
 4. Produce a report. 
 
 Examples
@@ -57,7 +59,7 @@ Examples
 
 Below, is a simple schema, where we have read the data, constructed the
 classification tree and viewed it in our tree viewer. If both the viewer
-and :doc:`Classification Tree<../classify/classificationtree>` are open, any run of the tree induction
+and :doc:`Classification Tree <../classify/classificationtree>` are open, any run of the tree induction
 algorithm will immediately affect the visualization. You can thus use
 this combination to explore how the parameters of the induction algorithm
 influence the structure of the resulting tree.
@@ -66,13 +68,9 @@ influence the structure of the resulting tree.
 
 Clicking on any node will output the related data instances. This is
 explored in the schema below that shows the subset in the data table and
-in the :doc:`Scatterplot<../visualize/scatterplot>`. Make sure that the tree data is
+in the :doc:`Scatterplot <../visualize/scatterplot>`. Make sure that the tree data is
 passed as a data subset; this can be done by connecting the
-:doc:`Scatterplot<../visualize/scatterplot>` to the :doc:`File<../data/file>` widget first, and connecting it to the
-**Tree Viewer** widget next.
+**Scatterplot** to the :doc:`File <../data/file>` widget first, and connecting it to the
+**Classification Tree Viewer** widget next.
 
 .. figure:: images/ClassificationTreeViewer-Interaction.png
-
-
-.. _classification tree: https://en.wikipedia.org/wiki/Decision_tree_learning
-.. _scatterplot: /widgets/visualize/scatterplot.html

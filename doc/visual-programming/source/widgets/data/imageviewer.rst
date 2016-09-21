@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-A data set with images.
+   A data set with images.
 
 **Outputs**:
 
 -  **Data**
 
-Images that come with the data.
+   Images that come with the data.
 
 Description
 -----------
@@ -43,7 +43,7 @@ handwriting).
 Examples
 --------
 
-A very simple way to use this widget is to connect the :doc:`File<../data/file>` widget with
+A very simple way to use this widget is to connect the :doc:`File <../data/file>` widget with
 **Image Viewer** and see all the images that come with your data set.
 
 .. figure:: images/image-viewer-example1.png

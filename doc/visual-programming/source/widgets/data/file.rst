@@ -17,7 +17,7 @@ Signals
 
 -  **Data**
 
-Attribute-valued data from the input file
+   Attribute-valued data from the input file
 
 Description
 -----------
@@ -48,7 +48,7 @@ Example
 
 Most Orange workflows would probably start with the **File** widget. In
 the schema below, the widget is used to read the data that is sent to
-both the :doc:`Data Table<../data/datatable>` and the :doc:`Box Plot<../visualize/boxplot>` widget.
+both the :doc:`Data Table <../data/datatable>` and the :doc:`Box Plot <../visualize/boxplot>` widget.
 
 .. figure:: images/File-Workflow.png
 
@@ -56,13 +56,13 @@ Loading your data
 -----------------
 
 -  Orange can import any comma, .xlsx or tab-delimited data file or URL. Use the
-   :doc:`File widget<../data/file>` and then, if needed, select class and meta attributes. 
+   :doc:`File widget <../data/file>` and then, if needed, select class and meta attributes. 
 -  To specify the domain and the type of the attribute, attribute names
    can be preceded with a label followed by a hash. Use c for class and
    m for meta attribute, i to ignore a column, and C, D, S for
    continuous, discrete and string attribute types. Examples: C#mpg,
    mS#name, i#dummy. Make sure to set **Import Options** in
-   :doc:`File<../data/file>` widget and set the header to **Orange simplified header**.
+   :doc:`File <../data/file>` widget and set the header to **Orange simplified header**.
 -  Orange's native format is a tab-delimited text file with three header
    rows. The first row contains attribute names, the second the type
    (**continuous**, **discrete** or **string**), and the third the
@@ -70,8 +70,4 @@ Loading your data
 
 .. figure:: images/spreadsheet-simple-head1.png
 
-Read more on loading your data
-:doc:`here <../../loading-your-data/index>`.
-
-
-
+Read more on loading your data :doc:`here <../../loading-your-data/index>`.

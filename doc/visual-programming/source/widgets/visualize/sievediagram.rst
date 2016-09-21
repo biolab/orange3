@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-An input data set
+   An input data set
 
 **Outputs**:
 
@@ -21,7 +21,7 @@ An input data set
 Description
 -----------
 
-A **Sieve diagram** is a graphical method for visualizing frequencies in a two-way contingency table and comparing them to `expected frequencies <http://cnx.org/contents/d396c4ad-2fd7-47cd-be84-152b44880feb@2/What-is-an-expected-frequency>`__ under assumption of independence. It was proposed by
+A **Sieve diagram** is a graphical method for visualizing frequencies in a two-way contingency table and comparing them to `expected frequencies <http://cnx.org/contents/d396c4ad-2fd7-47cd-be84-152b44880feb@2/What-is-an-expected-frequency>`_ under assumption of independence. It was proposed by
 Riedwyl and Schüpbach in a technical report in 1983 and later called a
 parquet diagram (Riedwyl and Schüpbach, 1994). In this display, the area
 of each rectangle is proportional to the expected frequency, while the
@@ -59,7 +59,7 @@ Example
 -------
 
 Below, we see a simple schema using the *Titanic* data set, where we use the
-:doc:`Rank<../data/rank>` widget to select the best attributes (the ones with the highest
+:doc:`Rank <../data/rank>` widget to select the best attributes (the ones with the highest
 information gain, gain ratio or gini index) and feed them into the **Sieve
 Diagram**. This displays the sieve plot for the two best attributes,
 which in our case are sex and status. We see that the survival rate on the

@@ -13,7 +13,7 @@ Signals
 
 -  **Evaluation Results**
 
-Results of testing classification algorithms.
+   Results of testing classification algorithms.
 
 **Outputs**:
 
@@ -22,8 +22,7 @@ Results of testing classification algorithms.
 Description
 -----------
 
-The `Calibration
-Plot <https://en.wikipedia.org/wiki/Calibration_curve>`__ plots class
+The `Calibration Plot <https://en.wikipedia.org/wiki/Calibration_curve>`_ plots class
 probabilities against those predicted by the classifier(s).
 
 .. figure:: images/CalibrationPlot-stamped.png
@@ -38,15 +37,15 @@ Example
 -------
 
 At the moment, the only widget which gives the right type of signal
-needed by the **Calibration Plot** is :doc:`Test&Score<../evaluation/testlearners>`. The Calibration
+needed by the **Calibration Plot** is :doc:`Test&Score <../evaluation/testlearners>`. The Calibration
 Plot will hence always follow Test&Score and, since it has no
 outputs, no other widgets follow it.
 
 Here is a typical example, where we compare three classifiers (namely
-:doc:`Naive Bayes<../classify/naivebayes>`, :doc:`Classification Tree<../classify/classificationtree>` and :doc:`Majority<../classify/majority>`) and input
-them into :doc:`Test&Score<../evaluation/testlearners>`. We used the *Titanic* data set. Test&Score then displays evaluation
+:doc:`Naive Bayes<../classify/naivebayes>`, :doc:`Classification Tree <../classify/classificationtree>` and :doc:`Majority <../classify/majority>`) and input
+them into :doc:`Test&Score <../evaluation/testlearners>`. We used the *Titanic* data set. Test&Score then displays evaluation
 results for each classifier. Then we draw **Calibration Plot** and :doc:`ROC
-Analysis<../evaluation/rocanalysis>` widgets from Test&Score to further analyze the performance
+Analysis <../evaluation/rocanalysis>` widgets from Test&Score to further analyze the performance
 of classifiers. **Calibration Plot** enables you to see prediction accuracy
 of class probabilities in a plot.
 

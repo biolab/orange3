@@ -12,18 +12,17 @@ Signals
 
 -  **Tree**
 
-A classification or regression tree model.
+   A classification or regression tree model.
 
 - **Selected Data**
 
-A subset of instances that the user has manually selected from the Pythagorean tree.
+   A subset of instances that the user has manually selected from the Pythagorean tree.
 
 Description
 -----------
 
-**Pythagorean Trees** are plane fractals that can be used to depict general tree hierarchies as presented in an article by `Fabian Beck and co-authors
-<http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In our case, they are used for visualizing and exploring tree models, such as 
-:doc:`Classification Tree<../classify/classificationtree>`.
+**Pythagorean Trees** are plane fractals that can be used to depict general tree hierarchies as presented in an article by `Fabian Beck and co-authors <http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In our case, they are used for visualizing and exploring tree models, such as 
+:doc:`Classification Tree <../classify/classificationtree>`.
 
 .. figure:: images/Pythagorean-Tree1-stamped.png
 
@@ -55,7 +54,7 @@ Example
 -------
 
 The workflow from the screenshot below demonstrates the difference between 
-:doc:`Classification Tree Viewer<../classify/classificationtreeviewer>` and Pythagorean Tree. They can both visualize :doc:`Classification Tree<../classify/classificationtree>`, but Pythagorean visualization takes less space and is more compact, even for a small 
+:doc:`Classification Tree Viewer <../classify/classificationtreeviewer>` and Pythagorean Tree. They can both visualize :doc:`Classification Tree <../classify/classificationtree>`, but Pythagorean visualization takes less space and is more compact, even for a small 
 `Iris flower <https://en.wikipedia.org/wiki/Iris_flower_data_set>`_
 data set. For both visualization widgets, we have hidden the control area on the left by clicking on the splitter between control and visualization area.
 
@@ -74,5 +73,4 @@ The selected data instances are shown as a subset in the :doc:`Scatter Plot <../
 References
 ----------
 
-Beck, F., Burch, M., Munz, T., Di Silvestro, L. and Weiskopf, D. (2014). `Generalized Pythagoras Trees for Visualizing Hierarchies
-<http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In IVAPP '14 Proceedings of the 5th International Conference on Information Visualization Theory and Applications, 17-28.
+Beck, F., Burch, M., Munz, T., Di Silvestro, L. and Weiskopf, D. (2014). `Generalized Pythagoras Trees for Visualizing Hierarchies <http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In IVAPP '14 Proceedings of the 5th International Conference on Information Visualization Theory and Applications, 17-28.

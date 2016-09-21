@@ -13,32 +13,31 @@ Signals
 
 -  **Distances**
 
-A distance matrix
+   A distance matrix
 
 -  **Data**
 
-A data set
+   A data set
 
 **Outputs**:
 
 -  **Data**
 
-A data set with MDS coordinates.
+   A data set with MDS coordinates.
 
 -  **Data subset**
 
-Selected data
+   Selected data
 
 Description
 -----------
 
-`Multidimensional
-scaling <https://en.wikipedia.org/wiki/Multidimensional_scaling>`__ is a
+`Multidimensional scaling <https://en.wikipedia.org/wiki/Multidimensional_scaling>`_ is a
 technique which finds a low-dimensional (in our case a two-dimensional)
 projection of points, where it tries to fit distances between points as
 well as possible. The perfect fit is typically impossible to obtain
 since the data is high-dimensional or the distances are not
-`Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`__.
+`Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_.
 
 In the input, the widget needs either a data set or a matrix of
 distances. When visualizing distances between rows, you can also adjust
@@ -97,16 +96,16 @@ corresponds to the sum of forces acting on it.
 7. Produce a report. 
 
 The MDS graph performs many of the functions of the Visualizations
-widget. It is in many respects similar to the :doc:`Scatter Plot<../visualize/scatterplot>` widget, so we
+widget. It is in many respects similar to the :doc:`Scatter Plot <../visualize/scatterplot>` widget, so we
 recommend reading that widget's description as well.
 
 Example
 -------
 
 The above graphs were drawn using the following simple schema. We used the *iris.tab* data set. Using the
-:doc:`Distances<../unsupervised/distances>` widget we input the distance matrix into the **MDS**
+:doc:`Distances <../unsupervised/distances>` widget we input the distance matrix into the **MDS**
 widget, where we see the *Iris* data displayed in a 2-dimensional plane.
-We can see the appended coordinates in the :doc:`Data Table<../data/datatable>` widget.
+We can see the appended coordinates in the :doc:`Data Table <../data/datatable>` widget.
 
 .. figure:: images/MDS-Example.png
 
@@ -115,4 +114,4 @@ References
 
 Wickelmaier, F. (2003). An Introduction to MDS. Sound Quality Research
 Unit, Aalborg University. Available
-`here <https://homepages.uni-tuebingen.de/florian.wickelmaier/pubs/Wickelmaier2003SQRU.pdf>`__.
+`here <https://homepages.uni-tuebingen.de/florian.wickelmaier/pubs/Wickelmaier2003SQRU.pdf>`_.

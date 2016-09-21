@@ -46,7 +46,6 @@ Data
    widgets/data/color
 
 
-
 Visualize
 ---------
 
@@ -57,7 +56,7 @@ Visualize
    widgets/visualize/distributions
    widgets/visualize/heatmap
    widgets/visualize/scatterplot
-   widgets/visualize/venn-diagram
+   widgets/visualize/venndiagram
    widgets/visualize/linearprojection
    widgets/visualize/scattermap
    widgets/visualize/sievediagram
@@ -117,13 +116,11 @@ Unsupervised
    widgets/unsupervised/distancematrix
    widgets/unsupervised/distancetransformation
    widgets/unsupervised/distancefile
-   widgets/usnupervised/savedistancematrix
+   widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeansclustering
    widgets/unsupervised/mds
    
-
-
 
 Evaluation
 ----------
