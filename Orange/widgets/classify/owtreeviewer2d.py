@@ -232,10 +232,32 @@ class TreeGraphicsView(QGraphicsView):
     def __init__(self, scene, *args):
         super().__init__(scene, *args)
         self.viewport().setMouseTracking(True)
+        self.viewport().setAttribute(Qt.WA_AcceptTouchEvents)
         self.setFocusPolicy(Qt.WheelFocus)
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.TextAntialiasing)
         self.setRenderHint(QPainter.HighQualityAntialiasing)
+
+        self.total_scale_factor = 1.
+
+    def viewportEvent(self, event):
+        if event.type() in [QEvent.TouchBegin, QEvent.TouchUpdate, QEvent.TouchEnd]:
+            touch_points = event.touchPoints()
+            if len(touch_points) == 2:
+                tp0, tp1 = touch_points
+                current_scale_factor = (QLineF(tp0.pos(), tp1.pos()).length() /
+                                        QLineF(tp0.startPos(), tp1.startPos()).length())
+                if not 0.8 < current_scale_factor < 1.2:
+                    if event.touchPointStates() & Qt.TouchPointReleased:
+                            self.total_scale_factor *= current_scale_factor
+                            current_scale_factor = 1
+
+                    self.setTransform(QTransform().scale(self.total_scale_factor * current_scale_factor,
+                                                         self.total_scale_factor * current_scale_factor))
+                    return True
+
+        return super().viewportEvent(event)
+
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
