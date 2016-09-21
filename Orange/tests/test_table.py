@@ -8,7 +8,7 @@ from math import isnan
 import random
 
 from unittest.mock import Mock, MagicMock, patch
-from scipy.sparse import csr_matrix, issparse
+import scipy.sparse as sp
 import numpy as np
 
 from Orange import data
@@ -651,7 +651,7 @@ class TableTestCase(unittest.TestCase):
 
     def test_copy_sparse(self):
         t = data.Table('iris')
-        t.X = csr_matrix(t.X)
+        t.X = sp.csr_matrix(t.X)
         copy = t.copy()
 
         self.assertEqual((t.X != copy.X).nnz, 0)      # sparse matrices match by content
@@ -1749,23 +1749,68 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assert_table_with_filter_matches(
             new_table, self.table[:0], xcols=order, ycols=order, mcols=order)
 
-    def test_from_table_on_sparse_data(self):
+    def test_from_table_sparse_move_some_to_empty_metas(self):
         iris = data.Table("iris")
-        iris.X = csr_matrix(iris.X)
-
+        iris.X = sp.csr_matrix(iris.X)
         new_domain = data.domain.Domain(iris.domain.attributes[:2], iris.domain.class_vars,
-                                        iris.domain.metas, source=iris.domain)
+                                        iris.domain.attributes[2:], source=iris.domain)
         new_iris = data.Table.from_table(new_domain, iris)
-        self.assertTrue(issparse(new_iris.X))
-        self.assertEqual(new_iris.X.shape[1], 2)
-        self.assertEqual(len(new_iris.domain.attributes), 2)
 
-        all_vars = chain(iris.domain.variables, iris.domain.metas)
-        n_all = len(iris.domain) + len(iris.domain.metas)
-        new_domain = data.domain.Domain([], [], all_vars, source=iris.domain)
+        self.assertTrue(sp.issparse(new_iris.X))
+        self.assertTrue(sp.issparse(new_iris.metas))
+        self.assertEqual(new_iris.X.shape, (len(iris), 2))
+        self.assertEqual(new_iris.metas.shape, (len(iris), 2))
+
+        # move back
+        back_iris = data.Table.from_table(iris.domain, new_iris)
+        self.assertEqual(back_iris.domain, iris.domain)
+        self.assertTrue(sp.issparse(back_iris.X))
+        self.assertTrue(sp.issparse(back_iris.metas))
+        self.assertEqual(back_iris.X.shape, iris.X.shape)
+        self.assertEqual(back_iris.metas.shape, iris.metas.shape)
+
+    def test_from_table_sparse_move_all_to_empty_metas(self):
+        iris = data.Table("iris")
+        iris.X = sp.csr_matrix(iris.X)
+        new_domain = data.domain.Domain([], iris.domain.class_vars,
+                                        iris.domain.attributes, source=iris.domain)
         new_iris = data.Table.from_table(new_domain, iris)
-        self.assertEqual(len(new_iris.domain.metas), n_all)
-        self.assertEqual(new_iris.metas.shape[1], n_all)
+        
+        self.assertTrue(sp.issparse(new_iris.X))
+        self.assertTrue(sp.issparse(new_iris.metas))
+        self.assertEqual(new_iris.X.shape, (len(iris), 0))
+        self.assertEqual(new_iris.metas.shape, (len(iris), 4))
+
+        # move back
+        back_iris = data.Table.from_table(iris.domain, new_iris)
+        self.assertEqual(back_iris.domain, iris.domain)
+        self.assertTrue(sp.issparse(back_iris.X))
+        self.assertTrue(sp.issparse(back_iris.metas))
+        self.assertEqual(back_iris.X.shape, iris.X.shape)
+        self.assertEqual(back_iris.metas.shape, iris.metas.shape)
+
+    def test_from_table_sparse_move_to_nonempty_metas(self):
+        brown = data.Table("brown-selected")
+        brown.X = sp.csr_matrix(brown.X)
+        n_attr = len(brown.domain.attributes)
+        n_metas = len(brown.domain.metas)
+        new_domain = data.domain.Domain(brown.domain.attributes[:-10], brown.domain.class_vars,
+                                        brown.domain.attributes[-10:] + brown.domain.metas,
+                                        source=brown.domain)
+        new_brown = data.Table.from_table(new_domain, brown)
+
+        self.assertTrue(sp.issparse(new_brown.X))
+        self.assertFalse(sp.issparse(new_brown.metas))
+        self.assertEqual(new_brown.X.shape, (len(new_brown), n_attr-10))
+        self.assertEqual(new_brown.metas.shape, (len(new_brown), n_metas+10))
+
+        # move back
+        back_brown = data.Table.from_table(brown.domain, new_brown)
+        self.assertEqual(brown.domain, back_brown.domain)
+        self.assertTrue(sp.issparse(back_brown.X))
+        self.assertFalse(sp.issparse(back_brown.metas))
+        self.assertEqual(back_brown.X.shape, brown.X.shape)
+        self.assertEqual(back_brown.metas.shape, brown.metas.shape)
 
     def assert_table_with_filter_matches(
             self, new_table, old_table,

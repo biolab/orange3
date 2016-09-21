@@ -264,15 +264,14 @@ class Table(MutableSequence, Storage):
 
         global _conversion_cache
 
-        def sparse_to_flat(x):
-            if sp.issparse(x):
-                x = np.ravel(x.toarray())
-            return x
-
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
+                        is_sparse=False):
 
             if not len(src_cols):
-                return np.zeros((n_rows, 0), dtype=source.X.dtype)
+                if is_sparse:
+                    return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
+                else:
+                    return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
             n_src_attrs = len(source.domain.attributes)
             if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
@@ -280,7 +279,7 @@ class Table(MutableSequence, Storage):
                 return _subarray(source.X, row_indices, src_cols)
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
                 arr = _subarray(source.metas, row_indices,
-                                 [-1 - x for x in src_cols])
+                                [-1 - x for x in src_cols])
                 if arr.dtype != dtype:
                     return arr.astype(dtype)
                 return arr
@@ -289,7 +288,20 @@ class Table(MutableSequence, Storage):
                 return _subarray(source._Y, row_indices,
                                  [x - n_src_attrs for x in src_cols])
 
-            a = np.empty((n_rows, len(src_cols)), dtype=dtype)
+            if is_sparse:
+                a = sp.dok_matrix((n_rows, len(src_cols)), dtype=dtype)
+            else:
+                a = np.empty((n_rows, len(src_cols)), dtype=dtype)
+
+            def match_type(x):
+                """ Assure that matrix and column are both dense or sparse. """
+                if is_sparse == sp.issparse(x):
+                    return x
+                elif is_sparse:
+                    return sp.csc_matrix(x.reshape(-1, 1).astype(np.float))
+                else:
+                    return np.ravel(x.toarray())
+
             shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
@@ -300,20 +312,27 @@ class Table(MutableSequence, Storage):
                             shared_cache[id(col.compute_shared), id(source)] = col.compute_shared(source)
                         shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
-                            a[:, i] = col(source, shared_data=shared)[row_indices]
+                            a[:, i] = match_type(
+                                col(source, shared_data=shared)[row_indices])
                         else:
-                            a[:, i] = col(source, shared_data=shared)
+                            a[:, i] = match_type(
+                                col(source, shared_data=shared))
                     else:
                         if row_indices is not ...:
-                            a[:, i] = col(source)[row_indices]
+                            a[:, i] = match_type(col(source)[row_indices])
                         else:
-                             a[:, i] = col(source)
+                            a[:, i] = match_type(col(source))
                 elif col < 0:
-                    a[:, i] = source.metas[row_indices, -1 - col]
+                    a[:, i] = match_type(source.metas[row_indices, -1 - col])
                 elif col < n_src_attrs:
-                    a[:, i] = sparse_to_flat(source.X[row_indices, col])
+                    a[:, i] = match_type(source.X[row_indices, col])
                 else:
-                    a[:, i] = source._Y[row_indices, col - n_src_attrs]
+                    a[:, i] = match_type(
+                        source._Y[row_indices, col - n_src_attrs])
+
+            if is_sparse:
+                a = a.tocsr()
+
             return a
 
         new_cache = _conversion_cache is None
@@ -340,16 +359,19 @@ class Table(MutableSequence, Storage):
             self = cls()
             self.domain = domain
             conversion = domain.get_conversion(source.domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows)
+            self.X = get_columns(row_indices, conversion.attributes, n_rows,
+                                 is_sparse=sp.issparse(source.X))
             if self.X.ndim == 1:
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = sparse_to_flat(get_columns(row_indices, conversion.class_vars, n_rows))
+            self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
+                                 is_sparse=sp.issparse(source.Y))
 
             dtype = np.float64
             if any(isinstance(var, StringVariable) for var in domain.metas):
                 dtype = np.object
             self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype)
+                                     n_rows, dtype,
+                                     is_sparse=sp.issparse(source.metas))
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             if source.has_weights():
