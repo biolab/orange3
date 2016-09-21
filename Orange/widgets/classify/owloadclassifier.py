@@ -69,6 +69,9 @@ class OWLoadClassifier(widget.OWWidget):
             self.filename = None
             self.reloadbutton.setEnabled(False)
 
+        if self.filename:
+            self.load(self.filename)
+
     def browse(self):
         """Select a filename using an open file dialog."""
         if self.filename is None:
