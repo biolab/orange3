@@ -1,4 +1,5 @@
 import numpy
+from scipy.sparse import issparse
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
@@ -24,7 +25,10 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        return numpy.where(numpy.isnan(c), self.value, c)
+        if issparse(c):     # sparse does not have unknown values
+            return c
+        else:
+            return numpy.where(numpy.isnan(c), self.value, c)
 
 
 class BaseImputeMethod:
