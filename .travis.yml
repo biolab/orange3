@@ -12,6 +12,10 @@ matrix:
           cache: {}
         - python: '3.4'
         - python: '3.5'
+        - &docs
+          env: BUILD_DOCS=true
+          python: '3.4'
+          script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
     allow_failures:
         - *pylint
     fast_finish: true
