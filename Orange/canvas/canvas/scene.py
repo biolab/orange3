@@ -442,6 +442,9 @@ class CanvasScene(QGraphicsScene):
             item.setDynamicEnabled(scheme_link.dynamic_enabled)
             scheme_link.dynamic_enabled_changed.connect(item.setDynamicEnabled)
 
+        item.setRuntimeState(scheme_link.runtime_state())
+        scheme_link.state_changed.connect(item.setRuntimeState)
+
         self.add_link_item(item)
         self.__item_for_link[scheme_link] = item
         return item
@@ -513,7 +516,7 @@ class CanvasScene(QGraphicsScene):
             scheme_link.dynamic_enabled_changed.disconnect(
                 item.setDynamicEnabled
             )
-
+        scheme_link.state_changed.disconnect(item.setRuntimeState)
         self.remove_link_item(item)
 
     def link_items(self):
