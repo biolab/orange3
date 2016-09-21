@@ -1,4 +1,4 @@
-import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Instance, Table, Domain
 
@@ -26,7 +26,7 @@ class Transformation:
             data = Table(data.domain, [data])
         domain = Domain([self.variable])
         data = Table.from_table(domain, data)
-        transformed = self.transform(data.X.squeeze(axis=1))
+        transformed = self.transform(data.X if sp.issparse(data.X) else data.X.squeeze(axis=1))
         if inst:
             transformed = transformed[0]
         return transformed
