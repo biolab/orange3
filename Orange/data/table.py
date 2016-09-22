@@ -1392,8 +1392,10 @@ class Table(MutableSequence, Storage):
                     mask = [i in disc_indi for i in range(arr.shape[1])]
                     conts, nans = contingency(arr, row_data, max_vals - 1,
                                               n_rows - 1, W, mask)
-                    for col_i, arr_i, _ in disc_vars:
-                        contingencies[col_i] = (conts[arr_i], nans[arr_i])
+                    for col_i, arr_i, var in disc_vars:
+                        n_vals = len(var.values)
+                        contingencies[col_i] = (conts[arr_i][:, :n_vals],
+                                                nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
                         contingencies[col_i] = contingency(
