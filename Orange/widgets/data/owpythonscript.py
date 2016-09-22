@@ -138,6 +138,9 @@ class PythonConsole(QtGui.QPlainTextEdit, code.InteractiveConsole):
     def setLocals(self, locals):
         self.locals = locals
 
+    def updateLocals(self, locals):
+        self.locals.update(locals)
+
     def interact(self, banner=None):
         try:
             sys.ps1
@@ -460,8 +463,9 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        gui.auto_commit(self.controlArea, self, "auto_execute", "Execute",
-                        auto_label="Auto Execute")
+        self.execute_button = gui.auto_commit(
+            self.controlArea, self, "auto_execute", "Execute",
+            auto_label="Auto Execute")
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -487,7 +491,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
-        self.console = PythonConsole(self.__dict__, self)
+        self.console = PythonConsole({}, self)
         self.consoleBox.layout().addWidget(self.console)
         self.console.document().setDefaultFont(QFont(defaultFont))
         self.consoleBox.setAlignment(Qt.AlignBottom)
@@ -636,14 +640,22 @@ class OWPythonScript(widget.OWWidget):
             f.write(self.text.toPlainText())
             f.close()
 
+    def initial_locals_state(self):
+        d = dict([(i.name, getattr(self, i.name, None)) for i in self.inputs])
+        d.update(dict([(o.name, None) for o in self.outputs]))
+        return d
+
     def commit(self):
         self._script = str(self.text.toPlainText())
+        lcls = self.initial_locals_state()
+        lcls["_script"] = str(self.text.toPlainText())
+        self.console.updateLocals(lcls)
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")
         self.console.new_prompt(sys.ps1)
         for out in self.outputs:
             signal = out.name
-            self.send(signal, getattr(self, signal, None))
+            self.send(signal, self.console.locals.get(signal, None))
 
 
 if __name__ == "__main__":
