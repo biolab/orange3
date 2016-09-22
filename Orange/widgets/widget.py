@@ -157,7 +157,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
         WidgetMessagesMixin.__init__(self)
@@ -176,8 +176,11 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
 
-        if self.name:
-            self.setCaption(self.name)
+        captionTitle = self.name if captionTitle is None else captionTitle
+
+        # must be set without invoking setCaption
+        self.captionTitle = captionTitle
+        self.setWindowTitle(captionTitle)
 
         self.setFocusPolicy(Qt.StrongFocus)
 
