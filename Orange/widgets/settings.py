@@ -767,7 +767,7 @@ class ContextHandler(SettingsHandler):
         widget.storeSpecificSettings()
 
         def packer(setting, instance):
-            if hasattr(instance, setting.name):
+            if isinstance(setting, ContextSetting) and hasattr(instance, setting.name):
                 value = getattr(instance, setting.name)
                 yield setting.name, self.encode_setting(context, setting, value)
                 if hasattr(setting, "selected"):

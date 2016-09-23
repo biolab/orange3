@@ -266,7 +266,7 @@ class TestDomainContextHandler(TestCase):
 
         var = self.domain[0]
         val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)), self.domain)
-        self.assertEqual(val, var)
+        self.assertIs(val, var)
 
     def create_context(self, domain, values):
         if not domain:
