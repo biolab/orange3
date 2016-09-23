@@ -155,5 +155,7 @@ class ProgressBarMixin:
         :type iterations: int
         """
         progress_bar = gui.ProgressBar(self, iterations)
-        yield progress_bar
-        progress_bar.finish()  # Let us not rely on garbage collector
+        try:
+            yield progress_bar
+        finally:
+            progress_bar.finish()
