@@ -1,29 +1,27 @@
+import operator
 import os
-import re
 import zlib
+
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
 from numbers import Real, Integral
-import operator
 from functools import reduce
 from warnings import warn
 from threading import Lock
-from tempfile import NamedTemporaryFile
-from urllib.parse import urlparse, unquote as urlunquote
-from urllib.request import urlopen
-from urllib.error import URLError
 
+import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
 
+from Orange.data import (
+    _contingency, _valuecount,
+    Domain, Variable, Storage, StringVariable, Unknown, Value, Instance
+)
+from Orange.data.util import SharedComputeValue
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from .instance import *
 from Orange.util import flatten
-from Orange.data import Domain, Variable, StringVariable
-from Orange.data.storage import Storage
-from . import _contingency
-from . import _valuecount
-from .util import SharedComputeValue
+
+__all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
 
 def get_sample_datasets_dir():
@@ -885,10 +883,8 @@ class Table(MutableSequence, Storage):
                 table.extend(t)
             return table
         elif axis == CONCAT_COLS:
-            from operator import iand, attrgetter
-            from functools import reduce
-            if reduce(iand,
-                      (set(map(attrgetter('name'),
+            if reduce(operator.iand,
+                      (set(map(operator.attrgetter('name'),
                                chain(t.domain.variables, t.domain.metas)))
                        for t in tables)):
                 raise ValueError('Concatenating two domains with variables '

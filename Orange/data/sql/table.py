@@ -1,24 +1,25 @@
 """
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
-from contextlib import contextmanager
 import functools
-from itertools import islice
 import logging
 import re
 import threading
+
+from contextlib import contextmanager
+from itertools import islice
 from time import time, strftime
 
 import numpy as np
 
-import Orange.misc
-psycopg2 = Orange.misc.import_late_warning("psycopg2")
-psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
-
-from .. import domain, variable, table, instance, filter,\
-    DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
+from Orange.data import (
+    DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable,
+    Table, Domain, Value, Instance, filter)
 from Orange.data.sql import filter as sql_filter
+from Orange.misc import import_late_warning
 
+psycopg2 = import_late_warning("psycopg2")
+psycopg2.pool = import_late_warning("psycopg2.pool")
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
@@ -27,7 +28,7 @@ sql_log = logging.getLogger('sql_log')
 sql_log.debug("Logging started: {}".format(strftime("%Y-%m-%d %H:%M:%S")))
 
 
-class SqlTable(table.Table):
+class SqlTable(Table):
     connection_pool = None
     table_name = None
     domain = None
@@ -94,7 +95,7 @@ class SqlTable(table.Table):
 
     def get_domain(self, type_hints=None, guess_values=False):
         if type_hints is None:
-            type_hints = domain.Domain([])
+            type_hints = Domain([])
 
         fields = []
         query = "SELECT * FROM %s LIMIT 0" % self.table_name
@@ -132,7 +133,7 @@ class SqlTable(table.Table):
                 else:
                     attrs.append(var)
 
-        return domain.Domain(attrs, class_vars, metas)
+        return Domain(attrs, class_vars, metas)
 
     def get_variable(self, field_name, type_code, inspect_values=False):
         FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
@@ -210,7 +211,7 @@ class SqlTable(table.Table):
             try:
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
-                return variable.Value(
+                return Value(
                     var,
                     next(self._query([var], rows=[row_idx]))[0]
                 )
@@ -739,7 +740,7 @@ class SqlTable(table.Table):
         self.create_connection_pool()
 
 
-class SqlRowInstance(instance.Instance):
+class SqlRowInstance(Instance):
     """
     Extends :obj:`Orange.data.Instance` to correctly handle values of meta
     attributes.

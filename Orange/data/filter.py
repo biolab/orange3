@@ -1,12 +1,14 @@
-from numbers import Real
 import random
 import re
-from math import isnan
 
-from ..misc.enum import Enum
+from math import isnan
+from numbers import Real
+
 import numpy as np
 import bottleneck as bn
+
 from Orange.data import Instance, Storage, Variable
+from Orange.misc.enum import Enum
 
 
 class Filter:
