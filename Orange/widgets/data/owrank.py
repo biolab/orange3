@@ -68,7 +68,7 @@ class OWRank(OWWidget):
     auto_apply = Setting(True)
 
     # Header state for discrete/continuous/no_class scores
-    headerState = Setting((None, None, None))
+    headerState = Setting([None, None, None])
 
     settingsHandler = DomainContextHandler()
     selected_rows = ContextSetting([])
@@ -169,7 +169,6 @@ class OWRank(OWWidget):
         self.discRanksView.setSelectionBehavior(QtGui.QTableView.SelectRows)
         self.discRanksView.setSelectionMode(QtGui.QTableView.MultiSelection)
         self.discRanksView.setSortingEnabled(True)
-        self.discRanksView.sortByColumn(2, Qt.DescendingOrder)
 
         self.discRanksLabels = ["#"] + [m.shortname for m in self.discMeasures]
         self.discRanksModel = QtGui.QStandardItemModel(self)
@@ -193,15 +192,13 @@ class OWRank(OWWidget):
 
         if self.headerState[0] is not None:
             self.discRanksView.horizontalHeader().restoreState(
-            self.headerState[0]
-        )
+                self.headerState[0])
 
         self.contRanksView = QtGui.QTableView()
         self.ranksViewStack.addWidget(self.contRanksView)
         self.contRanksView.setSelectionBehavior(QtGui.QTableView.SelectRows)
         self.contRanksView.setSelectionMode(QtGui.QTableView.MultiSelection)
         self.contRanksView.setSortingEnabled(True)
-        self.contRanksView.sortByColumn(1, Qt.DescendingOrder)
 
         self.contRanksLabels = ["#"] + [m.shortname for m in self.contMeasures]
         self.contRanksModel = QtGui.QStandardItemModel(self)
@@ -232,7 +229,6 @@ class OWRank(OWWidget):
         self.noClassRanksView.setSelectionBehavior(QtGui.QTableView.SelectRows)
         self.noClassRanksView.setSelectionMode(QtGui.QTableView.MultiSelection)
         self.noClassRanksView.setSortingEnabled(True)
-        self.noClassRanksView.sortByColumn(1, Qt.DescendingOrder)
 
         self.noClassRanksLabels = ["#"]
         self.noClassRanksModel = QtGui.QStandardItemModel(self)
@@ -579,7 +575,7 @@ class OWRank(OWWidget):
         disc = bytes(self.discRanksView.horizontalHeader().saveState())
         cont = bytes(self.contRanksView.horizontalHeader().saveState())
         no_class = bytes(self.noClassRanksView.horizontalHeader().saveState())
-        self.headerState = (disc, cont, no_class)
+        self.headerState = [disc, cont, no_class]
 
     def measuresSelectionChanged(self, measure):
         """Measure selection has changed. Update column visibility.
@@ -609,6 +605,20 @@ class OWRank(OWWidget):
             shown = self.selectedMeasures.get(measure.name)
             self.ranksView.setColumnHidden(i + 1, not shown)
             self.ranksView.setColumnWidth(i + 1, 100)
+
+        index = self.ranksView.horizontalHeader().sortIndicatorSection()
+        if self.ranksView.isColumnHidden(index):
+            self.headerState[self.rankMode] = None
+
+        if self.headerState[self.rankMode] is None:
+            def get_sort_by_col(measures, selected_measures):
+                cols = [i + 1 for i, m in enumerate(measures) if
+                        m.name in selected_measures]
+                return cols[0] if cols else len(measures) + 1
+
+            col = get_sort_by_col(self.measures, self.selected_checks)
+            self.ranksView.sortByColumn(col, Qt.DescendingOrder)
+            self.autoSelection()
 
     def updateDelegates(self):
         self.contRanksView.setItemDelegate(gui.ColoredBarItemDelegate(self))
