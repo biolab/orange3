@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 
 import io
-from os import path
+from os import path, remove
 import unittest
 import tempfile
 import shutil
@@ -132,6 +132,27 @@ class TestTabReader(unittest.TestCase):
 
         self.assertSequenceEqual(t2.domain['x'].values, 'abcdgh')
         np.testing.assert_almost_equal(t2.X.ravel(), [5, 4, 0, 2, 1])
+
+    def test_renaming(self):
+        simplefile = """\
+            a\t  b\t  a\t  a\t  b\t     a\t     c\t  a\t b
+            c\t  c\t  c\t  c\t  c\t     c\t     c\t  c\t c
+             \t   \t  \t   \t   class\t class\t  \t  \t  meta
+            0\t  0\t  0\t  0\t  0\t     0\t     0\t  0 """
+        file = tempfile.NamedTemporaryFile("wt", delete=False, suffix=".tab")
+        filename = file.name
+        try:
+            file.write(simplefile)
+            file.close()
+            table = read_tab_file(filename)
+            domain = table.domain
+            self.assertEqual([x.name for x in domain.attributes],
+                             ["a_1", "b_1", "a_2", "a_3", "c", "a_5"])
+            self.assertEqual([x.name for x in domain.class_vars], ["b_2", "a_4"])
+            self.assertEqual([x.name for x in domain.metas], ["b_3"])
+        finally:
+            remove(filename)
+
 
     def test_dataset_with_weird_names_and_column_attributes(self):
         data = Table(path.join(path.dirname(__file__), 'weird.tab'))

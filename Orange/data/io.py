@@ -8,7 +8,7 @@ import sys
 import warnings
 
 from ast import literal_eval
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from functools import lru_cache
 from itertools import chain, repeat
 from math import isnan
@@ -449,6 +449,17 @@ class FileFormat(metaclass=FileFormatMeta):
         Mcols, metas = [], []
         Ycols, clses = [], []
         Wcols = []
+
+        # Rename variables if necessary
+        # Reusing across files still works if both files have same duplicates
+        name_counts = Counter(names)
+        del name_counts[""]
+        if len(name_counts) != len(names) and name_counts:
+            uses = {name: 0 for name, count in name_counts.items() if count > 1}
+            for i, name in enumerate(names):
+                if name in uses:
+                    uses[name] += 1
+                    names[i] = "{}_{}".format(name, uses[name])
 
         # Iterate through the columns
         for col in range(rowlen):
