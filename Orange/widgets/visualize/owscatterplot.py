@@ -88,6 +88,9 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 
 class OWScatterPlot(OWWidget):
+    """Scatterplot visualization with explorative analysis and intelligent
+    data visualization enhancements."""
+
     name = 'Scatter Plot'
     description = "Interactive scatter plot visualization with " \
                   "intelligent data visualization enhancements."
@@ -154,19 +157,15 @@ class OWScatterPlot(OWWidget):
                                       callback=self.update_attr,
                                       **common_options)
 
-        self.vizrank = ScatterPlotVizRank(self)
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
-        self.vizrank_button_tooltip = "Find informative projections"
-        self.vizrank_button = gui.button(
-            vizrank_box, self, "Score Plots", callback=self.vizrank.reshow,
-            tooltip=self.vizrank_button_tooltip, enabled=False)
-        self.vizrank.pairSelected.connect(self.set_attr)
+        self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
+            vizrank_box, self, "Find Informative Projections", self.set_attr)
 
         gui.separator(box)
 
         gui.valueSlider(
-            box, self, value='graph.jitter_size',  label='Jittering: ',
+            box, self, value='graph.jitter_size', label='Jittering: ',
             values=self.jitter_sizes, callback=self.reset_graph_data,
             labelFormat=lambda x:
             "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
@@ -198,8 +197,6 @@ class OWScatterPlot(OWWidget):
             **common_options)
 
         g = self.graph.gui
-        box2 = g.point_properties_box(self.controlArea, box)
-
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(
@@ -316,7 +313,7 @@ class OWScatterPlot(OWWidget):
             self.vizrank_button.setToolTip(
                 "Data with a class variable is required.")
         else:
-            self.vizrank_button.setToolTip(self.vizrank_button_tooltip)
+            self.vizrank_button.setToolTip("")
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
@@ -492,14 +489,6 @@ class OWScatterPlot(OWWidget):
         self.send_data()
         self.send_features()
 
-    def closeEvent(self, ce):
-        self.vizrank.close()
-        super().closeEvent(ce)
-
-    def hideEvent(self, he):
-        self.vizrank.hide()
-        super().hideEvent(he)
-
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.combo_value(self.cb_attr_x),
@@ -512,12 +501,12 @@ class OWScatterPlot(OWWidget):
             disc_attr = domain[self.attr_x].is_discrete or \
                         domain[self.attr_y].is_discrete
         caption = report.render_items_vert((
-             ("Color", self.combo_value(self.cb_attr_color)),
-             ("Label", self.combo_value(self.cb_attr_label)),
-             ("Shape", self.combo_value(self.cb_attr_shape)),
-             ("Size", self.combo_value(self.cb_attr_size)),
-             ("Jittering", (self.graph.jitter_continuous or disc_attr) and
-              self.graph.jitter_size)))
+            ("Color", self.combo_value(self.cb_attr_color)),
+            ("Label", self.combo_value(self.cb_attr_label)),
+            ("Shape", self.combo_value(self.cb_attr_shape)),
+            ("Size", self.combo_value(self.cb_attr_size)),
+            ("Jittering", (self.graph.jitter_continuous or disc_attr) and
+             self.graph.jitter_size)))
         self.report_plot()
         if caption:
             self.report_caption(caption)
