@@ -330,21 +330,33 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def _describe(self, table):
         domain = table.domain
-        text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
-            len(table), len(domain.attributes), len(domain.metas))
+        text = ""
+
+        attrs = getattr(table, "attributes", {})
+        descs = [attrs[desc]
+                 for desc in ("Name", "Description") if desc in attrs]
+        if len(descs) == 2:
+            descs[0] = "<b>{}</b>".format(descs[0])
+        if descs:
+            text += "<p>{}</p>".format("<br/>".join(descs))
+
+        text += "<p>{} instance(s), {} feature(s), {} meta attribute(s)".\
+            format(len(table), len(domain.attributes), len(domain.metas))
         if domain.has_continuous_class:
-            text += "\nRegression; numerical class."
+            text += "<br/>Regression; numerical class."
         elif domain.has_discrete_class:
-            text += "\nClassification; discrete class with {} values.".format(
-                len(domain.class_var.values))
+            text += "<br/>Classification; discrete class with {} values.".\
+                format(len(domain.class_var.values))
         elif table.domain.class_vars:
-            text += "\nMulti-target; {} target variables.".format(
+            text += "<br/>Multi-target; {} target variables.".format(
                 len(table.domain.class_vars))
         else:
-            text += "\nData has no target variable."
+            text += "<br/>Data has no target variable."
+        text += "</p>"
+
         if 'Timestamp' in table.domain:
             # Google Forms uses this header to timestamp responses
-            text += '\n\nFirst entry: {}\nLast entry: {}'.format(
+            text += '<p>First entry: {}<br/>Last entry: {}</p>'.format(
                 table[0, 'Timestamp'], table[-1, 'Timestamp'])
         return text
 
