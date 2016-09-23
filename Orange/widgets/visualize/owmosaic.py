@@ -36,11 +36,11 @@ class OWMosaicDisplay(OWWidget):
 
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)
-    variable1 = ContextSetting("")
-    variable2 = ContextSetting("")
-    variable3 = ContextSetting("")
-    variable4 = ContextSetting("")
-    selection = ContextSetting({})
+    variable1 = ContextSetting("", exclude_metas=False)
+    variable2 = ContextSetting("", exclude_metas=False)
+    variable3 = ContextSetting("", exclude_metas=False)
+    variable4 = ContextSetting("", exclude_metas=False)
+    selection = ContextSetting(set())
     # interior_coloring is context setting to properly reset it
     # if the widget switches to regression and back (set setData)
     interior_coloring = ContextSetting(1)
@@ -192,7 +192,7 @@ class OWMosaicDisplay(OWWidget):
         self.reset_graph()
 
     def clear_selection(self):
-        self.selection = {}
+        self.selection = set()
         self.update_selection_rects()
         self.send_selection()
 
