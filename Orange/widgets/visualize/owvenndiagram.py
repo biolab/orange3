@@ -37,7 +37,7 @@ class OWVennDiagram(widget.OWWidget):
     description = "A graphical visualization of the overlap of data instances " \
                   "from a collection of input data sets."
     icon = "icons/VennDiagram.svg"
-    priority = 410
+    priority = 280
 
     inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]
     outputs = [("Selected Data", Orange.data.Table)]

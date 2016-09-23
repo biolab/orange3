@@ -30,7 +30,7 @@ class OWSilhouettePlot(widget.OWWidget):
                   "the degree of cluster membership."
 
     icon = "icons/SilhouettePlot.svg"
-    priority = 510
+    priority = 300
 
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Selected Data", Orange.data.Table, widget.Default),

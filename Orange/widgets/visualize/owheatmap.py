@@ -377,7 +377,7 @@ class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a heat map for a pair of attributes."
     icon = "icons/Heatmap.svg"
-    priority = 330
+    priority = 260
 
     inputs = [("Data", Table, "set_dataset")]
     outputs = [("Selected Data", Table, widget.Default)]

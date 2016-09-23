@@ -455,7 +455,7 @@ class OWScatterMap(widget.OWWidget):
     name = "Scatter Map"
     description = "Draw a two dimensional rectangular bin density plot."
     icon = "icons/Scattermap.svg"
-    priority = 500
+    priority = 5000
 
     inputs = [("Data", Orange.data.Table, "set_data")]
 
