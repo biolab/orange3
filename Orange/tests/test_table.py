@@ -1197,7 +1197,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(new_table.metas.dtype, np.float64)
 
     def test_attributes(self):
-        table = data.Table("iris")
+        table = data.Table("titanic")
         self.assertEqual(table.attributes, {})
         table.attributes[1] = "test"
         table2 = table[:4]

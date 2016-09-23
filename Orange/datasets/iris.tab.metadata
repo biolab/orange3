@@ -1,0 +1,5 @@
+Name: Iris flower data set
+Description: Classical data set with 150 instances of Iris setosa, Iris virginica and Iris versicolor.
+Author: Edgar Anderson, Ronald Fisher
+Year: 1936
+Reference: R. A. Fisher (1936). "The use of multiple measurements in taxonomic problems". Annals of Eugenics. 7 (2): 179–188. doi:10.1111/j.1469-1809.1936.tb02137.x
