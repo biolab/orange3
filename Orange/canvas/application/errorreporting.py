@@ -170,7 +170,7 @@ class ErrorReporting(QDialog):
                     return tb
                 tb = tb.tb_next
 
-        widget, frame = None, _find_widget_frame(tb)
+        widget_module, widget, frame = None, None, _find_widget_frame(tb)
         if frame:
             widget = frame.tb_frame.f_locals['self'].__class__
             widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
