@@ -58,6 +58,7 @@ class VariableTest:
         var.attributes["a"] = "b"
         var2 = var.copy(compute_value=None)
         self.assertIn("a", var2.attributes)
+        self.assertIsInstance(var2, type(var))
 
         var2.attributes["a"] = "c"
         # Attributes of original value should not change
