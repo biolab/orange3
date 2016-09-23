@@ -16,8 +16,8 @@ from operator import attrgetter, add
 from functools import partial
 
 
-from PyQt4.QtCore import QObject, QCoreApplication, QEvent
-from PyQt4.QtCore import pyqtSignal as Signal
+from PyQt4.QtCore import QObject, QCoreApplication, QEvent, QTimer
+from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 from .scheme import SchemeNode, SchemeLink
@@ -83,6 +83,8 @@ class SignalManager(QObject):
 
         # A flag indicating if UpdateRequest event should be rescheduled
         self.__reschedule = False
+        self.__update_timer = QTimer(self, interval=100, singleShot=True)
+        self.__update_timer.timeout.connect(self.__process_next)
 
     def _can_process(self):
         """
@@ -123,6 +125,7 @@ class SignalManager(QObject):
         if self.__state != SignalManager.Stoped:
             self.__state = SignalManager.Stoped
             self.stateChanged.emit(SignalManager.Stoped)
+            self.__update_timer.stop()
 
     def pause(self):
         """
@@ -132,6 +135,7 @@ class SignalManager(QObject):
         if self.__state != SignalManager.Paused:
             self.__state = SignalManager.Paused
             self.stateChanged.emit(SignalManager.Paused)
+            self.__update_timer.stop()
 
     def resume(self):
         if self.__state == SignalManager.Paused:
@@ -436,47 +440,45 @@ class SignalManager(QObject):
 
         return list(pending - pending_downstream - blocked_nodes)
 
-    def event(self, event):
-        if event.type() == QEvent.UpdateRequest:
-            if not self.__state == SignalManager.Running:
-                log.debug("Received 'UpdateRequest' event while not "
-                          "in 'Running' state")
-                event.setAccepted(False)
-                return False
+    @Slot()
+    def __process_next(self):
+        if not self.__state == SignalManager.Running:
+            log.debug("Received 'UpdateRequest' while not in 'Running' state")
+            return
 
-            if self.__runtime_state == SignalManager.Processing:
-                log.debug("Received 'UpdateRequest' event while in "
-                          "'process_queued'")
-                # This happens if someone calls QCoreApplication.processEvents
-                # from the signal handlers.
-                self.__reschedule = True
-                event.accept()
-                return True
+        if self.__runtime_state == SignalManager.Processing:
+            # This happens if someone calls QCoreApplication.processEvents
+            # from the signal handlers.
+            # A `__process_next` must be rescheduled when exiting
+            # process_queued.
+            log.warning("Received 'UpdateRequest' while in 'process_queued'. "
+                        "An update will be re-scheduled when exiting the "
+                        "current update.")
+            self.__reschedule = True
+            return
 
-            log.info("'UpdateRequest' event, queued signals: %i",
-                      len(self._input_queue))
-            if self._input_queue:
-                self.process_queued(max_nodes=1)
-            event.accept()
+        log.info("'UpdateRequest' event, queued signals: %i",
+                 len(self._input_queue))
+        if self._input_queue:
+            self.process_queued(max_nodes=1)
 
-            if self.__reschedule:
-                log.debug("Rescheduling 'UpdateRequest' event")
-                self._update()
-                self.__reschedule = False
-            elif self.node_update_front():
-                log.debug("More nodes are eligible for an update. "
-                          "Scheduling another update.")
-                self._update()
+        if self.__reschedule and self.__state == SignalManager.Running:
+            self.__reschedule = False
+            log.debug("Rescheduling signal update")
+            self.__update_timer.start()
 
-            return True
-
-        return QObject.event(self, event)
+        if self.node_update_front():
+            log.debug("More nodes are eligible for an update. "
+                      "Scheduling another update.")
+            self._update()
 
     def _update(self):
         """
         Schedule processing at a later time.
         """
-        QCoreApplication.postEvent(self, QEvent(QEvent.UpdateRequest))
+        if self.__state == SignalManager.Running and \
+                not self.__update_timer.isActive():
+            self.__update_timer.start()
 
 
 def can_enable_dynamic(link, value):
