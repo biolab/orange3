@@ -586,12 +586,13 @@ class PyListModelTooltip(PyListModel):
 
 
 class VariableListModel(PyListModel):
-
     MIME_TYPE = "application/x-Orange-VariableList"
 
     def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid_for(index, self):
             var = self[index.row()]
+            if var is None and role == Qt.DisplayRole:
+                return "None"
             if not isinstance(var, Variable):
                 return super().data(index, role)
             elif role == Qt.DisplayRole:
@@ -600,6 +601,8 @@ class VariableListModel(PyListModel):
                 return gui.attributeIconDict[var]
             elif role == Qt.ToolTipRole:
                 return self.variable_tooltip(var)
+            elif role == gui.TableVariable:
+                return var
             else:
                 return PyListModel.data(self, index, role)
 

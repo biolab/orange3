@@ -916,12 +916,11 @@ class DomainContextHandler(ContextHandler):
                 del data[setting.name]
 
     def settings_to_widget(self, widget, domain, *args):
-        super().settings_to_widget(widget, domain, *args)
-
         context = widget.current_context
         if context is None:
             return
 
+        widget.retrieveSpecificSettings()
         excluded = set()
 
         for setting, data, instance in \
@@ -930,6 +929,9 @@ class DomainContextHandler(ContextHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name], domain)
+            setattr(instance, setting.name, value)
+            if hasattr(setting, "selected") and setting.selected in data:
+                setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
                 excluded |= set(value)
