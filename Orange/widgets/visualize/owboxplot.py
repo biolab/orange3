@@ -38,16 +38,16 @@ def compute_scale(min_, max_):
 class BoxData:
     def __init__(self, dist):
         self.dist = dist
-        self.N = N = np.sum(dist[1])
-        if N == 0:
+        self.n = n = np.sum(dist[1])
+        if n == 0:
             return
         self.a_min = float(dist[0, 0])
         self.a_max = float(dist[0, -1])
-        self.mean = float(np.sum(dist[0] * dist[1]) / N)
-        self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / N)
+        self.mean = float(np.sum(dist[0] * dist[1]) / n)
+        self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / n)
         self.dev = math.sqrt(self.var)
         s = 0
-        thresholds = [N / 4, N / 2, N / 4 * 3]
+        thresholds = [n / 4, n / 2, n / 4 * 3]
         thresh_i = 0
         q = []
         for i, e in enumerate(dist[1]):
@@ -60,9 +60,7 @@ class BoxData:
                 thresh_i += 1
                 if thresh_i == 3:
                     break
-        while len(q) < 3:
-            q.append(q[-1])
-        self.q25, self.median, self.q75 = q
+        self.q25, self.median, self.q75, *_ = q + [-1] * 3
 
 
 class OWBoxPlot(widget.OWWidget):
@@ -99,7 +97,6 @@ class OWBoxPlot(widget.OWWidget):
     #: Comparison types for continuous variables
     CompareNone, CompareMedians, CompareMeans = 0, 1, 2
 
-    # TODO: Fix context settings
     settingsHandler = DomainContextHandler()
 
     attribute = ContextSetting(None)
@@ -274,8 +271,8 @@ class OWBoxPlot(widget.OWWidget):
             self.label_txts_all = [""]
         self.label_txts = [txts for stat, txts in zip(self.stats,
                                                       self.label_txts_all)
-                           if stat.N > 0]
-        self.stats = [stat for stat in self.stats if stat.N > 0]
+                           if stat.n > 0]
+        self.stats = [stat for stat in self.stats if stat.n > 0]
 
     def update_display_box(self):
         if self.is_continuous:
@@ -427,10 +424,10 @@ class OWBoxPlot(widget.OWWidget):
         # The non-parametric tests can't do this, so we use statistics.tests
         def stat_ttest():
             d1, d2 = self.stats
-            pooled_var = d1.var / d1.N + d2.var / d2.N
+            pooled_var = d1.var / d1.n + d2.var / d2.n
             df = pooled_var ** 2 / \
-                ((d1.var / d1.N) ** 2 / (d1.N - 1) +
-                 (d2.var / d2.N) ** 2 / (d2.N - 1))
+                ((d1.var / d1.n) ** 2 / (d1.n - 1) +
+                 (d2.var / d2.n) ** 2 / (d2.n - 1))
             t = abs(d1.mean - d2.mean) / math.sqrt(pooled_var)
             p = 2 * (1 - scipy.special.stdtr(df, t))
             return t, p
@@ -438,21 +435,21 @@ class OWBoxPlot(widget.OWWidget):
         # TODO: Check this function
         # noinspection PyPep8Naming
         def stat_ANOVA():
-            N = sum(stat.N for stat in self.stats)
-            grand_avg = sum(stat.N * stat.mean for stat in self.stats) / N
-            var_between = sum(stat.N * (stat.mean - grand_avg) ** 2
+            n = sum(stat.n for stat in self.stats)
+            grand_avg = sum(stat.n * stat.mean for stat in self.stats) / n
+            var_between = sum(stat.n * (stat.mean - grand_avg) ** 2
                               for stat in self.stats)
             df_between = len(self.stats) - 1
 
-            var_within = sum(stat.N * stat.var for stat in self.stats)
-            df_within = N - len(self.stats)
+            var_within = sum(stat.n * stat.var for stat in self.stats)
+            df_within = n - len(self.stats)
             F = (var_between / df_between) / (var_within / df_within)
             p = 1 - scipy.special.fdtr(df_between, df_within, F)
             return F, p
 
         if self.compare == OWBoxPlot.CompareNone or len(self.stats) < 2:
             t = ""
-        elif any(s.N <= 1 for s in self.stats):
+        elif any(s.n <= 1 for s in self.stats):
             t = "At least one group has just one instance, " \
                 "cannot compute significance"
         elif len(self.stats) == 2:
@@ -727,10 +724,8 @@ class OWBoxPlot(widget.OWWidget):
 
         if self.compare == OWBoxPlot.CompareMedians:
             crit_line = "median"
-        elif self.compare == OWBoxPlot.CompareMeans:
-            crit_line = "mean"
         else:
-            assert False
+            crit_line = "mean"
 
         xs = []
 
@@ -746,7 +741,7 @@ class OWBoxPlot(widget.OWWidget):
             line(by - 12, by - 25)
 
         used_to = []
-        last_to = 0
+        last_to = to = 0
         for frm, frm_x in enumerate(xs[:-1]):
             for to in range(frm + 1, len(xs)):
                 if xs[to] - frm_x > 1.5:
