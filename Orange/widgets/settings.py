@@ -635,9 +635,9 @@ class ContextHandler(SettingsHandler):
         widget.current_context, is_new = \
             self.find_or_create_context(widget, *args)
         if is_new:
-            self.settings_from_widget(widget)
+            self.settings_from_widget(widget, *args)
         else:
-            self.settings_to_widget(widget)
+            self.settings_to_widget(widget, *args)
 
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
@@ -736,7 +736,7 @@ class ContextHandler(SettingsHandler):
         self.settings_from_widget(widget)
         widget.current_context = None
 
-    def settings_to_widget(self, widget):
+    def settings_to_widget(self, widget, *args):
         """Apply context settings stored in currently opened context
         to the widget.
         """
@@ -756,7 +756,7 @@ class ContextHandler(SettingsHandler):
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
 
-    def settings_from_widget(self, widget):
+    def settings_from_widget(self, widget, *args):
         """Update the current context with the setting values from the widget.
         """
 
@@ -915,8 +915,8 @@ class DomainContextHandler(ContextHandler):
                     not self._var_exists(setting, value, attrs, metas)):
                 del data[setting.name]
 
-    def settings_to_widget(self, widget):
-        super().settings_to_widget(widget)
+    def settings_to_widget(self, widget, domain, *args):
+        super().settings_to_widget(widget, domain, *args)
 
         context = widget.current_context
         if context is None:
@@ -929,7 +929,7 @@ class DomainContextHandler(ContextHandler):
             if not isinstance(setting, ContextSetting) or setting.name not in data:
                 continue
 
-            value = self.decode_setting(setting, data[setting.name])
+            value = self.decode_setting(setting, data[setting.name], domain)
 
             if isinstance(value, list):
                 excluded |= set(value)
@@ -949,16 +949,22 @@ class DomainContextHandler(ContextHandler):
         value = copy.copy(value)
         if isinstance(value, list):
             return value
-        elif isinstance(setting, ContextSetting) and isinstance(value, str):
-            if not setting.exclude_attributes and value in context.attributes:
-                return value, context.attributes[value]
-            if not setting.exclude_metas and value in context.metas:
-                return value, context.metas[value]
+        elif isinstance(setting, ContextSetting):
+            if isinstance(value, str):
+                if not setting.exclude_attributes and value in context.attributes:
+                    return value, context.attributes[value]
+                if not setting.exclude_metas and value in context.metas:
+                    return value, context.metas[value]
+            elif isinstance(value, Variable):
+                return value.name, 100 + vartype(value)
         return value, -2
 
-    @staticmethod
-    def decode_setting(setting, value):
+    def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
+            if 100 <= value[1]:
+                if not domain:
+                    raise ValueError("Cannot decode variable without domain")
+                return domain[value[0]]
             return value[0]
         else:
             return value
@@ -969,6 +975,8 @@ class DomainContextHandler(ContextHandler):
             return False
 
         attr_name, attr_type = value
+        if 100 <= attr_type:
+            attr_type -= 100
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
                 not setting.exclude_metas and
