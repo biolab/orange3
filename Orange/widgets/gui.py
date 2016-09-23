@@ -1217,7 +1217,6 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
         bg = widget
     view = ListViewWithSizeHint(preferred_size=sizeHint)
     view.setModel(model)
-    view.selectionModel().selectionChanged.connect(callback)
     if value is not None:
         connectControl(master, value, callback,
                        view.selectionModel().selectionChanged,
