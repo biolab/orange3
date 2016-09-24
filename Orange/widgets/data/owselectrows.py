@@ -73,7 +73,7 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list = QtGui.QTableWidget(
             box, showGrid=False, selectionMode=QtGui.QTableWidget.NoSelection)
         box.layout().addWidget(self.cond_list)
-        self.cond_list.setColumnCount(3)
+        self.cond_list.setColumnCount(4)
         self.cond_list.setRowCount(0)
         self.cond_list.verticalHeader().hide()
         self.cond_list.horizontalHeader().hide()
@@ -138,6 +138,11 @@ class OWSelectRows(widget.OWWidget):
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
+        index = QtCore.QPersistentModelIndex(model.index(row, 3))
+        temp_button = QtGui.QPushButton('Remove', self)
+        temp_button.clicked.connect(lambda: self.remove_one(index.row()))
+        self.cond_list.setCellWidget(row, 3, temp_button)
+
         self.remove_all_button.setDisabled(False)
         self.set_new_operators(attr_combo, attr is not None,
                                condition_type, condition_value)
@@ -159,9 +164,18 @@ class OWSelectRows(widget.OWWidget):
         for i in range(len(domain.variables) + len(domain.metas)):
             self.add_row(i)
 
+    def remove_one(self, rownum):
+        self.remove_one_row(rownum)
+        self.conditions_changed()
+
     def remove_all(self):
         self.remove_all_rows()
         self.conditions_changed()
+
+    def remove_one_row(self, rownum):
+        self.cond_list.removeRow(rownum)
+        if(self.cond_list.model().rowCount() == 0):
+            self.remove_all_button.setDisabled(True)
 
     def remove_all_rows(self):
         self.cond_list.clear()
