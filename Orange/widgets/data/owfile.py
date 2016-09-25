@@ -257,7 +257,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
+        self.editor_model.set_domain(None)
         self.reader = self._get_reader()
+        if not self.reader:
+            self.data = None
+            self.send("Data", None)
+            self.info.setText("No data.")
+            return
         self._update_sheet_combo()
 
         errors = []
@@ -296,7 +302,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
         elif self.source == self.URL:
-            return UrlReader(self.url_combo.currentText())
+            url = self.url_combo.currentText().strip()
+            if url:
+                return UrlReader(url)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
