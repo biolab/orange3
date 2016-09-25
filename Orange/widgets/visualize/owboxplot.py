@@ -159,20 +159,31 @@ class OWBoxPlot(widget.OWWidget):
         self.attrs = VariableListModel()
         view = gui.listView(
             self.controlArea, self, "attribute", box="Variable",
-            model=self.attrs, callback=self.attr_changed, sizeHint=(200, 150))
+            model=self.attrs, callback=self.attr_changed)
+        view.setMinimumSize(QSize(30, 30))
+        # Any other policy than Ignored will let the QListBox's scrollbar
+        # set the minimal height (see the penultimate paragraph of
+        # http://doc.qt.io/qt-4.8/qabstractscrollarea.html#addScrollBarWidget)
+        view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        gui.separator(view.box, 6, 6)
         self.cb_order = gui.checkBox(
             view.box, self, "order_by_importance",
             "Order by relevance",
             tooltip="Order by 𝜒² or ANOVA over the subgroups",
             callback=self.apply_sorting)
         self.group_vars = VariableListModel()
-        gui.listView(
+        view = gui.listView(
             self.controlArea, self, "group_var", box="Subgroups",
-            model=self.group_vars, callback=self.grouping_changed,
-            sizeHint=(200, 50))
+            model=self.group_vars, callback=self.grouping_changed)
+        view.setMinimumSize(QSize(30, 30))
+        # See the comment above
+        view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
 
         # TODO: move Compare median/mean to grouping box
-        self.display_box = gui.vBox(self.controlArea, "Display")
+        # The vertical size policy is needed to let only the list views expand
+        self.display_box = gui.vBox(
+            self.controlArea, "Display",
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.display_changed)
@@ -181,9 +192,11 @@ class OWBoxPlot(widget.OWWidget):
             btnLabels=["No comparison", "Compare medians", "Compare means"],
             callback=self.display_changed)
 
+        # The vertical size policy is needed to let only the list views expand
         self.stretching_box = gui.checkBox(
             self.controlArea, self, 'stretched', "Stretch bars", box='Display',
-            callback=self.display_changed).box
+            callback=self.display_changed,
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum)).box
 
         gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QGraphicsScene()
@@ -197,12 +210,15 @@ class OWBoxPlot(widget.OWWidget):
 
         e = gui.hBox(self.mainArea, addSpace=False)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
-        self.mainArea.setMinimumWidth(650)
+        self.mainArea.setMinimumWidth(600)
 
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
 
         self.update_display_box()
+
+    def sizeHint(self):
+        return QSize(100, 500)  # Vertical size is regulated by mainArea
 
     def eventFilter(self, obj, event):
         if obj is self.box_view.viewport() and \
@@ -848,7 +864,7 @@ def main(argv=None):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "brown-selected"
+        filename = "heart_disease"
 
     data = Orange.data.Table(filename)
     w = OWBoxPlot()
