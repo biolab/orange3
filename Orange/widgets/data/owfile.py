@@ -65,6 +65,13 @@ class XlsContextHandler(ContextHandler):
         return ContextHandler.NO_MATCH
 
 
+class LineEditSelectOnFocus(QtGui.QLineEdit):
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        # If selectAll is called directly, placing the cursor unselects the text
+        QtCore.QTimer.singleShot(0, self.selectAll)
+
+
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
@@ -168,6 +175,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.url_combo = url_combo = QtGui.QComboBox()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
+        url_combo.setLineEdit(LineEditSelectOnFocus())
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         url_combo.setEditable(True)
