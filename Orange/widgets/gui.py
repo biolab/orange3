@@ -878,24 +878,9 @@ class LineEditWFocusOut(QtGui.QLineEdit):
     """
     A class derived from QtGui.QLineEdit, which postpones the synchronization
     of the control's value with the master's attribute until the user leaves
-    the line edit, presses Enter or clicks an icon that appears beside the
-    line edit when the value is changed.
+    the line edit or presses Tab when the value is changed.
 
     The class also allows specifying a callback function for focus-in event.
-
-    .. attribute:: enterButton
-
-        A widget (usually an icon) that is shown when the value is changed.
-
-    .. attribute:: placeHolder
-
-        A placeholder which is shown when the button is hidden
-
-    .. attribute:: inSetValue
-
-        A flag that is set when the value is being changed through
-        :obj:`setValue` to prevent the programmatic changes from showing the
-        commit button.
 
     .. attribute:: callback
 
@@ -906,41 +891,19 @@ class LineEditWFocusOut(QtGui.QLineEdit):
         Callback that is called on the focus-in event
     """
 
-    def __init__(self, parent, callback, focusInCallback=None,
-                 placeholder=False):
+    def __init__(self, parent, callback, focusInCallback=None):
         super().__init__(parent)
         if parent.layout() is not None:
             parent.layout().addWidget(self)
         self.callback = callback
         self.focusInCallback = focusInCallback
-        self.enterButton, self.placeHolder = \
-            _enterButton(parent, self, placeholder)
-        self.enterButton.clicked.connect(self.returnPressedHandler)
-        self.textChanged[str].connect(self.markChanged)
         self.returnPressed.connect(self.returnPressedHandler)
 
-    def markChanged(self, *_):
-        if self.placeHolder:
-            self.placeHolder.hide()
-        self.enterButton.show()
-
-    def markUnchanged(self, *_):
-        self.enterButton.hide()
-        if self.placeHolder:
-            self.placeHolder.show()
-
     def returnPressedHandler(self):
-        if self.enterButton.isVisible():
-            self.markUnchanged()
-            if hasattr(self, "cback") and self.cback:
-                self.cback(self.text())
-            if self.callback:
-                self.callback()
-
-    def setText(self, t):
-        super().setText(t)
-        if self.enterButton:
-            self.markUnchanged()
+        if hasattr(self, "cback") and self.cback:
+            self.cback(self.text())
+        if self.callback:
+            self.callback()
 
     def focusOutEvent(self, *e):
         super().focusOutEvent(*e)
@@ -955,8 +918,7 @@ class LineEditWFocusOut(QtGui.QLineEdit):
 def lineEdit(widget, master, value, label=None, labelWidth=None,
              orientation=Qt.Vertical, box=None, callback=None,
              valueType=str, validator=None, controlWidth=None,
-             callbackOnType=False, focusInCallback=None,
-             enterPlaceholder=False, **misc):
+             callbackOnType=False, focusInCallback=None, **misc):
     """
     Insert a line edit.
 
@@ -990,10 +952,6 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     :param focusInCallback: a function that is called when the line edit
         receives focus
     :type focusInCallback: function
-    :param enterPlaceholder: if set to `True`, space of appropriate width is
-        left empty to the right for the icon that shows that the value is
-        changed but has not been committed yet
-    :type enterPlaceholder: bool
     :rtype: PyQt4.QtGui.QLineEdit or a box
     """
     if box or label:
@@ -1008,7 +966,6 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     baseClass = misc.pop("baseClass", None)
     if baseClass:
         ledit = baseClass(b)
-        ledit.enterButton = None
         if b is not widget:
             b.layout().addWidget(ledit)
     elif focusInCallback or callback and not callbackOnType:
@@ -1018,11 +975,9 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
                 b = outer
         else:
             outer = b
-        ledit = LineEditWFocusOut(outer, callback, focusInCallback,
-                                  enterPlaceholder)
+        ledit = LineEditWFocusOut(outer, callback, focusInCallback)
     else:
         ledit = QtGui.QLineEdit(b)
-        ledit.enterButton = None
         if b is not widget:
             b.layout().addWidget(ledit)
 

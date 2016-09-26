@@ -824,13 +824,13 @@ class OWPaintData(OWWidget):
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
         gui.lineEdit(hbox, self, "attr1", "Variable X: ",
                      controlWidth=80, orientation=Qt.Horizontal,
-                     enterPlaceholder=True, callback=self._attr_name_changed)
-        gui.separator(hbox, 18)
+                     callback=self._attr_name_changed)
+        gui.separator(hbox, 21)
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
         attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y: ",
                              controlWidth=80, orientation=Qt.Horizontal,
-                             enterPlaceholder=True,
                              callback=self._attr_name_changed)
+        gui.separator(hbox)
         gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
                      labelWidth=0,
                      callback=self.set_dimensions)
