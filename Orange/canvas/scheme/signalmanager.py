@@ -9,10 +9,10 @@ widgets in a scheme.
 """
 
 import logging
-import itertools
+import warnings
 
 from collections import namedtuple, defaultdict, deque
-from operator import attrgetter, add
+from operator import attrgetter
 from functools import partial
 
 
@@ -145,7 +145,7 @@ class SignalManager(QObject):
 
     def step(self):
         if self.__state == SignalManager.Paused:
-            self.process_queued(1)
+            self.process_queued()
 
     def state(self):
         """
@@ -298,30 +298,34 @@ class SignalManager(QObject):
     def process_queued(self, max_nodes=None):
         """
         Process queued signals.
+
+        Take one node node from the pending input queue and deliver
+        all scheduled signals.
         """
+        if max_nodes is not None or max_nodes != 1:
+            warnings.warn(
+                "`max_nodes` is deprecated and unused (will always equal 1)",
+                DeprecationWarning, stacklevel=2)
+
         if self.__runtime_state == SignalManager.Processing:
             raise RuntimeError("Cannot re-enter 'process_queued'")
 
         if not self._can_process():
             raise RuntimeError("Can't process in state %i" % self.__state)
 
-        log.info("Processing queued signals")
+        log.info("SignalManager: Processing queued signals")
 
         node_update_front = self.node_update_front()
-
-        if max_nodes is not None:
-            node_update_front = node_update_front[:max_nodes]
-
-        log.debug("Nodes for update %s",
+        log.debug("SignalManager: Nodes eligible for update %s",
                   [node.title for node in node_update_front])
 
-        self._set_runtime_state(SignalManager.Processing)
-        try:
-            # TODO: What if the update front changes in the loop?
-            for node in node_update_front:
+        if node_update_front:
+            node = node_update_front[0]
+            self._set_runtime_state(SignalManager.Processing)
+            try:
                 self.process_node(node)
-        finally:
-            self._set_runtime_state(SignalManager.Waiting)
+            finally:
+                self._set_runtime_state(SignalManager.Waiting)
 
     def process_node(self, node):
         """
@@ -378,9 +382,16 @@ class SignalManager(QObject):
 
     def pending_nodes(self):
         """
-        Return a list of pending nodes (in no particular order).
+        Return a list of pending nodes.
+
+        The nodes are returned in the order they were enqueued for
+        signal delivery.
+
+        Returns
+        -------
+        nodes : List[SchemeNode]
         """
-        return list(set(sig.link.sink_node for sig in self._input_queue))
+        return list(unique(sig.link.sink_node for sig in self._input_queue))
 
     def pending_input_signals(self, node):
         """
@@ -426,19 +437,19 @@ class SignalManager(QObject):
         dependents = partial(dependent_nodes, scheme)
 
         blocked_nodes = reduce(set.union,
-                               list(map(dependents, blocking_nodes)),
+                               map(dependents, blocking_nodes),
                                set(blocking_nodes))
 
-        pending = set(self.pending_nodes())
-
+        pending = self.pending_nodes()
         pending_downstream = reduce(set.union,
-                                    list(map(dependents, pending)),
+                                    map(dependents, pending),
                                     set())
 
         log.debug("Pending nodes: %s", pending)
         log.debug("Blocking nodes: %s", blocking_nodes)
 
-        return list(pending - pending_downstream - blocked_nodes)
+        noneligible = pending_downstream | blocked_nodes
+        return [node for node in pending if node not in noneligible]
 
     @Slot()
     def __process_next(self):
@@ -460,7 +471,7 @@ class SignalManager(QObject):
         log.info("'UpdateRequest' event, queued signals: %i",
                  len(self._input_queue))
         if self._input_queue:
-            self.process_queued(max_nodes=1)
+            self.process_queued()
 
         if self.__reschedule and self.__state == SignalManager.Running:
             self.__reschedule = False
@@ -555,3 +566,27 @@ def group_by_all(sequence, key=None):
             order_seen.append(item_key)
 
     return [(key, groups[key]) for key in order_seen]
+
+
+def unique(iterable):
+    """
+    Return unique elements of `iterable` while preserving their order.
+
+    Parameters
+    ----------
+    iterable : Iterable[Hashable]
+
+
+    Returns
+    -------
+    unique : Iterable
+        Unique elements from `iterable`.
+    """
+    seen = set()
+
+    def observed(el):
+        observed = el in seen
+        seen.add(el)
+        return observed
+
+    return (el for el in iterable if not observed(el))
