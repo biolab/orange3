@@ -294,49 +294,6 @@ def setLayout(widget, layout):
     widget.setLayout(layout)
 
 
-def _enterButton(parent, control, placeholder=True):
-    """
-    Utility function that returns a button with a symbol for "Enter" and
-    optionally a placeholder to show when the enter button is hidden. Both
-    are inserted into the parent's layout, if it has one. If placeholder is
-    constructed it is shown and the button is hidden.
-
-    The height of the button is the same as the height of the widget passed
-    as argument `control`.
-
-    :param parent: parent widget into which the button is inserted
-    :type parent: PyQt4.QtGui.QWidget
-    :param control: a widget for determining the height of the button
-    :type control: PyQt4.QtGui.QWidget
-    :param placeholder: a flag telling whether to construct a placeholder
-        (default: True)
-    :type placeholder: bool
-    :return: a tuple with a button and a place holder (or `None`)
-    :rtype: PyQt4.QtGui.QToolButton or tuple
-    """
-    global _enter_icon
-    if not _enter_icon:
-        _enter_icon = QtGui.QIcon(
-            os.path.dirname(__file__) + "/icons/Dlg_enter.png")
-    button = QtGui.QPushButton(parent)
-    button.setAutoDefault(True)
-    button.setDefault(True)
-    height = control.sizeHint().height()
-    button.setFixedSize(height, height)
-    button.setIcon(_enter_icon)
-    if parent.layout() is not None:
-        parent.layout().addWidget(button)
-    if placeholder:
-        button.hide()
-        holder = QtGui.QWidget(parent)
-        holder.setFixedSize(height, height)
-        if parent.layout() is not None:
-            parent.layout().addWidget(holder)
-    else:
-        holder = None
-    return button, holder
-
-
 def _addSpace(widget, space):
     """
     A helper function that adds space into the widget, if requested.
@@ -530,26 +487,11 @@ def label(widget, master, label, labelWidth=None, box=None,
 class SpinBoxWFocusOut(QtGui.QSpinBox):
     """
     A class derived from QtGui.QSpinBox, which postpones the synchronization
-    of the control's value with the master's attribute until the user presses
-    Enter or clicks an icon that appears beside the spin box when the value
-    is changed.
+    of the control's value with the master's attribute until the control looses
+    focus or user presses Tab when the value has changed.
 
     The class overloads :obj:`onChange` event handler to show the commit button,
     and :obj:`onEnter` to commit the change when enter is pressed.
-
-    .. attribute:: enterButton
-
-        A widget (usually an icon) that is shown when the value is changed.
-
-    .. attribute:: placeHolder
-
-        A placeholder which is shown when the button is hidden
-
-    .. attribute:: inSetValue
-
-        A flag that is set when the value is being changed through
-        :obj:`setValue` to prevent the programmatic changes from showing the
-        commit button.
     """
 
     def __init__(self, minv, maxv, step, parent=None):
@@ -567,51 +509,15 @@ class SpinBoxWFocusOut(QtGui.QSpinBox):
         super().__init__(parent)
         self.setRange(minv, maxv)
         self.setSingleStep(step)
-        self.inSetValue = False
-        self.enterButton = None
-        self.placeHolder = None
-
-    def onChange(self, _):
-        """
-        Hides the place holder and shows the commit button unless
-        :obj:`inSetValue` is set.
-        """
-        if not self.inSetValue:
-            self.placeHolder.hide()
-            self.enterButton.show()
 
     def onEnter(self):
         """
-        If the commit button is visible, the overload event handler commits
-        the change by calling the appropriate callbacks. It also hides the
-        commit button and shows the placeHolder.
+        Commits the change by calling the appropriate callbacks.
         """
-        if self.enterButton.isVisible():
-            self.enterButton.hide()
-            self.placeHolder.show()
-            if self.cback:
-                self.cback(int(str(self.text())))
-            if self.cfunc:
-                self.cfunc()
-
-    # doesn't work: it's probably LineEdit's focusOut that we should
-    # (but can't) catch
-    def focusOutEvent(self, *e):
-        """
-        This handler was intended to catch the focus out event and reintepret
-        it as if enter was pressed. It does not work, though.
-        """
-        super().focusOutEvent(*e)
-        if self.enterButton and self.enterButton.isVisible():
-            self.onEnter()
-
-    def setValue(self, value):
-        """
-        Set the :obj:`inSetValue` flag and call the inherited method.
-        """
-        self.inSetValue = True
-        super().setValue(value)
-        self.inSetValue = False
+        if self.cback:
+            self.cback(int(str(self.text())))
+        if self.cfunc:
+            self.cfunc()
 
 
 class DoubleSpinBoxWFocusOut(QtGui.QDoubleSpinBox):
@@ -623,35 +529,12 @@ class DoubleSpinBoxWFocusOut(QtGui.QDoubleSpinBox):
         self.setDecimals(math.ceil(-math.log10(step)))
         self.setRange(minv, maxv)
         self.setSingleStep(step)
-        self.inSetValue = False
-        self.enterButton = None
-        self.placeHolder = None
-
-    def onChange(self, _):
-        if not self.inSetValue:
-            self.placeHolder.hide()
-            self.enterButton.show()
 
     def onEnter(self):
-        if self.enterButton.isVisible():
-            self.enterButton.hide()
-            self.placeHolder.show()
-            if self.cback:
-                self.cback(float(str(self.text()).replace(",", ".")))
-            if self.cfunc:
-                self.cfunc()
-
-    # doesn't work: it's probably LineEdit's focusOut that we should
-    # (and can't) catch
-    def focusOutEvent(self, *e):
-        super().focusOutEvent(*e)
-        if self.enterButton and self.enterButton.isVisible():
-            self.onEnter()
-
-    def setValue(self, value):
-        self.inSetValue = True
-        super().setValue(value)
-        self.inSetValue = False
+        if self.cback:
+            self.cback(float(str(self.text()).replace(",", ".")))
+        if self.cfunc:
+            self.cfunc()
 
 
 def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
@@ -773,10 +656,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         cbox.disables = [sbox]
         cbox.makeConsistent()
     if callback and callbackOnReturn:
-        sbox.enterButton, sbox.placeHolder = _enterButton(bi, sbox)
-        sbox.valueChanged[str].connect(sbox.onChange)
         sbox.editingFinished.connect(sbox.onEnter)
-        sbox.enterButton.clicked.connect(sbox.onEnter)
         if hasattr(sbox, "upButton"):
             sbox.upButton().clicked.connect(
                 lambda c=sbox.editor(): c.setFocus())
