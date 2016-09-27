@@ -724,12 +724,6 @@ class WidgetsSignalManager(SignalManager):
         SignalManager.__init__(self, scheme)
 
         scheme.installEventFilter(self)
-
-        self.freezing = 0
-
-        self.__scheme_deleted = False
-
-        scheme.destroyed.connect(self.__on_scheme_destroyed)
         scheme.node_added.connect(self.on_node_added)
         scheme.node_removed.connect(self.on_node_removed)
         scheme.link_added.connect(self.link_added)
@@ -844,24 +838,6 @@ class WidgetsSignalManager(SignalManager):
         finally:
             app.restoreOverrideCursor()
 
-    def event(self, event):
-        if event.type() == QEvent.UpdateRequest:
-            if self.freezing > 0:
-                log.debug("received UpdateRequest while signal processing "
-                          "is frozen")
-                event.setAccepted(False)
-                return False
-
-            if self.__scheme_deleted:
-                log.debug("Scheme has been/is being deleted. No more "
-                          "signals will be delivered to any nodes.")
-                event.setAccepted(True)
-                return True
-        # Retain a reference to the scheme until the 'process_queued' finishes
-        # in SignalManager.event.
-        scheme = self.scheme()
-        return SignalManager.event(self, event)
-
     def eventFilter(self, receiver, event):
         if event.type() == QEvent.DeferredDelete and receiver is self.scheme():
             try:
@@ -880,13 +856,10 @@ class WidgetsSignalManager(SignalManager):
                          "update loop.")
                 event.setAccepted(False)
                 self.processingFinished.connect(self.scheme().deleteLater)
-                self.__scheme_deleted = True
+                self.stop()
                 return True
 
         return SignalManager.eventFilter(self, receiver, event)
-
-    def __on_scheme_destroyed(self, obj):
-        self.__scheme_deleted = True
 
 
 class ActivateParentEvent(QEvent):
@@ -951,7 +924,6 @@ def mock_error_owwidget(node, message):
 
     widget = DummyOWWidget()
     widget._settings = node.properties
-    widget.widgetInfo = node.description
 
     for link in node.description.inputs:
         handler = link.handler
