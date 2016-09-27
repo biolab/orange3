@@ -65,6 +65,13 @@ class XlsContextHandler(ContextHandler):
         return ContextHandler.NO_MATCH
 
 
+class LineEditSelectOnFocus(QtGui.QLineEdit):
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        # If selectAll is called directly, placing the cursor unselects the text
+        QtCore.QTimer.singleShot(0, self.selectAll)
+
+
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
@@ -168,6 +175,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.url_combo = url_combo = QtGui.QComboBox()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
+        url_combo.setLineEdit(LineEditSelectOnFocus())
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         url_combo.setEditable(True)
@@ -249,7 +257,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
+        self.editor_model.set_domain(None)
         self.reader = self._get_reader()
+        if not self.reader:
+            self.data = None
+            self.send("Data", None)
+            self.info.setText("No data.")
+            return
         self._update_sheet_combo()
 
         errors = []
@@ -288,7 +302,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
         elif self.source == self.URL:
-            return UrlReader(self.url_combo.currentText())
+            url = self.url_combo.currentText().strip()
+            if url:
+                return UrlReader(url)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:

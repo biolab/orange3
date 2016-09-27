@@ -55,14 +55,17 @@ class VarTableModel(QtCore.QAbstractTableModel):
             return result
 
         self.modelAboutToBeReset.emit()
-        self.variables[:] = self.original = [
-            [var.name, type(var), place,
-             discrete_value_display(var.values) if var.is_discrete else "",
-             may_be_numeric(var)]
-            for place, vars in enumerate(
-                (domain.attributes, domain.class_vars, domain.metas))
-            for var in vars
-        ]
+        if domain is None:
+            self.variables.clear()
+        else:
+            self.variables[:] = self.original = [
+                [var.name, type(var), place,
+                 discrete_value_display(var.values) if var.is_discrete else "",
+                 may_be_numeric(var)]
+                for place, vars in enumerate(
+                    (domain.attributes, domain.class_vars, domain.metas))
+                for var in vars
+            ]
         self.modelReset.emit()
 
     def reset(self):
