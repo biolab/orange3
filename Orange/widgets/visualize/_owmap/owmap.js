@@ -10,7 +10,7 @@ if (!Array.prototype.fill) {
 
 
 var _DEFAULT_COLOR = 'red',
-    _DEFAULT_SIZE = 20,
+    _DEFAULT_SIZE = 30,
     _DEFAULT_SHAPE = 0;
 
 var tileLayer = L.tileLayer.provider('OpenStreetMap.BlackAndWhite');
@@ -157,6 +157,7 @@ function add_markers(latlon_data) {
     }
     set_cluster_points();
     set_jittering();
+    set_marker_sizes();
     map.fitBounds(markersLayer.getBounds().pad(.1));
 }
 
@@ -241,13 +242,33 @@ function set_marker_colors(css_colors) {
 
 
 function set_marker_sizes(font_sizes) {
-    if (!font_sizes.length)
+    if (!font_sizes || !font_sizes.length)
         font_sizes = Array(markers.length).fill(_DEFAULT_SIZE);
     if (markers.length != font_sizes.length)
         return console.error('markers.length != hex_colors.length ???');
+
+    // Markers need to be display=block for getComputedStyle().height to work.
+    // Yet they have to be display=inline for marker label span to not be
+    // pushed on the next line. So the rule that is inserted here, is reverted
+    // at the end.
+    var stylesheet = document.styleSheets[document.styleSheets.length - 1],
+        stylesheet_rule = stylesheet.insertRule(
+            '.orange-marker:before { display: inline-block; }',
+            stylesheet.rules.length);
+
     for (var i = 0; i < font_sizes.length; ++i) {
-        markers[i]._icon.style.fontSize = font_sizes[i] + 'pt';
+        var marker = markers[i];
+        marker._icon.style.fontSize = font_sizes[i] + 'px';
+        var computed = window.getComputedStyle(marker._icon, ':before'),
+            w = parseFloat(computed.width), h = parseFloat(computed.height),
+            opts = marker.options.icon.options;
+        // Offset the center of the marker and popup anchor
+        opts.iconAnchor = L.point(w / 2, h / 2);
+        opts.popupAnchor = L.point(0, -h / 2);
+        marker.setIcon(marker.options.icon);
     }
+
+    stylesheet.deleteRule(stylesheet_rule);
 }
 
 
