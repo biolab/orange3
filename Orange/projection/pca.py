@@ -18,7 +18,7 @@ from Orange.preprocess import Continuize
 from Orange.projection import SklProjector, Projection
 from Orange.preprocess.score import LearnerScorer
 
-__all__ = ["PCA", "SparsePCA", "RandomizedPCA", "IncrementalPCA"]
+__all__ = ["PCA", "SparsePCA", "IncrementalPCA"]
 
 
 class _FeatureScorerMixin(LearnerScorer):
@@ -35,7 +35,9 @@ class PCA(SklProjector, _FeatureScorerMixin):
     __wraps__ = skl_decomposition.PCA
     name = 'pca'
 
-    def __init__(self, n_components=None, copy=True, whiten=False, preprocessors=None):
+    def __init__(self, n_components=None, copy=True, whiten=False,
+                 svd_solver='auto', tol=0.0, iterated_power='auto',
+                 random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -52,21 +54,6 @@ class SparsePCA(SklProjector):
     def __init__(self, n_components=None, alpha=1, ridge_alpha=0.01,
                  max_iter=1000, tol=1e-8, method='lars', n_jobs=1, U_init=None,
                  V_init=None, verbose=False, random_state=None, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
-
-    def fit(self, X, Y=None):
-        proj = self.__wraps__(**self.params)
-        proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
-
-
-class RandomizedPCA(SklProjector):
-    __wraps__ = skl_decomposition.RandomizedPCA
-    name = 'randomized pca'
-
-    def __init__(self, n_components=None, copy=True, iterated_power=3,
-                 whiten=False, random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
