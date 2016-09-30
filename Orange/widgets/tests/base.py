@@ -1,5 +1,6 @@
 import unittest
 
+from Orange.base import SklLearner, SklModel
 from PyQt4.QtGui import (QApplication, QComboBox, QSpinBox, QDoubleSpinBox,
                          QSlider)
 import sip
@@ -273,6 +274,14 @@ class ParameterMapping(BaseParameterMapping):
                          setter or self._default_set_value(gui_element, values))
 
     @staticmethod
+    def get_gui_element(widget, attribute):
+        return widget.controlledAttributes[attribute][0].control
+
+    @classmethod
+    def from_attribute(cls, widget, attribute, parameter=None):
+        return cls(parameter or attribute, cls.get_gui_element(widget, attribute))
+
+    @staticmethod
     def _default_values(gui_element):
         if isinstance(gui_element, (QSpinBox, QDoubleSpinBox, QSlider)):
             return [gui_element.minimum(), gui_element.maximum()]
@@ -435,6 +444,13 @@ class WidgetLearnerTestMixin:
                                  parameter.get_value())
 
     def test_parameters(self):
+        def get_value(learner, name):
+            # Handle SKL and skl-like learners, and non-SKL learners
+            if hasattr(learner, "params"):
+                return learner.params.get(name)
+            else:
+                return getattr(learner, name)
+
         """Check learner and model for various values of all parameters"""
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
@@ -442,14 +458,21 @@ class WidgetLearnerTestMixin:
                 self.send_signal("Data", self.data)
                 parameter.set_value(value)
                 self.widget.apply_button.button.click()
-                param = self.widget.learner.params.get(parameter.name)
-                self.assertEqual(param, parameter.get_value())
-                self.assertEqual(param, value)
-                param = self.get_output("Learner").params.get(parameter.name)
-                self.assertEqual(param, value)
-                model = self.get_output(self.model_name)
-                if model is not None:
-                    self.assertEqual(model.params.get(parameter.name), value)
-                    self.assertFalse(self.widget.Error.active)
-                else:
-                    self.assertTrue(self.widget.Error.active)
+                param = get_value(self.widget.learner, parameter.name)
+                self.assertEqual(param, parameter.get_value(),
+                                 "Mismatching setting for parameter '{}'".
+                                 format(parameter.name))
+                self.assertEqual(param, value,
+                                 "Mismatching setting for parameter '{}'".
+                                 format(parameter.name))
+                param = get_value(self.get_output("Learner"), parameter.name)
+                self.assertEqual(param, value,
+                                 "Mismatching setting for parameter '{}'".
+                                 format(parameter.name))
+                if issubclass(self.widget.LEARNER, SklModel):
+                    model = self.get_output(self.model_name)
+                    if model is not None:
+                        self.assertEqual(get_value(model, parameter.name), value)
+                        self.assertFalse(self.widget.Error.active)
+                    else:
+                        self.assertTrue(self.widget.Error.active)
