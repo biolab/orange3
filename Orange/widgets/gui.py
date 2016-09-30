@@ -3102,15 +3102,18 @@ class ProgressBar:
         self.widget = widget
         self.count = 0
         self.widget.progressBarInit()
+        self.finished = False
 
     def __del__(self):
-        self.finish()
+        if not self.finished:
+            self.widget.progressBarFinished(processEvents=False)
 
     def advance(self, count=1):
         self.count += count
         self.widget.progressBarSet(int(self.count * 100 / max(1, self.iter)))
 
     def finish(self):
+        self.finished = True
         self.widget.progressBarFinished()
 
 
