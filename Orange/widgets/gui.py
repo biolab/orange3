@@ -26,6 +26,7 @@ from Orange.data import \
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.constants import \
     CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
+from Orange.widgets.utils.buttons import VariableTextPushButton
 from Orange.util import namegen
 
 YesNo = NoYes = ("No", "Yes")
@@ -2099,7 +2100,12 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     if _is_horizontal(orientation):
         b.layout().addSpacing(10)
     cb.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-    b.button = btn = button(b, master, label, callback=lambda: do_commit())
+
+    b.button = btn = VariableTextPushButton(
+        b, text=label, textChoiceList=[label, auto_label], clicked=do_commit)
+    if b.layout() is not None:
+        b.layout().addWidget(b.button)
+
     if not checkbox_label:
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     checkbox_toggled()
