@@ -283,6 +283,19 @@ function set_marker_labels(labels) {
 }
 
 
+var opacity_stylesheet = document.styleSheets[document.styleSheets.length - 1];
+var opacity_stylesheet_rule = opacity_stylesheet.insertRule(
+    '.orange-marker { opacity: .8; }',
+    opacity_stylesheet.rules.length);
+
+function set_marker_opacity(opacity) {
+    opacity_stylesheet.deleteRule(opacity_stylesheet_rule);
+    opacity_stylesheet.insertRule(
+        '.orange-marker { opacity: ' + opacity + '; }',
+        opacity_stylesheet_rule);
+}
+
+
 function set_cluster_points() {
     var old_markersLayer = markersLayer;
     if (cluster_points) {

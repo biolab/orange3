@@ -150,7 +150,7 @@ class LeafletMap(WebviewWidget):
         ...
 
     def set_marker_opacity(self, opacity):
-        ...
+        self.evalJS('''set_marker_opacity({});'''.format(opacity / 100))
 
     def set_model(self, model):
         self.model = model
@@ -211,6 +211,7 @@ class OWMap(widget.OWWidget):
     label_attr = settings.Setting('')
     shape_attr = settings.Setting('')
     size_attr = settings.Setting('')
+    opacity = settings.Setting(100)
     jittering = settings.Setting(0)
     cluster_points = settings.Setting(False)
 
@@ -327,6 +328,10 @@ class OWMap(widget.OWWidget):
             sendSelectedValue=True,
             callback=lambda: self.map.set_marker_size(self.size_attr))
         combo.setModel(self._size_model)
+        self._opacity_slider = gui.hSlider(
+            box, self, 'opacity', None, 1, 100, 5,
+            label='Opacity:', labelFormat=' %d%%',
+            callback=lambda: self.map.set_marker_opacity(self.opacity))
         self._jittering = gui.valueSlider(
             box, self, 'jittering', label='Jittering:', values=(0, .5, 1, 2, 5),
             labelFormat=' %.1f%%', ticks=True,
