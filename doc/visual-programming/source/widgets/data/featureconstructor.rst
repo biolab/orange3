@@ -12,36 +12,39 @@ Signals
 
 -  **Data**
 
-A data set.
+A data set
 
 **Outputs**:
 
 -  **Data**
 
-Modified data set.
+A modified data set
 
 Description
 -----------
 
-**Feature Constructor** allows you to manually add features (columns)
-into your data set. The new feature can be a computation of the existing
+The **Feature Constructor** allows you to manually add features (columns)
+into your data set. The new feature can be a computation of an existing
 one or a combination of several (addition, subtraction, etc.). You can
 choose what type of feature it will be (discrete, continuous or string)
 and what its parameters are (name, value, expression). For continuous
-variables you must define decimal precision and construct an expression
-in a Python mode.
+variables you only have to construct an expression in Python.
+
 
 .. figure:: images/feature-constructor1-stamped.png
 
-1. List of constructed attributes
-2. Add or remove features
+
+1. List of constructed variables 
+2. Add or remove variables.   
 3. New feature name
-4. Decimal precision
-5. Expression in Python
-6. Press commit to communicate changes
+4. Expression in Python
+5. Select a feature.
+6. Select a function.
+7. Produce a report.
+8. Press *Send* to communicate changes. 
 
 For discrete variables, however, there's a bit more work. First add or
-remove the values you want to for the new feature. Then select the base
+remove the values you want for the new feature. Then select the base
 value and the expression. In the example below, we have constructed an
 expression with 'if lower than' and defined three conditions; the
 program ascribes 0 (which we renamed to lower) if the original value is
@@ -49,20 +52,25 @@ lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the
 other values. Notice that we use an underscore for the feature name
 (e.g. petal\_length).
 
+
 .. figure:: images/feature-constructor2-stamped.png
 
-1. New feature name
-2. List of discrete values (click on the value to rename it)
-3. Add or remove discrete values
-4. Select base value
-5. Order the values
-6. Expression in Python
+
+1. List of variable definitions 
+2. Add or remove variables 
+3. New feature name
+4. Expression in Python
+5. Select a feature.
+6. Select a function.
+7. Assign values. 
+8. Produce a report. 
+9. Press *Send* to communicate changes. 
 
 Example
 -------
 
-With **Feature Constructor** you can easily adjust or combine existing
-features into new ones. Below we added one new discrete feature to the
+With the **Feature Constructor** you can easily adjust or combine existing
+features into new ones. Below, we added one new discrete feature to the
 *Titanic* data set. We created a new attribute called *Financial status*
 and set the values to be *rich* if the person belongs to the first class
 (status = first) and *not rich* for everybody else. We can see the new
@@ -86,7 +94,7 @@ introduction.
 - == for equal
 - != for not equal
 
-As in example: (*value*) if (*feature name*) < (*value*), else (*value*)
+As in the example: (*value*) if (*feature name*) < (*value*), else (*value*)
 if (*feature name*) < (*value*), else (*value*)
 
 [Use value 1 if feature is less than specified value, else use value 2

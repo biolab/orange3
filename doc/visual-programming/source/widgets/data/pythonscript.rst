@@ -12,55 +12,55 @@ Signals
 
 -  **in\_data (Orange.data.Table)**
 
-Input data set bound to ``in_data`` variable in the script’s local
-namespace.
+   Input data set bound to ``in_data`` variable in the script’s local
+   namespace.
 
 -  **in\_distance (Orange.core.SymMatrix)**
 
-Input symmetric matrix bound to ``in_distance`` variable in the script’s
-local namespace.
+   Input symmetric matrix bound to ``in_distance`` variable in the script’s
+   local namespace.
 
 -  **in\_learner (Orange.classification.Learner)**
 
-Input learner bound to ``in_learner`` variable in the script’s local
-namespace.
+   Input learner bound to ``in_learner`` variable in the script’s local
+   namespace.
 
 -  **in\_classifier (Orange.classification.Learner)**
 
-Input classifier bound to ``in_classifier`` variable in the script’s
-local namespace.
+   Input classifier bound to ``in_classifier`` variable in the script’s
+   local namespace.
 
 -  **in\_object (object)**
 
-Input python object bound to ``in_object`` variable in the script’s
-local namespace.
+   Input python object bound to ``in_object`` variable in the script’s
+   local namespace.
 
 **Outputs**:
 
 -  **out\_data (Orange.data.Table)**
 
-Data set retrieved from ``out_data`` variable in the script’s local
-namespace after execution.
+   Data set retrieved from ``out_data`` variable in the script’s local
+   namespace after execution.
 
 -  **out\_distance (Orange.core.SymMatrix)**
 
-Symmetric matrix retrieved from ``out_distance`` variable in the
-script’s local namespace after execution.
+   Symmetric matrix retrieved from ``out_distance`` variable in the
+   script’s local namespace after execution.
 
 -  **out\_learner (Orange.classification.Learner)**
 
-Learner retrieved from ``out_learner`` variable in the script’s local
-namespace.
+   Learner retrieved from ``out_learner`` variable in the script’s local
+   namespace.
 
 -  **out\_classifier (Orange.classification.Learner)**
 
-Classifier retrieved from ``out_classifier`` variable in the script’s
-local namespace after execution.
+   Classifier retrieved from ``out_classifier`` variable in the script’s
+   local namespace after execution.
 
 -  **out\_object (object)**
 
-Python object retrieved from ``out_object`` variable in the script’s
-local namespace after execution.
+   Python object retrieved from ``out_object`` variable in the script’s
+   local namespace after execution.
 
 Description
 -----------
@@ -114,7 +114,6 @@ Examples
 --------
 
 Python Script widget is intended to extend functionalities for advanced users. 
-
 
 One can, for example, do batch filtering by attributes. We used zoo.tab for the example
 and we filtered out all the attributes that have more than 5 discrete values. This in 
@@ -177,4 +176,3 @@ splitting them by whitespace.
 You can add a lot of other preprocessing steps to further adjust the output. The output of **Python Script** can be used with any widget that accepts the type of output your script produces. In this case, connection is green, which signalizes the right type of input for Word Cloud widget.
 
 .. figure:: images/PythonScript-Example3.png
-

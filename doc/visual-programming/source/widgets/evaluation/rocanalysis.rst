@@ -12,7 +12,7 @@ Signals
 
 -  **Evaluation Results**
 
-Results of classifiers’ tests on data
+   Results of classifiers’ tests on data
 
 **Outputs**:
 
@@ -27,13 +27,13 @@ models. The curve plots a false positive rate on an x-axis
 (1-specificity; probability that target=1 when true value=0) against a
 true positive rate on a y-axis (sensitivity; probability that target=1
 when true value=1). The closer the curve follows the left-hand border
-and then the top border of the ROC space the more accurate the
+and then the top border of the ROC space, the more accurate the
 classifier. Given the costs of false positives and false negatives, the
 widget can also determine the optimal classifier and threshold.
 
 .. figure:: images/ROCAnalysis-basic-stamped.png
 
-1. Choose the desired *Target Class*. Default class is chosen
+1. Choose the desired *Target Class*. The default class is chosen
    alphabetically.
 
 2. If test results contain more than one classifier, the user can choose
@@ -44,13 +44,14 @@ widget can also determine the optimal classifier and threshold.
    such as k-fold cross validation, the results can be (and usually are)
    averaged.
 
-.. figure:: images/ROC-Comparison.png
+   .. figure:: images/ROC-Comparison.png
 
-The averaging options are:
-    - **Merge predictions from folds** (top left), which treats all the test data as if they came from a single iteration
-    - **Mean TP rate** (top right) averages the curves vertically, showing the corresponding confidence intervals
-    - **Mean TP and FP at threshold** (bottom left) traverses over threshold, averages the positions of curves and shows horizontal and vertical confidence intervals
-    - **Show individual curves** (bottom right) does not average but prints all the curves instead
+   The averaging options are:
+
+   - **Merge predictions from folds** (top left), which treats all the test data as if they came from a single iteration
+   - **Mean TP rate** (top right) averages the curves vertically, showing the corresponding confidence intervals
+   - **Mean TP and FP at threshold** (bottom left) traverses over threshold, averages the positions of curves and shows horizontal and vertical confidence intervals
+   - **Show individual curves** (bottom right) does not average but prints all the curves instead
 
 4. Option *Show convex ROC curves* refers to convex curves over each
    individual classifier (the thin lines positioned over curves). *Show
@@ -59,56 +60,57 @@ The averaging options are:
    makes sense since selecting a threshold in a concave part of the
    curve cannot yield optimal results, disregarding the cost matrix.
    Besides, it is possible to reach any point on the convex curve by
-   combining the classifiers represented by the points at the border of
+   combining the classifiers represented by the points on the border of
    the concave region.
 
-.. figure:: images/ROCAnalysis-AUC.png
+   .. figure:: images/ROCAnalysis-AUC.png
 
-The diagonal dotted line represents the behaviour of a random
-classifier. The full diagonal line represents iso-performace. A black
-"*A*" symbol at the bottom of the graph proportionally readjusts the
-graph.
+   The diagonal dotted line represents the behaviour of a random
+   classifier. The full diagonal line represents iso-performance. A black
+   "*A*" symbol at the bottom of the graph proportionally readjusts the
+   graph.
 
 5. The final box is dedicated to the analysis of the curve. The user can
    specify the cost of false positives (FP) and false negatives (FN),
    and the prior target class probability.
 
-*Default threshold (0.5) point* shows the point on the ROC curve
-achieved by the classifier if it predicts the target class if its
-probability equals or exceeds 0.5.
+   *Default threshold (0.5) point* shows the point on the ROC curve
+   achieved by the classifier if it predicts the target class if its
+   probability equals or exceeds 0.5.
 
-*Show performance line* shows iso-performance in the ROC space so that
-all the points on the line give the same profit/loss. The line further
-to the upper left is better than the one down and right. The direction
-of the line depends upon costs and probabilities. This gives a recipe
-for depicting the optimal threshold for the given costs: this is the
-point where the tangent with the given inclination touches the curve and
-it is marked in the plot. If we push the iso-performance higher or more
-to the left, the points on the iso-performance line cannot be reached by
-the learner. Going down or to the right, decreases the performance.
+   *Show performance line* shows iso-performance in the ROC space so that
+   all the points on the line give the same profit/loss. The line further
+   to the upper left is better than the one down and right. The direction
+   of the line depends upon costs and probabilities. This gives a recipe
+   for depicting the optimal threshold for the given costs: this is the
+   point where the tangent with the given inclination touches the curve and
+   it is marked in the plot. If we push the iso-performance higher or more
+   to the left, the points on the iso-performance line cannot be reached by
+   the learner. Going down or to the right, decreases the performance.
 
-The widget allows setting the costs from 1 to 1000. Units are not
-important, as are not the magnitudes. What matters is the relation
-between the two costs, so setting them to 100 and 200 will give the same
-result as 400 and 800.
+   The widget allows setting the costs from 1 to 1000. Units are not
+   important, as are not the magnitudes. What matters is the relation
+   between the two costs, so setting them to 100 and 200 will give the same
+   result as 400 and 800.
 
-.. figure:: images/ROCAnalysis-Plain.png
+   .. figure:: images/ROCAnalysis-Plain.png
 
-Defaults: both costs equal (500), Prior target class probability 50%
-(from the data).
+   Defaults: both costs equal (500), Prior target class probability 50%
+   (from the data).
 
-.. figure:: images/ROCAnalysis.png
+   .. figure:: images/ROCAnalysis.png
 
-False positive cost: 830, False negative cost 650, Prior target class
-probability 73%.
+   False positive cost: 830, False negative cost 650, Prior target class
+   probability 73%.
+
+6. Press *Save Image* if you want to save the created image
+   to your computer in a .svg or .png format.
+
+7. Produce a report. 
 
 Example
 -------
 
-At the moment, the only widget which gives the right type of signal
-needed by the **ROC Analysis** is :doc:`Test&Score<../evaluation/testlearners>`. Below we compare
-two classifiers, namely :doc:`Classification Tree<../classify/classificationtree>` and :doc:`Naive Bayes<../classify/naivebayes>`, in
-**Test&Score** and then compare their performance in **ROC
-Analysis**, :doc:`Life Curve<../evaluation/lifecurve>` and :doc:`Calibration Plot<../evaluation/calibrationplot>`.
+At the moment, the only widget which gives the right type of signal needed by the **ROC Analysis** is :doc:`Test&Score <../evaluation/testlearners>`. Below, we compare two classifiers, namely :doc:`Classification Tree <../classify/classificationtree>` and :doc:`Naive Bayes <../classify/naivebayes>`, in **Test&Score** and then compare their performance in **ROC Analysis**, :doc:`Life Curve <../evaluation/liftcurve>` and :doc:`Calibration Plot <../evaluation/calibrationplot>`.
 
 .. figure:: images/ROCAnalysis-example.png
