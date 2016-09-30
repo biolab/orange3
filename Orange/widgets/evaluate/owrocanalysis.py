@@ -93,7 +93,6 @@ def ROCData_from_results(results, clf_index, target):
     folds = results.folds if results.folds is not None else [slice(0, -1)]
     fold_curves = []
     for fold in folds:
-        # TODO: Check for no FP or no TP
         points = roc_curve_for_fold(results, fold, clf_index, target)
         hull = roc_curve_convex_hull(points)
         c = ROCCurve(ROCPoints(*points), ROCPoints(*hull))
@@ -102,32 +101,49 @@ def ROCData_from_results(results, clf_index, target):
     curves = [fold.points for fold in fold_curves
               if fold.is_valid]
 
-    fpr, tpr, std = roc_curve_vertical_average(curves)
-    thresh = numpy.zeros_like(fpr) * numpy.nan
-    hull = roc_curve_convex_hull((fpr, tpr, thresh))
-    v_avg = ROCAveragedVert(
-        ROCPoints(fpr, tpr, thresh),
-        ROCPoints(*hull),
-        std
-    )
+    if curves:
+        fpr, tpr, std = roc_curve_vertical_average(curves)
 
-    all_thresh = numpy.hstack([t for _, _, t in curves])
-    all_thresh = numpy.clip(all_thresh, 0.0 - 1e-10, 1.0 + 1e-10)
-    all_thresh = numpy.unique(all_thresh)[::-1]
-    thresh = all_thresh[::max(all_thresh.size // 10, 1)]
+        thresh = numpy.zeros_like(fpr) * numpy.nan
+        hull = roc_curve_convex_hull((fpr, tpr, thresh))
+        v_avg = ROCAveragedVert(
+            ROCPoints(fpr, tpr, thresh),
+            ROCPoints(*hull),
+            std
+        )
+    else:
+        # return an invalid vertical averaged ROC
+        v_avg = ROCAveragedVert(
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            numpy.array([])
+        )
 
-    (fpr, fpr_std), (tpr, tpr_std) = \
-        roc_curve_threshold_average(curves, thresh)
+    if curves:
+        all_thresh = numpy.hstack([t for _, _, t in curves])
+        all_thresh = numpy.clip(all_thresh, 0.0 - 1e-10, 1.0 + 1e-10)
+        all_thresh = numpy.unique(all_thresh)[::-1]
+        thresh = all_thresh[::max(all_thresh.size // 10, 1)]
 
-    hull = roc_curve_convex_hull((fpr, tpr, thresh))
+        (fpr, fpr_std), (tpr, tpr_std) = \
+            roc_curve_threshold_average(curves, thresh)
 
-    t_avg = ROCAveragedThresh(
-        ROCPoints(fpr, tpr, thresh),
-        ROCPoints(*hull),
-        tpr_std,
-        fpr_std
-    )
+        hull = roc_curve_convex_hull((fpr, tpr, thresh))
 
+        t_avg = ROCAveragedThresh(
+            ROCPoints(fpr, tpr, thresh),
+            ROCPoints(*hull),
+            tpr_std,
+            fpr_std
+        )
+    else:
+        # return an invalid threshold averaged ROC
+        t_avg = ROCAveragedThresh(
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            numpy.array([]),
+            numpy.array([])
+        )
     return ROCData(merged_curve, fold_curves, v_avg, t_avg)
 
 ROCData.from_results = staticmethod(ROCData_from_results)
@@ -670,6 +686,8 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
 
 
 def roc_curve_vertical_average(curves, samples=10):
+    if not len(curves):
+        raise ValueError("No curves")
     fpr_sample = numpy.linspace(0.0, 1.0, samples)
     tpr_samples = []
     for fpr, tpr, _ in curves:
@@ -680,6 +698,8 @@ def roc_curve_vertical_average(curves, samples=10):
 
 
 def roc_curve_threshold_average(curves, thresh_samples):
+    if not len(curves):
+        raise ValueError("No curves")
     fpr_samples, tpr_samples = [], []
     for fpr, tpr, thresh in curves:
         ind = numpy.searchsorted(thresh[::-1], thresh_samples, side="left")
