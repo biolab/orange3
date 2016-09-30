@@ -258,7 +258,7 @@ function set_marker_sizes(font_sizes) {
 
     for (var i = 0; i < font_sizes.length; ++i) {
         var marker = markers[i];
-        marker._icon.style.fontSize = font_sizes[i] + 'px';
+        marker._icon.style.fontSize = size_coefficient * font_sizes[i] + 'px';
         var computed = window.getComputedStyle(marker._icon, ':before'),
             w = parseFloat(computed.width), h = parseFloat(computed.height),
             opts = marker.options.icon.options;
@@ -293,6 +293,14 @@ function set_marker_opacity(opacity) {
     opacity_stylesheet.insertRule(
         '.orange-marker { opacity: ' + opacity + '; }',
         opacity_stylesheet_rule);
+}
+
+
+var size_coefficient = 1;
+
+function set_marker_size_coefficient(coeff) {
+    window.size_coefficient = coeff;
+    set_marker_sizes(size_attr.sizes);
 }
 
 

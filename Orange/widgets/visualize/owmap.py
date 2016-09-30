@@ -147,7 +147,7 @@ class LeafletMap(WebviewWidget):
         self.evalJS('''set_marker_sizes(size_attr.sizes);''')
 
     def set_marker_size_coefficient(self, size):
-        ...
+        self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
 
     def set_marker_opacity(self, opacity):
         self.evalJS('''set_marker_opacity({});'''.format(opacity / 100))
@@ -212,6 +212,7 @@ class OWMap(widget.OWWidget):
     shape_attr = settings.Setting('')
     size_attr = settings.Setting('')
     opacity = settings.Setting(100)
+    zoom = settings.Setting(100)
     jittering = settings.Setting(0)
     cluster_points = settings.Setting(False)
 
@@ -332,6 +333,10 @@ class OWMap(widget.OWWidget):
             box, self, 'opacity', None, 1, 100, 5,
             label='Opacity:', labelFormat=' %d%%',
             callback=lambda: self.map.set_marker_opacity(self.opacity))
+        self._zoom_slider = gui.valueSlider(
+            box, self, 'zoom', None, values=(20, 50, 100, 200, 300, 400, 500, 700, 1000),
+            label='Symbol size:', labelFormat=' %d%%',
+            callback=lambda: self.map.set_marker_size_coefficient(self.zoom))
         self._jittering = gui.valueSlider(
             box, self, 'jittering', label='Jittering:', values=(0, .5, 1, 2, 5),
             labelFormat=' %.1f%%', ticks=True,
