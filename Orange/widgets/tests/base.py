@@ -331,6 +331,9 @@ class WidgetLearnerTestMixin:
             self.model_class = ModelRegression
         self.parameters = []
 
+    def test_has_unconditional_apply(self):
+        self.assertTrue(hasattr(self.widget, "unconditional_apply"))
+
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
