@@ -761,7 +761,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             pen = [make_pen(color, 1.5)] * self.n_points
             if subset is not None:
                 brush = [(QBrush(QColor(128, 128, 128, 0)),
-                          QBrush(QColor(128, 128, 128, self.alpha_value)))[s]
+                          QBrush(QColor(128, 128, 128, 255)))[s]
                          for s in subset]
             else:
                 brush = [QBrush(QColor(128, 128, 128, self.alpha_value))] \
@@ -787,7 +787,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                                    for col in self.pen_colors.tolist()]
             if subset is not None:
                 self.brush_colors[:, 3] = 0
-                self.brush_colors[subset, 3] = self.alpha_value
+                self.brush_colors[subset, 3] = 255
             else:
                 self.brush_colors[:, 3] = self.alpha_value
             pen = self.pen_colors
@@ -806,9 +806,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     [make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])
                 self.pen_colors = pens[c_data]
+                alpha = self.alpha_value if subset is None else 255
                 self.brush_colors = np.array([
                     [QBrush(QColor(0, 0, 0, 0)),
-                     QBrush(QColor(col[0], col[1], col[2], self.alpha_value))]
+                     QBrush(QColor(col[0], col[1], col[2], alpha))]
                     for col in colors])
                 self.brush_colors = self.brush_colors[c_data]
             if subset is not None:
