@@ -13,7 +13,7 @@ class OWRuleViewer(widget.OWWidget):
     name = "CN2 Rule Viewer"
     description = "Review rules induced from data."
     icon = "icons/CN2RuleViewer.svg"
-    priority = 18
+    priority = 1140
 
     inputs = [("Data", Table, 'set_data'),
               ("Classifier", _RuleClassifier, 'set_classifier')]

@@ -54,7 +54,7 @@ class OWPythagorasTree(OWWidget):
     description = 'Pythagorean Tree visualization for tree like-structures.'
     icon = 'icons/PythagoreanTree.svg'
 
-    priority = 610
+    priority = 1000
 
     inputs = [('Tree', Tree, 'set_tree')]
     outputs = [('Selected Data', Table)]

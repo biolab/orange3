@@ -29,7 +29,7 @@ class OWPythagoreanForest(OWWidget):
     description = 'Pythagorean forest for visualising random forests.'
     icon = 'icons/PythagoreanForest.svg'
 
-    priority = 620
+    priority = 1001
 
     inputs = [('Random forest', RandomForest, 'set_rf')]
     outputs = [('Tree', Tree)]

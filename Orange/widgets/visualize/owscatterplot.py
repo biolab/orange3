@@ -95,7 +95,7 @@ class OWScatterPlot(OWWidget):
     description = "Interactive scatter plot visualization with " \
                   "intelligent data visualization enhancements."
     icon = "icons/ScatterPlot.svg"
-    priority = 210
+    priority = 140
 
     inputs = [("Data", Table, "set_data", Default),
               ("Data Subset", Table, "set_subset_data"),

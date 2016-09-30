@@ -56,7 +56,7 @@ class OWSieveDiagram(OWWidget):
     description = "Visualize the observed and expected frequencies " \
                   "for a combination of values."
     icon = "icons/SieveDiagram.svg"
-    priority = 310
+    priority = 200
 
     inputs = [("Data", Table, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
