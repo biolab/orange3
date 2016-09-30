@@ -1,6 +1,6 @@
 numpy>=1.9.0
 scipy>=0.11.0
-scikit-learn>=0.17
+scikit-learn>=0.18
 bottleneck>=1.0.0
 # Reading Excel files
 xlrd>=0.9.2
