@@ -6,7 +6,7 @@ from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearRegressionLearner,
     RidgeRegressionLearner, ElasticNetLearner)
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
@@ -19,7 +19,7 @@ class OWLinearRegression(OWBaseLearner):
 
     LEARNER = LinearRegressionLearner
 
-    outputs = [("Coefficients", Table)]
+    outputs = [("Coefficients", Table, widget.Explicit)]
 
     #: Types
     REGULARIZATION_TYPES = ["No regularization", "Ridge regression (L2)",

@@ -6,7 +6,7 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.regression import SVRLearner, NuSVRLearner
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.classify.owsvmclassification import OWBaseSVM
 
 
@@ -19,7 +19,7 @@ class OWSVMRegression(OWBaseSVM):
 
     LEARNER = SVRLearner
 
-    outputs = [("Support vectors", Table)]
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
     #: SVR types
     Epsilon_SVR, Nu_SVR = 0, 1

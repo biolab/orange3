@@ -5,7 +5,7 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification.svm import SVMLearner, NuSVMLearner
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
@@ -127,7 +127,7 @@ class OWSVMClassification(OWBaseSVM):
 
     LEARNER = SVMLearner
 
-    outputs = [("Support vectors", Table)]
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
     C_SVC, Nu_SVC = 0, 1
     svmtype = settings.Setting(0)
