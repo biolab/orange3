@@ -765,6 +765,8 @@ Single = widget_description.Single
 #: Signal handlers with this flag have (object, id: object) -> None signature.
 Multiple = widget_description.Multiple
 #: Applies to user interaction only.
+#: Only connected if specifically requested (in a dedicated "Links" dialog)
+#: or it is the only possible connection.
 Explicit = widget_description.Explicit
 #: Dynamic output type.
 #: Specifies that the instances on the output will in general be
