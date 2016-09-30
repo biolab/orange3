@@ -15,7 +15,6 @@ from Orange.statistics import contingency, distribution
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.itemmodels import VariableListModel
 
 
@@ -260,15 +259,13 @@ class OWBoxPlot(widget.OWWidget):
         self.is_continuous = attr.is_continuous
         if self.group_var:
             self.dist = []
-            self.conts = datacaching.getCached(
-                dataset, contingency.get_contingency,
-                (dataset, attr, self.group_var))
+            self.conts = contingency.get_contingency(
+                dataset, attr, self.group_var)
             if self.is_continuous:
                 self.stats = [BoxData(cont) for cont in self.conts]
             self.label_txts_all = self.group_var.values
         else:
-            self.dist = datacaching.getCached(
-                dataset, distribution.get_distribution, (dataset, attr))
+            self.dist = distribution.get_distribution(dataset, attr)
             self.conts = []
             if self.is_continuous:
                 self.stats = [BoxData(self.dist)]

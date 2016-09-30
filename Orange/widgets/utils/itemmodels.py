@@ -666,8 +666,11 @@ class DomainModel(VariableListModel):
         if isinstance(order, int):
             order = (order,)
         if placeholder is not None and None not in order:
-            # don't use insert(0, .), it would modify the argument
-            order = (None,) + order
+            # Add None for the placeholder if it's not already there
+            # Include separator if the current order uses them
+            order = (None,) + \
+                    (self.Separator, ) * (self.Separator in order) + \
+                    order
         self.order = order
         self.valid_types = valid_types
         self.alphabetical = alphabetical
@@ -687,21 +690,21 @@ class DomainModel(VariableListModel):
             if isinstance(section, int):
                 if domain is None:
                     continue
-                to_add = chain(
+                to_add = list(chain(
                     *(vars for i, vars in enumerate(
                         (domain.attributes, domain.class_vars, domain.metas))
-                      if (1 << i) & section))
+                      if (1 << i) & section)))
                 if self.valid_types is not None:
                     to_add = [var for var in to_add
                               if isinstance(var, self.valid_types)]
                 if self.alphabetical:
-                    to_add = sorted(to_add)
+                    to_add = sorted(to_add, key=lambda x: x.name)
             elif isinstance(section, list):
                 to_add = section
             else:
                 to_add = [section]
             if to_add:
-                if add_separator:
+                if add_separator and content:
                     content.append(self.Separator)
                     add_separator = False
                 content += to_add
