@@ -589,11 +589,15 @@ class PyListModelTooltip(PyListModel):
 class VariableListModel(PyListModel):
     MIME_TYPE = "application/x-Orange-VariableList"
 
+    def __init__(self, *args, placeholder=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.placeholder = placeholder
+
     def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid_for(index, self):
             var = self[index.row()]
             if var is None and role == Qt.DisplayRole:
-                return "None"
+                return self.placeholder or "None"
             if not isinstance(var, Variable):
                 return super().data(index, role)
             elif role == Qt.DisplayRole:
@@ -656,10 +660,14 @@ class DomainModel(VariableListModel):
                  ATTRIBUTES)
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
-    def __init__(self, order=SEPARATED, valid_types=None, alphabetical=False):
-        super().__init__()
+    def __init__(self, order=SEPARATED, placeholder=None,
+                 valid_types=None, alphabetical=False):
+        super().__init__(placeholder=placeholder)
         if isinstance(order, int):
-            order = [order]
+            order = (order,)
+        if placeholder is not None and None not in order:
+            # don't use insert(0, .), it would modify the argument
+            order = (None,) + order
         self.order = order
         self.valid_types = valid_types
         self.alphabetical = alphabetical

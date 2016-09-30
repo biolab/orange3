@@ -183,32 +183,28 @@ class OWScatterPlot(OWWidget):
 
         box = gui.vBox(self.controlArea, "Points")
         color_model = DomainModel(
-            order=("(Same color)", dmod.Separator) + dmod.SEPARATED,
-            valid_types=dmod.PRIMITIVE)
+            placeholder="(Same color)", valid_types=dmod.PRIMITIVE)
         self.cb_attr_color = gui.comboBox(
             box, self, "graph.attr_color", label="Color:",
-            emptyString="(Same color)", callback=self.update_colors,
+            callback=self.update_colors,
             model=color_model, **common_options)
         label_model = DomainModel(
-            order=("(No labels)", dmod.Separator) + dmod.SEPARATED,
-            valid_types=dmod.PRIMITIVE)
+            placeholder="(No labels)", valid_types=dmod.PRIMITIVE)
         self.cb_attr_label = gui.comboBox(
             box, self, "graph.attr_label", label="Label:",
-            emptyString="(No labels)", callback=self.graph.update_labels,
+            callback=self.graph.update_labels,
             model=label_model, **common_options)
         shape_model = DomainModel(
-            order=("(Same shape)", dmod.Separator) + dmod.SEPARATED,
-            valid_types=DiscreteVariable)
+            placeholder="(Same shape)", valid_types=DiscreteVariable)
         self.cb_attr_shape = gui.comboBox(
             box, self, "graph.attr_shape", label="Shape:",
-            emptyString="(Same shape)", callback=self.graph.update_shapes,
+            callback=self.graph.update_shapes,
             model=shape_model, **common_options)
         size_model = DomainModel(
-            order=("(Same size)", dmod.Separator) + dmod.SEPARATED,
-            valid_types=ContinuousVariable)
+            placeholder="(Same size)", valid_types=ContinuousVariable)
         self.cb_attr_size = gui.comboBox(
             box, self, "graph.attr_size", label="Size:",
-            emptyString="(Same size)", callback=self.graph.update_sizes,
+            callback=self.graph.update_sizes,
             model=size_model, **common_options)
         self.models = [self.xy_model, color_model, label_model,
                        shape_model, size_model]

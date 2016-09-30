@@ -1613,7 +1613,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
         cindex = getdeepattr(master, value)
         model = misc.get("model", None)
         if isinstance(model, VariableListModel):
-            callfront = CallFrontComboBoxModel(combo, model, emptyString)
+            callfront = CallFrontComboBoxModel(combo, model)
             callfront.action(cindex)
         else:
             if isinstance(cindex, str):
@@ -1629,7 +1629,7 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
             connectControl(
                 master, value, callback, combo.activated[int],
                 callfront,
-                ValueCallbackComboModel(master, value, model, emptyString)
+                ValueCallbackComboModel(master, value, model)
             )
         elif sendSelectedValue:
             connectControl(
@@ -2266,16 +2266,13 @@ class ValueCallbackCombo(ValueCallback):
 
 
 class ValueCallbackComboModel(ValueCallback):
-    def __init__(self, widget, attribute, model, emptyString=""):
+    def __init__(self, widget, attribute, model):
         super().__init__(widget, attribute)
         self.model = model
-        self.emptyString = emptyString
 
     def __call__(self, index):
-        value = self.model[index]
         # Can't use super here since, it doesn't set `None`'s?!
-        return self.acyclic_setattr(
-            None if value == self.emptyString else value)
+        return self.acyclic_setattr(self.model[index])
 
 
 class ValueCallbackLineEdit(ControlledCallback):
@@ -2475,16 +2472,15 @@ class CallFrontComboBox(ControlledCallFront):
 
 
 class CallFrontComboBoxModel(ControlledCallFront):
-    def __init__(self, control, model, emptyString=None):
+    def __init__(self, control, model):
         super().__init__(control)
         self.model = model
-        self.emptyString = emptyString
 
     def action(self, value):
-        if value is None or value == "":  # the latter accomodates PyListModel
-            if self.emptyString is None:
-                return
-            value = self.emptyString
+        if value == "":  # the latter accomodates PyListModel
+            value = None
+        if value is None and None not in self.model:
+            return  # e.g. attribute x in uninitialized scatter plot
         if value in self.model:
             self.control.setCurrentIndex(self.model.indexOf(value))
             return
