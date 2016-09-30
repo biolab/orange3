@@ -1022,6 +1022,12 @@ class TableTestCase(unittest.TestCase):
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 7)
 
+    def test_valueFilter_discrete_meta_is_defined(self):
+        d = data.Table("test9.tab")
+        f = filter.FilterDiscrete(-4, None)
+        x = filter.Values([f])(d)
+        self.assertEqual(len(x), 8)
+
     def test_valueFilter_string_case_sens(self):
         d = data.Table("zoo")
         col = d[:, "name"].metas[:, 0]
