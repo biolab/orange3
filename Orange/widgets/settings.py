@@ -635,9 +635,23 @@ class ContextHandler(SettingsHandler):
         widget.current_context, is_new = \
             self.find_or_create_context(widget, *args)
         if is_new:
-            self.settings_from_widget(widget, *args)
+            try:
+                self.settings_from_widget(widget, *args)
+            except TypeError:
+                warnings.warn("settings_from_widget in {} does not accept *args.\n"
+                              "Support for this will be dropped in Orange 3.10"
+                              .format(type(self)),
+                              DeprecationWarning)
+                self.settings_from_widget(widget)
         else:
-            self.settings_to_widget(widget, *args)
+            try:
+                self.settings_to_widget(widget, *args)
+            except TypeError:
+                warnings.warn("settings_to_widget {} does not accept *args.\n"
+                              "Support for this will be dropped in Orange 3.10"
+                              .format(type(self)),
+                              DeprecationWarning)
+                self.settings_to_widget(widget)
 
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
