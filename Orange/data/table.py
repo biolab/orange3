@@ -1122,6 +1122,7 @@ class Table(MutableSequence, Storage):
             if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
                     or isinstance(f, data_filter.FilterContinuous) and \
                                     f.oper == f.IsDefined:
+                col = col.astype(float)
                 if conjunction:
                     sel *= ~np.isnan(col)
                 else:
