@@ -197,6 +197,7 @@ class OWScatterPlot(OWWidget):
             **common_options)
 
         g = self.graph.gui
+        g.point_properties_box(self.controlArea, box)
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(
