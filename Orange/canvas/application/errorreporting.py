@@ -53,8 +53,9 @@ class ErrorReporting(QDialog):
         icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning)
         F = self.DataField
 
-        def _finished(*, key=(data[F.MODULE], data[F.WIDGET_MODULE]),
-                      filename=data[F.WIDGET_SCHEME]):
+        def _finished(*, key=(data.get(F.MODULE),
+                              data.get(F.WIDGET_MODULE)),
+                      filename=data.get(F.WIDGET_SCHEME)):
             self._cache.add(key)
             try: os.remove(filename)
             except Exception: pass
