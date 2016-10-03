@@ -116,11 +116,6 @@ mkdir -p "$DISTDIR"
 
 touch "$BUILDBASE"/requirements.txt
 
-# pinned requirements (numpy and scipy are handled separately)
-echo "
-#:wheel: scikit-learn https://pypi.python.org/packages/b8/9a/02d5d76be66c57aaa9f917c87007b9b0bf486992cc7701512464d1ce11e9/scikit_learn-0.17.1-cp34-cp34m-win32.whl#md5=ab00daed7cdac4cb16ad0613b91be07e
-scikit-learn==0.17.1
-" > "$BUILDBASE"/requirements.txt
 
 function __download_url {
     local url=${1:?}
@@ -287,7 +282,7 @@ function prepare_orange {
         bdist_wheel -d "$BUILDBASE/wheelhouse"
 
     # Ensure all install dependencies are available in the wheelhouse
-    prepare_req --only-binary numpy,scipy,scikit-learn .
+    prepare_req --only-binary numpy,scipy .
 
     echo "# Orange " >> "$BUILDBASE/requirements.txt"
     echo "$name==$version" >> "$BUILDBASE/requirements.txt"
