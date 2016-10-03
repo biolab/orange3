@@ -48,9 +48,16 @@ class LeafletMap(WebviewWidget):
         ''')
         self.reset_heatmap()
 
-    @pyqtSlot('QVariantList')
-    def _selected_indices(self, indices):
-        self.selectionChanged.emit(sorted(map(int, indices)))
+    @pyqtSlot(float, float, float, float)
+    def _selected_area(self, north, east, south, west):
+        if north == south:
+            indices = np.array([])
+        else:
+            lat = np.ravel(self.data[:, self.lat_attr])
+            lon = np.ravel(self.data[:, self.lon_attr])
+            indices = ((lat <= north) & (lat >= south) &
+                       (lon <= east) & (lon >= west)).nonzero()[0]
+        self.selectionChanged.emit(indices.tolist())
 
     def set_map_provider(self, provider):
         self.evalJS('set_map_provider("{}");'.format(provider))

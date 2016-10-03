@@ -64,7 +64,6 @@ map.on('zoom', reposition_markers);
 
 var heatmapLayer = L.imageOverlay('data:', [[0, 0], [0, 0]], {attribution: 'Orange – Data Mining Fruitful &amp; Fun'}).addTo(map);
 
-var selected_markers = {};
 var BoxSelect = L.Map.BoxZoom.extend({
     _onMouseUp: function (e) {
         // Just prevent fitting the new box bounds, super for everything else
@@ -80,20 +79,20 @@ var BoxSelect = L.Map.BoxZoom.extend({
 map['boxZoom'].disable();
 map.addHandler('boxZoom', BoxSelect);
 map.on("boxzoomend", function(e) {
+    var box = e.boxZoomBounds;
     for (var i = 0; i < markers.length; i++) {
         var marker = markers[i];
-        if (e.boxZoomBounds.contains(marker.getLatLng())) {
+        if (box.contains(marker.getLatLng())) {
             marker._icon.classList.add('orange-marker-selected');
-            selected_markers[marker._orange_id] = 1;
         }
     }
-    __self._selected_indices(Object.keys(selected_markers));
+    __self._selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
 });
 map.on('click', function() {
     for (var i = 0; i < markers.length; i++) {
         markers[i]._icon.classList.remove('orange-marker-selected');
     }
-    __self._selected_indices([]);
+    __self._selected_area(0, 0, 0, 0);
 });
 
 
