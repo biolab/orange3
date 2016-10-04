@@ -86,6 +86,40 @@ class Psycopg2Backend:
             connection.commit()
             self.connection_pool.putconn(connection)
 
+    @staticmethod
+    def quote_identifier(name):
+        """Quote identifier name so it can be safely used in queries
+
+        Parameters
+        ----------
+        name: str
+            name of the parameter
+
+        Returns
+        -------
+        quoted parameter that can be used in sql queries
+        """
+        return '"%s"' % name
+
+    @staticmethod
+    def unquote_identifier(quoted_name):
+        """Remove quotes from identifier name
+        Used when sql table name is used in where parameter to
+        query special tables
+
+        Parameters
+        ----------
+        quoted_name : str
+
+        Returns
+        -------
+        unquoted name
+        """
+        if quoted_name.startswith('"'):
+            return quoted_name[1:len(quoted_name) - 1]
+        else:
+            return quoted_name
+
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled
         state = dict(self.__dict__)
@@ -150,7 +184,7 @@ class SqlTable(Table):
             if "SELECT" in table_or_sql.upper():
                 table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
-                table = self.quote_identifier(table_or_sql)
+                table = self.backend.quote_identifier(table_or_sql)
             self.table_name = table
             self.domain = self.get_domain(type_hints, inspect_values)
             self.name = table
@@ -171,16 +205,17 @@ class SqlTable(Table):
                 fields.append(col)
 
         def add_to_sql(var, field_name):
+            field_name_q = self.backend.quote_identifier(field_name)
             if var.is_continuous:
                 if isinstance(var, TimeVariable):
-                    var.to_sql = ToSql("extract(epoch from {})".format(
-                        self.quote_identifier(field_name)))
+                    var.to_sql = ToSql("extract(epoch from {})"
+                                       .format(field_name_q))
                 else:
-                    var.to_sql = ToSql("({})::double precision".format(
-                        self.quote_identifier(field_name)))
+                    var.to_sql = ToSql("({})::double precision"
+                                       .format(field_name_q))
             else:  # discrete or string
-                var.to_sql = ToSql("({})::text".format(
-                    self.quote_identifier(field_name)))
+                var.to_sql = ToSql("({})::text"
+                                   .format(field_name_q))
 
         attrs, class_vars, metas = [], [], []
         for field_name, type_code, *rest in fields:
@@ -239,12 +274,11 @@ class SqlTable(Table):
         return StringVariable(field_name)
 
     def get_distinct_values(self, field_name):
-        sql = " ".join(["SELECT DISTINCT (%s)::text" %
-                            self.quote_identifier(field_name),
+        field_name_q = self.backend.quote_identifier(field_name)
+        sql = " ".join(["SELECT DISTINCT (", field_name_q, ")::text",
                         "FROM", self.table_name,
-                        "WHERE {} IS NOT NULL".format(
-                            self.quote_identifier(field_name)),
-                        "ORDER BY", self.quote_identifier(field_name),
+                        "WHERE", field_name_q, "IS NOT NULL",
+                        "ORDER BY", field_name_q,
                         "LIMIT 21"])
         with self.backend.execute_sql_query(sql) as cur:
             values = cur.fetchall()
@@ -718,18 +752,6 @@ class SqlTable(Table):
                        "STDDEV(%(field_name)s)::double precision, " \
                        + DISCRETE_STATS
 
-    def quote_identifier(self, value):
-        return '"%s"' % value
-
-    def unquote_identifier(self, value):
-        if value.startswith('"'):
-            return value[1:len(value)-1]
-        else:
-            return value
-
-    def quote_string(self, value):
-        return "'%s'" % value
-
     def sample_percentage(self, percentage, no_cache=False):
         if percentage >= 100:
             return self
@@ -745,36 +767,34 @@ class SqlTable(Table):
             raise NotImplementedError("Sampling of complex queries is not supported")
 
         sample_table = '__%s_%s_%s' % (
-            self.unquote_identifier(self.table_name),
+            self.backend.unquote_identifier(self.table_name),
             method,
             str(parameter).replace('.', '_').replace('-', '_'))
+        sample_table_q = self.backend.quote_identifier(sample_table)
         create = False
         try:
-            with self.backend.execute_sql_query("SELECT * FROM %s LIMIT 0;" % self.quote_identifier(sample_table)) as cur:
-                cur.fetchall()
+            query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
+            with self.backend.execute_sql_query(query): pass
 
             if no_cache:
-                with self.backend.execute_sql_query("DROP TABLE %s;" % self.quote_identifier(sample_table)) as cur:
-                    cur.fetchall()
+                query = "DROP TABLE " + sample_table_q
+                with self.backend.execute_sql_query(query): pass
                 create = True
 
         except psycopg2.ProgrammingError:
             create = True
 
         if create:
-            with self.backend.execute_sql_query((
-                    "CREATE TABLE {target} AS "
-                    "SELECT * FROM {source} TABLESAMPLE {method}({param});"
-                    ).format(target=self.quote_identifier(sample_table),
-                         source=self.table_name,
-                         method=method,
-                         param=parameter)):
+            with self.backend.execute_sql_query(" ".join([
+                    "CREATE TABLE", sample_table_q, "AS",
+                    "SELECT * FROM", self.table_name,
+                    "TABLESAMPLE", method, parameter])):
                 pass
 
         sampled_table = self.copy()
-        sampled_table.table_name = self.quote_identifier(sample_table)
+        sampled_table.table_name = sample_table_q
         with sampled_table.backend.execute_sql_query(
-                'ANALYZE {}'.format(sampled_table.table_name)):
+                'ANALYZE' + sample_table_q):
             pass
         return sampled_table
 
