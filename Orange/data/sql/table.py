@@ -233,13 +233,14 @@ class Psycopg2Backend:
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled
         state = dict(self.__dict__)
-        state.pop('connection_pool')
+        state.pop('connection_pool', None)
         return state
 
     def __setstate__(self, state):
-        # Create a new connection pool
+        # Create a new connection pool if none exists
         self.__dict__.update(state)
-        self._create_connection_pool()
+        if self.connection_pool is None:
+            self._create_connection_pool()
 
 
 class SqlTable(Table):

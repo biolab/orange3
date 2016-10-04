@@ -5,6 +5,7 @@ import unittest
 import unittest.mock
 
 import numpy as np
+import pickle
 from numpy.testing import assert_almost_equal
 
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
@@ -587,6 +588,13 @@ class TestSqlTable(PostgresTest):
         self.assertIsInstance(conts[0], Continuous)
         self.assertIsInstance(conts[1], Continuous)
         self.assertIsInstance(conts[2], Discrete)
+
+    def test_pickling_restores_connection_pool(self):
+        iris = SqlTable(self.conn, self.iris, inspect_values=True)
+        iris2 = pickle.loads(pickle.dumps(iris))
+
+        self.assertEqual(iris[0], iris2[0])
+
 
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain), 0)
