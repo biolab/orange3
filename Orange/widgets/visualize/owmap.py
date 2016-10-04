@@ -20,6 +20,8 @@ OWMAP_URL = join(dirname(__file__), '_owmap', 'owmap.html')
 class LeafletMap(WebviewWidget):
     selectionChanged = pyqtSignal(list)
 
+    SAMPLE_SIZE = 2000
+
     def __init__(self, parent=None):
         super().__init__(parent,
                          url=QUrl(self.toFileURL(OWMAP_URL)),
@@ -38,8 +40,11 @@ class LeafletMap(WebviewWidget):
         lat_attr = self.lat_attr = data.domain[lat_attr]
         lon_attr = self.lon_attr = data.domain[lon_attr]
 
-        latlon_data = np.column_stack((data[:, lat_attr],
-                                       data[:, lon_attr]))
+        self.sample = sample = (Ellipsis
+                                if len(data) <= self.SAMPLE_SIZE else
+                                np.random.choice(len(data), self.SAMPLE_SIZE, False))
+        latlon_data = np.column_stack((data[sample, lat_attr],
+                                       data[sample, lon_attr]))
         self.exposeObject('latlon_data', dict(data=latlon_data))
 
         self.evalJS('''
@@ -83,23 +88,23 @@ class LeafletMap(WebviewWidget):
         except Exception:
             return self.evalJS('''
                 window.color_attr = {};
-                set_marker_colors([]);
+                set_marker_colors();
             ''')
 
         if variable.is_continuous:
-            values = np.ravel(self.data[:, variable])
+            values = np.ravel(self.data[self.sample, variable])
             colorgen = ContinuousPaletteGenerator(*variable.colors)
             colors = colorgen[scale(values)]
         elif variable.is_discrete:
             _values = np.asarray(self.data.domain[attr].values)
-            __values = np.ravel(self.data[:, variable]).astype(int)
+            __values = np.ravel(self.data[self.sample, variable]).astype(int)
             values = _values[__values]  # The joke's on you
             colorgen = ColorPaletteGenerator(len(variable.colors), variable.colors)
             colors = colorgen[__values]
 
         self.exposeObject('color_attr',
-                          dict(name=str(attr), values=values, colors=colors))
-        self.evalJS('set_marker_colors(color_attr.colors);')
+                          dict(name=str(attr), values=colors, raw_values=values))
+        self.evalJS('set_marker_colors();')
 
     def set_marker_label(self, attr):
         try:
@@ -107,18 +112,18 @@ class LeafletMap(WebviewWidget):
         except Exception:
             return self.evalJS('''
                 window.label_attr = {};
-                set_marker_labels([]);
+                set_marker_labels();
             ''')
 
         if variable.is_continuous or variable.is_string:
-            values = np.ravel(self.data[:, variable])
+            values = np.ravel(self.data[self.sample, variable])
         elif variable.is_discrete:
             _values = np.asarray(self.data.domain[attr].values)
-            __values = np.ravel(self.data[:, variable]).astype(int)
+            __values = np.ravel(self.data[self.sample, variable]).astype(int)
             values = _values[__values]  # The design had lead to poor code for ages
         self.exposeObject('label_attr',
                           dict(name=str(attr), values=values))
-        self.evalJS('set_marker_labels(label_attr.values);')
+        self.evalJS('set_marker_labels();')
 
     def set_marker_shape(self, attr):
         try:
@@ -126,16 +131,16 @@ class LeafletMap(WebviewWidget):
         except Exception:
             return self.evalJS('''
                 window.shape_attr = {};
-                set_marker_shapes([]);
+                set_marker_shapes();
             ''')
 
         assert variable.is_discrete
         _values = np.asarray(self.data.domain[attr].values)
-        __values = np.ravel(self.data[:, variable]).astype(int)
+        __values = np.ravel(self.data[self.sample, variable]).astype(int)
         values = _values[__values]
         self.exposeObject('shape_attr',
-                          dict(name=str(attr), indices=__values, values=values))
-        self.evalJS('''set_marker_shapes(shape_attr.indices);''')
+                          dict(name=str(attr), values=__values, raw_values=values))
+        self.evalJS('''set_marker_shapes();''')
 
     def set_marker_size(self, attr):
         try:
@@ -143,15 +148,15 @@ class LeafletMap(WebviewWidget):
         except Exception:
             return self.evalJS('''
                 window.size_attr = {};
-                set_marker_sizes([]);
+                set_marker_sizes();
             ''')
 
         assert variable.is_continuous
-        values = np.ravel(self.data[:, variable])
+        values = np.ravel(self.data[self.sample, variable])
         sizes = scale(values, 10, 60)
         self.exposeObject('size_attr',
-                          dict(name=str(attr), sizes=sizes, values=values))
-        self.evalJS('''set_marker_sizes(size_attr.sizes);''')
+                          dict(name=str(attr), values=sizes, raw_values=values))
+        self.evalJS('''set_marker_sizes();''')
 
     def set_marker_size_coefficient(self, size):
         self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
@@ -223,7 +228,6 @@ class OWMap(widget.OWWidget):
     jittering = settings.Setting(0)
     cluster_points = settings.Setting(False)
 
-    JITTER_SIZES = [0, 1, 3, 6, 9]
     TILE_PROVIDERS = OrderedDict((
         ('Black and white', 'OpenStreetMap.BlackAndWhite'),
         ('OpenStreetMap', 'OpenStreetMap.Mapnik'),
@@ -242,6 +246,9 @@ class OWMap(widget.OWWidget):
         model_error = widget.Msg("Error predicting: {}")
         missing_learner = widget.Msg('No input learner to model with')
         learner_error = widget.Msg("Error modelling: {}")
+
+    class Warning(widget.OWWidget.Warning):
+        data_sampled = widget.Msg('Showing a random sample of {} data points.')
 
     UserAdviceMessages = [
         widget.Message(
@@ -402,8 +409,10 @@ class OWMap(widget.OWWidget):
         self._combo_label.setCurrentIndex(0)
         self._combo_class.setCurrentIndex(0)
 
-        if len(data) > 1000:
-            self._clustering_check.setCheckState(Qt.Checked)
+        if len(data) > self.map.SAMPLE_SIZE:
+            self.Warning.data_sampled(self.map.SAMPLE_SIZE)
+        else:
+            self.Warning.data_sampled.clear()
 
         self.train_model()
 

@@ -18,12 +18,14 @@
         .leaflet-control-attribution { pointer-events: none; }
         .leaflet-popup-pane { cursor: default; }
         .leaflet-popup-close-button { display: none; }
-        canvas#heatmap_canvas {display: none}
+        canvas#heatmap_canvas,
+        canvas#icons_canvas {display: none}
     </style>
 </head>
 <body>
     <div id="map"></div>
     <canvas id="heatmap_canvas" width="32" height="32"><!--width=grid size--></canvas>
+    <canvas id="icons_canvas" width="400" height="400"></canvas>
 
 <script src="owmap.js"></script>
 <script>

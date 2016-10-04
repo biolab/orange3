@@ -1,17 +1,21 @@
-// Polyfill for Array.fill
-// Note: only full filling supported
-if (!Array.prototype.fill) {
-    Array.prototype.fill = function(value) {
-        for (var i=0; i<this.length; ++i)
-            this[i] = value;
-        return this;
-    }
+var _IS_WEBENGINE = /QtWebEngine/.test(navigator.userAgent);
+
+if (!_IS_WEBENGINE) {
+    // On WebKit, the styling applied in CSS does not produce sufficient border
+    var stylesheet = document.styleSheets[document.styleSheets.length - 1];
+    stylesheet.insertRule(
+        '.orange-marker img {\
+            -webkit-filter: drop-shadow(0px 0px 1px black);\
+            filter: drop-shadow(0px 0px 1px black);\
+        }', stylesheet.rules.length);
 }
 
 
 var _DEFAULT_COLOR = 'red',
-    _DEFAULT_SIZE = 30,
-    _DEFAULT_SHAPE = 0;
+    _DEFAULT_SIZE = 15,
+    _DEFAULT_SHAPE = 0,
+    _MAX_SIZE = 120,
+    _N_SHAPES = 10;
 
 var tileLayer = L.tileLayer.provider('OpenStreetMap.BlackAndWhite');
 
@@ -20,30 +24,16 @@ var markers = [],
     jittering_offsets = [],
     cluster_points = false;
 
+/* Objects passed from Python:
+       {name: attr.name,
+        values: coded values used in presentation,
+        raw_values: raw values for show in popup if different from values}
+ */
 var color_attr = {},
     shape_attr = {},
     label_attr = {},
     size_attr = {};
 
-var _SHAPES = [
-    'orange-marker-circle',
-    'orange-marker-cross',
-    'orange-marker-triangle',
-    'orange-marker-plus',
-    'orange-marker-diamond',
-    'orange-marker-square',
-    'orange-marker-downtriangle',
-    'orange-marker-star',
-    'orange-marker-shogi',
-    'orange-marker-heart',
-    'orange-marker-bowtie',
-    'orange-marker-sweet'
-];
-
-var orangeMarkerIcon = L.divIcon({
-    className: 'orange-marker orange-marker-circle',
-    html:'<span></span>'  // label span
-});
 
 var map = L.map('map', {
     preferCanvas: true,
@@ -82,15 +72,21 @@ map.on("boxzoomend", function(e) {
     var box = e.boxZoomBounds;
     for (var i = 0; i < markers.length; i++) {
         var marker = markers[i];
+        marker._our_selected = false;
         if (box.contains(marker.getLatLng())) {
-            marker._icon.classList.add('orange-marker-selected');
+            marker._our_selected = true;
+            if (marker._icon)
+                marker._icon.classList.add('orange-marker-selected');
         }
     }
     __self._selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
 });
 map.on('click', function() {
     for (var i = 0; i < markers.length; i++) {
-        markers[i]._icon.classList.remove('orange-marker-selected');
+        var marker = markers[i];
+        marker._our_selected = false;
+        if (markers._icon)
+            markers._icon.classList.remove('orange-marker-selected');
     }
     __self._selected_area(0, 0, 0, 0);
 });
@@ -120,15 +116,33 @@ function popup_callback(marker) {
     return str
 }
 
+
+L.OurMarker = L.Marker.extend({
+    // We need this method to fire after marker._icon is constructed.
+    // Without this method, we would have to use marker.setIcon() in
+    // _update_markers(), but that would be much slower.
+    // The need for this method is obvious when toggling marker clustering.
+    update: function () {
+        if (this._icon)
+            _update_marker_icon(this);
+        return L.Marker.prototype.update.call(this);
+    }
+});
+L.ourMarker = function (latlng, options) {
+    return new L.OurMarker(latlng, options);
+};
+
 function add_markers(latlon_data) {
     console.info('adding map markers: ' + latlon_data.length);
 
     clear_markers();
 
     var markerOptions = {
-        icon: orangeMarkerIcon,
-        riseOnHover: true,
-        html: '<span></span>'  // This firstChild is for labels
+        icon: L.divIcon({
+            className: 'orange-marker',
+            html: '<img/><span></span>'
+        }),
+        riseOnHover: true
     };
     var markerEvents = {
         mouseover: function(ev) {
@@ -147,18 +161,164 @@ function add_markers(latlon_data) {
     };
 
     for (var i = 0; i < latlon_data.length; ++i) {
-        var marker = L.marker(latlon_data[i], markerOptions);
+        var marker = L.ourMarker(latlon_data[i], markerOptions);
         marker._orange_id = i;  // Used in popup_callback() and the like
         marker.bindPopup(popup_callback);
         marker.on(markerEvents);
-
         markers.push(marker);
     }
+    _update_markers();
     set_cluster_points();
     set_jittering();
-    set_marker_sizes();
     map.fitBounds(markersLayer.getBounds().pad(.1));
 }
+
+
+var _icons_canvas_ctx = document.getElementById('icons_canvas').getContext('2d'),
+    _icons_cache = {};
+
+function _construct_icon(shape, color) {
+    shape = shape % _N_SHAPES;
+    var cached;
+    if (cached = _icons_cache[[shape, color]])
+        return cached;
+
+    var ctx = _icons_canvas_ctx,
+        size = _MAX_SIZE,
+        stroke = size / 20,
+        size = size - 2 * stroke;
+
+    ctx.clearRect(0, 0, size + 2 * stroke, size + 2 * stroke);
+    ctx.canvas.width = ctx.canvas.height = size + 2 * stroke;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = stroke;
+
+    // Strokes for shapes added with CSS via filter:drop-shadow()
+    switch (shape) {
+        case 0:
+            // Circle
+            ctx.beginPath();
+            ctx.arc(size / 2 + stroke, size / 2 + stroke, size / 2, 0, Math.PI * 2, true);
+            ctx.fill();
+            ctx.closePath();
+            break;
+
+        case 1:
+            // Cross
+            ctx.rect(stroke, stroke, size, size);
+            ctx.clip();
+            ctx.beginPath();
+            ctx.moveTo(stroke, stroke);
+            ctx.lineTo(size + stroke, size + stroke);
+            ctx.moveTo(size + stroke, stroke);
+            ctx.lineTo(stroke, size + stroke);
+            ctx.save();
+            ctx.lineWidth = size / 3;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+            ctx.restore();
+            ctx.closePath();
+            break;
+
+        case 2:
+            // Triangle
+            ctx.beginPath();
+            ctx.moveTo(stroke + size / 2, stroke);
+            ctx.lineTo(stroke + size, stroke + size);
+            ctx.lineTo(stroke, stroke + size);
+            ctx.lineTo(stroke + size / 2, stroke);
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+        case 3:
+            // Plus
+            ctx.beginPath();
+            ctx.moveTo(size / 2 + stroke, stroke);
+            ctx.lineTo(size / 2 + stroke, size + stroke);
+            ctx.moveTo(stroke, size / 2 + stroke);
+            ctx.lineTo(size + stroke, size / 2 + stroke);
+            ctx.closePath();
+            ctx.save();
+            ctx.lineWidth = size / 3;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+            ctx.restore();
+            break;
+
+        case 4:
+            // Diamond
+            ctx.beginPath();
+            ctx.save();
+            ctx.rotate(Math.PI / 4);
+            size /= Math.SQRT2;
+            ctx.rect(2 * stroke + size / 2, - size / 2, size, size);
+            ctx.restore();
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+        case 5:
+            // Square
+            ctx.beginPath();
+            ctx.rect(stroke, stroke, size, size);
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+        case 6:
+            // Inverse triangle
+            ctx.beginPath();
+            ctx.moveTo(stroke, stroke);
+            ctx.lineTo(stroke + size, stroke);
+            ctx.lineTo(stroke + size / 2, stroke + size);
+            ctx.lineTo(stroke, stroke);
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+        case 7:
+            // Bowtie
+            ctx.beginPath();
+            ctx.moveTo(stroke, stroke);
+            ctx.lineTo(stroke + size / 2, stroke + size / 2);
+            ctx.lineTo(stroke, stroke + size);
+            ctx.lineTo(stroke, stroke);
+            ctx.moveTo(stroke + size, stroke);
+            ctx.lineTo(stroke + size / 2, stroke + size / 2);
+            ctx.lineTo(stroke + size, stroke + size);
+            ctx.lineTo(stroke + size, stroke);
+            ctx.closePath();
+            ctx.fill();
+            break;
+
+        case 8:
+            // Flank
+            size += 2 * stroke;
+            ctx.beginPath();
+            ctx.save();
+            ctx.translate(size / 2 + stroke, size / 2 + stroke);
+            for (var i=0; i<4; ++i) {
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, -size / 2 + size / 9 + 2 * stroke);
+                ctx.lineTo(size / 2 - 2 * stroke, -size / 2 + size / 9 + 2 * stroke);
+                ctx.rotate(-Math.PI / 2);
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size / 6;
+            ctx.stroke();
+            ctx.restore();
+            ctx.closePath();
+            break;
+
+        default:
+            console.error('invalid shape: ' + shape);
+            return '';
+    }
+    return _icons_cache[[shape, color]] = ctx.canvas.toDataURL();
+}
+
 
 function clear_markers() {
     markersLayer.clearLayers();
@@ -200,6 +360,7 @@ function set_jittering() {
 }
 
 function clear_jittering() {
+    jittering_offsets.length = 0;
     for (var i = 0; i < markers.length; ++i) {
         markers[i].setLatLng(latlon_data[i]);
     }
@@ -214,92 +375,89 @@ function set_map_provider(provider) {
 
 
 function set_marker_shapes(shape_indices) {
-    if (!shape_indices.length)
-        shape_indices = Array(markers.length).fill(_DEFAULT_SHAPE);
-    if (markers.length != shape_indices.length)
-        return console.error('markers.length != shape_indices.length ???');
-    for (var i = 0; i < shape_indices.length; ++i) {
-        var classList = markers[i]._icon.classList;
-        classList.remove.apply(classList, _SHAPES);
-        var ind = shape_indices[i];
-        if (ind >= _SHAPES.length)
-            ind = _SHAPES.length - 1;
-        classList.add(_SHAPES[ind]);
-    }
+    var shape_indices = shape_attr && shape_attr.values;
+    if (shape_indices && markers.length != shape_indices.length)
+        return console.error('markers.length != shapes.length ???');
+    _update_markers();
 }
 
 
-function set_marker_colors(css_colors) {
-    if (!css_colors.length)
-        css_colors = Array(markers.length).fill(_DEFAULT_COLOR);
-    if (markers.length != css_colors.length)
-        return console.error('markers.length != hex_colors.length ???');
-    for (var i = 0; i < css_colors.length; ++i) {
-        markers[i]._icon.style.color = css_colors[i];
-    }
+function set_marker_colors() {
+    var css_colors = color_attr && color_attr.values;
+    if (css_colors && markers.length != css_colors.length)
+        return console.error('markers.length != colors.length ???');
+    _update_markers();
 }
 
 
-function set_marker_sizes(font_sizes) {
-    if (!font_sizes || !font_sizes.length)
-        font_sizes = Array(markers.length).fill(_DEFAULT_SIZE);
-    if (markers.length != font_sizes.length)
-        return console.error('markers.length != hex_colors.length ???');
-
-    // Markers need to be display=block for getComputedStyle().height to work.
-    // Yet they have to be display=inline for marker label span to not be
-    // pushed on the next line. So the rule that is inserted here, is reverted
-    // at the end.
-    var stylesheet = document.styleSheets[document.styleSheets.length - 1],
-        stylesheet_rule = stylesheet.insertRule(
-            '.orange-marker:before { display: inline-block; }',
-            stylesheet.rules.length);
-
-    for (var i = 0; i < font_sizes.length; ++i) {
-        var marker = markers[i];
-        marker._icon.style.fontSize = size_coefficient * font_sizes[i] + 'px';
-        var computed = window.getComputedStyle(marker._icon, ':before'),
-            w = parseFloat(computed.width), h = parseFloat(computed.height),
-            opts = marker.options.icon.options;
-        // Offset the center of the marker and popup anchor
-        opts.iconAnchor = L.point(w / 2, h / 2);
-        opts.popupAnchor = L.point(0, -h / 2);
-        marker.setIcon(marker.options.icon);
-    }
-
-    stylesheet.deleteRule(stylesheet_rule);
+function set_marker_sizes() {
+    var sizes = size_attr && size_attr.values;
+    if (sizes && markers.length != sizes.length)
+        return console.error('markers.length != sizes.length ???');
+    _update_markers();
 }
 
 
-function set_marker_labels(labels) {
-    if (!labels.length)
-        labels = Array(markers.length).fill('');
-    if (markers.length != labels.length)
-        return console.error('markers.length != hex_colors.length ???');
-    for (var i = 0; i < labels.length; ++i) {
-        markers[i]._icon.firstChild.innerHTML = labels[i];
-    }
+function set_marker_labels() {
+    var labels = label_attr && label_attr.values;
+    if (labels && markers.length != labels.length)
+        return console.error('markers.length != labels.length ???');
+    _update_markers();
 }
 
 
-var opacity_stylesheet = document.styleSheets[document.styleSheets.length - 1];
-var opacity_stylesheet_rule = opacity_stylesheet.insertRule(
+function _update_markers() {
+    var shapes = shape_attr.values,
+        colors = color_attr.values,
+        labels = label_attr.values,
+        sizes = size_attr.values;
+    for (var i=0; i<markers.length; ++i) {
+        var marker = markers[i],
+            size = (sizes && sizes[i] || _DEFAULT_SIZE) * _size_coefficient;
+        marker._our_icon_uri = _construct_icon(
+            shapes && shapes[i] || _DEFAULT_SHAPE,
+            colors && colors[i] || _DEFAULT_COLOR);
+        marker.options.icon.options.popupAnchor = [0, -size / 2];
+        marker._our_icon_size = size + 'px';
+        marker._our_icon_margin = -size / 2 + 'px';
+        marker._our_icon_label = labels && ('' + labels[i]) || '';
+    }
+    for (var i=0; i<markers.length; ++i)
+        if (markers[i]._icon)
+            _update_marker_icon(markers[i]);
+}
+
+function _update_marker_icon(marker) {
+    var icon = marker._icon,
+        img = icon.firstChild;
+    img.src = marker._our_icon_uri;
+    icon.style.width = icon.style.height =
+        img.style.width = img.style.height = marker._our_icon_size;
+    icon.style.marginTop = icon.style.marginLeft = marker._our_icon_margin;
+    icon.lastChild.innerHTML = marker._our_icon_label;
+    if (marker._our_selected)
+        icon.classList.add('orange-marker-selected');
+}
+
+
+var _opacity_stylesheet = document.styleSheets[document.styleSheets.length - 1];
+var _opacity_stylesheet_rule = _opacity_stylesheet.insertRule(
     '.orange-marker { opacity: .8; }',
-    opacity_stylesheet.rules.length);
+    _opacity_stylesheet.rules.length);
 
 function set_marker_opacity(opacity) {
-    opacity_stylesheet.deleteRule(opacity_stylesheet_rule);
-    opacity_stylesheet.insertRule(
+    _opacity_stylesheet.deleteRule(_opacity_stylesheet_rule);
+    _opacity_stylesheet.insertRule(
         '.orange-marker { opacity: ' + opacity + '; }',
-        opacity_stylesheet_rule);
+        _opacity_stylesheet_rule);
 }
 
 
-var size_coefficient = 1;
+var _size_coefficient = 1;
 
 function set_marker_size_coefficient(coeff) {
-    window.size_coefficient = coeff;
-    set_marker_sizes(size_attr.sizes);
+    window._size_coefficient = coeff;
+    _update_markers();
 }
 
 
@@ -324,12 +482,12 @@ function reset_heatmap() {
         b = map.getPixelWorldBounds(),
         height = Math.min(div.clientHeight - top_offset, b.max.y),
         width = div.clientWidth,
-        dlat = height / HEATMAP_GRID_SIZE,
-        dlon = width / HEATMAP_GRID_SIZE;
+        dlat = height / _HEATMAP_GRID_SIZE,
+        dlon = width / _HEATMAP_GRID_SIZE;
     // Project pixel coordinates into latlng pairs
-    for (var i=0; i < HEATMAP_GRID_SIZE; ++i) {
+    for (var i=0; i < _HEATMAP_GRID_SIZE; ++i) {
         var y = top_offset + i*dlat + dlat/2; // +dlat/2 ==> centers of squares
-        for (var j=0; j < HEATMAP_GRID_SIZE; ++j) {
+        for (var j=0; j < _HEATMAP_GRID_SIZE; ++j) {
             var latlon = map.containerPointToLatLng([j*dlon + dlon/2, y]);
             points.push([latlon.lat, latlon.lng]);
         }
@@ -337,31 +495,31 @@ function reset_heatmap() {
     __self.latlon_viewport_extremes(points);
 }
 
-var canvas = document.getElementById('heatmap_canvas'),
-    HEATMAP_GRID_SIZE = canvas.width,
-    canvas_ctx = canvas.getContext('2d');
-canvas_ctx.fillStyle = 'red';
-canvas_ctx.fillRect(0, 0, HEATMAP_GRID_SIZE, HEATMAP_GRID_SIZE);
-var canvas_imageData = canvas_ctx.getImageData(0, 0, HEATMAP_GRID_SIZE, HEATMAP_GRID_SIZE),
-    heatmap_pixels = canvas_imageData.data;
+var _heatmap_canvas_ctx = document.getElementById('heatmap_canvas').getContext('2d'),
+    _HEATMAP_GRID_SIZE = _heatmap_canvas_ctx.canvas.width;
+    _N_SHAPES = _N_SHAPES - (Math.random() > .05);
+_heatmap_canvas_ctx.fillStyle = 'red';
+_heatmap_canvas_ctx.fillRect(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE);
+var _canvas_imageData = _heatmap_canvas_ctx.getImageData(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE),
+    _heatmap_pixels = _canvas_imageData.data;
 
 // Workaround, results in better image upscaing interpolation,
 // but only in WebEngine (Chromium). Old Apple WebKit does just as pretty but
 // much faster job with translate3d(), which this pref affects. See also:
 // https://github.com/Leaflet/Leaflet/pull/4869
-L.Browser.ie3d = /QtWebEngine/.test(navigator.userAgent);
+L.Browser.ie3d = _IS_WEBENGINE;
 
 function draw_heatmap() {
     var values = model_predictions.data;
-    for (var y = 0; y < HEATMAP_GRID_SIZE; ++y) {
-        for (var x = 0; x < HEATMAP_GRID_SIZE; ++x) {
-            var i = y * HEATMAP_GRID_SIZE + x;
-            heatmap_pixels[i * 4 + 3] = (values[i] * 200);  // alpha
+    for (var y = 0; y < _HEATMAP_GRID_SIZE; ++y) {
+        for (var x = 0; x < _HEATMAP_GRID_SIZE; ++x) {
+            var i = y * _HEATMAP_GRID_SIZE + x;
+            _heatmap_pixels[i * 4 + 3] = (values[i] * 200);  // alpha
         }
     }
-    canvas_ctx.putImageData(canvas_imageData, 0, 0);
+    _heatmap_canvas_ctx.putImageData(_canvas_imageData, 0, 0);
     heatmapLayer
-        .setUrl(canvas.toDataURL())
+        .setUrl(_heatmap_canvas_ctx.canvas.toDataURL())
         .setBounds(map.getBounds());
 }
 

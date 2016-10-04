@@ -1,5 +1,4 @@
 .orange-marker {
-    color: red;
 }
 .orange-marker span {
     font-size: 10pt;
@@ -8,35 +7,25 @@
     color: black;
     background: #ddd;
     border-radius: 5px;
-    position: relative;
-    top: 4px;
+    float: right;
+    position: absolute;
+    bottom: -5px;
+    margin-left: 5px;
     z-index: inherit;
 }
-.orange-marker:before {
-    position:relative;
-    text-shadow:
-        -.5px -.5px 0 black,
-        .5px -.5px 0 black,
-        -.5px .5px 0 black,
-        .5px .5px 0 black;
+.orange-marker img {
+    -webkit-filter:
+        drop-shadow(.5px .5px 0px black)
+        drop-shadow(-.5px .5px 0px black)
+        drop-shadow(.5px -.5px 0px black)
+        drop-shadow(-.5px -.5px 0px black);
+    filter:
+        drop-shadow(.5px .5px 0px black)
+        drop-shadow(-.5px .5px 0px black)
+        drop-shadow(.5px -.5px 0px black)
+        drop-shadow(-.5px -.5px 0px black);
 }
-.orange-marker-selected:before {
-    text-shadow:
-        -2.3px -2.3px 0 lime,
-        2.3px -2.3px 0 lime,
-        -2.3px 2.3px 0 lime,
-        2.3px 2.3px 0 lime;
+.orange-marker-selected img {
+    -webkit-filter: drop-shadow(0px 0px 2px lime) drop-shadow(0px 0px 2px lime) !important;
+    filter: drop-shadow(0px 0px 2px lime) drop-shadow(0px 0px 2px lime) !important;
 }
-
-.orange-marker-circle:before       { content: '●'; }
-.orange-marker-cross:before        { content: '×'; font-weight:bold; top:2px; }
-.orange-marker-triangle:before     { content: '▲'; font-size:70%; left:-2px; top:-1px; }
-.orange-marker-plus:before         { content: '+'; font-weight:bold; top:2px; }
-.orange-marker-diamond:before      { content: '◆'; font-size:70%; top:-2px; }
-.orange-marker-square:before       { content: '■'; }
-.orange-marker-downtriangle:before { content: '▼'; font-size:70%; left:-2px; }
-.orange-marker-star:before         { content: '★'; font-size:85%; left:-2px; }
-.orange-marker-bowtie:before       { content: '⧓'; font-size:60%; top:-2px; }
-.orange-marker-heart:before        { content: '♥'; top:1px; }
-.orange-marker-shogi:before        { content: '☗'; font-size:65%; top:-2px; }
-.orange-marker-sweet:before        { content: '\0FD5'; font-weight:bold; font-size:60%; }
