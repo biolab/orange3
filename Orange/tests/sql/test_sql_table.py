@@ -530,14 +530,14 @@ class TestSqlTable(PostgresTest):
         try:
             broken_query = "SELECT 1/%s FROM %s" % (
                 sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
-            with sql_table._execute_sql_query(broken_query) as cur:
+            with sql_table.backend.execute_sql_query(broken_query) as cur:
                 cur.fetchall()
         except psycopg2.DataError:
             pass
 
         working_query = "SELECT %s FROM %s" % (
             sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
-        with sql_table._execute_sql_query(working_query) as cur:
+        with sql_table.backend.execute_sql_query(working_query) as cur:
             cur.fetchall()
 
     def test_basic_stats(self):
