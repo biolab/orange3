@@ -779,18 +779,31 @@ class LineEditWFocusOut(QtGui.QLineEdit):
         self.callback = callback
         self.focusInCallback = focusInCallback
         self.returnPressed.connect(self.returnPressedHandler)
+        # did the text change between focus enter and leave
+        self.__changed = False
+        self.textEdited.connect(self.__textEdited)
+
+    def __textEdited(self):
+        self.__changed = True
 
     def returnPressedHandler(self):
-        if hasattr(self, "cback") and self.cback:
-            self.cback(self.text())
-        if self.callback:
-            self.callback()
+        if self.__changed:
+            self.__changed = False
+            if hasattr(self, "cback") and self.cback:
+                self.cback(self.text())
+            if self.callback:
+                self.callback()
+
+    def setText(self, text):
+        self.__changed = False
+        super().setText(text)
 
     def focusOutEvent(self, *e):
         super().focusOutEvent(*e)
         self.returnPressedHandler()
 
     def focusInEvent(self, *e):
+        self.__changed = False
         if self.focusInCallback:
             self.focusInCallback()
         return super().focusInEvent(*e)
