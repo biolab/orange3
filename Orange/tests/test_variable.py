@@ -313,6 +313,7 @@ class TestTimeVariable(VariableTest):
         ('01:01', 3660, '01:01:00'),
         ('1970-01-01 00:00:00', 0, '1970-01-01 00:00:00'),
         ('1969-12-31 23:59:59', -1, '1969-12-31 23:59:59'),
+        ('1969-12-31 23:59:58.9', -1.1, '1969-12-31 23:59:58.900000'),
         ('1900-01-01', -2208988800, '1900-01-01'),
         ('nan', np.nan, '?'),
         ('1444651991.81', 1444651991.81, '2015-10-12 12:13:11.810000'),
@@ -354,6 +355,9 @@ class TestTimeVariable(VariableTest):
         ts = var.parse('16:20')  # parse time
         # observe have datetime
         self.assertEqual(var.repr_val(ts), '1970-01-01 16:20:00')
+
+    def test_no_date_no_time(self):
+        self.assertEqual(TimeVariable('relative time').repr_val(1.6), '1.6')
 
     def test_readwrite_timevariable(self):
         output_csv = StringIO()
