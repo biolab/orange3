@@ -852,10 +852,8 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
         b = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
             widgetLabel(b, label, labelWidth)
-        hasHBox = _is_horizontal(orientation)
     else:
         b = widget
-        hasHBox = False
 
     baseClass = misc.pop("baseClass", None)
     if baseClass:
@@ -863,13 +861,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
         if b is not widget:
             b.layout().addWidget(ledit)
     elif focusInCallback or callback and not callbackOnType:
-        if not hasHBox:
-            outer = hBox(b, addToLayout=(b is not widget))
-            if b is widget:
-                b = outer
-        else:
-            outer = b
-        ledit = LineEditWFocusOut(outer, callback, focusInCallback)
+        ledit = LineEditWFocusOut(b, callback, focusInCallback)
     else:
         ledit = QtGui.QLineEdit(b)
         if b is not widget:
