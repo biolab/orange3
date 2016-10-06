@@ -779,18 +779,31 @@ class LineEditWFocusOut(QtGui.QLineEdit):
         self.callback = callback
         self.focusInCallback = focusInCallback
         self.returnPressed.connect(self.returnPressedHandler)
+        # did the text change between focus enter and leave
+        self.__changed = False
+        self.textEdited.connect(self.__textEdited)
+
+    def __textEdited(self):
+        self.__changed = True
 
     def returnPressedHandler(self):
-        if hasattr(self, "cback") and self.cback:
-            self.cback(self.text())
-        if self.callback:
-            self.callback()
+        if self.__changed:
+            self.__changed = False
+            if hasattr(self, "cback") and self.cback:
+                self.cback(self.text())
+            if self.callback:
+                self.callback()
+
+    def setText(self, text):
+        self.__changed = False
+        super().setText(text)
 
     def focusOutEvent(self, *e):
         super().focusOutEvent(*e)
         self.returnPressedHandler()
 
     def focusInEvent(self, *e):
+        self.__changed = False
         if self.focusInCallback:
             self.focusInCallback()
         return super().focusInEvent(*e)
@@ -839,10 +852,8 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
         b = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
             widgetLabel(b, label, labelWidth)
-        hasHBox = _is_horizontal(orientation)
     else:
         b = widget
-        hasHBox = False
 
     baseClass = misc.pop("baseClass", None)
     if baseClass:
@@ -850,13 +861,7 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
         if b is not widget:
             b.layout().addWidget(ledit)
     elif focusInCallback or callback and not callbackOnType:
-        if not hasHBox:
-            outer = hBox(b, addToLayout=(b is not widget))
-            if b is widget:
-                b = outer
-        else:
-            outer = b
-        ledit = LineEditWFocusOut(outer, callback, focusInCallback)
+        ledit = LineEditWFocusOut(b, callback, focusInCallback)
     else:
         ledit = QtGui.QLineEdit(b)
         if b is not widget:
