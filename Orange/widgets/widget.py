@@ -205,6 +205,9 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
 
         sc = QShortcut(QKeySequence.Copy, self)
         sc.activated.connect(self.copy_to_clipboard)
+        if self.controlArea is not None:
+            # Otherwise, the first control has focus
+            self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
         return self
 
     # pylint: disable=super-init-not-called
