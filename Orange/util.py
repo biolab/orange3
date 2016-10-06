@@ -2,6 +2,7 @@
 
 from functools import wraps
 from inspect import isfunction
+from operator import attrgetter
 from itertools import chain, count
 from collections import OrderedDict
 import warnings
@@ -127,6 +128,21 @@ def export_globals(globals, module_name):
             if ((callable(v) and v.__module__ == module_name     # callables from this module
                  or k.isupper()) and                             # or CONSTANTS
                 not getattr(v, '__name__', k).startswith('_'))]  # neither marked internal
+
+
+_NOTSET = object()
+
+
+def deepgetattr(obj, attr, default=_NOTSET):
+    """Works exactly like getattr(), except that attr can be a nested attribute
+    (e.g. "attr1.attr2.attr3").
+    """
+    try:
+        return attrgetter(attr)(obj)
+    except AttributeError:
+        if default is _NOTSET:
+            raise
+        return default
 
 
 def color_to_hex(color):
