@@ -257,29 +257,36 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
+        # We need to catch any exception type since anything can happen in
+        # file readers
+        # pylint: disable=broad-except
         self.editor_model.set_domain(None)
-        self.reader = self._get_reader()
-        if not self.reader:
-            self.data = None
-            self.send("Data", None)
-            self.info.setText("No data.")
-            return
-        self._update_sheet_combo()
 
-        errors = []
-        with catch_warnings(record=True) as warnings:
-            try:
-                data = self.reader.read()
-            except Exception as ex:
-                errors.append("An error occurred:")
-                errors.append(str(ex))
-                data = None
-                self.editor_model.reset()
-            self.warning(warnings[-1].message.args[0] if warnings else '')
+        error = None
+        try:
+            self.reader = self._get_reader()
+            if self.reader is None:
+                self.send("Data", None)
+                self.info.setText("No data.")
+                self.sheet_box.hide()
+                return
+        except Exception as ex:
+            error = ex
 
-        if data is None:
+        if not error:
+            self._update_sheet_combo()
+            with catch_warnings(record=True) as warnings:
+                try:
+                    data = self.reader.read()
+                except Exception as ex:
+                    error = ex
+                self.warning(warnings[-1].message.args[0] if warnings else '')
+
+        if error:
             self.send("Data", None)
-            self.info.setText("\n".join(errors))
+            self.info.setText("An error occurred:\n{}".format(error))
+            self.editor_model.reset()
+            self.sheet_box.hide()
             return
 
         self.info.setText(self._describe(data))
