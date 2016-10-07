@@ -497,8 +497,11 @@ class OWBoxPlot(widget.OWWidget):
 
     def draw_axis(self):
         """Draw the horizontal axis and sets self.scale_x"""
-        bottom = min(stat.a_min for stat in self.stats)
-        top = max(stat.a_max for stat in self.stats)
+        misssing_stats = not self.stats
+        stats = self.stats or [BoxData(np.array([[0.], [1.]]))]
+        mean_labels = self.mean_labels or [self.mean_label(stats[0], self.attribute, "")]
+        bottom = min(stat.a_min for stat in stats)
+        top = max(stat.a_max for stat in stats)
 
         first_val, step = compute_scale(bottom, top)
         while bottom <= first_val:
@@ -507,8 +510,8 @@ class OWBoxPlot(widget.OWWidget):
         no_ticks = math.ceil((top - first_val) / step) + 1
         top = max(top, first_val + no_ticks * step)
 
-        gbottom = min(bottom, min(stat.mean - stat.dev for stat in self.stats))
-        gtop = max(top, max(stat.mean + stat.dev for stat in self.stats))
+        gbottom = min(bottom, min(stat.mean - stat.dev for stat in stats))
+        gtop = max(top, max(stat.mean + stat.dev for stat in stats))
 
         bv = self.box_view
         viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
@@ -517,7 +520,7 @@ class OWBoxPlot(widget.OWWidget):
         # In principle we should repeat this until convergence since the new
         # scaling is too conservative. (No chance am I doing this.)
         mlb = min(stat.mean + mean_lab.min_x / scale_x
-                  for stat, mean_lab in zip(self.stats, self.mean_labels))
+                  for stat, mean_lab in zip(stats, mean_labels))
         if mlb < gbottom:
             gbottom = mlb
             self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
@@ -530,8 +533,10 @@ class OWBoxPlot(widget.OWWidget):
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
             l.setZValue(100)
+
             t = self.box_scene.addSimpleText(
-                self.attribute.repr_val(val), self._axis_font)
+                self.attribute.repr_val(val) if not misssing_stats else "?",
+                self._axis_font)
             t.setFlags(
                 t.flags() | QtGui.QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
