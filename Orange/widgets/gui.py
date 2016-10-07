@@ -1526,14 +1526,12 @@ class OrangeComboBox(QtGui.QComboBox):
 
 
 # TODO comboBox looks overly complicated:
-# - is the argument control2attributeDict needed? doesn't emptyString do the
-#    job?
 # - can valueType be anything else than str?
 # - sendSelectedValue is not a great name
 def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
              orientation=Qt.Vertical, items=(), callback=None,
              sendSelectedValue=False, valueType=str,
-             control2attributeDict=None, emptyString=None, editable=False,
+             emptyString=None, editable=False,
              contentsLength=None, maximumContentsLength=25,
              **misc):
     """
@@ -1542,9 +1540,6 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     The `value` attribute of the `master` contains either the index of the
     selected row (if `sendSelected` is left at default, `False`) or a value
     converted to `valueType` (`str` by default).
-
-    Furthermore, the value is converted by looking up into dictionary
-    `control2attributeDict`.
 
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget or None
@@ -1571,9 +1566,6 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :param valueType: the type into which the selected value is converted
         if sentSelectedValue is `False`
     :type valueType: type
-    :param control2attributeDict: a dictionary through which the value is
-        converted
-    :type control2attributeDict: dict or None
     :param emptyString: the string value in the combo box that gets stored as
         an empty string in `value`
     :type emptyString: str
@@ -1624,20 +1616,14 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
             cindex = 0
         combo.setCurrentIndex(cindex)
 
-        if sendSelectedValue:
-            if control2attributeDict is None:
-                control2attributeDict = {}
-            if emptyString:
-                control2attributeDict[emptyString] = ""
             connectControl(
                 master, value, callback, combo.activated[str],
-                CallFrontComboBox(combo, valueType, control2attributeDict),
-                ValueCallbackCombo(master, value, valueType,
-                                   control2attributeDict))
+                CallFrontComboBox(combo, valueType, emptyString),
+                ValueCallbackCombo(master, value, valueType, emptyString))
         else:
             connectControl(
                 master, value, callback, combo.activated[int],
-                CallFrontComboBox(combo, None, control2attributeDict))
+                CallFrontComboBox(combo, None, emptyString))
     miscellanea(combo, hb, widget, **misc)
     combo.emptyString = emptyString
     return combo
@@ -2254,13 +2240,13 @@ class ValueCallback(ControlledCallback):
 
 
 class ValueCallbackCombo(ValueCallback):
-    def __init__(self, widget, attribute, f=None, control2attributeDict=None):
+    def __init__(self, widget, attribute, f=None, emptyString=""):
         super().__init__(widget, attribute, f)
-        self.control2attributeDict = control2attributeDict or {}
+        self.emptyString = emptyString
 
     def __call__(self, value):
         value = str(value)
-        return super().__call__(self.control2attributeDict.get(value, value))
+        return super().__call__("" if value == self.emptyString else value)
 
 
 class ValueCallbackComboModel(ValueCallback):
@@ -2447,18 +2433,15 @@ class CallFrontButton(ControlledCallFront):
 
 
 class CallFrontComboBox(ControlledCallFront):
-    def __init__(self, control, valType=None, control2attributeDict=None):
+    def __init__(self, control, valType=None, emptyString=""):
         super().__init__(control)
         self.valType = valType
-        if control2attributeDict is None:
-            self.attribute2controlDict = {}
-        else:
-            self.attribute2controlDict = \
-                {y: x for x, y in control2attributeDict.items()}
+        self.emptyString = emptyString
 
     def action(self, value):
         if value is not None:
-            value = self.attribute2controlDict.get(value, value)
+            if value == "":
+                value = self.emptyString
             if self.valType:
                 for i in range(self.control.count()):
                     if self.valType(str(self.control.itemText(i))) == value:
