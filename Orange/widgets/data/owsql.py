@@ -171,6 +171,7 @@ class OWSql(OWWidget):
                 ("Host", self.host), ("Port", self.port),
                 ("Database", self.database), ("User name", self.username)
             ))
+            self.create_extensions()
             self.refresh_tables()
             self.select_table()
         except psycopg2.Error as err:
@@ -236,7 +237,6 @@ class OWSql(OWWidget):
             shown=missing)
 
     def open_table(self):
-        self.create_extensions()
         table = self.get_table()
         self.data_desc_table = table
         self.send("Data", table)
