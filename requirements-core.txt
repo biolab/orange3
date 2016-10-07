@@ -8,3 +8,5 @@ xlrd>=0.9.2
 chardet>=2.3.0
 # Multiprocessing abstraction
 joblib>=0.9.4
+keyring
+keyrings.alt    # for alternative keyring implementations
