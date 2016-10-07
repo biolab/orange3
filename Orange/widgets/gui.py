@@ -2263,6 +2263,19 @@ class ValueCallbackCombo(ValueCallback):
         return super().__call__(self.control2attributeDict.get(value, value))
 
 
+class ValueCallbackComboModel(ValueCallback):
+    def __init__(self, widget, attribute, model, emptyString=""):
+        super().__init__(widget, attribute)
+        self.model = model
+        self.emptyString = emptyString
+
+    def __call__(self, index):
+        value = self.model[index]
+        # Can't use super here since, it doesn't set `None`'s?!
+        return self.acyclic_setattr(
+            None if value == self.emptyString else value)
+
+
 class ValueCallbackLineEdit(ControlledCallback):
     def __init__(self, control, widget, attribute, f=None):
         ControlledCallback.__init__(self, widget, attribute, f)
@@ -2460,6 +2473,28 @@ class CallFrontComboBox(ControlledCallFront):
             else:
                 if value < self.control.count():
                     self.control.setCurrentIndex(value)
+
+
+class CallFrontComboBoxModel(ControlledCallFront):
+    def __init__(self, control, model, emptyString=None):
+        super().__init__(control)
+        self.model = model
+        self.emptyString = emptyString
+
+    def action(self, value):
+        if value is None or value == "":  # the latter accomodates PyListModel
+            if self.emptyString is None:
+                return
+            value = self.emptyString
+        if value in self.model:
+            self.control.setCurrentIndex(self.model.indexOf(value))
+            return
+        elif isinstance(value, str):
+            for i, val in enumerate(self.model):
+                if value == str(val):
+                    self.control.setCurrentIndex(i)
+                    return
+        raise ValueError("Combo box does not contain item " + repr(value))
 
 
 class CallFrontHSlider(ControlledCallFront):
