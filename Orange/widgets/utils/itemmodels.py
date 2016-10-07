@@ -6,9 +6,10 @@ import operator
 from collections import namedtuple, Sequence, defaultdict
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache
+from itertools import chain
 from xml.sax.saxutils import escape
 
-from PyQt4.QtGui import  QItemSelectionModel, QColor
+from PyQt4.QtGui import QItemSelectionModel, QColor
 from PyQt4.QtCore import (
     Qt, QAbstractListModel, QAbstractTableModel, QModelIndex, QByteArray
 )
@@ -20,7 +21,7 @@ from PyQt4.QtGui import (
 
 import numpy
 
-from Orange.data import Variable, Storage
+from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -645,6 +646,60 @@ class VariableListModel(PyListModel):
         text = "<b>%s</b><br/>Python" % safe_text(var.name)
         text += self.variable_labels_tooltip(var)
         return text
+
+
+class DomainModel(VariableListModel):
+    ATTRIBUTES, CLASSES, METAS = 1, 2, 4
+    MIXED = ATTRIBUTES | CLASSES | METAS
+    SEPARATED = (CLASSES, PyListModel.Separator,
+                 METAS, PyListModel.Separator,
+                 ATTRIBUTES)
+    PRIMITIVE = (DiscreteVariable, ContinuousVariable)
+
+    def __init__(self, order=SEPARATED, valid_types=None, alphabetical=False):
+        super().__init__()
+        if isinstance(order, int):
+            order = [order]
+        self.order = order
+        self.valid_types = valid_types
+        self.alphabetical = alphabetical
+        self.set_domain(None)
+
+    def set_domain(self, domain):
+        self.beginResetModel()
+        content = []
+        # The logic related to separators is a bit complicated: it ensures that
+        # even when a section is empty we don't have two separators in a row
+        # or a separator at the end
+        add_separator = False
+        for section in self.order:
+            if section is self.Separator:
+                add_separator = True
+                continue
+            if isinstance(section, int):
+                if domain is None:
+                    continue
+                to_add = chain(
+                    *(vars for i, vars in enumerate(
+                        (domain.attributes, domain.class_vars, domain.metas))
+                      if (1 << i) & section))
+                if self.valid_types is not None:
+                    to_add = [var for var in to_add
+                              if isinstance(var, self.valid_types)]
+                if self.alphabetical:
+                    to_add = sorted(to_add)
+            elif isinstance(section, list):
+                to_add = section
+            else:
+                to_add = [section]
+            if to_add:
+                if add_separator:
+                    content.append(self.Separator)
+                    add_separator = False
+                content += to_add
+        self[:] = content
+        self.endResetModel()
+
 
 _html_replace = [("<", "&lt;"), (">", "&gt;")]
 
