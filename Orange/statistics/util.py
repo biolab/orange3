@@ -284,22 +284,38 @@ def mean(x):
     return m
 
 
+def _apply_func(x, dense_func, sparse_func, axis=None):
+    """ Equivalent of np.nanmean that supports sparse or dense matrices. """
+    if not sp.issparse(x):
+        return dense_func(x, axis=axis)
+    if axis is None:
+        return sparse_func(x)
+    if axis in [0, 1]:
+        arr = x if axis == 1 else x.T
+        arr = arr.tocsr()
+        return np.fromiter((sparse_func(row) for row in arr),
+                           dtype=np.double, count=len(arr))
+    else:
+        raise NotImplementedError
+
+
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
     def nanmean_sparse(x):
         n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
         return np.nansum(x.data) / n_values
 
-    if not sp.issparse(x):
-        return np.nanmean(x, axis=axis)
-    if axis is None:
-        return nanmean_sparse(x)
-    if axis in [0, 1]:
-        arr = x if axis == 1 else x.T
-        arr = arr.tocsr()
-        return np.array([nanmean_sparse(row) for row in arr])
-    else:
-        raise NotImplementedError
+    return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
+
+
+def nanvar(x, axis=None):
+    """ Equivalent of np.nanvar that supports sparse or dense matrices. """
+    def nanvar_sparse(x):
+        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        mean = np.nansum(x.data) / n_values
+        return np.nansum((x.data - mean) ** 2) / n_values
+
+    return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
 
 
 def unique(x, return_counts=False):

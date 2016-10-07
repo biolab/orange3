@@ -11,6 +11,7 @@ def configuration(parent_package='', top_path=None):
     config = Configuration('Orange', parent_package, top_path)
     config.add_subpackage('classification')
     config.add_subpackage('data')
+    config.add_subpackage('distance')
     config.add_subpackage('evaluation')
     config.add_subpackage('ensembles')
     config.add_subpackage('misc')
