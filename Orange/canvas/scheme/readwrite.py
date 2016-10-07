@@ -924,8 +924,7 @@ def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
             if not pickle_fallback:
                 raise
 
-            log.warning("Could not serialize to a literal string",
-                        exc_info=True)
+            log.debug("Could not serialize to a literal string")
 
     elif format == "json":
         try:
@@ -935,8 +934,7 @@ def dumps(obj, format="literal", prettyprint=False, pickle_fallback=False):
             if not pickle_fallback:
                 raise
 
-            log.warning("Could not serialize to a json string",
-                        exc_info=True)
+            log.debug("Could not serialize to a json string")
 
     elif format == "pickle":
         return base64.encodebytes(pickle.dumps(obj)).decode('ascii'), "pickle"
