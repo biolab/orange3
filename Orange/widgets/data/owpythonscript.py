@@ -4,6 +4,7 @@ import code
 import keyword
 import itertools
 import unicodedata
+from unittest.mock import patch
 
 from PyQt4 import QtGui, QtCore
 
@@ -203,12 +204,11 @@ class PythonConsole(QtGui.QPlainTextEdit, code.InteractiveConsole):
             self.history.insert(0, line)
         self.historyInd = 0
 
-        saved = sys.stdout, sys.stderr
-        try:
-            sys.stdout, sys.stderr = self, self
+        # prevent console errors to trigger error reporting & patch stdout, stderr
+        with patch('sys.excepthook', sys.__excepthook__),\
+             patch('sys.stdout', self),\
+             patch('sys.stderr', self):
             return code.InteractiveConsole.push(self, line)
-        finally:
-            sys.stdout, sys.stderr = saved
 
     def setLine(self, line):
         cursor = QTextCursor(self.document())
