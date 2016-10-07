@@ -6,6 +6,7 @@ from collections import defaultdict, namedtuple
 from types import SimpleNamespace as namespace
 
 import numpy as np
+import scipy.sparse as sp
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
@@ -462,9 +463,11 @@ class OWHeatMap(widget.OWWidget):
         discrete_ignored = Msg("{} discrete column{} ignored")
         row_clust = Msg("{}")
         col_clust = Msg("{}")
+        sparse_densified = Msg("Showing this data may require a lot of memory")
 
     class Error(widget.OWWidget.Error):
         no_continuous = Msg("No continuous feature columns")
+        not_enough_memory = Msg("Not enough memory to show this data")
 
     def __init__(self):
         super().__init__()
@@ -679,6 +682,16 @@ class OWHeatMap(widget.OWWidget):
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
+
+        if data is not None and sp.issparse(data.X):
+            try:
+                data = data.copy()
+                data.X = data.X.toarray()
+            except MemoryError:
+                data = None
+                self.Error.not_enough_memory()
+            else:
+                self.Information.sparse_densified()
 
         input_data = data
         if data is not None and \

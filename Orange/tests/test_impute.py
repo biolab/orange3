@@ -4,6 +4,7 @@
 import unittest
 from functools import reduce
 import numpy as np
+import scipy.sparse as sp
 
 from Orange import preprocess
 from Orange.preprocess import impute
@@ -23,6 +24,11 @@ class TestReplaceUnknowns(unittest.TestCase):
         a[1] = a[5] = Unknown
         ia = preprocess.ReplaceUnknowns(None, value=42).transform(a)
         np.testing.assert_equal(ia, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
+
+    def test_sparse(self):
+        m = sp.csr_matrix(np.eye(10))
+        rm = preprocess.ReplaceUnknowns(None, value=42).transform(m)
+        self.assertEqual((m!=rm).nnz, 0)
 
 
 class TestDropInstances(unittest.TestCase):
