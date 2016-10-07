@@ -498,7 +498,7 @@ def test_main(argv=None):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "iris"
+        filename = "heart_disease"
 
     ow = OWScatterPlot()
     ow.show()
