@@ -787,6 +787,7 @@ class LineEditWFocusOut(QtGui.QLineEdit):
         self.__changed = True
 
     def returnPressedHandler(self):
+        self.clearFocus()
         if self.__changed:
             self.__changed = False
             if hasattr(self, "cback") and self.cback:
