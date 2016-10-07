@@ -10,7 +10,7 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets.gui import attributeIconDict
 from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
 from Orange.widgets.utils.plot import xBottom
-from Orange.widgets.utils.scaling import checksum
+from Orange.widgets.utils import checksum
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget

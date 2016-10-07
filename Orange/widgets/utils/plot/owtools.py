@@ -39,7 +39,7 @@ from PyQt4.QtGui import (QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem,
     QGraphicsPixmapItem, QGraphicsPathItem, QPainterPath, qRgb, QImage, QPixmap)
 from PyQt4.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, qVersion
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
-from Orange.widgets.utils.scaling import get_variable_values_sorted
+from Orange.widgets.utils import get_variable_values_sorted
 
 from .owcurve import *
 from .owpalette import OWPalette

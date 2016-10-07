@@ -17,8 +17,7 @@ from Orange.statistics.distribution import get_distribution
 from Orange.widgets import gui
 from Orange.widgets.settings import (
     Setting, DomainContextHandler, ContextSetting)
-from Orange.widgets.utils import to_html
-from Orange.widgets.utils.scaling import get_variable_values_sorted
+from Orange.widgets.utils import to_html, get_variable_values_sorted
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress)
 from Orange.widgets.widget import OWWidget, Default, Msg

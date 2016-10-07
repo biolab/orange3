@@ -17,13 +17,12 @@ from PyQt4.QtGui import QApplication, QColor, QPen, QBrush, QToolTip
 from PyQt4.QtGui import QStaticText, QPainterPath, QTransform, QPinchGesture, QPainter
 
 from Orange.widgets import gui
-from Orange.widgets.utils import classdensity
+from Orange.widgets.utils import classdensity, get_variable_values_sorted
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
                                                ContinuousPaletteGenerator)
 from Orange.widgets.utils.plot import \
     OWPalette, OWPlotGUI, SELECT, PANNING, ZOOMING
-from Orange.widgets.utils.scaling import (get_variable_values_sorted,
-                                          ScaleScatterPlotData)
+from Orange.widgets.utils.scaling import ScaleScatterPlotData
 from Orange.widgets.settings import Setting, ContextSetting
 
 

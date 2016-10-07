@@ -15,7 +15,8 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft, OWPlotItem
-from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleData
+from Orange.widgets.utils.scaling import ScaleData
+from Orange.widgets.utils import get_variable_values_sorted
 from Orange.widgets.visualize.utils.lac import lac, create_contingencies
 
 NO_STATISTICS = 0

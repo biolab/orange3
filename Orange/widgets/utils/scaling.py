@@ -7,45 +7,8 @@ import numpy as np
 import Orange
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils import checksum
 from Orange.widgets.utils.datacaching import getCached, setCached
-
-
-# noinspection PyBroadException
-def checksum(x):
-    if x is None:
-        return None
-    try:
-        return x.checksum()
-    except:
-        return float('nan')
-
-
-def get_variable_values_sorted(variable):
-    """
-    Return a list of sorted values for given attribute, if all its values can be
-    cast to int's.
-    """
-    if variable.is_continuous:
-        return []
-    try:
-        return sorted(variable.values, key=int)
-    except ValueError:
-        return variable.values
-
-
-def get_variable_value_indices(variable, sort_values=True):
-    """
-    Create a dictionary with given variable. Keys are variable values, values
-    are indices (transformed from string to int); in case all values are
-    integers, we also sort them.
-    """
-    if variable.is_continuous:
-        return {}
-    if sort_values:
-        values = get_variable_values_sorted(variable)
-    else:
-        values = variable.values
-    return {value: i for i, value in enumerate(values)}
 
 
 class ScaleData:
