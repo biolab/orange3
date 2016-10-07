@@ -122,3 +122,12 @@ class TestNormalizer(unittest.TestCase):
         ]))
         with self.assertRaises(ValueError):
             normalizer(data)
+
+    def test_skip_normalization(self):
+        data = self.data.copy()
+        for attr in data.domain.attributes:
+            attr.attributes = {'skip-normalization': True}
+
+        normalizer = Normalize()
+        normalized = normalizer(data)
+        np.testing.assert_array_equal(data.X, normalized.X)

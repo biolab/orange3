@@ -295,6 +295,14 @@ class Normalize(Preprocess):
         """
         from . import normalize
 
+        if all(a.attributes.get('skip-normalization', False)
+               for a in data.domain.attributes if a.is_continuous):
+            # Skip normalization for data sets where all features are marked as already normalized.
+            # Required for SVMs (with normalizer as their default preprocessor) on sparse data to
+            # retain sparse structure. Normalizing sparse data would otherwise result in a dense matrix,
+            # which requires too much memory. For example, this is used for Bag of Words models where
+            # normalization is not really needed.
+            return data
         normalizer = normalize.Normalizer(
             zero_based=self.zero_based,
             norm_type=self.norm_type,
