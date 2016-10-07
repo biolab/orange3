@@ -200,15 +200,14 @@ class OWParallelGraph(OWPlot, ScaleData):
         self._draw_curves(background_curves)
 
     def select_color(self, row_index):
-        if self.data_has_class:
-            if self.data_has_continuous_class:
-                return self.continuous_palette.getRGB(
-                    self.data[row_index, self.data_class_index])
-            else:
-                return self.colors[
-                    int(self.data[row_index, self.data_class_index])]
-        else:
+        domain = self.data.domain
+        if domain.class_var is None:
             return 0, 0, 0
+        class_val = self.data[row_index, domain.index(domain.class_var)]
+        if domain.has_continuous_class:
+            return self.continuous_palette.getRGB(class_val)
+        else:
+            return self.colors[int(class_val)]
 
     def _draw_curves(self, selected_curves):
         n_attr = len(self.attributes)
