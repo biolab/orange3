@@ -1170,6 +1170,8 @@ class CanvasMainWindow(QMainWindow):
         document = self.current_document()
         curr_scheme = document.scheme()
         title = curr_scheme.title or "untitled"
+        for illegal in r'<>:"\/|?*\0':
+            title = title.replace(illegal, '_')
 
         if document.path():
             start_dir = document.path()
