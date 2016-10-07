@@ -266,6 +266,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         try:
             self.reader = self._get_reader()
             if self.reader is None:
+                self.data = None
                 self.send("Data", None)
                 self.info.setText("No data.")
                 self.sheet_box.hide()
@@ -283,6 +284,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 self.warning(warnings[-1].message.args[0] if warnings else '')
 
         if error:
+            self.data = None
             self.send("Data", None)
             self.info.setText("An error occurred:\n{}".format(error))
             self.editor_model.reset()
