@@ -136,6 +136,9 @@ class OWBoxPlot(widget.OWWidget):
 
     graph_name = "box_scene"
 
+    class Warning(widget.OWWidget.Warning):
+        missing_values = widget.Msg("Variable consists of only missing values.")
+
     def __init__(self):
         super().__init__()
         self.stats = []
@@ -292,11 +295,28 @@ class OWBoxPlot(widget.OWWidget):
         self.posthoc_lines = []
 
     def layout_changed(self):
+        self.clear_scene()
+
+        if self.dataset is None or len(self.conts) == len(self.dist) == 0:
+            self.Warning.missing_values.clear()
+            return
+
+        if len(self.conts):
+            if sum(self.conts.unknowns) == \
+                    len(self.dataset) and self.is_continuous:
+                self.Warning.missing_values()
+                return
+        if len(self.dist):
+            if self.dist.unknowns == len(self.dataset) and self.is_continuous:
+                self.Warning.missing_values()
+                return
+
+        self.Warning.missing_values.clear()
+        self.layout_changed_repaint()
+
+    def layout_changed_repaint(self):
         attr = self.attribute
         if not attr:
-            return
-        self.clear_scene()
-        if self.dataset is None or len(self.conts) == len(self.dist) == 0:
             return
 
         if not self.is_continuous:
