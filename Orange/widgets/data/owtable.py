@@ -379,7 +379,7 @@ class OWDataTable(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.inputs = OrderedDict()
+        self._inputs = OrderedDict()
 
         self.dist_color = QtGui.QColor(*self.dist_color_RGB)
 
@@ -436,9 +436,9 @@ class OWDataTable(widget.OWWidget):
         """Set the input dataset."""
         self.closeContext()
         if data is not None:
-            if tid in self.inputs:
+            if tid in self._inputs:
                 # update existing input slot
-                slot = self.inputs[tid]
+                slot = self._inputs[tid]
                 view = slot.view
                 # reset the (header) view state.
                 view.setModel(None)
@@ -472,7 +472,7 @@ class OWDataTable(widget.OWWidget):
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
             view._input_slot = slot
-            self.inputs[tid] = slot
+            self._inputs[tid] = slot
 
             self.tabs.setCurrentIndex(self.tabs.indexOf(view))
 
@@ -485,8 +485,8 @@ class OWDataTable(widget.OWWidget):
 
                 slot.summary.len.add_done_callback(update)
 
-        elif tid in self.inputs:
-            slot = self.inputs.pop(tid)
+        elif tid in self._inputs:
+            slot = self._inputs.pop(tid)
             view = slot.view
             view.hide()
             view.deleteLater()
@@ -657,7 +657,7 @@ class OWDataTable(widget.OWWidget):
 
     def _on_show_variable_labels_changed(self):
         """The variable labels (var.attribues) visibility was changed."""
-        for slot in self.inputs.values():
+        for slot in self._inputs.values():
             self._update_variable_labels(slot.view)
 
     def _on_distribution_color_changed(self):
@@ -683,7 +683,7 @@ class OWDataTable(widget.OWWidget):
             tab.reset()
 
     def _on_select_rows_changed(self):
-        for slot in self.inputs.values():
+        for slot in self._inputs.values():
             selection_model = slot.view.selectionModel()
             selection_model.setSelectBlocks(not self.select_rows)
             if self.select_rows:
