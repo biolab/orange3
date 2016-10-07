@@ -305,6 +305,7 @@ class OWScatterPlot(OWWidget):
         if not same_domain:
             self.init_attr_values()
         self.vizrank.initialize()
+        self.vizrank.attrs = self.data.domain.attributes if self.data is not None else []
         self.vizrank_button.setEnabled(
             self.data is not None and self.data.domain.class_var is not None
             and len(self.data.domain.attributes) > 1 and len(self.data) > 1)
