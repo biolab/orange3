@@ -1582,6 +1582,10 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
         length (default: 25, use 0 to disable)
     :rtype: PyQt4.QtGui.QComboBox
     """
+
+    # Local import to avoid circular imports
+    from Orange.widgets.utils.itemmodels import VariableListModel
+
     if box or label:
         hb = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
@@ -1607,15 +1611,27 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
 
     if value:
         cindex = getdeepattr(master, value)
-        if isinstance(cindex, str):
-            if items and cindex in items:
-                cindex = items.index(getdeepattr(master, value))
-            else:
+        model = misc.get("model", None)
+        if isinstance(model, VariableListModel):
+            callfront = CallFrontComboBoxModel(combo, model, emptyString)
+            callfront.action(cindex)
+        else:
+            if isinstance(cindex, str):
+                if items and cindex in items:
+                    cindex = items.index(cindex)
+                else:
+                    cindex = 0
+            if cindex > combo.count() - 1:
                 cindex = 0
-        if cindex > combo.count() - 1:
-            cindex = 0
-        combo.setCurrentIndex(cindex)
+            combo.setCurrentIndex(cindex)
 
+        if isinstance(model, VariableListModel):
+            connectControl(
+                master, value, callback, combo.activated[int],
+                callfront,
+                ValueCallbackComboModel(master, value, model, emptyString)
+            )
+        elif sendSelectedValue:
             connectControl(
                 master, value, callback, combo.activated[str],
                 CallFrontComboBox(combo, valueType, emptyString),
