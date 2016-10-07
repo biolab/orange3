@@ -15,222 +15,117 @@ class ScaleData:
     jitter_size = Setting(10)
     jitter_continuous = Setting(False)
 
-    def __init__(self):
-        self.raw_data = None           # input data
-        self.attribute_names = []    # list of attribute names from self.raw_data
-        self.attribute_flip_info = {}   # dictionary with attrName: 0/1 attribute is flipped or not
-
-        self.data_has_class = False
-        self.data_has_continuous_class = False
-        self.data_has_discrete_class = False
-        self.data_class_name = None
-        self.data_domain = None
-        self.data_class_index = None
-        self.have_data = False
-
+    def _reset_data(self):
+        self.domain = None
+        self.data = None
+        self.original_data = None  # as numpy array
+        self.scaled_data = None  # in [0, 1]
+        self.jittered_data = None
+        self.attr_values = {}
+        self.domain_data_stat = []
+        self.valid_data_array = None
+        self.attribute_flip_info = {}  # dictionary with attr: 0/1 if flipped
         self.jitter_seed = 0
 
-        self.attr_values = {}
-        self.domain_data_stat = []
-        self.original_data = None    # input (nonscaled) data in a numpy array
-        self.scaled_data = None        # scaled data to the interval 0-1
-        self.no_jittering_scaled_data = None
-        self.valid_data_array = None
+    def __init__(self):
+        self._reset_data()
 
     def rescale_data(self):
-        """
-        Force the existing data to be rescaled due to changes like
-        jitter_continuous, jitter_size, ...
-        """
-        self.set_data(self.raw_data, skipIfSame=0)
+        self._compute_jittered_data()
 
-    def set_data(self, data, **args):
-        if args.get("skipIfSame", 1):
-            if checksum(data) == checksum(self.raw_data):
-                return
-
-        self.domain_data_stat = []
-        self.attr_values = {}
-        self.original_data = None
-        self.scaled_data = None
-        self.no_jittering_scaled_data = None
-        self.valid_data_array = None
-
-        self.raw_data = None
-        self.have_data = False
-        self.data_has_class = False
-        self.data_has_continuous_class = False
-        self.data_has_discrete_class = False
-        self.data_class_name = None
-        self.data_domain = None
-        self.data_class_index = None
-
-        if data is None:
-            return
-        full_data = data
-        self.raw_data = data
-
-        len_data = data and len(data) or 0
-
-        self.attribute_names = [attr.name for attr in full_data.domain]
-        self.attribute_flip_info = {}
-
-        self.data_domain = full_data.domain
-        self.data_has_class = bool(full_data.domain.class_var)
-        self.data_has_continuous_class = full_data.domain.has_continuous_class
-        self.data_has_discrete_class = full_data.domain.has_discrete_class
-
-        self.data_class_name = self.data_has_class and full_data.domain.class_var.name
-        if self.data_has_class:
-            self.data_class_index = self.data_domain.index(self.data_class_name)
-        self.have_data = bool(self.raw_data and len(self.raw_data) > 0)
-
-        self.domain_data_stat = getCached(full_data,
-                                          DomainBasicStats,
-                                          (full_data,))
-
-        sort_values_for_discrete_attrs = args.get("sort_values_for_discrete_attrs",
-                                                  1)
-
-        for index in range(len(full_data.domain)):
-            attr = full_data.domain[index]
+    def _compute_domain_data_stat(self):
+        stt = self.domain_data_stat = \
+            getCached(self.data, DomainBasicStats, (self.data,))
+        for index in range(len(self.domain)):
+            attr = self.domain[index]
             if attr.is_discrete:
-                self.attr_values[attr.name] = [0, len(attr.values)]
+                self.attr_values[attr] = [0, len(attr.values)]
             elif attr.is_continuous:
-                self.attr_values[attr.name] = [self.domain_data_stat[index].min,
-                                               self.domain_data_stat[index].max]
+                self.attr_values[attr] = [stt[index].min, stt[index].max]
 
-        if 'no_data' in args:
+    def _compute_scaled_data(self):
+        data = self.data
+        # We cache scaled_data and validArray to share them between widgets
+        cached = getCached(data, "visualizationData")
+        if cached:
+            self.original_data, self.scaled_data, self.valid_data_array = cached
             return
 
-        # the original_data, no_jittering_scaled_data and validArray are arrays
-        # that we can cache so that other visualization widgets don't need to
-        # compute it. The scaled_data on the other hand has to be computed for
-        # each widget separately because of different
-        # jitter_continuous and jitter_size values
-        if getCached(data, "visualizationData"):
-            self.original_data, self.no_jittering_scaled_data, self.valid_data_array = getCached(data,
-                                                                                                 "visualizationData")
-        else:
-            no_jittering_data = np.c_[full_data.X, full_data.Y].T
-            valid_data_array = ~np.isnan(no_jittering_data)
-            original_data = no_jittering_data.copy()
-
-            for index in range(len(data.domain)):
-                attr = data.domain[index]
-                if attr.is_discrete:
-                    # see if the values for discrete attributes have to be resorted
-                    variable_value_indices = get_variable_value_indices(data.domain[index],
-                                                                        sort_values_for_discrete_attrs)
-                    if 0 in [i == variable_value_indices[attr.values[i]]
-                             for i in range(len(attr.values))]:
-                        # make the array a contiguous, otherwise the putmask
-                        # function does not work
-                        line = no_jittering_data[index].copy()
-                        indices = [np.where(line == val, 1, 0)
-                                   for val in range(len(attr.values))]
-                        for i in range(len(attr.values)):
-                            np.putmask(line, indices[i],
-                                          variable_value_indices[attr.values[i]])
-                        no_jittering_data[index] = line   # save the changed array
-                        original_data[index] = line     # reorder also the values in the original data
-                    no_jittering_data[index] = ((no_jittering_data[index] * 2.0 + 1.0)
-                                                / float(2 * len(attr.values)))
-
-                elif attr.is_continuous:
-                    diff = self.domain_data_stat[index].max - self.domain_data_stat[
-                        index].min or 1     # if all values are the same then prevent division by zero
-                    no_jittering_data[index] = (no_jittering_data[index] -
-                                                self.domain_data_stat[index].min) / diff
-
-            self.original_data = original_data
-            self.no_jittering_scaled_data = no_jittering_data
-            self.valid_data_array = valid_data_array
-
-        if data:
-            setCached(data, "visualizationData",
-                      (self.original_data, self.no_jittering_scaled_data,
-                       self.valid_data_array))
-
-        # compute the scaled_data arrays
-        scaled_data = self.no_jittering_scaled_data
-
-        # Random generators for jittering
-        random = np.random.RandomState(seed=self.jitter_seed)
-        rand_seeds = random.random_integers(0, 2 ** 30 - 1,
-                                            size=len(data.domain))
-        for index, rseed in zip(list(range(len(data.domain))), rand_seeds):
-            # Need to use a different seed for each feature
-            random = np.random.RandomState(seed=rseed)
+        Y = data.Y if data.Y.ndim == 2 else np.atleast_2d(data.Y).T
+        self.original_data = np.hstack((data.X, Y)).T
+        self.scaled_data = no_jit = self.original_data.copy()
+        self.valid_data_array = ~np.isnan(no_jit)
+        for index in range(len(data.domain)):
             attr = data.domain[index]
             if attr.is_discrete:
-                scaled_data[index] += (self.jitter_size / (50.0 * max(1, len(attr.values)))) * \
-                                      (random.rand(len(full_data)) - 0.5)
+                no_jit[index] *= 2
+                no_jit[index] += 1
+                no_jit[index] /= 2 * len(attr.values)
+            else:
+                dstat = self.domain_data_stat[index]
+                no_jit[index] -= dstat.min
+                if dstat.max != dstat.min:
+                    no_jit[index] /= dstat.max - dstat.min
+        setCached(data, "visualizationData",
+                  (self.original_data, self.scaled_data, self.valid_data_array))
 
+    def _compute_jittered_data(self):
+        data = self.data
+        self.jittered_data = self.scaled_data.copy()
+        random = np.random.RandomState(seed=self.jitter_seed)
+        for index, col in enumerate(self.jittered_data):
+            # Need to use a different seed for each feature
+            attr = data.domain[index]
+            if attr.is_discrete:
+                off = self.jitter_size / (25 * max(1, len(attr.values)))
             elif attr.is_continuous and self.jitter_continuous:
-                scaled_data[index] += self.jitter_size / 50.0 * (0.5 - random.rand(len(full_data)))
-                scaled_data[index] = np.absolute(scaled_data[index])       # fix values below zero
-                ind = np.where(scaled_data[index] > 1.0, 1, 0)     # fix values above 1
-                np.putmask(scaled_data[index], ind, 2.0 - np.compress(ind, scaled_data[index]))
+                off = self.jitter_size / 25
+            else:
+                continue
+            col += random.uniform(-off, off, len(data))
+            # fix values outside [0, 1]
+            col = np.absolute(col)
 
-        self.scaled_data = scaled_data[:, :len_data]
+            above_1 = col > 1
+            col[above_1] = 2 - col[above_1]
 
-    def scale_example_value(self, instance, index):
-        """
-        Scale instance's value at index index to a range between 0 and 1 with
-        respect to self.raw_data.
-        """
-        if instance[index].isSpecial():
-            print("Warning: scaling instance with missing value")
-            return 0.5
-        if instance.domain[index].is_discrete:
-            d = get_variable_value_indices(instance.domain[index])
-            return (d[instance[index].value] * 2 + 1) / float(2 * len(d))
-        elif instance.domain[index].is_continuous:
-            diff = self.domain_data_stat[index].max - self.domain_data_stat[index].min
-            if diff == 0:
-                diff = 1          # if all values are the same then prevent division by zero
-            return (instance[index] - self.domain_data_stat[index].min) / diff
+    # noinspection PyAttributeOutsideInit
+    def set_data(self, data, skip_if_same=False, no_data=False):
+        if skip_if_same and checksum(data) == checksum(self.data):
+            return
+        self._reset_data()
+        if data is None:
+            return
 
-    def get_attribute_label(self, attr_name):
-        if (self.attribute_flip_info.get(attr_name, 0) and
-            self.data_domain[attr_name].is_continuous):
-            return "-" + attr_name
-        return attr_name
+        self.domain = data.domain
+        self.data = data
+        self.attribute_flip_info = {}
+        if not no_data:
+            self._compute_domain_data_stat()
+            self._compute_scaled_data()
+            self._compute_jittered_data()
 
-    def flip_attribute(self, attr_name):
-        if attr_name not in self.attribute_names:
+    def flip_attribute(self, attr):
+        if attr.is_discrete:
             return 0
-        if self.data_domain[attr_name].is_discrete:
-            return 0
+        index = self.domain.index(attr)
+        self.attribute_flip_info[attr] = 1 - self.attribute_flip_info.get(attr, 0)
+        if attr.is_continuous:
+            self.attr_values[attr] = [-self.attr_values[attr][1],
+                                      -self.attr_values[attr][0]]
 
-        index = self.data_domain.index(attr_name)
-        self.attribute_flip_info[attr_name] = 1 - self.attribute_flip_info.get(attr_name, 0)
-        if self.data_domain[attr_name].is_continuous:
-            self.attr_values[attr_name] = [-self.attr_values[attr_name][1], -self.attr_values[attr_name][0]]
-
+        self.jittered_data[index] = 1 - self.jittered_data[index]
         self.scaled_data[index] = 1 - self.scaled_data[index]
-        self.no_jittering_scaled_data[index] = 1 - self.no_jittering_scaled_data[index]
         return 1
 
-    def get_min_max_val(self, attr):
-        if type(attr) == int:
-            attr = self.attribute_names[attr]
-        diff = self.attr_values[attr][1] - self.attr_values[attr][0]
-        return diff or 1.0
-
-    def get_valid_list(self, indices, also_class_if_exists=1):
+    def get_valid_list(self, indices):
         """
-        Get array of 0 and 1 of len = len(self.raw_data). If there is a missing
+        Get array of 0 and 1 of len = len(self.data). If there is a missing
         value at any attribute in indices return 0 for that instance.
         """
         if self.valid_data_array is None or len(self.valid_data_array) == 0:
             return np.array([], np.bool)
-
-        inds = indices[:]
-        if also_class_if_exists and self.data_has_class:
-            inds.append(self.data_class_index)
-        return np.all(self.valid_data_array[inds], axis=0)
+        return np.all(self.valid_data_array[indices], axis=0)
 
     def get_valid_indices(self, indices):
         """
@@ -240,55 +135,36 @@ class ScaleData:
         valid_list = self.get_valid_list(indices)
         return np.nonzero(valid_list)[0]
 
-    def rnd_correction(self, max):
-        """
-        Return a number from -max to max.
-        """
-        return (random.random() - 0.5) * 2 * max
-
 
 class ScaleScatterPlotData(ScaleData):
-    def get_original_data(self, indices):
-        data = self.original_data.take(indices, axis = 0)
-        for i, ind in enumerate(indices):
-            [minVal, maxVal] = self.attr_values[self.data_domain[ind].name]
-            if self.data_domain[ind].is_discrete:
-                data[i] += (self.jitter_size/50.0)*(np.random.random(len(self.raw_data)) - 0.5)
-            elif self.data_domain[ind].is_continuous and self.jitter_continuous:
-                data[i] += (self.jitter_size/(50.0*(maxVal-minVal or 1)))*(np.random.random(len(self.raw_data)) - 0.5)
-        return data
-
-    getOriginalData = get_original_data
-
-    # @deprecated_keywords({"xAttr": "xattr", "yAttr": "yattr"})
     def get_xy_data_positions(self, xattr, yattr, filter_valid=False,
                               copy=True):
         """
         Create x-y projection of attributes in attrlist.
 
         """
-        xattr_index = self.data_domain.index(xattr)
-        yattr_index = self.data_domain.index(yattr)
+        xattr_index = self.domain.index(xattr)
+        yattr_index = self.domain.index(yattr)
         if filter_valid is True:
             filter_valid = self.get_valid_list([xattr_index, yattr_index])
         if isinstance(filter_valid, np.ndarray):
-            xdata = self.scaled_data[xattr_index, filter_valid]
-            ydata = self.scaled_data[yattr_index, filter_valid]
+            xdata = self.jittered_data[xattr_index, filter_valid]
+            ydata = self.jittered_data[yattr_index, filter_valid]
         elif copy:
-            xdata = self.scaled_data[xattr_index].copy()
-            ydata = self.scaled_data[yattr_index].copy()
+            xdata = self.jittered_data[xattr_index].copy()
+            ydata = self.jittered_data[yattr_index].copy()
         else:
-            xdata = self.scaled_data[xattr_index]
-            ydata = self.scaled_data[yattr_index]
+            xdata = self.jittered_data[xattr_index]
+            ydata = self.jittered_data[yattr_index]
 
-        if self.data_domain[xattr_index].is_discrete:
-            xdata *= len(self.data_domain[xattr_index].values)
+        if self.domain[xattr_index].is_discrete:
+            xdata *= len(self.domain[xattr_index].values)
             xdata -= 0.5
         else:
             xdata *= self.attr_values[xattr][1] - self.attr_values[xattr][0]
             xdata += float(self.attr_values[xattr][0])
-        if self.data_domain[yattr_index].is_discrete:
-            ydata *= len(self.data_domain[yattr_index].values)
+        if self.domain[yattr_index].is_discrete:
+            ydata *= len(self.domain[yattr_index].values)
             ydata -= 0.5
         else:
             ydata *= self.attr_values[yattr][1] - self.attr_values[yattr][0]

@@ -18,16 +18,15 @@ class TestOWScatterPlot(WidgetTest):
         self.send_signal("Data", self.iris)
 
         # First two attribute should be selected as x an y
-        self.assertEqual(self.widget.attr_x, self.iris.domain[0].name)
-        self.assertEqual(self.widget.attr_y, self.iris.domain[1].name)
+        self.assertEqual(self.widget.attr_x, self.iris.domain[0])
+        self.assertEqual(self.widget.attr_y, self.iris.domain[1])
 
         # Class var should be selected as color
-        self.assertEqual(self.widget.graph.attr_color,
-                         self.iris.domain.class_var.name)
+        self.assertIs(self.widget.graph.attr_color, self.iris.domain.class_var)
 
         # Change which attributes are displayed
-        self.widget.attr_x = self.iris.domain[2].name
-        self.widget.attr_y = self.iris.domain[3].name
+        self.widget.attr_x = self.iris.domain[2]
+        self.widget.attr_y = self.iris.domain[3]
 
         # Disconnect the data
         self.send_signal("Data", None)
@@ -44,8 +43,8 @@ class TestOWScatterPlot(WidgetTest):
         # same attributes that were used last time should be selected
         self.send_signal("Data", self.iris)
 
-        self.assertEqual(self.widget.attr_x, self.iris.domain[2].name)
-        self.assertEqual(self.widget.attr_y, self.iris.domain[3].name)
+        self.assertIs(self.widget.attr_x, self.iris.domain[2])
+        self.assertIs(self.widget.attr_y, self.iris.domain[3])
 
     def test_score_heuristics(self):
         domain = Domain([ContinuousVariable(c) for c in "abcd"],
@@ -63,7 +62,7 @@ class TestOWScatterPlot(WidgetTest):
                    [domain.attributes[2]])
         t1 = Table(d1, self.iris)
         self.send_signal("Data", t1)
-        self.widget.graph.attr_size = domain.attributes[2].name
+        self.widget.graph.attr_size = domain.attributes[2]
 
         d2 = Domain(domain.attributes[:2], domain.class_var,
                     [domain.attributes[3]])

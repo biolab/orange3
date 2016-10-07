@@ -452,11 +452,15 @@ _define_symbols()
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
-    attr_color = ContextSetting("", ContextSetting.OPTIONAL, exclude_metas=False)
-    attr_label = ContextSetting("", ContextSetting.OPTIONAL, exclude_metas=False)
+    attr_color = ContextSetting(
+        None, ContextSetting.OPTIONAL, exclude_metas=False)
+    attr_label = ContextSetting(
+        None, ContextSetting.OPTIONAL, exclude_metas=False)
+    attr_shape = ContextSetting(
+        None, ContextSetting.OPTIONAL, exclude_metas=False)
+    attr_size = ContextSetting(
+        None, ContextSetting.OPTIONAL, exclude_metas=False)
     label_only_selected = Setting(False)
-    attr_shape = ContextSetting("", ContextSetting.OPTIONAL, exclude_metas=False)
-    attr_size = ContextSetting("", ContextSetting.OPTIONAL, exclude_metas=False)
 
     point_width = Setting(10)
     alpha_value = Setting(128)
@@ -503,8 +507,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             "missing_shape",
             "Points with undefined '{}' are shown as crossed circles")
         self.shown_attribute_indices = []
-        self.shown_x = ""
-        self.shown_y = ""
+        self.shown_x = self.shown_y = None
         self.pen_colors = self.brush_colors = None
 
         self.valid_data = None  # np.ndarray
@@ -572,22 +575,21 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.master.Information.missing_coords.clear()
         self._clear_plot_widget()
 
-        self.shown_x = attr_x
-        self.shown_y = attr_y
+        self.shown_x, self.shown_y = attr_x, attr_y
 
-        if self.scaled_data is None or not len(self.scaled_data):
+        if self.jittered_data is None or not len(self.jittered_data):
             self.valid_data = None
         else:
-            index_x = self.data_domain.index(attr_x)
-            index_y = self.data_domain.index(attr_y)
-            self.valid_data = self.get_valid_list([index_x, index_y],
-                                                  also_class_if_exists=False)
+            index_x = self.domain.index(attr_x)
+            index_y = self.domain.index(attr_y)
+            self.valid_data = self.get_valid_list([index_x, index_y])
             if not np.any(self.valid_data):
                 self.valid_data = None
         if self.valid_data is None:
             self.selection = None
             self.n_points = 0
-            self.master.Warning.missing_coords(self.shown_x, self.shown_y)
+            self.master.Warning.missing_coords(
+                self.shown_x.name, self.shown_y.name)
             return
 
         x_data, y_data = self.get_xy_data_positions(
@@ -607,7 +609,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         for axis, name, index in (("bottom", attr_x, index_x),
                                   ("left", attr_y, index_y)):
             self.set_axis_title(axis, name)
-            var = self.data_domain[index]
+            var = self.domain[index]
             if var.is_discrete:
                 self.set_labels(axis, get_variable_values_sorted(var))
             else:
@@ -627,7 +629,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         data_indices = np.flatnonzero(self.valid_data)
         if len(data_indices) != self.original_data.shape[1]:
-            self.master.Information.missing_coords(self.shown_x, self.shown_y)
+            self.master.Information.missing_coords(
+                self.shown_x.name, self.shown_y.name)
 
         self.scatterplot_item = ScatterPlotItem(
             x=x_data, y=y_data, data=data_indices,
@@ -649,19 +652,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.replot()
 
     def can_draw_density(self):
-        if self.data_domain is None:
-            return False
-        discrete_color = False
-        attr_color = self.attr_color
-        if attr_color != "" and attr_color != "(Same color)":
-            color_var = self.data_domain[attr_color]
-            discrete_color = color_var.is_discrete
-        continuous_x = False
-        continuous_y = False
-        if self.shown_x and self.shown_y:
-            continuous_x = self.data_domain[self.shown_x].is_continuous
-            continuous_y = self.data_domain[self.shown_y].is_continuous
-        return discrete_color and continuous_x and continuous_y
+        return self.domain is not None and \
+            self.attr_color is not None and \
+            self.attr_color.is_discrete and \
+            self.shown_x.is_continuous and \
+            self.shown_y.is_continuous
 
     def should_draw_density(self):
         return self.class_density and self.n_points > 1 and self.can_draw_density()
@@ -678,11 +673,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.setLabel(axis=axis, text=title)
 
     def get_size_index(self):
-        size_index = -1
-        attr_size = self.attr_size
-        if attr_size != "" and attr_size != "(Same size)":
-            size_index = self.data_domain.index(attr_size)
-        return size_index
+        if self.attr_size is None:
+            return -1
+        return self.domain.index(self.attr_size)
 
     def compute_sizes(self):
         self.master.Information.missing_size.clear()
@@ -692,7 +685,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:
             size_data = \
                 self.MinShapeSize + \
-                self.no_jittering_scaled_data[size_index, self.valid_data] * \
+                self.scaled_data[size_index, self.valid_data] * \
                 self.point_width
         nans = np.isnan(size_data)
         if np.any(nans):
@@ -709,18 +702,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     update_point_size = update_sizes
 
     def get_color_index(self):
-        color_index = -1
-        attr_color = self.attr_color
-        if attr_color != "" and attr_color != "(Same color)":
-            color_index = self.data_domain.index(attr_color)
-            color_var = self.data_domain[attr_color]
-            colors = color_var.colors
-            if color_var.is_discrete:
-                self.discrete_palette = ColorPaletteGenerator(
-                    number_of_colors=len(colors), rgb_colors=colors)
-            else:
-                self.continuous_palette = ContinuousPaletteGenerator(*colors)
-        return color_index
+        if self.attr_color is None:
+            return -1
+        colors = self.attr_color.colors
+        if self.attr_color.is_discrete:
+            self.discrete_palette = ColorPaletteGenerator(
+                number_of_colors=len(colors), rgb_colors=colors)
+        else:
+            self.continuous_palette = ContinuousPaletteGenerator(*colors)
+        return self.domain.index(self.attr_color)
 
     def compute_colors_sel(self, keep_colors=False):
         if not keep_colors:
@@ -753,7 +743,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         subset = None
         if self.subset_indices:
             subset = np.array([ex.id in self.subset_indices
-                               for ex in self.raw_data[self.valid_data]])
+                               for ex in self.data[self.valid_data]])
 
         if color_index == -1:  # same color
             color = self.plot_widget.palette().color(OWPalette.Data)
@@ -768,7 +758,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             return pen, brush
 
         c_data = self.original_data[color_index, self.valid_data]
-        if self.data_domain[color_index].is_continuous:
+        if self.domain[color_index].is_continuous:
             if self.pen_colors is None:
                 self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
                 c_data -= self.scale.offset
@@ -846,15 +836,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.labels.append(ti)
 
     def update_labels(self):
-        if not self.attr_label or \
+        if self.attr_label is None or \
                 self.label_only_selected and self.selection is None:
             for label in self.labels:
                 label.setText("")
             return
         if not self.labels:
             self.create_labels()
-        label_column = self.raw_data.get_column_view(self.attr_label)[0]
-        formatter = self.raw_data.domain[self.attr_label].str_val
+        label_column = self.data.get_column_view(self.attr_label)[0]
+        formatter = self.attr_label.str_val
         label_data = map(formatter, label_column)
         black = pg.mkColor(0, 0, 0)
         if self.label_only_selected:
@@ -866,13 +856,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 label.setText(text, black)
 
     def get_shape_index(self):
-        shape_index = -1
-        attr_shape = self.attr_shape
-        if attr_shape and attr_shape != "(Same shape)" and \
-                len(self.data_domain[attr_shape].values) <= \
-                len(self.CurveSymbols):
-            shape_index = self.data_domain.index(attr_shape)
-        return shape_index
+        if self.attr_shape is None or \
+                len(self.attr_shape.values) > len(self.CurveSymbols):
+            return -1
+        return self.domain.index(self.attr_shape)
 
     def compute_symbols(self):
         self.master.Information.missing_shape.clear()
@@ -930,7 +917,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         color_index = self.get_color_index()
         if color_index == -1:
             return
-        color_var = self.data_domain[color_index]
+        color_var = self.domain[color_index]
         use_shape = self.get_shape_index() == color_index
         if color_var.is_discrete:
             if not self.legend:
@@ -959,7 +946,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             return
         if not self.legend:
             self.create_legend()
-        shape_var = self.data_domain[shape_index]
+        shape_var = self.domain[shape_index]
         color = self.plot_widget.palette().color(OWPalette.Data)
         pen = QPen(color.darker(self.DarkerValue))
         color.setAlpha(self.alpha_value)
@@ -1004,12 +991,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def select(self, points):
         # noinspection PyArgumentList
-        if self.raw_data is None:
+        if self.data is None:
             return
         keys = QApplication.keyboardModifiers()
         if self.selection is None or not keys & (
                 Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
-            self.selection = np.full(len(self.raw_data), False, dtype=np.bool)
+            self.selection = np.full(len(self.data), False, dtype=np.bool)
         indices = [p.data() for p in points]
         if keys & Qt.AltModifier:
             self.selection[indices] = False
@@ -1046,22 +1033,22 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 index = p.data()
                 text += "Attributes:\n"
                 if self.tooltip_shows_all and \
-                        len(self.data_domain.attributes) < 30:
+                        len(self.domain.attributes) < 30:
                     text += "".join(
                         '   {} = {}\n'.format(attr.name,
-                                              self.raw_data[index][attr])
-                        for attr in self.data_domain.attributes)
+                                              self.data[index][attr])
+                        for attr in self.domain.attributes)
                 else:
                     text += '   {} = {}\n   {} = {}\n'.format(
-                        self.shown_x, self.raw_data[index][self.shown_x],
-                        self.shown_y, self.raw_data[index][self.shown_y])
+                        self.shown_x, self.data[index][self.shown_x],
+                        self.shown_y, self.data[index][self.shown_y])
                     if self.tooltip_shows_all:
                         text += "   ... and {} others\n\n".format(
-                            len(self.data_domain.attributes) - 2)
-                if self.data_domain.class_var:
+                            len(self.domain.attributes) - 2)
+                if self.domain.class_var:
                     text += 'Class:\n   {} = {}\n'.format(
-                        self.data_domain.class_var.name,
-                        self.raw_data[index][self.raw_data.domain.class_var])
+                        self.domain.class_var.name,
+                        self.data[index][self.data.domain.class_var])
                 if i < len(points) - 1:
                     text += '------------------\n'
 
