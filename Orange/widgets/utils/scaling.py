@@ -1,10 +1,5 @@
-from datetime import time
-import random
-import sys
-
 import numpy as np
 
-import Orange
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import checksum
