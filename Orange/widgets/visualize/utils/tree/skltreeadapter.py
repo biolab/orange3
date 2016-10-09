@@ -2,7 +2,7 @@
 from collections import OrderedDict
 
 import numpy as np
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.widgets.visualize.utils.tree.treeadapter import BaseTreeAdapter
 
 from Orange.misc.cache import memoize_method
 from Orange.preprocess.transformation import Indicator
@@ -12,7 +12,7 @@ from Orange.widgets.visualize.utils.tree.rules import (
 )
 
 
-class SklTreeAdapter(TreeAdapter):
+class SklTreeAdapter(BaseTreeAdapter):
     """Sklear Tree Adapter.
 
     An abstraction on top of the scikit learn classification tree.

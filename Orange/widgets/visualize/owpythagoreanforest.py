@@ -398,7 +398,7 @@ class GridItem(SelectableGridItem, ZoomableGridItem):
 
 
 class SklRandomForestAdapter:
-    """Take a `RandomForest` and wrap all the trees into the `TreeAdapter`
+    """Take a `RandomForest` and wrap all the trees into the `SklTreeAdapter`
     instances that Pythagorean trees use."""
     def __init__(self, model, domain, adjust_weight=lambda x: x):
         self._adapters = []

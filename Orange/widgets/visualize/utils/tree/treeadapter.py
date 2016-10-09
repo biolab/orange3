@@ -1,8 +1,9 @@
 """Base tree adapter class with common methods needed for visualisations."""
 from abc import ABCMeta, abstractmethod
+from itertools import chain
 
 
-class TreeAdapter(metaclass=ABCMeta):
+class BaseTreeAdapter(metaclass=ABCMeta):
     """Base class for tree representation.
 
     Any subclass should implement the methods listed in this base class. Note
