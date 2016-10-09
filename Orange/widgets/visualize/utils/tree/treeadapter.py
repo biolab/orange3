@@ -212,7 +212,7 @@ class TreeAdapter(metaclass=ABCMeta):
         ----------
         dataset : Table
             A Orange Table dataset.
-        nodes : iterable[TreeNode]
+        nodes : iterable[node]
             A list of tree nodes for which we want the instances.
 
         Returns
