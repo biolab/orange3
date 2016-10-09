@@ -1,5 +1,6 @@
 """Widget for visualization of tree models"""
 import numpy as np
+from Orange.widgets.utils import to_html
 
 from PyQt4.QtCore import Qt, QRectF, QPointF, QSizeF
 from PyQt4.QtGui import QColor, QBrush, QPen, QFontMetrics, QStyle, \
@@ -281,11 +282,8 @@ class OWTreeGraph(OWTreeViewer2D):
         return node
 
     def node_tooltip(self, node):
-        path_to_root = [node]
-        while node.parent:
-            node = node.parent
-            path_to_root.append(node)
-        return self.model.rule(reversed(path_to_root))
+        return "<br>".join(to_html(rule)
+                           for rule in self.model.rule(node.node_inst))
 
     def update_selection(self):
         if self.model is None:

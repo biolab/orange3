@@ -119,11 +119,11 @@ class NumericNode(Node):
         attr = self.attr
         threshold = self.threshold
         lower, upper = conditions.get(attr, (None, None))
-        if child_idx == 0 and (lower is None or threshold > lower):
-            lower = threshold
-        elif child_idx == 1 and (upper is None or threshold < upper):
+        if child_idx == 0 and (upper is None or threshold < upper):
             upper = threshold
-        child.condition = (upper, lower)
+        elif child_idx == 1 and (lower is None or threshold > lower):
+            lower = threshold
+        child.condition = (lower, upper)
         child.description = \
             "{} {}".format("≤>"[child_idx], attr.str_val(threshold))
 
@@ -222,8 +222,35 @@ class TreeModel(Model):
         if subsets:
             return self.instances[np.unique(np.hstack(subsets))]
 
-    def rule(self, path):
-        return ""
+    @staticmethod
+    def climb(node):
+        while node:
+            yield node
+            node = node.parent
+
+    @classmethod
+    def rule(cls, node):
+        rules = []
+        used_attrs = set()
+        for node in cls.climb(node):
+            if node.parent is None or node.parent.attr_idx in used_attrs:
+                continue
+            parent = node.parent
+            attr = parent.attr
+            name = attr.name
+            if isinstance(parent, NumericNode):
+                lower, upper = node.condition
+                if lower is None:
+                    rules.append("{} > {}".format(name, attr.repr_val(upper)))
+                elif upper is None:
+                    rules.append("{} ≤ {}".format(name, attr.repr_val(lower)))
+                else:
+                    rules.append("{} < {} ≤ {}".format(
+                        attr.repr_val(lower), name, attr.repr_val(upper)))
+            else:
+                rules.append("{}: {}".format(name, node.description))
+            used_attrs.add(node.parent.attr_idx)
+        return rules
 
     def print_tree(self, node=None, level=0):
         """String representation of tree for debug purposees"""
@@ -316,6 +343,7 @@ class TreeModel(Model):
             for i, child in enumerate(node.children):
                 if child is None:
                     continue
+                child.parent = node
                 # These classes are friends
                 # pylint: disable=protected-access
                 node._set_child_descriptions(child, i, conditions)
@@ -328,4 +356,5 @@ class TreeModel(Model):
                     del conditions[node.attr]
 
         conditions = OrderedDict()
+        self.root.parent = None
         _compute_subtree(self.root)
