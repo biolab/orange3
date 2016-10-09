@@ -21,6 +21,8 @@ from math import pi, sqrt, cos, sin, degrees
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import Qt
 
+from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+
 # z index range, increase if needed
 Z_STEP = 5000000
 
@@ -384,7 +386,7 @@ class SquareGraphicsItem(QtGui.QGraphicsRectItem):
         self.z_step = Z_STEP
 
         # calculate the correct z values based on the parent
-        if self.tree_node.parent != -1:
+        if self.tree_node.parent != TreeAdapter.ROOT_PARENT:
             p = self.tree_node.parent
             # override root z step
             num_children = len(p.children)
@@ -503,7 +505,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
     def _propagate_to_parents(self, graphics_item, fnc, other_fnc):
         # propagate function that handles graphics item to appropriate parents
-        if graphics_item.tree_node.parent != -1:
+        if graphics_item.tree_node.parent != TreeAdapter.ROOT_PARENT:
             parent = graphics_item.tree_node.parent.graphics_item
             # handle the non relevant children nodes
             for c in parent.tree_node.children:

@@ -11,7 +11,7 @@ class TreeAdapter(metaclass=ABCMeta):
 
     """
 
-    ROOT_PARENT = -1
+    ROOT_PARENT = None
     NO_CHILD = -1
     FEATURE_UNDEFINED = -2
 
@@ -52,7 +52,7 @@ class TreeAdapter(metaclass=ABCMeta):
 
     @abstractmethod
     def parent(self, node):
-        """Get the parent of a given node. Return -1 if the node is the root.
+        """Get the parent of a given node or ROOT_PARENT if the node is the root.
 
         Parameters
         ----------

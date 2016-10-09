@@ -30,7 +30,6 @@ class SklTreeAdapter(TreeAdapter):
 
     """
 
-    ROOT_PARENT = -1
     NO_CHILD = -1
     FEATURE_UNDEFINED = -2
 
