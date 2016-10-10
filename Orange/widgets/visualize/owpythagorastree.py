@@ -547,10 +547,7 @@ class OWPythagorasTree(OWWidget):
         return self.color_palette[(std - min_mean) / (max_mean - min_mean)]
 
     def _regression_get_tooltip(self, node):
-        total = self.tree_adapter.num_samples(
-            self.tree_adapter.parent(node.label))
-        samples = self.tree_adapter.num_samples(node.label)
-        ratio = samples / total
+        num_samples = self.tree_adapter.num_samples(node.label)
 
         instances = self.tree_adapter.get_instances_in_nodes(
             self.clf_dataset, node)
@@ -568,8 +565,7 @@ class OWPythagorasTree(OWWidget):
 
         return '<p>Mean: {:2.3f}'.format(mean) \
             + '<br>Standard deviation: {:2.3f}'.format(std) \
-            + '<br>{}/{} samples ({:2.3f}%)'.format(
-              int(samples), total, ratio * 100) \
+            + '<br>{} samples'.format(num_samples) \
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
