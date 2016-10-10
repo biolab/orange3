@@ -598,7 +598,6 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
 def main():
     import sys
     import Orange
-    from Orange.classification.tree import TreeLearner
 
     argv = sys.argv
     if len(argv) > 1:
@@ -609,8 +608,17 @@ def main():
     app = QtGui.QApplication(argv)
     ow = OWPythagorasTree()
     data = Orange.data.Table(filename)
-    clf = TreeLearner(max_depth=1000)(data)
-    ow.set_tree(clf)
+
+    if data.domain.has_discrete_class:
+        from Orange.classification.tree import TreeLearner
+        model = TreeLearner(max_depth=1000)(data)
+    else:
+        from Orange.regression.tree import TreeRegressionLearner
+        model = TreeRegressionLearner(max_depth=1000)(data)
+
+    model.instances = data
+
+    ow.set_tree(model)
 
     ow.show()
     ow.raise_()
