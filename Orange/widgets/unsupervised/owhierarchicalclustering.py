@@ -708,8 +708,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
 
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table),
-               ("Other Data", Orange.data.Table)]
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
 
     #: Selected linkage
     linkage = settings.Setting(1)
@@ -1101,10 +1100,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             annotated_data = create_annotated_table(items, selected_indices) \
                 if self.selection_method == 0 and self.matrix.axis else None
             self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
-            self.send("Other Data", None)
             return
 
-        selected_data = unselected_data = None
+        selected_data = None
 
         if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
             # Select rows
@@ -1144,8 +1142,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
             if selected_indices:
                 selected_data = data[mask]
-            if unselected_indices:
-                unselected_data = data[~mask]
 
         elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
             # Select columns
@@ -1153,17 +1149,12 @@ class OWHierarchicalClustering(widget.OWWidget):
                 [items.domain[i] for i in selected_indices],
                 items.domain.class_vars, items.domain.metas)
             selected_data = items.from_table(domain, items)
-            domain = Orange.data.Domain(
-                [items.domain[i] for i in unselected_indices],
-                items.domain.class_vars, items.domain.metas)
-            unselected_data = items.from_table(domain, items)
             data = None
 
         self.send("Selected Data", selected_data)
         annotated_data = create_annotated_table(data, selected_indices) if \
             self.selection_method == 0 else None
         self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
-        self.send("Other Data", unselected_data)
 
     def sizeHint(self):
         return QSize(800, 500)
