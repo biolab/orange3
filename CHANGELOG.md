@@ -5,6 +5,56 @@ Change Log
 ------------
 * ...
 
+[3.3.8] - 2016-10-11
+--------------------
+##### Enhancements
+* CredentialManager: Store passwords in System Keyring Services ([#1641](../../pull/1641))
+* Extend widget creation policy ([#1611](../../pull/1611))
+* File widget improvements ([#1607](../../pull/1607))
+* Remote reporting of unexpected errors ([#1558](../../pull/1558))
+* OWRank: Widget improvements ([#1560](../../pull/1560))
+* canvas: Indicate runtime state on links ([#1554](../../pull/1554))
+* Rule induction (CN2) ([#1397](../../pull/1397))
+* Upgrade OWSvm unittests ([#1499](../../pull/1499))
+* Enable Ward clustering in Hierarchical clustering widget  ([#1515](../../pull/1515))
+* PCA transformation speedup ([#1539](../../pull/1539))
+
+##### Bugfixes
+* owsql: Fix bug when using connection before established ([#1638](../../pull/1638))
+* Scatterplot: Reintroduce sliders for size and opacity ([#1622](../../pull/1622))
+* Reporting tabular in Data Table and Rank widgets ([#1573](../../pull/1573))
+* BoxPlot crashes on variables with no known values (Fixes #1568) ([#1647](../../pull/1647))
+* Canvas: Replace illegal file-name characters with _ when saving workf… ([#1644](../../pull/1644))
+* OWScatterPlot: Fix progress bar percentages running over 100% ([#1645](../../pull/1645))
+* OWFile: Report errors for incorrect file formats instead of crashing ([#1635](../../pull/1635))
+* OWFeatureConstructor: Fix domain check for only meta data sets ([#1632](../../pull/1632))
+* gui.lineEdit: Restore changed state tracking ([#1630](../../pull/1630))
+* errorreporting: Fix an KeyError for a missing 'Widget Module' entry ([#1625](../../pull/1625))
+* win-installer: Build scikit-learn in windows installer build script ([#1623](../../pull/1623))
+* owlearnerwidget: Fix output initialization ([#1562](../../pull/1562))
+* gui: Add a push button class adapted for variable width text ([#1614](../../pull/1614))
+* :  Add `Explicit` flag to supplementary Table learner output ([#1617](../../pull/1617))
+* Silhouette: Auto-commit on changing checkbox state ([#1606](../../pull/1606))
+* Linear regression: Fix Elastic net; Fix Auto-apply buttons ([#1601](../../pull/1601))
+* ROC Analysis - Fix roc averaging ([#1595](../../pull/1595))
+* OWBaseLearner: Do not re-fit if name has changed ([#1580](../../pull/1580))
+* Context attributes with metas in Sieve and Mosaic ([#1545](../../pull/1545))
+* Variable: Fix Variable.copy for StringVariable and TimeVariable ([#1589](../../pull/1589))
+* Stats: Fix counting of missing values for non-numeric data ([#1585](../../pull/1585))
+* Load Classifier widget sends classifier on init ([#1584](../../pull/1584))
+* Context settings ([#1577](../../pull/1577))
+* Fixed svg function to return svg chart together with container div for highcharts ([#1541](../../pull/1541))
+* Fix compatibility with Color widget ([#1552](../../pull/1552))
+* Gini impurity: formula and docstring fixed. ([#1495](../../pull/1495))
+* owimageviewer: Open local images directly ([#1550](../../pull/1550))
+* Fix loading of datasets with paths in variable attributes ([#1549](../../pull/1549))
+* Confusion matrix: fix selected_learner setting ([#1523](../../pull/1523))
+* canvas/addons: Remove wrong/unnecessary proxy mapping ([#1533](../../pull/1533))
+* Scatterplot: Score Plots crash if multiple attributes have the same score ([#1535](../../pull/1535))
+* ScatterPlot: Score Plots window title changed to title case ([#1525](../../pull/1525))
+* Predictions: column size hint ([#1514](../../pull/1514))
+
+
 [3.3.7] - 2016-08-05
 --------------------
 ##### Enhancements
@@ -201,7 +251,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.7...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.8...HEAD
+[3.3.8]: https://github.com/biolab/orange3/compare/3.3.7...3.3.8
 [3.3.7]: https://github.com/biolab/orange3/compare/3.3.6...3.3.7
 [3.3.6]: https://github.com/biolab/orange3/compare/3.3.5...3.3.6
 [3.3.5]: https://github.com/biolab/orange3/compare/3.3.4...3.3.5
