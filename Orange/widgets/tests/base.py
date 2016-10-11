@@ -133,6 +133,8 @@ class WidgetTest(GuiTest):
             settings_handler.bind(cls)
             # Reset defaults read from disk
             settings_handler.defaults = {}
+            # Reset context settings
+            settings_handler.global_contexts = []
 
     @staticmethod
     def process_events():
