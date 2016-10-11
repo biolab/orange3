@@ -105,7 +105,6 @@ class OWScatterPlot(OWWidget):
 
     outputs = [("Selected Data", Table, Default),
                ("Flagged Data", Table),
-               ("Other Data", Table),
                ("Features", Table)]
 
     settingsHandler = DomainContextHandler()
@@ -429,29 +428,21 @@ class OWScatterPlot(OWWidget):
         self.send_data()
 
     def send_data(self):
-        selected = unselected = None
+        selected = None
         selection = None
         # TODO: Implement selection for sql data
         if isinstance(self.data, SqlTable):
-            selected = unselected = self.data
+            selected = self.data
         elif self.data is not None:
             selection = self.graph.get_selection()
             if len(selection) == 0:
                 self.send("Selected Data", None)
                 self.send("Flagged Data",
                           create_flagged_table(self.data, selection))
-                self.send("Other Data", self.data)
                 return
             selected = self.data[selection]
-            unselection = np.full(len(self.data), True, dtype=bool)
-            unselection[selection] = False
-            unselected = self.data[unselection]
         self.send("Selected Data", selected)
         self.send("Flagged Data", create_flagged_table(self.data, selection))
-        if unselected is None or len(unselected) == 0:
-            self.send("Other Data", None)
-        else:
-            self.send("Other Data", unselected)
 
     def send_features(self):
         features = None
