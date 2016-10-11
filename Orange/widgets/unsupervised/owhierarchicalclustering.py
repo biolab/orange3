@@ -1080,7 +1080,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
         if not items:
-            # nothing to commit
+            self.send("Selected Data", None)
+            self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
             return
 
         selection = self.dendrogram.selected_nodes()
