@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
+from PyQt4.QtCore import QRectF
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.owscatterplot import \
@@ -68,3 +70,30 @@ class TestOWScatterPlot(WidgetTest):
                     [domain.attributes[3]])
         t2 = Table(d2, self.iris)
         self.send_signal("Data", t2)
+
+    def test_outputs(self):
+        self.send_signal("Data", self.iris)
+
+        # check selected data output
+        self.assertIsNone(self.get_output("Selected Data"))
+
+        # check flagged data output
+        flagged = self.get_output("Flagged Data")
+        self.assertEqual(0, np.sum([i["Flag"] for i in flagged]))
+
+        # select data points
+        self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
+
+        # check selected data output
+        selected = self.get_output("Selected Data")
+        self.assertGreater(len(selected), 0)
+        self.assertEqual(selected.domain, self.iris.domain)
+
+        # check flagged data output
+        flagged = self.get_output("Flagged Data")
+        self.assertEqual(len(selected), np.sum([i["Flag"] for i in flagged]))
+
+        # check output when data is removed
+        self.send_signal("Data", None)
+        self.assertIsNone(self.get_output("Selected Data"))
+        self.assertIsNone(self.get_output("Flagged Data"))

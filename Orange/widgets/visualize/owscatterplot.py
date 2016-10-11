@@ -10,6 +10,7 @@ from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
+from Orange.misc.flagged_data import create_flagged_table
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
 from Orange.widgets.settings import \
@@ -103,6 +104,7 @@ class OWScatterPlot(OWWidget):
               ("Features", AttributeList, "set_shown_attributes")]
 
     outputs = [("Selected Data", Table, Default),
+               ("Flagged Data", Table),
                ("Other Data", Table),
                ("Features", Table)]
 
@@ -428,6 +430,7 @@ class OWScatterPlot(OWWidget):
 
     def send_data(self):
         selected = unselected = None
+        selection = None
         # TODO: Implement selection for sql data
         if isinstance(self.data, SqlTable):
             selected = unselected = self.data
@@ -435,6 +438,8 @@ class OWScatterPlot(OWWidget):
             selection = self.graph.get_selection()
             if len(selection) == 0:
                 self.send("Selected Data", None)
+                self.send("Flagged Data",
+                          create_flagged_table(self.data, selection))
                 self.send("Other Data", self.data)
                 return
             selected = self.data[selection]
@@ -442,6 +447,7 @@ class OWScatterPlot(OWWidget):
             unselection[selection] = False
             unselected = self.data[unselection]
         self.send("Selected Data", selected)
+        self.send("Flagged Data", create_flagged_table(self.data, selection))
         if unselected is None or len(unselected) == 0:
             self.send("Other Data", None)
         else:
