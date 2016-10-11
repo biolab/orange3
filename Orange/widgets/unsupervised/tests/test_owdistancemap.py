@@ -19,7 +19,7 @@ class TestOWDistanceMap(WidgetTest):
         self.send_signal("Distances", self.iris_distances)
 
         # check selected data output
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output("Selected Data"))
 
         # check flagged data output
         flagged = self.get_output(FLAGGED_SIGNAL_NAME)
@@ -31,7 +31,7 @@ class TestOWDistanceMap(WidgetTest):
         self.widget.commit()
 
         # check selected data output
-        selected = self.get_output("Data")
+        selected = self.get_output("Selected Data")
         self.assertEqual(len(selected), len(points))
 
         # check flagged data output
@@ -46,5 +46,5 @@ class TestOWDistanceMap(WidgetTest):
 
         # check output when data is removed
         self.send_signal("Distances", None)
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output("Selected Data"))
         self.assertIsNone(self.get_output(FLAGGED_SIGNAL_NAME))

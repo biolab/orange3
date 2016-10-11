@@ -244,7 +244,7 @@ class OWDistanceMap(widget.OWWidget):
     priority = 1200
 
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
-    outputs = [("Data", Orange.data.Table, widget.Default),
+    outputs = [("Selected Data", Orange.data.Table, widget.Default),
                (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table),
                ("Features", widget.AttributeList)]
 
@@ -633,7 +633,7 @@ class OWDistanceMap(widget.OWWidget):
             subset = [self.items[i] for i in self._selection]
             featuresubset = widget.AttributeList(subset)
 
-        self.send("Data", datasubset)
+        self.send("Selected Data", datasubset)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.items, self._selection))
         self.send("Features", featuresubset)
