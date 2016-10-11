@@ -23,6 +23,8 @@ from Orange.data.domain import filter_visible
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from .owhierarchicalclustering import DendrogramWidget, GraphicsSimpleTextList
 
 def _remove_item(item):
@@ -242,7 +244,9 @@ class OWDistanceMap(widget.OWWidget):
     priority = 1200
 
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
-    outputs = [("Data", Orange.data.Table), ("Features", widget.AttributeList)]
+    outputs = [("Data", Orange.data.Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table),
+               ("Features", widget.AttributeList)]
 
     settingsHandler = settings.PerfectDomainContextHandler()
 
@@ -630,6 +634,8 @@ class OWDistanceMap(widget.OWWidget):
             featuresubset = widget.AttributeList(subset)
 
         self.send("Data", datasubset)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.items, self._selection))
         self.send("Features", featuresubset)
 
     def onDeleteWidget(self):
