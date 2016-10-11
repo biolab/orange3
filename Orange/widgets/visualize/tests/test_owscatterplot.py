@@ -5,6 +5,7 @@ import numpy as np
 from PyQt4.QtCore import QRectF
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.misc.flagged_data import FLAGGED_SIGNAL_NAME, FLAGGED_FEATURE_NAME
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.owscatterplot import \
     OWScatterPlot, ScatterPlotVizRank
@@ -78,8 +79,8 @@ class TestOWScatterPlot(WidgetTest):
         self.assertIsNone(self.get_output("Selected Data"))
 
         # check flagged data output
-        flagged = self.get_output("Flagged Data")
-        self.assertEqual(0, np.sum([i["Flag"] for i in flagged]))
+        flagged = self.get_output(FLAGGED_SIGNAL_NAME)
+        self.assertEqual(0, np.sum([i[FLAGGED_FEATURE_NAME] for i in flagged]))
 
         # select data points
         self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
@@ -90,10 +91,11 @@ class TestOWScatterPlot(WidgetTest):
         self.assertEqual(selected.domain, self.iris.domain)
 
         # check flagged data output
-        flagged = self.get_output("Flagged Data")
-        self.assertEqual(len(selected), np.sum([i["Flag"] for i in flagged]))
+        flagged = self.get_output(FLAGGED_SIGNAL_NAME)
+        self.assertEqual(len(selected),
+                         np.sum([i[FLAGGED_FEATURE_NAME] for i in flagged]))
 
         # check output when data is removed
         self.send_signal("Data", None)
         self.assertIsNone(self.get_output("Selected Data"))
-        self.assertIsNone(self.get_output("Flagged Data"))
+        self.assertIsNone(self.get_output(FLAGGED_SIGNAL_NAME))

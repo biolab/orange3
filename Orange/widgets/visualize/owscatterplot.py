@@ -10,7 +10,6 @@ from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
-from Orange.misc.flagged_data import create_flagged_table
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
 from Orange.widgets.settings import \
@@ -19,6 +18,8 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -104,7 +105,7 @@ class OWScatterPlot(OWWidget):
               ("Features", AttributeList, "set_shown_attributes")]
 
     outputs = [("Selected Data", Table, Default),
-               ("Flagged Data", Table),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table),
                ("Features", Table)]
 
     settingsHandler = DomainContextHandler()
@@ -435,14 +436,11 @@ class OWScatterPlot(OWWidget):
             selected = self.data
         elif self.data is not None:
             selection = self.graph.get_selection()
-            if len(selection) == 0:
-                self.send("Selected Data", None)
-                self.send("Flagged Data",
-                          create_flagged_table(self.data, selection))
-                return
-            selected = self.data[selection]
+            if len(selection) > 0:
+                selected = self.data[selection]
         self.send("Selected Data", selected)
-        self.send("Flagged Data", create_flagged_table(self.data, selection))
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, selection))
 
     def send_features(self):
         features = None
