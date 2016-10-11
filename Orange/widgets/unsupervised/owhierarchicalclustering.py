@@ -29,6 +29,8 @@ from Orange.clustering.hierarchical import \
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.io import FileFormat
 
 __all__ = ["OWHierarchicalClustering"]
@@ -706,6 +708,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
 
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table),
                ("Other Data", Orange.data.Table)]
 
     #: Selected linkage
@@ -779,37 +782,40 @@ class OWHierarchicalClustering(widget.OWWidget):
             1, 0)
         grid.addWidget(self.max_depth_spin, 1, 1)
 
-        box = gui.radioButtons(
+        self.selection_box = gui.radioButtons(
             self.controlArea, self, "selection_method",
             box="Selection",
             callback=self._selection_method_changed)
 
         grid = QGridLayout()
-        box.layout().addLayout(grid)
+        self.selection_box.layout().addLayout(grid)
         grid.addWidget(
-            gui.appendRadioButton(box, "Manual", addToLayout=False),
+            gui.appendRadioButton(
+                self.selection_box, "Manual", addToLayout=False),
             0, 0
         )
         grid.addWidget(
-            gui.appendRadioButton(box, "Height ratio:", addToLayout=False),
+            gui.appendRadioButton(
+                self.selection_box, "Height ratio:", addToLayout=False),
             1, 0
         )
         self.cut_ratio_spin = gui.spin(
-            box, self, "cut_ratio", 0, 100, step=1e-1, spinType=float,
-            callback=self._selection_method_changed
+            self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
+            spinType=float, callback=self._selection_method_changed
         )
         self.cut_ratio_spin.setSuffix("%")
 
         grid.addWidget(self.cut_ratio_spin, 1, 1)
 
         grid.addWidget(
-            gui.appendRadioButton(box, "Top N:", addToLayout=False),
+            gui.appendRadioButton(
+                self.selection_box, "Top N:", addToLayout=False),
             2, 0
         )
-        self.top_n_spin = gui.spin(box, self, "top_n", 1, 20,
+        self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
                                    callback=self._selection_method_changed)
         grid.addWidget(self.top_n_spin, 2, 1)
-        box.layout().addLayout(grid)
+        self.selection_box.layout().addLayout(grid)
 
         self.zoom_slider = gui.hSlider(
             self.controlArea, self, "zoom_factor", box="Zoom",
@@ -1092,6 +1098,9 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if not selected_indices:
             self.send("Selected Data", None)
+            annotated_data = create_annotated_table(items, selected_indices) \
+                if self.selection_method == 0 and self.matrix.axis else None
+            self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
             self.send("Other Data", None)
             return
 
@@ -1148,8 +1157,12 @@ class OWHierarchicalClustering(widget.OWWidget):
                 [items.domain[i] for i in unselected_indices],
                 items.domain.class_vars, items.domain.metas)
             unselected_data = items.from_table(domain, items)
+            data = None
 
         self.send("Selected Data", selected_data)
+        annotated_data = create_annotated_table(data, selected_indices) if \
+            self.selection_method == 0 else None
+        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
         self.send("Other Data", unselected_data)
 
     def sizeHint(self):
@@ -1280,6 +1293,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         # dendrogram view.
         self.selection_method = 0
         self._selection_method_changed()
+        self._invalidate_output()
 
     def __zoom_in(self):
         def clip(minval, maxval, val):
