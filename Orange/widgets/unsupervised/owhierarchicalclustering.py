@@ -1051,6 +1051,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     def _invalidate_clustering(self):
         self._update()
         self._update_labels()
+        self._invalidate_output()
 
     def _invalidate_output(self):
         self.commit()
