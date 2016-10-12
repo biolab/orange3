@@ -73,7 +73,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.scene.update()
 
     def ctree(self, model=None):
-        self.clear()
+        self.clear_scene()
         self.closeContext()
         self.model = model
         if model is None:
@@ -101,12 +101,7 @@ class OWTreeGraph(OWTreeViewer2D):
                 format(self.tree.node_count,
                        numpy.count_nonzero(
                             self.tree.children_left == TREE_LEAF)))
-
-            self.scene.fix_pos(self.root_node, self._HSPACING, self._VSPACING)
-            self.activate_loaded_settings()
-            self.scene_view.centerOn(self.root_node.x(), self.root_node.y())
-            self.update_node_tooltips()
-        self.scene.update()
+        self.setup_scene()
         self.send("Data", None)
 
     def walkcreate(self, tree, node_id, parent=None):

@@ -426,11 +426,6 @@ class OWTreeViewer2D(OWWidget):
             self.scene.render(painter)
             painter.end()
 
-            # from OWDlgs import OWChooseImageSizeDlg
-            # self.reportImage(OWChooseImageSizeDlg(self.scene).saveImage)
-            # self.report_object(self.svg_type, urlfn, width="600",
-            # height=str(h*fact))
-
     def toggle_zoom_slider(self):
         k = 0.0028 * (self.zoom ** 2) + 0.2583 * self.zoom + 1.1389
         self.scene_view.setTransform(QTransform().scale(k / 2, k / 2))
@@ -459,7 +454,7 @@ class OWTreeViewer2D(OWWidget):
     def toggle_node_size(self):
         self.set_node_info()
         self.scene.update()
-        self.sceneView.repaint()
+        self.scene_view.repaint()
 
     def toggle_navigator(self):
         self.nav_widget.setHidden(not self.nav_widget.isHidden())
@@ -473,41 +468,17 @@ class OWTreeViewer2D(OWWidget):
         self.toggle_tree_depth()
         self.toggle_line_width()
 
-    def ctree(self, tree):
-        self.clear()
-        if not tree:
-            self.centerRootButton.setDisabled(1)
-            self.centerNodeButton.setDisabled(0)
-            self.infoa.setText('No tree.')
-            self.infob.setText('')
-            self.tree = None
-            self.root_node = None
-        else:
-            self.infoa.setText('Tree.')
-            self.tree = tree
-            self.root_node = self.walkcreate(self.tree.clf.tree_, None)
+    def clear_scene(self):
+        self.scene.clear()
+        self.scene.setSceneRect(QRectF())
+
+    def setup_scene(self):
+        if self.root_node is not None:
             self.scene.fix_pos(self.root_node, self._HSPACING, self._VSPACING)
             self.activate_loaded_settings()
-            self.sceneView.centerOn(self.root_node.x(), self.root_node.y())
+            self.scene_view.centerOn(self.root_node.x(), self.root_node.y())
             self.update_node_tooltips()
-            self.centerRootButton.setDisabled(0)
-            self.centerNodeButton.setDisabled(1)
         self.scene.update()
-
-    def walkcreate(self, tree, parent=None, level=0, i=0):
-        node = GraphicsNode(tree, parent, None, self.scene)
-        if parent:
-            parent.graph_add_edge(GraphicsEdge(None, self.scene,
-                                               node1=parent, node2=node))
-        left_child_ind = tree.children_left[i]
-        right_child_ind = tree.children_right[i]
-        if right_child_ind >= 0:
-            self.walkcreate(tree, parent=node, level=level + 1,
-                            i=right_child_ind)
-        if left_child_ind >= 0:
-            self.walkcreate(tree, parent=node, level=level + 1,
-                            i=left_child_ind)
-        return node
 
     def walkupdate(self, node, level=0):
         if not node:
@@ -519,12 +490,6 @@ class OWTreeViewer2D(OWWidget):
             node.set_open(True)
         for n in node.branches:
             self.walkupdate(n, level + 1)
-
-    def clear(self):
-        self.tree = None
-        self.root_node = None
-        self.scene.clear()
-        self.scene.setSceneRect(QRectF())
 
     def update_node_tooltips(self):
         for node in self.scene.nodes():
