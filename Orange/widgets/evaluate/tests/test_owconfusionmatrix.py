@@ -39,3 +39,19 @@ class TestOWClassificationTree(WidgetTest):
         self.widget.set_results(self.results_1_iris)
         self.widget.selected_learner[:] = [0]
 
+    def test_outputs(self):
+        self.send_signal("Evaluation Results", self.results_1_iris)
+
+        # check selected data output
+        self.assertIsNone(self.get_output("Selected Data"))
+
+        # select data instances
+        self.widget.select_correct()
+
+        # check selected data output
+        selected = self.get_output("Selected Data")
+        self.assertGreater(len(selected), 0)
+
+        # check output when data is removed
+        self.send_signal("Evaluation Results", None)
+        self.assertIsNone(self.get_output("Selected Data"))
