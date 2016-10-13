@@ -408,6 +408,7 @@ class OWLinearProjection(widget.OWWidget):
         self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.view.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.viewbox = pg.ViewBox(enableMouse=True, enableMenu=False)
+        self.viewbox.setAspectLocked(True)
         self.viewbox.grabGesture(Qt.PinchGesture)
         self.view.setCentralItem(self.viewbox)
 
