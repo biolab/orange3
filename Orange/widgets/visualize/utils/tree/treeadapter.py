@@ -274,3 +274,68 @@ class BaseTreeAdapter(metaclass=ABCMeta):
 
         """
         pass
+
+
+
+class TreeAdapter(BaseTreeAdapter):
+    def __init__(self, model):
+        self.model = model
+
+    def weight(self, node):
+        return len(node.subset) / len(node.parent.subset)
+
+    def num_samples(self, node):
+        return len(node.subset)
+
+    def parent(self, node):
+        return node.parent
+
+    def has_children(self, node):
+        return any(node.children)
+
+    def is_leaf(self, node):
+        return not any(node.children)
+
+    def children(self, node):
+        return filter(None, node.children)
+
+    def get_distribution(self, node):
+        return [node.value]
+
+    def get_impurity(self, node):
+        raise NotImplementedError
+
+    def rules(self, node):
+        return self.model.rule(node)
+
+    def attribute(self, node):
+        return node.attr
+
+    def leaves(self, node):
+        def _leaves(node):
+            if node.children:
+                return list(chain(lvs for lvs in node.children if lvs))
+            else:
+                return [node]
+
+    def get_instances_in_nodes(self, dataset, nodes):
+        from Orange import tree
+        if isinstance(nodes, tree.Node):
+            nodes = [nodes]
+        return self.model.get_instances(nodes)
+
+    @property
+    def max_depth(self):
+        return self.model.depth()
+
+    @property
+    def num_nodes(self):
+        return self.model.node_count()
+
+    @property
+    def root(self):
+        return self.model.root
+
+    @property
+    def domain(self):
+        return self.model.domain
