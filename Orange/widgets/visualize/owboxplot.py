@@ -231,6 +231,10 @@ class OWBoxPlot(widget.OWWidget):
     def reset_all_data(self):
         self.clear_scene()
         self.infot1.setText("")
+        self.attrs[:] = []
+        self.group_vars[:] = []
+        self.is_continuous = False
+        self.update_display_box()
 
     def attr_changed(self):
         self.compute_box_data()

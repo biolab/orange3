@@ -19,13 +19,18 @@ class TestOWBoxPlot(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWBoxPlot)
 
-    @skip("Known bug, FIXME!")
     def test_input_data(self):
         """Check widget's data"""
         self.send_signal("Data", self.iris)
-        self.assertGreater(len(self.widget.attrs), 0)
+        self.assertEqual(len(self.widget.attrs), 5)
+        self.assertEqual(len(self.widget.group_vars), 2)
+        self.assertFalse(self.widget.display_box.isHidden())
+        self.assertTrue(self.widget.stretching_box.isHidden())
         self.send_signal("Data", None)
         self.assertEqual(len(self.widget.attrs), 0)
+        self.assertEqual(len(self.widget.group_vars), 0)
+        self.assertTrue(self.widget.display_box.isHidden())
+        self.assertFalse(self.widget.stretching_box.isHidden())
 
     def test_input_data_missings_cont_group_var(self):
         """Check widget with continuous data with missing values and group variable"""
