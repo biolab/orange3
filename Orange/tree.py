@@ -211,6 +211,12 @@ class TreeModel(Model):
             return 1 + sum(_count(c) for c in node.children if c)
         return _count(self.root)
 
+    def depth(self):
+        def _depth(node):
+            return 1 + max((_depth(child) for child in node.children if child),
+                           default=0)
+        return _depth(self.root)
+
     def leaf_count(self):
         def _count(node):
             return not node.children or \
