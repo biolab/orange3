@@ -6,7 +6,8 @@ from Orange.evaluation.testing import CrossValidation
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.tests.base import WidgetTest
 
-class TestOWClassificationTree(WidgetTest):
+
+class TestOWConfusionMatrix(WidgetTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -28,14 +29,30 @@ class TestOWClassificationTree(WidgetTest):
         """Check learner and model for various values of all parameters
         when pruning parameters are not checked
         """
-        self.widget.set_results(self.results_2_iris)
+        self.send_signal("Evaluation Results", self.results_2_iris)
         self.assertEqual(self.widget.selected_learner, [0])
         self.widget.selected_learner[:] = [1]
-        self.widget.set_results(self.results_2_titanic)
+        self.send_signal("Evaluation Results", self.results_2_titanic)
         self.widget.selected_learner[:] = [1]
-        self.widget.set_results(self.results_1_iris)
+        self.send_signal("Evaluation Results", self.results_1_iris)
         self.widget.selected_learner[:] = [0]
-        self.widget.set_results(None)
-        self.widget.set_results(self.results_1_iris)
+        self.send_signal("Evaluation Results", None)
+        self.send_signal("Evaluation Results", self.results_1_iris)
         self.widget.selected_learner[:] = [0]
 
+    def test_outputs(self):
+        self.send_signal("Evaluation Results", self.results_1_iris)
+
+        # check selected data output
+        self.assertIsNone(self.get_output("Selected Data"))
+
+        # select data instances
+        self.widget.select_correct()
+
+        # check selected data output
+        selected = self.get_output("Selected Data")
+        self.assertGreater(len(selected), 0)
+
+        # check output when data is removed
+        self.send_signal("Evaluation Results", None)
+        self.assertIsNone(self.get_output("Selected Data"))

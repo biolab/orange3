@@ -324,44 +324,46 @@ class OWConfusionMatrix(widget.OWWidget):
             predicted = self.results.predicted[self.selected_learner[0]]
             selected = [i for i, t in enumerate(zip(actual, predicted))
                         if t in indices]
-            row_indices = self.results.row_indices[selected]
+            if selected:
+                row_indices = self.results.row_indices[selected]
+                extra = []
+                class_var = self.data.domain.class_var
+                metas = self.data.domain.metas
 
-            extra = []
-            class_var = self.data.domain.class_var
-            metas = self.data.domain.metas
+                if self.append_predictions:
+                    predicted = numpy.array(predicted[selected], dtype=object)
+                    extra.append(predicted.reshape(-1, 1))
+                    var = Orange.data.DiscreteVariable(
+                        "{}({})".format(class_var.name, learner_name),
+                        class_var.values
+                    )
+                    metas = metas + (var,)
 
-            if self.append_predictions:
-                predicted = numpy.array(predicted[selected], dtype=object)
-                extra.append(predicted.reshape(-1, 1))
-                var = Orange.data.DiscreteVariable(
-                    "{}({})".format(class_var.name, learner_name),
-                    class_var.values
+                if self.append_probabilities and \
+                        self.results.probabilities is not None:
+                    probs = self.results.probabilities[self.selected_learner[0],
+                                                       selected]
+                    extra.append(numpy.array(probs, dtype=object))
+                    pvars = [Orange.data.ContinuousVariable("p({})".format(value))
+                             for value in class_var.values]
+                    metas = metas + tuple(pvars)
+
+                X = self.data.X[row_indices]
+                Y = self.data.Y[row_indices]
+                M = self.data.metas[row_indices]
+                row_ids = self.data.ids[row_indices]
+
+                M = numpy.hstack((M,) + tuple(extra))
+                domain = Orange.data.Domain(
+                    self.data.domain.attributes,
+                    self.data.domain.class_vars,
+                    metas
                 )
-                metas = metas + (var,)
-
-            if self.append_probabilities and \
-                    self.results.probabilities is not None:
-                probs = self.results.probabilities[self.selected_learner[0],
-                                                   selected]
-                extra.append(numpy.array(probs, dtype=object))
-                pvars = [Orange.data.ContinuousVariable("p({})".format(value))
-                         for value in class_var.values]
-                metas = metas + tuple(pvars)
-
-            X = self.data.X[row_indices]
-            Y = self.data.Y[row_indices]
-            M = self.data.metas[row_indices]
-            row_ids = self.data.ids[row_indices]
-
-            M = numpy.hstack((M,) + tuple(extra))
-            domain = Orange.data.Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                metas
-            )
-            data = Orange.data.Table.from_numpy(domain, X, Y, M)
-            data.ids = row_ids
-            data.name = learner_name
+                data = Orange.data.Table.from_numpy(domain, X, Y, M)
+                data.ids = row_ids
+                data.name = learner_name
+            else:
+                data = None
 
         else:
             data = None
