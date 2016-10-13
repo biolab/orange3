@@ -547,10 +547,7 @@ class OWPythagorasTree(OWWidget):
         return self.color_palette[(std - min_mean) / (max_mean - min_mean)]
 
     def _regression_get_tooltip(self, node):
-        total = self.tree_adapter.num_samples(
-            self.tree_adapter.parent(node.label))
-        samples = self.tree_adapter.num_samples(node.label)
-        ratio = samples / total
+        num_samples = self.tree_adapter.num_samples(node.label)
 
         instances = self.tree_adapter.get_instances_in_nodes(
             self.clf_dataset, node)
@@ -568,8 +565,7 @@ class OWPythagorasTree(OWWidget):
 
         return '<p>Mean: {:2.3f}'.format(mean) \
             + '<br>Standard deviation: {:2.3f}'.format(std) \
-            + '<br>{}/{} samples ({:2.3f}%)'.format(
-              int(samples), total, ratio * 100) \
+            + '<br>{} samples'.format(num_samples) \
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
@@ -598,7 +594,6 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
 def main():
     import sys
     import Orange
-    from Orange.classification.tree import TreeLearner
 
     argv = sys.argv
     if len(argv) > 1:
@@ -609,8 +604,17 @@ def main():
     app = QtGui.QApplication(argv)
     ow = OWPythagorasTree()
     data = Orange.data.Table(filename)
-    clf = TreeLearner(max_depth=1000)(data)
-    ow.set_tree(clf)
+
+    if data.domain.has_discrete_class:
+        from Orange.classification.tree import TreeLearner
+        model = TreeLearner(max_depth=1000)(data)
+    else:
+        from Orange.regression.tree import TreeRegressionLearner
+        model = TreeRegressionLearner(max_depth=1000)(data)
+
+    model.instances = data
+
+    ow.set_tree(model)
 
     ow.show()
     ow.raise_()
