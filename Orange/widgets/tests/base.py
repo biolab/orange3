@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 from Orange.base import SklLearner, SklModel
 from PyQt4.QtGui import (QApplication, QComboBox, QSpinBox, QDoubleSpinBox,
                          QSlider)
@@ -13,6 +15,8 @@ from Orange.classification.base_classification import (LearnerClassification,
 from Orange.regression.base_regression import LearnerRegression, ModelRegression
 from Orange.canvas.report.owreport import OWReport
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 app = None
 
@@ -476,3 +480,75 @@ class WidgetLearnerTestMixin:
                         self.assertFalse(self.widget.Error.active)
                     else:
                         self.assertTrue(self.widget.Error.active)
+
+
+class WidgetOutputsTestMixin:
+    """Class for widget's outputs testing.
+
+    Contains init method to set up testing parameters and a test method, which
+    checks Selected Data and (Annotated) Data outputs.
+
+    Since widgets have different ways of selecting data instances, _select_data
+    method should be implemented when subclassed. The method should assign
+    value to selected_indices parameter.
+
+    If output's expected domain differs from input's domain, parameter
+    same_input_output_domain should be set to False.
+
+    If Selected Data and Data domains differ, override method
+    _compare_selected_annotated_domains.
+    """
+
+    def init(self):
+        self.data = Table("iris")
+        self.same_input_output_domain = True
+        self.selected_indices = []
+
+    def test_outputs(self):
+        self.send_signal(self.signal_name, self.signal_data)
+
+        # only needed in TestOWMDS
+        if type(self).__name__ == "TestOWMDS":
+            from PyQt4.QtCore import QEvent
+            self.widget.customEvent(QEvent(QEvent.User))
+            self.widget.commit()
+
+        # check selected data output
+        self.assertIsNone(self.get_output("Selected Data"))
+
+        # check annotated data output
+        feature_name = ANNOTATED_DATA_FEATURE_NAME
+        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
+
+        # select data instances
+        self._select_data()
+
+        # check selected data output
+        selected = self.get_output("Selected Data")
+        n_sel, n_attr = len(selected), len(self.data.domain.attributes)
+        self.assertGreater(n_sel, 0)
+        self.assertEqual(selected.domain == self.data.domain,
+                         self.same_input_output_domain)
+        np.testing.assert_array_equal(selected.X[:, :n_attr],
+                                      self.data.X[self.selected_indices])
+
+        # check annotated data output
+        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+
+        # compare selected and annotated data domains
+        self._compare_selected_annotated_domains(selected, annotated)
+
+        # check output when data is removed
+        self.send_signal(self.signal_name, None)
+        self.assertIsNone(self.get_output("Selected Data"))
+        self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
+
+    def _select_data(self):
+        raise NotImplementedError("Subclasses should implement select_data")
+
+    def _compare_selected_annotated_domains(self, selected, annotated):
+        selected_vars = selected.domain.variables + selected.domain.metas
+        annotated_vars = annotated.domain.variables + annotated.domain.metas
+        self.assertTrue(all((var in annotated_vars for var in selected_vars)))
