@@ -276,7 +276,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         pass
 
 
-
 class TreeAdapter(BaseTreeAdapter):
     def __init__(self, model):
         self.model = model
@@ -314,7 +313,7 @@ class TreeAdapter(BaseTreeAdapter):
     def leaves(self, node):
         def _leaves(node):
             if node.children:
-                return list(chain(lvs for lvs in node.children if lvs))
+                return list(chain(_leaves(lvs) for lvs in node.children if lvs))
             else:
                 return [node]
 

@@ -263,7 +263,7 @@ class TreeModel(Model):
         if node is None:
             node = self.root
         res = ""
-        for branch_no, child in enumerate(node.children):
+        for child in node.children:
             res += ("{:>20} {}{} {}\n".format(
                 str(child.value), "    " * level, node.attr.name,
                 child.description))

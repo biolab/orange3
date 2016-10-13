@@ -1,6 +1,5 @@
 """Widget for visualization of tree models"""
 import numpy as np
-from Orange.widgets.utils import to_html
 
 from PyQt4.QtCore import Qt, QRectF, QPointF, QSizeF
 from PyQt4.QtGui import QColor, QBrush, QPen, QFontMetrics, QStyle, \
@@ -9,6 +8,7 @@ from PyQt4.QtGui import QColor, QBrush, QPen, QFontMetrics, QStyle, \
 from Orange.tree import TreeModel
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
+from Orange.widgets.utils import to_html
 from Orange.data import Table
 
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
