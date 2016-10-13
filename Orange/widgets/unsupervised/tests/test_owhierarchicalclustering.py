@@ -39,6 +39,15 @@ class TestOWHierarchicalClustering(WidgetTest):
         self.assertEqual(len(selected),
                          np.sum([i[FLAGGED_FEATURE_NAME] for i in flagged]))
 
+        # compare selected and flagged data domains
+        self.assertTrue(all((var in flagged.domain.variables
+                             for var in selected.domain.variables)))
+        self.assertNotIn("Other", selected.domain.metas[0].values)
+        self.assertIn("Other", flagged.domain.metas[0].values)
+        self.assertTrue(
+            all((var in [var.name for var in flagged.domain.metas]
+                 for var in [var.name for var in selected.domain.metas])))
+
         # check output when data is removed
         self.send_signal("Distances", None)
         self.assertIsNone(self.get_output("Selected Data"))

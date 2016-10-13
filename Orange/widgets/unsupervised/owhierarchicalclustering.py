@@ -22,6 +22,7 @@ import pyqtgraph as pg
 
 import Orange.data
 from Orange.data.domain import filter_visible
+from Orange.data import Domain
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
@@ -1143,6 +1144,20 @@ class OWHierarchicalClustering(widget.OWWidget):
 
             if selected_indices:
                 selected_data = data[mask]
+                if self.append_clusters:
+                    def remove_other_value(vars_):
+                        vars_ = [var for var in vars_]
+                        clust_var = vars_[-1].copy()
+                        clust_var.values.pop()
+                        vars_[-1] = clust_var
+                        return vars_
+                    if self.cluster_role == self.AttributeRole:
+                        attrs = remove_other_value(attrs)
+                    elif self.cluster_role == self.ClassRole:
+                        class_ = remove_other_value(class_)
+                    elif self.cluster_role == self.MetaRole:
+                        metas = remove_other_value(metas)
+                    selected_data.domain = Domain(attrs, class_, metas)
 
         elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
             # Select columns
