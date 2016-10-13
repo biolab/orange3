@@ -31,8 +31,8 @@ except ImportError:
     HAVE_WEBKIT = False
 
 try:
-    from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineScript
-    from PyQt5.QtWebChannel import QWebChannel
+    from AnyQt.QtWebEngineWidgets import QWebEngineView, QWebEngineScript
+    from AnyQt.QtWebChannel import QWebChannel
     HAVE_WEBENGINE = True
 except ImportError:
     HAVE_WEBENGINE = False
