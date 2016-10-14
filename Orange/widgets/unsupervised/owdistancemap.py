@@ -528,6 +528,7 @@ class OWDistanceMap(widget.OWWidget):
             self._update_ordering()
             self._setup_scene()
             self._update_labels()
+            self._invalidate_selection()
 
     def _update_ordering(self):
         if self.sorting == OWDistanceMap.NoOrdering:
