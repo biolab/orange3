@@ -102,6 +102,15 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         super().paint(painter, option, widget)
 
 
+class TextItem(pg.TextItem):
+    if not hasattr(pg.TextItem, "setAnchor"):
+        # Compatibility with pyqtgraph <= 0.9.10; in (as of yet unreleased)
+        # 0.9.11 the TextItem has a `setAnchor`, but not `updateText`
+        def setAnchor(self, anchor):
+            self.anchor = pg.Point(anchor)
+            self.updateText()
+
+
 class AxisItem(pg.GraphicsObject):
     def __init__(self, parent=None, line=None, label=None, *args):
         super().__init__(parent, *args)
@@ -119,7 +128,7 @@ class AxisItem(pg.GraphicsObject):
         self._arrow = pg.ArrowItem(parent=self, angle=180 - angle)
         self._arrow.setPos(self._spine.line().p2())
 
-        self._label = pg.TextItem(text=label, color=(10, 10, 10))
+        self._label = TextItem(text=label, color=(10, 10, 10))
         self._label.setParentItem(self)
         self._label.setPos(self._spine.line().p2())
 
@@ -165,8 +174,7 @@ class AxisItem(pg.GraphicsObject):
 
         pos = T.map(label_pos)
         self._label.setPos(pos)
-        self._label.anchor = pg.Point(*anchor)
-        self._label.updateText()
+        self._label.setAnchor(pg.Point(*anchor))
         self._label.setRotation(angle if left_quad else angle - 180)
 
 
@@ -400,6 +408,7 @@ class OWLinearProjection(widget.OWWidget):
         self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.view.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.viewbox = pg.ViewBox(enableMouse=True, enableMenu=False)
+        self.viewbox.setAspectLocked(True)
         self.viewbox.grabGesture(Qt.PinchGesture)
         self.view.setCentralItem(self.viewbox)
 
