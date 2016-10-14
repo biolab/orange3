@@ -37,7 +37,7 @@ class OWTreeLearner(OWBaseLearner):
         for label, check, setting, fromv, tov in self.spin_boxes:
             gui.spin(box, self, setting, fromv, tov, label=label, checked=check,
                      alignment=Qt.AlignRight, callback=self.settings_changed,
-                     checkCallback=self.settings_changed)
+                     checkCallback=self.settings_changed, controlWidth=80)
 
     def learner_kwargs(self):
         # Pylint doesn't get our Settings
