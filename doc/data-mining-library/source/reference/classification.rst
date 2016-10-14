@@ -136,9 +136,17 @@ One Class Support Vector Machines
 
 Classification Tree
 -------------------
-.. autoclass:: SklTreeLearner
+
+Orange includes three implemenations of classification trees. `TreeLearner`
+is home-grown and properly handles multinominal and missing values.
+The one from scikit-learn, `SklTreeLearner`, is faster. Another home-grown,
+`SimpleTreeLearner`, is simpler and stil faster.
+
+.. autoclass:: TreeLearner
    :members:
 
+.. autoclass:: SklTreeLearner
+   :members:
 
 .. index:: classification tree (simple)
    pair: classification; simple tree

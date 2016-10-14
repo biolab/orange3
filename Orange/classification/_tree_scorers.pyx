@@ -91,7 +91,7 @@ def find_threshold_entropy(double[:] x, double[:] y, long[:] idx,
 def find_binarization_entropy(double[:, :] cont, double[:] class_distr,
                               double[:] val_distr, int min_leaf):
     """
-    Find the split of discrete values into two groups the optimizes information
+    Find the split of discrete values into two groups that optimizes information
     gain.
 
     The split is returned as an int in which the lower bits give the group
