@@ -5,12 +5,12 @@ import numpy as np
 from PyQt4 import QtGui
 from PyQt4.QtCore import Qt
 
-from Orange.base import RandomForest, Tree
+from Orange.base import RandomForest
 from Orange.classification.random_forest import RandomForestClassifier
-from Orange.classification.tree import TreeClassifier
+from Orange.classification.tree import SklTreeClassifier
 from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressor
-from Orange.regression.tree import TreeRegressor
+from Orange.regression.tree import SklTreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
@@ -32,7 +32,7 @@ class OWPythagoreanForest(OWWidget):
     priority = 1001
 
     inputs = [('Random forest', RandomForest, 'set_rf')]
-    outputs = [('Tree', Tree)]
+    outputs = [('Tree', SklTreeClassifier)]
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -276,9 +276,9 @@ class OWPythagoreanForest(OWWidget):
         tree = self.model.skl_model.estimators_[self.selected_tree_index]
 
         if self.forest_type == self.CLASSIFICATION:
-            obj = TreeClassifier(tree)
+            obj = SklTreeClassifier(tree)
         else:
-            obj = TreeRegressor(tree)
+            obj = SklTreeRegressor(tree)
         obj.domain = self.model.domain
         obj.instances = self.model.instances
 
@@ -398,7 +398,7 @@ class GridItem(SelectableGridItem, ZoomableGridItem):
 
 
 class SklRandomForestAdapter:
-    """Take a `RandomForest` and wrap all the trees into the `TreeAdapter`
+    """Take a `RandomForest` and wrap all the trees into the `SklTreeAdapter`
     instances that Pythagorean trees use."""
     def __init__(self, model, domain, adjust_weight=lambda x: x):
         self._adapters = []

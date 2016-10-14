@@ -1,13 +1,14 @@
-from itertools import chain
-
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt4.QtCore import (
+    Qt, pyqtProperty, pyqtSignal, QSize, QRectF, QPointF, QLineF, QTimer)
+from PyQt4.QtGui import (
+    QBrush, QPen, QColor, QStyle, QSizePolicy, QFormLayout,
+    QGraphicsEllipseItem, QGraphicsTextItem, QGraphicsItem, QGraphicsLineItem,
+    QPainter, QPainterPath, QTransform, QGraphicsView, QGraphicsScene
+)
 
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.saveplot import save_plot
-from Orange.widgets.io import FileFormat
 
 DefDroppletBrush = QBrush(Qt.darkGray)
 
@@ -81,21 +82,21 @@ class TextTreeNode(QGraphicsTextItem, GraphNode):
             self.update()
 
     def backgroundBrush(self):
-        brush = getattr(self, "_background_brush",
-                        getattr(self.scene(), "defaultItemBrush", Qt.NoBrush))
+        brush = getattr(self, "_background_brush")
+        if brush is None:
+            brush = getattr(self.scene(), "defaultItemBrush", Qt.NoBrush)
         return QBrush(brush)
 
     backgroundBrush = pyqtProperty(
         "QBrush", fget=backgroundBrush, fset=setBackgroundBrush,
         doc="Background brush")
 
-    def __init__(self, tree, parent, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         QGraphicsTextItem.__init__(self, *args)
         GraphNode.__init__(self, **kwargs)
         self._background_brush = None
         self._rect = None
 
-        self.tree = tree
         self.parent = parent
         font = self.font()
         font.setPointSize(10)
@@ -367,7 +368,7 @@ class OWTreeViewer2D(OWWidget):
         super().__init__()
         self.selected_node = None
         self.root_node = None
-        self.tree = None
+        self.model = None
 
         box = gui.vBox(
             self.controlArea, 'Tree', addSpace=20,
@@ -407,12 +408,20 @@ class OWTreeViewer2D(OWWidget):
                                 'Relative to parent'],
                          addToLayout=False,
                          callback=self.toggle_line_width, sizePolicy=policy))
+        gui.rubber(self.controlArea)
         self.resize(800, 500)
+
+        self.scene = TreeGraphicsScene(self)
+        self.scene_view = TreeGraphicsView(self.scene)
+        self.scene_view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.mainArea.layout().addWidget(self.scene_view)
+        self.toggle_zoom_slider()
+        self.scene.selectionChanged.connect(self.update_selection)
 
     def send_report(self):
         from PyQt4.QtSvg import QSvgGenerator
 
-        if self.tree:
+        if self.model:
             self.reportSection("Tree")
             urlfn, filefn = self.getUniqueImageName(ext=".svg")
             svg = QSvgGenerator()
@@ -425,11 +434,6 @@ class OWTreeViewer2D(OWWidget):
             painter.begin(svg)
             self.scene.render(painter)
             painter.end()
-
-            # from OWDlgs import OWChooseImageSizeDlg
-            # self.reportImage(OWChooseImageSizeDlg(self.scene).saveImage)
-            # self.report_object(self.svg_type, urlfn, width="600",
-            # height=str(h*fact))
 
     def toggle_zoom_slider(self):
         k = 0.0028 * (self.zoom ** 2) + 0.2583 * self.zoom + 1.1389
@@ -445,27 +449,28 @@ class OWTreeViewer2D(OWWidget):
         if self.root_node is None:
             return
 
-        root_instances = self.root_node.num_instances()
+        model = self.model
+        root_instances = len(model.instances)
         width = 3
         for edge in self.scene.edges():
-            num_inst = edge.node2.num_instances()
+            num_inst = len(edge.node2.node_inst.subset)
             if self.line_width_method == 1:
                 width = 8 * num_inst / root_instances
             elif self.line_width_method == 2:
-                width = 8 * num_inst / edge.node1.num_instances()
+                width = 8 * num_inst / len(edge.node1.node_inst.subset)
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 
     def toggle_node_size(self):
         self.set_node_info()
         self.scene.update()
-        self.sceneView.repaint()
+        self.scene_view.repaint()
 
     def toggle_navigator(self):
         self.nav_widget.setHidden(not self.nav_widget.isHidden())
 
     def activate_loaded_settings(self):
-        if not self.tree:
+        if not self.model:
             return
         self.rescale_tree()
         self.scene.fix_pos(self.root_node, 10, 10)
@@ -473,41 +478,17 @@ class OWTreeViewer2D(OWWidget):
         self.toggle_tree_depth()
         self.toggle_line_width()
 
-    def ctree(self, tree):
-        self.clear()
-        if not tree:
-            self.centerRootButton.setDisabled(1)
-            self.centerNodeButton.setDisabled(0)
-            self.infoa.setText('No tree.')
-            self.infob.setText('')
-            self.tree = None
-            self.root_node = None
-        else:
-            self.infoa.setText('Tree.')
-            self.tree = tree
-            self.root_node = self.walkcreate(self.tree.clf.tree_, None)
+    def clear_scene(self):
+        self.scene.clear()
+        self.scene.setSceneRect(QRectF())
+
+    def setup_scene(self):
+        if self.root_node is not None:
             self.scene.fix_pos(self.root_node, self._HSPACING, self._VSPACING)
             self.activate_loaded_settings()
-            self.sceneView.centerOn(self.root_node.x(), self.root_node.y())
+            self.scene_view.centerOn(self.root_node.x(), self.root_node.y())
             self.update_node_tooltips()
-            self.centerRootButton.setDisabled(0)
-            self.centerNodeButton.setDisabled(1)
         self.scene.update()
-
-    def walkcreate(self, tree, parent=None, level=0, i=0):
-        node = GraphicsNode(tree, parent, None, self.scene)
-        if parent:
-            parent.graph_add_edge(GraphicsEdge(None, self.scene,
-                                               node1=parent, node2=node))
-        left_child_ind = tree.children_left[i]
-        right_child_ind = tree.children_right[i]
-        if right_child_ind >= 0:
-            self.walkcreate(tree, parent=node, level=level + 1,
-                            i=right_child_ind)
-        if left_child_ind >= 0:
-            self.walkcreate(tree, parent=node, level=level + 1,
-                            i=left_child_ind)
-        return node
 
     def walkupdate(self, node, level=0):
         if not node:
@@ -519,12 +500,6 @@ class OWTreeViewer2D(OWWidget):
             node.set_open(True)
         for n in node.branches:
             self.walkupdate(n, level + 1)
-
-    def clear(self):
-        self.tree = None
-        self.root_node = None
-        self.scene.clear()
-        self.scene.setSceneRect(QRectF())
 
     def update_node_tooltips(self):
         for node in self.scene.nodes():
@@ -546,8 +521,3 @@ class OWTreeViewer2D(OWWidget):
         # self.centerNodeButton.setDisabled(not self.selected_node)
         # self.send("Data", self.selectedNode.tree.examples if self.selectedNode
         # else None)
-
-    def save_graph(self):
-        save_plot(data=dict(scene=self.scene, tree=self.tree),
-                  file_formats=dict(chain(FileFormat.img_writers.items(),
-                                          FileFormat.graph_writers.items())))

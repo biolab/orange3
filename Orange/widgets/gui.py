@@ -654,6 +654,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         sbox.valueChanged[(int, float)[isDouble]],
         (CallFrontSpin, CallFrontDoubleSpin)[isDouble](sbox))
     if checked:
+        sbox.cbox = cbox
         cbox.disables = [sbox]
         cbox.makeConsistent()
     if callback and callbackOnReturn:
@@ -669,7 +670,6 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         if isDouble and b == widget:
             # TODO Backward compatilibity; try to find and eliminate
             sbox.control = b.control
-            sbox.cbox = cbox
             return sbox
         return cbox, sbox
     else:

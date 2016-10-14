@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.classification import TreeLearner, KNNLearner
+from Orange.classification import SklTreeLearner, KNNLearner
 from Orange.widgets.classify.owadaboost import OWAdaBoostClassification
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
@@ -21,9 +21,9 @@ class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
         """Check if base learner properly changes with learner on the input"""
         max_depth = 2
         default_base_est = self.widget.base_estimator
-        self.assertIsInstance(default_base_est, TreeLearner)
+        self.assertIsInstance(default_base_est, SklTreeLearner)
         self.assertIsNone(default_base_est.params.get("max_depth"))
-        self.send_signal("Learner", TreeLearner(max_depth=max_depth))
+        self.send_signal("Learner", SklTreeLearner(max_depth=max_depth))
         self.assertEqual(self.widget.base_estimator.params.get("max_depth"),
                          max_depth)
         self.widget.apply_button.button.click()

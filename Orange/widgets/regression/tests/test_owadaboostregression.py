@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.regression import TreeRegressionLearner, KNNRegressionLearner
+from Orange.regression import SklTreeRegressionLearner, KNNRegressionLearner
 from Orange.widgets.regression.owadaboostregression import OWAdaBoostRegression
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
@@ -21,9 +21,10 @@ class TestOWAdaBoostRegression(WidgetTest, WidgetLearnerTestMixin):
         """Check if base learner properly changes with learner on the input"""
         max_depth = 2
         default_base_est = self.widget.base_estimator
-        self.assertIsInstance(default_base_est, TreeRegressionLearner)
+        self.assertIsInstance(default_base_est, SklTreeRegressionLearner)
         self.assertIsNone(default_base_est.params.get("max_depth"))
-        self.send_signal("Learner", TreeRegressionLearner(max_depth=max_depth))
+        self.send_signal("Learner",
+                         SklTreeRegressionLearner(max_depth=max_depth))
         self.assertEqual(self.widget.base_estimator.params.get("max_depth"),
                          max_depth)
         self.widget.apply_button.button.click()

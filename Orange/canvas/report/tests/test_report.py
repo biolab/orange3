@@ -7,20 +7,19 @@ from PyQt4.QtCore import Qt
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
-from Orange.regression.tree import TreeRegressionLearner
+from Orange.regression.tree import TreeLearner as RegressionTreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
 from Orange.canvas.report.owreport import OWReport
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.classify.owclassificationtreegraph import OWClassificationTreeGraph
+from Orange.widgets.visualize.owtreeviewer import OWTreeGraph
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.owtestlearners import OWTestLearners
-from Orange.widgets.regression.owregressiontreegraph import OWRegressionTreeGraph
 from Orange.widgets.unsupervised.owcorrespondence import OWCorrespondenceAnalysis
 from Orange.widgets.unsupervised.owdistancemap import OWDistanceMap
 from Orange.widgets.unsupervised.owdistances import OWDistances
@@ -123,8 +122,7 @@ class TestReportWidgets(WidgetTest):
                     OWMDS, OWPCA]
     dist_widgets = [OWDistanceMap, OWHierarchicalClustering]
     visu_widgets = VISUALIZATION_WIDGETS
-    spec_widgets = [OWClassificationTreeGraph, OWTestLearners,
-                    OWRegressionTreeGraph]
+    spec_widgets = [OWTestLearners, OWTreeGraph]
 
     def _create_report(self, widgets, rep, data):
         for widget in widgets:
@@ -141,7 +139,7 @@ class TestReportWidgets(WidgetTest):
         data = Table("titanic")
         widgets = self.clas_widgets
 
-        w = self.create_widget(OWClassificationTreeGraph)
+        w = self.create_widget(OWTreeGraph)
         clf = TreeLearner(max_depth=3)(data)
         clf.instances = data
         w.ctree(clf)
@@ -182,8 +180,8 @@ class TestReportWidgets(WidgetTest):
         data = Table("housing")
         widgets = self.regr_widgets
 
-        w = self.create_widget(OWRegressionTreeGraph)
-        mod = TreeRegressionLearner(max_depth=3)(data)
+        w = self.create_widget(OWTreeGraph)
+        mod = RegressionTreeLearner(max_depth=3)(data)
         mod.instances = data
         w.ctree(mod)
         w.create_report_html()

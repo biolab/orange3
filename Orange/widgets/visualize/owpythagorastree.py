@@ -19,8 +19,10 @@ kind of trees.
 from math import sqrt, log
 
 import numpy as np
+from Orange.tree import TreeModel
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
+from Orange.widgets.visualize.utils.tree.rules import Rule
 from Orange.widgets.visualize.utils.view import (
     PannableGraphicsView,
     ZoomableGraphicsView,
@@ -28,11 +30,9 @@ from Orange.widgets.visualize.utils.view import (
 )
 from PyQt4 import QtGui
 
-from Orange.base import Tree
-from Orange.classification.tree import TreeClassifier
 from Orange.data.table import Table
-from Orange.regression.tree import TreeRegressor
 from Orange.widgets import gui, settings
+from Orange.widgets.utils import to_html
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
@@ -44,8 +44,7 @@ from Orange.widgets.visualize.utils.owlegend import (
     OWDiscreteLegend,
     OWContinuousLegend
 )
-from Orange.widgets.visualize.utils.tree.skltreeadapter import \
-    SklTreeAdapter
+from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 from Orange.widgets.widget import OWWidget
 
 
@@ -56,7 +55,7 @@ class OWPythagorasTree(OWWidget):
 
     priority = 1000
 
-    inputs = [('Tree', Tree, 'set_tree')]
+    inputs = [('Tree', TreeModel, 'set_tree')]
     outputs = [('Selected Data', Table)]
 
     # Enable the save as feature
@@ -170,9 +169,9 @@ class OWPythagorasTree(OWWidget):
         if model is not None:
             # We need to know what kind of tree we have in order to properly
             # show colors and tooltips
-            if isinstance(model, TreeClassifier):
+            if model.domain.class_var.is_discrete:
                 self.tree_type = self.CLASSIFICATION
-            elif isinstance(model, TreeRegressor):
+            elif model.domain.class_var.is_continuous:
                 self.tree_type = self.REGRESSION
             else:
                 self.tree_type = self.GENERAL
@@ -329,11 +328,7 @@ class OWPythagorasTree(OWWidget):
         self.view.update_anchored_items()
 
     def _get_tree_adapter(self, model):
-        return SklTreeAdapter(
-            model.tree,
-            model.domain,
-            adjust_weight=self.SIZE_CALCULATION[self.size_calc_idx][1],
-        )
+        return TreeAdapter(model)
 
     def onDeleteWidget(self):
         """When deleting the widget."""
@@ -433,6 +428,18 @@ class OWPythagorasTree(OWWidget):
             color = colors[int(modus)].light(400 - 300 * p)
         return color
 
+    def _rules_for_tooltip(self, node):
+        rules = self.tree_adapter.rules(node.label)
+        if len(rules):
+            if isinstance(rules[0], Rule):
+                sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
+                return '<br>'.join(str(rule) for rule in sorted_rules) + \
+                       '<br><b>%s</b>' % rules[-1]
+            else:
+                return '<br>'.join(to_html(rule) for rule in rules)
+        else:
+            return ''
+
     def _classification_get_tooltip(self, node):
         distribution = self.tree_adapter.get_distribution(node.label)[0]
         total = int(np.sum(distribution))
@@ -446,13 +453,7 @@ class OWPythagorasTree(OWWidget):
                 '<br>'
         ratio = samples / np.sum(distribution)
 
-        rules = self.tree_adapter.rules(node.label)
-        sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
-        rules_str = ''
-        if len(rules):
-            rules_str += '<br>'.join(str(rule) for rule in sorted_rules)
-            rules_str += '<br><b>%s</b>' % rules[-1]
-
+        rules_str = self._rules_for_tooltip(node)
         splitting_attr = self.tree_adapter.attribute(node.label)
 
         return '<p>' \
@@ -463,7 +464,7 @@ class OWPythagorasTree(OWWidget):
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
             + ('<br><br>'
-               if len(rules) and not self.tree_adapter.is_leaf(node.label)
+               if rules_str and not self.tree_adapter.is_leaf(node.label)
                else '') \
             + rules_str \
             + '</p>'
@@ -556,13 +557,7 @@ class OWPythagorasTree(OWWidget):
         mean = np.mean(instances.Y)
         std = np.std(instances.Y)
 
-        rules = self.tree_adapter.rules(node.label)
-        sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
-        rules_str = ''
-        if len(rules):
-            rules_str += '<br>'.join(str(rule) for rule in sorted_rules)
-            rules_str += '<br><b>%s</b>' % rules[-1]
-
+        rules_str = self._rules_for_tooltip(node)
         splitting_attr = self.tree_adapter.attribute(node.label)
 
         return '<p>Mean: {:2.3f}'.format(mean) \
@@ -571,7 +566,7 @@ class OWPythagorasTree(OWWidget):
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
-            + ('<br><br>' if len(rules) and not self.tree_adapter.is_leaf(
+            + ('<br><br>' if rules_str and not self.tree_adapter.is_leaf(
                node.label) else '') \
             + rules_str \
             + '</p>'
@@ -609,10 +604,9 @@ def main():
 
     if data.domain.has_discrete_class:
         from Orange.classification.tree import TreeLearner
-        model = TreeLearner(max_depth=1000)(data)
     else:
-        from Orange.regression.tree import TreeRegressionLearner
-        model = TreeRegressionLearner(max_depth=1000)(data)
+        from Orange.regression.tree import TreeLearner
+    model = TreeLearner(max_depth=1000)(data)
 
     model.instances = data
 
