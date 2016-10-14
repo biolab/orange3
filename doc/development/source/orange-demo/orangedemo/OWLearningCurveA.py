@@ -2,15 +2,13 @@ import sys
 from collections import OrderedDict
 
 import numpy
-import sklearn.cross_validation
-
 from PyQt4.QtGui import QTableWidget, QTableWidgetItem
 
 import Orange.data
 import Orange.classification
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.evaluate.owtestlearners import split_by_model
+from Orange.evaluation.testing import Results
 
 
 class OWLearningCurveA(widget.OWWidget):
@@ -186,7 +184,8 @@ class OWLearningCurveA(widget.OWWidget):
         )
         self.progressBarFinished()
         # split the combined result into per learner/model results
-        results = [list(split_by_model(p_results)) for p_results in results]
+        results = [list(Results.split_by_model(p_results))
+                   for p_results in results]
 
         for i, (id, learner) in enumerate(need_update):
             self.results[id] = [p_results[i] for p_results in results]
