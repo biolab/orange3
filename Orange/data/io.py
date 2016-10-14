@@ -283,15 +283,30 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @classmethod
     def write_table_metadata(cls, filename, data):
-        if isinstance(filename, str) and getattr(data, 'attributes', {}):
-            with open(filename + '.metadata', 'wb') as f:
-                pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
+        if isinstance(filename, str) and hasattr(data, 'attributes'):
+            if all(isinstance(key, str) and isinstance(value, str)
+                   for key, value in data.attributes.items()):
+                with open(filename + '.metadata', 'w') as f:
+                    f.write("\n".join("{}: {}".format(*kv)
+                                      for kv in data.attributes.items()))
+            else:
+                with open(filename + '.metadata', 'wb') as f:
+                    pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def set_table_metadata(cls, filename, table):
+        # pylint: disable=bare-except
         if isinstance(filename, str) and path.exists(filename + '.metadata'):
-            with open(filename + '.metadata', 'rb') as f:
-                table.attributes = pickle.load(f)
+            try:
+                with open(filename + '.metadata', 'rb') as f:
+                    table.attributes = pickle.load(f)
+            # Unpickling throws different exceptions, not just UnpickleError
+            except:
+                with open(filename + '.metadata') as f:
+                    table.attributes = OrderedDict(
+                        (k.strip(), v.strip())
+                        for k, v in (line.split(":", 1)
+                                     for line in f.readlines()))
 
     @classmethod
     def locate(cls, filename, search_dirs=('.',)):

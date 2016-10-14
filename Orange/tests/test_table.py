@@ -1198,8 +1198,7 @@ class TableTestCase(unittest.TestCase):
 
     def test_attributes(self):
         table = data.Table("iris")
-        self.assertEqual(table.attributes, {})
-        table.attributes[1] = "test"
+        table.attributes = {1: "test"}
         table2 = table[:4]
         self.assertEqual(table2.attributes[1], "test")
         table2.attributes[1] = "modified"
