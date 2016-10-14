@@ -23,6 +23,8 @@ import Orange.distance
 
 from Orange.clustering import hierarchical
 from Orange.widgets.utils import colorbrewer
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.io import FileFormat
 
@@ -381,7 +383,8 @@ class OWHeatMap(widget.OWWidget):
     priority = 260
 
     inputs = [("Data", Table, "set_dataset")]
-    outputs = [("Selected Data", Table, widget.Default)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -1506,6 +1509,7 @@ class OWHeatMap(widget.OWWidget):
 
     def commit(self):
         data = None
+        indices = None
         if self.merge_kmeans:
             assert self.merge_indices is not None
             merge_indices = self.merge_indices
@@ -1524,6 +1528,8 @@ class OWHeatMap(widget.OWWidget):
             data = self.input_data[indices]
 
         self.send("Selected Data", data)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.input_data, indices))
 
     def onDeleteWidget(self):
         self.clear()
