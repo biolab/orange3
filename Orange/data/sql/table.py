@@ -120,6 +120,116 @@ class Psycopg2Backend:
         else:
             return quoted_name
 
+    def get_fields(self, table_name):
+        """Return a list of field names and metadata in the given table
+
+        Parameters
+        ----------
+        table_name: str
+
+        Returns
+        -------
+        a list of tuples (field_name, *field_metadata)
+        both will be passed to create_variable
+        """
+        fields = []
+        query = "SELECT * FROM %s LIMIT 0" % table_name
+        with self.execute_sql_query(query) as cur:
+            for col in cur.description:
+                fields.append(col)
+        return fields
+
+    def create_variable(self, field_name, field_metadata,
+                        type_hints, inspect_table=None):
+        """Create variable based on field information
+
+        Parameters
+        ----------
+        field_name : str
+            name do the field
+        field_metadata : tuple
+            data to guess field type from
+        type_hints : Domain
+            domain with variable templates
+        inspect_table : Option[str]
+            name of the table to expect the field values or None
+            if no inspection is to be performed
+
+        Returns
+        -------
+        Variable representing the field
+        """
+        if field_name in type_hints:
+            var = type_hints[field_name]
+        else:
+            var = self._guess_variable(field_name, field_metadata,
+                                       inspect_table)
+
+        field_name_q = self.quote_identifier(field_name)
+        if var.is_continuous:
+            if isinstance(var, TimeVariable):
+                var.to_sql = ToSql("extract(epoch from {})"
+                                   .format(field_name_q))
+            else:
+                var.to_sql = ToSql("({})::double precision"
+                                   .format(field_name_q))
+        else:  # discrete or string
+            var.to_sql = ToSql("({})::text"
+                               .format(field_name_q))
+        return var
+
+    def _guess_variable(self, field_name, field_metadata, inspect_table):
+        type_code, *rest = field_metadata
+
+        FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
+        INT_TYPES = (20, 21, 23)  # bigint, int, smallint
+        CHAR_TYPES = (25, 1042, 1043,)  # text, char, varchar
+        BOOLEAN_TYPES = (16,)  # bool
+        DATE_TYPES = (1082, 1114, 1184, )  # date, timestamp, timestamptz
+        # time, timestamp, timestamptz, timetz
+        TIME_TYPES = (1083, 1114, 1184, 1266,)
+
+        if type_code in FLOATISH_TYPES:
+            return ContinuousVariable(field_name)
+
+        if type_code in TIME_TYPES + DATE_TYPES:
+            tv = TimeVariable(field_name)
+            tv.have_date |= type_code in DATE_TYPES
+            tv.have_time |= type_code in TIME_TYPES
+            return tv
+
+        if type_code in INT_TYPES:  # bigint, int, smallint
+            if inspect_table:
+                values = self._get_distinct_values(field_name, inspect_table)
+                if values:
+                    return DiscreteVariable(field_name, values)
+            return ContinuousVariable(field_name)
+
+        if type_code in BOOLEAN_TYPES:
+            return DiscreteVariable(field_name, ['false', 'true'])
+
+        if type_code in CHAR_TYPES:
+            if inspect_table:
+                values = self._get_distinct_values(field_name, inspect_table)
+                if values:
+                    return DiscreteVariable(field_name, values)
+
+        return StringVariable(field_name)
+
+    def _get_distinct_values(self, field_name, table_name):
+        field_name_q = self.quote_identifier(field_name)
+        sql = " ".join(["SELECT DISTINCT (", field_name_q, ")::text",
+                        "FROM", table_name,
+                        "WHERE", field_name_q, "IS NOT NULL",
+                        "ORDER BY", field_name_q,
+                        "LIMIT 21"])
+        with self.execute_sql_query(sql) as cur:
+            values = cur.fetchall()
+        if len(values) > 20:
+            return ()
+        else:
+            return tuple(x[0] for x in values)
+
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled
         state = dict(self.__dict__)
@@ -194,36 +304,17 @@ class SqlTable(Table):
         warnings.warn("Use backend.connection_params", DeprecationWarning)
         return self.backend.connection_params
 
-    def get_domain(self, type_hints=None, guess_values=False):
+    def get_domain(self, type_hints=None, inspect_values=False):
+        table_name = self.table_name
         if type_hints is None:
             type_hints = Domain([])
 
-        fields = []
-        query = "SELECT * FROM %s LIMIT 0" % self.table_name
-        with self.backend.execute_sql_query(query) as cur:
-            for col in cur.description:
-                fields.append(col)
-
-        def add_to_sql(var, field_name):
-            field_name_q = self.backend.quote_identifier(field_name)
-            if var.is_continuous:
-                if isinstance(var, TimeVariable):
-                    var.to_sql = ToSql("extract(epoch from {})"
-                                       .format(field_name_q))
-                else:
-                    var.to_sql = ToSql("({})::double precision"
-                                       .format(field_name_q))
-            else:  # discrete or string
-                var.to_sql = ToSql("({})::text"
-                                   .format(field_name_q))
+        inspect_table = table_name if inspect_values else None
 
         attrs, class_vars, metas = [], [], []
-        for field_name, type_code, *rest in fields:
-            if field_name in type_hints:
-                var = type_hints[field_name]
-            else:
-                var = self.get_variable(field_name, type_code, guess_values)
-            add_to_sql(var, field_name)
+        for field_name, *field_metadata in self.backend.get_fields(table_name):
+            var = self.backend.create_variable(field_name, field_metadata,
+                                               type_hints, inspect_table)
 
             if var.is_string:
                 metas.append(var)
@@ -236,56 +327,6 @@ class SqlTable(Table):
                     attrs.append(var)
 
         return Domain(attrs, class_vars, metas)
-
-    def get_variable(self, field_name, type_code, inspect_values=False):
-        FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
-        INT_TYPES = (20, 21, 23)  # bigint, int, smallint
-        CHAR_TYPES = (25, 1042, 1043,)  # text, char, varchar
-        BOOLEAN_TYPES = (16,)  # bool
-        DATE_TYPES = (1082, 1114, 1184, )  # date, timestamp, timestamptz
-        # time, timestamp, timestamptz, timetz
-        TIME_TYPES = (1083, 1114, 1184, 1266,)
-
-        if type_code in FLOATISH_TYPES:
-            return ContinuousVariable(field_name)
-
-        if type_code in TIME_TYPES + DATE_TYPES:
-            tv = TimeVariable(field_name)
-            tv.have_date |= type_code in DATE_TYPES
-            tv.have_time |= type_code in TIME_TYPES
-            return tv
-
-        if type_code in INT_TYPES:  # bigint, int, smallint
-            if inspect_values:
-                values = self.get_distinct_values(field_name)
-                if values:
-                    return DiscreteVariable(field_name, values)
-            return ContinuousVariable(field_name)
-
-        if type_code in BOOLEAN_TYPES:
-            return DiscreteVariable(field_name, ['false', 'true'])
-
-        if type_code in CHAR_TYPES:
-            if inspect_values:
-                values = self.get_distinct_values(field_name)
-                if values:
-                    return DiscreteVariable(field_name, values)
-
-        return StringVariable(field_name)
-
-    def get_distinct_values(self, field_name):
-        field_name_q = self.backend.quote_identifier(field_name)
-        sql = " ".join(["SELECT DISTINCT (", field_name_q, ")::text",
-                        "FROM", self.table_name,
-                        "WHERE", field_name_q, "IS NOT NULL",
-                        "ORDER BY", field_name_q,
-                        "LIMIT 21"])
-        with self.backend.execute_sql_query(sql) as cur:
-            values = cur.fetchall()
-        if len(values) > 20:
-            return ()
-        else:
-            return tuple(x[0] for x in values)
 
     def __getitem__(self, key):
         """ Indexing of SqlTable is performed in the following way:
@@ -766,10 +807,12 @@ class SqlTable(Table):
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
 
+        parameter = str(parameter)
+
         sample_table = '__%s_%s_%s' % (
             self.backend.unquote_identifier(self.table_name),
             method,
-            str(parameter).replace('.', '_').replace('-', '_'))
+            parameter.replace('.', '_').replace('-', '_'))
         sample_table_q = self.backend.quote_identifier(sample_table)
         create = False
         try:
@@ -788,7 +831,7 @@ class SqlTable(Table):
             with self.backend.execute_sql_query(" ".join([
                     "CREATE TABLE", sample_table_q, "AS",
                     "SELECT * FROM", self.table_name,
-                    "TABLESAMPLE", method, parameter])):
+                    "TABLESAMPLE", method, "(", parameter, ")"])):
                 pass
 
         sampled_table = self.copy()

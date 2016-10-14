@@ -309,10 +309,10 @@ class OWSql(OWWidget):
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             if sample:
                 s = table.sample_time(1)
-                domain = s.get_domain(guess_values=True)
+                domain = s.get_domain(inspect_values=True)
                 self.Information.data_sampled()
             else:
-                domain = table.get_domain(guess_values=True)
+                domain = table.get_domain(inspect_values=True)
             QApplication.restoreOverrideCursor()
             table.domain = domain
 
