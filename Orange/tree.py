@@ -224,9 +224,14 @@ class TreeModel(Model):
         return _count(self.root)
 
     def get_instances(self, nodes):
+        indices = self.get_indices(nodes)
+        if indices is not None:
+            return self.instances[indices]
+
+    def get_indices(self, nodes):
         subsets = [node.subset for node in nodes]
         if subsets:
-            return self.instances[np.unique(np.hstack(subsets))]
+            return np.unique(np.hstack(subsets))
 
     @staticmethod
     def climb(node):
