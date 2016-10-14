@@ -726,9 +726,7 @@ class OWHeatMap(widget.OWWidget):
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
 
-            self.update_heatmaps()
-
-        self.commit()
+        self.update_heatmaps()
 
     def update_heatmaps(self):
         if self.data is not None:
@@ -736,8 +734,10 @@ class OWHeatMap(widget.OWWidget):
             self.construct_heatmaps(self.data)
             self.construct_heatmaps_scene(
                 self.heatmapparts, self.effective_data)
+            self.selected_rows = []
         else:
             self.clear()
+        self.commit()
 
     def update_merge(self):
         self.kmeans_model = None
