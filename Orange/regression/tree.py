@@ -25,9 +25,9 @@ class TreeLearner(Learner):
     If the tree is not binary, it can contain zero-branches.
 
     Args:
-        binarize: if `True` (default) the inducer will find optimal split into
-            two subsets for values of discrete attributes. If `False`, each
-            value gets its branch.
+        binarize: if `True` the inducer will find optimal split into two
+            subsets for values of discrete attributes. If `False` (default),
+            each value gets its branch.
         min_samples_leaf: the minimal number of data instances in a leaf
         min_samples_split: the minimal nubmer of data instances that is split
             into subgroups
@@ -43,7 +43,7 @@ class TreeLearner(Learner):
 
     def __init__(
             self, *args,
-            binarize=True, min_samples_leaf=1, min_samples_split=2,
+            binarize=False, min_samples_leaf=1, min_samples_split=2,
             max_depth=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.binarize = binarize

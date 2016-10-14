@@ -19,7 +19,8 @@ class TestTree:
     def all_nodes(cls, node):
         yield node
         for child in node.children:
-            yield from cls.all_nodes(child)
+            if child:
+                yield from cls.all_nodes(child)
 
     def test_get_tree(self):
         learn = self.TreeLearner()
@@ -47,12 +48,14 @@ class TestTree:
         for lim in (1, 2, 30):
             args = dict(min_samples_split=2, min_samples_leaf=lim)
             args.update(self.no_pruning_args)
-            clf = self.TreeLearner(**args)(self.data_mixed)
+            clf = self.TreeLearner(binarize=False, **args)(self.data_mixed)
             self.assertTrue(all(len(node.subset) >= lim
-                                for node in self.all_nodes(clf.root)))
+                                for node in self.all_nodes(clf.root)
+                                if node))
             clf = self.TreeLearner(binarize=True, **args)(self.data_mixed)
             self.assertTrue(all(len(node.subset) >= lim
-                                for node in self.all_nodes(clf.root)))
+                                for node in self.all_nodes(clf.root)
+                                if node))
 
     def test_max_depth(self):
         for i in (1, 2, 5):
@@ -67,9 +70,11 @@ class TestTree:
             [DiscreteVariable("x", ("v{}".format(i) for i in range(lim + 1)))],
             self.class_var)
         data = Table(domain, np.zeros((100, 2)))
-        self.assertRaises(ValueError, clf, data)
+
         clf.binarize = False
         clf(data)
+        clf.binarize = True
+        self.assertRaises(ValueError, clf, data)
 
         domain = Domain(
             [DiscreteVariable("x", ("v{}".format(i) for i in range(lim)))],
@@ -81,7 +86,7 @@ class TestTree:
         clf(data)
 
     def test_find_mapping(self):
-        clf = self.TreeLearner()
+        clf = self.TreeLearner(binarize=True)
 
         domain = Domain([DiscreteVariable("x", values="abcdefgh"),
                          ContinuousVariable("r1"),
