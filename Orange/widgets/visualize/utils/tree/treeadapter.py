@@ -1,6 +1,7 @@
 """Base tree adapter class with common methods needed for visualisations."""
 from abc import ABCMeta, abstractmethod
-from itertools import chain
+from functools import reduce
+from operator import add
 
 
 class BaseTreeAdapter(metaclass=ABCMeta):
@@ -296,7 +297,7 @@ class TreeAdapter(BaseTreeAdapter):
         return not any(node.children)
 
     def children(self, node):
-        return filter(None, node.children)
+        return [child for child in node.children if child is not None]
 
     def get_distribution(self, node):
         return [node.value]
@@ -312,10 +313,8 @@ class TreeAdapter(BaseTreeAdapter):
 
     def leaves(self, node):
         def _leaves(node):
-            if node.children:
-                return list(chain(_leaves(lvs) for lvs in node.children if lvs))
-            else:
-                return [node]
+            return reduce(add, map(_leaves, self.children(node)), []) or [node]
+        return _leaves(node)
 
     def get_instances_in_nodes(self, dataset, nodes):
         from Orange import tree

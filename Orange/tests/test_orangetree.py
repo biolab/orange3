@@ -21,11 +21,6 @@ class TestTree:
         for child in node.children:
             yield from cls.all_nodes(child)
 
-    @classmethod
-    def depth(cls, node):
-        return 0 if not node.children else \
-            1 + max(cls.depth(child) for child in node.children)
-
     def test_get_tree(self):
         learn = self.TreeLearner()
         clf = learn(self.data)
@@ -62,7 +57,7 @@ class TestTree:
     def test_max_depth(self):
         for i in (1, 2, 5):
             tree = self.TreeLearner(max_depth=i)(self.data)
-            self.assertEqual(self.depth(tree.root), i)
+            self.assertEqual(tree.depth(), i)
 
     def test_refuse_binarize_too_many_values(self):
         clf = self.TreeLearner(binarize=True)
@@ -298,6 +293,10 @@ class TestNodes(unittest.TestCase):
 
 class TestTreeModel(unittest.TestCase):
     def setUp(self):
+        """
+        Construct a tree with v1 as a root, and v2 and v3 as left and right
+        child.
+        """
         # pylint: disable=invalid-name
         v1 = self.v1 = ContinuousVariable("v1")
         v2 = self.v2 = DiscreteVariable("v2", "abc")
@@ -376,6 +375,7 @@ class TestTreeModel(unittest.TestCase):
         model = TreeModel(self.data, self.root)
         self.assertEqual(model.node_count(), 8)
         self.assertEqual(model.leaf_count(), 5)
+        self.assertEqual(model.depth(), 2)
         self.assertIs(model.root, self.root)
 
         left = self.root.children[0]

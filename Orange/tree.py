@@ -215,7 +215,7 @@ class TreeModel(Model):
         def _depth(node):
             return 1 + max((_depth(child) for child in node.children if child),
                            default=0)
-        return _depth(self.root)
+        return _depth(self.root) - 1
 
     def leaf_count(self):
         def _count(node):
@@ -246,10 +246,10 @@ class TreeModel(Model):
             name = attr.name
             if isinstance(parent, NumericNode):
                 lower, upper = node.condition
-                if lower is None:
-                    rules.append("{} > {}".format(name, attr.repr_val(upper)))
-                elif upper is None:
-                    rules.append("{} ≤ {}".format(name, attr.repr_val(lower)))
+                if upper is None:
+                    rules.append("{} > {}".format(name, attr.repr_val(lower)))
+                elif lower is None:
+                    rules.append("{} ≤ {}".format(name, attr.repr_val(upper)))
                 else:
                     rules.append("{} < {} ≤ {}".format(
                         attr.repr_val(lower), name, attr.repr_val(upper)))
