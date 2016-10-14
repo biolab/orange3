@@ -30,7 +30,6 @@ class SklTreeAdapter(TreeAdapter):
 
     """
 
-    ROOT_PARENT = -1
     NO_CHILD = -1
     FEATURE_UNDEFINED = -2
 
@@ -279,7 +278,7 @@ class SklTreeAdapter(TreeAdapter):
         if not isinstance(nodes, (list, tuple)):
             nodes = [nodes]
 
-        node_leaves = [self.leaves(n.label) for n in nodes]
+        node_leaves = [self.leaves(n) for n in nodes]
         if len(node_leaves) > 0:
             # get the leaves of the selected tree node
             node_leaves = np.unique(np.hstack(node_leaves))

@@ -375,7 +375,8 @@ class OWPythagoreanForest(OWWidget):
         # calculate node colors relative to the mean of the node samples
         min_mean = np.min(self.clf_dataset.Y)
         max_mean = np.max(self.clf_dataset.Y)
-        instances = adapter.get_instances_in_nodes(self.clf_dataset, tree_node)
+        instances = adapter.get_instances_in_nodes(self.clf_dataset,
+                                                   tree_node.label)
         mean = np.mean(instances.Y)
 
         return self.color_palette[(mean - min_mean) / (max_mean - min_mean)]
@@ -384,7 +385,8 @@ class OWPythagoreanForest(OWWidget):
         # calculate node colors relative to the standard deviation in the node
         # samples
         min_mean, max_mean = 0, np.std(self.clf_dataset.Y)
-        instances = adapter.get_instances_in_nodes(self.clf_dataset, tree_node)
+        instances = adapter.get_instances_in_nodes(self.clf_dataset,
+                                                   tree_node.label)
         std = np.std(instances.Y)
 
         return self.color_palette[(std - min_mean) / (max_mean - min_mean)]
