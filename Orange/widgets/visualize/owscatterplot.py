@@ -195,9 +195,14 @@ class OWScatterPlot(OWWidget):
             box, self, "graph.attr_size", label="Size:",
             emptyString="(Same size)", callback=self.graph.update_sizes,
             **common_options)
+        self.sl_point_size = gui.hSlider(box, self, "graph.point_width", label="Symbol size:   ",
+                                          minValue=1, maxValue=20, step=1, createLabel=False,
+                                          callback=self.graph.update_point_size)
+        self.sl_alpha_value = gui.hSlider(box, self, "graph.alpha_value", label="Opacity: ",
+                                          minValue=0, maxValue=255, step=10, createLabel=False,
+                                          callback=self.graph.update_alpha_value)
 
         g = self.graph.gui
-        g.point_properties_box(self.controlArea, box)
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(
@@ -353,6 +358,8 @@ class OWScatterPlot(OWWidget):
                 self.warning("Data subset does not support large Sql tables")
                 subset_data = None
         self.subset_data = self.move_primitive_metas_to_X(subset_data)
+        self.sl_alpha_value.setEnabled(subset_data is None)
+
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
