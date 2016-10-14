@@ -7,7 +7,7 @@ from Orange.tree import Node, DiscreteNode, MappedDiscreteNode, \
 from Orange.regression import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
 
-__all__ = ["TreeRegressionLearner", "TreeLearner"]
+__all__ = ["SklTreeRegressionLearner", "TreeLearner"]
 
 
 class TreeLearner(Learner):
@@ -166,7 +166,7 @@ class SklTreeRegressor(SklModel):
         return self.skl_model.tree_
 
 
-class TreeRegressionLearner(SklLearner):
+class SklTreeRegressionLearner(SklLearner):
     __wraps__ = skl_tree.DecisionTreeRegressor
     __returns__ = SklTreeRegressor
     name = 'regression tree'

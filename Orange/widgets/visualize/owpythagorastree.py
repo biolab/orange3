@@ -604,10 +604,9 @@ def main():
 
     if data.domain.has_discrete_class:
         from Orange.classification.tree import TreeLearner
-        model = TreeLearner(max_depth=1000)(data)
     else:
-        from Orange.regression.tree import TreeRegressionLearner
-        model = TreeRegressionLearner(max_depth=1000)(data)
+        from Orange.regression.tree import TreeLearner
+    model = TreeLearner(max_depth=1000)(data)
 
     model.instances = data
 

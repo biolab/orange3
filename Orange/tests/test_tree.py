@@ -5,11 +5,11 @@ import unittest
 
 import numpy as np
 import sklearn.tree as skl_tree
-from sklearn.tree._tree import TREE_LEAF, Tree
+from sklearn.tree._tree import TREE_LEAF
 
 from Orange.data import Table
 from Orange.classification import SklTreeLearner
-from Orange.regression import TreeRegressionLearner
+from Orange.regression import SklTreeRegressionLearner
 
 
 class TestTreeLearner(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestTreeLearner(unittest.TestCase):
 
     def test_regression(self):
         table = Table('housing')
-        learn = TreeRegressionLearner()
+        learn = SklTreeRegressionLearner()
         model = learn(table)
         pred = model(table)
         self.assertTrue(np.all(table.Y.flatten() == pred))
