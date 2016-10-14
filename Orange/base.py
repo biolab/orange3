@@ -27,11 +27,15 @@ class Learner:
         self.preprocessors = list(preprocessors)
 
     def fit(self, X, Y, W=None):
-        raise NotImplementedError(
-            "Descendants of Learner must overload method fit")
+        raise RuntimeError(
+            "Descendants of Learner must overload method fit or "
+            "fit_storage")
 
     def fit_storage(self, data):
-        return self.fit(data.X, data.Y, data.W)
+        """Default implementation of fit_storage defaults to calling fit.
+        Derived classes must define fit_storage or fit"""
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+        return self.fit(X, Y, W)
 
     def __call__(self, data):
         if not self.check_learner_adequacy(data.domain):
