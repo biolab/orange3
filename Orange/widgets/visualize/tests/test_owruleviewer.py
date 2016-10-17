@@ -14,6 +14,9 @@ class TestOWRuleViewer(WidgetTest):
         self.titanic = Table('titanic')
         self.learner = CN2Learner()
         self.classifier = self.learner(self.titanic)
+        # CN2Learner does not add `instances` attribute to the model, but
+        # the Rules widget does. We simulate the model we get from the widget.
+        self.classifier.instances = self.titanic
         self.widget = self.create_widget(OWRuleViewer)
 
     def test_set_data(self):
