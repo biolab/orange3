@@ -197,9 +197,6 @@ class LeafletMap(WebviewWidget):
         self.evalJS('draw_heatmap()')
 
 
-
-
-
 class OWMap(widget.OWWidget):
     name = 'Map'
     description = 'Show data points on a world map.'
@@ -273,13 +270,16 @@ class OWMap(widget.OWWidget):
 
         map.selectionChanged.connect(selectionChanged)
 
+        def _set_map_provider():
+            map.set_map_provider(self.TILE_PROVIDERS[self.tile_provider])
+
         box = gui.vBox(self.controlArea, 'Map')
         gui.comboBox(box, self, 'tile_provider',
                      orientation=Qt.Horizontal,
                      label='Map:',
                      items=tuple(self.TILE_PROVIDERS.keys()),
                      sendSelectedValue=True,
-                     callback=lambda: self.map.set_map_provider(self.TILE_PROVIDERS[self.tile_provider]))
+                     callback=_set_map_provider)
 
         self._latlon_model = VariableListModel(parent=self)
         self._class_model = VariableListModel(parent=self)
@@ -343,25 +343,43 @@ class OWMap(widget.OWWidget):
             sendSelectedValue=True,
             callback=lambda: self.map.set_marker_size(self.size_attr))
         combo.setModel(self._size_model)
+
+        def _set_opacity():
+            map.set_marker_opacity(self.opacity)
+
+        def _set_zoom():
+            map.set_marker_size_coefficient(self.zoom)
+
+        def _set_jittering():
+            map.set_jittering(self.jittering)
+
+        def _set_clustering():
+            map.set_clustering(self.cluster_points)
+
         self._opacity_slider = gui.hSlider(
             box, self, 'opacity', None, 1, 100, 5,
             label='Opacity:', labelFormat=' %d%%',
-            callback=lambda: self.map.set_marker_opacity(self.opacity))
+            callback=_set_opacity)
         self._zoom_slider = gui.valueSlider(
             box, self, 'zoom', None, values=(20, 50, 100, 200, 300, 400, 500, 700, 1000),
             label='Symbol size:', labelFormat=' %d%%',
-            callback=lambda: self.map.set_marker_size_coefficient(self.zoom))
+            callback=_set_zoom)
         self._jittering = gui.valueSlider(
             box, self, 'jittering', label='Jittering:', values=(0, .5, 1, 2, 5),
             labelFormat=' %.1f%%', ticks=True,
-            callback=lambda: self.map.set_jittering(self.jittering)
-        )
+            callback=_set_jittering)
         self._clustering_check = gui.checkBox(
             box, self, 'cluster_points', label='Cluster points',
-            callback=lambda: self.map.set_clustering(self.cluster_points))
+            callback=_set_clustering)
 
         gui.rubber(self.controlArea)
         gui.auto_commit(self.controlArea, self, 'autocommit', 'Send Selection')
+
+        QTimer.singleShot(0, _set_map_provider)
+        QTimer.singleShot(0, _set_opacity)
+        QTimer.singleShot(0, _set_zoom)
+        QTimer.singleShot(0, _set_jittering)
+        QTimer.singleShot(0, _set_clustering)
 
     autocommit = settings.Setting(True)
 

@@ -20,6 +20,7 @@ var _DEFAULT_COLOR = 'red',
 var tileLayer = L.tileLayer.provider('OpenStreetMap.BlackAndWhite');
 
 var markers = [],
+    latlon_data = [],
     markersLayer = L.featureGroup(),
     jittering_offsets = [],
     cluster_points = false;
