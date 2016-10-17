@@ -57,6 +57,22 @@ the [wiki].
 
 [wiki]: https://github.com/biolab/orange3/wiki
 
+Anaconda Installation
+---------------------
+
+First, install [Anaconda] for your OS (Python version 3.5+). Create virtual environment for Orange:
+
+    conda create python=3 --name orange3 
+
+In your Anaconda Prompt add conda-forge to your channels:
+
+    conda config --add channels conda-forge
+
+This will enable access to the latest Orange release. Then install Orange3:
+
+    conda install orange3
+
+[Anaconda]: https://www.continuum.io/downloads
 
 Starting Orange GUI
 -------------------
