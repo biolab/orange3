@@ -82,7 +82,7 @@ class LeafletMap(WebviewWidget):
                 clear_jittering();
         '''.format(jittering))
 
-    def set_marker_color(self, attr):
+    def set_marker_color(self, attr, update=True):
         try:
             variable = self.data.domain[attr]
         except Exception:
@@ -101,9 +101,9 @@ class LeafletMap(WebviewWidget):
             self.exposeObject('color_attr',
                               dict(name=str(attr), values=colors, raw_values=values))
         finally:
-            self.evalJS('set_marker_colors();')
+            self.evalJS('set_marker_colors(%d);' % update)
 
-    def set_marker_label(self, attr):
+    def set_marker_label(self, attr, update=True):
         try:
             variable = self.data.domain[attr]
         except Exception:
@@ -118,9 +118,9 @@ class LeafletMap(WebviewWidget):
             self.exposeObject('label_attr',
                               dict(name=str(attr), values=values))
         finally:
-            self.evalJS('set_marker_labels();')
+            self.evalJS('set_marker_labels(%d);' % update)
 
-    def set_marker_shape(self, attr):
+    def set_marker_shape(self, attr, update=True):
         try:
             variable = self.data.domain[attr]
         except Exception:
@@ -133,9 +133,9 @@ class LeafletMap(WebviewWidget):
             self.exposeObject('shape_attr',
                               dict(name=str(attr), values=__values, raw_values=values))
         finally:
-            self.evalJS('set_marker_shapes();')
+            self.evalJS('set_marker_shapes(%d);' % update)
 
-    def set_marker_size(self, attr):
+    def set_marker_size(self, attr, update=True):
         try:
             variable = self.data.domain[attr]
         except Exception:
@@ -147,7 +147,7 @@ class LeafletMap(WebviewWidget):
             self.exposeObject('size_attr',
                               dict(name=str(attr), values=sizes, raw_values=values))
         finally:
-            self.evalJS('set_marker_sizes();')
+            self.evalJS('set_marker_sizes(%d);' % update)
 
     def set_marker_size_coefficient(self, size):
         self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
@@ -430,10 +430,10 @@ class OWMap(widget.OWWidget):
         if self.lat_attr in self.data.domain and self.lon_attr in self.data.domain:
             self.map.set_data(self.data, self.lat_attr, self.lon_attr)
 
-        self.map.set_marker_color(self.color_attr)
-        self.map.set_marker_label(self.label_attr)
-        self.map.set_marker_shape(self.shape_attr)
-        self.map.set_marker_size(self.size_attr)
+        self.map.set_marker_color(self.color_attr, update=False)
+        self.map.set_marker_label(self.label_attr, update=False)
+        self.map.set_marker_shape(self.shape_attr, update=False)
+        self.map.set_marker_size(self.size_attr, update=True)
 
     def handleNewSignals(self):
         super().handleNewSignals()

@@ -375,35 +375,35 @@ function set_map_provider(provider) {
 }
 
 
-function set_marker_shapes(shape_indices) {
+function set_marker_shapes(update) {
     var shape_indices = shape_attr && shape_attr.values;
     if (shape_indices && markers.length != shape_indices.length)
         return console.error('markers.length != shapes.length ???');
-    _update_markers();
+    update && _update_markers();
 }
 
 
-function set_marker_colors() {
+function set_marker_colors(update) {
     var css_colors = color_attr && color_attr.values;
     if (css_colors && markers.length != css_colors.length)
         return console.error('markers.length != colors.length ???');
-    _update_markers();
+    update && _update_markers();
 }
 
 
-function set_marker_sizes() {
+function set_marker_sizes(update) {
     var sizes = size_attr && size_attr.values;
     if (sizes && markers.length != sizes.length)
         return console.error('markers.length != sizes.length ???');
-    _update_markers();
+    update && _update_markers();
 }
 
 
-function set_marker_labels() {
+function set_marker_labels(update) {
     var labels = label_attr && label_attr.values;
     if (labels && markers.length != labels.length)
         return console.error('markers.length != labels.length ???');
-    _update_markers();
+    update && _update_markers();
 }
 
 
