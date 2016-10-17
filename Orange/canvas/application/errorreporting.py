@@ -157,14 +157,17 @@ class ErrorReporting(QDialog):
         stacktrace = ''.join(traceback.format_exception(etype, evalue, tb))
 
         def _find_last_frame(tb):
+            if not tb:
+                return None
             while tb.tb_next:
                 tb = tb.tb_next
             return tb
 
-        frame = _find_last_frame(tb)
-        err_module = '{}:{}'.format(
-            frame.tb_frame.f_globals.get('__name__', frame.tb_frame.f_code.co_filename),
-            frame.tb_lineno)
+        err_module, frame = None, _find_last_frame(tb)
+        if frame:
+            err_module = '{}:{}'.format(
+                frame.tb_frame.f_globals.get('__name__', frame.tb_frame.f_code.co_filename),
+                frame.tb_lineno)
 
         def _find_widget_frame(tb):
             while tb:
