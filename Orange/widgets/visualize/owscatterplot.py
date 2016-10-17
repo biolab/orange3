@@ -14,6 +14,7 @@ from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
@@ -57,9 +58,9 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def compute_score(self, state):
         graph = self.master.graph
-        ind12 = [graph.data_domain.index(self.attrs[x]) for x in state]
+        ind12 = [graph.domain.index(self.attrs[x]) for x in state]
         valid = graph.get_valid_list(ind12)
-        X = graph.scaled_data[ind12, :][:, valid].T
+        X = graph.jittered_data[ind12, :][:, valid].T
         Y = self.master.data.Y[valid]
         if X.shape[0] < self.K:
             return
@@ -73,7 +74,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
                    (len(Y) / len(self.master.data))
 
     def score_heuristic(self):
-        X = self.master.graph.scaled_data.T
+        X = self.master.graph.jittered_data.T
         Y = self.master.data.Y
         mdomain = self.master.data.domain
         dom = Domain([ContinuousVariable(str(i)) for i in range(X.shape[1])],
@@ -111,8 +112,8 @@ class OWScatterPlot(OWWidget):
     auto_sample = Setting(True)
     toolbar_selection = Setting(0)
 
-    attr_x = ContextSetting("")
-    attr_y = ContextSetting("")
+    attr_x = ContextSetting(None)
+    attr_y = ContextSetting(None)
 
     graph = SettingProvider(OWScatterPlotGraph)
 
@@ -150,12 +151,14 @@ class OWScatterPlot(OWWidget):
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
             valueType=str)
         box = gui.vBox(self.controlArea, "Axis Data")
-        self.cb_attr_x = gui.comboBox(box, self, "attr_x", label="Axis x:",
-                                      callback=self.update_attr,
-                                      **common_options)
-        self.cb_attr_y = gui.comboBox(box, self, "attr_y", label="Axis y:",
-                                      callback=self.update_attr,
-                                      **common_options)
+        dmod = DomainModel
+        self.xy_model = DomainModel(dmod.MIXED, valid_types=dmod.PRIMITIVE)
+        gui.comboBox(
+            box, self, "attr_x", label="Axis x:", callback=self.update_attr,
+            model=self.xy_model, **common_options)
+        self.cb_attr_y = gui.comboBox(
+            box, self, "attr_y", label="Axis y:", callback=self.update_attr,
+            model=self.xy_model, **common_options)
 
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
@@ -179,22 +182,32 @@ class OWScatterPlot(OWWidget):
         self.sampling.setVisible(False)
 
         box = gui.vBox(self.controlArea, "Points")
+        color_model = DomainModel(
+            placeholder="(Same color)", valid_types=dmod.PRIMITIVE)
         self.cb_attr_color = gui.comboBox(
             box, self, "graph.attr_color", label="Color:",
-            emptyString="(Same color)", callback=self.update_colors,
-            **common_options)
+            callback=self.update_colors,
+            model=color_model, **common_options)
+        label_model = DomainModel(
+            placeholder="(No labels)", valid_types=dmod.PRIMITIVE)
         self.cb_attr_label = gui.comboBox(
             box, self, "graph.attr_label", label="Label:",
-            emptyString="(No labels)", callback=self.graph.update_labels,
-            **common_options)
+            callback=self.graph.update_labels,
+            model=label_model, **common_options)
+        shape_model = DomainModel(
+            placeholder="(Same shape)", valid_types=DiscreteVariable)
         self.cb_attr_shape = gui.comboBox(
             box, self, "graph.attr_shape", label="Shape:",
-            emptyString="(Same shape)", callback=self.graph.update_shapes,
-            **common_options)
+            callback=self.graph.update_shapes,
+            model=shape_model, **common_options)
+        size_model = DomainModel(
+            placeholder="(Same size)", valid_types=ContinuousVariable)
         self.cb_attr_size = gui.comboBox(
             box, self, "graph.attr_size", label="Size:",
-            emptyString="(Same size)", callback=self.graph.update_sizes,
-            **common_options)
+            callback=self.graph.update_sizes,
+            model=size_model, **common_options)
+        self.models = [self.xy_model, color_model, label_model,
+                       shape_model, size_model]
 
         g = self.graph.gui
         g.point_properties_box(self.controlArea, box)
@@ -358,10 +371,10 @@ class OWScatterPlot(OWWidget):
     def handleNewSignals(self):
         self.graph.new_data(self.data_metas_X, self.subset_data)
         if self.attribute_selection_list and \
-                all(attr in self.graph.data_domain
+                all(attr in self.graph.domain
                     for attr in self.attribute_selection_list):
-            self.attr_x = self.attribute_selection_list[0].name
-            self.attr_y = self.attribute_selection_list[1].name
+            self.attr_x = self.attribute_selection_list[0]
+            self.attr_y = self.attribute_selection_list[1]
         self.attribute_selection_list = None
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
@@ -377,64 +390,19 @@ class OWScatterPlot(OWWidget):
         return self.attr_x, self.attr_y
 
     def init_attr_values(self):
-        self.cb_attr_x.clear()
-        self.attr_x = None
-        self.cb_attr_y.clear()
-        self.attr_y = None
-        self.cb_attr_color.clear()
-        self.cb_attr_color.addItem("(Same color)")
-        self.graph.attr_color = None
-        self.cb_attr_label.clear()
-        self.cb_attr_label.addItem("(No labels)")
-        self.graph.attr_label = None
-        self.cb_attr_shape.clear()
-        self.cb_attr_shape.addItem("(Same shape)")
+        domain = self.data and self.data.domain
+        for model in self.models:
+            model.set_domain(domain)
+        self.attr_x = self.xy_model[0] if self.xy_model else None
+        self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
+            else self.attr_x
+        self.graph.attr_color = domain and self.data.domain.class_var or None
         self.graph.attr_shape = None
-        self.cb_attr_size.clear()
-        self.cb_attr_size.addItem("(Same size)")
         self.graph.attr_size = None
-        if not self.data:
-            return
-
-        for var in self.data.domain.metas:
-            if not var.is_primitive():
-                self.cb_attr_label.addItem(self.icons[var], var.name)
-        for attr in self.data.domain.variables:
-            self.cb_attr_x.addItem(self.icons[attr], attr.name)
-            self.cb_attr_y.addItem(self.icons[attr], attr.name)
-            self.cb_attr_color.addItem(self.icons[attr], attr.name)
-            if attr.is_discrete:
-                self.cb_attr_shape.addItem(self.icons[attr], attr.name)
-            else:
-                self.cb_attr_size.addItem(self.icons[attr], attr.name)
-            self.cb_attr_label.addItem(self.icons[attr], attr.name)
-        for var in self.data.domain.metas:
-            if var.is_primitive():
-                self.cb_attr_x.addItem(self.icons[var], var.name)
-                self.cb_attr_y.addItem(self.icons[var], var.name)
-                self.cb_attr_color.addItem(self.icons[var], var.name)
-                if var.is_discrete:
-                    self.cb_attr_shape.addItem(self.icons[var], var.name)
-                else:
-                    self.cb_attr_size.addItem(self.icons[var], var.name)
-                self.cb_attr_label.addItem(self.icons[var], var.name)
-
-        self.attr_x = self.cb_attr_x.itemText(0)
-        if self.cb_attr_y.count() > 1:
-            self.attr_y = self.cb_attr_y.itemText(1)
-        else:
-            self.attr_y = self.cb_attr_y.itemText(0)
-
-        if self.data.domain.class_var:
-            self.graph.attr_color = self.data.domain.class_var.name
-        else:
-            self.graph.attr_color = ""
-        self.graph.attr_shape = ""
-        self.graph.attr_size = ""
-        self.graph.attr_label = ""
+        self.graph.attr_label = None
 
     def set_attr(self, attr_x, attr_y):
-        self.attr_x, self.attr_y = attr_x.name, attr_y.name
+        self.attr_x, self.attr_y = attr_x, attr_y
         self.update_attr()
 
     def update_attr(self):
@@ -451,7 +419,7 @@ class OWScatterPlot(OWWidget):
 
     def update_graph(self, reset_view=True, **_):
         self.graph.zoomStack = []
-        if not self.graph.have_data:
+        if self.graph.data is None:
             return
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
@@ -493,21 +461,19 @@ class OWScatterPlot(OWWidget):
 
     def get_widget_name_extension(self):
         if self.data is not None:
-            return "{} vs {}".format(self.combo_value(self.cb_attr_x),
-                                     self.combo_value(self.cb_attr_y))
+            return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
 
     def send_report(self):
-        disc_attr = False
-        if self.data:
-            domain = self.data.domain
-            disc_attr = domain[self.attr_x].is_discrete or \
-                        domain[self.attr_y].is_discrete
+        def name(var):
+            return var and var.name
         caption = report.render_items_vert((
-            ("Color", self.combo_value(self.cb_attr_color)),
-            ("Label", self.combo_value(self.cb_attr_label)),
-            ("Shape", self.combo_value(self.cb_attr_shape)),
-            ("Size", self.combo_value(self.cb_attr_size)),
-            ("Jittering", (self.graph.jitter_continuous or disc_attr) and
+            ("Color", name(self.graph.attr_color)),
+            ("Label", name(self.graph.attr_label)),
+            ("Shape", name(self.graph.attr_shape)),
+            ("Size", name(self.graph.attr_size)),
+            ("Jittering", (self.attr_x.is_discrete or
+                           self.attr_y.is_discrete or
+                           self.graph.jitter_continuous) and
              self.graph.jitter_size)))
         self.report_plot()
         if caption:
@@ -528,7 +494,7 @@ def test_main(argv=None):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "iris"
+        filename = "heart_disease"
 
     ow = OWScatterPlot()
     ow.show()

@@ -1,19 +1,17 @@
 from collections import defaultdict
 from operator import itemgetter
 
-def getCached(data, funct, params=(), kwparams=None):
+def getCached(data, funct, params=(), **kwparams):
+    # pylint: disable=protected-access
     if data is None:
         return None
-    info = getattr(data, "__data_cache", None)
-    if info is not None:
-        if funct in data.info:
-            return data.info(funct)
-    else:
-        info = data.info = {}
+    if not hasattr(data, "__data_cache"):
+        data.__data_cache = {}
+    info = data.__data_cache
+    if funct in info:
+        return info[funct]
     if isinstance(funct, str):
         return None
-    if kwparams is None:
-        kwparams = {}
     info[funct] = res = funct(*params, **kwparams)
     return res
 
@@ -21,10 +19,9 @@ def getCached(data, funct, params=(), kwparams=None):
 def setCached(data, name, value):
     if data is None:
         return
-    info = getattr(data, "__data_cache", None)
-    if info is None:
-        info = data.info = {}
-    info[name] = value
+    if not hasattr(data, "__data_cache"):
+        data.__data_cache = {}
+    data.__data_cache[name] = value
 
 def delCached(data, name):
     info = data is not None and getattr(data, "__data_cache")
