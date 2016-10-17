@@ -949,6 +949,11 @@ class OWMDS(OWWidget):
                     emb_x[self._similar_pairs][i * 2 + 1],
                     emb_y[self._similar_pairs][i * 2 + 1]
                 )
+                if item.line().isNull():
+                    # Null (zero length) line causes bad rendering artifacts
+                    # in Qt when using the raster graphics system
+                    # (see gh-issue: 1668).
+                    continue
                 pen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(204, 204, 204)), 2)
                 pen.setCosmetic(True)
                 item.setPen(pen)
