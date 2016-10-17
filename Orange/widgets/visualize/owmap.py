@@ -86,77 +86,68 @@ class LeafletMap(WebviewWidget):
         try:
             variable = self.data.domain[attr]
         except Exception:
-            return self.evalJS('''
-                window.color_attr = {};
-                set_marker_colors();
-            ''')
-
-        if variable.is_continuous:
-            values = np.ravel(self.data[self.sample, variable])
-            colorgen = ContinuousPaletteGenerator(*variable.colors)
-            colors = colorgen[scale(values)]
-        elif variable.is_discrete:
-            _values = np.asarray(self.data.domain[attr].values)
-            __values = np.ravel(self.data[self.sample, variable]).astype(int)
-            values = _values[__values]  # The joke's on you
-            colorgen = ColorPaletteGenerator(len(variable.colors), variable.colors)
-            colors = colorgen[__values]
-
-        self.exposeObject('color_attr',
-                          dict(name=str(attr), values=colors, raw_values=values))
-        self.evalJS('set_marker_colors();')
+            self.evalJS('window.color_attr = {};')
+        else:
+            if variable.is_continuous:
+                values = np.ravel(self.data[self.sample, variable])
+                colorgen = ContinuousPaletteGenerator(*variable.colors)
+                colors = colorgen[scale(values)]
+            elif variable.is_discrete:
+                _values = np.asarray(self.data.domain[attr].values)
+                __values = np.ravel(self.data[self.sample, variable]).astype(int)
+                values = _values[__values]  # The joke's on you
+                colorgen = ColorPaletteGenerator(len(variable.colors), variable.colors)
+                colors = colorgen[__values]
+            self.exposeObject('color_attr',
+                              dict(name=str(attr), values=colors, raw_values=values))
+        finally:
+            self.evalJS('set_marker_colors();')
 
     def set_marker_label(self, attr):
         try:
             variable = self.data.domain[attr]
         except Exception:
-            return self.evalJS('''
-                window.label_attr = {};
-                set_marker_labels();
-            ''')
-
-        if variable.is_continuous or variable.is_string:
-            values = np.ravel(self.data[self.sample, variable])
-        elif variable.is_discrete:
-            _values = np.asarray(self.data.domain[attr].values)
-            __values = np.ravel(self.data[self.sample, variable]).astype(int)
-            values = _values[__values]  # The design had lead to poor code for ages
-        self.exposeObject('label_attr',
-                          dict(name=str(attr), values=values))
-        self.evalJS('set_marker_labels();')
+            self.evalJS('window.label_attr = {};')
+        else:
+            if variable.is_continuous or variable.is_string:
+                values = np.ravel(self.data[self.sample, variable])
+            elif variable.is_discrete:
+                _values = np.asarray(self.data.domain[attr].values)
+                __values = np.ravel(self.data[self.sample, variable]).astype(int)
+                values = _values[__values]  # The design had lead to poor code for ages
+            self.exposeObject('label_attr',
+                              dict(name=str(attr), values=values))
+        finally:
+            self.evalJS('set_marker_labels();')
 
     def set_marker_shape(self, attr):
         try:
             variable = self.data.domain[attr]
         except Exception:
-            return self.evalJS('''
-                window.shape_attr = {};
-                set_marker_shapes();
-            ''')
-
-        assert variable.is_discrete
-        _values = np.asarray(self.data.domain[attr].values)
-        __values = np.ravel(self.data[self.sample, variable]).astype(int)
-        values = _values[__values]
-        self.exposeObject('shape_attr',
-                          dict(name=str(attr), values=__values, raw_values=values))
-        self.evalJS('''set_marker_shapes();''')
+            self.evalJS('window.shape_attr = {};')
+        else:
+            assert variable.is_discrete
+            _values = np.asarray(self.data.domain[attr].values)
+            __values = np.ravel(self.data[self.sample, variable]).astype(int)
+            values = _values[__values]
+            self.exposeObject('shape_attr',
+                              dict(name=str(attr), values=__values, raw_values=values))
+        finally:
+            self.evalJS('set_marker_shapes();')
 
     def set_marker_size(self, attr):
         try:
             variable = self.data.domain[attr]
         except Exception:
-            return self.evalJS('''
-                window.size_attr = {};
-                set_marker_sizes();
-            ''')
-
-        assert variable.is_continuous
-        values = np.ravel(self.data[self.sample, variable])
-        sizes = scale(values, 10, 60)
-        self.exposeObject('size_attr',
-                          dict(name=str(attr), values=sizes, raw_values=values))
-        self.evalJS('''set_marker_sizes();''')
+            self.evalJS('window.size_attr = {};')
+        else:
+            assert variable.is_continuous
+            values = np.ravel(self.data[self.sample, variable])
+            sizes = scale(values, 10, 60)
+            self.exposeObject('size_attr',
+                              dict(name=str(attr), values=sizes, raw_values=values))
+        finally:
+            self.evalJS('set_marker_sizes();')
 
     def set_marker_size_coefficient(self, size):
         self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
