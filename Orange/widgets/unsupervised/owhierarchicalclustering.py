@@ -3,11 +3,9 @@ import sys
 
 from collections import namedtuple, OrderedDict
 from itertools import chain
-from functools import reduce
 from contextlib import contextmanager
 
 import numpy
-import scipy.cluster.hierarchy
 
 from PyQt4.QtGui import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
@@ -26,7 +24,8 @@ import Orange.data
 from Orange.data.domain import filter_visible
 import Orange.misc
 from Orange.clustering.hierarchical import \
-    postorder, preorder, Tree, tree_from_linkage, leaves, prune, top_clusters
+    postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
+    leaves, prune, top_clusters
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
@@ -34,11 +33,8 @@ from Orange.widgets.io import FileFormat
 
 __all__ = ["OWHierarchicalClustering"]
 
-# In scipy 0.14 ward linkage cannot be computed from the distance
-# matrix alone, it requires the full data matrix (in 0.15 the whole
-# hierarchical clustering is/will be reimplemented and from the
-# looks of it will support ward from dist matrix).
-LINKAGE = ["Single", "Average", "Weighted", "Complete"]
+
+LINKAGE = ["Single", "Average", "Weighted", "Complete", "Ward"]
 
 
 def dendrogram_layout(tree, expand_leaves=False):
@@ -938,12 +934,12 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._set_cut_line_visible(self.selection_method == 1)
 
     def set_distances(self, matrix):
-        self.error(0)
+        self.error()
         self._set_items(None)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
-                self.error(0, "Empty distance matrix")
+                self.error("Empty distance matrix")
                 matrix = None
 
         self.matrix = matrix
@@ -1003,14 +999,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         distances = self.matrix
 
         if distances is not None:
-            # Convert to flat upper triangular distances
-            i, j = numpy.triu_indices(distances.shape[0], k=1)
-            distances = numpy.asarray(distances[i, j])
-
             method = LINKAGE[self.linkage].lower()
-            Z = scipy.cluster.hierarchy.linkage(
-                distances, method=method
-            )
+            Z = dist_matrix_linkage(distances, linkage=method)
+
             tree = tree_from_linkage(Z)
             self.linkmatrix = Z
             self.root = tree
@@ -1060,6 +1051,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     def _invalidate_clustering(self):
         self._update()
         self._update_labels()
+        self._invalidate_output()
 
     def _invalidate_output(self):
         self.commit()

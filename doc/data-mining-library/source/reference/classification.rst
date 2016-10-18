@@ -4,7 +4,6 @@ Classification (``classification``)
 
 .. automodule:: Orange.classification
 
-
 .. index:: logistic regression
    pair: classification; logistic regression
 
@@ -137,9 +136,17 @@ One Class Support Vector Machines
 
 Classification Tree
 -------------------
+
+Orange includes three implemenations of classification trees. `TreeLearner`
+is home-grown and properly handles multinominal and missing values.
+The one from scikit-learn, `SklTreeLearner`, is faster. Another home-grown,
+`SimpleTreeLearner`, is simpler and stil faster.
+
 .. autoclass:: TreeLearner
    :members:
 
+.. autoclass:: SklTreeLearner
+   :members:
 
 .. index:: classification tree (simple)
    pair: classification; simple tree
@@ -168,4 +175,25 @@ Elliptic Envelope
 -----------------
 
 .. autoclass:: EllipticEnvelopeLearner
+   :members:
+
+
+.. index:: Rule induction
+   pair: classification; rules
+
+CN2 Rule Induction
+------------------
+
+.. automodule:: Orange.classification.rules
+
+.. autoclass:: CN2Learner
+   :members:
+
+.. autoclass:: CN2UnorderedLearner
+   :members:
+
+.. autoclass:: CN2SDLearner
+   :members:
+
+.. autoclass:: CN2SDUnorderedLearner
    :members:

@@ -242,14 +242,14 @@ class OWImpute(OWWidget):
             attributes = []
             class_vars = []
 
-            self.warning(1)
+            self.warning()
             with self.progressBar(len(self.varmodel)) as progress:
                 for i, var in enumerate(self.varmodel):
                     method = self.variable_methods.get(i, self.default_method)
 
                     if not method.supports_variable(var):
-                        self.warning(1, "Default method could not impute some "
-                                        "of the variables.")
+                        self.warning("Default method can not handle '{}'".
+                                     format(var.name))
                     elif isinstance(method, impute.DropInstances):
                         drop_mask |= method(self.data, var)
                     else:

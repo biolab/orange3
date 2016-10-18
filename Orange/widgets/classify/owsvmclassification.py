@@ -5,7 +5,7 @@ from PyQt4.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification.svm import SVMLearner, NuSVMLearner
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
@@ -17,13 +17,14 @@ class OWBaseSVM(OWBaseLearner):
     #: kernel degree
     degree = settings.Setting(3)
     #: gamma
-    gamma = settings.Setting(1.0)
+    gamma = settings.Setting(0.0)
     #: coef0 (adative constant)
     coef0 = settings.Setting(0.0)
 
     #: numerical tolerance
     tol = settings.Setting(0.001)
 
+    _default_gamma = "auto"
     kernels = (("Linear", "x⋅y"),
                ("Polynomial", "(g x⋅y + c)<sup>d</sup>"),
                ("RBF", "exp(-g|x-y|²)"),
@@ -50,6 +51,7 @@ class OWBaseSVM(OWBaseLearner):
         inbox = gui.vBox(spbox)
         gamma = gui.doubleSpin(
             inbox, self, "gamma", 0.0, 10.0, 0.01, label=" g: ", **common)
+        gamma.setSpecialValueText(self._default_gamma)
         coef0 = gui.doubleSpin(
             inbox, self, "coef0", 0.0, 10.0, 0.01, label=" c: ", **common)
         degree = gui.doubleSpin(
@@ -66,7 +68,7 @@ class OWBaseSVM(OWBaseLearner):
     def _add_optimization_box(self):
         self.optimization_box = gui.vBox(
             self.controlArea, "Optimization Parameters")
-        gui.doubleSpin(
+        self.tol_spin = gui.doubleSpin(
             self.optimization_box, self, "tol", 1e-6, 1.0, 1e-5,
             label="Numerical tolerance:",
             decimals=6, alignment=Qt.AlignRight, controlWidth=100,
@@ -94,17 +96,18 @@ class OWBaseSVM(OWBaseLearner):
         self.settings_changed()
 
     def _report_kernel_parameters(self, items):
+        gamma = self.gamma or self._default_gamma
         if self.kernel_type == 0:
             items["Kernel"] = "Linear"
         elif self.kernel_type == 1:
             items["Kernel"] = \
                 "Polynomial, ({g:.4} x⋅y + {c:.4})<sup>{d}</sup>".format(
-                    g=self.gamma, c=self.coef0, d=self.degree)
+                    g=gamma, c=self.coef0, d=self.degree)
         elif self.kernel_type == 2:
-            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(self.gamma)
+            items["Kernel"] = "RBF, exp(-{:.4}|x-y|²)".format(gamma)
         else:
             items["Kernel"] = "Sigmoid, tanh({g:.4} x⋅y + {c:.4})".format(
-                g=self.gamma, c=self.coef0)
+                g=gamma, c=self.coef0)
 
     def update_model(self):
         super().update_model()
@@ -124,9 +127,9 @@ class OWSVMClassification(OWBaseSVM):
 
     LEARNER = SVMLearner
 
-    outputs = [("Support vectors", Table)]
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
-    # 0: c_svc, 1: nu_svc
+    C_SVC, Nu_SVC = 0, 1
     svmtype = settings.Setting(0)
     C = settings.Setting(1.0)
     nu = settings.Setting(0.5)
@@ -141,53 +144,51 @@ class OWSVMClassification(OWBaseSVM):
             self.controlArea, self, "svmtype", [], box="SVM Type",
             orientation=form, callback=self.settings_changed)
 
-        form.addWidget(gui.appendRadioButton(box, "C-SVM", addToLayout=False),
-                       0, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Cost (C):"),
-                       0, 1, Qt.AlignRight)
-        form.addWidget(gui.doubleSpin(box, self, "C", 1e-3, 1000.0, 0.1,
-                                      decimals=3, alignment=Qt.AlignRight,
-                                      controlWidth=80, addToLayout=False,
-                                      callback=self.settings_changed),
-                       0, 2)
-
-        form.addWidget(gui.appendRadioButton(box, "ν-SVM", addToLayout=False),
-                       1, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Complexity (ν):"),
-                       1, 1, Qt.AlignRight)
-        form.addWidget(gui.doubleSpin(box, self, "nu", 0.05, 1.0, 0.05,
-                                      decimals=2, alignment=Qt.AlignRight,
-                                      controlWidth=80, addToLayout=False,
-                                      callback=self.settings_changed),
-                       1, 2)
+        self.c_radio = gui.appendRadioButton(box, "C-SVM", addToLayout=False)
+        self.nu_radio = gui.appendRadioButton(box, "ν-SVM", addToLayout=False)
+        self.c_spin = gui.doubleSpin(
+            box, self, "C", 1e-3, 1000.0, 0.1, decimals=3,
+            alignment=Qt.AlignRight, controlWidth=80, addToLayout=False,
+            callback=self.settings_changed)
+        self.nu_spin = gui.doubleSpin(
+            box, self, "nu", 0.05, 1.0, 0.05, decimals=2,
+            alignment=Qt.AlignRight, controlWidth=80, addToLayout=False,
+            callback=self.settings_changed)
+        form.addWidget(self.c_radio, 0, 0, Qt.AlignLeft)
+        form.addWidget(QtGui.QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
+        form.addWidget(self.c_spin, 0, 2)
+        form.addWidget(self.nu_radio, 1, 0, Qt.AlignLeft)
+        form.addWidget(QtGui.QLabel("Complexity (ν):"), 1, 1, Qt.AlignRight)
+        form.addWidget(self.nu_spin, 1, 2)
 
     def _add_optimization_box(self):
         super()._add_optimization_box()
-        gui.spin(self.optimization_box, self, "max_iter", 50, 1e6, 50,
-                 label="Iteration limit:", checked="limit_iter",
-                 alignment=Qt.AlignRight, controlWidth=100,
-                 callback=self.settings_changed)
+        self.max_iter_spin = gui.spin(
+            self.optimization_box, self, "max_iter", 50, 1e6, 50,
+            label="Iteration limit:", checked="limit_iter",
+            alignment=Qt.AlignRight, controlWidth=100,
+            callback=self.settings_changed)
 
     def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]
         common_args = dict(
             kernel=kernel,
             degree=self.degree,
-            gamma=self.gamma,
+            gamma=self.gamma or self._default_gamma,
             coef0=self.coef0,
             tol=self.tol,
             max_iter=self.max_iter if self.limit_iter else -1,
             probability=True,
             preprocessors=self.preprocessors
         )
-        if self.svmtype == 0:
+        if self.svmtype == OWSVMClassification.C_SVC:
             return SVMLearner(C=self.C, **common_args)
         else:
             return NuSVMLearner(nu=self.nu, **common_args)
 
     def get_learner_parameters(self):
         items = OrderedDict()
-        if self.svmtype == 0:
+        if self.svmtype == OWSVMClassification.C_SVC:
             items["SVM type"] = "C-SVM, C={}".format(self.C)
         else:
             items["SVM type"] = "ν-SVM, ν={}".format(self.nu)

@@ -39,7 +39,7 @@ class OWKMeans(widget.OWWidget):
 
     resizing_enabled = False
 
-    k = Setting(8)
+    k = Setting(3)
     k_from = Setting(2)
     k_to = Setting(8)
     optimize_k = Setting(False)
@@ -50,7 +50,7 @@ class OWKMeans(widget.OWWidget):
     append_cluster_ids = Setting(True)
     place_cluster_ids = Setting(OUTPUT_CLASS)
     output_name = Setting("Cluster")
-    auto_run = Setting(False)
+    auto_run = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -61,7 +61,7 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Number of Clusters")
         layout = QGridLayout()
-        bg = gui.radioButtonsInBox(
+        self.n_clusters = bg = gui.radioButtonsInBox(
             box, self, "optimize_k", [], orientation=layout,
             callback=self.update)
         layout.addWidget(
@@ -132,7 +132,10 @@ class OWKMeans(widget.OWWidget):
                      callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
-        gui.auto_commit(self.buttonsArea, self, "auto_run", "Apply", box=None)
+        self.apply_button = gui.auto_commit(
+            self.buttonsArea, self, "auto_run", "Apply", box=None,
+            commit=self.commit
+        )
         gui.rubber(self.controlArea)
 
         self.table_model = QStandardItemModel(self)
@@ -199,12 +202,16 @@ class OWKMeans(widget.OWWidget):
         self.updateOptimizationGui()
         self.update()
 
-    def check_data_size(self, n, msg_func):
+    def check_data_size(self, n, msg_group):
+        msg_group.add_message(
+            "not_enough_data",
+            "Too few ({}) unique data instances for {} clusters")
         if n > len(self.data):
-            msg_func("Too few unique data instances ({}) for {} clusters".
-                     format(len(self.data), n))
+            msg_group.not_enough_data(len(self.data), n)
             return False
-        return True
+        else:
+            msg_group.not_enough_data.clear()
+            return True
 
     def run_optimization(self):
         # Disabling is needed since this function is not reentrant
@@ -212,9 +219,9 @@ class OWKMeans(widget.OWWidget):
         try:
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
-            if not self.check_data_size(self.k_from, self.error):
+            if not self.check_data_size(self.k_from, self.Error):
                 return
-            self.check_data_size(self.k_to, self.warning)
+            self.check_data_size(self.k_to, self.Warning)
             k_to = min(self.k_to, len(self.data))
             kmeans = KMeans(
                 init=['random', 'k-means++'][self.smart_init],
@@ -231,7 +238,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def cluster(self):
-        if not self.check_data_size(self.k, self.error):
+        if not self.check_data_size(self.k, self.Error):
             return
         self.km = KMeans(
             n_clusters=self.k,
@@ -241,8 +248,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def run(self):
-        self.error()
-        self.warning()
+        self.clear_messages()
         if not self.data:
             return
         if self.optimize_k:
@@ -250,7 +256,8 @@ class OWKMeans(widget.OWWidget):
         else:
             self.cluster()
 
-    commit = run
+    def commit(self):
+        self.run()
 
     def show_results(self):
         minimize = self.SCORING_METHODS[self.scoring][2]
@@ -350,15 +357,18 @@ class OWKMeans(widget.OWWidget):
         self.data = data
         if data is None:
             self.table_model.setRowCount(0)
+            self.send("Annotated Data", None)
+            self.send("Centroids", None)
         else:
             self.data = data
             self.run()
 
     def send_report(self):
+        k_clusters = self.k
+        if self.optimize_k and self.optimization_runs and self.selected_row() is not None:
+            k_clusters = self.optimization_runs[self.selected_row()][1].k
         self.report_items((
-            ("Number of clusters",
-             self.optimization_runs[self.selected_row()][1].k
-             if self.optimize_k else self.k),
+            ("Number of clusters", k_clusters),
             ("Optimization",
              self.optimize_k != 0 and
              "{}, {} re-runs limited to {} steps".format(

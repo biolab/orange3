@@ -208,3 +208,16 @@ and - nothing will really happen:
 
 That is, no window with a query on which channels to connect to will
 open, as the default *"Train Data"* was selected.
+
+
+*****************
+Explicit Channels
+*****************
+
+
+Some times when a widget has multiple outputs of different types, some
+of them should not be subject to this automatic default connection selection.
+An example of this is in Orange's `Logistic Regression` widget that outputs
+a suplimentary 'Coefficients' data table. Such outputs can be marked with
+and :attr:`~Orange.widgets.widget.Explicit` flag ensuring they are never
+selected for a default connection.

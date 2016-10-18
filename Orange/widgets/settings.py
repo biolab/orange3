@@ -531,6 +531,7 @@ class ContextSetting(Setting):
     # something with the attributes. Large majority does, so this greatly
     # simplifies the declaration of settings in widget at no (visible)
     # cost to those settings that don't need it
+    # TODO: exclude_metas should be disabled by default
     def __init__(self, default, not_attribute=False, required=0,
                  exclude_attributes=False, exclude_metas=True, **data):
         super().__init__(default, **data)
@@ -634,9 +635,23 @@ class ContextHandler(SettingsHandler):
         widget.current_context, is_new = \
             self.find_or_create_context(widget, *args)
         if is_new:
-            self.settings_from_widget(widget)
+            try:
+                self.settings_from_widget(widget, *args)
+            except TypeError:
+                warnings.warn("settings_from_widget in {} does not accept *args.\n"
+                              "Support for this will be dropped in Orange 3.10"
+                              .format(type(self)),
+                              DeprecationWarning)
+                self.settings_from_widget(widget)
         else:
-            self.settings_to_widget(widget)
+            try:
+                self.settings_to_widget(widget, *args)
+            except TypeError:
+                warnings.warn("settings_to_widget {} does not accept *args.\n"
+                              "Support for this will be dropped in Orange 3.10"
+                              .format(type(self)),
+                              DeprecationWarning)
+                self.settings_to_widget(widget)
 
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
@@ -658,10 +673,11 @@ class ContextHandler(SettingsHandler):
         of the context list."""
 
         # First search the contexts that were already used in this widget instance
-        best_context, best_score = self.find_context(widget.context_settings, args)
+        best_context, best_score = self.find_context(widget.context_settings, args, move_up=True)
         # If the exact data was used, reuse the context
         if best_score == self.PERFECT_MATCH:
             return best_context, False
+
         # Otherwise check if a better match is available in global_contexts
         best_context, best_score = self.find_context(self.global_contexts, args,
                                                      best_score, best_context)
@@ -674,7 +690,7 @@ class ContextHandler(SettingsHandler):
         self.add_context(widget.context_settings, context)
         return context, best_context is None
 
-    def find_context(self, known_contexts, args, best_score=0, best_context=None):
+    def find_context(self, known_contexts, args, best_score=0, best_context=None, move_up=False):
         """Search the given list of contexts and return the context
          which best matches the given args.
 
@@ -684,7 +700,8 @@ class ContextHandler(SettingsHandler):
         for i, context in enumerate(known_contexts):
             score = self.match(context, *args)
             if score == self.PERFECT_MATCH:
-                self.move_context_up(known_contexts, i)
+                if move_up:
+                    self.move_context_up(known_contexts, i)
                 return context, score
             if score > best_score:  # NO_MATCH is not OK!
                 best_context, best_score = context, score
@@ -733,7 +750,7 @@ class ContextHandler(SettingsHandler):
         self.settings_from_widget(widget)
         widget.current_context = None
 
-    def settings_to_widget(self, widget):
+    def settings_to_widget(self, widget, *args):
         """Apply context settings stored in currently opened context
         to the widget.
         """
@@ -753,7 +770,7 @@ class ContextHandler(SettingsHandler):
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
 
-    def settings_from_widget(self, widget):
+    def settings_from_widget(self, widget, *args):
         """Update the current context with the setting values from the widget.
         """
 
@@ -764,7 +781,7 @@ class ContextHandler(SettingsHandler):
         widget.storeSpecificSettings()
 
         def packer(setting, instance):
-            if hasattr(instance, setting.name):
+            if isinstance(setting, ContextSetting) and hasattr(instance, setting.name):
                 value = getattr(instance, setting.name)
                 yield setting.name, self.encode_setting(context, setting, value)
                 if hasattr(setting, "selected"):
@@ -912,13 +929,12 @@ class DomainContextHandler(ContextHandler):
                     not self._var_exists(setting, value, attrs, metas)):
                 del data[setting.name]
 
-    def settings_to_widget(self, widget):
-        super().settings_to_widget(widget)
-
+    def settings_to_widget(self, widget, domain, *args):
         context = widget.current_context
         if context is None:
             return
 
+        widget.retrieveSpecificSettings()
         excluded = set()
 
         for setting, data, instance in \
@@ -926,7 +942,10 @@ class DomainContextHandler(ContextHandler):
             if not isinstance(setting, ContextSetting) or setting.name not in data:
                 continue
 
-            value = self.decode_setting(setting, data[setting.name])
+            value = self.decode_setting(setting, data[setting.name], domain)
+            setattr(instance, setting.name, value)
+            if hasattr(setting, "selected") and setting.selected in data:
+                setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
                 excluded |= set(value)
@@ -946,16 +965,22 @@ class DomainContextHandler(ContextHandler):
         value = copy.copy(value)
         if isinstance(value, list):
             return value
-        elif isinstance(setting, ContextSetting) and isinstance(value, str):
-            if not setting.exclude_attributes and value in context.attributes:
-                return value, context.attributes[value]
-            if not setting.exclude_metas and value in context.metas:
-                return value, context.metas[value]
+        elif isinstance(setting, ContextSetting):
+            if isinstance(value, str):
+                if not setting.exclude_attributes and value in context.attributes:
+                    return value, context.attributes[value]
+                if not setting.exclude_metas and value in context.metas:
+                    return value, context.metas[value]
+            elif isinstance(value, Variable):
+                return value.name, 100 + vartype(value)
         return value, -2
 
-    @staticmethod
-    def decode_setting(setting, value):
+    def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
+            if 100 <= value[1]:
+                if not domain:
+                    raise ValueError("Cannot decode variable without domain")
+                return domain[value[0]]
             return value[0]
         else:
             return value
@@ -966,6 +991,8 @@ class DomainContextHandler(ContextHandler):
             return False
 
         attr_name, attr_type = value
+        if 100 <= attr_type:
+            attr_type -= 100
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
                 not setting.exclude_metas and
@@ -1034,6 +1061,8 @@ class DomainContextHandler(ContextHandler):
         Subclasses can override this method to checks data in alternative
         representations.
         """
+        if not isinstance(item, tuple):
+            return True
         return self._var_exists(setting, item, attrs, metas)
 
 
@@ -1080,6 +1109,13 @@ class PerfectDomainContextHandler(DomainContextHandler):
         """Same as DomainContextHandler, but also store class_vars"""
         context = super().new_context(domain, attributes, metas)
         context.class_vars = class_vars
+        return context
+
+    def clone_context(self, old_context, *args):
+        """Copy of context is always valid, since widgets are using
+        the same domain."""
+        context = self.new_context(*args)
+        context.values = copy.deepcopy(old_context.values)
         return context
 
     def encode_domain(self, domain):

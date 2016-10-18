@@ -4,7 +4,10 @@
 from unittest import TestCase
 
 from PyQt4.QtCore import Qt
-from Orange.widgets.utils.itemmodels import PyTableModel, PyListModel
+
+from Orange.data import Domain, ContinuousVariable
+from Orange.widgets.utils.itemmodels import \
+    PyTableModel, PyListModel, DomainModel
 
 
 class TestPyTableModel(TestCase):
@@ -183,3 +186,73 @@ class TestPyListModel(TestCase):
         success = model.removeRows(3, 4)
         self.assertIs(success, True)
         self.assertSequenceEqual(model, [None, None, None])
+
+
+class TestDomainModel(TestCase):
+    def test_init_with_single_section(self):
+        model = DomainModel(order=DomainModel.CLASSES)
+        self.assertEqual(model.order, (DomainModel.CLASSES, ))
+
+    def test_separators(self):
+        attrs = [ContinuousVariable(n) for n in "abg"]
+        classes = [ContinuousVariable(n) for n in "deh"]
+        metas = [ContinuousVariable(n) for n in "ijf"]
+
+        model = DomainModel()
+        sep = [model.Separator]
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(list(model), classes + sep + metas + sep + attrs)
+
+        model = DomainModel()
+        model.set_domain(Domain(attrs, [], metas))
+        self.assertEqual(list(model), metas + sep + attrs)
+
+        model = DomainModel()
+        model.set_domain(Domain([], [], metas))
+        self.assertEqual(list(model), metas)
+
+        model = DomainModel(placeholder="foo")
+        model.set_domain(Domain([], [], metas))
+        self.assertEqual(list(model), [None] + sep + metas)
+
+        model = DomainModel(placeholder="foo")
+        model.set_domain(Domain(attrs, [], metas))
+        self.assertEqual(list(model), [None] + sep + metas + sep + attrs)
+
+    def test_placeholder_placement(self):
+        model = DomainModel(placeholder="foo")
+        sep = model.Separator
+        self.assertEqual(model.order, (None, sep) + model.SEPARATED)
+
+        model = DomainModel(order=("bar", ), placeholder="foo")
+        self.assertEqual(model.order, (None, "bar"))
+
+        model = DomainModel(order=("bar", None, "baz"), placeholder="foo")
+        self.assertEqual(model.order, ("bar", None, "baz"))
+
+        model = DomainModel(order=("bar", sep, "baz"),
+                            placeholder="foo")
+        self.assertEqual(model.order, (None, sep, "bar", sep, "baz"))
+
+    def test_subparts(self):
+        attrs = [ContinuousVariable(n) for n in "abg"]
+        classes = [ContinuousVariable(n) for n in "deh"]
+        metas = [ContinuousVariable(n) for n in "ijf"]
+
+        m = DomainModel
+        sep = m.Separator
+        model = DomainModel(
+            order=(m.ATTRIBUTES | m.METAS, sep, m.CLASSES))
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(list(model), attrs + metas + [sep] + classes)
+
+        m = DomainModel
+        sep = m.Separator
+        model = DomainModel(
+            order=(m.ATTRIBUTES | m.METAS, sep, m.CLASSES),
+            alphabetical=True)
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(list(model),
+                         sorted(attrs + metas, key=lambda x: x.name) +
+                         [sep] +
+                         sorted(classes, key=lambda x: x.name))

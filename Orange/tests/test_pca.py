@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 
 from Orange.preprocess import Continuize, Normalize
-from Orange.projection import PCA, SparsePCA, RandomizedPCA, IncrementalPCA
+from Orange.projection import PCA, SparsePCA, IncrementalPCA
 from Orange.data import Table
 
 
@@ -53,7 +53,7 @@ class TestPCA(unittest.TestCase):
         self.__rnd_pca_test_helper(data, n_com=32, min_xpl_var=0.98)
 
     def __rnd_pca_test_helper(self, data, n_com, min_xpl_var):
-        rnd_pca = RandomizedPCA(n_components=n_com)
+        rnd_pca = PCA(n_components=n_com, svd_solver='randomized')
         pca_model = rnd_pca(data)
         pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
         self.assertGreaterEqual(pca_xpl_var, min_xpl_var)

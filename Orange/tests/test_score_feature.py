@@ -34,7 +34,7 @@ class FeatureScoringTest(unittest.TestCase):
 
     def test_gini(self):
         scorer = Gini()
-        correct = [0.11893, 0.10427, 0.13117, 0.14650, 0.05973]
+        correct = [0.23786, 0.20855, 0.26235, 0.29300, 0.11946]
         np.testing.assert_almost_equal([scorer(self.zoo, a) for a in range(5)],
                                        correct, decimal=5)
 

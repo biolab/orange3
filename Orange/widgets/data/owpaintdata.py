@@ -21,11 +21,12 @@ import pyqtgraph as pg
 
 import Orange.data
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.util import scale, namegen
+from Orange.widgets.widget import OWWidget, Msg
 
 
 def indices_to_mask(indices, size):
@@ -744,7 +745,7 @@ def _i(name, icon_path="icons/paintdata",
     return os.path.join(widg_path, icon_path, name)
 
 
-class OWPaintData(widget.OWWidget):
+class OWPaintData(OWWidget):
     TOOLS = [
         ("Brush", "Create multiple instances", AirBrushTool, _i("brush.svg")),
         ("Put", "Put individual instances", PutInstanceTool, _i("put.svg")),
@@ -757,7 +758,6 @@ class OWPaintData(widget.OWWidget):
 
     name = "Paint Data"
     description = "Create data by painting data points on a plane."
-    long_description = ""
     icon = "icons/PaintData.svg"
     priority = 15
     keywords = ["data", "paint", "create"]
@@ -777,6 +777,14 @@ class OWPaintData(widget.OWWidget):
     data = Setting(None, schema_only=True)
 
     graph_name = "plot"
+
+    class Warning(OWWidget.Warning):
+        no_input_variables = Msg("Input data has no variables")
+        continuous_target = Msg("Continuous target value can not be used.")
+
+    class Information(OWWidget.Information):
+        use_first_two = \
+            Msg("Paint Data uses data from the first two attributes.")
 
     def __init__(self):
         super().__init__()
@@ -816,13 +824,13 @@ class OWPaintData(widget.OWWidget):
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
         gui.lineEdit(hbox, self, "attr1", "Variable X: ",
                      controlWidth=80, orientation=Qt.Horizontal,
-                     enterPlaceholder=True, callback=self._attr_name_changed)
-        gui.separator(hbox, 18)
+                     callback=self._attr_name_changed)
+        gui.separator(hbox, 21)
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
         attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y: ",
                              controlWidth=80, orientation=Qt.Horizontal,
-                             enterPlaceholder=True,
                              callback=self._attr_name_changed)
+        gui.separator(hbox)
         gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
                      labelWidth=0,
                      callback=self.set_dimensions)
@@ -979,15 +987,13 @@ class OWPaintData(widget.OWWidget):
     def set_data(self, data):
         """Set the input_data and call reset_to_input"""
         def _check_and_set_data(data):
-            self.warning()
-            self.information()
+            self.clear_messages()
             if data is not None:
                 if not data.domain.attributes:
-                    self.warning("Input data has no variables")
+                    self.Warning.no_input_variables()
                     data = None
                 elif len(data.domain.attributes) > 2:
-                    self.information(
-                        "Paint Data uses data from the first two attributes.")
+                    self.Information.use_first_two()
             self.input_data = data
             self.btResetToInput.setDisabled(data is None)
             return data is not None
@@ -1000,7 +1006,7 @@ class OWPaintData(widget.OWWidget):
             y = next(cls for cls in data.domain.class_vars if cls.is_discrete)
         except StopIteration:
             if data.domain.class_vars:
-                self.warning("Target value is continuous and can not be used.")
+                self.Warning.continuous_target()
             self.input_classes = ["C1"]
             y = np.zeros(len(data))
         else:

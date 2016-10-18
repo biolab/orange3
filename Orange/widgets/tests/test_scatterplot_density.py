@@ -10,6 +10,8 @@ from Orange.widgets.utils.classdensity import compute_density, grid_sample
 
 
 class TestScatterplotDensity(TestCase):
+    def setUp(self):
+        np.random.seed(1)
 
     def random_data(self, n_grid, n_colors, n_data):
         mx, Mx = 200, 2000

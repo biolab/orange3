@@ -19,6 +19,7 @@ from Orange.classification import (Learner, Model, NaiveBayesLearner,
     EllipticEnvelopeLearner)
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
     RemoveNaNColumns, SklImpute, Discretize, Normalize)
+from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
 from Orange.evaluation import CrossValidation
@@ -213,7 +214,7 @@ class SklTest(unittest.TestCase):
 class ClassfierListInputTest(unittest.TestCase):
     def test_discrete(self):
         table = Table("titanic")
-        tree = Orange.classification.TreeLearner()(table)
+        tree = Orange.classification.SklTreeLearner()(table)
         strlist = [["crew", "adult", "male"],
                    ["crew", "adult", None]]
         for se in strlist: #individual examples
@@ -222,7 +223,7 @@ class ClassfierListInputTest(unittest.TestCase):
 
     def test_continuous(self):
         table = Table("iris")
-        tree = Orange.classification.TreeLearner()(table)
+        tree = Orange.classification.SklTreeLearner()(table)
         strlist = [[2, 3, 4, 5],
                    [1, 2, 3, 5]]
         for se in strlist: #individual examples
@@ -246,6 +247,9 @@ class UnknownValuesInPrediction(unittest.TestCase):
                 learner = learner()
                 if isinstance(learner, NuSVMLearner):
                     learner.params["nu"] = 0.01
+                # Skip slow tests
+                if isinstance(learner, _RuleLearner):
+                    continue
                 model = learner(table)
                 model(table)
             except TypeError:
@@ -270,7 +274,9 @@ class LearnerAccessibility(unittest.TestCase):
                 continue
 
             for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if issubclass(class_, Learner) and 'base' not in class_.__module__:
+                if (issubclass(class_, Learner) and
+                        not name.startswith('_') and
+                        'base' not in class_.__module__):
                     yield class_
 
     def test_all_learners_accessible_in_Orange_classification_namespace(self):
@@ -288,6 +294,9 @@ class LearnerAccessibility(unittest.TestCase):
             except Exception:
                 print('%s cannot be used with default parameters' % learner.__name__)
                 traceback.print_exc()
+                continue
+            # Skip slow tests
+            if isinstance(learner, _RuleLearner):
                 continue
 
             for ds in datasets:

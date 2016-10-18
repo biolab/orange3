@@ -263,7 +263,10 @@ class OWDistanceMap(widget.OWWidget):
     graph_name = "grid_widget"
 
     # Disable clustering for inputs bigger than this
-    _MaxClustering = 3000
+    if hierarchical._HAS_NN_CHAIN:
+        _MaxClustering = 25000
+    else:
+        _MaxClustering = 3000
 
     # Disable cluster leaf ordering for inputs bigger than this
     _MaxOrderedClustering = 1000
@@ -382,11 +385,11 @@ class OWDistanceMap(widget.OWWidget):
     def set_distances(self, matrix):
         self.closeContext()
         self.clear()
-        self.error(0)
+        self.error()
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
-                self.error(0, "Empty distance matrix.")
+                self.error("Empty distance matrix.")
                 matrix = None
 
         self.matrix = matrix
@@ -423,7 +426,7 @@ class OWDistanceMap(widget.OWWidget):
         else:
             item.setFlags(item.flags() | Qt.ItemIsEnabled)
 
-        self.information(1, msg)
+        self.information(msg)
 
     def set_items(self, items, axis=1):
         self.items = items
@@ -525,6 +528,7 @@ class OWDistanceMap(widget.OWWidget):
             self._update_ordering()
             self._setup_scene()
             self._update_labels()
+            self._invalidate_selection()
 
     def _update_ordering(self):
         if self.sorting == OWDistanceMap.NoOrdering:

@@ -1,11 +1,17 @@
+import weakref
+
 from math import log
 from collections import Iterable
 from itertools import chain
 from numbers import Integral
 
-import weakref
-from .variable import *
 import numpy as np
+
+from Orange.data import (
+    Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
+)
+
+__all__ = ["DomainConversion", "Domain"]
 
 
 class DomainConversion:
@@ -130,6 +136,9 @@ class Domain:
         self.anonymous = False
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
+
+        # Precompute hash, which is frequently used in domain conversions.
+        self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
 
     # noinspection PyPep8Naming
     @classmethod
@@ -422,4 +431,4 @@ class Domain:
                 self.metas == other.metas)
 
     def __hash__(self):
-        return hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
+        return self._hash

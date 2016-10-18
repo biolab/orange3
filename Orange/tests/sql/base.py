@@ -6,7 +6,8 @@ from urllib import parse
 import uuid
 
 import Orange
-from Orange.data.sql.table import SqlTable
+from Orange.data.sql.table import SqlTable, Psycopg2Backend
+from psycopg2.pool import ThreadedConnectionPool
 
 
 def sql_test(f):
@@ -148,14 +149,15 @@ class TestParseUri(unittest.TestCase):
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        SqlTable.connection_pool = \
-            psycopg2.pool.ThreadedConnectionPool(1, 1, **connection_params())
+        Psycopg2Backend.connection_pool = \
+            ThreadedConnectionPool(1, 1, **connection_params())
+        cls.backend = Psycopg2Backend(connection_params())
         cls.conn, cls.iris = create_iris()
 
     @classmethod
     def tearDownClass(cls):
-        SqlTable.connection_pool.closeall()
-        SqlTable.connection_pool = None
+        Psycopg2Backend.connection_pool.closeall()
+        Psycopg2Backend.connection_pool = None
 
     def create_sql_table(self, data, columns=None):
         table_name = self._create_sql_table(data, columns)
@@ -163,7 +165,7 @@ class PostgresTest(unittest.TestCase):
 
     @contextlib.contextmanager
     def sql_table_from_data(self, data, guess_values=True):
-        assert SqlTable.connection_pool is not None
+        assert Psycopg2Backend.connection_pool is not None
 
         table_name = self._create_sql_table(data)
         yield SqlTable(connection_params(), table_name,
@@ -190,9 +192,7 @@ class PostgresTest(unittest.TestCase):
                 for i, t in enumerate(sql_column_types)
             )
         )
-        conn = SqlTable.connection_pool.getconn()
-        cur = conn.cursor()
-        cur.execute(create_table_sql)
+        with self.backend.execute_sql_query(create_table_sql): pass
         for row in data:
             values = []
             for v, t in zip(row, sql_column_types):
@@ -209,9 +209,7 @@ class PostgresTest(unittest.TestCase):
                 table_name=table_name,
                 values=', '.join(values)
             )
-            cur.execute(insert_sql)
-        conn.commit()
-        SqlTable.connection_pool.putconn(conn)
+            with self.backend.execute_sql_query(insert_sql): pass
         return str(table_name)
 
     def _get_column_types(self, data):
@@ -225,12 +223,7 @@ class PostgresTest(unittest.TestCase):
         return column_size
 
     def drop_sql_table(self, table_name):
-        conn = SqlTable.connection_pool.getconn()
-        cur = conn.cursor()
-        cur.execute("""DROP TABLE "%s" """ % table_name)
-        conn.commit()
-        SqlTable.connection_pool.putconn(conn)
-
+        with self.backend.execute_sql_query("""DROP TABLE "%s" """ % table_name): pass
 
     def float_variable(self, size):
         return [i*.1 for i in range(size)]

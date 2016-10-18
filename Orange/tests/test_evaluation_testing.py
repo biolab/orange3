@@ -259,7 +259,7 @@ class TestCrossValidation(TestSampling):
             pass
 
         self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [NonPicklableLearner()], k=3)
+                         CrossValidation, self.iris, [NonPicklableLearner()], k=3, n_jobs=3)
 
     def test_internal_cv(self):
         # This test just covers; can't catch warnings from subprocesses
@@ -267,7 +267,7 @@ class TestCrossValidation(TestSampling):
         was_daemon = proc.daemon
         proc.daemon = True
         self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [_ParameterTuningLearner()], k=2)
+                         CrossValidation, self.iris, [_ParameterTuningLearner()], k=2, n_jobs=3)
         proc.daemon = was_daemon
 
 class TestLeaveOneOut(TestSampling):

@@ -70,6 +70,16 @@ class TestHierarchical(unittest.TestCase):
         pruned = hierarchical.prune(self.cluster, height=10)
         self.assertTrue(c.height >= 10 for c in hierarchical.preorder(pruned))
 
+        top = hierarchical.top_clusters(self.cluster, 3)
+        self.assertEqual(len(top), 3)
+
+        top = hierarchical.top_clusters(self.cluster, len(self.matrix))
+        self.assertEqual(len(top), len(self.matrix))
+        self.assertTrue(all(n.is_leaf for n in top))
+
+        top1 = hierarchical.top_clusters(self.cluster, len(self.matrix) + 1)
+        self.assertEqual(top1, top)
+
     def test_form(self):
         m = [[0, 2, 3, 4],
              [2, 0, 6, 7],
@@ -116,6 +126,14 @@ class TestHierarchical(unittest.TestCase):
         score_ordered = score(ordered)
         self.assertGreater(score_unordered, score_ordered)
         self.assertEqual(score_ordered, 21.0)
+
+    def test_table_clustering(self):
+        table = Orange.data.Table(numpy.eye(3))
+        tree = hierarchical.data_clustering(table, linkage="single")
+        numpy.testing.assert_almost_equal(tree.value.height, numpy.sqrt(2))
+
+        tree = hierarchical.feature_clustering(table)
+        numpy.testing.assert_almost_equal(tree.value.height, 0.75)
 
 
 class TestTree(unittest.TestCase):

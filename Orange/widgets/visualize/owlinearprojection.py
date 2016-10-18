@@ -102,6 +102,15 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         super().paint(painter, option, widget)
 
 
+class TextItem(pg.TextItem):
+    if not hasattr(pg.TextItem, "setAnchor"):
+        # Compatibility with pyqtgraph <= 0.9.10; in (as of yet unreleased)
+        # 0.9.11 the TextItem has a `setAnchor`, but not `updateText`
+        def setAnchor(self, anchor):
+            self.anchor = pg.Point(anchor)
+            self.updateText()
+
+
 class AxisItem(pg.GraphicsObject):
     def __init__(self, parent=None, line=None, label=None, *args):
         super().__init__(parent, *args)
@@ -119,7 +128,7 @@ class AxisItem(pg.GraphicsObject):
         self._arrow = pg.ArrowItem(parent=self, angle=180 - angle)
         self._arrow.setPos(self._spine.line().p2())
 
-        self._label = pg.TextItem(text=label, color=(10, 10, 10))
+        self._label = TextItem(text=label, color=(10, 10, 10))
         self._label.setParentItem(self)
         self._label.setPos(self._spine.line().p2())
 
@@ -165,8 +174,7 @@ class AxisItem(pg.GraphicsObject):
 
         pos = T.map(label_pos)
         self._label.setPos(pos)
-        self._label.anchor = pg.Point(*anchor)
-        self._label.updateText()
+        self._label.setAnchor(pg.Point(*anchor))
         self._label.setRotation(angle if left_quad else angle - 180)
 
 
@@ -218,7 +226,7 @@ class OWLinearProjection(widget.OWWidget):
     description = "A multi-axis projection of data onto " \
                   "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
-    priority = 420
+    priority = 240
 
     inputs = [("Data", Table, "set_data", widget.Default),
               ("Data Subset", Table, "set_subset_data")]
@@ -400,6 +408,7 @@ class OWLinearProjection(widget.OWWidget):
         self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.view.setFrameStyle(QtGui.QFrame.StyledPanel)
         self.viewbox = pg.ViewBox(enableMouse=True, enableMenu=False)
+        self.viewbox.setAspectLocked(True)
         self.viewbox.grabGesture(Qt.PinchGesture)
         self.view.setCentralItem(self.viewbox)
 
@@ -552,12 +561,12 @@ class OWLinearProjection(widget.OWWidget):
         """
         self.closeContext()
         self.clear()
-        self.information(0)
+        self.information()
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
                 data = Table(data)
             else:
-                self.information(0, "Data has been sampled")
+                self.information("Data has been sampled")
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
@@ -693,10 +702,8 @@ class OWLinearProjection(widget.OWWidget):
         shape_vars = [var for var in disc_vars
                       if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
 
-        self.warning(0)
-        if not len(cont_vars):
-            self.warning(
-                "Need at least one continuous feature to plot the data.")
+        self.warning("Plotting requires continuous features.",
+                     shown=not len(cont_vars))
 
         self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]

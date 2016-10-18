@@ -6,17 +6,17 @@ import re
 import subprocess
 import sys
 import warnings
-from tempfile import NamedTemporaryFile
 
-from os import path, unlink
 from ast import literal_eval
+from collections import OrderedDict, Counter
+from functools import lru_cache
+from itertools import chain, repeat
 from math import isnan
 from numbers import Number
-from itertools import chain, repeat
-from functools import lru_cache
-from collections import OrderedDict
-from urllib.parse import urlparse, unquote as urlunquote
-from urllib.request import urlopen
+from os import path, unlink
+from tempfile import NamedTemporaryFile
+from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
+from urllib.request import urlopen, Request
 
 import bottleneck as bn
 import numpy as np
@@ -121,9 +121,13 @@ class Flags:
             if self._RE_ALL.match(flag):
                 if '=' in flag:
                     k, v = flag.split('=', 1)
-                    self.attributes[k] = (v if Flags._RE_ATTR_UNQUOTED_STR(v) else
-                                          literal_eval(v) if v else
-                                          '')
+                    if not Flags._RE_ATTR_UNQUOTED_STR(v):
+                        try:
+                            v = literal_eval(v)
+                        except SyntaxError:
+                            # If parsing failed, treat value as string
+                            pass
+                    self.attributes[k] = v
                 else:
                     setattr(self, flag, True)
                     setattr(self, self.ALL.get(flag, ''), True)
@@ -165,39 +169,39 @@ class FileFormatMeta(Registry):
         return newcls
 
     @property
-    def formats(self):
-        return self.registry.values()
+    def formats(cls):
+        return cls.registry.values()
 
     @lru_cache(5)
-    def _ext_to_attr_if_attr2(self, attr, attr2):
+    def _ext_to_attr_if_attr2(cls, attr, attr2):
         """
         Return ``{ext: `attr`, ...}`` dict if ``cls`` has `attr2`.
         If `attr` is '', return ``{ext: cls, ...}`` instead.
         """
         return OrderedDict((ext, getattr(cls, attr, cls))
-                            for cls in self.registry.values()
-                            if hasattr(cls, attr2)
-                            for ext in getattr(cls, 'EXTENSIONS', []))
+                           for cls in cls.registry.values()
+                           if hasattr(cls, attr2)
+                           for ext in getattr(cls, 'EXTENSIONS', []))
 
     @property
-    def names(self):
-        return self._ext_to_attr_if_attr2('DESCRIPTION', '__class__')
+    def names(cls):
+        return cls._ext_to_attr_if_attr2('DESCRIPTION', '__class__')
 
     @property
-    def writers(self):
-        return self._ext_to_attr_if_attr2('', 'write_file')
+    def writers(cls):
+        return cls._ext_to_attr_if_attr2('', 'write_file')
 
     @property
-    def readers(self):
-        return self._ext_to_attr_if_attr2('', 'read')
+    def readers(cls):
+        return cls._ext_to_attr_if_attr2('', 'read')
 
     @property
-    def img_writers(self):
-        return self._ext_to_attr_if_attr2('', 'write_image')
+    def img_writers(cls):
+        return cls._ext_to_attr_if_attr2('', 'write_image')
 
     @property
-    def graph_writers(self):
-        return self._ext_to_attr_if_attr2('', 'write_graph')
+    def graph_writers(cls):
+        return cls._ext_to_attr_if_attr2('', 'write_graph')
 
 
 class FileFormat(metaclass=FileFormatMeta):
@@ -279,15 +283,30 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @classmethod
     def write_table_metadata(cls, filename, data):
-        if isinstance(filename, str) and getattr(data, 'attributes', {}):
-            with open(filename + '.metadata', 'wb') as f:
-                pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
+        if isinstance(filename, str) and hasattr(data, 'attributes'):
+            if all(isinstance(key, str) and isinstance(value, str)
+                   for key, value in data.attributes.items()):
+                with open(filename + '.metadata', 'w') as f:
+                    f.write("\n".join("{}: {}".format(*kv)
+                                      for kv in data.attributes.items()))
+            else:
+                with open(filename + '.metadata', 'wb') as f:
+                    pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
 
     @classmethod
     def set_table_metadata(cls, filename, table):
+        # pylint: disable=bare-except
         if isinstance(filename, str) and path.exists(filename + '.metadata'):
-            with open(filename + '.metadata', 'rb') as f:
-                table.attributes = pickle.load(f)
+            try:
+                with open(filename + '.metadata', 'rb') as f:
+                    table.attributes = pickle.load(f)
+            # Unpickling throws different exceptions, not just UnpickleError
+            except:
+                with open(filename + '.metadata') as f:
+                    table.attributes = OrderedDict(
+                        (k.strip(), v.strip())
+                        for k, v in (line.split(":", 1)
+                                     for line in f.readlines()))
 
     @classmethod
     def locate(cls, filename, search_dirs=('.',)):
@@ -432,8 +451,10 @@ class FileFormat(metaclass=FileFormatMeta):
                         copy=False, dtype=object, order='F')
 
         # Data may actually be longer than headers were
-        try: rowlen = data.shape[1]
-        except IndexError: pass
+        try:
+            rowlen = data.shape[1]
+        except IndexError:
+            pass
         else:
             for lst in (names, types, flags):
                 _equal_length(lst)
@@ -444,10 +465,22 @@ class FileFormat(metaclass=FileFormatMeta):
         Ycols, clses = [], []
         Wcols = []
 
+        # Rename variables if necessary
+        # Reusing across files still works if both files have same duplicates
+        name_counts = Counter(names)
+        del name_counts[""]
+        if len(name_counts) != len(names) and name_counts:
+            uses = {name: 0 for name, count in name_counts.items() if count > 1}
+            for i, name in enumerate(names):
+                if name in uses:
+                    uses[name] += 1
+                    names[i] = "{}_{}".format(name, uses[name])
+
         # Iterate through the columns
         for col in range(rowlen):
             flag = Flags(Flags.split(flags[col]))
-            if flag.i: continue
+            if flag.i:
+                continue
 
             type_flag = types and types[col].strip()
             try:
@@ -472,8 +505,10 @@ class FileFormat(metaclass=FileFormatMeta):
                     values = [float(i) for i in orig_values]
                 except ValueError:
                     for row, num in enumerate(orig_values):
-                        try: float(num)
-                        except ValueError: break
+                        try:
+                            float(num)
+                        except ValueError:
+                            break
                     raise ValueError('Non-continuous value in (1-based) '
                                      'line {}, column {}'.format(row + len(headers) + 1,
                                                                  col + 1))
@@ -495,10 +530,12 @@ class FileFormat(metaclass=FileFormatMeta):
                 if is_discrete:
                     valuemap = sorted(is_discrete)
                 else:
-                    try: values = [float(i) for i in orig_values]
+                    try:
+                        values = [float(i) for i in orig_values]
                     except ValueError:
                         tvar = TimeVariable('_')
-                        try: values = [tvar.parse(i) for i in orig_values]
+                        try:
+                            values = [tvar.parse(i) for i in orig_values]
                         except ValueError:
                             coltype = StringVariable
                         else:
@@ -509,8 +546,10 @@ class FileFormat(metaclass=FileFormatMeta):
             if valuemap:
                 # Map discrete data to ints
                 def valuemap_index(val):
-                    try: return valuemap.index(val)
-                    except ValueError: return np.nan
+                    try:
+                        return valuemap.index(val)
+                    except ValueError:
+                        return np.nan
 
                 values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
                 coltype = DiscreteVariable
@@ -549,8 +588,10 @@ class FileFormat(metaclass=FileFormatMeta):
                         column = values if data.ndim > 1 else data
                         column += offset
                         for i, val in enumerate(var.values):
-                            try: oldval = old_order.index(val)
-                            except ValueError: continue
+                            try:
+                                oldval = old_order.index(val)
+                            except ValueError:
+                                continue
                             bn.replace(column, offset + oldval, new_order.index(val))
 
             if coltype is TimeVariable:
@@ -560,8 +601,10 @@ class FileFormat(metaclass=FileFormatMeta):
 
             # Write back the changed data. This is needeed to pass the
             # correct, converted values into Table.from_numpy below
-            try: data[:, col] = values
-            except IndexError: pass
+            try:
+                data[:, col] = values
+            except IndexError:
+                pass
 
         domain = Domain(attrs, clses, metas)
 
@@ -600,7 +643,7 @@ class FileFormat(metaclass=FileFormatMeta):
         return list(chain(['weight'] * data.has_weights(),
                           (Flags.join([flag], *('{}={}'.format(*a)
                                                 for a in sorted(var.attributes.items())))
-                           for flag, var in chain(zip(repeat(''),  data.domain.attributes),
+                           for flag, var in chain(zip(repeat(''), data.domain.attributes),
                                                   zip(repeat('class'), data.domain.class_vars),
                                                   zip(repeat('meta'), data.domain.metas)))))
 
@@ -668,6 +711,14 @@ class CSVReader(FileFormat):
                 try:
                     reader = csv.reader(file, dialect=dialect)
                     data = self.data_table(reader)
+
+                    # TODO: Name can be set unconditionally when/if
+                    # self.filename will always be a string with the file name.
+                    # Currently, some tests pass StringIO instead of
+                    # the file name to a reader.
+                    if isinstance(self.filename, str):
+                        data.name = path.splitext(
+                            path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
@@ -679,7 +730,7 @@ class CSVReader(FileFormat):
                 except Exception as e:
                     error = e
                     continue
-        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error))
+        raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error)) from error
 
     @classmethod
     def write_file(cls, filename, data):
@@ -731,8 +782,10 @@ class BasketReader(FileFormat):
         classes = constr_vars(class_indices)
         meta_attrs = constr_vars(meta_indices)
         domain = Domain(attrs, classes, meta_attrs)
-        return Table.from_numpy(
+        table = Table.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
+        table.name = path.splitext(path.split(self.filename)[-1])[0]
+        return table
 
 
 class ExcelReader(FileFormat):
@@ -767,6 +820,9 @@ class ExcelReader(FileFormat):
                              for col in range(first_col, row_len)]
                             for row in range(first_row, ss.nrows)])
             table = self.data_table(cells)
+            table.name = path.splitext(path.split(self.filename)[-1])[0]
+            if self.sheet:
+                table.name = '-'.join((table.name, self.sheet))
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
@@ -791,10 +847,17 @@ class DotReader(FileFormat):
 
 
 class UrlReader(FileFormat):
+    @staticmethod
+    def urlopen(url):
+        req = Request(
+            url,
+            # Avoid 403 error with servers that dislike scrapers
+            headers={'User-Agent': 'Mozilla/5.0 (X11; Linux) Gecko/20100101 Firefox/'})
+        return urlopen(req, timeout=10)
+
     def read(self):
         self.filename = self._trim(self._resolve_redirects(self.filename))
-
-        with contextlib.closing(urlopen(self.filename, timeout=10)) as response:
+        with contextlib.closing(self.urlopen(self.filename)) as response:
             name = self._suggest_filename(response.headers['content-disposition'])
             with NamedTemporaryFile(suffix=name, delete=False) as f:
                 f.write(response.read())
@@ -810,12 +873,14 @@ class UrlReader(FileFormat):
 
     def _resolve_redirects(self, url):
         # Resolve (potential) redirects to a final URL
-        with contextlib.closing(urlopen(url, timeout=10)) as response:
+        with contextlib.closing(self.urlopen(url)) as response:
             return response.url
 
-    def _trim(self, url):
+    @classmethod
+    def _trim(cls, url):
         URL_TRIMMERS = (
-            self._trim_googlesheet_url,
+            cls._trim_googlesheet,
+            cls._trim_dropbox,
         )
         for trim in URL_TRIMMERS:
             try:
@@ -826,11 +891,12 @@ class UrlReader(FileFormat):
                 break
         return url
 
-    def _trim_googlesheet_url(self, url):
+    @staticmethod
+    def _trim_googlesheet(url):
         match = re.match(r'(?:https?://)?(?:www\.)?'
-                         'docs\.google\.com/spreadsheets/d/'
-                         '(?P<workbook_id>[-\w_]+)'
-                         '(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
+                         r'docs\.google\.com/spreadsheets/d/'
+                         r'(?P<workbook_id>[-\w_]+)'
+                         r'(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
                          url, re.IGNORECASE)
         try:
             workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
@@ -842,6 +908,13 @@ class UrlReader(FileFormat):
         if sheet:
             url += '&gid=' + sheet
         return url
+
+    @staticmethod
+    def _trim_dropbox(url):
+        parts = urlsplit(url)
+        if not parts.netloc.endswith('dropbox.com'):
+            raise ValueError
+        return urlunsplit(parts._replace(query='dl=1'))
 
     def _suggest_filename(self, content_disposition):
         default_name = re.sub(r'[\\:/]', '_', urlparse(self.filename).path)

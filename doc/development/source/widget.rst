@@ -113,6 +113,13 @@ Input/Output flags:
    can be connected to any input which can accept a subtype of the
    declared output type.
 
+.. attribute:: Explicit
+
+   Outputs with an explicit flag are never selected (auto connected) among
+   candidate connections. Connections are only established when there is
+   one unambiguous connection possible or through a dedicated 'Links'
+   dialog.
+
 .. autoclass:: InputSignal
 
 .. autoclass:: OutputSignal

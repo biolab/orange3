@@ -1,16 +1,19 @@
-import re
-from numbers import Number, Real, Integral
-from math import isnan, floor, sqrt
-import numpy as np
-from pickle import PickleError
-import copy
-
 import collections
+import re
+
 from datetime import datetime, timedelta, timezone
+from numbers import Number, Real, Integral
+from math import isnan, floor
+from pickle import PickleError
 
-from . import _variable
+import numpy as np
 
+from Orange.data import _variable
 from Orange.util import Registry, color_to_hex, hex_to_color
+
+__all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
+           "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
+           "StringVariable", "TimeVariable"]
 
 
 # For storing unknowns
@@ -36,7 +39,8 @@ def is_discrete_values(values):
     ----
     Assumes consistent type of items of `values`.
     """
-    if not len(values): return None
+    if not len(values):
+        return None
     # If the first few values are, or can be converted to, floats,
     # the type is numeric
     try:
@@ -62,14 +66,16 @@ def is_discrete_values(values):
                   not (isinstance(i, Number) and np.isnan(i)))}
 
     # All NaNs => indeterminate
-    if not unique: return None
+    if not unique:
+        return None
 
     # Strings with |values| < max_unique
     if not is_numeric:
         return unique
 
     # Handle numbers
-    try: unique_float = set(map(float, unique))
+    try:
+        unique_float = set(map(float, unique))
     except ValueError:
         # Converting all the values to floats resulted in an error.
         # Since the values have enough unique values, they are probably
@@ -421,7 +427,7 @@ class Variable(metaclass=VariableMeta):
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
     def copy(self, compute_value):
-        var = Variable(self.name, compute_value)
+        var = type(self)(self.name, compute_value=compute_value)
         var.attributes = dict(self.attributes)
         return var
 
@@ -471,10 +477,11 @@ class ContinuousVariable(Variable):
     @property
     def colors(self):
         if self._colors is None:
-            if "colors" in self.attributes:
+            try:
                 col1, col2, black = self.attributes["colors"]
                 self._colors = (hex_to_color(col1), hex_to_color(col2), black)
-            else:
+            except (KeyError, ValueError):
+                # Stored colors were not available or invalid, use defaults
                 self._colors = ((0, 0, 255), (255, 255, 0), False)
         return self._colors
 
@@ -517,7 +524,7 @@ class ContinuousVariable(Variable):
     str_val = repr_val
 
     def copy(self, compute_value=None):
-        var = ContinuousVariable(self.name, self.number_of_decimals, compute_value)
+        var = type(self)(self.name, self.number_of_decimals, compute_value)
         var.attributes = dict(self.attributes)
         return var
 
@@ -879,12 +886,12 @@ class TimeVariable(ContinuousVariable):
     ]
     # The regex that matches all above formats
     REGEX = (r'^('
-             '\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
-             '\d{1,4}\d{2}\d{2}(T?\d{2}\d{2}\d{2}([+-]\d{4})?)?|'
-             '\d{2}:\d{2}(:\d{2}(\.\d+)?)?|'
-             '\d{2}\d{2}\d{2}\.\d+|'
-             '\d{1,4}(-?\d{2,3})?'
-             ')$')
+             r'\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
+             r'\d{1,4}\d{2}\d{2}(T?\d{2}\d{2}\d{2}([+-]\d{4})?)?|'
+             r'\d{2}:\d{2}(:\d{2}(\.\d+)?)?|'
+             r'\d{2}\d{2}\d{2}\.\d+|'
+             r'\d{1,4}(-?\d{2,3})?'
+             r')$')
     _matches_iso_format = re.compile(REGEX).match
 
     # UTC offset and associated timezone. If parsed datetime values provide an
@@ -897,6 +904,12 @@ class TimeVariable(ContinuousVariable):
         super().__init__(*args, **kwargs)
         self.have_date = 0
         self.have_time = 0
+
+    def copy(self, compute_value=None):
+        copy = super().copy(compute_value=compute_value)
+        copy.have_date = self.have_date
+        copy.have_time = self.have_time
+        return copy
 
     @staticmethod
     def _tzre_sub(s, _subtz=re.compile(r'([+-])(\d\d):(\d\d)$').sub):
@@ -982,11 +995,13 @@ class TimeVariable(ContinuousVariable):
         # Convert time to UTC timezone. In dates without timezone,
         # localtime is assumed. See also:
         # https://docs.python.org/3.4/library/datetime.html#datetime.datetime.timestamp
-        if dt.tzinfo: dt -= dt.utcoffset()
+        if dt.tzinfo:
+            dt -= dt.utcoffset()
         dt = dt.replace(tzinfo=timezone.utc)
 
         # Unix epoch is the origin, older dates are negative
-        try: return dt.timestamp()
+        try:
+            return dt.timestamp()
         except OverflowError:
             return -(self.UNIX_EPOCH - dt).total_seconds()
 

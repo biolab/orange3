@@ -13,6 +13,7 @@ import optparse
 import pickle
 import shlex
 import shutil
+from unittest.mock import patch
 
 import pkg_resources
 
@@ -23,11 +24,11 @@ from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.application.outputview import TextStream, ExceptHook
+from Orange.canvas.application.errorreporting import ErrorReporting
 
 from Orange.canvas.gui.splashscreen import SplashScreen
 from Orange.canvas.config import cache_dir
 from Orange.canvas import config
-from Orange.canvas.utils.redirect import redirect_stdout, redirect_stderr
 from Orange.canvas.utils.qtcompat import QSettings
 
 from Orange.canvas.registry import qt
@@ -35,14 +36,6 @@ from Orange.canvas.registry import WidgetRegistry, set_global_registry
 from Orange.canvas.registry import cache
 
 log = logging.getLogger(__name__)
-
-
-def running_in_ipython():
-    try:
-        __IPYTHON__
-        return True
-    except NameError:
-        return False
 
 
 # Allow termination with CTRL + C
@@ -118,9 +111,6 @@ def main(argv=None):
     parser.add_option("-l", "--log-level",
                       help="Logging level (0, 1, 2, 3, 4)",
                       type="int", default=1)
-    parser.add_option("--no-redirect",
-                      action="store_true",
-                      help="Do not redirect stdout/err to canvas output view.")
     parser.add_option("--style",
                       help="QStyle to use",
                       type="str", default=None)
@@ -335,42 +325,6 @@ def main(argv=None):
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
 
-    stdout_redirect = \
-        settings.value("output/redirect-stdout", True, type=bool)
-
-    stderr_redirect = \
-        settings.value("output/redirect-stderr", True, type=bool)
-
-    # cmd line option overrides settings / no redirect is possible
-    # under ipython
-    if options.no_redirect or running_in_ipython():
-        stderr_redirect = stdout_redirect = False
-
-    output_view = canvas_window.output_view()
-
-    if stdout_redirect:
-        stdout = TextStream()
-        stdout.stream.connect(output_view.write)
-        if sys.stdout is not None:
-            # also connect to original fd
-            stdout.stream.connect(sys.stdout.write)
-    else:
-        stdout = sys.stdout
-
-    if stderr_redirect:
-        error_writer = output_view.formated(color=Qt.red)
-        stderr = TextStream()
-        stderr.stream.connect(error_writer.write)
-        if sys.stderr is not None:
-            # also connect to original fd
-            stderr.stream.connect(sys.stderr.write)
-    else:
-        stderr = sys.stderr
-
-    if stderr_redirect:
-        sys.excepthook = ExceptHook()
-        sys.excepthook.handledException.connect(output_view.parent().show)
-
     # If run for the first time, open a browser tab with a survey
     show_survey = settings.value("startup/show-survey", True, type=bool)
     if show_survey:
@@ -395,12 +349,32 @@ def main(argv=None):
         question.finished.connect(handle_response)
         question.show()
 
-    with redirect_stdout(stdout), redirect_stderr(stderr):
-        log.info("Entering main event loop.")
-        try:
+    # Tee stdout and stderr into Output dock
+    log_view = canvas_window.log_view()
+
+    stdout = TextStream()
+    stdout.stream.connect(log_view.write)
+    if sys.stdout:
+        stdout.stream.connect(sys.stdout.write)
+        stdout.flushed.connect(sys.stdout.flush)
+
+    stderr = TextStream()
+    error_writer = log_view.formated(color=Qt.red)
+    stderr.stream.connect(error_writer.write)
+    if sys.stderr:
+        stderr.stream.connect(sys.stderr.write)
+        stderr.flushed.connect(sys.stderr.flush)
+
+    log.info("Entering main event loop.")
+    try:
+        with patch('sys.excepthook',
+                   ExceptHook(stream=stderr, canvas=canvas_window,
+                              handledException=ErrorReporting.handle_exception)),\
+             patch('sys.stderr', stderr),\
+             patch('sys.stdout', stdout):
             status = app.exec_()
-        except BaseException:
-            log.error("Error in main event loop.", exc_info=True)
+    except BaseException:
+        log.error("Error in main event loop.", exc_info=True)
 
     canvas_window.deleteLater()
     app.processEvents()

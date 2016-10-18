@@ -2,9 +2,10 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.visualize.owscatterplot import OWScatterPlot
+from Orange.widgets.visualize.owscatterplot import \
+    OWScatterPlot, ScatterPlotVizRank
 
 
 class TestOWScatterPlot(WidgetTest):
@@ -17,16 +18,15 @@ class TestOWScatterPlot(WidgetTest):
         self.send_signal("Data", self.iris)
 
         # First two attribute should be selected as x an y
-        self.assertEqual(self.widget.attr_x, self.iris.domain[0].name)
-        self.assertEqual(self.widget.attr_y, self.iris.domain[1].name)
+        self.assertEqual(self.widget.attr_x, self.iris.domain[0])
+        self.assertEqual(self.widget.attr_y, self.iris.domain[1])
 
         # Class var should be selected as color
-        self.assertEqual(self.widget.graph.attr_color,
-                         self.iris.domain.class_var.name)
+        self.assertIs(self.widget.graph.attr_color, self.iris.domain.class_var)
 
         # Change which attributes are displayed
-        self.widget.attr_x = self.iris.domain[2].name
-        self.widget.attr_y = self.iris.domain[3].name
+        self.widget.attr_x = self.iris.domain[2]
+        self.widget.attr_y = self.iris.domain[3]
 
         # Disconnect the data
         self.send_signal("Data", None)
@@ -43,5 +43,28 @@ class TestOWScatterPlot(WidgetTest):
         # same attributes that were used last time should be selected
         self.send_signal("Data", self.iris)
 
-        self.assertEqual(self.widget.attr_x, self.iris.domain[2].name)
-        self.assertEqual(self.widget.attr_y, self.iris.domain[3].name)
+        self.assertIs(self.widget.attr_x, self.iris.domain[2])
+        self.assertIs(self.widget.attr_y, self.iris.domain[3])
+
+    def test_score_heuristics(self):
+        domain = Domain([ContinuousVariable(c) for c in "abcd"],
+                        DiscreteVariable("c", values="ab"))
+        a = np.arange(10).reshape((10, 1))
+        data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
+        self.send_signal("Data", data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        self.assertEqual([x.name for x in vizrank.score_heuristic()],
+                         list("abcd"))
+
+    def test_optional_combos(self):
+        domain = self.iris.domain
+        d1 = Domain(domain.attributes[:2], domain.class_var,
+                   [domain.attributes[2]])
+        t1 = Table(d1, self.iris)
+        self.send_signal("Data", t1)
+        self.widget.graph.attr_size = domain.attributes[2]
+
+        d2 = Domain(domain.attributes[:2], domain.class_var,
+                    [domain.attributes[3]])
+        t2 = Table(d2, self.iris)
+        self.send_signal("Data", t2)

@@ -37,7 +37,7 @@ class OWVennDiagram(widget.OWWidget):
     description = "A graphical visualization of the overlap of data instances " \
                   "from a collection of input data sets."
     icon = "icons/VennDiagram.svg"
-    priority = 410
+    priority = 280
 
     inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]
     outputs = [("Selected Data", Orange.data.Table)]
@@ -135,7 +135,7 @@ class OWVennDiagram(widget.OWWidget):
 
     @check_sql_input
     def setData(self, data, key=None):
-        self.error(0)
+        self.error()
         if not self._inputUpdate:
             # Store hints only on the first setData call.
             self._storeHints()
@@ -152,7 +152,7 @@ class OWVennDiagram(widget.OWWidget):
             # TODO: Allow setting more them 5 inputs and let the user
             # select the 5 to display.
             if len(self.data) == 5:
-                self.error(0, "Can only take 5 inputs.")
+                self.error("Venn diagram accepts at most five data sets.")
                 return
             # Add a new input
             self._add(key, data)
@@ -259,7 +259,7 @@ class OWVennDiagram(widget.OWWidget):
         index = list(self.data.keys()).index(key)
 
         # Clear possible warnings.
-        self.warning(index)
+        self.warning()
 
         self._setAttributes(index, None)
 
@@ -437,7 +437,7 @@ class OWVennDiagram(widget.OWWidget):
 
     def _updateInfo(self):
         # Clear all warnings
-        self.warning(list(range(5)))
+        self.warning()
 
         if not len(self.data):
             self.info.setText("No data on input\n")
@@ -446,10 +446,15 @@ class OWVennDiagram(widget.OWWidget):
                 "{0} data sets on input\n".format(len(self.data)))
 
         if self.useidentifiers:
-            for i, key in enumerate(self.data):
-                if not source_attributes(self.data[key].table.domain):
-                    self.warning(i, "Data set #{} has no suitable identifiers."
-                                 .format(i + 1))
+            no_idx = ["#{}".format(i + 1)
+                      for i, key in enumerate(self.data)
+                      if not source_attributes(self.data[key].table.domain)]
+            if len(no_idx) == 1:
+                self.warning("Data set {} has no suitable identifiers."
+                             .format(no_idx[0]))
+            elif len(no_idx) > 1:
+                self.warning("Data sets {} and {} have no suitable identifiers."
+                             .format(", ".join(no_idx[:-1]), no_idx[-1]))
 
     def _on_selectionChanged(self):
         if self._updating:
@@ -1063,6 +1068,7 @@ class GraphicsTextEdit(QGraphicsTextItem):
 
     def __init__(self, *args, **kwargs):
         super(GraphicsTextEdit, self).__init__(*args, **kwargs)
+        self.setCursor(Qt.IBeamCursor)
         self.setTabChangesFocus(True)
         self._edittrigger = GraphicsTextEdit.DoubleClicked
         self._editing = False

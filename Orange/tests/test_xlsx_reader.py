@@ -6,7 +6,7 @@ import os
 
 import numpy as np
 
-from Orange.data import io, ContinuousVariable, DiscreteVariable, StringVariable
+from Orange.data import io, ContinuousVariable, DiscreteVariable
 
 
 def get_dataset(name):
@@ -31,6 +31,7 @@ class TestExcelHeader0(unittest.TestCase):
                                        np.array([[0.1, 0.5, 0.1, 21],
                                                  [0.2, 0.1, 2.5, 123],
                                                  [0, 0, 0, 0]]))
+        self.assertEqual(table.name, 'header_0')
 
 
 class TextExcelSheets(unittest.TestCase):
@@ -45,6 +46,7 @@ class TextExcelSheets(unittest.TestCase):
         self.reader.select_sheet("my_sheet")
         table = self.reader.read()
         self.assertEqual(len(table.domain.attributes), 4)
+        self.assertEqual(table.name, 'header_0_sheet-my_sheet')
 
 
 class TestExcelHeader1(unittest.TestCase):
@@ -94,6 +96,7 @@ class TestExcelHeader1(unittest.TestCase):
         np.testing.assert_almost_equal(
             table.metas[:, 1], np.array([0, 1, 2, 3] * 5 + [0, 1, 2]))
 
+
 class TestExcelHeader3(unittest.TestCase):
     def test_read(self):
         table = read_file("header_3.xlsx")
@@ -129,6 +132,7 @@ class TestExcelHeader3(unittest.TestCase):
             table.metas[:, 1], np.array([0, 1, 2, 3] * 5 + [0, 1, 2]))
         np.testing.assert_equal(
             table.metas[:, 2], np.array(list("abcdefghijklmnopqrstuvw")))
+
 
 if __name__ == "__main__":
     unittest.main()

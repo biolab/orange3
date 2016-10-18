@@ -43,6 +43,7 @@ Data
    widgets/data/preprocess
    widgets/data/purgedomain
    widgets/data/rank
+   widgets/data/color
 
 
 Visualize
@@ -55,11 +56,15 @@ Visualize
    widgets/visualize/distributions
    widgets/visualize/heatmap
    widgets/visualize/scatterplot
-   widgets/visualize/venn-diagram
+   widgets/visualize/venndiagram
    widgets/visualize/linearprojection
-   widgets/visualize/modelmapprojectionrank
    widgets/visualize/scattermap
    widgets/visualize/sievediagram
+   widgets/visualize/pythagoreantree
+   widgets/visualize/pythagoreanforest
+   widgets/visualize/cn2ruleviewer
+   widgets/visualize/mosaicdisplay
+   widgets/visualize/silhouetteplot
 
 
 Classify
@@ -78,6 +83,8 @@ Classify
    widgets/classify/randomforest
    widgets/classify/saveclassifier
    widgets/classify/svm
+   widgets/classify/cn2ruleinduction
+   widgets/classify/adaboost
 
 
 Regression
@@ -91,6 +98,9 @@ Regression
    widgets/regression/nearestneighbors
    widgets/regression/stochasticgradient
    widgets/regression/svmregression
+   widgets/regression/regressiontree
+   widgets/regression/regressiontreeviewer
+   widgets/regression/randomforestregression
 
 
 Unsupervised
@@ -103,10 +113,14 @@ Unsupervised
    widgets/unsupervised/correspondenceanalysis
    widgets/unsupervised/distancemap
    widgets/unsupervised/distances
+   widgets/unsupervised/distancematrix
+   widgets/unsupervised/distancetransformation
+   widgets/unsupervised/distancefile
+   widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeansclustering
    widgets/unsupervised/mds
-
+   
 
 Evaluation
 ----------

@@ -1,12 +1,12 @@
 from itertools import chain
-from PyQt4.QtGui import QLayout
+from PyQt4.QtGui import QLayout, QSizePolicy
 from PyQt4.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearRegressionLearner,
     RidgeRegressionLearner, ElasticNetLearner)
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
@@ -19,7 +19,7 @@ class OWLinearRegression(OWBaseLearner):
 
     LEARNER = LinearRegressionLearner
 
-    outputs = [("Coefficients", Table)]
+    outputs = [("Coefficients", Table, widget.Explicit)]
 
     #: Types
     REGULARIZATION_TYPES = ["No regularization", "Ridge regression (L2)",
@@ -29,7 +29,7 @@ class OWLinearRegression(OWBaseLearner):
     ridge = settings.Setting(False)
     reg_type = settings.Setting(OLS)
     alpha_index = settings.Setting(0)
-    l1_ratio = settings.Setting(0.5)
+    l2_ratio = settings.Setting(0.5)
     autosend = settings.Setting(True)
 
     want_main_area = False
@@ -65,52 +65,44 @@ class OWLinearRegression(OWBaseLearner):
         gui.widgetLabel(box4, "Elastic net mixing:")
         box5 = gui.hBox(box4)
         gui.widgetLabel(box5, "L1")
-        self.l1_ratio_slider = gui.hSlider(
-            box5, self, "l1_ratio", minValue=0.01, maxValue=1,
-            intOnly=False, ticks=0.1, createLabel=False,
-            step=0.01, callback=self._l1_ratio_changed)
+        self.l2_ratio_slider = gui.hSlider(
+            box5, self, "l2_ratio", minValue=0.01, maxValue=0.99,
+            intOnly=False, ticks=0.1, createLabel=False, width=120,
+            step=0.01, callback=self._l2_ratio_changed)
         gui.widgetLabel(box5, "L2")
+        self.l2_ratio_label = gui.widgetLabel(
+            box4, "",
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        self.l2_ratio_label.setAlignment(Qt.AlignCenter)
 
-    def add_bottom_buttons(self):
         box5 = gui.hBox(self.controlArea)
         box5.layout().setAlignment(Qt.AlignCenter)
-        self.l1_ratio_label = gui.widgetLabel(box5, "")
-        self._set_l1_ratio_label()
-
-        auto_commit = gui.auto_commit(
-                self.controlArea, self, "autosend", "Apply")
-        auto_commit.layout().insertWidget(0, self.report_button)
-        auto_commit.layout().insertSpacing(1, 20)
-        self.report_button.setMinimumWidth(150)
-
+        self._set_l2_ratio_label()
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
         self.alpha_slider.setEnabled(self.reg_type != self.OLS)
-        self.l1_ratio_slider.setEnabled(self.reg_type == self.Elastic)
+        self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
 
     def handleNewSignals(self):
-        self.commit()
+        self.apply()
 
     def _reg_type_changed(self):
         self.alpha_slider.setEnabled(self.reg_type != self.OLS)
-        self.l1_ratio_slider.setEnabled(self.reg_type == self.Elastic)
-        self.commit()
+        self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
+        self.apply()
 
     def _set_alpha_label(self):
         self.alpha_label.setText("Alpha: {}".format(self.alphas[self.alpha_index]))
 
     def _alpha_changed(self):
         self._set_alpha_label()
-        self.commit()
+        self.apply()
 
-    def _set_l1_ratio_label(self):
-        self.l1_ratio_label.setText(
-            "{:.{}f} : {:.{}f}".format(self.l1_ratio, 2, 1 - self.l1_ratio, 2))
+    def _set_l2_ratio_label(self):
+        self.l2_ratio_label.setText(
+            "{:.{}f} : {:.{}f}".format(1 - self.l2_ratio, 2, self.l2_ratio, 2))
 
-    def _l1_ratio_changed(self):
-        self._set_l1_ratio_label()
-        self.commit()
-
-    def commit(self):
+    def _l2_ratio_changed(self):
+        self._set_l2_ratio_label()
         self.apply()
 
     def create_learner(self):
@@ -125,7 +117,7 @@ class OWLinearRegression(OWBaseLearner):
             learner = LassoRegressionLearner(alpha=alpha, **args)
         elif self.reg_type == OWLinearRegression.Elastic:
             learner = ElasticNetLearner(alpha=alpha,
-                                        l1_ratio=self.l1_ratio, **args)
+                                        l1_ratio=1 - self.l2_ratio, **args)
         return learner
 
     def update_model(self):
@@ -154,8 +146,8 @@ class OWLinearRegression(OWBaseLearner):
             regularization = ("Elastic Net Regression with α={}"
                               " and L1:L2 ratio of {}:{}"
                               .format(self.alphas[self.alpha_index],
-                                      self.l1_ratio,
-                                      1 - self.l1_ratio))
+                                      self.l2_ratio,
+                                      1 - self.l2_ratio))
         return ("Regularization", regularization),
 
 

@@ -337,10 +337,17 @@ class Results:
                           "subprocesses (e.g. parameter tuning with internal "
                           "cross-validation). Setting n_jobs=1", OrangeWarning)
 
-        # Workaround for NumPy locking on Macintosh.
+        # Workaround for NumPy locking on Macintosh and Ubuntu 14.04 LTS
+        # May be removed once offending libs and OSes are nowhere to be found.
         # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
         mp_ctx = mp.get_context(
-            'forkserver' if sys.platform == 'darwin' and n_jobs > 1 else None)
+            'forkserver' if sys.platform.startswith(('darwin', 'linux')) and n_jobs > 1 else None)
+
+        if n_jobs > 1 and mp_ctx.get_start_method() != 'fork' and train_data.X.size < 20e3:
+            n_jobs = 1
+            warnings.warn("Working with small-enough data; single-threaded "
+                          "sequential excecution will (probably) be faster. "
+                          "Setting n_jobs=1", OrangeWarning)
 
         try:
             # Use context-adapted Queue or just the regular Queue if no
@@ -496,7 +503,7 @@ class CrossValidation(Results):
     """
     def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
                  store_models=False, preprocessor=None, callback=None, warnings=None,
-                 n_jobs=-1):
+                 n_jobs=1):
         self.k = k
         self.stratified = stratified
         self.random_state = random_state
@@ -512,10 +519,11 @@ class CrossValidation(Results):
     def setup_indices(self, train_data, test_data):
         self.indices = None
         if self.stratified and test_data.domain.has_discrete_class:
-            self.indices = skl_cross_validation.StratifiedKFold(
-                test_data.Y, self.k, shuffle=True, random_state=self.random_state
-            )
-            if any(len(train) == 0 or len(test) == 0 for train, test in self.indices):
+            try:
+                self.indices = skl_cross_validation.StratifiedKFold(
+                    test_data.Y, self.k, shuffle=True, random_state=self.random_state
+                )
+            except ValueError:
                 self.warnings.append("Using non-stratified sampling.")
                 self.indices = None
         if self.indices is None:
@@ -529,7 +537,7 @@ class LeaveOneOut(Results):
     score_by_folds = False
 
     def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None, n_jobs=-1):
+                 preprocessor=None, callback=None, n_jobs=1):
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
                          callback=callback, n_jobs=n_jobs)
@@ -547,7 +555,7 @@ class LeaveOneOut(Results):
 class ShuffleSplit(Results):
     def __init__(self, data, learners, n_resamples=10, train_size=None,
                  test_size=0.1, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, n_jobs=-1):
+                 store_models=False, preprocessor=None, callback=None, n_jobs=1):
         self.n_resamples = n_resamples
         self.train_size = train_size
         self.test_size = test_size
@@ -576,7 +584,7 @@ class TestOnTestData(Results):
     Test on a separate test data set.
     """
     def __init__(self, train_data, test_data, learners, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, n_jobs=-1):
+                 store_models=False, preprocessor=None, callback=None, n_jobs=1):
         super().__init__(test_data, train_data=train_data, learners=learners,
                          store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
@@ -597,7 +605,7 @@ class TestOnTrainingData(TestOnTestData):
     """
 
     def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None, n_jobs=-1):
+                 preprocessor=None, callback=None, n_jobs=1):
 
         if preprocessor is not None:
             data = preprocessor(data)

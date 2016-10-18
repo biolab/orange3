@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-A data set.
+   A data set.
 
 **Outputs**:
 
@@ -21,26 +21,25 @@ A data set.
 Description
 -----------
 
-**Save Data** widget considers a data set provided in the input channel
-and saves it to a data file with the specified name. It can save the
-data as both tab-delimited and comma-separated files.
+The **Save Data** widget considers a data set provided in the input channel
+and saves it to a data file with a specified name. It can save the
+data as a tab-delimited or a comma-separated file.
 
 The widget does not save the data every time it receives a new signal in
 the input as this would constantly (and, mostly, inadvertently)
 overwrite the file. Instead, the data is saved only after a new file
-name is set or the user pushes *Save* button.
+name is set or the user pushes the *Save* button.
 
 .. figure:: images/Save-stamped.png
 
-1. Choose file format
-2. Save by overwriting the existing file
-3. *Save as* to create a new file
+1. Save by overwriting the existing file.
+2. *Save as* to create a new file. 
 
 Example
 -------
 
-In the workflow below we load the data into a :doc:`Scatter Plot<../visualize/scatterplot>` widget,
-where we select a subset of the data instances and push them to the
+In the workflow below, we used the *Zoo* data set. We loaded the data into the :doc:`Scatter Plot <../visualize/scatterplot>` widget, with which
+we selected a subset of data instances and pushed them to the
 **Save Data** widget to store them in a file.
 
 .. figure:: images/Save-Workflow.png

@@ -1,3 +1,4 @@
+import bottleneck as bn
 import numpy
 from PyQt4.QtCore import Qt
 from scipy.sparse import issparse
@@ -5,8 +6,9 @@ from scipy.sparse import issparse
 import Orange.data
 import Orange.misc
 from Orange import distance
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import OWWidget, Msg
 
 METRICS = [
     distance.Euclidean,
@@ -21,7 +23,7 @@ METRICS = [
 ]
 
 
-class OWDistances(widget.OWWidget):
+class OWDistances(OWWidget):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
@@ -35,6 +37,15 @@ class OWDistances(widget.OWWidget):
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
+
+    class Error(OWWidget.Error):
+        no_continuous_features = Msg("No continuous features")
+        dense_metric_sparse_data = Msg("Selected metric does not support sparse data")
+        empty_data = Msg("Empty data (shape = {})")
+
+    class Warning(OWWidget.Warning):
+        ignoring_discrete = Msg("Ignoring discrete features")
+        imputing_data = Msg("Imputing missing values")
 
     def __init__(self):
         super().__init__()
@@ -79,47 +90,51 @@ class OWDistances(widget.OWWidget):
     def _checksparse(self):
         # Check the current metric for input data compatibility and set/clear
         # appropriate informational GUI state
-        metric = METRICS[self.metric_idx]
-        data = self.data
-        if data is not None and issparse(data.X) and \
-                not metric.supports_sparse:
-            self.error(2, "Selected metric does not support sparse data")
-        else:
-            self.error(2)
+        self.Error.dense_metric_sparse_data(
+            shown=self.data is not None and issparse(self.data.X) and
+            not METRICS[self.metric_idx].supports_sparse)
 
     def commit(self):
-        self.warning(1)
-        self.error(1)
         metric = METRICS[self.metric_idx]
-        distances = None
-        data = self.data
-        if data is not None and issparse(data.X) and \
-                not metric.supports_sparse:
-            data = None
+        self.send("Distances", self.compute_distances(metric, self.data))
 
-        if data is not None:
-            if isinstance(metric, distance.MahalanobisDistance):
-                metric.fit(self.data, axis=1-self.axis)
+    def compute_distances(self, metric, data):
+        if data is None:
+            return
 
-            if not any(a.is_continuous for a in self.data.domain.attributes):
-                self.error(1, "No continuous features")
-                data = None
-            elif any(a.is_discrete for a in self.data.domain.attributes) or \
-                    (not issparse(self.data.X) and numpy.any(numpy.isnan(self.data.X))):
-                data = distance._preprocess(self.data)
-                if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
-                    self.warning(1, "Ignoring discrete features")
-            else:
-                data = self.data
+        self.clear_messages()
 
-        if data is not None:
-            shape = (len(data), len(data.domain.attributes))
-            if numpy.product(shape) == 0:
-                self.error(1, "Empty data (shape == {})".format(shape))
-            else:
-                distances = metric(data, data, 1 - self.axis, impute=True)
+        if issparse(data.X) and not metric.supports_sparse:
+            self.Error.dense_metric_sparse_data()
+            return
 
-        self.send("Distances", distances)
+        if not any(a.is_continuous for a in data.domain.attributes):
+            self.Error.no_continuous_features()
+            return
+
+        needs_preprocessing = False
+        if any(a.is_discrete for a in self.data.domain.attributes):
+            self.Warning.ignoring_discrete()
+            needs_preprocessing = True
+
+        if not issparse(data.X) and bn.anynan(data.X):
+            self.Warning.imputing_data()
+            needs_preprocessing = True
+
+        if needs_preprocessing:
+            # removes discrete features and imputes data
+            data = distance._preprocess(data)
+
+        if not data.X.size:
+            self.Error.empty_data(data.X.shape)
+            return
+
+        if isinstance(metric, distance.MahalanobisDistance):
+            # Mahalanobis distance has to be trained before it can be used
+            # to compute distances
+            metric.fit(data, axis=1 - self.axis)
+
+        return metric(data, data, 1 - self.axis, impute=True)
 
     def _invalidate(self):
         self._checksparse()

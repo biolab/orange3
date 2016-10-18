@@ -2,7 +2,7 @@ from PyQt4.QtCore import Qt
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
-from Orange.classification import TreeLearner
+from Orange.classification import SklTreeLearner
 from Orange.ensembles import SklAdaBoostLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -26,39 +26,43 @@ class OWAdaBoostClassification(OWBaseLearner):
     learning_rate = Setting(1.)
     algorithm = Setting(0)
 
+    DEFAULT_BASE_ESTIMATOR = SklTreeLearner()
+
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Parameters")
-        self.base_estimator = TreeLearner()
-        self.base_label = gui.label(box, self, "Base estimator: " + self.base_estimator.name)
+        self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
+        self.base_label = gui.label(
+            box, self, "Base estimator: " + self.base_estimator.name)
 
-        gui.spin(box, self, "n_estimators", 1, 100, label="Number of estimators:",
-                 alignment=Qt.AlignRight, callback=self.settings_changed)
-        gui.doubleSpin(box, self, "learning_rate", 1e-5, 1.0, 1e-5,
-                       label="Learning rate:", decimals=5, alignment=Qt.AlignRight,
-                       controlWidth=90, callback=self.settings_changed)
+        self.n_estimators_spin = gui.spin(
+            box, self, "n_estimators", 1, 100, label="Number of estimators:",
+            alignment=Qt.AlignRight, callback=self.settings_changed)
+        self.learning_rate_spin = gui.doubleSpin(
+            box, self, "learning_rate", 1e-5, 1.0, 1e-5, label="Learning rate:",
+            decimals=5, alignment=Qt.AlignRight, controlWidth=90,
+            callback=self.settings_changed)
         self.add_specific_parameters(box)
 
     def add_specific_parameters(self, box):
-        gui.comboBox(box, self, "algorithm", label="Algorithm:",
-                     orientation=Qt.Horizontal, items=self.losses,
-                     callback=self.settings_changed)
+        self.algorithm_combo = gui.comboBox(
+            box, self, "algorithm", label="Algorithm:", items=self.losses,
+            orientation=Qt.Horizontal, callback=self.settings_changed)
 
     def create_learner(self):
         return self.LEARNER(
             base_estimator=self.base_estimator,
             n_estimators=self.n_estimators,
+            learning_rate=self.learning_rate,
             preprocessors=self.preprocessors,
             algorithm=self.losses[self.algorithm]
         )
 
-    def set_base_learner(self, model):
-        self.base_estimator = model
-        if self.base_estimator:
-            self.base_label.setText("Base estimator: " + self.base_estimator.name)
-            self.apply_button.setDisabled(False)
-        else:
-            self.base_label.setText("No base estimator")
-            self.apply_button.setDisabled(True)
+    def set_base_learner(self, learner):
+        self.base_estimator = learner if learner \
+            else self.DEFAULT_BASE_ESTIMATOR
+        self.base_label.setText("Base estimator: " + self.base_estimator.name)
+        if self.auto_apply:
+            self.apply()
 
     def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
@@ -69,6 +73,7 @@ class OWAdaBoostClassification(OWBaseLearner):
 if __name__ == "__main__":
     import sys
     from PyQt4.QtGui import QApplication
+
     a = QApplication(sys.argv)
     ow = OWAdaBoostClassification()
     ow.set_data(Table("iris"))

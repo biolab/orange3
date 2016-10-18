@@ -48,11 +48,11 @@ class TestUtil(unittest.TestCase):
 
         # assure last two columns have just zero elements
         X = X[:3]
-        np.testing.assert_equal(stats(X), [[0, 1, 1/3, 0, 4, 1],
-                                           [0, 1, 1/3, 0, 4, 1],
-                                           [0, 1, 1/3, 0, 4, 1],
-                                           [0, 0,   0, 0, 5, 0],
-                                           [0, 0,   0, 0, 5, 0]])
+        np.testing.assert_equal(stats(X), [[0, 1, 1/3, 0, 2, 1],
+                                           [0, 1, 1/3, 0, 2, 1],
+                                           [0, 1, 1/3, 0, 2, 1],
+                                           [0, 0,   0, 0, 3, 0],
+                                           [0, 0,   0, 0, 3, 0]])
 
     def test_stats_weights(self):
         X = np.arange(4).reshape(2, 2).astype(float)
@@ -69,3 +69,13 @@ class TestUtil(unittest.TestCase):
         weights = np.array([1, 3])
         np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 1, 1],
                                                     [1, 3, 2.5, 0, 0, 2]])
+
+    def test_stats_non_numeric(self):
+        X = np.array([
+            ['', 'a', 'b'],
+            ['a', '', 'b'],
+            ['a', 'b', ''],
+        ], dtype=object)
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 1, 2],
+                                           [np.inf, -np.inf, 0, 0, 1, 2],
+                                           [np.inf, -np.inf, 0, 0, 1, 2]])

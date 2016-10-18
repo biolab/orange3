@@ -65,11 +65,18 @@ class XlsContextHandler(ContextHandler):
         return ContextHandler.NO_MATCH
 
 
+class LineEditSelectOnFocus(QtGui.QLineEdit):
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        # If selectAll is called directly, placing the cursor unselects the text
+        QtCore.QTimer.singleShot(0, self.selectAll)
+
+
 class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
-    description = "Read a data from an input file or network " \
-                  "and send the data table to the output."
+    description = "Read data from an input file or network " \
+                  "and send a data table to the output."
     icon = "icons/File.svg"
     priority = 10
     category = "Data"
@@ -91,6 +98,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         RecentPath("", "sample-datasets", "iris.tab"),
         RecentPath("", "sample-datasets", "titanic.tab"),
         RecentPath("", "sample-datasets", "housing.tab"),
+        RecentPath("", "sample-datasets", "heart_disease.tab"),
     ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
@@ -167,6 +175,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.url_combo = url_combo = QtGui.QComboBox()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
+        url_combo.setLineEdit(LineEditSelectOnFocus())
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
         url_combo.setEditable(True)
@@ -248,24 +257,38 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     # Open a file, create data from it and send it over the data channel
     def load_data(self):
-        self.reader = self._get_reader()
-        self._update_sheet_combo()
+        # We need to catch any exception type since anything can happen in
+        # file readers
+        # pylint: disable=broad-except
+        self.editor_model.set_domain(None)
 
-        errors = []
-        with catch_warnings(record=True) as warnings:
-            try:
-                data = self.reader.read()
-            except Exception as ex:
-                errors.append("An error occured:")
-                errors.append(str(ex))
-                data = None
-                self.editor_model.reset()
-            self.warning(
-                33, warnings[-1].message.args[0] if warnings else '')
+        error = None
+        try:
+            self.reader = self._get_reader()
+            if self.reader is None:
+                self.data = None
+                self.send("Data", None)
+                self.info.setText("No data.")
+                self.sheet_box.hide()
+                return
+        except Exception as ex:
+            error = ex
 
-        if data is None:
+        if not error:
+            self._update_sheet_combo()
+            with catch_warnings(record=True) as warnings:
+                try:
+                    data = self.reader.read()
+                except Exception as ex:
+                    error = ex
+                self.warning(warnings[-1].message.args[0] if warnings else '')
+
+        if error:
+            self.data = None
             self.send("Data", None)
-            self.info.setText("\n".join(errors))
+            self.info.setText("An error occurred:\n{}".format(error))
+            self.editor_model.reset()
+            self.sheet_box.hide()
             return
 
         self.info.setText(self._describe(data))
@@ -288,7 +311,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
         elif self.source == self.URL:
-            return UrlReader(self.url_combo.currentText())
+            url = self.url_combo.currentText().strip()
+            if url:
+                return UrlReader(url)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
@@ -314,21 +339,33 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def _describe(self, table):
         domain = table.domain
-        text = "{} instance(s), {} feature(s), {} meta attribute(s)".format(
-            len(table), len(domain.attributes), len(domain.metas))
+        text = ""
+
+        attrs = getattr(table, "attributes", {})
+        descs = [attrs[desc]
+                 for desc in ("Name", "Description") if desc in attrs]
+        if len(descs) == 2:
+            descs[0] = "<b>{}</b>".format(descs[0])
+        if descs:
+            text += "<p>{}</p>".format("<br/>".join(descs))
+
+        text += "<p>{} instance(s), {} feature(s), {} meta attribute(s)".\
+            format(len(table), len(domain.attributes), len(domain.metas))
         if domain.has_continuous_class:
-            text += "\nRegression; numerical class."
+            text += "<br/>Regression; numerical class."
         elif domain.has_discrete_class:
-            text += "\nClassification; discrete class with {} values.".format(
-                len(domain.class_var.values))
+            text += "<br/>Classification; discrete class with {} values.".\
+                format(len(domain.class_var.values))
         elif table.domain.class_vars:
-            text += "\nMulti-target; {} target variables.".format(
+            text += "<br/>Multi-target; {} target variables.".format(
                 len(table.domain.class_vars))
         else:
-            text += "\nData has no target variable."
+            text += "<br/>Data has no target variable."
+        text += "</p>"
+
         if 'Timestamp' in table.domain:
             # Google Forms uses this header to timestamp responses
-            text += '\n\nFirst entry: {}\nLast entry: {}'.format(
+            text += '<p>First entry: {}<br/>Last entry: {}</p>'.format(
                 table[0, 'Timestamp'], table[-1, 'Timestamp'])
         return text
 

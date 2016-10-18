@@ -12,9 +12,9 @@ from types import LambdaType
 import pkg_resources
 
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, pyqtSignal as Signal
+from PyQt4.QtCore import Qt, pyqtSignal as Signal, QSize
 from PyQt4.QtGui import QCursor, QApplication, QTableView, QHeaderView, \
-    QStyledItemDelegate, QSizePolicy, QColor
+    QStyledItemDelegate, QSizePolicy, QColor, QListView
 
 # Some Orange widgets might expect this here
 from Orange.widgets.webview import WebView as WebviewWidget  # pylint: disable=unused-import
@@ -26,6 +26,7 @@ from Orange.data import \
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.constants import \
     CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
+from Orange.widgets.utils.buttons import VariableTextPushButton
 from Orange.util import namegen
 
 YesNo = NoYes = ("No", "Yes")
@@ -294,49 +295,6 @@ def setLayout(widget, layout):
     widget.setLayout(layout)
 
 
-def _enterButton(parent, control, placeholder=True):
-    """
-    Utility function that returns a button with a symbol for "Enter" and
-    optionally a placeholder to show when the enter button is hidden. Both
-    are inserted into the parent's layout, if it has one. If placeholder is
-    constructed it is shown and the button is hidden.
-
-    The height of the button is the same as the height of the widget passed
-    as argument `control`.
-
-    :param parent: parent widget into which the button is inserted
-    :type parent: PyQt4.QtGui.QWidget
-    :param control: a widget for determining the height of the button
-    :type control: PyQt4.QtGui.QWidget
-    :param placeholder: a flag telling whether to construct a placeholder
-        (default: True)
-    :type placeholder: bool
-    :return: a tuple with a button and a place holder (or `None`)
-    :rtype: PyQt4.QtGui.QToolButton or tuple
-    """
-    global _enter_icon
-    if not _enter_icon:
-        _enter_icon = QtGui.QIcon(
-            os.path.dirname(__file__) + "/icons/Dlg_enter.png")
-    button = QtGui.QPushButton(parent)
-    button.setAutoDefault(True)
-    button.setDefault(True)
-    height = control.sizeHint().height()
-    button.setFixedSize(height, height)
-    button.setIcon(_enter_icon)
-    if parent.layout() is not None:
-        parent.layout().addWidget(button)
-    if placeholder:
-        button.hide()
-        holder = QtGui.QWidget(parent)
-        holder.setFixedSize(height, height)
-        if parent.layout() is not None:
-            parent.layout().addWidget(holder)
-    else:
-        holder = None
-    return button, holder
-
-
 def _addSpace(widget, space):
     """
     A helper function that adds space into the widget, if requested.
@@ -530,26 +488,11 @@ def label(widget, master, label, labelWidth=None, box=None,
 class SpinBoxWFocusOut(QtGui.QSpinBox):
     """
     A class derived from QtGui.QSpinBox, which postpones the synchronization
-    of the control's value with the master's attribute until the user presses
-    Enter or clicks an icon that appears beside the spin box when the value
-    is changed.
+    of the control's value with the master's attribute until the control looses
+    focus or user presses Tab when the value has changed.
 
     The class overloads :obj:`onChange` event handler to show the commit button,
     and :obj:`onEnter` to commit the change when enter is pressed.
-
-    .. attribute:: enterButton
-
-        A widget (usually an icon) that is shown when the value is changed.
-
-    .. attribute:: placeHolder
-
-        A placeholder which is shown when the button is hidden
-
-    .. attribute:: inSetValue
-
-        A flag that is set when the value is being changed through
-        :obj:`setValue` to prevent the programmatic changes from showing the
-        commit button.
     """
 
     def __init__(self, minv, maxv, step, parent=None):
@@ -567,51 +510,15 @@ class SpinBoxWFocusOut(QtGui.QSpinBox):
         super().__init__(parent)
         self.setRange(minv, maxv)
         self.setSingleStep(step)
-        self.inSetValue = False
-        self.enterButton = None
-        self.placeHolder = None
-
-    def onChange(self, _):
-        """
-        Hides the place holder and shows the commit button unless
-        :obj:`inSetValue` is set.
-        """
-        if not self.inSetValue:
-            self.placeHolder.hide()
-            self.enterButton.show()
 
     def onEnter(self):
         """
-        If the commit button is visible, the overload event handler commits
-        the change by calling the appropriate callbacks. It also hides the
-        commit button and shows the placeHolder.
+        Commits the change by calling the appropriate callbacks.
         """
-        if self.enterButton.isVisible():
-            self.enterButton.hide()
-            self.placeHolder.show()
-            if self.cback:
-                self.cback(int(str(self.text())))
-            if self.cfunc:
-                self.cfunc()
-
-    # doesn't work: it's probably LineEdit's focusOut that we should
-    # (but can't) catch
-    def focusOutEvent(self, *e):
-        """
-        This handler was intended to catch the focus out event and reintepret
-        it as if enter was pressed. It does not work, though.
-        """
-        super().focusOutEvent(*e)
-        if self.enterButton and self.enterButton.isVisible():
-            self.onEnter()
-
-    def setValue(self, value):
-        """
-        Set the :obj:`inSetValue` flag and call the inherited method.
-        """
-        self.inSetValue = True
-        super().setValue(value)
-        self.inSetValue = False
+        if self.cback:
+            self.cback(int(str(self.text())))
+        if self.cfunc:
+            self.cfunc()
 
 
 class DoubleSpinBoxWFocusOut(QtGui.QDoubleSpinBox):
@@ -623,35 +530,12 @@ class DoubleSpinBoxWFocusOut(QtGui.QDoubleSpinBox):
         self.setDecimals(math.ceil(-math.log10(step)))
         self.setRange(minv, maxv)
         self.setSingleStep(step)
-        self.inSetValue = False
-        self.enterButton = None
-        self.placeHolder = None
-
-    def onChange(self, _):
-        if not self.inSetValue:
-            self.placeHolder.hide()
-            self.enterButton.show()
 
     def onEnter(self):
-        if self.enterButton.isVisible():
-            self.enterButton.hide()
-            self.placeHolder.show()
-            if self.cback:
-                self.cback(float(str(self.text()).replace(",", ".")))
-            if self.cfunc:
-                self.cfunc()
-
-    # doesn't work: it's probably LineEdit's focusOut that we should
-    # (and can't) catch
-    def focusOutEvent(self, *e):
-        super().focusOutEvent(*e)
-        if self.enterButton and self.enterButton.isVisible():
-            self.onEnter()
-
-    def setValue(self, value):
-        self.inSetValue = True
-        super().setValue(value)
-        self.inSetValue = False
+        if self.cback:
+            self.cback(float(str(self.text()).replace(",", ".")))
+        if self.cfunc:
+            self.cfunc()
 
 
 def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
@@ -747,7 +631,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         widgetLabel(bi, posttext)
 
     isDouble = spinType == float
-    sbox = bi.control = \
+    sbox = bi.control = b.control = \
         (SpinBoxWFocusOut, DoubleSpinBoxWFocusOut)[isDouble](minv, maxv,
                                                              step, bi)
     if bi is not widget:
@@ -770,13 +654,11 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         sbox.valueChanged[(int, float)[isDouble]],
         (CallFrontSpin, CallFrontDoubleSpin)[isDouble](sbox))
     if checked:
+        sbox.cbox = cbox
         cbox.disables = [sbox]
         cbox.makeConsistent()
     if callback and callbackOnReturn:
-        sbox.enterButton, sbox.placeHolder = _enterButton(bi, sbox)
-        sbox.valueChanged[str].connect(sbox.onChange)
         sbox.editingFinished.connect(sbox.onEnter)
-        sbox.enterButton.clicked.connect(sbox.onEnter)
         if hasattr(sbox, "upButton"):
             sbox.upButton().clicked.connect(
                 lambda c=sbox.editor(): c.setFocus())
@@ -877,24 +759,9 @@ class LineEditWFocusOut(QtGui.QLineEdit):
     """
     A class derived from QtGui.QLineEdit, which postpones the synchronization
     of the control's value with the master's attribute until the user leaves
-    the line edit, presses Enter or clicks an icon that appears beside the
-    line edit when the value is changed.
+    the line edit or presses Tab when the value is changed.
 
     The class also allows specifying a callback function for focus-in event.
-
-    .. attribute:: enterButton
-
-        A widget (usually an icon) that is shown when the value is changed.
-
-    .. attribute:: placeHolder
-
-        A placeholder which is shown when the button is hidden
-
-    .. attribute:: inSetValue
-
-        A flag that is set when the value is being changed through
-        :obj:`setValue` to prevent the programmatic changes from showing the
-        commit button.
 
     .. attribute:: callback
 
@@ -905,47 +772,39 @@ class LineEditWFocusOut(QtGui.QLineEdit):
         Callback that is called on the focus-in event
     """
 
-    def __init__(self, parent, callback, focusInCallback=None,
-                 placeholder=False):
+    def __init__(self, parent, callback, focusInCallback=None):
         super().__init__(parent)
         if parent.layout() is not None:
             parent.layout().addWidget(self)
         self.callback = callback
         self.focusInCallback = focusInCallback
-        self.enterButton, self.placeHolder = \
-            _enterButton(parent, self, placeholder)
-        self.enterButton.clicked.connect(self.returnPressedHandler)
-        self.textChanged[str].connect(self.markChanged)
         self.returnPressed.connect(self.returnPressedHandler)
+        # did the text change between focus enter and leave
+        self.__changed = False
+        self.textEdited.connect(self.__textEdited)
 
-    def markChanged(self, *_):
-        if self.placeHolder:
-            self.placeHolder.hide()
-        self.enterButton.show()
-
-    def markUnchanged(self, *_):
-        self.enterButton.hide()
-        if self.placeHolder:
-            self.placeHolder.show()
+    def __textEdited(self):
+        self.__changed = True
 
     def returnPressedHandler(self):
-        if self.enterButton.isVisible():
-            self.markUnchanged()
+        self.clearFocus()
+        if self.__changed:
+            self.__changed = False
             if hasattr(self, "cback") and self.cback:
                 self.cback(self.text())
             if self.callback:
                 self.callback()
 
-    def setText(self, t):
-        super().setText(t)
-        if self.enterButton:
-            self.markUnchanged()
+    def setText(self, text):
+        self.__changed = False
+        super().setText(text)
 
     def focusOutEvent(self, *e):
         super().focusOutEvent(*e)
         self.returnPressedHandler()
 
     def focusInEvent(self, *e):
+        self.__changed = False
         if self.focusInCallback:
             self.focusInCallback()
         return super().focusInEvent(*e)
@@ -954,8 +813,7 @@ class LineEditWFocusOut(QtGui.QLineEdit):
 def lineEdit(widget, master, value, label=None, labelWidth=None,
              orientation=Qt.Vertical, box=None, callback=None,
              valueType=str, validator=None, controlWidth=None,
-             callbackOnType=False, focusInCallback=None,
-             enterPlaceholder=False, **misc):
+             callbackOnType=False, focusInCallback=None, **misc):
     """
     Insert a line edit.
 
@@ -989,37 +847,24 @@ def lineEdit(widget, master, value, label=None, labelWidth=None,
     :param focusInCallback: a function that is called when the line edit
         receives focus
     :type focusInCallback: function
-    :param enterPlaceholder: if set to `True`, space of appropriate width is
-        left empty to the right for the icon that shows that the value is
-        changed but has not been committed yet
-    :type enterPlaceholder: bool
     :rtype: PyQt4.QtGui.QLineEdit or a box
     """
     if box or label:
         b = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
             widgetLabel(b, label, labelWidth)
-        hasHBox = _is_horizontal(orientation)
     else:
         b = widget
-        hasHBox = False
 
     baseClass = misc.pop("baseClass", None)
     if baseClass:
         ledit = baseClass(b)
-        ledit.enterButton = None
         if b is not widget:
             b.layout().addWidget(ledit)
     elif focusInCallback or callback and not callbackOnType:
-        if not hasHBox:
-            outer = hBox(b, addToLayout=(b is not widget))
-        else:
-            outer = b
-        ledit = LineEditWFocusOut(outer, callback, focusInCallback,
-                                  enterPlaceholder)
+        ledit = LineEditWFocusOut(b, callback, focusInCallback)
     else:
         ledit = QtGui.QLineEdit(b)
-        ledit.enterButton = None
         if b is not widget:
             b.layout().addWidget(ledit)
 
@@ -1193,6 +1038,35 @@ def attributeItem(var):
     :rtype: tuple with PyQt4.QtGui.QIcon and str
     """
     return attributeIconDict[var], var.name
+
+
+class ListViewWithSizeHint(QListView):
+    def __init__(self, *args, preferred_size=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if isinstance(preferred_size, tuple):
+            preferred_size = QSize(*preferred_size)
+        self.preferred_size = preferred_size
+
+    def sizeHint(self):
+        return self.preferred_size or super().sizeHint()
+
+
+def listView(widget, master, value=None, model=None, box=None, callback=None,
+             sizeHint=None, **misc):
+    if box:
+        bg = vBox(widget, box, addToLayout=False)
+    else:
+        bg = widget
+    view = ListViewWithSizeHint(preferred_size=sizeHint)
+    view.setModel(model)
+    if value is not None:
+        connectControl(master, value, callback,
+                       view.selectionModel().selectionChanged,
+                       CallFrontListView(view),
+                       CallBackListView(model, master, value))
+    misc.setdefault('addSpace', True)
+    miscellanea(view, bg, widget, **misc)
+    return view
 
 
 def listBox(widget, master, value=None, labels=None, box=None, callback=None,
@@ -1652,14 +1526,12 @@ class OrangeComboBox(QtGui.QComboBox):
 
 
 # TODO comboBox looks overly complicated:
-# - is the argument control2attributeDict needed? doesn't emptyString do the
-#    job?
 # - can valueType be anything else than str?
 # - sendSelectedValue is not a great name
 def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
              orientation=Qt.Vertical, items=(), callback=None,
              sendSelectedValue=False, valueType=str,
-             control2attributeDict=None, emptyString=None, editable=False,
+             emptyString=None, editable=False,
              contentsLength=None, maximumContentsLength=25,
              **misc):
     """
@@ -1668,9 +1540,6 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     The `value` attribute of the `master` contains either the index of the
     selected row (if `sendSelected` is left at default, `False`) or a value
     converted to `valueType` (`str` by default).
-
-    Furthermore, the value is converted by looking up into dictionary
-    `control2attributeDict`.
 
     :param widget: the widget into which the box is inserted
     :type widget: PyQt4.QtGui.QWidget or None
@@ -1697,9 +1566,6 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
     :param valueType: the type into which the selected value is converted
         if sentSelectedValue is `False`
     :type valueType: type
-    :param control2attributeDict: a dictionary through which the value is
-        converted
-    :type control2attributeDict: dict or None
     :param emptyString: the string value in the combo box that gets stored as
         an empty string in `value`
     :type emptyString: str
@@ -1716,6 +1582,10 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
         length (default: 25, use 0 to disable)
     :rtype: PyQt4.QtGui.QComboBox
     """
+
+    # Local import to avoid circular imports
+    from Orange.widgets.utils.itemmodels import VariableListModel
+
     if box or label:
         hb = widgetBox(widget, box, orientation, addToLayout=False)
         if label is not None:
@@ -1741,29 +1611,35 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
 
     if value:
         cindex = getdeepattr(master, value)
-        if isinstance(cindex, str):
-            if items and cindex in items:
-                cindex = items.index(getdeepattr(master, value))
-            else:
+        model = misc.get("model", None)
+        if isinstance(model, VariableListModel):
+            callfront = CallFrontComboBoxModel(combo, model)
+            callfront.action(cindex)
+        else:
+            if isinstance(cindex, str):
+                if items and cindex in items:
+                    cindex = items.index(cindex)
+                else:
+                    cindex = 0
+            if cindex > combo.count() - 1:
                 cindex = 0
-        if cindex > combo.count() - 1:
-            cindex = 0
-        combo.setCurrentIndex(cindex)
+            combo.setCurrentIndex(cindex)
 
-        if sendSelectedValue:
-            if control2attributeDict is None:
-                control2attributeDict = {}
-            if emptyString:
-                control2attributeDict[emptyString] = ""
+        if isinstance(model, VariableListModel):
+            connectControl(
+                master, value, callback, combo.activated[int],
+                callfront,
+                ValueCallbackComboModel(master, value, model)
+            )
+        elif sendSelectedValue:
             connectControl(
                 master, value, callback, combo.activated[str],
-                CallFrontComboBox(combo, valueType, control2attributeDict),
-                ValueCallbackCombo(master, value, valueType,
-                                   control2attributeDict))
+                CallFrontComboBox(combo, valueType, emptyString),
+                ValueCallbackCombo(master, value, valueType, emptyString))
         else:
             connectControl(
                 master, value, callback, combo.activated[int],
-                CallFrontComboBox(combo, None, control2attributeDict))
+                CallFrontComboBox(combo, None, emptyString))
     miscellanea(combo, hb, widget, **misc)
     combo.emptyString = emptyString
     return combo
@@ -2232,7 +2108,12 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     if _is_horizontal(orientation):
         b.layout().addSpacing(10)
     cb.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-    b.button = btn = button(b, master, label, callback=lambda: do_commit())
+
+    b.button = btn = VariableTextPushButton(
+        b, text=label, textChoiceList=[label, auto_label], clicked=do_commit)
+    if b.layout() is not None:
+        b.layout().addWidget(b.button)
+
     if not checkbox_label:
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
     checkbox_toggled()
@@ -2251,7 +2132,7 @@ class ControlledList(list):
     selection in the list box.
     """
     def __init__(self, content, listBox=None):
-        super().__init__(content)
+        super().__init__(content if content is not None else [])
         self.listBox = listBox
 
     def __reduce__(self):
@@ -2375,13 +2256,23 @@ class ValueCallback(ControlledCallback):
 
 
 class ValueCallbackCombo(ValueCallback):
-    def __init__(self, widget, attribute, f=None, control2attributeDict=None):
+    def __init__(self, widget, attribute, f=None, emptyString=""):
         super().__init__(widget, attribute, f)
-        self.control2attributeDict = control2attributeDict or {}
+        self.emptyString = emptyString
 
     def __call__(self, value):
         value = str(value)
-        return super().__call__(self.control2attributeDict.get(value, value))
+        return super().__call__("" if value == self.emptyString else value)
+
+
+class ValueCallbackComboModel(ValueCallback):
+    def __init__(self, widget, attribute, model):
+        super().__init__(widget, attribute)
+        self.model = model
+
+    def __call__(self, index):
+        # Can't use super here since, it doesn't set `None`'s?!
+        return self.acyclic_setattr(self.model[index])
 
 
 class ValueCallbackLineEdit(ControlledCallback):
@@ -2438,6 +2329,23 @@ class FunctionCallback:
                     func(**kwds)
             else:
                 self.func(**kwds)
+
+
+class CallBackListView(ControlledCallback):
+    def __init__(self, model, widget, attribute):
+        super().__init__(widget, attribute)
+        self.model = model
+
+    # triggered by selectionModel().selectionChanged()
+    def __call__(self, newSelection, _):
+        # This must be imported locally to avoid circular imports
+        from Orange.widgets.utils.itemmodels import PyListModel
+        indexes = newSelection.indexes()
+        if indexes:
+            value = newSelection.indexes()[0].row()
+            if isinstance(self.model, PyListModel):
+                value = self.model[value]
+            self.acyclic_setattr(value)
 
 
 class CallBackListBox:
@@ -2538,18 +2446,15 @@ class CallFrontButton(ControlledCallFront):
 
 
 class CallFrontComboBox(ControlledCallFront):
-    def __init__(self, control, valType=None, control2attributeDict=None):
+    def __init__(self, control, valType=None, emptyString=""):
         super().__init__(control)
         self.valType = valType
-        if control2attributeDict is None:
-            self.attribute2controlDict = {}
-        else:
-            self.attribute2controlDict = \
-                {y: x for x, y in control2attributeDict.items()}
+        self.emptyString = emptyString
 
     def action(self, value):
         if value is not None:
-            value = self.attribute2controlDict.get(value, value)
+            if value == "":
+                value = self.emptyString
             if self.valType:
                 for i in range(self.control.count()):
                     if self.valType(str(self.control.itemText(i))) == value:
@@ -2564,6 +2469,27 @@ class CallFrontComboBox(ControlledCallFront):
             else:
                 if value < self.control.count():
                     self.control.setCurrentIndex(value)
+
+
+class CallFrontComboBoxModel(ControlledCallFront):
+    def __init__(self, control, model):
+        super().__init__(control)
+        self.model = model
+
+    def action(self, value):
+        if value == "":  # the latter accomodates PyListModel
+            value = None
+        if value is None and None not in self.model:
+            return  # e.g. attribute x in uninitialized scatter plot
+        if value in self.model:
+            self.control.setCurrentIndex(self.model.indexOf(value))
+            return
+        elif isinstance(value, str):
+            for i, val in enumerate(self.model):
+                if value == str(val):
+                    self.control.setCurrentIndex(i)
+                    return
+        raise ValueError("Combo box does not contain item " + repr(value))
 
 
 class CallFrontHSlider(ControlledCallFront):
@@ -2602,6 +2528,25 @@ class CallFrontRadioButtons(ControlledCallFront):
         if value < 0 or value >= len(self.control.buttons):
             value = 0
         self.control.buttons[value].setChecked(1)
+
+
+class CallFrontListView(ControlledCallFront):
+    def action(self, value):
+        model = self.control.model()
+        if not isinstance(value, int):
+            if isinstance(value, str):
+                search_role = Qt.DisplayRole
+            elif isinstance(value, Variable):
+                search_role = TableVariable
+            else:
+                search_role = Qt.DisplayRole
+                value = str(value)
+            for i in range(model.rowCount()):
+                if model.data(model.index(i), search_role) == value:
+                    value = i
+                    break
+        sel_model = self.control.selectionModel()
+        sel_model.select(model.index(value), sel_model.ClearAndSelect)
 
 
 class CallFrontListBox(ControlledCallFront):
@@ -3193,15 +3138,18 @@ class ProgressBar:
         self.widget = widget
         self.count = 0
         self.widget.progressBarInit()
+        self.finished = False
 
     def __del__(self):
-        self.finish()
+        if not self.finished:
+            self.widget.progressBarFinished(processEvents=False)
 
     def advance(self, count=1):
         self.count += count
         self.widget.progressBarSet(int(self.count * 100 / max(1, self.iter)))
 
     def finish(self):
+        self.finished = True
         self.widget.progressBarFinished()
 
 

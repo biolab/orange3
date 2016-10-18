@@ -88,4 +88,4 @@ class WebView(QWebView):
         """ Return SVG string of the first SVG element on the page, or
         raise ValueError if not any. """
         html = self.frame.toHtml()
-        return html[html.index('<svg '):html.index('</svg>') + 5]
+        return html[html.index('<svg '):html.index('</svg>') + 6]

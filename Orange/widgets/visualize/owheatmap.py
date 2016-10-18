@@ -6,6 +6,7 @@ from collections import defaultdict, namedtuple
 from types import SimpleNamespace as namespace
 
 import numpy as np
+import scipy.sparse as sp
 
 from PyQt4 import QtGui
 from PyQt4.QtGui import (
@@ -27,6 +28,8 @@ from Orange.widgets.io import FileFormat
 
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
+
+from Orange.widgets.widget import Msg
 
 
 def split_domain(domain, split_label):
@@ -375,7 +378,7 @@ class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a heat map for a pair of attributes."
     icon = "icons/Heatmap.svg"
-    priority = 330
+    priority = 260
 
     inputs = [("Data", Table, "set_dataset")]
     outputs = [("Selected Data", Table, widget.Default)]
@@ -397,7 +400,10 @@ class OWHeatMap(widget.OWWidget):
         (OrderedClustering, "Clustering with leaf ordering")
     ]
     # Disable clustering for inputs bigger than this
-    _MaxClustering = 3000
+    if hierarchical._HAS_NN_CHAIN:
+        _MaxClustering = 25000
+    else:
+        _MaxClustering = 3000
 
     # Disable cluster leaf ordering for inputs bigger than this
     _MaxOrderedClustering = 1000
@@ -451,6 +457,17 @@ class OWHeatMap(widget.OWWidget):
     auto_commit = settings.Setting(True)
 
     graph_name = "scene"
+
+    class Information(widget.OWWidget.Information):
+        sampled = Msg("Data has been sampled")
+        discrete_ignored = Msg("{} discrete column{} ignored")
+        row_clust = Msg("{}")
+        col_clust = Msg("{}")
+        sparse_densified = Msg("Showing this data may require a lot of memory")
+
+    class Error(widget.OWWidget.Error):
+        no_continuous = Msg("No continuous feature columns")
+        not_enough_memory = Msg("Not enough memory to show this data")
 
     def __init__(self):
         super().__init__()
@@ -655,17 +672,26 @@ class OWHeatMap(widget.OWWidget):
         """Set the input dataset to display."""
         self.closeContext()
         self.clear()
-        self.error(0)
-        self.information([0, 1])
+        self.clear_messages()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
                 data = Table(data)
             else:
-                self.information(0, "Data has been sampled")
+                self.Information.sampled()
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
+
+        if data is not None and sp.issparse(data.X):
+            try:
+                data = data.copy()
+                data.X = data.X.toarray()
+            except MemoryError:
+                data = None
+                self.Error.not_enough_memory()
+            else:
+                self.Information.sparse_densified()
 
         input_data = data
         if data is not None and \
@@ -678,11 +704,11 @@ class OWHeatMap(widget.OWWidget):
                        data.domain.metas),
                 data)
             if not data.domain.attributes:
-                self.error(0, "No continuous feature columns")
+                self.Error.no_continuous()
                 input_data = data = None
             else:
-                self.information(1, "{} discrete column{} ignored"
-                                .format(ndisc, "s" if ndisc > 1 else ""))
+                self.Information.discrete_ignored(
+                    ndisc, "s" if ndisc > 1 else "")
 
         self.data = data
         self.input_data = input_data
@@ -700,9 +726,7 @@ class OWHeatMap(widget.OWWidget):
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
 
-            self.update_heatmaps()
-
-        self.commit()
+        self.update_heatmaps()
 
     def update_heatmaps(self):
         if self.data is not None:
@@ -710,8 +734,10 @@ class OWHeatMap(widget.OWWidget):
             self.construct_heatmaps(self.data)
             self.construct_heatmaps_scene(
                 self.heatmapparts, self.effective_data)
+            self.selected_rows = []
         else:
             self.clear()
+        self.commit()
 
     def update_merge(self):
         self.kmeans_model = None
@@ -1263,8 +1289,8 @@ class OWHeatMap(widget.OWWidget):
         cco_enabled = M <= OWHeatMap._MaxOrderedClustering
         sort_rows, sort_cols = self.sort_rows, self.sort_columns
 
-        row_clust_msg = None
-        col_clust_msg = None
+        row_clust_msg = ""
+        col_clust_msg = ""
 
         if not rco_enabled and sort_rows == OWHeatMap.OrderedClustering:
             sort_rows = OWHeatMap.Clustering
@@ -1286,8 +1312,12 @@ class OWHeatMap(widget.OWWidget):
             col_clust_msg = "Column clustering was disabled due to the " \
                             "input matrix being to big"
 
-        self.information(3, row_clust_msg)
-        self.information(4, col_clust_msg)
+        self.Information.row_clust.clear()
+        self.Information.col_clust.clear()
+        if row_clust_msg:
+            self.Information.row_clust(row_clust_msg)
+        if col_clust_msg:
+            self.Information.col_clust(col_clust_msg)
 
         self.sort_rows = sort_rows
         self.sort_columns = sort_cols

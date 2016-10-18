@@ -2,6 +2,8 @@ import os
 import pickle
 
 from PyQt4 import QtGui
+from PyQt4.QtCore import QTimer
+
 from Orange.base import Model
 
 from Orange.widgets import widget, gui
@@ -68,6 +70,9 @@ class OWLoadClassifier(widget.OWWidget):
             self.selectedIndex = -1
             self.filename = None
             self.reloadbutton.setEnabled(False)
+
+        if self.filename:
+            QTimer.singleShot(0, lambda: self.load(self.filename))
 
     def browse(self):
         """Select a filename using an open file dialog."""

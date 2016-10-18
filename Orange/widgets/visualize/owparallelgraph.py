@@ -1,18 +1,13 @@
 #
 # OWParallelGraph.py
 #
-from collections import defaultdict
-import os
-import sys
 import math
+from collections import defaultdict
 
 import numpy as np
 
 from PyQt4.QtCore import QLineF, Qt, QEvent, QRect, QPoint, QPointF
 from PyQt4.QtGui import QGraphicsPathItem, QPixmap, QColor, QBrush, QPen, QToolTip, QPainterPath, QPolygonF, QGraphicsPolygonItem
-
-from Orange.preprocess import Discretize
-from Orange.preprocess.discretize import EqualFreq
 
 from Orange.statistics.contingency import get_contingencies, get_contingency
 from Orange.widgets import gui
@@ -20,7 +15,9 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.plot import OWPlot, UserAxis, AxisStart, AxisEnd, OWCurve, OWPoint, PolygonCurve, \
     xBottom, yLeft, OWPlotItem
-from Orange.widgets.utils.scaling import get_variable_values_sorted, ScaleData
+from Orange.widgets.utils.scaling import ScaleData
+from Orange.widgets.utils import get_variable_values_sorted
+from Orange.widgets.visualize.utils.lac import lac, create_contingencies
 
 NO_STATISTICS = 0
 MEANS = 1
@@ -79,6 +76,7 @@ class OWParallelGraph(OWPlot, ScaleData):
         self.groups = {}
         OWPlot.setData(self, data)
         ScaleData.set_data(self, data, no_data=True, **args)
+        self._compute_domain_data_stat()
         self.end_progress()
 
 
@@ -87,7 +85,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         self.clear()
 
-        if not (self.have_data):
+        if self.data is None:
             return
         if len(attributes) < 2:
             return
@@ -100,14 +98,14 @@ class OWParallelGraph(OWPlot, ScaleData):
             self.alpha_value_2 = TRANSPARENT
 
         self.attributes = attributes
-        self.attribute_indices = [self.data_domain.index(name)
+        self.attribute_indices = [self.domain.index(name)
                                   for name in self.attributes]
         self.valid_data = self.get_valid_list(self.attribute_indices)
 
         self.visualized_mid_labels = mid_labels
         self.add_relevant_selections(old_selection_conditions)
 
-        class_var = self.data_domain.class_var
+        class_var = self.domain.class_var
         if not class_var:
             self.colors = None
         elif class_var.is_discrete:
@@ -146,14 +144,15 @@ class OWParallelGraph(OWPlot, ScaleData):
             a.title_margin = -10
             a.text_margin = 0
             a.setZValue(5)
-            self.set_axis_title(axis_id, self.data_domain[self.attributes[i]].name)
+            self.set_axis_title(axis_id, self.domain[self.attributes[i]].name)
             self.set_show_axis_title(axis_id, self.show_attr_values)
             if self.show_attr_values:
-                attr = self.data_domain[self.attributes[i]]
+                attr = self.domain[self.attributes[i]]
                 if attr.is_continuous:
-                    self.set_axis_scale(axis_id, self.attr_values[attr.name][0], self.attr_values[attr.name][1])
+                    self.set_axis_scale(axis_id, self.attr_values[attr][0],
+                                        self.attr_values[attr][1])
                 elif attr.is_discrete:
-                    attribute_values = get_variable_values_sorted(self.data_domain[self.attributes[i]])
+                    attribute_values = get_variable_values_sorted(self.domain[self.attributes[i]])
                     attr_len = len(attribute_values)
                     values = [float(1.0 + 2.0 * j) / float(2 * attr_len) for j in range(len(attribute_values))]
                     a.set_bounds((0, 1))
@@ -171,7 +170,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         diff, mins = [], []
         for i in self.attribute_indices:
-            var = self.data_domain[i]
+            var = self.domain[i]
             if var.is_discrete:
                 diff.append(len(var.values))
                 mins.append(-0.5)
@@ -201,15 +200,14 @@ class OWParallelGraph(OWPlot, ScaleData):
         self._draw_curves(background_curves)
 
     def select_color(self, row_index):
-        if self.data_has_class:
-            if self.data_has_continuous_class:
-                return self.continuous_palette.getRGB(
-                    self.data[row_index, self.data_class_index])
-            else:
-                return self.colors[
-                    int(self.data[row_index, self.data_class_index])]
-        else:
+        domain = self.data.domain
+        if domain.class_var is None:
             return 0, 0, 0
+        class_val = self.data[row_index, domain.index(domain.class_var)]
+        if domain.has_continuous_class:
+            return self.continuous_palette.getRGB(class_val)
+        else:
+            return self.colors[int(class_val)]
 
     def _draw_curves(self, selected_curves):
         n_attr = len(self.attributes)
@@ -228,7 +226,7 @@ class OWParallelGraph(OWPlot, ScaleData):
 
         diff, mins = [], []
         for i in self.attribute_indices:
-            var = self.data_domain[i]
+            var = self.domain[i]
             if var.is_discrete:
                 diff.append(len(var.values))
                 mins.append(-0.5)
@@ -265,19 +263,21 @@ class OWParallelGraph(OWPlot, ScaleData):
         return self.groups[key]
 
     def draw_legend(self):
-        if self.data_has_class:
-            if self.data_domain.has_discrete_class:
+        domain = self.data.domain
+        class_var = domain.class_var
+        if class_var:
+            if class_var.is_discrete:
                 self.legend().clear()
-                values = get_variable_values_sorted(self.data_domain.class_var)
+                values = get_variable_values_sorted(class_var)
                 for i, value in enumerate(values):
                     self.legend().add_item(
-                        self.data_domain.class_var.name, value,
+                        class_var.name, value,
                         OWPoint(OWPoint.Rect, QColor(*self.colors[i]), 10))
             else:
-                values = self.attr_values[self.data_domain.class_var.name]
-                decimals = self.data_domain.class_var.number_of_decimals
-                self.legend().add_color_gradient(self.data_domain.class_var.name,
-                                                 ["%%.%df" % decimals % v for v in values])
+                values = self.attr_values[class_var]
+                decimals = class_var.number_of_decimals
+                self.legend().add_color_gradient(
+                    class_var.name, ["%%.%df" % decimals % v for v in values])
         else:
             self.legend().clear()
             self.old_legend_keys = []
@@ -290,14 +290,15 @@ class OWParallelGraph(OWPlot, ScaleData):
     def draw_statistics(self):
         """Draw lines that represent standard deviation or quartiles"""
         return # TODO: Implement using BasicStats
-        if self.show_statistics and self.have_data:
+        if self.show_statistics and self.data is not None:
             data = []
+            domain = self.data.domain
             for attr_idx in self.attribute_indices:
-                if not self.data_domain[attr_idx].is_continuous:
+                if not self.domain[attr_idx].is_continuous:
                     data.append([()])
                     continue  # only for continuous attributes
 
-                if not self.data_has_class or self.data_has_continuous_class:    # no class
+                if not domain.class_var or domain.has_continuous_class:
                     if self.show_statistics == MEANS:
                         m = self.domain_data_stat[attr_idx].mean
                         dev = self.domain_data_stat[attr_idx].var
@@ -314,10 +315,11 @@ class OWParallelGraph(OWPlot, ScaleData):
                             data.append([(0, 0, 0)])
                 else:
                     curr = []
-                    class_values = get_variable_values_sorted(self.data_domain.class_var)
+                    class_values = get_variable_values_sorted(self.domain.class_var)
+                    class_index = self.domain.index(self.domain.class_var)
 
                     for c in range(len(class_values)):
-                        attr_values = self.data[attr_idx, self.data[self.data_class_index] == c]
+                        attr_values = self.data[attr_idx, self.data[class_index] == c]
                         attr_values = attr_values[~np.isnan(attr_values)]
 
                         if len(attr_values) == 0:
@@ -352,10 +354,10 @@ class OWParallelGraph(OWPlot, ScaleData):
                                    yData=[data[i][c][2], data[i][c][2]], lineWidth=4)
 
             # draw lines with mean/median values
-            if not self.data_has_class or self.data_has_continuous_class:
+            if not domain.class_var or domain.has_continuous_class:
                 class_count = 1
             else:
-                class_count = len(self.data_domain.class_var.values)
+                class_count = len(self.domain.class_var.values)
             for c in range(class_count):
                 diff = - 0.03 * (class_count - 1) / 2.0 + c * 0.03
                 ys = []
@@ -379,23 +381,23 @@ class OWParallelGraph(OWPlot, ScaleData):
 
     def draw_distributions(self):
         """Draw distributions with discrete attributes"""
-        if not (self.show_distributions and self.have_data and self.data_has_discrete_class):
+        if not (self.show_distributions and self.data is not None and self.domain.has_discrete_class):
             return
-        class_count = len(self.data_domain.class_var.values)
-        class_ = self.data_domain.class_var
+        class_count = len(self.domain.class_var.values)
+        class_ = self.domain.class_var
 
         # we create a hash table of possible class values (happens only if we have a discrete class)
         if self.domain_contingencies is None:
             self.domain_contingencies = dict(
-                zip([attr for attr in self.data_domain if attr.is_discrete],
-                    get_contingencies(self.raw_data, skipContinuous=True)))
-            self.domain_contingencies[class_] = get_contingency(self.raw_data, class_, class_)
+                zip([attr for attr in self.domain if attr.is_discrete],
+                    get_contingencies(self.data, skipContinuous=True)))
+            self.domain_contingencies[class_] = get_contingency(self.data, class_, class_)
 
         max_count = max([contingency.max() for contingency in self.domain_contingencies.values()] or [1])
-        sorted_class_values = get_variable_values_sorted(self.data_domain.class_var)
+        sorted_class_values = get_variable_values_sorted(self.domain.class_var)
 
         for axis_idx, attr_idx in enumerate(self.attribute_indices):
-            attr = self.data_domain[attr_idx]
+            attr = self.domain[attr_idx]
             if attr.is_discrete:
                 continue
 
@@ -441,11 +443,11 @@ class OWParallelGraph(OWPlot, ScaleData):
             contact, (index, pos) = self.testArrowContact(int(round(x_float)), canvas_position.x(),
                                                           canvas_position.y())
             if contact:
-                attr = self.data_domain[self.attributes[index]]
+                attr = self.domain[self.attributes[index]]
                 if attr.is_continuous:
                     condition = self.selection_conditions.get(attr.name, [0, 1])
-                    val = self.attr_values[attr.name][0] + condition[pos] * (
-                        self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
+                    val = self.attr_values[attr][0] + condition[pos] * (
+                        self.attr_values[attr][1] - self.attr_values[attr][0])
                     str_val = attr.name + "= %%.%df" % attr.number_of_decimals % val
                     QToolTip.showText(ev.globalPos(), str_val)
             else:
@@ -507,15 +509,15 @@ class OWParallelGraph(OWPlot, ScaleData):
             canvas_position = self.mapToScene(e.pos())
             y = min(1, max(0, self.inv_transform(yLeft, canvas_position.y())))
             index, pos = self.pressed_arrow
-            attr = self.data_domain[self.attributes[index]]
+            attr = self.domain[self.attributes[index]]
             old_condition = self.selection_conditions.get(attr.name, [0, 1])
             old_condition[pos] = y
             self.selection_conditions[attr.name] = old_condition
             self.update_data(self.attributes, self.visualized_mid_labels)
 
             if attr.is_continuous:
-                val = self.attr_values[attr.name][0] + old_condition[pos] * (
-                    self.attr_values[attr.name][1] - self.attr_values[attr.name][0])
+                val = self.attr_values[attr][0] + old_condition[pos] * (
+                    self.attr_values[attr][1] - self.attr_values[attr][0])
                 strVal = attr.name + "= %.2f" % val
                 QToolTip.showText(e.globalPos(), strVal)
             if self.sendSelectionOnUpdate and self.auto_send_selection_callback:
@@ -655,206 +657,3 @@ class ParallelCoordinatePolygon(OWPlotItem):
     def update_properties(self):
         self.outer_box.setPolygon(self.graph_transform().map(self.twosigmapolygon))
         self.inner_box.setPolygon(self.graph_transform().map(self.sigmapolygon))
-
-
-def initialize_random(conts, k):
-    mu = np.zeros((k, len(conts)))
-    sigma = np.zeros((k, len(conts)))
-    for i, (c, cw) in enumerate(conts):
-        w = np.random.random((len(c), k))
-        w /= w.sum(axis=1)[:, None]
-
-        c = c[:, 0] if i == 0 else c[:, 1]
-
-        for j in range(k):
-            mu1 = np.dot(w[:, j] * cw, c) / (w[:, j] * cw).sum()
-            cn = c - mu1
-            sigma1 = np.sum(cn ** 2 * w[:, j] * cw, axis=0) / (w[:, j] * cw).sum()
-
-            mu[j, i] = mu1
-            sigma[j, i] = sigma1
-
-    return mu, sigma
-
-def initialize_kmeans(conts, k):
-    x = []
-    xm = {}
-    for i, (c, cw) in enumerate(conts[1:-1]):
-        oldx, oldxm, x, xm = x, xm, [], {}
-        if i == 0:
-            for a, w in zip(c, cw):
-                x.append((tuple(a), w))
-                xm.setdefault(tuple(a)[1:], []).append(len(x) - 1)
-        else:
-            for a, w in zip(c, cw):
-                for l in oldxm[tuple(a[:2])]:
-                    olda, oldw = oldx[l]
-                    x.append((olda + (a[2],), oldw+w))
-                    xm.setdefault(tuple(a)[1:], []).append(len(x) - 1)
-
-    X = np.array([y[0] for y in x])
-
-    import sklearn.cluster as skl_cluster
-    kmeans = skl_cluster.KMeans(n_clusters=k)
-    Y = kmeans.fit_predict(X)
-    means = kmeans.cluster_centers_
-    covars = np.zeros((k, len(conts)))
-    for j in range(k):
-        xn = X[Y == j, :] - means[j]
-        covars[j] = np.sum(xn ** 2, axis=0) / len(xn)
-
-    return means, covars
-
-
-def lac(conts, k, nsteps=30, window_size=1):
-    """
-    k expected classes,
-    m data points,
-    each with dim dimensions
-    """
-    dim = len(conts)
-
-    np.random.seed(42)
-    # Initialize parameters
-    priors = np.ones(k) / k
-
-
-    print("Initializing")
-    import sys; sys.stdout.flush()
-    means, covars = initialize_random(conts, k)
-    #means, covars = initialize_kmeans(conts, k)
-    print("Done")
-
-    w = [np.empty((k, len(c[0]),)) for c in conts]
-    active = np.ones(k, dtype=np.bool)
-
-    for i in range(1, nsteps + 1):
-        for l, (c, cw) in enumerate(conts):
-            lower = l - window_size if l - window_size >= 0 else None
-            upper = l + window_size + 1 if l + window_size + 1 <= dim else None
-            dims = slice(lower, upper)
-            active_dim = min(l, window_size)
-
-            x = c
-
-            # E step
-            for j in range(k):
-                if any(np.abs(covars[j, dims]) < 1e-15):
-                    active[j] = 0
-
-                if active[j]:
-                    det = covars[j, dims].prod()
-                    inv_covars = 1. / covars[j, dims]
-                    xn = x - means[j, dims]
-                    factor = (2.0 * np.pi) ** (x.shape[1]/ 2.0) * det ** 0.5
-                    w[l][j] = priors[j] * np.exp(np.sum(xn * inv_covars * xn, axis=1) * -.5) / factor
-                else:
-                    w[l][j] = 0
-            w[l][active] /= w[l][active].sum(axis=0)
-
-            # M step
-            n = np.sum(w[l], axis=1)
-            priors = n / np.sum(n)
-            for j in range(k):
-                if n[j]:
-                    mu = np.dot(w[l][j, :] * cw, x[:, active_dim]) / (w[l][j, :] * cw).sum()
-
-                    xn = x[:, active_dim] - mu
-                    sigma = np.sum(xn ** 2 * w[l][j] * cw, axis=0) / (w[l][j, :] * cw).sum()
-
-                    if np.isnan(mu).any() or np.isnan(sigma).any():
-                        return w, means, covars, priors
-                else:
-                    active[j] = 0
-                    mu = 0.
-                    sigma = 0.
-                means[j, l] = mu
-                covars[j, l] = sigma
-
-    # w = np.zeros((k, m))
-    # for j in range(k):
-    #     if active[j]:
-    #         det = covars[j].prod()
-    #         inv_covars = 1. / covars[j]
-    #         xn = X - means[j]
-    #         factor = (2.0 * np.pi) ** (xn.shape[1] / 2.0) * det ** 0.5
-    #         w[j] = priors[j] * exp(-.5 * np.sum(xn * inv_covars * xn, axis=1)) / factor
-    # w[active] /= w[active].sum(axis=0)
-
-    return w, means, covars, priors
-
-
-def create_contingencies(X, callback=None):
-    window_size = 1
-    dim = len(X.domain)
-
-    X_ = Discretize(method=EqualFreq(n=10))(X)
-    m = []
-    for i, var in enumerate(X_.domain):
-        cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=≥').split('-')))
-                          for v in var.values]
-        try:
-            float_values = [[float(v) for v in vals] for vals in cleaned_values]
-            bin_centers = {
-                i: v[0] if len(v) == 1 else v[0] + (v[1] - v[0])
-                for i, v in enumerate(float_values)
-            }
-        except ValueError:
-            bin_centers = {
-                i: i
-                for i, v in enumerate(cleaned_values)
-            }
-        m.append(bin_centers)
-
-    from Orange.data.sql.table import SqlTable
-    if isinstance(X, SqlTable):
-        conts = []
-        al = len(X.domain)
-        if al > 1:
-            conts.append(create_sql_contingency(X_, [0, 1], m))
-            if callback:
-                callback(1, al)
-            for a1, a2, a3 in zip(range(al), range(1, al), range(2, al)):
-                conts.append(create_sql_contingency(X_, [a1, a2, a3], m))
-                if callback:
-                    callback(a3, al)
-            if al > 2:
-                conts.append(create_sql_contingency(X_, [al-2, al-1], m))
-                if callback:
-                    callback(al, al)
-    else:
-        conts = [defaultdict(float) for i in range(len(X_.domain))]
-        for i, r in enumerate(X_):
-            if any(np.isnan(r)):
-                continue
-            row = tuple(m[vi].get(v) for vi, v in enumerate(r))
-            for l in range(len(X_.domain)):
-                lower = l - window_size if l - window_size >= 0 else None
-                upper = l + window_size + 1 if l + window_size + 1 <= dim else None
-                dims = slice(lower, upper)
-
-                conts[l][row[dims]] += 1
-        conts = [zip(*x.items()) for x in conts]
-        conts = [(np.array(c), np.array(cw)) for c, cw in conts]
-
-    # for i, ((c1, cw1), (c2, cw2)) in enumerate(zip(contss, conts)):
-    #     a = np.sort(np.hstack((c1, cw1[:, None])), axis=0)
-    #     b = np.sort(np.hstack((c2, cw2[:, None])), axis=0)
-    #     assert_almost_equal(a, b)
-
-    return conts
-
-
-def create_sql_contingency(X, columns, m):
-    def convert(row):
-        c = len(row) - 1
-        return [m[columns[i]].get(v) if i != c else v
-                for i, v in enumerate(row)]
-
-    group_by = [a.to_sql() for a in (X.domain[c] for c in columns)]
-    filters = ['%s IS NOT NULL' % a for a in group_by]
-    fields = group_by + ['COUNT(%s)' % group_by[0]]
-    query = X._sql_query(fields, group_by=group_by, filters=filters)
-    with X._execute_sql_query(query) as cur:
-        cont = np.array(list(map(convert, cur.fetchall())), dtype='float')
-    return cont[:, :-1], cont[:, -1:].flatten()

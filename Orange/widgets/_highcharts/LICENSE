@@ -1,0 +1,19 @@
+Some files in this directory are licensed under special license terms:
+
+- chart.html and orange-*.js files are distributed under the terms of
+  [GNU AGPL v3+] license;
+- jquery.js is distributed under the terms of [MIT license],
+- boost.js, drilldown.js, exporting.js, heatmap.js, highcharts-more.js,
+  highmaps.js, highstock.js, map.js, no-data-to-display.js,
+  offline-exporting.js, treemap.js, and any other files courtesy of Highsoft AS
+  are distributed under the terms of [CC BY-NC 3.0] license.
+
+Highsoft products are NOT free for commercial and Governmental use. In order
+to redistribute Highsoft products commercially, you should obtain an
+appropriate license here:
+
+  http://www.highcharts.com/
+
+[GNU AGPL v3+]: https://www.gnu.org/licenses/agpl-3.0.en.html
+[MIT license]:  https://jquery.org/license/
+[CC BY-NC 3.0]: https://creativecommons.org/licenses/by-nc/3.0/

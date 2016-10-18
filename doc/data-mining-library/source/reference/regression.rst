@@ -107,5 +107,13 @@ Simple Random Forest
 
 Regression Tree
 -------------------
-.. autoclass:: TreeRegressionLearner
+
+Orange includes two implemenations of regression tres: a home-grown one, and one
+from scikit-learn. The former properly handles multinominal and missing values,
+and the latter is faster.
+
+.. autoclass:: TreeLearner
+   :members:
+
+.. autoclass:: SklTreeRegressionLearner
    :members:

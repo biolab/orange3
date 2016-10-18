@@ -7,7 +7,7 @@ from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, WidgetMetaClass
+from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
 
 
 class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
@@ -108,8 +108,11 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     resizing_enabled = False
     auto_apply = Setting(True)
 
-    DATA_ERROR_ID = 1
-    OUTDATED_LEARNER_WARNING_ID = 2
+    class Error(OWWidget.Error):
+        data_error = Msg("{}")
+
+    class Warning(OWWidget.Warning):
+        outdated_learner = Msg("Press Apply to submit changes.")
 
     def __init__(self):
         super().__init__()
@@ -120,7 +123,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.preprocessors = None
         self.outdated_settings = False
         self.setup_layout()
-        QTimer.singleShot(0, self.apply)
+        QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
 
     def create_learner(self):
         """Creates a learner with current configuration.
@@ -147,10 +150,10 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     @check_sql_input
     def set_data(self, data):
         """Set the input train data set."""
-        self.error(self.DATA_ERROR_ID)
+        self.Error.data_error.clear()
         self.data = data
         if data is not None and data.domain.class_var is None:
-            self.error(self.DATA_ERROR_ID, "Data has no target variable")
+            self.Error.data_error("Data has no target variable.")
             self.data = None
 
         self.update_model()
@@ -165,7 +168,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.learner.name = self.learner_name
         self.send("Learner", self.learner)
         self.outdated_settings = False
-        self.warning(self.OUTDATED_LEARNER_WARNING_ID)
+        self.Warning.outdated_learner.clear()
 
     def update_model(self):
         if self.check_data():
@@ -173,22 +176,20 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             self.model.name = self.learner_name
             self.model.instances = self.data
             self.valid_data = True
-
+        else:
+            self.model = None
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def check_data(self):
         self.valid_data = False
         if self.data is not None and self.learner is not None:
-            self.error(self.DATA_ERROR_ID)
+            self.Error.data_error.clear()
             if not self.learner.check_learner_adequacy(self.data.domain):
-                self.error(self.DATA_ERROR_ID, self.learner.learner_adequacy_err_msg)
+                self.Error.data_error(self.learner.learner_adequacy_err_msg)
             elif len(np.unique(self.data.Y)) < 2:
-                self.error(self.DATA_ERROR_ID,
-                           "Data contains a single target value. "
-                           "There is nothing to learn.")
+                self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:
-                self.error(self.DATA_ERROR_ID,
-                           "Data has no features to learn from.")
+                self.Error.data_error("Data has no features to learn from.")
             else:
                 self.valid_data = True
         return self.valid_data
@@ -196,9 +197,18 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def settings_changed(self, *args, **kwargs):
         self.outdated_settings = True
-        self.warning(self.OUTDATED_LEARNER_WARNING_ID,
-                     None if self.auto_apply else "Press Apply to submit changes.")
+        self.Warning.outdated_learner(shown=not self.auto_apply)
         self.apply()
+
+    def _change_name(self, instance, signal_name):
+        if instance:
+            instance.name = self.learner_name
+            if self.auto_apply:
+                self.send(signal_name, instance)
+
+    def learner_name_changed(self):
+        self._change_name(self.learner, "Learner")
+        self._change_name(self.model, self.OUTPUT_MODEL_NAME)
 
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
@@ -225,10 +235,10 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         pass
 
     def add_learner_name_widget(self):
-        gui.lineEdit(self.controlArea, self, 'learner_name', box='Name',
-                     tooltip='The name will identify this model in other widgets',
-                     orientation=Qt.Horizontal,
-                     callback=lambda: self.apply())
+        self.name_line_edit = gui.lineEdit(
+            self.controlArea, self, 'learner_name', box='Name',
+            tooltip='The name will identify this model in other widgets',
+            orientation=Qt.Horizontal, callback=self.learner_name_changed)
 
     def add_bottom_buttons(self):
         box = gui.hBox(self.controlArea, True)

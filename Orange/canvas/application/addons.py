@@ -335,14 +335,10 @@ class AddonManagerWidget(QWidget):
 
     def __data_changed(self, topleft, bottomright):
         rows = range(topleft.row(), bottomright.row() + 1)
-        proxy = self.__view.model()
-        map_to_source = proxy.mapToSource
-
         for i in rows:
-            sourceind = map_to_source(proxy.index(i, 0))
-            modelitem = self.__model.itemFromIndex(sourceind)
-            actionitem = self.__model.item(modelitem.row(), 3)
-            item = self.__items[modelitem.row()]
+            modelitem = self.__model.item(i, 0)
+            actionitem = self.__model.item(i, 3)
+            item = self.__items[i]
 
             state = modelitem.checkState()
             flags = modelitem.flags()

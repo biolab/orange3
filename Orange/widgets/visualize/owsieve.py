@@ -52,13 +52,11 @@ class SieveRank(VizRankDialogAttrPair):
 
 
 class OWSieveDiagram(OWWidget):
-    """
-    A two-way contingency table providing information on the relation
-    between the observed and expected frequencies of a combination of values
-    """
     name = "Sieve Diagram"
+    description = "Visualize the observed and expected frequencies " \
+                  "for a combination of values."
     icon = "icons/SieveDiagram.svg"
-    priority = 310
+    priority = 200
 
     inputs = [("Data", Table, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
@@ -69,8 +67,8 @@ class OWSieveDiagram(OWWidget):
     want_control_area = False
 
     settingsHandler = DomainContextHandler()
-    attrX = ContextSetting("")
-    attrY = ContextSetting("")
+    attrX = ContextSetting("", exclude_metas=False)
+    attrY = ContextSetting("", exclude_metas=False)
     selection = ContextSetting(set())
 
     def __init__(self):
@@ -94,11 +92,9 @@ class OWSieveDiagram(OWWidget):
         self.attrXCombo = gui.comboBox(value="attrX", **combo_args)
         gui.widgetLabel(self.attr_box, "\u2715", sizePolicy=fixed_size)
         self.attrYCombo = gui.comboBox(value="attrY", **combo_args)
-        self.vizrank = SieveRank(self)
-        self.vizrank_button = gui.button(
-            self.attr_box, self, "Score Combinations", sizePolicy=fixed_size,
-            callback=self.vizrank.reshow, enabled=False)
-        self.vizrank.pairSelected.connect(self.set_attr)
+        self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
+            self.attr_box, self, "Score Combinations", self.set_attr)
+        self.vizrank_button.setSizePolicy(*fixed_size)
 
         self.canvas = QGraphicsScene()
         self.canvasView = ViewWithPress(
@@ -121,14 +117,6 @@ class OWSieveDiagram(OWWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.update_graph()
-
-    def closeEvent(self, event):
-        self.vizrank.close()
-        super().closeEvent(event)
-
-    def hideEvent(self, event):
-        self.vizrank.hide()
-        super().hideEvent(event)
 
     def set_data(self, data):
         """
@@ -213,14 +201,14 @@ class OWSieveDiagram(OWWidget):
         and at least two attributes appear in the domain. If there are
         multiple, use the first two. Combos are disabled if inputs are used.
         """
-        self.warning(1)
+        self.warning()
         self.attr_box.setEnabled(True)
         if not self.input_features:  # None or empty
             return
         features = [f for f in self.input_features if f in self.attrs]
         if not features:
-            self.warning(1, "Features from the input signal "
-                            "are not present in the data")
+            self.warning(
+                "Features from the input signal are not present in the data")
             return
         old_attrs = self.attrX, self.attrY
         self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]

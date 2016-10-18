@@ -119,14 +119,14 @@ class OWPredictions(widget.OWWidget):
             childrenCollapsible=False,
             handleWidth=2,
         )
-        self.dataview = QtGui.QTableView(
+        self.dataview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
             selectionMode=QtGui.QTableView.NoSelection,
             focusPolicy=Qt.StrongFocus
         )
-        self.predictionsview = QtGui.QTableView(
+        self.predictionsview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
@@ -191,7 +191,7 @@ class OWPredictions(widget.OWWidget):
             self.class_var = predictor.domain.class_var
 
     def handleNewSignals(self):
-        self.error(0)
+        self.clear_messages()
         if self.data is not None:
             for inputid, pred in list(self.predictors.items()):
                 if pred.results is None or numpy.isnan(pred.results[0]).all():
@@ -200,7 +200,7 @@ class OWPredictions(widget.OWWidget):
                     except ValueError as err:
                         err_msg = '{}:\n'.format(pred.predictor.name) + \
                                   str(err)
-                        self.error(0, err_msg)
+                        self.error(err_msg)
                         n, m = len(self.data), 1
                         if self.data.domain.has_discrete_class:
                             m = len(self.data.domain.class_var.values)
@@ -228,11 +228,7 @@ class OWPredictions(widget.OWWidget):
         # Check for prediction target consistency
         target_vars = set([p.predictor.domain.class_var
                            for p in self.predictors.values()])
-
-        if len(target_vars) > 1:
-            self.warning(0, "Inconsistent class variables")
-        else:
-            self.warning(0)
+        self.warning("Mismatching class variables", shown=len(target_vars) > 1)
 
         # Update the Info box text.
         info = []
@@ -290,7 +286,13 @@ class OWPredictions(widget.OWWidget):
         predmodel.setDynamicSortFilter(True)
         self.predictionsview.setItemDelegate(PredictionsItemDelegate())
         self.predictionsview.setModel(predmodel)
-        self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
+        hheader = self.predictionsview.horizontalHeader()
+        hheader.setSortIndicatorShown(False)
+        # SortFilterProxyModel is slow due to large abstraction overhead
+        # (every comparison triggers multiple `model.index(...)`,
+        # model.rowCount(...), `model.parent`, ... calls)
+        hheader.setClickable(predmodel.rowCount() < 20000)
+
         predmodel.layoutChanged.connect(self._update_data_sort_order)
         self._update_data_sort_order()
         self.predictionsview.resizeColumnsToContents()
@@ -760,6 +762,52 @@ class _TableModel(QtCore.QAbstractTableModel):
             return None
 
 PredictionsModel = _TableModel
+
+
+class TableView(QtGui.QTableView):
+    MaxSizeHintSamples = 1000
+
+    def sizeHintForColumn(self, column):
+        """
+        Reimplemented from `QTableView.sizeHintForColumn`
+
+        Note: This does not match the QTableView's implementation,
+        in particular size hints from editor/index widgets are not taken
+        into account.
+
+        Parameters
+        ----------
+        column : int
+        """
+        # This is probably not needed in Qt5?
+        if self.model() is None:
+            return -1
+
+        self.ensurePolished()
+        model = self.model()
+        vheader = self.verticalHeader()
+        top = vheader.visualIndexAt(0)
+        bottom = vheader.visualIndexAt(self.viewport().height())
+        if bottom < 0:
+            bottom = self.model().rowCount()
+
+        options = self.viewOptions()
+        options.widget = self
+
+        width = 0
+        sample_count = 0
+
+        for row in range(top, bottom):
+            if not vheader.isSectionHidden(vheader.logicalIndex(row)):
+                index = model.index(row, column)
+                size = self.itemDelegate(index).sizeHint(options, index)
+                width = max(size.width(), width)
+                sample_count += 1
+
+            if sample_count >= TableView.MaxSizeHintSamples:
+                break
+
+        return width + 1 if self.showGrid() else width
 
 
 class TableSortProxyModel(QtGui.QSortFilterProxyModel):

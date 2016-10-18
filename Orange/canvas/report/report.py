@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict, Iterable
 from itertools import chain
 from PyQt4.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
-from PyQt4.QtGui import QGraphicsScene, QTableView, QColor
+from PyQt4.QtGui import QGraphicsScene, QTableView, QColor, QBrush
 
 from Orange.util import try_
 from Orange.widgets.io import PngFormat
@@ -222,10 +222,12 @@ class Report:
                             if view and row is not None and col is not None else False)
 
                 fgcolor = data(Qt.ForegroundRole)
-                fgcolor = fgcolor.color().name() if fgcolor else 'black'
+                fgcolor = (QBrush(fgcolor).color().name()
+                           if isinstance(fgcolor, (QBrush, QColor)) else 'black')
 
                 bgcolor = data(Qt.BackgroundRole)
-                bgcolor = bgcolor.color().name() if bgcolor else 'transparent'
+                bgcolor = (QBrush(bgcolor).color().name()
+                           if isinstance(bgcolor, (QBrush, QColor)) else 'transparent')
                 if bgcolor.lower() == '#ffffff':
                     bgcolor = 'transparent'
 
@@ -255,6 +257,8 @@ class Report:
 
             if has_horizontal_header:
                 stream.append('<tr>')
+                if has_vertical_header:
+                    stream.append('<th></th>')
                 stream.extend(item_html(None, col) for col in columns)
                 stream.append('</tr>')
 

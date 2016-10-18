@@ -10,7 +10,7 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets.gui import attributeIconDict
 from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
 from Orange.widgets.utils.plot import xBottom
-from Orange.widgets.utils.scaling import checksum
+from Orange.widgets.utils import checksum
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
@@ -22,7 +22,7 @@ class OWParallelCoordinates(OWVisWidget):
     name = "Parallel Coordinates"
     description = "Parallel coordinates display of multi-dimensional data."
     icon = "icons/ParallelCoordinates.svg"
-    priority = 100
+    priority = 900
     inputs = [("Data", Orange.data.Table, 'set_data', Default),
               ("Data Subset", Orange.data.Table, 'set_subset_data'),
               ("Features", AttributeList, 'set_shown_attributes')]
@@ -110,10 +110,10 @@ class OWParallelCoordinates(OWVisWidget):
     def flip_attribute(self, item):
         if self.graph.flip_attribute(str(item.text())):
             self.update_graph()
-            self.information(0)
+            self.information()
         else:
-            self.information(0, "Didn't flip the attribute. To flip a continuous "
-                                "attribute uncheck 'Global value scaling' checkbox.")
+            self.information("To flip a numeric feature, disable"
+                             "'Global value scaling'")
 
     def update_graph(self):
         self.graph.update_data(self.shown_attributes)

@@ -1,47 +1,39 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from PyQt4 import QtGui
-
-from Orange.widgets.tests.base import WidgetTest
+from Orange.classification import SklTreeLearner, KNNLearner
 from Orange.widgets.classify.owadaboost import OWAdaBoostClassification
+from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
+                                       ParameterMapping)
 
 
-
-class TestOWAdaBoostClassification(WidgetTest):
-
+class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(OWAdaBoostClassification)
-        self.spinners = []
-        self.spinners.append(self.widget.findChildren(QtGui.QSpinBox)[0])
-        self.spinners.append(self.widget.findChildren(QtGui.QDoubleSpinBox)[0])
-        self.combobox_algorithm = self.widget.findChildren(QtGui.QComboBox)[0]
+        self.widget = self.create_widget(OWAdaBoostClassification,
+                                         stored_settings={"auto_apply": False})
+        self.init()
+        losses = self.widget.losses
+        self.parameters = [
+            ParameterMapping('algorithm', self.widget.algorithm_combo, losses),
+            ParameterMapping('learning_rate', self.widget.learning_rate_spin),
+            ParameterMapping('n_estimators', self.widget.n_estimators_spin)]
 
-    def test_visible_boxes(self):
-        """ Check if boxes are visible """
-        self.assertEqual(self.spinners[0].isHidden(), False)
-        self.assertEqual(self.spinners[1].isHidden(), False)
-        self.assertEqual(self.combobox_algorithm.isHidden(), False)
+    def test_input_learner(self):
+        """Check if base learner properly changes with learner on the input"""
+        max_depth = 2
+        default_base_est = self.widget.base_estimator
+        self.assertIsInstance(default_base_est, SklTreeLearner)
+        self.assertIsNone(default_base_est.params.get("max_depth"))
+        self.send_signal("Learner", SklTreeLearner(max_depth=max_depth))
+        self.assertEqual(self.widget.base_estimator.params.get("max_depth"),
+                         max_depth)
+        self.widget.apply_button.button.click()
+        output_base_est = self.get_output("Learner").params.get("base_estimator")
+        self.assertEqual(output_base_est.max_depth, max_depth)
 
-    def test_parameters_on_output(self):
-        """ Check right paramaters  on output """
-        self.widget.apply()
-        learner_params = self.widget.learner.params
-        self.assertEqual(learner_params.get("n_estimators"), self.spinners[0].value())
-        self.assertEqual(learner_params.get("learning_rate"), self.spinners[1].value())
-        self.assertEqual(learner_params.get('algorithm'), self.combobox_algorithm.currentText())
-
-
-    def test_output_algorithm(self):
-        """ Check if right learning algorithm is on output when we change algorithm """
-        for index, algorithmName in enumerate(self.widget.losses):
-            self.combobox_algorithm.setCurrentIndex(index)
-            self.combobox_algorithm.activated.emit(index)
-            self.assertEqual(self.combobox_algorithm.currentText(), algorithmName)
-            self.widget.apply()
-            self.assertEqual(self.widget.learner.params.get("algorithm").capitalize(),
-                             self.combobox_algorithm.currentText().capitalize())
-
-    def test_learner_on_output(self):
-        """ Check if learner is on output after create widget  and apply """
-        self.widget.apply()
-        self.assertNotEqual(self.widget.learner, None)
+    def test_input_learner_disconnect(self):
+        """Check base learner after disconnecting learner on the input"""
+        self.send_signal("Learner", KNNLearner())
+        self.assertIsInstance(self.widget.base_estimator, KNNLearner)
+        self.send_signal("Learner", None)
+        self.assertEqual(self.widget.base_estimator,
+                         self.widget.DEFAULT_BASE_ESTIMATOR)

@@ -1,10 +1,14 @@
 from collections import namedtuple, deque
 from operator import attrgetter
 from itertools import chain, count
+from distutils.version import LooseVersion as _LooseVersion
+
 import heapq
 import numpy
 
 import scipy.cluster.hierarchy
+import scipy.spatial.distance
+
 from Orange.distance import Euclidean, PearsonR
 
 __all__ = ['HierarchicalClustering']
@@ -14,6 +18,17 @@ AVERAGE = "average"
 COMPLETE = "complete"
 WEIGHTED = "weighted"
 WARD = "ward"
+
+# Does scipy implement a O(n**2) NN chain algorithm?
+_HAS_NN_CHAIN = hasattr(scipy.cluster.hierarchy, "_hierarchy") and \
+                hasattr(scipy.cluster.hierarchy._hierarchy, "nn_chain")
+
+# Prior to 0.18 scipy.cluster.hierarchical's python interface disallowed
+# ward clustering from a precomputed distance matrix even though it's cython
+# implementation allowed it and was documented to support it (scipy issue 5220)
+_HAS_WARD_LINKAGE_FROM_DIST = \
+    _LooseVersion(scipy.__version__) >= _LooseVersion("0.18") and \
+    _HAS_NN_CHAIN
 
 
 def condensedform(X, mode="upper"):
@@ -86,7 +101,23 @@ def dist_matrix_linkage(matrix, linkage=AVERAGE):
     """
     # Extract compressed upper triangular distance matrix.
     distances = condensedform(matrix)
-    return scipy.cluster.hierarchy.linkage(distances, method=linkage)
+    if linkage == WARD and not _HAS_WARD_LINKAGE_FROM_DIST:
+        # Avoid `scipy.cluster.hierarchy.linkage` and dispatch to it's
+        # cython implementation directly.
+        # This the core of the scipy.cluster.hierarchy.linkage in
+        # scipy 0.16, 0.17. Assuming the branches are in bug fix mode
+        # only so this interface will not change.
+        y = numpy.asarray(distances, dtype=float)
+        scipy.spatial.distance.is_valid_y(y, throw=True)
+        N = scipy.spatial.distance.num_obs_y(y)
+        # allocate the output linkage matrix
+        Z = numpy.zeros((N - 1, 4))
+        # retrieve the correct method flag
+        method = scipy.cluster.hierarchy._cpy_euclid_methods["ward"]
+        scipy.cluster.hierarchy._hierarchy.linkage(y, Z, int(N), int(method))
+        return Z
+    else:
+        return scipy.cluster.hierarchy.linkage(distances, method=linkage)
 
 
 def dist_matrix_clustering(matrix, linkage=AVERAGE):
@@ -96,9 +127,7 @@ def dist_matrix_clustering(matrix, linkage=AVERAGE):
     :param Orange.misc.DistMatrix matrix:
     :param str linkage:
     """
-    # Extract compressed upper triangular distance matrix.
-    distances = condensedform(matrix)
-    Z = scipy.cluster.hierarchy.linkage(distances, method=linkage)
+    Z = dist_matrix_linkage(matrix, linkage=linkage)
     return tree_from_linkage(Z)
 
 
@@ -363,12 +392,11 @@ def top_clusters(tree, k):
     heap = [item(tree)]
 
     while len(heap) < k:
-        key, cl = heapq.heappop(heap)
+        _, cl = heap[0]  # peek
         if cl.is_leaf:
             assert all(n.is_leaf for _, n in heap)
-            heapq.heappush(heap, (key, cl))
             break
-
+        key, cl = heapq.heappop(heap)
         left, right = cl.left, cl.right
         heapq.heappush(heap, item(left))
         heapq.heappush(heap, item(right))

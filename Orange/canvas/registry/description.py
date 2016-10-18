@@ -198,9 +198,6 @@ class WidgetDescription(object):
         version.
     description : str, optional
         A short description of the widget, suitable for a tool tip.
-    long_description : str, optional
-        A longer description of the widget, suitable for a 'what's this?'
-        role.
     qualified_name : str
         A qualified name (import name) of the class implementing the widget.
     package : str, optional
@@ -229,7 +226,7 @@ class WidgetDescription(object):
 
     """
     def __init__(self, name, id, category=None, version=None,
-                 description=None, long_description=None,
+                 description=None,
                  qualified_name=None, package=None, project_name=None,
                  inputs=[], outputs=[],
                  help=None, help_ref=None, url=None, keywords=None,
@@ -247,7 +244,6 @@ class WidgetDescription(object):
         self.category = category
         self.version = version
         self.description = description
-        self.long_description = long_description
         self.qualified_name = qualified_name
         self.package = package
         self.project_name = project_name
@@ -307,14 +303,7 @@ class WidgetDescription(object):
             raise WidgetSpecificationError
 
         qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
-        long_description = (
-            widget_class.long_description or
-            widget_class.__doc__ or
-            "").strip()
-        description = (
-            widget_class.description or
-            long_description and long_description.split("\n\n")[0]).strip()
-
+        description = widget_class.description
         inputs = [input_channel_from_args(input_) for input_ in
                   widget_class.inputs]
         outputs = [output_channel_from_args(output) for output in
@@ -333,7 +322,6 @@ class WidgetDescription(object):
             category=widget_class.category or default_cat_name,
             version=widget_class.version,
             description=description,
-            long_description=long_description,
             qualified_name=qualified_name,
             package=module.__package__,
             inputs=inputs,
