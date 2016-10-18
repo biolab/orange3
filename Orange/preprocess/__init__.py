@@ -5,7 +5,6 @@ from .impute import *
 from .normalize import *
 from .remove import *
 from .preprocess import *
-from .reprable import *
 
 from Orange.misc.lazy_module import _LazyModule
 transformation = _LazyModule("preprocess.transformation")

@@ -2,8 +2,8 @@ import numpy
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
+from Orange.misc.reprable import Reprable
 from .transformation import Transformation, Lookup
-from .reprable import Reprable
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
            "Model", "AsValue", "Random", "Default"]

@@ -10,7 +10,8 @@ import bottleneck as bn
 import Orange.data
 from Orange.data import Table
 from Orange.statistics import distribution
-from . import impute, discretize, transformation, reprable
+from Orange.misc.reprable import Reprable
+from . import impute, discretize, transformation
 from ..misc.enum import Enum
 
 
@@ -19,7 +20,7 @@ __all__ = ["Continuize", "Discretize", "Impute",
            "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scaling"]
 
 
-class Preprocess(reprable.Reprable):
+class Preprocess(Reprable):
     """
     A generic preprocessor class. All preprocessors need to inherit this
     class. Preprocessors can be instantiated without the data set to return
@@ -476,7 +477,7 @@ class Scaling(Preprocess):
         return data.from_table(domain, data)
 
 
-class PreprocessorList(reprable.Reprable):
+class PreprocessorList(Reprable):
     """
     Store a list of preprocessors and on call apply them to the data set.
 

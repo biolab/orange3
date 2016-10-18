@@ -285,7 +285,7 @@ class LearnerAccessibility(unittest.TestCase):
         for learner in list(self.all_learners()):
             try:
                 learner = learner()
-            except Exception as err:
+            except Exception:
                 print('%s cannot be used with default parameters' % learner.__name__)
                 traceback.print_exc()
                 continue
@@ -306,7 +306,7 @@ class LearnerAccessibility(unittest.TestCase):
                 learner = learner()
                 table = Table("housing")
                 self.assertRaises(ValueError, learner, table)
-            except TypeError as err:
+            except TypeError:
                 traceback.print_exc()
                 continue
 
@@ -316,9 +316,10 @@ class LearnerAccessibility(unittest.TestCase):
                 learner = learner()
                 table = Table(test_filename("test8.tab"))
                 self.assertRaises(ValueError, learner, table)
-            except TypeError as err:
+            except TypeError:
                 traceback.print_exc()
                 continue
+
 
 class LearnerReprs(unittest.TestCase):
     def test_reprs(self):
@@ -342,5 +343,6 @@ class LearnerReprs(unittest.TestCase):
 
         for l in learners:
             repr_str = repr(l)
+            print(repr_str + "\n")
             new_l = eval(repr_str)
             self.assertEqual(repr(new_l), repr_str)

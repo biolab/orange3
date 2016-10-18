@@ -4,8 +4,8 @@ from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from Orange.statistics.basic_stats import BasicStats
+from Orange.misc.reprable import Reprable
 from .transformation import Transformation
-from .reprable import Reprable
 from . import _discretize
 
 __all__ = ["EqualFreq", "EqualWidth", "EntropyMDL", "DomainDiscretizer"]
@@ -98,14 +98,6 @@ class Discretization(Reprable):
         raise NotImplementedError(
             "Subclasses of 'Discretization' need to implement "
             "the call operator")
-
-    def __repr__(self):
-        args = self.__class__.__init__.__code__.co_varnames
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
-                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
-        )
 
 
 class EqualFreq(Discretization):

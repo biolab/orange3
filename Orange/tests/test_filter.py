@@ -425,5 +425,6 @@ class TestFilterReprs(unittest.TestCase):
 
         for f in filters:
             repr_str = repr(f)
+            print(repr_str)
             new_f = eval(repr_str)
             self.assertEqual(repr(new_f), repr_str)

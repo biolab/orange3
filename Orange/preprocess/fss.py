@@ -1,6 +1,7 @@
 import random
 import Orange
 import numpy as np
+from Orange.misc.reprable import Reprable
 from scipy.sparse import issparse
 
 from itertools import takewhile
@@ -12,7 +13,7 @@ from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
 
-class SelectBestFeatures:
+class SelectBestFeatures(Reprable):
     """
     A feature selector that builds a new data set consisting of either the top
     `k` features or all those that exceed a given `threshold`. Features are
@@ -88,14 +89,6 @@ class SelectBestFeatures:
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
-    def __repr__(self):
-        args = self.__class__.__init__.__code__.co_varnames
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join("{}={}".format(arg, repr(getattr(self, arg))) for i, arg in enumerate(args) if
-                arg != "self" and self.__class__.__init__.__defaults__[i-1] != getattr(self, arg))
-        )
-
 
     def score_only_nice_features(self, data, method):
         mask = np.array([isinstance(a, method.feature_type)
@@ -109,7 +102,7 @@ class SelectBestFeatures:
         return all_scores
 
 
-class SelectRandomFeatures:
+class SelectRandomFeatures(Reprable):
     """
     A feature selector that selects random `k` features from an input
     data set and returns a data set with selected features. Parameter
@@ -134,8 +127,6 @@ class SelectRandomFeatures:
                           min(self.k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
-
-    __repr__ = SelectBestFeatures.__repr__
 
 
 class RemoveNaNColumns(Preprocess):
@@ -165,5 +156,3 @@ class RemoveNaNColumns(Preprocess):
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
         return Orange.data.Table(domain, data)
-
-    __repr__ = SelectBestFeatures.__repr__

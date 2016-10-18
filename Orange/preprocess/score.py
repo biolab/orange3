@@ -8,7 +8,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
-from .reprable import Reprable
+from Orange.misc.reprable import Reprable
 
 
 __all__ = ["Chi2",
