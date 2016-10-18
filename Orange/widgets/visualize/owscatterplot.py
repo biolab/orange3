@@ -182,32 +182,32 @@ class OWScatterPlot(OWWidget):
         self.sampling.setVisible(False)
 
         box = gui.vBox(self.controlArea, "Points")
-        color_model = DomainModel(
+        self.color_model = DomainModel(
             placeholder="(Same color)", valid_types=dmod.PRIMITIVE)
         self.cb_attr_color = gui.comboBox(
             box, self, "graph.attr_color", label="Color:",
             callback=self.update_colors,
-            model=color_model, **common_options)
-        label_model = DomainModel(
+            model=self.color_model, **common_options)
+        self.label_model = DomainModel(
             placeholder="(No labels)", valid_types=dmod.PRIMITIVE)
         self.cb_attr_label = gui.comboBox(
             box, self, "graph.attr_label", label="Label:",
             callback=self.graph.update_labels,
-            model=label_model, **common_options)
-        shape_model = DomainModel(
+            model=self.label_model, **common_options)
+        self.shape_model = DomainModel(
             placeholder="(Same shape)", valid_types=DiscreteVariable)
         self.cb_attr_shape = gui.comboBox(
             box, self, "graph.attr_shape", label="Shape:",
             callback=self.graph.update_shapes,
-            model=shape_model, **common_options)
-        size_model = DomainModel(
+            model=self.shape_model, **common_options)
+        self.size_model = DomainModel(
             placeholder="(Same size)", valid_types=ContinuousVariable)
         self.cb_attr_size = gui.comboBox(
             box, self, "graph.attr_size", label="Size:",
             callback=self.graph.update_sizes,
-            model=size_model, **common_options)
-        self.models = [self.xy_model, color_model, label_model,
-                       shape_model, size_model]
+            model=self.size_model, **common_options)
+        self.models = [self.xy_model, self.color_model, self.label_model,
+                       self.shape_model, self.size_model]
 
         g = self.graph.gui
         g.point_properties_box(self.controlArea, box)
@@ -330,6 +330,32 @@ class OWScatterPlot(OWWidget):
         else:
             self.vizrank_button.setToolTip("")
         self.openContext(self.data)
+
+        def findvar(name, iterable):
+            """Find a Orange.data.Variable in `iterable` by name"""
+            for el in iterable:
+                if isinstance(el, Orange.data.Variable) and el.name == name:
+                    return el
+            else:
+                return None
+        # handle restored settings from  < 3.3.9 when attr_* were stored
+        # by name
+        if isinstance(self.attr_x, str):
+            self.attr_x = findvar(self.attr_x, self.xy_model)
+        if isinstance(self.attr_y, str):
+            self.attr_y = findvar(self.attr_y, self.xy_model)
+        if isinstance(self.graph.attr_label, str):
+            self.graph.attr_label = findvar(
+                self.graph.attr_label, self.label_model)
+        if isinstance(self.graph.attr_color, str):
+            self.graph.attr_color = findvar(
+                self.graph.attr_color, self.color_model)
+        if isinstance(self.graph.attr_shape, str):
+            self.graph.attr_shape = findvar(
+                self.graph.attr_shape, self.shape_model)
+        if isinstance(self.graph.attr_size, str):
+            self.graph.attr_size = findvar(
+                self.graph.attr_size, self.size_model)
 
     def add_data(self, time=0.4):
         if self.data and len(self.data) > 2000:
