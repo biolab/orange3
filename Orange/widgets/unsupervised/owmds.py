@@ -24,6 +24,8 @@ from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
 from Orange.widgets.widget import Msg, OWWidget
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 
 def torgerson(distances, n_components=2):
@@ -101,7 +103,7 @@ class OWMDS(OWWidget):
               ("Data Subset", Orange.data.Table, "set_subset_data")]
 
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Data", Orange.data.Table)]
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
 
     #: Initialization type
     PCA, Random = 0, 1
@@ -1046,13 +1048,14 @@ class OWMDS(OWWidget):
             elif self.output_embedding_role == OWMDS.MetaRole:
                 output.metas[:, -2:] = embedding.X
 
-        self.send("Data", output)
         if output is not None and self._selection_mask is not None and \
                 numpy.any(self._selection_mask):
             subset = output[self._selection_mask]
         else:
             subset = None
         self.send("Selected Data", subset)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(output, self._selection_mask))
 
     def onDeleteWidget(self):
         super().onDeleteWidget()

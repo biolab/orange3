@@ -18,6 +18,8 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -103,7 +105,7 @@ class OWScatterPlot(OWWidget):
               ("Features", AttributeList, "set_shown_attributes")]
 
     outputs = [("Selected Data", Table, Default),
-               ("Other Data", Table),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table),
                ("Features", Table)]
 
     settingsHandler = DomainContextHandler()
@@ -427,25 +429,18 @@ class OWScatterPlot(OWWidget):
         self.send_data()
 
     def send_data(self):
-        selected = unselected = None
+        selected = None
+        selection = None
         # TODO: Implement selection for sql data
         if isinstance(self.data, SqlTable):
-            selected = unselected = self.data
+            selected = self.data
         elif self.data is not None:
             selection = self.graph.get_selection()
-            if len(selection) == 0:
-                self.send("Selected Data", None)
-                self.send("Other Data", self.data)
-                return
-            selected = self.data[selection]
-            unselection = np.full(len(self.data), True, dtype=bool)
-            unselection[selection] = False
-            unselected = self.data[unselection]
+            if len(selection) > 0:
+                selected = self.data[selection]
         self.send("Selected Data", selected)
-        if unselected is None or len(unselected) == 0:
-            self.send("Other Data", None)
-        else:
-            self.send("Other Data", unselected)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, selection))
 
     def send_features(self):
         features = None

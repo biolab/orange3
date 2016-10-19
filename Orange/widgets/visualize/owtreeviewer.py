@@ -13,8 +13,10 @@ from Orange.data import Table
 
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 
 class PieChart(QGraphicsRectItem):
@@ -151,7 +153,8 @@ class OWTreeGraph(OWTreeViewer2D):
     icon = "icons/TreeViewer.svg"
     priority = 35
     inputs = [("Tree", TreeModel, "ctree")]
-    outputs = [("Data", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
@@ -266,7 +269,9 @@ class OWTreeGraph(OWTreeViewer2D):
             self.info.setText('{} nodes, {} leaves'.
                               format(model.node_count(), model.leaf_count()))
         self.setup_scene()
-        self.send("Data", None)
+        self.send("Selected Data", None)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.dataset, None))
 
     def walkcreate(self, node_inst, parent=None):
         """Create a structure of tree nodes from the given model"""
@@ -291,7 +296,10 @@ class OWTreeGraph(OWTreeViewer2D):
         nodes = [item.node_inst for item in self.scene.selectedItems()
                  if isinstance(item, TreeNode)]
         data = self.model.get_instances(nodes)
-        self.send("Data", data)
+        self.send("Selected Data", data)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.dataset,
+                                         self.model.get_indices(nodes)))
 
     def send_report(self):
         if not self.model:
