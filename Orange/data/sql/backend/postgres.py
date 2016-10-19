@@ -1,4 +1,5 @@
 import logging
+import re
 import warnings
 from contextlib import contextmanager
 from time import time
@@ -7,7 +8,7 @@ from psycopg2 import Error, OperationalError
 from psycopg2.pool import ThreadedConnectionPool
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
-from Orange.data.sql.backend.base import Backend, TableDesc, ToSql, BackendError
+from Orange.data.sql.backend.base import Backend, ToSql, BackendError
 
 log = logging.getLogger(__name__)
 
@@ -166,6 +167,12 @@ class Psycopg2Backend(Backend):
                     return DiscreteVariable(field_name, values)
 
         return StringVariable(field_name)
+
+    def count_approx(self, query):
+        sql = "EXPLAIN " + query
+        with self.execute_sql_query(sql) as cur:
+            s = ''.join(row[0] for row in cur.fetchall())
+        return int(re.findall(r'rows=(\d*)', s)[0])
 
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled

@@ -264,13 +264,20 @@ class SqlTable(Table):
     def approx_len(self, get_exact=False):
         if self._cached__len__ is not None:
             return self._cached__len__
-        sql = "EXPLAIN " + self._sql_query(["*"])
-        with self.backend.execute_sql_query(sql) as cur:
-            s = ''.join(row[0] for row in cur.fetchall())
-        alen = int(re.findall('rows=(\d*)', s)[0])
-        if get_exact:
-            threading.Thread(target=len, args=(self,)).start()
-        return alen
+
+        approx_len = None
+        try:
+            query = self._sql_query(["*"])
+            approx_len = self.backend.count_approx(query)
+            if get_exact:
+                threading.Thread(target=len, args=(self,)).start()
+        except NotImplementedError:
+            pass
+
+        if approx_len is None:
+            approx_len = len(self)
+
+        return approx_len
 
     _X = None
     _Y = None
