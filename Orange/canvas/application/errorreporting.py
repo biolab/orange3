@@ -197,8 +197,13 @@ class ErrorReporting(QDialog):
             filename = mkstemp(prefix='ows-', suffix='.ows.xml')[1]
             # Prevent excepthook printing the same exception when
             # canvas tries to instantiate the broken widget again
-            with patch('sys.excepthook', lambda *_: None):
-                canvas.save_scheme_to(canvas.current_document().scheme(), filename)
+            with patch('sys.excepthook', lambda *_: None), \
+                    open(filename, "wb") as f:
+                scheme = canvas.current_document().scheme()
+                try:
+                    scheme.save_to(f, pretty=True, pickle_fallback=True)
+                except Exception:
+                    pass
             data[F.WIDGET_SCHEME] = filename
             with open(filename) as f:
                 data['_' + F.WIDGET_SCHEME] = f.read()
