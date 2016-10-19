@@ -194,7 +194,8 @@ class ErrorReporting(QDialog):
             data[F.WIDGET_NAME] = widget.name
             data[F.WIDGET_MODULE] = widget_module
         if canvas:
-            filename = mkstemp(prefix='ows-', suffix='.ows.xml')[1]
+            fd, filename = mkstemp(prefix='ows-', suffix='.ows.xml')
+            os.close(fd)
             # Prevent excepthook printing the same exception when
             # canvas tries to instantiate the broken widget again
             with patch('sys.excepthook', lambda *_: None), \
