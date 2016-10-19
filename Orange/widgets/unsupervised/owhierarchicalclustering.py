@@ -1101,7 +1101,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if not selected_indices:
             self.send("Selected Data", None)
-            annotated_data = create_annotated_table(items, selected_indices) \
+            annotated_data = create_annotated_table(items, []) \
                 if self.selection_method == 0 and self.matrix.axis else None
             self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
             return
