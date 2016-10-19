@@ -1148,7 +1148,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 selected_data = data[mask]
                 if self.append_clusters:
                     def remove_other_value(vars_):
-                        vars_ = [var for var in vars_]
+                        vars_ = list(vars_)
                         clust_var = vars_[-1].copy()
                         clust_var.values.pop()
                         vars_[-1] = clust_var
