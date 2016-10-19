@@ -6,17 +6,16 @@ import logging
 import re
 import threading
 import warnings
-
 from contextlib import contextmanager
 from itertools import islice
 from time import time, strftime
 
 import numpy as np
-
 from Orange.data import (
     DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable,
     Table, Domain, Value, Instance, filter)
 from Orange.data.sql import filter as sql_filter
+from Orange.data.sql.backend.base import Backend, ToSql
 from Orange.misc import import_late_warning
 
 psycopg2 = import_late_warning("psycopg2")
@@ -29,20 +28,14 @@ sql_log = logging.getLogger('sql_log')
 sql_log.debug("Logging started: {}".format(strftime("%Y-%m-%d %H:%M:%S")))
 
 
-class Psycopg2Backend:
-    """Backend for accesing data stored in a PostgreSql tdatabase
-
-    Parameters
-    ----------
-    connection_params: dict
-        connection params passed tot he psycopg2 drriver
+class Psycopg2Backend(Backend):
+    """Backend for accessing data stored in a Postgres database
     """
-
 
     connection_pool = None
 
     def __init__(self, connection_params):
-        self.connection_params = connection_params
+        super().__init__(connection_params)
 
         if self.connection_pool is None:
             self._create_connection_pool()
@@ -53,26 +46,6 @@ class Psycopg2Backend:
 
     @contextmanager
     def execute_sql_query(self, query, params=None):
-        """Context manager for execution of sql queries
-
-        Usage:
-            ```
-            with backend.execute_sql_query("SELECT * FROM foo") as cur:
-                cur.fetch_all()
-            ```
-
-        Parameters
-        ----------
-        query : string
-            query to be executed
-        params: tuple
-            parameters to be passed to the query
-
-        Returns
-        -------
-        yields a cursor that can be used to access the data
-        """
-
         connection = self.connection_pool.getconn()
         cur = connection.cursor()
         try:
@@ -86,52 +59,16 @@ class Psycopg2Backend:
             connection.commit()
             self.connection_pool.putconn(connection)
 
-    @staticmethod
-    def quote_identifier(name):
-        """Quote identifier name so it can be safely used in queries
-
-        Parameters
-        ----------
-        name: str
-            name of the parameter
-
-        Returns
-        -------
-        quoted parameter that can be used in sql queries
-        """
+    def quote_identifier(self, name):
         return '"%s"' % name
 
-    @staticmethod
-    def unquote_identifier(quoted_name):
-        """Remove quotes from identifier name
-        Used when sql table name is used in where parameter to
-        query special tables
-
-        Parameters
-        ----------
-        quoted_name : str
-
-        Returns
-        -------
-        unquoted name
-        """
+    def unquote_identifier(self, quoted_name):
         if quoted_name.startswith('"'):
             return quoted_name[1:len(quoted_name) - 1]
         else:
             return quoted_name
 
     def get_fields(self, table_name):
-        """Return a list of field names and metadata in the given table
-
-        Parameters
-        ----------
-        table_name: str
-
-        Returns
-        -------
-        a list of tuples (field_name, *field_metadata)
-        both will be passed to create_variable
-        """
         fields = []
         query = "SELECT * FROM %s LIMIT 0" % table_name
         with self.execute_sql_query(query) as cur:
@@ -141,24 +78,6 @@ class Psycopg2Backend:
 
     def create_variable(self, field_name, field_metadata,
                         type_hints, inspect_table=None):
-        """Create variable based on field information
-
-        Parameters
-        ----------
-        field_name : str
-            name do the field
-        field_metadata : tuple
-            data to guess field type from
-        type_hints : Domain
-            domain with variable templates
-        inspect_table : Option[str]
-            name of the table to expect the field values or None
-            if no inspection is to be performed
-
-        Returns
-        -------
-        Variable representing the field
-        """
         if field_name in type_hints:
             var = type_hints[field_name]
         else:
@@ -863,11 +782,3 @@ class SqlRowInstance(Instance):
         super().__init__(domain, data[:nvar])
         if len(data) > nvar:
             self._metas = np.asarray(data[nvar:], dtype=object)
-
-
-class ToSql:
-    def __init__(self, sql):
-        self.sql = sql
-
-    def __call__(self):
-        return self.sql
