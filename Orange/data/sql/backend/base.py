@@ -1,7 +1,12 @@
+import logging
 from contextlib import contextmanager
 
+from Orange.util import Registry
 
-class Backend:
+log = logging.getLogger(__name__)
+
+
+class Backend(metaclass=Registry):
     """Base class for SqlTable backends. Implementations should define
     all of the methods defined below.
 
@@ -13,6 +18,11 @@ class Backend:
 
     def __init__(self, connection_params):
         self.connection_params = connection_params
+
+    @classmethod
+    def available_backends(cls):
+        """Return a list of all available backends"""
+        return cls.registry.values()
 
     # "meta" methods
 

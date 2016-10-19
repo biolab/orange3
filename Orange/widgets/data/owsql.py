@@ -281,6 +281,7 @@ class OWSql(OWWidget):
                                   user=self.username,
                                   password=self.password),
                              self.table,
+                             backend=type(self.backend),
                              inspect_values=False)
         except psycopg2.ProgrammingError as ex:
             self.Error.connection(str(ex))

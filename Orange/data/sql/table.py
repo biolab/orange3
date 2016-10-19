@@ -14,7 +14,7 @@ import numpy as np
 from Orange.data import (
     Table, Domain, Value, Instance, filter)
 from Orange.data.sql import filter as sql_filter
-from Orange.data.sql.backend.postgres import Psycopg2Backend
+from Orange.data.sql.backend import Backend
 from Orange.misc import import_late_warning
 
 psycopg2 = import_late_warning("psycopg2")
@@ -37,7 +37,7 @@ class SqlTable(Table):
         return super().__new__(cls)
 
     def __init__(
-            self, connection_params, table_or_sql,
+            self, connection_params, table_or_sql, backend=None,
             type_hints=None, inspect_values=False):
         """
         Create a new proxy for sql table.
@@ -72,7 +72,18 @@ class SqlTable(Table):
         """
         if isinstance(connection_params, str):
             connection_params = dict(database=connection_params)
-        self.backend = Psycopg2Backend(connection_params)
+
+        if backend is None:
+            for backend in Backend.available_backends():
+                try:
+                    self.backend = backend(connection_params)
+                    break
+                except Exception as ex:
+                    print(ex)
+            else:
+                raise ValueError("No backend could connect to server")
+        else:
+            self.backend = backend(connection_params)
 
         if table_or_sql is not None:
             if "SELECT" in table_or_sql.upper():
