@@ -68,6 +68,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.get_output("Selected Data"))
 
     def _select_data(self):
-        self.selected_indices = list(range(10, 31))
-        self.widget.selection_manager.select_rows(self.selected_indices)
+        selected_indices = list(range(10, 31))
+        self.widget.selection_manager.select_rows(selected_indices)
         self.widget.on_selection_finished()
+        return selected_indices

@@ -25,4 +25,4 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         points = random.sample(range(0, len(self.data)), 20)
         self.widget.select_indices(points)
         self.widget.commit()
-        self.selected_indices = sorted(points)
+        return sorted(points)

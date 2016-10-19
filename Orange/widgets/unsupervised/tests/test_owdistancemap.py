@@ -20,6 +20,7 @@ class TestOWDistanceMap(WidgetTest, WidgetOutputsTestMixin):
 
     def _select_data(self):
         random.seed(42)
-        self.selected_indices = random.sample(range(0, len(self.data)), 20)
-        self.widget._selection = self.selected_indices
+        selected_indices = random.sample(range(0, len(self.data)), 20)
+        self.widget._selection = selected_indices
         self.widget.commit()
+        return selected_indices

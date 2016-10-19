@@ -25,4 +25,4 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
     def _select_data(self):
         node = self.widget.scene.nodes()[0]
         node.setSelected(True)
-        self.selected_indices = self.model.get_indices([node.node_inst])
+        return self.model.get_indices([node.node_inst])
