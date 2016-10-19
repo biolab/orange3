@@ -35,8 +35,12 @@ from Orange.widgets.visualize.utils.view import (
 )
 
 from Orange.data.table import Table
-from Orange.widgets import gui, settings
+from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils import to_html
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table,
+    ANNOTATED_DATA_SIGNAL_NAME
+)
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
@@ -60,7 +64,8 @@ class OWPythagorasTree(OWWidget):
     priority = 1000
 
     inputs = [('Tree', TreeModel, 'set_tree')]
-    outputs = [('Selected Data', Table)]
+    outputs = [('Selected Data', Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -228,6 +233,8 @@ class OWPythagorasTree(OWWidget):
             # if hasattr(model, 'meta_depth_limit'):
             #     self.depth_limit = model.meta_depth_limit
             #     self.update_depth()
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.instances, None))
 
     def clear(self):
         """Clear all relevant data from the widget."""
@@ -343,14 +350,16 @@ class OWPythagorasTree(OWWidget):
         """Commit the selected data to output."""
         if self.instances is None:
             self.send('Selected Data', None)
+            self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
             return
-        # this is taken almost directly from the owclassificationtreegraph.py
-        items = filter(lambda x: isinstance(x, SquareGraphicsItem),
-                       self.scene.selectedItems())
-
+        nodes = [i.tree_node.label for i in self.scene.selectedItems()
+                 if isinstance(i, SquareGraphicsItem)]
         data = self.tree_adapter.get_instances_in_nodes(
-            self.clf_dataset, [item.tree_node.label for item in items])
+            self.clf_dataset, nodes)
         self.send('Selected Data', data)
+        selected_indices = self.model.get_indices(nodes)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.instances, selected_indices))
 
     def send_report(self):
         """Send report."""

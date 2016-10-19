@@ -2,7 +2,11 @@
 import math
 import unittest
 
+from Orange.classification import TreeLearner
+from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.widgets.visualize.owpythagorastree import OWPythagorasTree
 from Orange.widgets.visualize.pythagorastreeviewer import (
+    SquareGraphicsItem,
     PythagorasTree,
     Point,
     Square,
@@ -73,3 +77,26 @@ class TestPythagorasTree(unittest.TestCase):
         expected_point = Point(1.43, 3.98)
         self.assertAlmostEqual(point.x, expected_point.x, places=1)
         self.assertAlmostEqual(point.y, expected_point.y, places=1)
+
+
+class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
+        tree = TreeLearner()
+        cls.model = tree(cls.data)
+        cls.model.instances = cls.data
+
+        cls.signal_name = "Tree"
+        cls.signal_data = cls.model
+
+    def setUp(self):
+        self.widget = self.create_widget(OWPythagorasTree)
+
+    def _select_data(self):
+        item = [i for i in self.widget.scene.items() if
+                isinstance(i, SquareGraphicsItem)][3]
+        item.setSelected(True)
+        return item.tree_node.label.subset
