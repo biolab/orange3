@@ -1,7 +1,9 @@
 import logging
+import warnings
 from contextlib import contextmanager
 from time import time
 
+from psycopg2 import OperationalError
 from psycopg2.pool import ThreadedConnectionPool
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
@@ -10,12 +12,15 @@ from Orange.data.sql.backend.base import Backend, ToSql
 
 log = logging.getLogger(__name__)
 
+EXTENSIONS = ('tsm_system_time', 'quantile')
+
 
 class Psycopg2Backend(Backend):
     """Backend for accessing data stored in a Postgres database
     """
 
     connection_pool = None
+    auto_create_extensions = True
 
     def __init__(self, connection_params):
         super().__init__(connection_params)
@@ -23,9 +28,21 @@ class Psycopg2Backend(Backend):
         if self.connection_pool is None:
             self._create_connection_pool()
 
+        if self.auto_create_extensions:
+            self._create_extensions()
+
     def _create_connection_pool(self):
         self.connection_pool = ThreadedConnectionPool(
             1, 16, **self.connection_params)
+
+    def _create_extensions(self):
+        for ext in EXTENSIONS:
+            try:
+                query = "CREATE EXTENSION IF NOT EXISTS {}".format(ext)
+                with self.execute_sql_query(query):
+                    pass
+            except OperationalError:
+                warnings.warn("Database is missing extension {}".format(ext))
 
     def create_sql_query(self, table_name, fields, filters=(),
                          group_by=None, order_by=None,
