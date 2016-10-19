@@ -560,23 +560,13 @@ class SqlTable(Table):
     def _sql_query(self, fields, filters=(),
                    group_by=None, order_by=None, offset=None, limit=None,
                    use_time_sample=None):
-        sql = ["SELECT", ', '.join(fields),
-               "FROM", self.table_name]
-        if use_time_sample is not None:
-            sql.append("TABLESAMPLE system_time(%i)" % use_time_sample)
+
         row_filters = [f.to_sql() for f in self.row_filters]
         row_filters.extend(filters)
-        if row_filters:
-            sql.extend(["WHERE", " AND ".join(row_filters)])
-        if group_by is not None:
-            sql.extend(["GROUP BY", ", ".join(group_by)])
-        if order_by is not None:
-            sql.extend(["ORDER BY", ",".join(order_by)])
-        if offset is not None:
-            sql.extend(["OFFSET", str(offset)])
-        if limit is not None:
-            sql.extend(["LIMIT", str(limit)])
-        return " ".join(sql)
+        return self.backend.create_sql_query(
+            self.table_name, fields, row_filters, group_by, order_by,
+            offset, limit, use_time_sample)
+
 
     DISCRETE_STATS = "SUM(CASE TRUE WHEN %(field_name)s IS NULL THEN 1 " \
                      "ELSE 0 END), " \

@@ -27,6 +27,26 @@ class Psycopg2Backend(Backend):
         self.connection_pool = ThreadedConnectionPool(
             1, 16, **self.connection_params)
 
+    def create_sql_query(self, table_name, fields, filters=(),
+                         group_by=None, order_by=None,
+                         offset=None, limit=None,
+                         use_time_sample=None):
+        sql = ["SELECT", ', '.join(fields),
+               "FROM", table_name]
+        if use_time_sample is not None:
+            sql.append("TABLESAMPLE system_time(%i)" % use_time_sample)
+        if filters:
+            sql.extend(["WHERE", " AND ".join(filters)])
+        if group_by is not None:
+            sql.extend(["GROUP BY", ", ".join(group_by)])
+        if order_by is not None:
+            sql.extend(["ORDER BY", ",".join(order_by)])
+        if offset is not None:
+            sql.extend(["OFFSET", str(offset)])
+        if limit is not None:
+            sql.extend(["LIMIT", str(limit)])
+        return " ".join(sql)
+
     @contextmanager
     def execute_sql_query(self, query, params=None):
         connection = self.connection_pool.getconn()

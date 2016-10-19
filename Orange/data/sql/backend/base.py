@@ -64,6 +64,29 @@ class Backend(metaclass=Registry):
 
     # query related methods
 
+    def create_sql_query(
+            self, table_name, fields, filters=(),
+            group_by=None, order_by=None, offset=None, limit=None,
+            use_time_sample=None):
+        """Construct an sql query using the provided elements.
+
+        Parameters
+        ----------
+        table_name : str
+        fields : List[str]
+        filters : List[str]
+        group_by: List[str]
+        order_by: List[str]
+        offset: int
+        limit: int
+        use_time_sample: int
+
+        Returns
+        -------
+        string containing sql query
+        """
+        raise NotImplementedError
+
     @contextmanager
     def execute_sql_query(self, query, params=None):
         """Context manager for execution of sql queries
