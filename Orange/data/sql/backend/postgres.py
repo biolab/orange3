@@ -7,8 +7,7 @@ from psycopg2 import OperationalError
 from psycopg2.pool import ThreadedConnectionPool
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
-from Orange.data.sql.backend.base import Backend, ToSql
-
+from Orange.data.sql.backend.base import Backend, TableDesc, ToSql
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +18,7 @@ class Psycopg2Backend(Backend):
     """Backend for accessing data stored in a Postgres database
     """
 
+    display_name = "PostgreSQL"
     connection_pool = None
     auto_create_extensions = True
 
@@ -87,6 +87,31 @@ class Psycopg2Backend(Backend):
             return quoted_name[1:len(quoted_name) - 1]
         else:
             return quoted_name
+
+    def list_tables(self, schema=None):
+        if schema:
+            schema_clause = "AND n.nspname = '{}'".format(schema)
+        else:
+            schema_clause = "AND pg_catalog.pg_table_is_visible(c.oid)"
+        query = """SELECT n.nspname as "Schema",
+                          c.relname AS "Name"
+                       FROM pg_catalog.pg_class c
+                  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                      WHERE c.relkind IN ('r','v','m','S','f','')
+                        AND n.nspname <> 'pg_catalog'
+                        AND n.nspname <> 'information_schema'
+                        AND n.nspname !~ '^pg_toast'
+                        {}
+                        AND NOT c.relname LIKE '\\_\\_%'
+                   ORDER BY 1;""".format(schema_clause)
+        with self.execute_sql_query(query) as cur:
+            tables = []
+            for schema, name in cur.fetchall():
+                sql = "{}.{}".format(
+                    self.quote_identifier(schema),
+                    self.quote_identifier(name)) if schema else self.quote_identifier(name)
+                tables.append(TableDesc(name, schema, sql))
+            return tables
 
     def get_fields(self, table_name):
         fields = []

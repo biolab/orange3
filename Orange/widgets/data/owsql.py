@@ -14,9 +14,26 @@ from Orange.data.sql.backend import Backend
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.widget import OWWidget, OutputSignal, Msg
 
 MAX_DL_LIMIT = 1000000
+
+
+class TableModel(PyListModel):
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        if role == Qt.DisplayRole:
+            return str(self[row])
+        return super().data(index, role)
+
+
+class BackendModel(PyListModel):
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        if role == Qt.DisplayRole:
+            return self[row].display_name
+        return super().data(index, role)
 
 
 class OWSql(OWWidget):
@@ -64,6 +81,12 @@ class OWSql(OWWidget):
 
         vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
         box = gui.vBox(vbox)
+
+        self.backendmodel = BackendModel(Backend.available_backends())
+        self.backendcombo = QComboBox(box)
+        self.backendcombo.setModel(self.backendmodel)
+        box.layout().addWidget(self.backendcombo)
+
         self.servertext = QLineEdit(box)
         self.servertext.setPlaceholderText('Server')
         self.servertext.setToolTip('Server')
@@ -94,11 +117,12 @@ class OWSql(OWWidget):
         box.layout().addWidget(self.passwordtext)
 
         tables = gui.hBox(box)
+        self.tablemodel = TableModel()
         self.tablecombo = QComboBox(
-            tables,
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
         )
+        self.tablecombo.setModel(self.tablemodel)
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
         self.tablecombo.activated[int].connect(self.select_table)
@@ -160,7 +184,8 @@ class OWSql(OWWidget):
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
         try:
-            self.backend = Backend.create(dict(
+            backend = self.backendmodel[self.backendcombo.currentIndex()]
+            self.backend = backend(dict(
                 host=self.host,
                 port=self.port,
                 database=self.database,
@@ -180,36 +205,15 @@ class OWSql(OWWidget):
             self.tablecombo.clear()
 
     def refresh_tables(self):
-        self.tablecombo.clear()
+        self.tablemodel.clear()
         self.Error.missing_extension.clear()
         if self.backend is None:
             self.data_desc_table = None
             return
 
-        if self.schema:
-            schema_clause = "AND n.nspname = '{}'".format(self.schema)
-        else:
-            schema_clause = "AND pg_catalog.pg_table_is_visible(c.oid)"
-        query = """SELECT --n.nspname as "Schema",
-                              c.relname AS "Name"
-                       FROM pg_catalog.pg_class c
-                  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                      WHERE c.relkind IN ('r','v','m','S','f','')
-                        AND n.nspname <> 'pg_catalog'
-                        AND n.nspname <> 'information_schema'
-                        AND n.nspname !~ '^pg_toast'
-                        {}
-                        AND NOT c.relname LIKE '\\_\\_%'
-                   ORDER BY 1;""".format(schema_clause)
-        with self.backend.execute_sql_query(query) as cur:
-            tables = cur.fetchall()
-
-        self.tablecombo.addItem("Select a table")
-        for i, (table_name,) in enumerate(tables):
-            self.tablecombo.addItem(table_name)
-            if table_name == self.table:
-                self.tablecombo.setCurrentIndex(i + 1)
-        self.tablecombo.addItem("Custom SQL")
+        self.tablemodel.append("Select a table")
+        self.tablemodel.extend(self.backend.list_tables(self.schema))
+        self.tablemodel.append("Custom SQL")
 
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
@@ -240,7 +244,7 @@ class OWSql(OWWidget):
             return
 
         if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
-            self.table = self.tablecombo.currentText()
+            self.table = self.tablemodel[self.tablecombo.currentIndex()]
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]

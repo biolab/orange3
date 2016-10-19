@@ -1,11 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import pickle
 import unittest
 import unittest.mock
 
 import numpy as np
-import pickle
+
 from numpy.testing import assert_almost_equal
 
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
@@ -595,6 +596,20 @@ class TestSqlTable(PostgresTest):
 
         self.assertEqual(iris[0], iris2[0])
 
+    def test_list_tables_with_schema(self):
+        with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE") as cur:
+            cur.execute("CREATE SCHEMA orange_tests")
+            cur.execute("CREATE TABLE orange_tests.efgh (id int)")
+            cur.execute("INSERT INTO orange_tests.efgh (id) VALUES (1)")
+            cur.execute("INSERT INTO orange_tests.efgh (id) VALUES (2)")
+
+        try:
+            tables = self.backend.list_tables("orange_tests")
+            self.assertTrue(any([t.name == "efgh" for t in tables]))
+            SqlTable(self.conn, tables[0], inspect_values=True)
+        finally:
+            with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE"):
+                pass
 
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain), 0)

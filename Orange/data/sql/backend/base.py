@@ -16,6 +16,8 @@ class Backend(metaclass=Registry):
         connection params
     """
 
+    display_name = ""
+
     def __init__(self, connection_params):
         self.connection_params = connection_params
 
@@ -25,6 +27,20 @@ class Backend(metaclass=Registry):
         return cls.registry.values()
 
     # "meta" methods
+
+    def list_tables(self, schema=None):
+        """Return a list of tables in database
+
+        Parameters
+        ----------
+        schema : Optional[str]
+            If set, only tables from given schema will be listed
+
+        Returns
+        -------
+        A list of TableDesc objects, describing the tables in the database
+        """
+        raise NotImplementedError
 
     def get_fields(self, table_name):
         """Return a list of field names and metadata in the given table
@@ -139,6 +155,15 @@ class Backend(metaclass=Registry):
         """
         raise NotImplementedError
 
+
+class TableDesc:
+    def __init__(self, name, schema, sql):
+        self.name = name
+        self.schema = schema
+        self.sql = sql
+
+    def __str__(self):
+        return self.name
 
 class ToSql:
     def __init__(self, sql):

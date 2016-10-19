@@ -15,6 +15,7 @@ from Orange.data import (
     Table, Domain, Value, Instance, filter)
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
+from Orange.data.sql.backend.base import TableDesc
 from Orange.misc import import_late_warning
 
 psycopg2 = import_late_warning("psycopg2")
@@ -86,7 +87,9 @@ class SqlTable(Table):
             self.backend = backend(connection_params)
 
         if table_or_sql is not None:
-            if "SELECT" in table_or_sql.upper():
+            if isinstance(table_or_sql, TableDesc):
+                table = table_or_sql.sql
+            elif "SELECT" in table_or_sql:
                 table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
                 table = self.backend.quote_identifier(table_or_sql)
@@ -593,12 +596,19 @@ class SqlTable(Table):
             raise NotImplementedError("Sampling of complex queries is not supported")
 
         parameter = str(parameter)
-
-        sample_table = '__%s_%s_%s' % (
-            self.backend.unquote_identifier(self.table_name),
-            method,
-            parameter.replace('.', '_').replace('-', '_'))
-        sample_table_q = self.backend.quote_identifier(sample_table)
+        if "." in self.table_name:
+            schema, name = self.table_name.split(".")
+            sample_name = '__%s_%s_%s' % (
+                self.backend.unquote_identifier(name),
+                method,
+                parameter.replace('.', '_').replace('-', '_'))
+            sample_table_q = ".".join([schema, self.backend.quote_identifier(sample_name)])
+        else:
+            sample_table = '__%s_%s_%s' % (
+                self.backend.unquote_identifier(self.table_name),
+                method,
+                parameter.replace('.', '_').replace('-', '_'))
+            sample_table_q = self.backend.quote_identifier(sample_table)
         create = False
         try:
             query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
