@@ -137,19 +137,19 @@ class OWRuleViewer(widget.OWWidget):
         data_output = None
         self._save_selected(actual=True)
 
+        data = self.data or self.classifier and self.classifier.instances
         if (self.selected is not None and
-                self.data is not None and
+                data is not None and
                 self.classifier is not None and
-                self.data.domain.attributes ==
+                data.domain.attributes ==
                 self.classifier.original_domain.attributes):
 
-            status = np.ones(self.data.X.shape[0], dtype=bool)
+            status = np.ones(data.X.shape[0], dtype=bool)
             for i in self.selected:
                 rule = self.classifier.rule_list[i]
-                status &= rule.evaluate_data(self.data.X)
+                status &= rule.evaluate_data(data.X)
 
-            data_output = self.data.from_table_rows(
-                self.data, status.nonzero()[0])
+            data_output = data.from_table_rows(data, status.nonzero()[0])
 
         self.send(OWRuleViewer.data_output_identifier, data_output)
 
