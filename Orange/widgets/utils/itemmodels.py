@@ -885,7 +885,7 @@ class TableModel(QAbstractTableModel):
 
         columns = []
 
-        if self.Y_density != Storage.DENSE:
+        if self.Y_density != Storage.DENSE and domain.class_vars:
             coldesc = make_basket(domain.class_vars, self.Y_density,
                                   TableModel.ClassVar)
             columns.append(coldesc)
@@ -893,7 +893,7 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.ClassVar)
                         for var in domain.class_vars]
 
-        if self.M_density != Storage.DENSE:
+        if self.M_density != Storage.DENSE and domain.metas:
             coldesc = make_basket(domain.metas, self.M_density,
                                   TableModel.Meta)
             columns.append(coldesc)
@@ -901,7 +901,7 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.Meta)
                         for var in domain.metas]
 
-        if self.X_density != Storage.DENSE:
+        if self.X_density != Storage.DENSE and domain.attributes:
             coldesc = make_basket(domain.attributes, self.X_density,
                                   TableModel.Attribute)
             columns.append(coldesc)
