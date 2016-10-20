@@ -33,11 +33,11 @@ class Psycopg2Backend(Backend):
         cur = connection.cursor()
         try:
             utfquery = cur.mogrify(query, params).decode('utf-8')
-            log.debug("Executing: {}".format(utfquery))
+            log.debug("Executing: %s", utfquery)
             t = time()
             cur.execute(query, params)
             yield cur
-            log.info("{:.2f} ms: {}".format(1000 * (time() - t), utfquery))
+            log.info("%.2f ms: %s", 1000 * (time() - t), utfquery)
         finally:
             connection.commit()
             self.connection_pool.putconn(connection)
@@ -81,7 +81,7 @@ class Psycopg2Backend(Backend):
         return var
 
     def _guess_variable(self, field_name, field_metadata, inspect_table):
-        type_code, *rest = field_metadata
+        type_code = field_metadata[0]
 
         FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
         INT_TYPES = (20, 21, 23)  # bigint, int, smallint
