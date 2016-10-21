@@ -4,19 +4,29 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QApplication
 
 from Orange.data import Table
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.classification import CN2Learner
 from Orange.widgets.visualize.owruleviewer import OWRuleViewer
 
 
-class TestOWRuleViewer(WidgetTest):
-    def setUp(self):
-        self.titanic = Table('titanic')
-        self.learner = CN2Learner()
-        self.classifier = self.learner(self.titanic)
+class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
+        cls.titanic = Table('titanic')
+        cls.learner = CN2Learner()
+        cls.classifier = cls.learner(cls.titanic)
         # CN2Learner does not add `instances` attribute to the model, but
         # the Rules widget does. We simulate the model we get from the widget.
-        self.classifier.instances = self.titanic
+        cls.classifier.instances = cls.titanic
+
+        cls.signal_name = "Classifier"
+        cls.signal_data = cls.classifier
+        cls.data = cls.titanic
+
+    def setUp(self):
         self.widget = self.create_widget(OWRuleViewer)
 
     def test_set_data(self):
@@ -139,3 +149,9 @@ class TestOWRuleViewer(WidgetTest):
 
         # test that the selection persists
         self.assertEqual(temp, self.widget.selected)
+
+    def _select_data(self):
+        selection_model = self.widget.view.selectionModel()
+        selection_model.select(self.widget.proxy_model.index(2, 0),
+                               selection_model.Select | selection_model.Rows)
+        return list(range(586, 597))

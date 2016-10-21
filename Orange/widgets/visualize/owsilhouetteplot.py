@@ -24,6 +24,8 @@ import Orange.distance
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
@@ -40,7 +42,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table)]
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
 
     replaces = [
         "orangecontrib.prototypes.widgets.owsilhouetteplot.OWSilhouettePlot",
@@ -311,7 +313,7 @@ class OWSilhouettePlot(widget.OWWidget):
         """
         Commit/send the current selection to the output.
         """
-        selected = other = None
+        selected = indices = data = None
         if self.data is not None:
             selectedmask = numpy.full(len(self.data), False, dtype=bool)
             if self._silplot is not None:
@@ -327,25 +329,24 @@ class OWSilhouettePlot(widget.OWWidget):
                     self.data.domain.attributes,
                     self.data.domain.class_vars,
                     self.data.domain.metas + (silhouette_var, ))
+                data = self.data.from_table(
+                    domain, self.data)
             else:
                 domain = self.data.domain
+                data = self.data
 
             if numpy.count_nonzero(selectedmask):
                 selected = self.data.from_table(
                     domain, self.data, numpy.flatnonzero(selectedmask))
 
-            if numpy.count_nonzero(~selectedmask):
-                other = self.data.from_table(
-                    domain, self.data, numpy.flatnonzero(~selectedmask))
-
             if self.add_scores:
                 if selected is not None:
                     selected[:, silhouette_var] = numpy.c_[scores[selectedmask]]
-                if other is not None:
-                    other[:, silhouette_var] = numpy.c_[scores[~selectedmask]]
+                data[:, silhouette_var] = numpy.c_[scores]
 
         self.send("Selected Data", selected)
-        self.send("Other Data", other)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(data, indices))
 
     def send_report(self):
         if not len(self.cluster_var_model):

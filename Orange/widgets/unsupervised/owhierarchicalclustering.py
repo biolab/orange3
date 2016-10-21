@@ -1101,7 +1101,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if not selected_indices:
             self.send("Selected Data", None)
-            annotated_data = create_annotated_table(items, selected_indices) \
+            annotated_data = create_annotated_table(items, []) \
                 if self.selection_method == 0 and self.matrix.axis else None
             self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
             return
@@ -1148,7 +1148,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 selected_data = data[mask]
                 if self.append_clusters:
                     def remove_other_value(vars_):
-                        vars_ = [var for var in vars_]
+                        vars_ = list(vars_)
                         clust_var = vars_[-1].copy()
                         clust_var.values.pop()
                         vars_[-1] = clust_var

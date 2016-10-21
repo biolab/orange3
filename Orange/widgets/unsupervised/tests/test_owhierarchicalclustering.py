@@ -25,16 +25,15 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         items = self.widget.dendrogram._items
         cluster = items[sorted(list(items.keys()))[4]]
         self.widget.dendrogram.set_selected_items([cluster])
-        self.selected_indices = [14, 15, 32, 33]
+        return [14, 15, 32, 33]
 
     def _compare_selected_annotated_domains(self, selected, annotated):
-        self.assertTrue(all((var in annotated.domain.variables
-                             for var in selected.domain.variables)))
+        self.assertEqual(annotated.domain.variables,
+                         selected.domain.variables)
         self.assertNotIn("Other", selected.domain.metas[0].values)
         self.assertIn("Other", annotated.domain.metas[0].values)
-        self.assertTrue(
-            all((var in [var.name for var in annotated.domain.metas]
-                 for var in [var.name for var in selected.domain.metas])))
+        self.assertLess(set(var.name for var in selected.domain.metas),
+                        set(var.name for var in annotated.domain.metas))
 
     def test_selection_box_output(self):
         """Check output if Selection method changes"""

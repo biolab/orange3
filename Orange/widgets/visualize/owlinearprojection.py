@@ -31,6 +31,9 @@ from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
+)
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
 from Orange.widgets.utils import classdensity
 from Orange.canvas import report
@@ -238,7 +241,8 @@ class OWLinearProjection(widget.OWWidget):
               ("Data Subset", Table, "set_subset_data")]
 #              #TODO: Allow for axes to be supplied from an external source.
 #               ("Projection", numpy.ndarray, "set_axes"),]
-    outputs = [("Selected Data", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -1064,12 +1068,15 @@ class OWLinearProjection(widget.OWWidget):
 
     def commit(self):
         subset = None
+        indices = None
         if self.data is not None and self._selection_mask is not None:
             indices = numpy.flatnonzero(self._selection_mask)
             if len(indices) > 0:
                 subset = self.data[indices]
 
         self.send("Selected Data", subset)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, indices))
 
     def send_report(self):
         self.report_plot(name="", plot=self.viewbox.getViewBox())

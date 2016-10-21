@@ -274,7 +274,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.setup_scene()
         self.send("Selected Data", None)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.dataset, None))
+                  create_annotated_table(self.dataset, []))
 
     def walkcreate(self, node_inst, parent=None):
         """Create a structure of tree nodes from the given model"""

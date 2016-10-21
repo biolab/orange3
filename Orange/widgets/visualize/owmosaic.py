@@ -13,10 +13,12 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.distribution import get_distribution
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.settings import (
     Setting, DomainContextHandler, ContextSetting)
 from Orange.widgets.utils import to_html, get_variable_values_sorted
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress)
 from Orange.widgets.widget import OWWidget, Default, Msg
@@ -30,7 +32,8 @@ class OWMosaicDisplay(OWWidget):
 
     inputs = [("Data", Table, "set_data", Default),
               ("Data Subset", Table, "set_subset_data")]
-    outputs = [("Selected Data", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)
@@ -218,6 +221,8 @@ class OWMosaicDisplay(OWWidget):
     def send_selection(self):
         if not self.selection or self.data is None:
             self.send("Selected Data", None)
+            self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                      create_annotated_table(self.data, []))
             return
         filters = []
         self.Warning.no_cont_selection_sql.clear()
@@ -235,12 +240,13 @@ class OWMosaicDisplay(OWWidget):
         else:
             filters = filters[0]
         selection = filters(self.discrete_data)
+        idset = set(selection.ids)
+        sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
         if self.discrete_data is not self.data:
-            idset = set(selection.ids)
-            sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
             selection = self.data[sel_idx]
         self.send("Selected Data", selection)
-
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, sel_idx))
 
     def send_report(self):
         self.report_plot(self.canvas)

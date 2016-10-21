@@ -80,4 +80,4 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def _select_data(self):
         self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
-        self.selected_indices = self.widget.graph.get_selection()
+        return self.widget.graph.get_selection()

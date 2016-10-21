@@ -503,7 +503,6 @@ class WidgetOutputsTestMixin:
     def init(self):
         self.data = Table("iris")
         self.same_input_output_domain = True
-        self.selected_indices = []
 
     def test_outputs(self):
         self.send_signal(self.signal_name, self.signal_data)
@@ -523,7 +522,7 @@ class WidgetOutputsTestMixin:
         self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
 
         # select data instances
-        self._select_data()
+        selected_indices = self._select_data()
 
         # check selected data output
         selected = self.get_output("Selected Data")
@@ -532,7 +531,7 @@ class WidgetOutputsTestMixin:
         self.assertEqual(selected.domain == self.data.domain,
                          self.same_input_output_domain)
         np.testing.assert_array_equal(selected.X[:, :n_attr],
-                                      self.data.X[self.selected_indices])
+                                      self.data.X[selected_indices])
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
@@ -552,4 +551,4 @@ class WidgetOutputsTestMixin:
     def _compare_selected_annotated_domains(self, selected, annotated):
         selected_vars = selected.domain.variables + selected.domain.metas
         annotated_vars = annotated.domain.variables + annotated.domain.metas
-        self.assertTrue(all((var in annotated_vars for var in selected_vars)))
+        self.assertLess(set(selected_vars), set(annotated_vars))

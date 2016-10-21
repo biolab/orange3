@@ -53,4 +53,4 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         selected = [i for i, t in enumerate(zip(
             self.widget.results.actual, self.widget.results.predicted[0]))
                     if t in indices]
-        self.selected_indices = self.widget.results.row_indices[selected]
+        return self.widget.results.row_indices[selected]
