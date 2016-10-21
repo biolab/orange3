@@ -6,9 +6,18 @@ from numbers import Number
 from collections import Iterable
 
 import numpy as np
-from PyQt4 import QtCore
-from PyQt4.QtGui import *
-from PyQt4.QtCore import Qt, QSize, pyqtSignal
+
+from AnyQt.QtGui import (
+    QColor, QIcon, QPixmap, QPainter, QPen, QBrush, QLinearGradient,
+    QPalette, qRgb
+)
+from AnyQt.QtWidgets import (
+    QSizePolicy, QVBoxLayout, QHBoxLayout, QWidget, QDialog, QColorDialog,
+    QInputDialog, QMessageBox, QScrollArea, QPushButton, QDialogButtonBox,
+    QListWidgetItem, QFrame, QGraphicsView, QGraphicsScene, QComboBox,
+    QItemDelegate
+)
+from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal
 
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
@@ -810,7 +819,7 @@ def createDiscPalettePixmap(width, height, palette):
     rectWidth = width / float(len(palette))
     for i, col in enumerate(palette):
         p.setBrush(QBrush(QColor(*col)))
-        p.drawRect(QtCore.QRectF(i * rectWidth, 0, (i + 1) * rectWidth, height))
+        p.drawRect(QRectF(i * rectWidth, 0, (i + 1) * rectWidth, height))
     return img
 
 # create a pixmap withcolor going from color1 to color2 passing through all intermidiate colors in passThroughColors
@@ -937,6 +946,7 @@ class PaletteSelectorComboBox(QComboBox):
 
 
 if __name__ == "__main__":
+    from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
 
     c = ColorPaletteDlg(None)

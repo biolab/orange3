@@ -5,8 +5,8 @@ Orange canvas about dialog
 import sys
 import pkg_resources
 
-from PyQt4.QtGui import QDialog, QDialogButtonBox, QVBoxLayout, QLabel
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QLabel
+from AnyQt.QtCore import Qt
 
 from .. import config
 

@@ -11,14 +11,11 @@ import logging
 
 from collections import namedtuple, MutableMapping
 
-from PyQt4.QtCore import QObject, QEvent, QCoreApplication
+from AnyQt.QtCore import QObject, QEvent, QCoreApplication, QSettings
+from AnyQt.QtCore import pyqtSignal as Signal
 
-from PyQt4.QtCore import pyqtSignal as Signal
+_QObjectType = type(QObject)
 
-pyqtWrapperType = type(QObject)
-
-# Import QSettings from qtcompat module (compatibility with PyQt < 4.8.3
-from .qtcompat import QSettings
 
 log = logging.getLogger(__name__)
 
@@ -82,9 +79,9 @@ def qt_to_mapped_type(value):
         return value
 
 
-class QABCMeta(pyqtWrapperType, abc.ABCMeta):
+class QABCMeta(_QObjectType, abc.ABCMeta):
     def __init__(self, name, bases, attr_dict):
-        pyqtWrapperType.__init__(self, name, bases, attr_dict)
+        _QObjectType.__init__(self, name, bases, attr_dict)
         abc.ABCMeta.__init__(self, name, bases, attr_dict)
 
 

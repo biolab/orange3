@@ -12,13 +12,13 @@ import functools
 import operator
 from collections import namedtuple
 
-from PyQt4.QtGui import (
-    QIcon, QHBoxLayout, QPushButton, QLabel, QSizePolicy, QStyle,
-    QAbstractButton, QStyleOptionButton, QStylePainter, QFocusFrame,
-    QWidget, QPixmap, QStyleOption, QPainter
+from AnyQt.QtWidgets import (
+    QHBoxLayout, QPushButton, QLabel, QSizePolicy, QStyle, QAbstractButton,
+    QStyleOptionButton, QStylePainter, QFocusFrame, QWidget, QStyleOption
 )
-from PyQt4.QtCore import Qt, QSize, QRect, QPoint, QEvent, QTimer
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtGui import QIcon, QPixmap, QPainter
+from AnyQt.QtCore import Qt, QSize, QRect, QPoint, QEvent, QTimer
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 class OverlayWidget(QWidget):
@@ -598,7 +598,7 @@ import unittest
 
 class TestOverlay(unittest.TestCase):
     def setUp(self):
-        from PyQt4.QtGui import QApplication
+        from AnyQt.QtWidgets import QApplication
         app = QApplication.instance()
         if app is None:
             app = QApplication([])

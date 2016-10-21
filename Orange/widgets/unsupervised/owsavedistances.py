@@ -1,6 +1,6 @@
 import os.path
 
-from PyQt4.QtGui import QFileDialog
+from AnyQt.QtWidgets import QFileDialog
 
 from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget
@@ -52,7 +52,7 @@ class OWSaveDistances(widget.OWWidget):
 
     def save_file_as(self):
         file_name = self.filename or self.last_dir or os.path.expanduser("~")
-        filename = QFileDialog.getSaveFileName(
+        filename, _ = QFileDialog.getSaveFileName(
             self, "Select file", file_name, 'Distance files (*.dst)')
         if not filename:
             return
@@ -82,9 +82,8 @@ class OWSaveDistances(widget.OWWidget):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4 import QtGui
-
-    a = QtGui.QApplication(sys.argv)
+    from AnyQt.QtWidgets import QApplication
+    a = QApplication(sys.argv)
     table = Table("iris")
     ow = OWSaveDistances()
     ow.show()

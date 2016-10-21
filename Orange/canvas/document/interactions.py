@@ -15,16 +15,12 @@ All interactions are subclasses of :class:`UserInteraction`.
 
 import logging
 
-from PyQt4.QtGui import (
-    QApplication, QGraphicsRectItem, QPen, QBrush, QColor, QFontMetrics,
-    QUndoCommand
-)
-
-from PyQt4.QtCore import (
+from AnyQt.QtWidgets import QApplication, QGraphicsRectItem, QUndoCommand
+from AnyQt.QtGui import QPen, QBrush, QColor, QFontMetrics
+from AnyQt.QtCore import (
     Qt, QObject, QCoreApplication, QSizeF, QPointF, QRect, QRectF, QLineF
 )
-
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..registry.description import WidgetDescription
 from ..registry.qt import QtWidgetRegistry

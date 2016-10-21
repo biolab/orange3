@@ -3,7 +3,7 @@ Undo/Redo Commands
 
 """
 
-from PyQt4.QtGui import QUndoCommand
+from AnyQt.QtWidgets import QUndoCommand
 
 
 class AddNodeCommand(QUndoCommand):

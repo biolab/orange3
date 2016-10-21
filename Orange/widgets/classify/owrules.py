@@ -1,6 +1,6 @@
 from collections import OrderedDict
 import numpy as np
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.widgets import gui
@@ -355,7 +355,7 @@ class OWRuleLearner(OWBaseLearner):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWRuleLearner()

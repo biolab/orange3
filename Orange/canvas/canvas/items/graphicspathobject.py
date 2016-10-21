@@ -1,7 +1,7 @@
-from PyQt4.QtGui import QGraphicsObject, QPainterPath, QPainterPathStroker, \
-                        QBrush, QPen
-
-from PyQt4.QtCore import Qt, QPointF, pyqtSignal as Signal
+from AnyQt.QtWidgets import QGraphicsObject
+from AnyQt.QtGui import QPainterPath, QPainterPathStroker, QBrush, QPen
+from AnyQt.QtCore import Qt, QPointF
+from AnyQt.QtCore import pyqtSignal as Signal
 
 
 class GraphicsPathObject(QGraphicsObject):

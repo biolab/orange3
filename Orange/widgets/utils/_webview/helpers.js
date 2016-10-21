@@ -2,9 +2,12 @@
  * Our general helpers for Highcharts, JS, QWebView bridge ...
  */
 
-var _PREVENT_KEYS = ['data'];
+// Prevent descent into the values of these keys
+var _PREVENT_KEYS = [
+    'data'  // This is the numeric payload in Highcharts
+];
 
-function fixupOptionsObject(obj) {
+function fixupPythonObject(obj) {
     /**
      * Replace any strings with their eval'd value if they
      * start with an empty JavaScript block comment, i.e. these
@@ -34,6 +37,6 @@ function fixupOptionsObject(obj) {
             obj[key] = eval(val)
         } else if (val.constructor === Object ||
                    val.constructor === Array && _PREVENT_KEYS.indexOf(key) == -1)
-            fixupOptionsObject(val);
+            fixupPythonObject(val);
     }
 }

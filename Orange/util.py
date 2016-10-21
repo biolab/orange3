@@ -1,6 +1,7 @@
 """Various small utilities that might be useful everywhere"""
 
 from functools import wraps
+from inspect import isfunction
 from itertools import chain, count
 from collections import OrderedDict
 import warnings
@@ -134,6 +135,18 @@ def color_to_hex(color):
 
 def hex_to_color(s):
     return int(s[1:3], 16), int(s[3:5], 16), int(s[5:7], 16)
+
+
+def inherit_docstrings(cls):
+    """Inherit methods' docstrings from first superclass that defines them"""
+    for method in cls.__dict__.values():
+        if isfunction(method) and method.__doc__ is None:
+            for parent in cls.__mro__[1:]:
+                __doc__ = getattr(parent, method.__name__, None).__doc__
+                if __doc__:
+                    method.__doc__ = __doc__
+                    break
+    return cls
 
 # For best result, keep this at the bottom
 __all__ = export_globals(globals(), __name__)

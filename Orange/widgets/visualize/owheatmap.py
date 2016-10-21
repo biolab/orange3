@@ -8,13 +8,19 @@ from types import SimpleNamespace as namespace
 import numpy as np
 import scipy.sparse as sp
 
-from PyQt4 import QtGui
-from PyQt4.QtGui import (
-    QSizePolicy, QGraphicsScene, QGraphicsView, QFontMetrics,
-    QPen, QPixmap, QColor
+from AnyQt.QtWidgets import (
+    QSizePolicy, QGraphicsScene, QGraphicsView, QGraphicsRectItem,
+    QGraphicsWidget, QGraphicsSimpleTextItem, QGraphicsPixmapItem,
+    QGraphicsGridLayout, QGraphicsLinearLayout, QGraphicsLayoutItem,
+    QFormLayout, QApplication
 )
-from PyQt4.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import (
+    QFontMetrics, QPen, QPixmap, QColor, QLinearGradient, QPainter,
+    QTransform, QIcon, QBrush,
+    QStandardItemModel, QStandardItem,
+)
+from AnyQt.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
+from AnyQt.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
 from Orange.data import Domain, Table, DiscreteVariable, StringVariable
@@ -146,7 +152,7 @@ def palette_gradient(colors, discrete=False):
     n = len(colors)
     stops = np.linspace(0.0, 1.0, n, endpoint=True)
     gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
-    grad = QtGui.QLinearGradient(QPointF(0, 0), QPointF(1, 0))
+    grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
     grad.setStops(gradstops)
     return grad
 
@@ -156,23 +162,23 @@ def palette_pixmap(colors, size):
     img.fill(Qt.transparent)
 
     grad = palette_gradient(colors)
-    grad.setCoordinateMode(QtGui.QLinearGradient.ObjectBoundingMode)
+    grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
 
-    painter = QtGui.QPainter(img)
+    painter = QPainter(img)
     painter.setPen(Qt.NoPen)
-    painter.setBrush(QtGui.QBrush(grad))
+    painter.setBrush(QBrush(grad))
     painter.drawRect(0, 0, size.width(), size.height())
     painter.end()
     return img
 
 
 def color_palette_model(palettes, iconsize=QSize(64, 16)):
-    model = QtGui.QStandardItemModel()
+    model = QStandardItemModel()
     for name, palette in palettes:
         _, colors = max(palette.items())
         colors = [QColor(*c) for c in colors]
-        item = QtGui.QStandardItem(name)
-        item.setIcon(QtGui.QIcon(palette_pixmap(colors, iconsize)))
+        item = QStandardItem(name)
+        item.setIcon(QIcon(palette_pixmap(colors, iconsize)))
         item.setData(palette, Qt.UserRole)
         model.appendRow([item])
     return model
@@ -518,10 +524,10 @@ class OWHeatMap(widget.OWWidget):
         self.color_cb.setCurrentIndex(self.palette_index)
         # TODO: Add 'Manage/Add/Remove' action.
 
-        form = QtGui.QFormLayout(
+        form = QFormLayout(
             formAlignment=Qt.AlignLeft,
             labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
         )
 
         lowslider = gui.hSlider(
@@ -603,7 +609,7 @@ class OWHeatMap(widget.OWWidget):
             self.on_selection_finished)
         self.heatmap_scene.set_selection_manager(self.selection_manager)
 
-        item = QtGui.QGraphicsRectItem(0, 0, 10, 10, None)
+        item = QGraphicsRectItem(0, 0, 10, 10, None)
         self.heatmap_scene.addItem(item)
         self.heatmap_scene.itemsBoundingRect()
         self.heatmap_scene.removeItem(item)
@@ -971,7 +977,7 @@ class OWHeatMap(widget.OWWidget):
         widget = GraphicsWidget()
         widget.layoutDidActivate.connect(self.__update_selection_geometry)
 
-        grid = QtGui.QGraphicsGridLayout()
+        grid = QGraphicsGridLayout()
         grid.setSpacing(self.SpaceX)
         self.heatmap_scene.addItem(widget)
 
@@ -1002,7 +1008,7 @@ class OWHeatMap(widget.OWWidget):
 
         for i, rowitem in enumerate(parts.rows):
             if rowitem.title:
-                title = QtGui.QGraphicsSimpleTextItem(rowitem.title, widget)
+                title = QGraphicsSimpleTextItem(rowitem.title, widget)
                 item = GraphicsSimpleTextLayoutItem(title, parent=grid)
                 grid.addItem(item, Row0 + i * 2, Col0)
 
@@ -1031,7 +1037,7 @@ class OWHeatMap(widget.OWWidget):
 
         for j, colitem in enumerate(parts.columns):
             if colitem.title:
-                title = QtGui.QGraphicsSimpleTextItem(colitem.title, widget)
+                title = QGraphicsSimpleTextItem(colitem.title, widget)
                 item = GraphicsSimpleTextLayoutItem(title, parent=grid)
                 grid.addItem(item, 1, Col0 + j)
 
@@ -1478,7 +1484,7 @@ class OWHeatMap(widget.OWWidget):
         except IndexError:
             pass
         else:
-            key = QtGui.QApplication.keyboardModifiers()
+            key = QApplication.keyboardModifiers()
             clear = not (key & ((Qt.ControlModifier | Qt.ShiftModifier |
                                  Qt.AltModifier)))
             remove = (key & (Qt.ControlModifier | Qt.AltModifier))
@@ -1496,7 +1502,7 @@ class OWHeatMap(widget.OWWidget):
         self.selection_manager.update_selection_rects()
         rects = self.selection_manager.selection_rects
         for rect in rects:
-            item = QtGui.QGraphicsRectItem(rect, None)
+            item = QGraphicsRectItem(rect, None)
             pen = QPen(Qt.black, 2)
             pen.setCosmetic(True)
             item.setPen(pen)
@@ -1546,7 +1552,7 @@ class OWHeatMap(widget.OWWidget):
         self.report_plot()
 
 
-class GraphicsWidget(QtGui.QGraphicsWidget):
+class GraphicsWidget(QGraphicsWidget):
     """A graphics widget which can notify on relayout events.
     """
     #: The widget's layout has activated (i.e. did a relayout
@@ -1587,7 +1593,7 @@ def scaled(size, constraint, mode=Qt.KeepAspectRatio):
     return size
 
 
-class GraphicsPixmapWidget(QtGui.QGraphicsWidget):
+class GraphicsPixmapWidget(QGraphicsWidget):
     def __init__(self, parent=None, pixmap=None, scaleContents=False,
                  aspectMode=Qt.KeepAspectRatio, **kwargs):
         super().__init__(parent)
@@ -1596,7 +1602,7 @@ class GraphicsPixmapWidget(QtGui.QGraphicsWidget):
         self.__aspectMode = aspectMode
 
         self.__pixmap = pixmap or QPixmap()
-        self.__item = QtGui.QGraphicsPixmapItem(self.__pixmap, self)
+        self.__item = QGraphicsPixmapItem(self.__pixmap, self)
         self.__updateScale()
 
     def setPixmap(self, pixmap):
@@ -1665,14 +1671,14 @@ class GraphicsPixmapWidget(QtGui.QGraphicsWidget):
         xscale = csize.width() / pxsize.width()
         yscale = csize.height() / pxsize.height()
 
-        t = QtGui.QTransform().scale(xscale, yscale)
+        t = QTransform().scale(xscale, yscale)
         self.__item.setTransform(t)
 
     def pixmapTransform(self):
-        return QtGui.QTransform(self.__item.transform())
+        return QTransform(self.__item.transform())
 
 
-class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
+class GraphicsHeatmapWidget(QGraphicsWidget):
     def __init__(self, parent=None, data=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.setAcceptHoverEvents(True)
@@ -1684,7 +1690,7 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
         self.__pixmap = QPixmap()
         self.__avgpixmap = QPixmap()
 
-        layout = QtGui.QGraphicsLinearLayout(Qt.Horizontal)
+        layout = QGraphicsLinearLayout(Qt.Horizontal)
         layout.setContentsMargins(0, 0, 0, 0)
         self.heatmap_item = GraphicsPixmapWidget(
             self, scaleContents=True, aspectMode=Qt.IgnoreAspectRatio)
@@ -1710,8 +1716,8 @@ class GraphicsHeatmapWidget(QtGui.QGraphicsWidget):
         self.__pixmap = None
         self.__avgpixmap = None
 
-        self.heatmap_item.setPixmap(QtGui.QPixmap())
-        self.averages_item.setPixmap(QtGui.QPixmap())
+        self.heatmap_item.setPixmap(QPixmap())
+        self.averages_item.setPixmap(QPixmap())
         self.show_averages = True
         self.updateGeometry()
         self.layout().invalidate()
@@ -1950,7 +1956,7 @@ class HeatmapScene(QGraphicsScene):
         return QGraphicsScene.mouseDoubleClickEvent(self, event)
 
 
-class GraphicsSimpleTextLayoutItem(QtGui.QGraphicsLayoutItem):
+class GraphicsSimpleTextLayoutItem(QGraphicsLayoutItem):
     """ A Graphics layout item wrapping a QGraphicsSimpleTextItem alowing it
     to be managed by a layout.
 
@@ -1997,7 +2003,7 @@ class GraphicsSimpleTextLayoutItem(QtGui.QGraphicsLayoutItem):
         self.updateGeometry()
 
 
-class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
+class GraphicsSimpleTextList(QGraphicsWidget):
     """A simple text list widget."""
     def __init__(self, labels=[], orientation=Qt.Vertical, parent=None):
         super().__init__(parent)
@@ -2006,7 +2012,7 @@ class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
         self.alignment = Qt.AlignCenter
         self.__resize_in_progress = False
 
-        layout = QtGui.QGraphicsLinearLayout(orientation)
+        layout = QGraphicsLinearLayout(orientation)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
@@ -2032,7 +2038,7 @@ class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
         self.clear()
         orientation = Qt.Horizontal if self.orientation == Qt.Vertical else Qt.Vertical
         for text in labels:
-            item = QtGui.QGraphicsSimpleTextItem(text, self)
+            item = QGraphicsSimpleTextItem(text, self)
             item.setFont(self.font())
             item.setToolTip(text)
             item = GraphicsSimpleTextLayoutItem(item, orientation, parent=self)
@@ -2052,7 +2058,7 @@ class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
         if not self.isVisible():
             return QSizeF(0, 0)
         elif which == Qt.PreferredSize:
-            fm = QFontMetrics(QtGui.QApplication.instance().font())
+            fm = QFontMetrics(QApplication.instance().font())
             brects = [fm.boundingRect(item.text_item.text())
                       for item in self.label_items]
             spacing = self.layout().spacing()
@@ -2101,7 +2107,7 @@ class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
         if self.scene() is not None:
             maxfontsize = self.scene().font().pointSize()
         else:
-            maxfontsize = QtGui.QApplication.instance().font().pointSize()
+            maxfontsize = QApplication.instance().font().pointSize()
 
         lineheight = max(1, h / n)
         fontsize = min(self._pointSize(lineheight), maxfontsize)
@@ -2120,23 +2126,23 @@ class GraphicsSimpleTextList(QtGui.QGraphicsWidget):
         return height - fix
 
 
-class GradientLegendWidget(QtGui.QGraphicsWidget):
+class GradientLegendWidget(QGraphicsWidget):
     def __init__(self, low, high, parent=None):
         super().__init__(parent)
         self.low = low
         self.high = high
         self.color_table = None
 
-        layout = QtGui.QGraphicsLinearLayout(Qt.Vertical)
+        layout = QGraphicsLinearLayout(Qt.Vertical)
         self.setLayout(layout)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(1)
 
-        layout_labels = QtGui.QGraphicsLinearLayout(Qt.Horizontal)
+        layout_labels = QGraphicsLinearLayout(Qt.Horizontal)
         layout.addItem(layout_labels)
         layout_labels.setContentsMargins(0, 0, 0, 0)
-        label_lo = QtGui.QGraphicsSimpleTextItem("%.2f" % low, self)
-        label_hi = QtGui.QGraphicsSimpleTextItem("%.2f" % high, self)
+        label_lo = QGraphicsSimpleTextItem("%.2f" % low, self)
+        label_hi = QGraphicsSimpleTextItem("%.2f" % high, self)
         self.item_low = GraphicsSimpleTextLayoutItem(label_lo, parent=self)
         self.item_high = GraphicsSimpleTextLayoutItem(label_hi, parent=self)
 
@@ -2443,7 +2449,7 @@ def test_main(argv=sys.argv):
     else:
         filename = "brown-selected"
 
-    app = QtGui.QApplication(argv)
+    app = QApplication(argv)
     ow = OWHeatMap()
 
     ow.set_dataset(Table(filename))

@@ -2,7 +2,7 @@
 Test for welcome screen.
 """
 
-from PyQt4.QtGui import QAction
+from AnyQt.QtWidgets import QAction
 
 from ...resources import icon_loader
 

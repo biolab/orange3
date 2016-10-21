@@ -15,9 +15,8 @@ from collections import namedtuple, defaultdict, deque
 from operator import attrgetter
 from functools import partial
 
-
-from PyQt4.QtCore import QObject, QCoreApplication, QEvent, QTimer
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtCore import QObject, QCoreApplication, QEvent, QTimer
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 from .scheme import SchemeNode, SchemeLink

@@ -2,8 +2,10 @@
 from math import log, sqrt
 
 import numpy as np
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+
+from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
+from AnyQt.QtGui import QPainter, QColor
+from AnyQt.QtCore import Qt
 
 from Orange.base import RandomForest
 from Orange.classification.random_forest import RandomForestClassifier
@@ -68,7 +70,7 @@ class OWPythagoreanForest(OWWidget):
         ]
 
         self.REGRESSION_COLOR_CALC = [
-            ('None', lambda _, __: QtGui.QColor(255, 255, 255)),
+            ('None', lambda _, __: QColor(255, 255, 255)),
             ('Class mean', self._color_class_mean),
             ('Standard deviation', self._color_stddev),
         ]
@@ -100,17 +102,17 @@ class OWPythagoreanForest(OWWidget):
         gui.rubber(self.controlArea)
 
         self.controlArea.setSizePolicy(
-            QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+            QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # MAIN AREA
-        self.scene = QtGui.QGraphicsScene(self)
+        self.scene = QGraphicsScene(self)
         self.scene.selectionChanged.connect(self.commit)
         self.grid = OWGrid()
         self.grid.geometryChanged.connect(self._update_scene_rect)
         self.scene.addItem(self.grid)
 
-        self.view = QtGui.QGraphicsView(self.scene)
-        self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        self.view = QGraphicsView(self.scene)
+        self.view.setRenderHint(QPainter.Antialiasing, True)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.mainArea.layout().addWidget(self.view)
 
@@ -337,7 +339,7 @@ class OWPythagoreanForest(OWWidget):
         self.ui_target_class_combo.addItems(values)
 
     def _classification_get_color_palette(self):
-        return [QtGui.QColor(*c) for c in self.model.domain.class_var.colors]
+        return [QColor(*c) for c in self.model.domain.class_var.colors]
 
     def _classification_get_node_color(self, adapter, tree_node):
         # this is taken almost directly from the existing classification tree
@@ -348,11 +350,11 @@ class OWPythagoreanForest(OWWidget):
 
         if self.target_class_index:
             p = distribution[self.target_class_index - 1] / total
-            color = colors[self.target_class_index - 1].light(200 - 100 * p)
+            color = colors[self.target_class_index - 1].lighter(200 - 100 * p)
         else:
             modus = np.argmax(distribution)
             p = distribution[modus] / (total or 1)
-            color = colors[int(modus)].light(400 - 300 * p)
+            color = colors[int(modus)].lighter(400 - 300 * p)
         return color
 
     # REGRESSION FOREST SPECIFIC METHODS

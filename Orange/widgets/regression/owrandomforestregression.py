@@ -1,5 +1,6 @@
 from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.classify import owrandomforest
+
 from Orange.widgets import settings
 
 
@@ -13,10 +14,11 @@ class OWRandomForestRegression(owrandomforest.OWRandomForest):
 
 
 if __name__ == "__main__":
-    from PyQt4 import QtGui
+    from AnyQt.QtWidgets import QApplication
     from Orange.data import Table
 
-    app = QtGui.QApplication([])
+    app = QApplication([])
+
     w = OWRandomForestRegression()
     w.set_data(Table("housing"))
     w.show()

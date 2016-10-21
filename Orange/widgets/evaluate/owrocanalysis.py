@@ -9,9 +9,10 @@ from collections import namedtuple, deque, OrderedDict
 
 import numpy
 import sklearn.metrics as skl_metrics
-from PyQt4 import QtGui
-from PyQt4.QtGui import QColor, QPen, QBrush
-from PyQt4.QtCore import Qt
+
+from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont
+from AnyQt.QtCore import Qt
 import pyqtgraph as pg
 
 import Orange
@@ -285,7 +286,7 @@ class InfiniteLine(pg.InfiniteLine):
 
     def paint(self, painter, *args):
         if self.antialias:
-            painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.Antialiasing, True)
         super().paint(painter, *args)
 
 
@@ -340,7 +341,7 @@ class OWROCAnalysis(widget.OWWidget):
         cbox.setFlat(True)
         self.classifiers_list_box = gui.listBox(
             cbox, self, "selected_classifiers", "classifier_names",
-            selectionMode=QtGui.QListView.MultiSelection,
+            selectionMode=QListView.MultiSelection,
             callback=self._on_classifiers_changed)
 
         abox = gui.vBox(box, "Combine ROC Curves From Folds")
@@ -365,35 +366,35 @@ class OWROCAnalysis(widget.OWWidget):
 
         gui.checkBox(box, self, "display_perf_line", "Show performance line",
                      callback=self._on_display_perf_line_changed)
-        grid = QtGui.QGridLayout()
+        grid = QGridLayout()
         ibox = gui.indentedBox(box, orientation=grid)
 
         sp = gui.spin(box, self, "fp_cost", 1, 1000, 10,
                       callback=self._on_display_perf_line_changed)
-        grid.addWidget(QtGui.QLabel("FP Cost:"), 0, 0)
+        grid.addWidget(QLabel("FP Cost:"), 0, 0)
         grid.addWidget(sp, 0, 1)
 
         sp = gui.spin(box, self, "fn_cost", 1, 1000, 10,
                       callback=self._on_display_perf_line_changed)
-        grid.addWidget(QtGui.QLabel("FN Cost:"))
+        grid.addWidget(QLabel("FN Cost:"))
         grid.addWidget(sp, 1, 1)
         sp = gui.spin(box, self, "target_prior", 1, 99,
                       callback=self._on_display_perf_line_changed)
         sp.setSuffix("%")
-        sp.addAction(QtGui.QAction("Auto", sp))
-        grid.addWidget(QtGui.QLabel("Prior target class probability:"))
+        sp.addAction(QAction("Auto", sp))
+        grid.addWidget(QLabel("Prior target class probability:"))
         grid.addWidget(sp, 2, 1)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plotview.setFrameStyle(QtGui.QFrame.StyledPanel)
+        self.plotview.setFrameStyle(QFrame.StyledPanel)
 
         self.plot = pg.PlotItem()
         self.plot.getViewBox().setMenuEnabled(False)
         self.plot.getViewBox().setMouseEnabled(False, False)
 
-        pen = QPen(self.palette().color(QtGui.QPalette.Text))
+        pen = QPen(self.palette().color(QPalette.Text))
 
-        tickfont = QtGui.QFont(self.font())
+        tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")
@@ -850,7 +851,7 @@ def roc_iso_performance_slope(fp_cost, fn_cost, p):
 def main():
     import gc
     import sip
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     from Orange.classification import (LogisticRegressionLearner, SVMLearner,
                                        NuSVMLearner)
 

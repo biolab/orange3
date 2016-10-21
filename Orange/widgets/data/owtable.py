@@ -11,13 +11,18 @@ from math import isnan
 import numpy
 from scipy.sparse import issparse
 
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-
-from PyQt4.QtGui import (QIdentityProxyModel, QTableView, QItemSelectionModel,
-                         QItemSelection)
-from PyQt4.QtCore import Qt, QMetaObject, QModelIndex, QT_VERSION
-from PyQt4.QtCore import pyqtSlot as Slot
+from AnyQt.QtWidgets import (
+    QTableView, QHeaderView, QAbstractButton, QAction, QApplication,
+    QStyleOptionHeader, QStyle, QStylePainter, QStyledItemDelegate
+)
+from AnyQt.QtGui import QColor, QKeySequence, QClipboard
+from AnyQt.QtCore import (
+    Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
+    QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
+    QItemSelectionModel, QItemSelection, QItemSelectionRange,
+    QT_VERSION
+)
+from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
 from Orange.data.storage import Storage
@@ -225,7 +230,7 @@ class BlockSelectionModel(QItemSelectionModel):
     def select(self, selection, flags):
         """Reimplemented."""
         if isinstance(selection, QModelIndex):
-            selection = QtGui.QItemSelection(selection, selection)
+            selection = QItemSelection(selection, selection)
 
         model = self.model()
         indexes = self.selectedIndexes()
@@ -239,7 +244,7 @@ class BlockSelectionModel(QItemSelectionModel):
             sel_rows = set(ind.row() for ind in indexes).union(rows)
             sel_cols = set(ind.column() for ind in indexes).union(cols)
 
-            selection = QtGui.QItemSelection()
+            selection = QItemSelection()
 
             for r_start, r_end in ranges(sorted(sel_rows)):
                 for c_start, c_end in ranges(sorted(sel_cols)):
@@ -258,7 +263,7 @@ class BlockSelectionModel(QItemSelectionModel):
             desel_rows = to_ranges(set(ind.row() for ind in indexes))
             desel_cols = to_ranges(set(ind.column() for ind in indexes))
 
-            selection = QtGui.QItemSelection()
+            selection = QItemSelection()
 
             # deselection extended vertically
             for row_range, col_range in \
@@ -316,10 +321,10 @@ def table_selection_to_mime_data(table):
     csv = lines_to_csv_string(lines, dialect="excel")
     tsv = lines_to_csv_string(lines, dialect="excel-tab")
 
-    mime = QtCore.QMimeData()
-    mime.setData("text/csv", QtCore.QByteArray(csv))
-    mime.setData("text/tab-separated-values", QtCore.QByteArray(tsv))
-    mime.setData("text/plain", QtCore.QByteArray(tsv))
+    mime = QMimeData()
+    mime.setData("text/csv", QByteArray(csv))
+    mime.setData("text/tab-separated-values", QByteArray(tsv))
+    mime.setData("text/plain", QByteArray(tsv))
     return mime
 
 
@@ -381,7 +386,7 @@ class OWDataTable(widget.OWWidget):
 
         self._inputs = OrderedDict()
 
-        self.dist_color = QtGui.QColor(*self.dist_color_RGB)
+        self.dist_color = QColor(*self.dist_color_RGB)
 
         info_box = gui.vBox(self.controlArea, "Info")
         self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
@@ -425,12 +430,12 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
-        copy = QtGui.QAction("Copy", self, shortcut=QtGui.QKeySequence.Copy,
+        copy = QAction("Copy", self, shortcut=QKeySequence.Copy,
                              triggered=self.copy)
         self.addAction(copy)
 
     def sizeHint(self):
-        return QtCore.QSize(800, 500)
+        return QSize(800, 500)
 
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
@@ -452,8 +457,8 @@ class OWDataTable(widget.OWWidget):
                     view.setSelectionBehavior(QTableView.SelectRows)
 
                 header = view.horizontalHeader()
-                header.setMovable(True)
-                header.setClickable(True)
+                header.setSectionsMovable(True)
+                header.setSectionsClickable(True)
                 header.setSortIndicatorShown(True)
                 header.setSortIndicator(-1, Qt.AscendingOrder)
 
@@ -516,7 +521,7 @@ class OWDataTable(widget.OWWidget):
 
         if self.color_by_class and data.domain.has_discrete_class:
             color_schema = [
-                QtGui.QColor(*c) for c in data.domain.class_var.colors]
+                QColor(*c) for c in data.domain.class_var.colors]
         else:
             color_schema = None
         if self.show_distributions:
@@ -525,12 +530,12 @@ class OWDataTable(widget.OWWidget):
                     self, color=self.dist_color, color_schema=color_schema)
             )
         else:
-            view.setItemDelegate(QtGui.QStyledItemDelegate(self))
+            view.setItemDelegate(QStyledItemDelegate(self))
 
         # Enable/disable view sorting based on data's type
         view.setSortingEnabled(is_sortable(data))
         header = view.horizontalHeader()
-        header.setClickable(is_sortable(data))
+        header.setSectionsClickable(is_sortable(data))
         header.setSortIndicatorShown(is_sortable(data))
 
         view.setModel(datamodel)
@@ -538,12 +543,12 @@ class OWDataTable(widget.OWWidget):
         vheader = view.verticalHeader()
         option = view.viewOptions()
         size = view.style().sizeFromContents(
-            QtGui.QStyle.CT_ItemViewItem, option,
-            QtCore.QSize(20, 20), view)
+            QStyle.CT_ItemViewItem, option,
+            QSize(20, 20), view)
 
         vheader.setDefaultSectionSize(size.height() + 2)
         vheader.setMinimumSectionSize(5)
-        vheader.setResizeMode(QtGui.QHeaderView.Fixed)
+        vheader.setSectionResizeMode(QHeaderView.Fixed)
 
         # Limit the number of rows displayed in the QTableView
         # (workaround for QTBUG-18490 / QTBUG-28631)
@@ -576,30 +581,29 @@ class OWDataTable(widget.OWWidget):
 
         if not hasattr(table, "btn") and not hasattr(table, "btnfailed"):
             try:
-                btn = table.findChild(QtGui.QAbstractButton)
+                btn = table.findChild(QAbstractButton)
 
-                class efc(QtCore.QObject):
+                class efc(QObject):
                     def eventFilter(self, o, e):
-                        if (isinstance(o, QtGui.QAbstractButton) and
-                                e.type() == QtCore.QEvent.Paint):
+                        if (isinstance(o, QAbstractButton) and
+                                e.type() == QEvent.Paint):
                             # paint by hand (borrowed from QTableCornerButton)
                             btn = o
-                            opt = QtGui.QStyleOptionHeader()
+                            opt = QStyleOptionHeader()
                             opt.initFrom(btn)
-                            state = QtGui.QStyle.State_None
+                            state = QStyle.State_None
                             if btn.isEnabled():
-                                state |= QtGui.QStyle.State_Enabled
+                                state |= QStyle.State_Enabled
                             if btn.isActiveWindow():
-                                state |= QtGui.QStyle.State_Active
+                                state |= QStyle.State_Active
                             if btn.isDown():
-                                state |= QtGui.QStyle.State_Sunken
+                                state |= QStyle.State_Sunken
                             opt.state = state
                             opt.rect = btn.rect()
                             opt.text = btn.text()
-                            opt.position = \
-                                QtGui.QStyleOptionHeader.OnlyOneSection
-                            painter = QtGui.QStylePainter(btn)
-                            painter.drawControl(QtGui.QStyle.CE_Header, opt)
+                            opt.position = QStyleOptionHeader.OnlyOneSection
+                            painter = QStylePainter(btn)
+                            painter.drawControl(QStyle.CE_Header, opt)
                             return True     # eat event
                         return False
                 table.efc = efc()
@@ -616,12 +620,12 @@ class OWDataTable(widget.OWWidget):
             try:
                 btn = table.btn
                 btn.setText(text)
-                opt = QtGui.QStyleOptionHeader()
+                opt = QStyleOptionHeader()
                 opt.text = btn.text()
                 s = btn.style().sizeFromContents(
-                    QtGui.QStyle.CT_HeaderSection,
-                    opt, QtCore.QSize(),
-                    btn).expandedTo(QtGui.QApplication.globalStrut())
+                    QStyle.CT_HeaderSection,
+                    opt, QSize(),
+                    btn).expandedTo(QApplication.globalStrut())
                 if s.isValid():
                     table.verticalHeader().setMinimumWidth(s.width())
             except Exception:
@@ -664,19 +668,19 @@ class OWDataTable(widget.OWWidget):
         for ti in range(self.tabs.count()):
             widget = self.tabs.widget(ti)
             model = widget.model()
-            while isinstance(model, QtGui.QAbstractProxyModel):
+            while isinstance(model, QAbstractProxyModel):
                 model = model.sourceModel()
             data = model.source
             class_var = data.domain.class_var
             if self.color_by_class and class_var and class_var.is_discrete:
-                color_schema = [QtGui.QColor(*c) for c in class_var.colors]
+                color_schema = [QColor(*c) for c in class_var.colors]
             else:
                 color_schema = None
             if self.show_distributions:
                 delegate = gui.TableBarItem(self, color=self.dist_color,
                                             color_schema=color_schema)
             else:
-                delegate = QtGui.QStyledItemDelegate(self)
+                delegate = QStyledItemDelegate(self)
             widget.setItemDelegate(delegate)
         tab = self.tabs.currentWidget()
         if tab:
@@ -741,7 +745,7 @@ class OWDataTable(widget.OWWidget):
             for rowstart, rowend in rowranges:
                 for colstart, colend in colranges:
                     selection.append(
-                        QtGui.QItemSelectionRange(
+                        QItemSelectionRange(
                             view.model().index(rowstart, colstart),
                             view.model().index(rowend - 1, colend - 1)
                         )
@@ -756,7 +760,7 @@ class OWDataTable(widget.OWWidget):
         selection = view.selectionModel().selection()
         model = view.model()
         # map through the proxies into input table.
-        while isinstance(model, QtGui.QAbstractProxyModel):
+        while isinstance(model, QAbstractProxyModel):
             selection = model.mapSelectionToSource(selection)
             model = model.sourceModel()
 
@@ -773,7 +777,7 @@ class OWDataTable(widget.OWWidget):
     @staticmethod
     def _get_model(view):
         model = view.model()
-        while isinstance(model, QtGui.QAbstractProxyModel):
+        while isinstance(model, QAbstractProxyModel):
             model = model.sourceModel()
         return model
 
@@ -858,8 +862,8 @@ class OWDataTable(widget.OWWidget):
         view = self.tabs.currentWidget()
         if view is not None:
             mime = table_selection_to_mime_data(view)
-            QtGui.QApplication.clipboard().setMimeData(
-                mime, QtGui.QClipboard.Clipboard
+            QApplication.clipboard().setMimeData(
+                mime, QClipboard.Clipboard
             )
 
     def send_report(self):
@@ -1011,7 +1015,7 @@ def is_sortable(table):
 
 
 def test_main():
-    a = QtGui.QApplication(sys.argv)
+    a = QApplication(sys.argv)
     ow = OWDataTable()
 
     iris = Table("iris")
@@ -1030,8 +1034,8 @@ def test_main():
 
 
 def test_model():
-    app = QtGui.QApplication([])
-    view = QtGui.QTableView(
+    app = QApplication([])
+    view = QTableView(
         sortingEnabled=True
     )
     data = Orange.data.Table("lenses")

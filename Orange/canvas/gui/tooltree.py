@@ -10,13 +10,13 @@ organized in a tree structure.
 
 import logging
 
-from PyQt4.QtGui import (
-    QTreeView, QWidget, QVBoxLayout, QSizePolicy, QStandardItemModel,
-    QAbstractProxyModel, QStyledItemDelegate, QStyle, QAction
+from AnyQt.QtWidgets import (
+    QTreeView, QWidget, QVBoxLayout, QSizePolicy, QStyledItemDelegate,
+    QStyle, QAction
 )
-
-from PyQt4.QtCore import Qt, QEvent, QModelIndex
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import QStandardItemModel
+from AnyQt.QtCore import Qt, QEvent, QModelIndex, QAbstractProxyModel
+from AnyQt.QtCore import pyqtSignal as Signal
 
 log = logging.getLogger(__name__)
 

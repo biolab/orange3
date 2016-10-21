@@ -1,8 +1,6 @@
 import os.path
 from operator import attrgetter
 
-from PyQt4 import QtGui
-
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -91,8 +89,8 @@ class OWSave(widget.OWWidget):
 
 if __name__ == "__main__":
     import sys
-
-    a = QtGui.QApplication(sys.argv)
+    from AnyQt.QtWidgets import QApplication
+    a = QApplication(sys.argv)
     table = Table("iris")
     ow = OWSave()
     ow.show()

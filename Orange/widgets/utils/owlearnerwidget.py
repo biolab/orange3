@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt4.QtCore import QTimer, Qt
+from AnyQt.QtCore import QTimer, Qt
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table

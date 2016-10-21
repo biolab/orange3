@@ -8,17 +8,15 @@ widget.
 
 """
 
-from PyQt4.QtGui import (
-    QWidget, QPainter, QPixmap, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsDropShadowEffect, QColor, QPen, QPalette, QStyleOption,
-    QAbstractScrollArea, QToolBar, QRegion
+from AnyQt.QtWidgets import (
+    QWidget, QGraphicsScene, QGraphicsRectItem, QGraphicsDropShadowEffect,
+    QStyleOption, QAbstractScrollArea, QToolBar
 )
-
-from PyQt4.QtCore import (
+from AnyQt.QtGui import QPainter, QPixmap, QColor, QPen, QPalette, QRegion
+from AnyQt.QtCore import (
     Qt, QPoint, QPointF, QRect, QRectF, QSize, QSizeF, QEvent
 )
-
-from PyQt4.QtCore import pyqtProperty as Property
+from AnyQt.QtCore import pyqtProperty as Property
 
 CACHED_SHADOW_RECT_SIZE = (50, 50)
 

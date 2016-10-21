@@ -9,13 +9,10 @@ A dock widget that can be a collapsed/expanded.
 
 import logging
 
-from PyQt4.QtGui import (
-    QDockWidget, QAbstractButton, QSizePolicy, QStyle, QIcon, QTransform
-)
-
-from PyQt4.QtCore import Qt, QEvent
-
-from PyQt4.QtCore import pyqtProperty as Property, pyqtSignal as Signal
+from AnyQt.QtWidgets import QDockWidget, QAbstractButton, QSizePolicy, QStyle
+from AnyQt.QtGui import  QIcon, QTransform
+from AnyQt.QtCore import Qt, QEvent
+from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
 from .stackedwidget import AnimatedStackedWidget
 from .utils import QWIDGETSIZE_MAX

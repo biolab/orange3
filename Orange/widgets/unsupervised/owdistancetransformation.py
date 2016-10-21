@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.util import scale
 from Orange.misc import DistMatrix

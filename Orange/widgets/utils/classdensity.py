@@ -1,7 +1,7 @@
 import ctypes
 import numpy as np
 
-from PyQt4.QtCore import QRectF
+from AnyQt.QtCore import QRectF
 from pyqtgraph.graphicsItems.ImageItem import ImageItem
 
 

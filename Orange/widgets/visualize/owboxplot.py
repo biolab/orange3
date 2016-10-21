@@ -4,8 +4,13 @@ import math
 from itertools import chain
 import numpy as np
 
-from PyQt4 import QtCore
-from PyQt4 import QtGui
+from AnyQt.QtWidgets import (
+    QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
+    QGraphicsTextItem, QGraphicsItemGroup, QGraphicsLineItem,
+    QGraphicsPathItem, QGraphicsRectItem, QSizePolicy
+)
+from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
+from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
 
 import scipy.special
 
@@ -110,28 +115,28 @@ class OWBoxPlot(widget.OWWidget):
         CompareNone: "", CompareMedians: "median", CompareMeans: "mean"
     }
 
-    _pen_axis_tick = QtGui.QPen(QtCore.Qt.white, 5)
-    _pen_axis = QtGui.QPen(QtCore.Qt.darkGray, 3)
-    _pen_median = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0xff, 0xff, 0x00)), 2)
-    _pen_paramet = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 2)
-    _pen_dotted = QtGui.QPen(QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff)), 1)
-    _pen_dotted.setStyle(QtCore.Qt.DotLine)
-    _post_line_pen = QtGui.QPen(QtCore.Qt.lightGray, 2)
-    _post_grp_pen = QtGui.QPen(QtCore.Qt.lightGray, 4)
+    _pen_axis_tick = QPen(Qt.white, 5)
+    _pen_axis = QPen(Qt.darkGray, 3)
+    _pen_median = QPen(QBrush(QColor(0xff, 0xff, 0x00)), 2)
+    _pen_paramet = QPen(QBrush(QColor(0x33, 0x00, 0xff)), 2)
+    _pen_dotted = QPen(QBrush(QColor(0x33, 0x00, 0xff)), 1)
+    _pen_dotted.setStyle(Qt.DotLine)
+    _post_line_pen = QPen(Qt.lightGray, 2)
+    _post_grp_pen = QPen(Qt.lightGray, 4)
     for pen in (_pen_paramet, _pen_median, _pen_dotted,
                 _pen_axis, _pen_axis_tick, _post_line_pen, _post_grp_pen):
         pen.setCosmetic(True)
-        pen.setCapStyle(QtCore.Qt.RoundCap)
-        pen.setJoinStyle(QtCore.Qt.RoundJoin)
-    _pen_axis_tick.setCapStyle(QtCore.Qt.FlatCap)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+    _pen_axis_tick.setCapStyle(Qt.FlatCap)
 
-    _box_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x88, 0xff, 0xc0))
+    _box_brush = QBrush(QColor(0x33, 0x88, 0xff, 0xc0))
 
-    _axis_font = QtGui.QFont()
+    _axis_font = QFont()
     _axis_font.setPixelSize(12)
-    _label_font = QtGui.QFont()
+    _label_font = QFont()
     _label_font.setPixelSize(11)
-    _attr_brush = QtGui.QBrush(QtGui.QColor(0x33, 0x00, 0xff))
+    _attr_brush = QBrush(QColor(0x33, 0x00, 0xff))
 
     graph_name = "box_scene"
 
@@ -173,11 +178,11 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.display_changed).box
 
         gui.vBox(self.mainArea, addSpace=True)
-        self.box_scene = QtGui.QGraphicsScene()
-        self.box_view = QtGui.QGraphicsView(self.box_scene)
-        self.box_view.setRenderHints(QtGui.QPainter.Antialiasing |
-                                     QtGui.QPainter.TextAntialiasing |
-                                     QtGui.QPainter.SmoothPixmapTransform)
+        self.box_scene = QGraphicsScene()
+        self.box_view = QGraphicsView(self.box_scene)
+        self.box_view.setRenderHints(QPainter.Antialiasing |
+                                     QPainter.TextAntialiasing |
+                                     QPainter.SmoothPixmapTransform)
         self.box_view.viewport().installEventFilter(self)
 
         self.mainArea.layout().addWidget(self.box_view)
@@ -193,7 +198,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def eventFilter(self, obj, event):
         if obj is self.box_view.viewport() and \
-                event.type() == QtCore.QEvent.Resize:
+                event.type() == QEvent.Resize:
             self.layout_changed()
 
         return super().eventFilter(obj, event)
@@ -309,7 +314,7 @@ class OWBoxPlot(widget.OWWidget):
         self.boxes = [self.box_group(stat) for stat in self.stats]
         self.labels = [self.label_group(stat, attr, mean_lab)
                        for stat, mean_lab in zip(self.stats, self.mean_labels)]
-        self.attr_labels = [QtGui.QGraphicsSimpleTextItem(lab)
+        self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts]
         for it in chain(self.labels, self.boxes, self.attr_labels):
             self.box_scene.addItem(it)
@@ -357,8 +362,8 @@ class OWBoxPlot(widget.OWWidget):
                 label.setX(pos * self.scale_x)
                 label.show()
 
-        r = QtCore.QRectF(self.scene_min_x, -30 - len(self.stats) * heights,
-                          self.scene_width, len(self.stats) * heights + 90)
+        r = QRectF(self.scene_min_x, -30 - len(self.stats) * heights,
+                   self.scene_width, len(self.stats) * heights + 90)
         self.box_scene.setSceneRect(r)
 
         self.compute_tests()
@@ -366,17 +371,17 @@ class OWBoxPlot(widget.OWWidget):
 
     def display_changed_disc(self):
         self.clear_scene()
-        self.attr_labels = [QtGui.QGraphicsSimpleTextItem(lab)
+        self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
 
         if not self.stretched:
             if self.group_var:
                 self.labels = [
-                    QtGui.QGraphicsTextItem("{}".format(int(sum(cont))))
+                    QGraphicsTextItem("{}".format(int(sum(cont))))
                     for cont in self.conts]
             else:
                 self.labels = [
-                    QtGui.QGraphicsTextItem(str(int(sum(self.dist))))]
+                    QGraphicsTextItem(str(int(sum(self.dist))))]
 
         self.draw_axis_disc()
         if self.group_var:
@@ -404,7 +409,7 @@ class OWBoxPlot(widget.OWWidget):
             if self.attribute is not self.group_var:
                 for text_item, bar_part in zip(box.childItems()[1::2],
                                                box.childItems()[::2]):
-                    label = QtGui.QGraphicsSimpleTextItem(
+                    label = QGraphicsSimpleTextItem(
                         text_item.toPlainText())
                     label.setPos(bar_part.boundingRect().x(),
                                  y - label.boundingRect().height() - 8)
@@ -473,20 +478,20 @@ class OWBoxPlot(widget.OWWidget):
         self.infot1.setText("<center>%s</center>" % t)
 
     def mean_label(self, stat, attr, val_name):
-        label = QtGui.QGraphicsItemGroup()
-        t = QtGui.QGraphicsSimpleTextItem(
+        label = QGraphicsItemGroup()
+        t = QGraphicsSimpleTextItem(
             "%.*f" % (attr.number_of_decimals + 1, stat.mean), label)
         t.setFont(self._label_font)
         bbox = t.boundingRect()
         w2, h = bbox.width() / 2, bbox.height()
         t.setPos(-w2, -h)
-        tpm = QtGui.QGraphicsSimpleTextItem(
+        tpm = QGraphicsSimpleTextItem(
             " \u00b1 " + "%.*f" % (attr.number_of_decimals + 1, stat.dev),
             label)
         tpm.setFont(self._label_font)
         tpm.setPos(w2, -h)
         if val_name:
-            vnm = QtGui.QGraphicsSimpleTextItem(val_name + ": ", label)
+            vnm = QGraphicsSimpleTextItem(val_name + ": ", label)
             vnm.setFont(self._label_font)
             vnm.setBrush(self._attr_brush)
             vb = vnm.boundingRect()
@@ -539,7 +544,7 @@ class OWBoxPlot(widget.OWWidget):
                 self.attribute.repr_val(val) if not misssing_stats else "?",
                 self._axis_font)
             t.setFlags(
-                t.flags() | QtGui.QGraphicsItem.ItemIgnoresTransformations)
+                t.flags() | QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
             t.setPos(val * scale_x - r.width() / 2, 8)
             if val >= top:
@@ -605,7 +610,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def label_group(self, stat, attr, mean_lab):
         def centered_text(val, pos):
-            t = QtGui.QGraphicsSimpleTextItem(
+            t = QGraphicsSimpleTextItem(
                 "%.*f" % (attr.number_of_decimals + 1, val), labels)
             t.setFont(self._label_font)
             bbox = t.boundingRect()
@@ -613,20 +618,20 @@ class OWBoxPlot(widget.OWWidget):
             return t
 
         def line(x, down=1):
-            QtGui.QGraphicsLineItem(x, 12 * down, x, 20 * down, labels)
+            QGraphicsLineItem(x, 12 * down, x, 20 * down, labels)
 
         def move_label(label, frm, to):
             label.setX(to)
             to += t_box.width() / 2
-            path = QtGui.QPainterPath()
+            path = QPainterPath()
             path.lineTo(0, 4)
             path.lineTo(to - frm, 4)
             path.lineTo(to - frm, 8)
-            p = QtGui.QGraphicsPathItem(path)
+            p = QGraphicsPathItem(path)
             p.setPos(frm, 12)
             labels.addToGroup(p)
 
-        labels = QtGui.QGraphicsItemGroup()
+        labels = QGraphicsItemGroup()
 
         labels.addToGroup(mean_lab)
         m = stat.mean * self.scale_x
@@ -660,11 +665,10 @@ class OWBoxPlot(widget.OWWidget):
 
     def box_group(self, stat, height=20):
         def line(x0, y0, x1, y1, *args):
-            return QtGui.QGraphicsLineItem(x0 * scale_x, y0, x1 * scale_x, y1,
-                                           *args)
+            return QGraphicsLineItem(x0 * scale_x, y0, x1 * scale_x, y1, *args)
 
         scale_x = self.scale_x
-        box = QtGui.QGraphicsItemGroup()
+        box = QGraphicsItemGroup()
         whisker1 = line(stat.a_min, -1.5, stat.a_min, 1.5, box)
         whisker2 = line(stat.a_max, -1.5, stat.a_max, 1.5, box)
         vert_line = line(stat.a_min, 0, stat.a_max, 0, box)
@@ -675,11 +679,11 @@ class OWBoxPlot(widget.OWWidget):
         var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0, box)
         var_line.setPen(self._pen_paramet)
 
-        mbox = QtGui.QGraphicsRectItem(stat.q25 * scale_x, -height / 2,
-                                       (stat.q75 - stat.q25) * scale_x, height,
-                                       box)
+        mbox = QGraphicsRectItem(stat.q25 * scale_x, -height / 2,
+                                 (stat.q75 - stat.q25) * scale_x, height,
+                                 box)
         mbox.setBrush(self._box_brush)
-        mbox.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        mbox.setPen(QPen(Qt.NoPen))
         mbox.setZValue(-200)
 
         median_line = line(stat.median, -height / 2,
@@ -692,9 +696,9 @@ class OWBoxPlot(widget.OWWidget):
     def strudel(self, dist):
         attr = self.attribute
         ss = np.sum(dist)
-        box = QtGui.QGraphicsItemGroup()
+        box = QGraphicsItemGroup()
         if ss < 1e-6:
-            QtGui.QGraphicsRectItem(0, -10, 1, 10, box)
+            QGraphicsRectItem(0, -10, 1, 10, box)
         cum = 0
         for i, v in enumerate(dist):
             if v < 1e-6:
@@ -702,16 +706,16 @@ class OWBoxPlot(widget.OWWidget):
             if self.stretched:
                 v /= ss
             v *= self.scale_x
-            rect = QtGui.QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
-            rect.setBrush(QtGui.QBrush(QtGui.QColor(*attr.colors[i])))
-            rect.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            rect = QGraphicsRectItem(cum + 1, -6, v - 2, 12, box)
+            rect.setBrush(QBrush(QColor(*attr.colors[i])))
+            rect.setPen(QPen(Qt.NoPen))
             if self.stretched:
                 tooltip = "{}: {:.2f}%".format(attr.values[i],
                                                100 * dist[i] / sum(dist))
             else:
                 tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
             rect.setToolTip(tooltip)
-            text = QtGui.QGraphicsTextItem(attr.values[i])
+            text = QGraphicsTextItem(attr.values[i])
             box.addToGroup(text)
             cum += v
         return box
@@ -784,10 +788,11 @@ class OWBoxPlot(widget.OWWidget):
 
 
 def main(argv=None):
+    from AnyQt.QtWidgets import QApplication
     if argv is None:
         argv = sys.argv
     argv = list(argv)
-    app = QtGui.QApplication(argv)
+    app = QApplication(argv)
     if len(argv) > 1:
         filename = argv[1]
     else:

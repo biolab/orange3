@@ -1,4 +1,5 @@
-from PyQt4.QtGui import QGraphicsView, QPainter
+from AnyQt.QtWidgets import QGraphicsView
+from AnyQt.QtGui import QPainter
 
 from ..scene import CanvasScene
 from .. import items

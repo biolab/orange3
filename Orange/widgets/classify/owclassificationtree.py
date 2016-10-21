@@ -2,7 +2,7 @@
 
 from collections import OrderedDict
 
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification.tree import TreeLearner
@@ -101,7 +101,7 @@ class OWClassificationTree(OWTreeLearner):
 
 def _test():
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWClassificationTree()

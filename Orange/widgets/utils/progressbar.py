@@ -2,8 +2,8 @@ import contextlib
 import time
 import warnings
 
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtProperty, QEventLoop
-from PyQt4.QtGui import qApp
+from AnyQt.QtCore import QEventLoop, pyqtSignal as Signal, pyqtProperty
+from AnyQt.QtWidgets import QApplication, qApp
 
 from Orange.widgets import gui
 

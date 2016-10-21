@@ -1,8 +1,13 @@
+"""
+Widget for assigning colors to variables
+"""
+
 import numpy as np
-from PyQt4.QtCore import Qt, QAbstractTableModel, QSize
-from PyQt4.QtGui import (
-    QColor, QHeaderView, QFont, QColorDialog, QTableView, qRgb, QImage,
-    QBrush)
+from AnyQt.QtCore import Qt, QSize, QAbstractTableModel
+from AnyQt.QtGui import QColor, QFont, QImage, QBrush, qRgb
+from AnyQt.QtWidgets import (
+    QHeaderView, QColorDialog, QTableView, QApplication
+)
 
 import Orange
 from Orange.widgets import widget, settings, gui
@@ -300,7 +305,8 @@ class OWColor(widget.OWWidget):
         box = gui.hBox(self.controlArea, "Discrete Variables")
         self.disc_model = DiscColorTableModel()
         disc_view = self.disc_view = DiscreteTable(self.disc_model)
-        disc_view.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
+        disc_view.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeToContents)
         self.disc_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(disc_view)
 

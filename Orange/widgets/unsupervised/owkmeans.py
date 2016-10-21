@@ -1,9 +1,9 @@
 import math
 
 import numpy as np
-from PyQt4.QtGui import QGridLayout, QSizePolicy, \
-    QTableView, QStandardItemModel, QStandardItem, QIntValidator
-from PyQt4.QtCore import Qt, QTimer
+from AnyQt.QtWidgets import QGridLayout, QSizePolicy, QTableView
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIntValidator
+from AnyQt.QtCore import Qt, QTimer
 
 from Orange.clustering import KMeans
 from Orange.data import Table, Domain, DiscreteVariable
@@ -391,7 +391,7 @@ class OWKMeans(widget.OWWidget):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWKMeans()

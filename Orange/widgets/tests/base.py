@@ -3,8 +3,9 @@ import unittest
 import numpy as np
 
 from Orange.base import SklLearner, SklModel
-from PyQt4.QtGui import (QApplication, QComboBox, QSpinBox, QDoubleSpinBox,
-                         QSlider)
+from AnyQt.QtWidgets import (
+    QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
+)
 import sip
 
 from Orange.data import Table
@@ -509,7 +510,7 @@ class WidgetOutputsTestMixin:
 
         # only needed in TestOWMDS
         if type(self).__name__ == "TestOWMDS":
-            from PyQt4.QtCore import QEvent
+            from AnyQt.QtCore import QEvent
             self.widget.customEvent(QEvent(QEvent.User))
             self.widget.commit()
 

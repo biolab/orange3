@@ -2,13 +2,10 @@
 """
 import traceback
 
-from PyQt4.QtGui import (
-    QWidget, QPlainTextEdit, QVBoxLayout, QTextCursor, QTextCharFormat,
-    QFont, QSizePolicy
-)
-
-from PyQt4.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QSizePolicy
+from AnyQt.QtGui import QTextCursor, QTextCharFormat, QFont
+from AnyQt.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
+from AnyQt.QtCore import pyqtSignal as Signal
 
 
 class TerminalView(QPlainTextEdit):

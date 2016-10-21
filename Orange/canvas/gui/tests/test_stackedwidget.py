@@ -2,7 +2,7 @@
 Test for StackedWidget
 
 """
-from PyQt4.QtGui import QWidget, QLabel, QGroupBox, QListView, QVBoxLayout
+from AnyQt.QtWidgets import QWidget, QLabel, QGroupBox, QListView, QVBoxLayout
 
 from .. import test
 from .. import stackedwidget

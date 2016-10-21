@@ -15,18 +15,21 @@ import copy
 from operator import attrgetter
 from urllib.parse import urlencode
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
-    QKeySequence, QUndoStack, QUndoCommand, QGraphicsItem, QGraphicsObject,
-    QGraphicsTextItem, QCursor, QFont, QPainter, QPixmap, QColor,
-    QIcon, QWhatsThisClickedEvent, QBrush
+    QUndoStack, QUndoCommand, QGraphicsItem, QGraphicsObject,
+    QGraphicsTextItem
+)
+from AnyQt.QtGui import (
+    QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QBrush, QIcon,
+    QWhatsThisClickedEvent
 )
 
-from PyQt4.QtCore import (
+from AnyQt.QtCore import (
     Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication
 )
 
-from PyQt4.QtCore import pyqtProperty as Property, pyqtSignal as Signal
+from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
 from ..registry.qt import whats_this_helper
 from ..gui.quickhelp import QuickHelpTipEvent

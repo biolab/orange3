@@ -34,10 +34,14 @@ Plot tools (``owtools``)
 
 '''
 
-from PyQt4.QtGui import (QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem,
-    QPolygonF, QGraphicsPolygonItem, QGraphicsEllipseItem, QPen, QBrush,
-    QGraphicsPixmapItem, QGraphicsPathItem, QPainterPath, qRgb, QImage, QPixmap)
-from PyQt4.QtCore import Qt, QRectF, QPointF, QPropertyAnimation, qVersion
+from AnyQt.QtWidgets import (
+    QGraphicsItem, QGraphicsRectItem, QGraphicsTextItem, QGraphicsPolygonItem,
+    QGraphicsEllipseItem, QGraphicsPixmapItem, QGraphicsPathItem
+)
+from AnyQt.QtGui import QPolygonF, QPen, QBrush, QPainterPath, QImage, \
+    qRgb, QPixmap
+from AnyQt.QtCore import Qt, QRectF, QPointF, QPropertyAnimation
+
 from Orange.widgets.utils.colorpalette import ColorPaletteDlg
 from Orange.widgets.utils import get_variable_values_sorted
 
@@ -430,7 +434,7 @@ class ProbabilitiesItem(orangeqt.PlotItem):
             palette.extend([qRgb(255, 255, 255) for i in range(256-len(palette))])
 
         self.potentialsImage = QImage(imagebmp, rx, ry, QImage.Format_Indexed8)
-        self.potentialsImage.setColorTable(ColorPaletteDlg.signedPalette(palette) if qVersion() < "4.5" else palette)
+        self.potentialsImage.setColorTable(palette)
         self.potentialsImage.setNumColors(256)
         self.pixmap_item.setPixmap(QPixmap.fromImage(self.potentialsImage))
         self.pixmap_item.setPos(self.graph_transform().map(self.rect.bottomLeft()))

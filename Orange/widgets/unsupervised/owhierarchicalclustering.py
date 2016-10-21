@@ -7,16 +7,18 @@ from contextlib import contextmanager
 
 import numpy
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
-    QGraphicsScene, QGraphicsView, QTransform, QPainterPath,
-    QColor, QBrush, QPen, QFontMetrics, QGridLayout, QFormLayout,
-    QSizePolicy, QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
-    QGraphicsLayoutItem, QAction, QKeySequence, QFont
+    QGraphicsScene, QGraphicsView, QGridLayout, QFormLayout, QSizePolicy,
+    QGraphicsSimpleTextItem,
+    QGraphicsLayoutItem, QAction,
 )
-
-from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import (
+    QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
+    QFont, QFontMetrics, QPolygonF, QKeySequence
+)
+from AnyQt.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
 
@@ -1625,7 +1627,7 @@ def clusters_at_height(root, height):
 
 
 def main(argv=None):
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     import sip
     import Orange.distance as distance
 

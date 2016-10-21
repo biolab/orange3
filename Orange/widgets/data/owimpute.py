@@ -1,9 +1,12 @@
 import sys
 import numpy as np
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
-from PyQt4.QtGui import QComboBox
+from AnyQt.QtWidgets import (
+    QWidget, QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
+    QVBoxLayout, QStackedLayout, QComboBox, QLineEdit,
+    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
+)
+from AnyQt.QtCore import Qt
 
 import Orange.data
 from Orange.preprocess import impute
@@ -15,7 +18,7 @@ from Orange.widgets.widget import OWWidget
 from Orange.classification import SimpleTreeLearner
 
 
-class DisplayFormatDelegate(QtGui.QStyledItemDelegate):
+class DisplayFormatDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         method = index.data(Qt.UserRole)
@@ -76,34 +79,34 @@ class OWImpute(OWWidget):
 
     def __init__(self):
         super().__init__()
-        main_layout = QtGui.QVBoxLayout()
-        main_layout.setMargin(10)
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(10, 10, 10, 10)
         self.controlArea.layout().addLayout(main_layout)
 
-        box = QtGui.QGroupBox(title=self.tr("Default Method"), flat=False)
-        box_layout = QtGui.QVBoxLayout(box)
+        box = QGroupBox(title=self.tr("Default Method"), flat=False)
+        box_layout = QVBoxLayout(box)
         main_layout.addWidget(box)
 
-        button_group = QtGui.QButtonGroup()
+        button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
         for i, method in enumerate(self.METHODS):
             if not method.columns_only:
-                button = QtGui.QRadioButton(method.name)
+                button = QRadioButton(method.name)
                 button.setChecked(i == self.default_method_index)
                 button_group.addButton(button, i)
                 box_layout.addWidget(button)
 
         self.default_button_group = button_group
 
-        box = QtGui.QGroupBox(title=self.tr("Individual Attribute Settings"),
-                              flat=False)
+        box = QGroupBox(title=self.tr("Individual Attribute Settings"),
+                        flat=False)
         main_layout.addWidget(box)
 
-        horizontal_layout = QtGui.QHBoxLayout(box)
+        horizontal_layout = QHBoxLayout(box)
         main_layout.addWidget(box)
 
-        self.varview = QtGui.QListView(
-            selectionMode=QtGui.QListView.ExtendedSelection
+        self.varview = QListView(
+            selectionMode=QListView.ExtendedSelection
         )
         self.varview.setItemDelegate(DisplayFormatDelegate())
         self.varmodel = itemmodels.VariableListModel()
@@ -115,12 +118,12 @@ class OWImpute(OWWidget):
 
         horizontal_layout.addWidget(self.varview)
 
-        method_layout = QtGui.QVBoxLayout()
+        method_layout = QVBoxLayout()
         horizontal_layout.addLayout(method_layout)
 
-        button_group = QtGui.QButtonGroup()
+        button_group = QButtonGroup()
         for i, method in enumerate(self.METHODS):
-            button = QtGui.QRadioButton(text=method.name)
+            button = QRadioButton(text=method.name)
             button_group.addButton(button, i)
             method_layout.addWidget(button)
 
@@ -130,12 +133,12 @@ class OWImpute(OWWidget):
             activated=self._on_value_selected
             )
         self.value_combo.currentIndexChanged.connect(self._on_value_changed)
-        self.value_double = QtGui.QDoubleSpinBox(
+        self.value_double = QDoubleSpinBox(
             editingFinished=self._on_value_selected,
             minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
             value=self.default_value
             )
-        self.value_stack = value_stack = QtGui.QStackedLayout()
+        self.value_stack = value_stack = QStackedLayout()
         value_stack.addWidget(self.value_combo)
         value_stack.addWidget(self.value_double)
         method_layout.addLayout(value_stack)
@@ -146,7 +149,7 @@ class OWImpute(OWWidget):
 
         method_layout.addStretch(2)
 
-        reset_button = QtGui.QPushButton(
+        reset_button = QPushButton(
                 "Restore All to Default", checked=False, checkable=False,
                 clicked=self.reset_variable_methods, default=False,
                 autoDefault=False)
@@ -372,9 +375,9 @@ class OWImpute(OWWidget):
 
 
 def main(argv=sys.argv):
-
-    app = QtGui.QApplication(list(argv))
-    argv = app.argv()
+    from AnyQt.QtWidgets import QApplication
+    app = QApplication(list(argv))
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:

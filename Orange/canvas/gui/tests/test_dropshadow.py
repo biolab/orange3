@@ -3,12 +3,13 @@ Tests for DropShadowFrame wiget.
 
 """
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QMainWindow, QWidget, QListView, QTextEdit, QHBoxLayout, QToolBar,
-    QVBoxLayout, QColor
+    QVBoxLayout
 )
+from AnyQt.QtGui import QColor
 
-from PyQt4.QtCore import Qt, QTimer
+from AnyQt.QtCore import Qt, QTimer
 from .. import dropshadow
 
 from .. import test

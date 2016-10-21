@@ -2,17 +2,22 @@ import os
 
 import pkg_resources
 import pickle
+import textwrap
+import warnings
 from enum import IntEnum
-from PyQt4.QtCore import Qt, pyqtSlot
-from PyQt4.QtGui import (QApplication, QDialog, QPrinter, QIcon, QCursor,
-                         QPrintDialog, QFileDialog, QTableView,
-                         QStandardItemModel, QStandardItem, QHeaderView)
+
+from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, pyqtSlot, QT_VERSION
+from AnyQt.QtGui import QIcon, QCursor, QStandardItemModel, QStandardItem
+from AnyQt.QtWidgets import (
+    QApplication, QDialog, QFileDialog, QTableView, QHeaderView, QSizePolicy
+)
+from AnyQt.QtPrintSupport import QPrinter, QPrintDialog
 
 from Orange.util import deprecated
 from Orange.widgets import gui
-from Orange.widgets.webview import WebView
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.webview import WebviewWidget
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.gui.utils import message_critical
 
@@ -128,7 +133,7 @@ class OWReport(OWWidget):
         self.table.setSelectionMode(QTableView.SingleSelection)
         self.table.setWordWrap(False)
         self.table.setMouseTracking(True)
-        self.table.verticalHeader().setResizeMode(QHeaderView.Fixed)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
         self.table.verticalHeader().setDefaultSectionSize(20)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setVisible(False)
@@ -154,7 +159,21 @@ class OWReport(OWWidget):
         self.print_button = gui.button(
             box, self, "Print", callback=self._print_report
         )
-        self.report_view = WebView(self.mainArea, bridge=self)
+
+        class PyBridge(QObject):
+            @pyqtSlot(str)
+            def _select_item(myself, item_id):
+                item = self.table_model.get_item_by_id(item_id)
+                self.table.selectRow(self.table_model.indexFromItem(item).row())
+                self._change_selected_item(item)
+
+            @pyqtSlot(str, str)
+            def _add_comment(myself, item_id, value):
+                item = self.table_model.get_item_by_id(item_id)
+                item.comment = value
+
+        self.report_view = WebviewWidget(self.mainArea, bridge=PyBridge(self))
+        self.mainArea.layout().addWidget(self.report_view)
 
     @deprecated("Widgets should not be pickled")
     def __getstate__(self):
@@ -229,16 +248,18 @@ class OWReport(OWWidget):
         self.report_view.setHtml(html)
 
     def _scroll_to_item(self, item):
-        self.report_view.evalJS("document.getElementById('{}')."
-                                "scrollIntoView();".format(item.id))
+        self.report_view.runJavaScript(
+            "document.getElementById('{}').scrollIntoView();".format(item.id)
+        )
 
     def _change_selected_item(self, item):
-        self.report_view.evalJS(
+        self.report_view.runJavaScript(
             "var sel_el = document.getElementsByClassName('selected')[0]; "
             "if (sel_el.id != {}) "
             "   sel_el.className = 'normal';".format(item.id))
-        self.report_view.evalJS("document.getElementById('{}')."
-                                "className = 'selected';".format(item.id))
+        self.report_view.runJavaScript(
+            "document.getElementById('{}').className = 'selected';"
+            .format(item.id))
         self.report_changed = True
 
 
@@ -248,7 +269,6 @@ class OWReport(OWWidget):
         self.table.selectRow(self.table_model.indexFromItem(item).row())
         self._change_selected_item(item)
 
-    @pyqtSlot(str, str)
     def _add_comment(self, item_id, value):
         item = self.table_model.get_item_by_id(item_id)
         item.comment = value
@@ -281,7 +301,7 @@ class OWReport(OWWidget):
 
     def save_report(self):
         """Save report"""
-        filename = QFileDialog.getSaveFileName(
+        filename, _ = QFileDialog.getSaveFileName(
             self, "Save Report", self.save_dir,
             "HTML (*.html);;PDF (*.pdf);;Report (*.report)")
         if not filename:
@@ -299,9 +319,11 @@ class OWReport(OWWidget):
         elif extension == ".report":
             self.save(filename)
         else:
-            frame = self.report_view.page().currentFrame()
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(frame.documentElement().toInnerXml())
+            def save_html(contents):
+                with open(filename, "w", encoding="utf-8") as f:
+                    f.write(contents)
+
+            save_html(self.report_view.html())
         self.report_changed = False
         return QDialog.Accepted
 
@@ -314,7 +336,7 @@ class OWReport(OWWidget):
         self.report_view.print_(printer)
 
     def open_report(self):
-        filename = QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, "Open Report", self.open_dir, "Report (*.report)")
         if not filename:
             return

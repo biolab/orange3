@@ -23,5 +23,5 @@ try:
     from .owaxis import *
     from .owplot import *
     from .owtools import *
-except ImportError:
+except (ImportError, RuntimeError):
     pass

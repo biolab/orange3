@@ -1,13 +1,15 @@
 import os
 import pickle
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import QTimer
-
+from AnyQt.QtCore import QTimer
+from AnyQt.QtWidgets import (
+    QSizePolicy, QHBoxLayout, QComboBox, QStyle, QFileDialog
+)
 from Orange.base import Model
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils import stdpaths
 
 from Orange.widgets.classify import owsaveclassifier
 
@@ -35,27 +37,26 @@ class OWLoadClassifier(widget.OWWidget):
         self.selectedIndex = -1
 
         box = gui.widgetBox(
-            self.controlArea, self.tr("File"), orientation=QtGui.QHBoxLayout()
+            self.controlArea, self.tr("File"), orientation=QHBoxLayout()
         )
 
         self.filesCB = gui.comboBox(
             box, self, "selectedIndex", callback=self._on_recent)
         self.filesCB.setMinimumContentsLength(20)
         self.filesCB.setSizeAdjustPolicy(
-            QtGui.QComboBox.AdjustToMinimumContentsLength)
+            QComboBox.AdjustToMinimumContentsLength)
 
         self.loadbutton = gui.button(box, self, "...", callback=self.browse)
         self.loadbutton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
-        self.loadbutton.setSizePolicy(QtGui.QSizePolicy.Maximum,
-                                      QtGui.QSizePolicy.Fixed)
+            self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        self.loadbutton.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
 
         self.reloadbutton = gui.button(
             box, self, "Reload", callback=self.reload, default=True)
         self.reloadbutton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        self.reloadbutton.setSizePolicy(QtGui.QSizePolicy.Maximum,
-                                        QtGui.QSizePolicy.Fixed)
+            self.style().standardIcon(QStyle.SP_BrowserReload))
+        self.reloadbutton.setSizePolicy(QSizePolicy.Maximum,
+                                        QSizePolicy.Fixed)
 
         # filter valid existing filenames
         self.history = list(filter(os.path.isfile, self.history))[:20]
@@ -77,12 +78,11 @@ class OWLoadClassifier(widget.OWWidget):
     def browse(self):
         """Select a filename using an open file dialog."""
         if self.filename is None:
-            startdir = QtGui.QDesktopServices.storageLocation(
-                QtGui.QDesktopServices.DocumentsLocation)
+            startdir = stdpaths.Documents
         else:
             startdir = os.path.dirname(self.filename)
 
-        filename = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, self.tr("Open"), directory=startdir, filter=self.FILTER)
 
         if filename:
@@ -126,7 +126,8 @@ class OWLoadClassifier(widget.OWWidget):
 
 
 def main():
-    app = QtGui.QApplication([])
+    from AnyQt.QtWidgets import QApplication
+    app = QApplication([])
     w = OWLoadClassifier()
     w.show()
     return app.exec_()

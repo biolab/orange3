@@ -1,4 +1,4 @@
-from PyQt4.Qt import QFont, QColor
+from AnyQt.QtGui import QFont, QColor
 
 class PlotTheme(object):
     '''Collection of color and font settings.'''

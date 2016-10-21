@@ -2,11 +2,9 @@ import sys
 
 import numpy
 
-from PyQt4.QtGui import (
-    QListView, QItemSelectionModel, QItemSelection, QBrush, QColor, QPainter,
-    QApplication
-)
-from PyQt4.QtCore import Qt, QEvent
+from AnyQt.QtWidgets import QListView, QApplication
+from AnyQt.QtGui import QBrush, QColor, QPainter
+from AnyQt.QtCore import Qt, QEvent, QItemSelectionModel, QItemSelection
 
 import pyqtgraph as pg
 import Orange.data
@@ -30,7 +28,7 @@ def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
     """
     Select rows in view.
 
-    :param PyQt4.QtGui.QAbstractItemView view:
+    :param QAbstractItemView view:
     :param row_indices: Integer indices of rows to select.
     :param command: QItemSelectionModel.SelectionFlags
     """

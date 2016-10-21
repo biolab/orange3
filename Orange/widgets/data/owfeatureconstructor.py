@@ -15,9 +15,13 @@ import random
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
 
-from PyQt4 import QtGui
-from PyQt4.QtGui import QSizePolicy
-from PyQt4.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
+from AnyQt.QtWidgets import (
+    QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
+    QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
+    QPushButton, QMenu, QListView, QFrame
+)
+from AnyQt.QtGui import QIcon, QKeySequence
+from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
 import Orange
 from Orange.widgets import gui
@@ -67,8 +71,8 @@ def selected_row(view):
 
     The view's selection mode must be a QAbstractItemView.SingleSelction
     """
-    if view.selectionMode() in [QtGui.QAbstractItemView.MultiSelection,
-                                QtGui.QAbstractItemView.ExtendedSelection]:
+    if view.selectionMode() in [QAbstractItemView.MultiSelection,
+                                QAbstractItemView.ExtendedSelection]:
         raise ValueError("invalid 'selectionMode'")
 
     sel_model = view.selectionModel()
@@ -80,7 +84,7 @@ def selected_row(view):
         return None
 
 
-class FeatureEditor(QtGui.QFrame):
+class FeatureEditor(QFrame):
     FUNCTIONS = dict(chain([(key, val) for key, val in math.__dict__.items()
                             if not key.startswith("_")],
                            [("str", str)]))
@@ -92,26 +96,25 @@ class FeatureEditor(QtGui.QFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        layout = QtGui.QFormLayout(
-            fieldGrowthPolicy=QtGui.QFormLayout.ExpandingFieldsGrow
+        layout = QFormLayout(
+            fieldGrowthPolicy=QFormLayout.ExpandingFieldsGrow
         )
         layout.setContentsMargins(0, 0, 0, 0)
-        self.nameedit = QtGui.QLineEdit(
+        self.nameedit = QLineEdit(
             placeholderText="Name...",
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
                                    QSizePolicy.Fixed)
         )
-        self.expressionedit = QtGui.QLineEdit(
+        self.expressionedit = QLineEdit(
             placeholderText="Expression..."
         )
 
         self.attrs_model = itemmodels.VariableListModel(
             ["Select Feature"], parent=self)
-        self.attributescb = QtGui.QComboBox(
+        self.attributescb = QComboBox(
             minimumContentsLength=16,
-            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon,
-            sizePolicy=QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum,
-                                         QtGui.QSizePolicy.Minimum)
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
+            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         )
         self.attributescb.setModel(self.attrs_model)
 
@@ -124,14 +127,13 @@ class FeatureEditor(QtGui.QFrame):
             [''],
             [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
 
-        self.functionscb = QtGui.QComboBox(
+        self.functionscb = QComboBox(
             minimumContentsLength=16,
-            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon,
-            sizePolicy=QtGui.QSizePolicy(QtGui.QSizePolicy.Minimum,
-                                         QtGui.QSizePolicy.Minimum))
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
+            sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
         self.functionscb.setModel(self.funcs_model)
 
-        hbox = QtGui.QHBoxLayout()
+        hbox = QHBoxLayout()
         hbox.addWidget(self.attributescb)
         hbox.addWidget(self.functionscb)
 
@@ -224,7 +226,7 @@ class DiscreteFeatureEditor(FeatureEditor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.valuesedit = QtGui.QLineEdit()
+        self.valuesedit = QLineEdit()
         self.valuesedit.textChanged.connect(self._invalidate)
 
         layout = self.layout()
@@ -270,10 +272,10 @@ def variable_icon(dtype):
     try:
         return gui.attributeIconDict[vtype]
     except Exception:
-        return QtGui.QIcon()
+        return QIcon()
 
 
-class FeatureItemDelegate(QtGui.QStyledItemDelegate):
+class FeatureItemDelegate(QStyledItemDelegate):
     def displayText(self, value, locale):
         return value.name + " := " + value.expression
 
@@ -341,11 +343,11 @@ class OWFeatureConstructor(OWWidget):
 
         box = gui.vBox(self.controlArea, "Variable Definitions")
 
-        toplayout = QtGui.QHBoxLayout()
+        toplayout = QHBoxLayout()
         toplayout.setContentsMargins(0, 0, 0, 0)
         box.layout().addLayout(toplayout)
 
-        self.editorstack = QtGui.QStackedWidget(
+        self.editorstack = QStackedWidget(
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
                                    QSizePolicy.MinimumExpanding)
         )
@@ -358,13 +360,13 @@ class OWFeatureConstructor(OWWidget):
 
         self.editorstack.setEnabled(False)
 
-        buttonlayout = QtGui.QVBoxLayout(spacing=10)
+        buttonlayout = QVBoxLayout(spacing=10)
         buttonlayout.setContentsMargins(0, 0, 0, 0)
 
-        self.addbutton = QtGui.QPushButton(
+        self.addbutton = QPushButton(
             "New", toolTip="Create a new variable",
             minimumWidth=120,
-            shortcut=QtGui.QKeySequence.New
+            shortcut=QKeySequence.New
         )
 
         def unique_name(fmt, reserved):
@@ -382,7 +384,7 @@ class OWFeatureConstructor(OWWidget):
         def generate_newname(fmt):
             return unique_name(fmt, reserved_names())
 
-        menu = QtGui.QMenu(self.addbutton)
+        menu = QMenu(self.addbutton)
         cont = menu.addAction("Continuous")
         cont.triggered.connect(
             lambda: self.addFeature(
@@ -405,10 +407,10 @@ class OWFeatureConstructor(OWWidget):
         self.duplicateaction.setEnabled(False)
         self.addbutton.setMenu(menu)
 
-        self.removebutton = QtGui.QPushButton(
+        self.removebutton = QPushButton(
             "Remove", toolTip="Remove selected variable",
             minimumWidth=120,
-            shortcut=QtGui.QKeySequence.Delete
+            shortcut=QKeySequence.Delete
         )
         self.removebutton.clicked.connect(self.removeSelectedFeature)
 
@@ -420,10 +422,10 @@ class OWFeatureConstructor(OWWidget):
         toplayout.addWidget(self.editorstack, 10)
 
         # Layout for the list view
-        layout = QtGui.QVBoxLayout(spacing=1, margin=0)
+        layout = QVBoxLayout(spacing=1, margin=0)
         self.featuremodel = DescriptorModel(parent=self)
 
-        self.featureview = QtGui.QListView(
+        self.featureview = QListView(
             minimumWidth=200,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
                                    QSizePolicy.MinimumExpanding)
@@ -908,8 +910,9 @@ def unique(seq):
 
 
 def main(argv=sys.argv):
-    app = QtGui.QApplication(list(argv))
-    argv = app.argv()
+    from AnyQt.QtWidgets import QApplication
+    app = QApplication(list(argv))
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:

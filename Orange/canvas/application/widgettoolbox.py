@@ -9,17 +9,17 @@ A tool box with a tool grid for each category.
 
 import logging
 
-from PyQt4.QtGui import (
-    QAbstractButton, QSizePolicy, QAction, QApplication, QDrag, QPalette,
-    QBrush
+from AnyQt.QtWidgets import (
+    QAbstractButton, QSizePolicy, QAction, QApplication
 )
+from AnyQt.QtGui import QDrag, QPalette, QBrush
 
-from PyQt4.QtCore import (
+from AnyQt.QtCore import (
     Qt, QObject, QModelIndex, QSize, QEvent, QMimeData, QByteArray,
     QDataStream, QIODevice
 )
 
-from PyQt4.QtCore import  pyqtSignal as Signal, pyqtProperty as Property
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from ..gui.toolbox import ToolBox
 from ..gui.toolgrid import ToolGrid

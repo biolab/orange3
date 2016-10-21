@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QPushButton, QStyle, QStyleOptionButton
-from PyQt4.QtCore import Qt, QSize
+from AnyQt.QtWidgets import QPushButton, QStyle, QStyleOptionButton
+from AnyQt.QtCore import Qt, QSize
 
 
 class VariableTextPushButton(QPushButton):

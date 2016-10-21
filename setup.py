@@ -184,6 +184,7 @@ PACKAGE_DATA = {
     "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.regression": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
+    "Orange.widgets.utils": ["_webview/*.js"],
     "Orange.widgets.utils.plot": ["*.fs", "*.gs", "*.vs"],
     "Orange.widgets.utils.plot.primitives": ["*.obj"],
     "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]

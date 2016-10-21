@@ -11,17 +11,18 @@ in a single :class:`QScrollArea` instance and can keep multiple open tabs.
 from collections import namedtuple
 from operator import eq, attrgetter
 
-from PyQt4.QtGui import (
-    QWidget, QFrame, QSizePolicy, QIcon, QFontMetrics, QPainter, QStyle,
-    QStyleOptionToolButton, QStyleOptionToolBoxV2, QPalette, QBrush, QPen,
-    QColor, QScrollArea, QVBoxLayout, QToolButton, QAction, QActionGroup
+from AnyQt.QtWidgets import (
+    QWidget, QFrame, QSizePolicy, QStyle, QStyleOptionToolButton,
+    QStyleOptionToolBox, QScrollArea, QVBoxLayout, QToolButton,
+    QAction, QActionGroup
 )
-
-from PyQt4.QtCore import (
+from AnyQt.QtGui import (
+    QIcon, QFontMetrics, QPainter, QPalette, QBrush, QPen, QColor,
+)
+from AnyQt.QtCore import (
     Qt, QObject, QSize, QRect, QPoint, QSignalMapper, QEvent
 )
-
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtProperty as Property
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from .utils import brush_darker
 
@@ -65,8 +66,8 @@ class ToolBoxTabButton(QToolButton):
 
     def __init__(self, *args, **kwargs):
         self.__nativeStyling = False
-        self.position = QStyleOptionToolBoxV2.OnlyOneTab
-        self.selected = QStyleOptionToolBoxV2.NotAdjacent
+        self.position = QStyleOptionToolBox.OnlyOneTab
+        self.selected = QStyleOptionToolBox.NotAdjacent
 
         QToolButton.__init__(self, *args, **kwargs)
 
@@ -155,10 +156,10 @@ class ToolBoxTabButton(QToolButton):
         else:
             p.setPen(pen)
             # Draw the top/bottom border
-            if self.position == QStyleOptionToolBoxV2.OnlyOneTab or \
-                    self.position == QStyleOptionToolBoxV2.Beginning or \
+            if self.position == QStyleOptionToolBox.OnlyOneTab or \
+                    self.position == QStyleOptionToolBox.Beginning or \
                     self.selected & \
-                        QStyleOptionToolBoxV2.PreviousIsSelected:
+                        QStyleOptionToolBox.PreviousIsSelected:
 
                 p.drawLine(rect.topLeft(), rect.topRight())
 
@@ -489,7 +490,7 @@ class ToolBox(QFrame):
         if index > 0:
             # Update the `previous` tab buttons style hints
             previous = self.__pages[index - 1].button
-            flag = QStyleOptionToolBoxV2.NextIsSelected
+            flag = QStyleOptionToolBox.NextIsSelected
             if on:
                 previous.selected |= flag
             else:
@@ -499,7 +500,7 @@ class ToolBox(QFrame):
 
         if index < self.count() - 1:
             next = self.__pages[index + 1].button
-            flag = QStyleOptionToolBoxV2.PreviousIsSelected
+            flag = QStyleOptionToolBox.PreviousIsSelected
             if on:
                 next.selected |= flag
             else:
@@ -517,7 +518,7 @@ class ToolBox(QFrame):
         if self.count() == 0:
             return
 
-        opt = QStyleOptionToolBoxV2
+        opt = QStyleOptionToolBox
 
         def update(button, next_sel, prev_sel):
             if next_sel:
@@ -547,12 +548,12 @@ class ToolBox(QFrame):
         if self.count() == 0:
             return
         elif self.count() == 1:
-            self.__pages[0].button.position = QStyleOptionToolBoxV2.OnlyOneTab
+            self.__pages[0].button.position = QStyleOptionToolBox.OnlyOneTab
         else:
-            self.__pages[0].button.position = QStyleOptionToolBoxV2.Beginning
-            self.__pages[-1].button.position = QStyleOptionToolBoxV2.End
+            self.__pages[0].button.position = QStyleOptionToolBox.Beginning
+            self.__pages[-1].button.position = QStyleOptionToolBox.End
             for p in self.__pages[1:-1]:
-                p.button.position = QStyleOptionToolBoxV2.Middle
+                p.button.position = QStyleOptionToolBox.Middle
 
         for p in self.__pages:
             p.button.update()
