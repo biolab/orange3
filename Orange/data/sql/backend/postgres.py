@@ -3,11 +3,11 @@ import warnings
 from contextlib import contextmanager
 from time import time
 
-from psycopg2 import OperationalError
+from psycopg2 import Error, OperationalError
 from psycopg2.pool import ThreadedConnectionPool
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
-from Orange.data.sql.backend.base import Backend, TableDesc, ToSql
+from Orange.data.sql.backend.base import Backend, TableDesc, ToSql, BackendError
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +32,11 @@ class Psycopg2Backend(Backend):
             self._create_extensions()
 
     def _create_connection_pool(self):
-        self.connection_pool = ThreadedConnectionPool(
-            1, 16, **self.connection_params)
+        try:
+            self.connection_pool = ThreadedConnectionPool(
+                1, 16, **self.connection_params)
+        except Error as ex:
+            raise BackendError(str(ex)) from ex
 
     def _create_extensions(self):
         for ext in EXTENSIONS:

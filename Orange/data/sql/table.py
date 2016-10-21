@@ -15,7 +15,7 @@ from Orange.data import (
     Table, Domain, Value, Instance, filter)
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
-from Orange.data.sql.backend.base import TableDesc
+from Orange.data.sql.backend.base import TableDesc, BackendError
 from Orange.misc import import_late_warning
 
 psycopg2 = import_late_warning("psycopg2")
@@ -79,7 +79,7 @@ class SqlTable(Table):
                 try:
                     self.backend = backend(connection_params)
                     break
-                except Exception as ex:
+                except BackendError as ex:
                     print(ex)
             else:
                 raise ValueError("No backend could connect to server")

@@ -11,6 +11,7 @@ from AnyQt.QtCore import Qt, QTimer
 from Orange.canvas import report
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
+from Orange.data.sql.backend.base import BackendError
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -199,8 +200,9 @@ class OWSql(OWWidget):
             ))
             self.refresh_tables()
             self.select_table()
-        except ValueError as err:
-            self.Error.connection(str(err).split('\n')[0])
+        except BackendError as err:
+            error = str(err).split('\n')[0]
+            self.Error.connection(error)
             self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 

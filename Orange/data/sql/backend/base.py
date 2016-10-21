@@ -6,6 +6,10 @@ from Orange.util import Registry
 log = logging.getLogger(__name__)
 
 
+class BackendError(Exception):
+    pass
+
+
 class Backend(metaclass=Registry):
     """Base class for SqlTable backends. Implementations should define
     all of the methods defined below.
