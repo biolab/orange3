@@ -272,7 +272,10 @@ class OWPythagorasTree(OWWidget):
         """When the tree needs to be recalculated. E.g. change of size calc."""
         if self.model is not None:
             self.tree_adapter = self._get_tree_adapter(self.model)
-            self.ptree.set_tree(self.tree_adapter)
+            self.ptree.set_tree(
+                self.tree_adapter,
+                weight_adjustemnt=self.SIZE_CALCULATION[self.size_calc_idx][1]
+            )
             self.ptree.set_depth_limit(self.depth_limit)
             self._update_main_area()
 
