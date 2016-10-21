@@ -123,7 +123,8 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         """Get all the `TreeNode` instances in the widget scene."""
         return (sq.tree_node for sq in self.get_squares())
 
-    def set_combo_option(self, combo_box, text):
+    @staticmethod
+    def set_combo_option(combo_box, text):
         """Set a given combo box value to some text (given that it exists)."""
         index = combo_box.findText(text)
         # This only changes the selection, need to emit signal to call callback
@@ -177,4 +178,6 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         eqs = [b != s and b != l and s != l for b, s, l in
                zip(basic_sizing_sq, sqroot_sizing_sq, log_sizing_sq)]
 
-        self.assertTrue(all(eqs))
+        # Only compare to the -1 list element since the base square is always
+        # the same
+        self.assertTrue(all(eqs[:-1]))
