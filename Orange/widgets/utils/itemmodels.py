@@ -1015,6 +1015,9 @@ class TableModel(QAbstractTableModel):
                 and role == TableModel.ValueRole:
             col_view, _ = self.source.get_column_view(coldesc.var)
             col_data = numpy.asarray(col_view)
+            if coldesc.var.is_continuous:
+                # continuous from metas have dtype object; cast it to float
+                col_data = col_data.astype(float)
             if self.__sortInd is not None:
                 col_data = col_data[self.__sortInd]
             return col_data
