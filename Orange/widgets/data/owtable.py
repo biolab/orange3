@@ -34,6 +34,8 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils import datacaching
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
 
 
@@ -367,7 +369,7 @@ class OWDataTable(widget.OWWidget):
 
     inputs = [("Data", Table, "set_dataset", widget.Multiple)]
     outputs = [("Selected Data", Table, widget.Default),
-               ("Other Data", Table)]
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
@@ -506,6 +508,7 @@ class OWDataTable(widget.OWWidget):
         self.selected_cols = []
         self.openContext(data)
         self.set_selection()
+        self.commit()
 
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
@@ -785,7 +788,7 @@ class OWDataTable(widget.OWWidget):
         """
         Commit/send the current selected row/column selection.
         """
-        selected_data = other_data = None
+        selected_data = table = rowsel = None
         view = self.tabs.currentWidget()
         if view and view.model() is not None:
             model = self._get_model(view)
@@ -795,7 +798,7 @@ class OWDataTable(widget.OWWidget):
             # for SqlTables
             if isinstance(table, SqlTable):
                 self.send("Selected Data", selected_data)
-                self.send("Other Data", other_data)
+                self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
                 return
 
             rowsel, colsel = self.get_selection(view)
@@ -841,19 +844,14 @@ class OWDataTable(widget.OWWidget):
             # Avoid a copy if all/none rows are selected.
             if not rowsel:
                 selected_data = None
-                other_data = select(table, None, domain)
             elif len(rowsel) == len(table):
                 selected_data = select(table, None, domain)
-                other_data = None
             else:
                 selected_data = select(table, rowsel, domain)
-                selmask = numpy.ones((len(table),), dtype=bool)
-                selmask[rowsel] = False
-
-                other_data = select(table, numpy.flatnonzero(selmask), domain)
 
         self.send("Selected Data", selected_data)
-        self.send("Other Data", other_data)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(table, rowsel))
 
     def copy(self):
         """
