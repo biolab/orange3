@@ -76,6 +76,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     messageDeactivated = Signal(Msg)
     selectionChanged = Signal(object)
 
+    class Information(WidgetMessagesMixin.Information):
+        nothing_to_rank = Msg("There is nothing to rank.")
+
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
         QDialog.__init__(self, windowTitle=self.captionTitle)
@@ -268,6 +271,56 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             self.button.setText("Continue")
 
 
+class VizRankDialogAttr(VizRankDialog):
+    """
+    VizRank dialog for single attributes. The class provides most of the
+    needed methods, except for `initialize` which is expected to store a
+    list of `Variable` instances to `self.attrs`, and method
+    `compute_score(state)` for scoring the combinations.
+
+    The state is an attribute index.
+
+    When the user selects an attribute, the dialog emits signal
+    `selectionChanged` with the attribute as parameter.
+    """
+
+    attrSelected = Signal(Variable, Variable)
+    _AttrRole = next(gui.OrangeUserRole)
+
+    def __init__(self, master):
+        super().__init__(master)
+        self.attrs = []
+
+    def sizeHint(self):
+        """Assuming a single columns in the table, return `QSize(160, 512)` as
+        a reasonable default size."""
+        return QSize(160, 512)
+
+    def check_preconditions(self):
+        """Refuse ranking if there are no features or instances."""
+        can_rank = self.master.data is not None and \
+            self.master.data.domain.attributes and \
+            len(self.master.data) != 0
+        self.Information.nothing_to_rank(shown=not can_rank)
+        return can_rank
+
+    def on_selection_changed(self, selected, deselected):
+        attr = selected.indexes()[0].data(self._AttrRole)
+        self.attrSelected.emit(attr)
+
+    def state_count(self):
+        return len(self.attrs)
+
+    def iterate_states(self, initial_state):
+        yield from range(initial_state or 0, len(self.attrs))
+
+    def row_for_state(self, score, state):
+        attr = self.attrs[state]
+        item = QStandardItem(attr.name)
+        item.setData(attr, self._AttrRole)
+        return [item]
+
+
 class VizRankDialogAttrPair(VizRankDialog):
     """
     VizRank dialog for pairs of attributes. The class provides most of the
@@ -283,9 +336,6 @@ class VizRankDialogAttrPair(VizRankDialog):
 
     pairSelected = Signal(Variable, Variable)
     _AttrRole = next(gui.OrangeUserRole)
-
-    class Information(VizRankDialog.Information):
-        nothing_to_rank = Msg("There is nothing to rank.")
 
     def __init__(self, master):
         VizRankDialog.__init__(self, master)
