@@ -105,7 +105,6 @@ class PythagorasTreeViewer(QGraphicsWidget):
         self.__calc_node_color_func = kwargs.get('node_color_func')
         self.__get_tooltip_func = kwargs.get('tooltip_func')
         self._interactive = kwargs.get('interactive', True)
-        self._weight_adjustment = kwargs.get('weight_adjustment', lambda x: x)
 
         self._square_objects = {}
         self._drawn_nodes = deque()
@@ -115,13 +114,15 @@ class PythagorasTreeViewer(QGraphicsWidget):
         if adapter is not None:
             self.set_tree(adapter)
 
-    def set_tree(self, tree_adapter, weight_adjustemnt=None):
+    def set_tree(self, tree_adapter, weight_adjustment=lambda x: x):
         """Pass in a new tree adapter instance and perform updates to canvas.
 
         Parameters
         ----------
         tree_adapter : TreeAdapter
             The new tree adapter that is to be used.
+        weight_adjustment : callable
+            A weight adjustment function that with signature `x -> x`
 
         Returns
         -------
@@ -130,11 +131,9 @@ class PythagorasTreeViewer(QGraphicsWidget):
         self.clear_tree()
         self.tree_adapter = tree_adapter
 
-        if weight_adjustemnt is not None:
-            self._weight_adjustment = weight_adjustemnt
-
         if self.tree_adapter is not None:
-            self._tree = self._calculate_tree(self.tree_adapter)
+            self._tree = self._calculate_tree(
+                self.tree_adapter, weight_adjustment)
             self.set_depth_limit(tree_adapter.max_depth)
             self._draw_tree(self._tree)
 
@@ -244,10 +243,10 @@ class PythagorasTreeViewer(QGraphicsWidget):
         self._tree = None
         self._clear_scene()
 
-    def _calculate_tree(self, tree_adapter):
+    def _calculate_tree(self, tree_adapter, weight_adjustment):
         """Actually calculate the tree squares"""
         tree_builder = PythagorasTree(
-            weight_adjustment=self._weight_adjustment
+            weight_adjustment=weight_adjustment
         )
         return tree_builder.pythagoras_tree(
             tree_adapter, tree_adapter.root, Square(Point(0, 0), 200, -pi / 2)
