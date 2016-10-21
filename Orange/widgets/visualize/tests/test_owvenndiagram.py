@@ -1,15 +1,23 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+
 import unittest
 import numpy as np
 
 from Orange.data import (Table, Domain, StringVariable,
-                         DiscreteVariable, ContinuousVariable, dataset_dirs)
+                         DiscreteVariable, ContinuousVariable)
+from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
                                                     table_concat,
                                                     varying_between,
-                                                    drop_columns)
+                                                    drop_columns,
+                                                    OWVennDiagram)
 from Orange.tests import test_filename
 
-class TestOWVennDiagram(unittest.TestCase):
+
+class TestVennDiagram(unittest.TestCase):
     def add_metas(self, table, meta_attrs, meta_data):
         domain = Domain(table.domain.attributes,
                         table.domain.class_vars,
@@ -91,3 +99,58 @@ class TestOWVennDiagram(unittest.TestCase):
                     self.assertTrue(np.isnan(data.metas[i][j]))
                 else:
                     np.testing.assert_equal(data.metas[i][j], result[i][j])
+
+
+class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
+        cls.signal_name = "Data"
+        cls.signal_data = cls.data[:25]
+
+    def setUp(self):
+        self.widget = self.create_widget(OWVennDiagram)
+
+    def _select_data(self):
+        self.widget.vennwidget.vennareas()[1].setSelected(True)
+        return list(range(len(self.signal_data)))
+
+    def test_multiple_input(self):
+        self.send_signal(self.signal_name, self.data[:100], 1)
+        self.send_signal(self.signal_name, self.data[50:], 2)
+
+        # check selected data output
+        self.assertIsNone(self.get_output("Selected Data"))
+
+        # check annotated data output
+        feature_name = ANNOTATED_DATA_FEATURE_NAME
+        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
+
+        # select data instances
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        selected_indices = list(range(50, 100))
+
+        # check selected data output
+        selected = self.get_output("Selected Data")
+        n_sel, n_attr = len(selected), len(self.data.domain.attributes)
+        self.assertGreater(n_sel, 0)
+        self.assertEqual(selected.domain == self.data.domain,
+                         self.same_input_output_domain)
+        np.testing.assert_array_equal(selected.X[:, :n_attr],
+                                      self.data.X[selected_indices])
+
+        # check annotated data output
+        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+
+        # compare selected and annotated data domains
+        self._compare_selected_annotated_domains(selected, annotated)
+
+        # check output when data is removed
+        self.send_signal(self.signal_name, None, 1)
+        self.send_signal(self.signal_name, None, 2)
+        self.assertIsNone(self.get_output("Selected Data"))
+        self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
