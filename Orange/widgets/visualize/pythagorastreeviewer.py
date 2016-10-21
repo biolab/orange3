@@ -653,6 +653,9 @@ class PythagorasTree:
             The parent square of the given child.
         node : int
             The node label of the child.
+        weight : float
+            The weight of the node relative to its parent e.g. two children in
+            relation 3:1 should have weights .75 and .25, respectively.
 
         Returns
         -------
