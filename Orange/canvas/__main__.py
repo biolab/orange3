@@ -169,9 +169,6 @@ def main(argv=None):
 
     qt_argv += args
 
-    # Add --disable-web-security to enable Qt WebEngine to load local resources
-    qt_argv.append('--disable-web-security')
-
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
 
