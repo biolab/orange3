@@ -414,6 +414,9 @@ elif HAVE_WEBENGINE:
         def send_object(self, name, obj):
             id = next(self._id_gen)
             value = self._objects[id] = dict(id=id, name=name, obj=obj)
+            # Wait till JS is connected to receive objects
+            while not self.receivers(self.objectChanged):
+                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
             self.objectChanged.emit(value)
 
         @pyqtSlot(int)
@@ -422,16 +425,6 @@ elif HAVE_WEBENGINE:
 
         def is_all_exposed(self):
             return len(self._objects) == 0
-
-        @pyqtProperty('QVariantList')
-        def get_start_objects(self):
-            # FIXME: There might be a race condition between here and in JS
-            # (WebEngine). This property is evaled as soon as self if exposed
-            # through WebChannel, so the _objects present at that time will be
-            # handled. But any additional objects sent with send_object()
-            # before the channel gets to connect to objectChanged signal might
-            # not be. I think.
-            return list(self._objects.values())
 
 
     _NOTSET = object()

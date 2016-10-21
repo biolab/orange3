@@ -26,9 +26,6 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
             return;
         clearInterval(timer);
 
-        // If an object is already present on our channel, expose it
-        __unpack_start_js_objects(__channel.objects.__js_object_channel.get_start_objects);
-
         // And subscribe to all further object exposing
         channel.objects.__js_object_channel.objectChanged.connect(
             __unpack_js_object);
