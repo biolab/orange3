@@ -217,3 +217,7 @@ class ErrorReporting(QDialog):
         data[F.STACK_TRACE] = stacktrace
 
         cls(data=data).exec()
+
+
+def handle_exception(exc):
+    return ErrorReporting.handle_exception(exc)
