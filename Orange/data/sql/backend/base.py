@@ -32,6 +32,20 @@ class Backend(metaclass=Registry):
 
     # "meta" methods
 
+    def list_tables_query(self, schema=None):
+        """Return a list of tuples (schema, table_name)
+
+        Parameters
+        ----------
+        schema : Optional[str]
+            If set, only tables from schema should be listed
+
+        Returns
+        -------
+        A list of tuples
+        """
+        raise NotImplementedError
+
     def list_tables(self, schema=None):
         """Return a list of tables in database
 
@@ -44,7 +58,15 @@ class Backend(metaclass=Registry):
         -------
         A list of TableDesc objects, describing the tables in the database
         """
-        raise NotImplementedError
+        query = self.list_tables_query(schema)
+        with self.execute_sql_query(query) as cur:
+            tables = []
+            for schema, name in cur.fetchall():
+                sql = "{}.{}".format(
+                    self.quote_identifier(schema),
+                    self.quote_identifier(name)) if schema else self.quote_identifier(name)
+                tables.append(TableDesc(name, schema, sql))
+            return tables
 
     def get_fields(self, table_name):
         """Return a list of field names and metadata in the given table
@@ -58,7 +80,33 @@ class Backend(metaclass=Registry):
         a list of tuples (field_name, *field_metadata)
         both will be passed to create_variable
         """
-        raise NotImplementedError
+        query = self.create_sql_query(table_name, ["*"], limit=0)
+        with self.execute_sql_query(query) as cur:
+            return cur.description
+
+    def get_distinct_values(self, field_name, table_name):
+        """Return a list of distinct values of field
+
+        Parameters
+        ----------
+        field_name : name of the field
+        table_name : name of the table or query to search
+
+        Returns
+        -------
+        List[str] of values
+        """
+        fields = [self.quote_identifier(field_name)]
+
+        query = self.create_sql_query(table_name, fields,
+                                      group_by=fields, order_by=fields,
+                                      limit=21)
+        with self.execute_sql_query(query) as cur:
+            values = cur.fetchall()
+        if len(values) > 20:
+            return ()
+        else:
+            return tuple(str(x[0]) for x in values)
 
     def create_variable(self, field_name, field_metadata,
                         type_hints, inspect_table=None):

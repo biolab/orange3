@@ -91,12 +91,12 @@ class Psycopg2Backend(Backend):
         else:
             return quoted_name
 
-    def list_tables(self, schema=None):
+    def list_tables_query(self, schema=None):
         if schema:
             schema_clause = "AND n.nspname = '{}'".format(schema)
         else:
             schema_clause = "AND pg_catalog.pg_table_is_visible(c.oid)"
-        query = """SELECT n.nspname as "Schema",
+        return """SELECT n.nspname as "Schema",
                           c.relname AS "Name"
                        FROM pg_catalog.pg_class c
                   LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -107,22 +107,6 @@ class Psycopg2Backend(Backend):
                         {}
                         AND NOT c.relname LIKE '\\_\\_%'
                    ORDER BY 1;""".format(schema_clause)
-        with self.execute_sql_query(query) as cur:
-            tables = []
-            for schema, name in cur.fetchall():
-                sql = "{}.{}".format(
-                    self.quote_identifier(schema),
-                    self.quote_identifier(name)) if schema else self.quote_identifier(name)
-                tables.append(TableDesc(name, schema, sql))
-            return tables
-
-    def get_fields(self, table_name):
-        fields = []
-        query = "SELECT * FROM %s LIMIT 0" % table_name
-        with self.execute_sql_query(query) as cur:
-            for col in cur.description:
-                fields.append(col)
-        return fields
 
     def create_variable(self, field_name, field_metadata,
                         type_hints, inspect_table=None):
@@ -167,7 +151,7 @@ class Psycopg2Backend(Backend):
 
         if type_code in INT_TYPES:  # bigint, int, smallint
             if inspect_table:
-                values = self._get_distinct_values(field_name, inspect_table)
+                values = self.get_distinct_values(field_name, inspect_table)
                 if values:
                     return DiscreteVariable(field_name, values)
             return ContinuousVariable(field_name)
@@ -177,25 +161,11 @@ class Psycopg2Backend(Backend):
 
         if type_code in CHAR_TYPES:
             if inspect_table:
-                values = self._get_distinct_values(field_name, inspect_table)
+                values = self.get_distinct_values(field_name, inspect_table)
                 if values:
                     return DiscreteVariable(field_name, values)
 
         return StringVariable(field_name)
-
-    def _get_distinct_values(self, field_name, table_name):
-        field_name_q = self.quote_identifier(field_name)
-        sql = " ".join(["SELECT DISTINCT (", field_name_q, ")::text",
-                        "FROM", table_name,
-                        "WHERE", field_name_q, "IS NOT NULL",
-                        "ORDER BY", field_name_q,
-                        "LIMIT 21"])
-        with self.execute_sql_query(sql) as cur:
-            values = cur.fetchall()
-        if len(values) > 20:
-            return ()
-        else:
-            return tuple(x[0] for x in values)
 
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled
