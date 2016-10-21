@@ -16,7 +16,8 @@ from Orange.data import FileFormat
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
-from Orange.widgets.gui import ControlledAttributesDict, notify_changed
+from Orange.widgets.gui import \
+    ControlledAttributesDict, notify_changed, ControlGetter
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
@@ -179,6 +180,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
         self.__env = _asmappingproxy(kwargs.get("env", {}))
 
         setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
+        self.controls = ControlGetter(self)
         self.graphButton = None
         self.report_button = None
 

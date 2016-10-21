@@ -184,6 +184,7 @@ class OWComponent:
     """
     def __init__(self, widget):
         setattr(self, CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
+        self.controls = ControlGetter(self)
 
         if widget.settingsHandler:
             widget.settingsHandler.initialize(self)
@@ -3240,3 +3241,27 @@ class FloatSlider(QSlider):
         # For compatibility with qwtSlider
         # TODO If it's related to Qwt, remove it
         self.setScale(minValue, maxValue, step)
+
+
+class ControlGetter:
+    """
+    Provide access to GUI elements based on their corresponding attributes
+    in widget.
+
+    Every widget has an attribute `controls` that is an instance of this
+    class, which uses the `controlledAttributes` dictionary to retrieve the
+    control (e.g. `QCheckBox`, `QComboBox`...) corresponding to the attribute.
+    For `OWComponents`, it returns its controls so that subsequent
+    `__getattr__` will retrieve the control.
+    """
+    def __init__(self, widget):
+        self.widget = widget
+
+    def __getattr__(self, name):
+        widget = self.widget
+        if hasattr(widget, "settingsHandler") and \
+                name in widget.settingsHandler.provider.providers:
+            # Control within an OWComponent are retrieved by its `controls`
+            return getattr(widget, name).controls
+        else:
+            return widget.controlledAttributes[name][0].control
