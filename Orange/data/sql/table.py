@@ -6,241 +6,25 @@ import logging
 import re
 import threading
 import warnings
-
 from contextlib import contextmanager
 from itertools import islice
-from time import time, strftime
+from time import strftime
 
 import numpy as np
-
 from Orange.data import (
-    DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable,
     Table, Domain, Value, Instance, filter)
 from Orange.data.sql import filter as sql_filter
+from Orange.data.sql.backend import Backend
+from Orange.data.sql.backend.base import TableDesc, BackendError
 from Orange.misc import import_late_warning
 
 psycopg2 = import_late_warning("psycopg2")
-psycopg2.pool = import_late_warning("psycopg2.pool")
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
 DEFAULT_SAMPLE_TIME = 1
 sql_log = logging.getLogger('sql_log')
 sql_log.debug("Logging started: {}".format(strftime("%Y-%m-%d %H:%M:%S")))
-
-
-class Psycopg2Backend:
-    """Backend for accesing data stored in a PostgreSql tdatabase
-
-    Parameters
-    ----------
-    connection_params: dict
-        connection params passed tot he psycopg2 drriver
-    """
-
-
-    connection_pool = None
-
-    def __init__(self, connection_params):
-        self.connection_params = connection_params
-
-        if self.connection_pool is None:
-            self._create_connection_pool()
-
-    def _create_connection_pool(self):
-        self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
-            1, 16, **self.connection_params)
-
-    @contextmanager
-    def execute_sql_query(self, query, params=None):
-        """Context manager for execution of sql queries
-
-        Usage:
-            ```
-            with backend.execute_sql_query("SELECT * FROM foo") as cur:
-                cur.fetch_all()
-            ```
-
-        Parameters
-        ----------
-        query : string
-            query to be executed
-        params: tuple
-            parameters to be passed to the query
-
-        Returns
-        -------
-        yields a cursor that can be used to access the data
-        """
-
-        connection = self.connection_pool.getconn()
-        cur = connection.cursor()
-        try:
-            utfquery = cur.mogrify(query, params).decode('utf-8')
-            sql_log.debug("Executing: {}".format(utfquery))
-            t = time()
-            cur.execute(query, params)
-            yield cur
-            sql_log.info("{:.2f} ms: {}".format(1000 * (time() - t), utfquery))
-        finally:
-            connection.commit()
-            self.connection_pool.putconn(connection)
-
-    @staticmethod
-    def quote_identifier(name):
-        """Quote identifier name so it can be safely used in queries
-
-        Parameters
-        ----------
-        name: str
-            name of the parameter
-
-        Returns
-        -------
-        quoted parameter that can be used in sql queries
-        """
-        return '"%s"' % name
-
-    @staticmethod
-    def unquote_identifier(quoted_name):
-        """Remove quotes from identifier name
-        Used when sql table name is used in where parameter to
-        query special tables
-
-        Parameters
-        ----------
-        quoted_name : str
-
-        Returns
-        -------
-        unquoted name
-        """
-        if quoted_name.startswith('"'):
-            return quoted_name[1:len(quoted_name) - 1]
-        else:
-            return quoted_name
-
-    def get_fields(self, table_name):
-        """Return a list of field names and metadata in the given table
-
-        Parameters
-        ----------
-        table_name: str
-
-        Returns
-        -------
-        a list of tuples (field_name, *field_metadata)
-        both will be passed to create_variable
-        """
-        fields = []
-        query = "SELECT * FROM %s LIMIT 0" % table_name
-        with self.execute_sql_query(query) as cur:
-            for col in cur.description:
-                fields.append(col)
-        return fields
-
-    def create_variable(self, field_name, field_metadata,
-                        type_hints, inspect_table=None):
-        """Create variable based on field information
-
-        Parameters
-        ----------
-        field_name : str
-            name do the field
-        field_metadata : tuple
-            data to guess field type from
-        type_hints : Domain
-            domain with variable templates
-        inspect_table : Option[str]
-            name of the table to expect the field values or None
-            if no inspection is to be performed
-
-        Returns
-        -------
-        Variable representing the field
-        """
-        if field_name in type_hints:
-            var = type_hints[field_name]
-        else:
-            var = self._guess_variable(field_name, field_metadata,
-                                       inspect_table)
-
-        field_name_q = self.quote_identifier(field_name)
-        if var.is_continuous:
-            if isinstance(var, TimeVariable):
-                var.to_sql = ToSql("extract(epoch from {})"
-                                   .format(field_name_q))
-            else:
-                var.to_sql = ToSql("({})::double precision"
-                                   .format(field_name_q))
-        else:  # discrete or string
-            var.to_sql = ToSql("({})::text"
-                               .format(field_name_q))
-        return var
-
-    def _guess_variable(self, field_name, field_metadata, inspect_table):
-        type_code, *rest = field_metadata
-
-        FLOATISH_TYPES = (700, 701, 1700)  # real, float8, numeric
-        INT_TYPES = (20, 21, 23)  # bigint, int, smallint
-        CHAR_TYPES = (25, 1042, 1043,)  # text, char, varchar
-        BOOLEAN_TYPES = (16,)  # bool
-        DATE_TYPES = (1082, 1114, 1184, )  # date, timestamp, timestamptz
-        # time, timestamp, timestamptz, timetz
-        TIME_TYPES = (1083, 1114, 1184, 1266,)
-
-        if type_code in FLOATISH_TYPES:
-            return ContinuousVariable(field_name)
-
-        if type_code in TIME_TYPES + DATE_TYPES:
-            tv = TimeVariable(field_name)
-            tv.have_date |= type_code in DATE_TYPES
-            tv.have_time |= type_code in TIME_TYPES
-            return tv
-
-        if type_code in INT_TYPES:  # bigint, int, smallint
-            if inspect_table:
-                values = self._get_distinct_values(field_name, inspect_table)
-                if values:
-                    return DiscreteVariable(field_name, values)
-            return ContinuousVariable(field_name)
-
-        if type_code in BOOLEAN_TYPES:
-            return DiscreteVariable(field_name, ['false', 'true'])
-
-        if type_code in CHAR_TYPES:
-            if inspect_table:
-                values = self._get_distinct_values(field_name, inspect_table)
-                if values:
-                    return DiscreteVariable(field_name, values)
-
-        return StringVariable(field_name)
-
-    def _get_distinct_values(self, field_name, table_name):
-        field_name_q = self.quote_identifier(field_name)
-        sql = " ".join(["SELECT DISTINCT (", field_name_q, ")::text",
-                        "FROM", table_name,
-                        "WHERE", field_name_q, "IS NOT NULL",
-                        "ORDER BY", field_name_q,
-                        "LIMIT 21"])
-        with self.execute_sql_query(sql) as cur:
-            values = cur.fetchall()
-        if len(values) > 20:
-            return ()
-        else:
-            return tuple(x[0] for x in values)
-
-    def __getstate__(self):
-        # Drop connection_pool from state as it cannot be pickled
-        state = dict(self.__dict__)
-        state.pop('connection_pool', None)
-        return state
-
-    def __setstate__(self, state):
-        # Create a new connection pool if none exists
-        self.__dict__.update(state)
-        if self.connection_pool is None:
-            self._create_connection_pool()
 
 
 class SqlTable(Table):
@@ -254,7 +38,7 @@ class SqlTable(Table):
         return super().__new__(cls)
 
     def __init__(
-            self, connection_params, table_or_sql,
+            self, connection_params, table_or_sql, backend=None,
             type_hints=None, inspect_values=False):
         """
         Create a new proxy for sql table.
@@ -289,10 +73,23 @@ class SqlTable(Table):
         """
         if isinstance(connection_params, str):
             connection_params = dict(database=connection_params)
-        self.backend = Psycopg2Backend(connection_params)
+
+        if backend is None:
+            for backend in Backend.available_backends():
+                try:
+                    self.backend = backend(connection_params)
+                    break
+                except BackendError as ex:
+                    print(ex)
+            else:
+                raise ValueError("No backend could connect to server")
+        else:
+            self.backend = backend(connection_params)
 
         if table_or_sql is not None:
-            if "SELECT" in table_or_sql.upper():
+            if isinstance(table_or_sql, TableDesc):
+                table = table_or_sql.sql
+            elif "SELECT" in table_or_sql:
                 table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
                 table = self.backend.quote_identifier(table_or_sql)
@@ -467,13 +264,20 @@ class SqlTable(Table):
     def approx_len(self, get_exact=False):
         if self._cached__len__ is not None:
             return self._cached__len__
-        sql = "EXPLAIN " + self._sql_query(["*"])
-        with self.backend.execute_sql_query(sql) as cur:
-            s = ''.join(row[0] for row in cur.fetchall())
-        alen = int(re.findall('rows=(\d*)', s)[0])
-        if get_exact:
-            threading.Thread(target=len, args=(self,)).start()
-        return alen
+
+        approx_len = None
+        try:
+            query = self._sql_query(["*"])
+            approx_len = self.backend.count_approx(query)
+            if get_exact:
+                threading.Thread(target=len, args=(self,)).start()
+        except NotImplementedError:
+            pass
+
+        if approx_len is None:
+            approx_len = len(self)
+
+        return approx_len
 
     _X = None
     _Y = None
@@ -766,23 +570,13 @@ class SqlTable(Table):
     def _sql_query(self, fields, filters=(),
                    group_by=None, order_by=None, offset=None, limit=None,
                    use_time_sample=None):
-        sql = ["SELECT", ', '.join(fields),
-               "FROM", self.table_name]
-        if use_time_sample is not None:
-            sql.append("TABLESAMPLE system_time(%i)" % use_time_sample)
+
         row_filters = [f.to_sql() for f in self.row_filters]
         row_filters.extend(filters)
-        if row_filters:
-            sql.extend(["WHERE", " AND ".join(row_filters)])
-        if group_by is not None:
-            sql.extend(["GROUP BY", ", ".join(group_by)])
-        if order_by is not None:
-            sql.extend(["ORDER BY", ",".join(order_by)])
-        if offset is not None:
-            sql.extend(["OFFSET", str(offset)])
-        if limit is not None:
-            sql.extend(["LIMIT", str(limit)])
-        return " ".join(sql)
+        return self.backend.create_sql_query(
+            self.table_name, fields, row_filters, group_by, order_by,
+            offset, limit, use_time_sample)
+
 
     DISCRETE_STATS = "SUM(CASE TRUE WHEN %(field_name)s IS NULL THEN 1 " \
                      "ELSE 0 END), " \
@@ -809,12 +603,19 @@ class SqlTable(Table):
             raise NotImplementedError("Sampling of complex queries is not supported")
 
         parameter = str(parameter)
-
-        sample_table = '__%s_%s_%s' % (
-            self.backend.unquote_identifier(self.table_name),
-            method,
-            parameter.replace('.', '_').replace('-', '_'))
-        sample_table_q = self.backend.quote_identifier(sample_table)
+        if "." in self.table_name:
+            schema, name = self.table_name.split(".")
+            sample_name = '__%s_%s_%s' % (
+                self.backend.unquote_identifier(name),
+                method,
+                parameter.replace('.', '_').replace('-', '_'))
+            sample_table_q = ".".join([schema, self.backend.quote_identifier(sample_name)])
+        else:
+            sample_table = '__%s_%s_%s' % (
+                self.backend.unquote_identifier(self.table_name),
+                method,
+                parameter.replace('.', '_').replace('-', '_'))
+            sample_table_q = self.backend.quote_identifier(sample_table)
         create = False
         try:
             query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
@@ -863,11 +664,3 @@ class SqlRowInstance(Instance):
         super().__init__(domain, data[:nvar])
         if len(data) > nvar:
             self._metas = np.asarray(data[nvar:], dtype=object)
-
-
-class ToSql:
-    def __init__(self, sql):
-        self.sql = sql
-
-    def __call__(self):
-        return self.sql

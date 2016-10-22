@@ -86,13 +86,13 @@ def flatten(lst):
 
 class Registry(type):
     """Metaclass that registers subtypes."""
-    def __new__(cls, name, bases, attrs):
-        obj = type.__new__(cls, name, bases, attrs)
+    def __new__(mcs, name, bases, attrs):
+        cls = type.__new__(mcs, name, bases, attrs)
         if not hasattr(cls, 'registry'):
             cls.registry = OrderedDict()
         else:
-            cls.registry[name] = obj
-        return obj
+            cls.registry[name] = cls
+        return cls
 
     def __iter__(cls):
         return iter(cls.registry)

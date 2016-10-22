@@ -6,7 +6,8 @@ from urllib import parse
 import uuid
 
 import Orange
-from Orange.data.sql.table import SqlTable, Psycopg2Backend
+from Orange.data.sql.table import SqlTable
+from Orange.data.sql.backend.postgres import Psycopg2Backend
 from psycopg2.pool import ThreadedConnectionPool
 
 

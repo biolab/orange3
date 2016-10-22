@@ -204,6 +204,7 @@ class MessageGroup:
         """
         key = msg if msg_id is None else msg_id
         if self.active.get(key) == msg:
+            self.widget.messageActivated.emit(msg)
             return
         self.active[key] = msg
         self.widget.messageActivated.emit(msg)

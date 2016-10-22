@@ -1,23 +1,40 @@
-from collections import OrderedDict
 import sys
+from collections import OrderedDict
 
 import psycopg2
 
 from AnyQt.QtWidgets import (
-    QLineEdit, QComboBox, QTextEdit, QMessageBox, QSizePolicy,QApplication)
+    QLineEdit, QComboBox, QTextEdit, QMessageBox, QSizePolicy, QApplication)
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt, QTimer
 
+from Orange.canvas import report
 from Orange.data import Table
+from Orange.data.sql.backend import Backend
+from Orange.data.sql.backend.base import BackendError
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.widget import OWWidget, OutputSignal, Msg
-from Orange.canvas import report
-
 
 MAX_DL_LIMIT = 1000000
-EXTENSIONS = ('tsm_system_time', 'quantile')
+
+
+class TableModel(PyListModel):
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        if role == Qt.DisplayRole:
+            return str(self[row])
+        return super().data(index, role)
+
+
+class BackendModel(PyListModel):
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        if role == Qt.DisplayRole:
+            return self[row].display_name
+        return super().data(index, role)
 
 
 class OWSql(OWWidget):
@@ -59,12 +76,18 @@ class OWSql(OWWidget):
     def __init__(self):
         super().__init__()
 
-        self._connection = None
+        self.backend = None
         self.data_desc_table = None
         self.database_desc = None
 
         vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
         box = gui.vBox(vbox)
+
+        self.backendmodel = BackendModel(Backend.available_backends())
+        self.backendcombo = QComboBox(box)
+        self.backendcombo.setModel(self.backendmodel)
+        box.layout().addWidget(self.backendcombo)
+
         self.servertext = QLineEdit(box)
         self.servertext.setPlaceholderText('Server')
         self.servertext.setToolTip('Server')
@@ -95,11 +118,12 @@ class OWSql(OWWidget):
         box.layout().addWidget(self.passwordtext)
 
         tables = gui.hBox(box)
+        self.tablemodel = TableModel()
         self.tablecombo = QComboBox(
-            tables,
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
         )
+        self.tablecombo.setModel(self.tablemodel)
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
         self.tablecombo.activated[int].connect(self.select_table)
@@ -161,56 +185,37 @@ class OWSql(OWWidget):
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
         try:
-            self._connection = psycopg2.connect(
+            backend = self.backendmodel[self.backendcombo.currentIndex()]
+            self.backend = backend(dict(
                 host=self.host,
                 port=self.port,
                 database=self.database,
                 user=self.username,
                 password=self.password
-            )
+            ))
             self.Error.connection.clear()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
                 ("Database", self.database), ("User name", self.username)
             ))
-            self.create_extensions()
             self.refresh_tables()
             self.select_table()
-        except psycopg2.Error as err:
-            self.Error.connection(str(err).split('\n')[0])
+        except BackendError as err:
+            error = str(err).split('\n')[0]
+            self.Error.connection(error)
             self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 
     def refresh_tables(self):
-        self.tablecombo.clear()
+        self.tablemodel.clear()
         self.Error.missing_extension.clear()
-        if self._connection is None:
+        if self.backend is None:
             self.data_desc_table = None
             return
 
-        cur = self._connection.cursor()
-        if self.schema:
-            schema_clause = "AND n.nspname = '{}'".format(self.schema)
-        else:
-            schema_clause = "AND pg_catalog.pg_table_is_visible(c.oid)"
-        cur.execute("""SELECT --n.nspname as "Schema",
-                              c.relname AS "Name"
-                       FROM pg_catalog.pg_class c
-                  LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                      WHERE c.relkind IN ('r','v','m','S','f','')
-                        AND n.nspname <> 'pg_catalog'
-                        AND n.nspname <> 'information_schema'
-                        AND n.nspname !~ '^pg_toast'
-                        {}
-                        AND NOT c.relname LIKE '\\_\\_%'
-                   ORDER BY 1;""".format(schema_clause))
-
-        self.tablecombo.addItem("Select a table")
-        for i, (table_name,) in enumerate(cur.fetchall()):
-            self.tablecombo.addItem(table_name)
-            if table_name == self.table:
-                self.tablecombo.setCurrentIndex(i + 1)
-        self.tablecombo.addItem("Custom SQL")
+        self.tablemodel.append("Select a table")
+        self.tablemodel.extend(self.backend.list_tables(self.schema))
+        self.tablemodel.append("Custom SQL")
 
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
@@ -223,20 +228,10 @@ class OWSql(OWWidget):
             self.database_desc["Table"] = "(None)"
             self.table = None
 
-    def create_extensions(self):
-        missing = []
-        for ext in EXTENSIONS:
-            try:
-                cur = self._connection.cursor()
-                cur.execute("CREATE EXTENSION IF NOT EXISTS " + ext)
-            except psycopg2.OperationalError:
-                missing.append(ext)
-            finally:
-                self._connection.commit()
-        self.Error.missing_extension(
-            's' if len(missing) > 1 else '',
-            ', '.join(missing),
-            shown=missing)
+        #self.Error.missing_extension(
+        #    's' if len(missing) > 1 else '',
+        #    ', '.join(missing),
+        #    shown=missing)
 
     def open_table(self):
         table = self.get_table()
@@ -251,7 +246,7 @@ class OWSql(OWWidget):
             return
 
         if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
-            self.table = self.tablecombo.currentText()
+            self.table = self.tablemodel[self.tablecombo.currentIndex()]
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]
@@ -263,16 +258,16 @@ class OWSql(OWWidget):
                         "Specify a table name to materialize the query")
                     return
                 try:
-                    cur = self._connection.cursor()
-                    cur.execute("DROP TABLE IF EXISTS " + self.materialize_table_name)
-                    cur.execute("CREATE TABLE " + self.materialize_table_name + " AS " + self.table)
-                    cur.execute("ANALYZE " + self.materialize_table_name)
+                    with self.backend.execute_sql_query("DROP TABLE IF EXISTS " + self.materialize_table_name):
+                        pass
+                    with self.backend.execute_sql_query("CREATE TABLE " + self.materialize_table_name + " AS " + self.table):
+                        pass
+                    with self.backend.execute_sql_query("ANALYZE " + self.materialize_table_name):
+                        pass
                     self.table = self.materialize_table_name
                 except psycopg2.ProgrammingError as ex:
                     self.Error.connection(str(ex))
                     return
-                finally:
-                    self._connection.commit()
 
         try:
             table = SqlTable(dict(host=self.host,
@@ -281,6 +276,7 @@ class OWSql(OWWidget):
                                   user=self.username,
                                   password=self.password),
                              self.table,
+                             backend=type(self.backend),
                              inspect_values=False)
         except psycopg2.ProgrammingError as ex:
             self.Error.connection(str(ex))
@@ -348,8 +344,6 @@ class OWSql(OWWidget):
                               report.describe_data(self.data_desc_table))
 
 if __name__ == "__main__":
-    import os
-
     a = QApplication(sys.argv)
     ow = OWSql()
     ow.show()
