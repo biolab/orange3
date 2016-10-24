@@ -69,6 +69,7 @@ class OWSql(OWWidget):
 
     class Error(OWWidget.Error):
         connection = Msg("{}")
+        no_backends = Msg("Please install a backend to use this widget")
         missing_extension = Msg("Database is missing extension{}: {}")
 
     def __init__(self):
@@ -83,7 +84,11 @@ class OWSql(OWWidget):
 
         self.backendmodel = BackendModel(Backend.available_backends())
         self.backendcombo = QComboBox(box)
-        self.backendcombo.setModel(self.backendmodel)
+        if len(self.backendmodel):
+            self.backendcombo.setModel(self.backendmodel)
+        else:
+            self.Error.no_backends()
+            box.setEnabled(False)
         box.layout().addWidget(self.backendcombo)
 
         self.servertext = QLineEdit(box)
@@ -183,6 +188,8 @@ class OWSql(OWWidget):
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
         try:
+            if self.backendcombo.currentIndex() < 0:
+                return
             backend = self.backendmodel[self.backendcombo.currentIndex()]
             self.backend = backend(dict(
                 host=self.host,
