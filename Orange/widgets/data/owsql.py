@@ -1,8 +1,6 @@
 import sys
 from collections import OrderedDict
 
-import psycopg2
-
 from AnyQt.QtWidgets import (
     QLineEdit, QComboBox, QTextEdit, QMessageBox, QSizePolicy, QApplication)
 from AnyQt.QtGui import QCursor
@@ -71,6 +69,7 @@ class OWSql(OWWidget):
 
     class Error(OWWidget.Error):
         connection = Msg("{}")
+        no_backends = Msg("Please install a backend to use this widget")
         missing_extension = Msg("Database is missing extension{}: {}")
 
     def __init__(self):
@@ -85,7 +84,11 @@ class OWSql(OWWidget):
 
         self.backendmodel = BackendModel(Backend.available_backends())
         self.backendcombo = QComboBox(box)
-        self.backendcombo.setModel(self.backendmodel)
+        if len(self.backendmodel):
+            self.backendcombo.setModel(self.backendmodel)
+        else:
+            self.Error.no_backends()
+            box.setEnabled(False)
         box.layout().addWidget(self.backendcombo)
 
         self.servertext = QLineEdit(box)
@@ -185,6 +188,8 @@ class OWSql(OWWidget):
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
         try:
+            if self.backendcombo.currentIndex() < 0:
+                return
             backend = self.backendmodel[self.backendcombo.currentIndex()]
             self.backend = backend(dict(
                 host=self.host,
@@ -253,6 +258,7 @@ class OWSql(OWWidget):
         else:
             self.sql = self.table = self.sqltext.toPlainText()
             if self.materialize:
+                import psycopg2
                 if not self.materialize_table_name:
                     self.Error.connection(
                         "Specify a table name to materialize the query")
@@ -278,7 +284,7 @@ class OWSql(OWWidget):
                              self.table,
                              backend=type(self.backend),
                              inspect_values=False)
-        except psycopg2.ProgrammingError as ex:
+        except BackendError as ex:
             self.Error.connection(str(ex))
             return
 
