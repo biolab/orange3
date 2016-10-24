@@ -27,7 +27,7 @@ def contingency(double[:] x, int nx, double[:] y, int ny):
             cont[yi, xi] += 1
     return cont
 
-def find_threshold_entropy(double[:] x, double[:] y, np.int64_t[:] idx,
+def find_threshold_entropy(double[:] x, double[:] y, np.intp_t[:] idx,
                            int n_classes, int min_leaf):
     """
     Find the threshold for continuous attribute values that maximizes
@@ -186,7 +186,7 @@ def find_binarization_entropy(double[:, :] cont, double[:] class_distr,
     return (class_entro - best_entro) / N / log(2), best_mapping
 
 
-def find_threshold_MSE(double[:] x, double[:] y, np.int64_t[:] idx, int min_leaf):
+def find_threshold_MSE(double[:] x, double[:] y, np.intp_t[:] idx, int min_leaf):
     """
     Find the threshold for continuous attribute values that minimizes MSE.
 
