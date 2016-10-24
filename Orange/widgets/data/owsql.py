@@ -1,8 +1,6 @@
 import sys
 from collections import OrderedDict
 
-import psycopg2
-
 from AnyQt.QtWidgets import (
     QLineEdit, QComboBox, QTextEdit, QMessageBox, QSizePolicy, QApplication)
 from AnyQt.QtGui import QCursor
@@ -253,6 +251,7 @@ class OWSql(OWWidget):
         else:
             self.sql = self.table = self.sqltext.toPlainText()
             if self.materialize:
+                import psycopg2
                 if not self.materialize_table_name:
                     self.Error.connection(
                         "Specify a table name to materialize the query")
@@ -278,7 +277,7 @@ class OWSql(OWWidget):
                              self.table,
                              backend=type(self.backend),
                              inspect_values=False)
-        except psycopg2.ProgrammingError as ex:
+        except BackendError as ex:
             self.Error.connection(str(ex))
             return
 

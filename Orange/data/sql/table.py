@@ -3,7 +3,6 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 """
 import functools
 import logging
-import re
 import threading
 import warnings
 from contextlib import contextmanager
@@ -17,8 +16,6 @@ from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import TableDesc, BackendError
 from Orange.misc import import_late_warning
-
-psycopg2 = import_late_warning("psycopg2")
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
@@ -599,6 +596,7 @@ class SqlTable(Table):
                             no_cache=no_cache)
 
     def _sample(self, method, parameter, no_cache=False):
+        import psycopg2
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
 
