@@ -1,0 +1,80 @@
+# https://packaging.python.org/en/latest/appveyor/
+
+skip_commits:
+  files:
+    - doc/*
+    - .travis
+    - benchmark
+    - tutorials
+
+clone_depth: 30
+
+matrix:
+  fast_finish: true
+
+environment:
+  global:
+    STAGING_INDEX: 'https://pypi.anaconda.org/ales-erjavec/simple'
+    NUMPY_BUILD_VERSION: '1.9.3'
+    PIP_DISABLE_PIP_VERSION_CHECK: 1
+
+  matrix:
+    - PYTHON: C:\Python34
+      # BUILD_INSTALLER: '1'
+
+    - PYTHON: C:\Python34-x64
+      DISTUTILS_USE_SDK: '1'
+      # TODO: For 3.4-x64 we do not have a build scipy available
+      # Modify the test script to create a miniconda env with numpy,scipy
+      # then use it to test the build whl (it should be binary compatible?)
+      SKIP_TESTS: 'True'
+
+    - PYTHON: C:\Python35
+      # disable threaded builds on Python 3.5 when using numpy's distutils
+      # (https://github.com/numpy/numpy/issues/7607)
+      BUILD_GLOBAL_OPTIONS: build -j1
+      # TODO: For 3.5 we do not have a build scipy available
+      # Modify the test script to create a miniconda env with numpy,scipy
+      # then use it to test the build whl (it should be binary compatible?)
+      SKIP_TESTS: 'True'
+
+    - PYTHON: C:\Python35-x64
+      # disable threaded builds on Python 3.5 when using numpy's distutils
+      # (https://github.com/numpy/numpy/issues/7607)
+      BUILD_GLOBAL_OPTIONS: build -j1
+      # TODO: For 3.5 we do not have a build scipy available
+      # Modify the test script to create a miniconda env with numpy,scipy
+      # then use it to test the build whl (it should be binary compatible?)
+      SKIP_TESTS: 'True'
+
+cache:
+  - '%LOCALAPPDATA%\pip\cache -> appveyor.yml'
+
+install:
+  - ps: $env:PATH="$env:PYTHON;$env:PYTHON\Scripts;$env:PATH"
+  - ps: .ci_tools\appveyor\step-install.ps1
+
+build_script:
+  - ps: |
+      .ci_tools\appveyor\step-build.ps1
+      if ($env:BUILD_INSTALLER) {
+        $env:PATH="C:\Program Files (x86)\NSIS;C:\msys2\bin;$env:PATH"
+
+        bash scripts\windows\build-win-application.sh -d installers
+        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+
+        bash scripts\windows\build-win-application.sh `
+            -d installers `
+            --standalone
+        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+      }
+
+test_script:
+  - ps: |
+      if (-not($env:SKIP_TESTS)) {
+        .ci_tools\appveyor\step-test.ps1
+      }
+
+artifacts:
+  - path: dist\*
+  - path: installers\*
