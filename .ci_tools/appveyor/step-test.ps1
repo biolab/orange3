@@ -43,10 +43,10 @@ try {
 
     if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
 
-    echo "Tests env:"
-    echo "----------"
+    echo "Test environment:"
+    echo "-----------------"
     python -m pip freeze
-    echo "----------"
+    echo "-----------------"
 
     # Run core tests
     echo "Running tests"
@@ -54,6 +54,33 @@ try {
     python -m unittest -v Orange.tests
 
     if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+
+    # Widget tests
+    python -m pip install `
+        --extra-index-url "$Env:STAGING_INDEX" `
+        PyQt5
+
+    echo "Running widget tests with PyQt5"
+    echo "-------------------------------"
+    try {
+        $Env:ANYQT_HOOK_BACKPORT = "pyqt4"
+        python -m unittest -v Orange.widgets.tests
+        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+    } finally {
+        $Env:ANYQT_HOOK_BACKPORT = ""
+    }
+
+    python -m pip uninstall --yes PyQt5
+    python -m pip install `
+        --extra-index-url "$Env:STAGING_INDEX" `
+        PyQt4
+
+    echo "Running widget tests with PyQt4"
+    echo "-------------------------------"
+
+    python -m unittest -v Orange.widgets.tests
+    if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+
 } finally {
     popd
 }
