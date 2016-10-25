@@ -22,13 +22,14 @@ from AnyQt.QtCore import (
     Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION
 )
 
-if QT_VERSION < 0x50500:
+try:
+    from AnyQt.QtWebEngineWidgets import QWebEngineView
+    USE_WEB_ENGINE = True
+except ImportError:
     from AnyQt.QtWebKitWidgets import QWebView
     from AnyQt.QtNetwork import QNetworkDiskCache
     USE_WEB_ENGINE = False
-else:
-    from PyQt5.QtWebEngineWidgets import QWebEngineView
-    USE_WEB_ENGINE = True
+
 
 from AnyQt.QtCore import pyqtProperty as Property
 
