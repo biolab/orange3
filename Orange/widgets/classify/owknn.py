@@ -53,7 +53,7 @@ class OWKNNLearner(OWBaseLearner):
 
 if __name__ == "__main__":
     import sys
-    from AnyQt.QtWidgest import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWKNNLearner()
