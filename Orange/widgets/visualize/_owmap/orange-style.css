@@ -1,4 +1,6 @@
 .orange-marker {
+    /* Make points at low zoom (<100%) haligned. */
+    line-height: 0;
 }
 .orange-marker span {
     font-size: 10pt;
@@ -26,6 +28,6 @@
         drop-shadow(-.5px -.5px 0px black);
 }
 .orange-marker-selected img {
-    -webkit-filter: drop-shadow(0px 0px 2px lime) drop-shadow(0px 0px 2px lime) !important;
-    filter: drop-shadow(0px 0px 2px lime) drop-shadow(0px 0px 2px lime) !important;
+    -webkit-filter: drop-shadow(0px 0px 1.5px lime) drop-shadow(0px 0px 1.5px lime) !important;
+    filter: drop-shadow(0px 0px 1.5px lime) drop-shadow(0px 0px 1.5px lime) !important;
 }

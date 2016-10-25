@@ -1,10 +1,15 @@
-from itertools import chain
+import os
+from itertools import chain, repeat, groupby
 from collections import OrderedDict
+from tempfile import mkstemp
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot, QTimer
+from AnyQt.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot, QTimer, QT_VERSION_STR
+from AnyQt.QtGui import QImage, QPainter, QPen, QBrush, QColor
 
+
+from Orange.util import color_to_hex
 from Orange.base import Learner
 from Orange.data.util import scale
 from Orange.data import Table, Domain
@@ -12,57 +17,87 @@ from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.webview import WebviewWidget
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, ContinuousPaletteGenerator
+from operator import itemgetter
 
-from os.path import join, dirname
-OWMAP_URL = join(dirname(__file__), '_owmap', 'owmap.html')
+
+if QT_VERSION_STR <= '5.3':
+    raise RuntimeError('Map widget only works with Qt 5.3+')
 
 
 class LeafletMap(WebviewWidget):
     selectionChanged = pyqtSignal(list)
 
-    SAMPLE_SIZE = 2000
-
     def __init__(self, parent=None):
         super().__init__(parent,
-                         url=QUrl(self.toFileURL(OWMAP_URL)),
+                         url=QUrl(self.toFileURL(
+                             os.path.join(os.path.dirname(__file__), '_owmap', 'owmap.html'))),
                          debug=True,)
-        self.jittering = 3
+        self.jittering = 0
         self._owwidget = parent
+        self._opacity = 255
+        self._sizes = None
+        self._selected_indices = None
+
+        self.lat_attr = None
+        self.lon_attr = None
+        self.data = None
         self.model = None
+
+        self._jittering = None
+        self._color_attr = None
+        self._label_attr = None
+        self._shape_attr = None
+        self._size_attr = None
+
+        self._drawing_args = None
+        self._image_token = None
+        self._overlay_image_path = mkstemp(prefix='orange-Map-', suffix='.png')[1]
+
+    def __del__(self):
+        os.remove(self._overlay_image_path)
 
     def set_data(self, data, lat_attr, lon_attr):
         self.data = data
+        self.lat_attr = None
+        self.lon_attr = None
+        self._image_token = np.nan  # Stop drawing previous image
 
         if data is None or not (len(data) and lat_attr and lon_attr):
-            self.evalJS('clear_markers();')
+            self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
             return
 
-        lat_attr = self.lat_attr = data.domain[lat_attr]
-        lon_attr = self.lon_attr = data.domain[lon_attr]
+        self.lat_attr = data.domain[lat_attr]
+        self.lon_attr = data.domain[lon_attr]
+        self.fit_to_bounds(False)
 
-        self.sample = sample = (Ellipsis
-                                if len(data) <= self.SAMPLE_SIZE else
-                                np.random.choice(len(data), self.SAMPLE_SIZE, False))
-        latlon_data = np.column_stack((data[sample, lat_attr],
-                                       data[sample, lon_attr]))
-        self.exposeObject('latlon_data', dict(data=latlon_data))
-
-        self.evalJS('''
-            window.latlon_data = latlon_data.data;
-            add_markers(latlon_data);
-        ''')
-        self.reset_heatmap()
+    @pyqtSlot()
+    def fit_to_bounds(self, fly=True):
+        if self.data is None:
+            return
+        lat_data = self.data.get_column_view(self.lat_attr)[0]
+        lon_data = self.data.get_column_view(self.lon_attr)[0]
+        north, south = np.nanmax(lat_data), np.nanmin(lat_data)
+        east, west = np.nanmin(lon_data), np.nanmax(lon_data)
+        self.evalJS('map.fitBounds([[%f, %f], [%f, %f]], {padding: [.1, .1]})'
+                    % (south, west, north, east))
 
     @pyqtSlot(float, float, float, float)
-    def _selected_area(self, north, east, south, west):
-        if north == south:
-            indices = np.array([])
-        else:
-            lat = np.ravel(self.data[:, self.lat_attr])
-            lon = np.ravel(self.data[:, self.lon_attr])
+    def selected_area(self, north, east, south, west):
+        indices = np.array([])
+        prev_selected_indices = self._selected_indices
+        if self.data is not None and (north != south and east != west):
+            lat = self.data.get_column_view(self.lat_attr)[0]
+            lon = self.data.get_column_view(self.lon_attr)[0]
             indices = ((lat <= north) & (lat >= south) &
-                       (lon <= east) & (lon >= west)).nonzero()[0]
-        self.selectionChanged.emit(indices.tolist())
+                       (lon <= east) & (lon >= west))
+            if self._selected_indices is not None:
+                indices |= self._selected_indices
+            self._selected_indices = indices
+        else:
+            self._selected_indices = None
+        if np.any(self._selected_indices != prev_selected_indices):
+            self.selectionChanged.emit(indices.nonzero()[0].tolist())
+            self.redraw_markers_overlay_image(new_image=True)
 
     def set_map_provider(self, provider):
         self.evalJS('set_map_provider("{}");'.format(provider))
@@ -75,103 +110,95 @@ class LeafletMap(WebviewWidget):
 
     def set_jittering(self, jittering):
         """ In percent, i.e. jittering=3 means 3% of screen height and width """
+        self._jittering = jittering / 100
         self.evalJS('''
             window.jittering_percent = {};
             set_jittering();
             if (window.jittering_percent == 0)
                 clear_jittering();
         '''.format(jittering))
+        self.redraw_markers_overlay_image()
 
     def set_marker_color(self, attr, update=True):
         try:
-            variable = self.data.domain[attr]
+            self._color_attr = variable = self.data.domain[attr]
         except Exception:
-            self.evalJS('window.color_attr = {};')
+            self._color_attr = None
         else:
             if variable.is_continuous:
-                values = np.ravel(self.data[self.sample, variable])
-                colorgen = ContinuousPaletteGenerator(*variable.colors)
-                colors = colorgen[scale(values)]
+                self._raw_color_values = values = self.data.get_column_view(variable)[0]
+                self._scaled_color_values = scale(values)
+                self._colorgen = ContinuousPaletteGenerator(*variable.colors)
             elif variable.is_discrete:
                 _values = np.asarray(self.data.domain[attr].values)
-                __values = np.ravel(self.data[self.sample, variable]).astype(int)
-                values = _values[__values]  # The joke's on you
-                colorgen = ColorPaletteGenerator(len(variable.colors), variable.colors)
-                colors = colorgen[__values]
-            self.exposeObject('color_attr',
-                              dict(name=str(attr), values=colors, raw_values=values))
+                __values = self.data.get_column_view(variable)[0].astype(np.uint16)
+                self._raw_color_values = _values[__values]  # The joke's on you
+                self._scaled_color_values = __values
+                self._colorgen = ColorPaletteGenerator(len(variable.colors), variable.colors)
         finally:
-            self.evalJS('set_marker_colors(%d);' % update)
+            if update:
+                self.redraw_markers_overlay_image()
 
     def set_marker_label(self, attr, update=True):
         try:
-            variable = self.data.domain[attr]
+            self._label_attr = variable = self.data.domain[attr]
         except Exception:
-            self.evalJS('window.label_attr = {};')
+            self._label_attr = None
         else:
             if variable.is_continuous or variable.is_string:
-                values = np.ravel(self.data[self.sample, variable])
+                self._label_values = self.data.get_column_view(variable)[0]
             elif variable.is_discrete:
                 _values = np.asarray(self.data.domain[attr].values)
-                __values = np.ravel(self.data[self.sample, variable]).astype(int)
-                values = _values[__values]  # The design had lead to poor code for ages
-            self.exposeObject('label_attr',
-                              dict(name=str(attr), values=values))
+                __values = self.data.get_column_view(variable)[0].astype(np.uint16)
+                self._label_values = _values[__values]  # The design had lead to poor code for ages
         finally:
-            self.evalJS('set_marker_labels(%d);' % update)
+            if update:
+                self.redraw_markers_overlay_image()
 
     def set_marker_shape(self, attr, update=True):
         try:
-            variable = self.data.domain[attr]
+            self._shape_attr = variable = self.data.domain[attr]
         except Exception:
-            self.evalJS('window.shape_attr = {};')
+            self._shape_attr = None
         else:
             assert variable.is_discrete
             _values = np.asarray(self.data.domain[attr].values)
-            __values = np.ravel(self.data[self.sample, variable]).astype(int)
-            values = _values[__values]
-            self.exposeObject('shape_attr',
-                              dict(name=str(attr), values=__values, raw_values=values))
+            self._shape_values = __values = self.data.get_column_view(variable)[0].astype(np.uint16)
+            self._raw_shape_values = _values[__values]
         finally:
-            self.evalJS('set_marker_shapes(%d);' % update)
+            if update:
+                self.redraw_markers_overlay_image()
 
     def set_marker_size(self, attr, update=True):
         try:
-            variable = self.data.domain[attr]
+            self._size_attr = variable = self.data.domain[attr]
         except Exception:
-            self.evalJS('window.size_attr = {};')
+            self._size_attr = None
         else:
             assert variable.is_continuous
-            values = np.ravel(self.data[self.sample, variable])
-            sizes = scale(values, 10, 60)
-            self.exposeObject('size_attr',
-                              dict(name=str(attr), values=sizes, raw_values=values))
+            self._raw_sizes = values = self.data.get_column_view(variable)[0]
+            self._sizes = scale(values, 5, 60).astype(np.uint8)
         finally:
-            self.evalJS('set_marker_sizes(%d);' % update)
+            if update:
+                self.redraw_markers_overlay_image()
 
     def set_marker_size_coefficient(self, size):
+        self._size_coef = size / 100
         self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
+        self.redraw_markers_overlay_image()
 
     def set_marker_opacity(self, opacity):
+        self._opacity = 255 * opacity // 100
         self.evalJS('''set_marker_opacity({});'''.format(opacity / 100))
+        self.redraw_markers_overlay_image()
 
     def set_model(self, model):
         self.model = model
-        if model is not None:
-            self.reset_heatmap()
-        else:
-            self.evalJS('clear_heatmap();')
-
-    def reset_heatmap(self):
-        if self.data is None:
-            # We don't have lat/lon attrs (variables), so we won't be able
-            # to construct the domain for the model later on anyway
-            return
-        self.evalJS('''reset_heatmap();''')
+        self.evalJS('clear_heatmap()' if model is None else 'reset_heatmap()')
 
     @pyqtSlot('QVariantList')
-    def latlon_viewport_extremes(self, points):
-        if self.model is None:
+    def recompute_heatmap(self, points):
+        if self.model is None or not self.data or not self.lat_attr or not self.lon_attr:
             return
 
         latlons = np.array(points)
@@ -186,6 +213,168 @@ class LeafletMap(WebviewWidget):
         predictions = scale(np.round(predictions, 7))  # Avoid small errors
         self.exposeObject('model_predictions', dict(data=predictions))
         self.evalJS('draw_heatmap()')
+
+    def _update_js_markers(self, visible):
+        self._visible = visible
+        latlon = np.c_[self.data.get_column_view(self.lat_attr)[0],
+                       self.data.get_column_view(self.lon_attr)[0]]
+        self.exposeObject('latlon_data', dict(data=latlon[visible]))
+        self.exposeObject('selected_markers', dict(data=(self._selected_indices[visible]
+                                                         if self._selected_indices is not None else 0)))
+        if not self._color_attr:
+            self.exposeObject('color_attr', dict())
+        else:
+            colors = [color_to_hex(rgb)
+                      for rgb in self._colorgen.getRGB(self._scaled_color_values[visible])]
+            self.exposeObject('color_attr',
+                              dict(name=str(self._color_attr), values=colors,
+                                   raw_values=self._raw_color_values[visible]))
+        if not self._label_attr:
+            self.exposeObject('label_attr', dict())
+        else:
+            self.exposeObject('label_attr',
+                              dict(name=str(self._label_attr),
+                                   values=self._label_values[visible]))
+        if not self._shape_attr:
+            self.exposeObject('shape_attr', dict())
+        else:
+            self.exposeObject('shape_attr',
+                              dict(name=str(self._shape_attr),
+                                   values=self._shape_values[visible],
+                                   raw_values=self._raw_shape_values[visible]))
+        if not self._size_attr:
+            self.exposeObject('size_attr', dict())
+        else:
+            self.exposeObject('size_attr',
+                              dict(name=str(self._size_attr),
+                                   values=self._sizes[visible],
+                                   raw_values=self._raw_sizes[visible]))
+        self.evalJS('''
+            window.latlon_data = latlon_data.data;
+            window.selected_markers = selected_markers.data
+            add_markers(latlon_data);
+        ''')
+
+    class Projection:
+        """This should somewhat model Leaflet's Web Mercator (EPSG:3857).
+
+        Reverse-engineered from L.Map.latlngToContainerPoint().
+        """
+        @staticmethod
+        def latlon_to_easting_northing(lat, lon):
+            R = 6378137
+            MAX_LATITUDE = 85.0511287798
+            DEG = np.pi / 180
+
+            lat = np.clip(lat, -MAX_LATITUDE, MAX_LATITUDE)
+            sin = np.sin(DEG * lat)
+            x = R * DEG * lon
+            y = R / 2 * np.log((1 + sin) / (1 - sin))
+            return x, y
+
+        @staticmethod
+        def easting_northing_to_pixel(x, y, zoom_level, pixel_origin, map_pane_pos):
+            R = 6378137
+            PROJ_SCALE = .5 / (np.pi * R)
+
+            zoom_scale = 256 * (2 ** zoom_level)
+            x = (zoom_scale * (PROJ_SCALE * x + .5)).round() + (map_pane_pos[0] - pixel_origin[0])
+            y = (zoom_scale * (-PROJ_SCALE * y + .5)).round() + (map_pane_pos[1] - pixel_origin[1])
+            return x, y
+
+    N_POINTS_PER_ITER = 1000
+
+    @pyqtSlot(float, float, float, float, int, int, float, 'QVariantList', 'QVariantList')
+    def redraw_markers_overlay_image(self, *args):
+        if (not args and not self._drawing_args or
+                self.lat_attr is None or self.lon_attr is None):
+            return
+
+        if args:
+            self._drawing_args = args
+        north, east, south, west, width, height, zoom, origin, map_pane_pos = self._drawing_args
+
+        lat = self.data.get_column_view(self.lat_attr)[0]
+        lon = self.data.get_column_view(self.lon_attr)[0]
+        visible = ((lat <= north) & (lat >= south) &
+                   (lon <= east) & (lon >= west)).nonzero()[0]
+
+        if len(visible) <= 500:
+            self.evalJS('clear_markers_overlay_image()')
+            self._update_js_markers(visible)
+            self._owwidget.disable_some_controls(False)
+            return
+
+        self.evalJS('clear_markers_js();')
+        self._owwidget.disable_some_controls(True)
+
+        np.random.shuffle(visible)
+
+        selected = (self._selected_indices
+                    if self._selected_indices is not None else
+                    np.zeros(len(lat), dtype=bool))
+        cur = 0
+        im = QImage(width, height, QImage.Format_ARGB32)
+        im.fill(Qt.transparent)
+        painter = QPainter(im)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        self.evalJS('clear_markers_overlay_image(); markersImageLayer.setBounds(map.getBounds());0')
+
+        self._image_token = image_token = np.random.random()
+
+        def add_points():
+            nonlocal cur, image_token
+            if image_token != self._image_token:
+                return
+            batch = visible[cur:cur + self.N_POINTS_PER_ITER]
+
+            batch_lat = lat[batch]
+            batch_lon = lon[batch]
+            batch_selected = selected[batch]
+
+            x, y = self.Projection.latlon_to_easting_northing(batch_lat, batch_lon)
+            x, y = self.Projection.easting_northing_to_pixel(x, y, zoom, origin, map_pane_pos)
+
+            if self._jittering:
+                x += (np.random.random(len(x)) - .5) * (self._jittering * width)
+                y += (np.random.random(len(x)) - .5) * (self._jittering * height)
+
+            colors = (self._colorgen.getRGB(self._scaled_color_values[batch]).tolist()
+                      if self._color_attr else
+                      repeat((0xff, 0, 0)))
+            sizes = self._sizes[batch] if self._size_attr else repeat(10)
+
+            zipped = zip(x, y, batch_selected, sizes, colors)
+            sortkey, penkey, sizekey, brushkey = itemgetter(2, 3, 4), itemgetter(2), itemgetter(3), itemgetter(4)
+            for is_selected, points in groupby(sorted(zipped, key=sortkey),
+                                               key=penkey):
+                for size, points in groupby(points, key=sizekey):
+                    pensize, pencolor = ((3, Qt.green) if is_selected else
+                                         (.7, QColor(0, 0, 0, self._opacity)))
+                    size *= self._size_coef
+                    if size < 5:
+                        pensize /= 3
+                    size += pensize
+                    size2 = size / 2
+                    painter.setPen(Qt.NoPen if size < 5 and not is_selected else
+                                   QPen(QBrush(pencolor), pensize))
+
+                    for color, points in groupby(points, key=brushkey):
+                        color = tuple(color) + (self._opacity,)
+                        painter.setBrush(QBrush(QColor(*color)))
+                        for x, y, *_ in points:
+                            painter.drawEllipse(x - size2, y - size2, size, size)
+
+            im.save(self._overlay_image_path, 'PNG')
+            self.evalJS('markersImageLayer.setUrl("{}#{}"); 0;'
+                        .format(self.toFileURL(self._overlay_image_path),
+                                np.random.random()))
+
+            cur += self.N_POINTS_PER_ITER
+            if cur < len(visible):
+                QTimer.singleShot(10, add_points)
+
+        QTimer.singleShot(10, add_points)
 
 
 class OWMap(widget.OWWidget):
@@ -234,9 +423,6 @@ class OWMap(widget.OWWidget):
         model_error = widget.Msg("Error predicting: {}")
         missing_learner = widget.Msg('No input learner to model with')
         learner_error = widget.Msg("Error modelling: {}")
-
-    class Warning(widget.OWWidget.Warning):
-        data_sampled = widget.Msg('Showing a random sample of {} data points.')
 
     UserAdviceMessages = [
         widget.Message(
@@ -420,11 +606,6 @@ class OWMap(widget.OWWidget):
         self._combo_label.setCurrentIndex(0)
         self._combo_class.setCurrentIndex(0)
 
-        if len(data) > self.map.SAMPLE_SIZE:
-            self.Warning.data_sampled(self.map.SAMPLE_SIZE)
-        else:
-            self.Warning.data_sampled.clear()
-
         self.openContext(data)
 
         if self.lat_attr in self.data.domain and self.lon_attr in self.data.domain:
@@ -463,6 +644,17 @@ class OWMap(widget.OWWidget):
                     else:
                         self.Error.learner_error.clear()
         self.map.set_model(model)
+
+    def disable_some_controls(self, disabled):
+        tooltip = (
+            "These controls are only available when the zoom is close enough to"
+            " have only {} points in the viewport.".format(self.map.N_POINTS_PER_ITER)
+            if disabled else '')
+        for widget in (self._combo_label,
+                       self._combo_shape,
+                       self._clustering_check):
+            widget.setDisabled(disabled)
+            widget.setToolTip(tooltip)
 
     def clear(self):
         self.map.set_data(None, '', '')

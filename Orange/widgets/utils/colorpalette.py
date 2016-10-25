@@ -544,7 +544,7 @@ class GradientPaletteGenerator:
         assert len(colors) >= 2
         self.bins = np.linspace(0, 1, len(colors))
         self.deriv = self.bins[1] - self.bins[0]
-        self.colors = np.array([self.to_rgb_tuple(c) for c in colors])
+        self.colors = np.array([self.to_rgb_tuple(c) for c in colors], dtype=np.uint8)
 
     def to_rgb_tuple(self, color):
         try:
@@ -649,7 +649,7 @@ class ColorPaletteGenerator:
                 col = QColor()
                 col.setHsv(360 / number_of_colors * i, 255, 255)
                 rgb_colors.append(col.getRgb()[:3])
-        self.rgb_array = np.vstack((rgb_colors, [NAN_GREY]))
+        self.rgb_array = np.vstack((rgb_colors, [NAN_GREY])).astype(np.uint8)
 
     def __getitem__(self, value):
         if isinstance(value, Iterable):

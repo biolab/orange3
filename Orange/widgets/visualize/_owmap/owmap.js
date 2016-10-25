@@ -12,10 +12,12 @@ if (!_IS_WEBENGINE) {
 
 
 var _DEFAULT_COLOR = 'red',
-    _DEFAULT_SIZE = 15,
+    _DEFAULT_SIZE = 12,
     _DEFAULT_SHAPE = 0,
     _MAX_SIZE = 120,
-    _N_SHAPES = 10;
+    _N_SHAPES = 10,
+    // On WebKit, this lengthy 1px transparent PNG is the only thing that works
+    _TRANSPARENT_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQI12NgYGBgAAAABQABXvMqOgAAAABJRU5ErkJggg==';
 
 var tileLayer = L.tileLayer.provider('OpenStreetMap.BlackAndWhite');
 
@@ -54,6 +56,7 @@ map.fitWorld();
 map.on('zoom', reposition_markers);
 
 var heatmapLayer = L.imageOverlay('data:', [[0, 0], [0, 0]], {attribution: 'Orange – Data Mining Fruitful &amp; Fun'}).addTo(map);
+var markersImageLayer = L.imageOverlay(_TRANSPARENT_IMAGE, [[0, 0], [0, 0]]).addTo(map);
 
 var BoxSelect = L.Map.BoxZoom.extend({
     _onMouseUp: function (e) {
@@ -75,21 +78,17 @@ map.on("boxzoomend", function(e) {
         var marker = markers[i];
         marker._our_selected = false;
         if (box.contains(marker.getLatLng())) {
-            marker._our_selected = true;
-            if (marker._icon)
-                marker._icon.classList.add('orange-marker-selected');
+            marker.setSelected(true);
         }
     }
-    __self._selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
+    __self.selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
 });
 map.on('click', function() {
     for (var i = 0; i < markers.length; i++) {
         var marker = markers[i];
-        marker._our_selected = false;
-        if (markers._icon)
-            markers._icon.classList.remove('orange-marker-selected');
+        marker.setSelected(false);
     }
-    __self._selected_area(0, 0, 0, 0);
+    __self.selected_area(0, 0, 0, 0);
 });
 
 
@@ -99,8 +98,8 @@ function popup_callback(marker) {
 <b>Latitude:</b> {lat}<br>\
 <b>Longitude:</b> {lon}<br>\
 <b></b>', {
-        lat: latlon_data[i][0],
-        lon: latlon_data[i][1]
+        lat: latlon_data[i][0].toFixed(6),
+        lon: latlon_data[i][1].toFixed(6)
     });
     var attrs = [color_attr, shape_attr, label_attr, size_attr],
         already = {};
@@ -127,6 +126,14 @@ L.OurMarker = L.Marker.extend({
         if (this._icon)
             _update_marker_icon(this);
         return L.Marker.prototype.update.call(this);
+    },
+    setSelected: function(selected) {
+        this._our_selected = !!selected;
+        var method = this._icon && (selected ? 'add' : 'remove');
+        method && this._icon.classList[method]('orange-marker-selected');
+    },
+    isSelected: function() {
+        return this._our_selected;
     }
 });
 L.ourMarker = function (latlng, options) {
@@ -136,7 +143,7 @@ L.ourMarker = function (latlng, options) {
 function add_markers(latlon_data) {
     console.info('adding map markers: ' + latlon_data.length);
 
-    clear_markers();
+    clear_markers_js();
 
     var markerOptions = {
         icon: L.divIcon({
@@ -163,6 +170,8 @@ function add_markers(latlon_data) {
 
     for (var i = 0; i < latlon_data.length; ++i) {
         var marker = L.ourMarker(latlon_data[i], markerOptions);
+        if (selected_markers[i])
+            marker.setSelected(true);
         marker._orange_id = i;  // Used in popup_callback() and the like
         marker.bindPopup(popup_callback);
         marker.on(markerEvents);
@@ -171,7 +180,6 @@ function add_markers(latlon_data) {
     _update_markers();
     set_cluster_points();
     set_jittering();
-    map.fitBounds(markersLayer.getBounds().pad(.1));
 }
 
 
@@ -321,7 +329,7 @@ function _construct_icon(shape, color) {
 }
 
 
-function clear_markers() {
+function clear_markers_js() {
     markersLayer.clearLayers();
     markers.length = 0;
 }
@@ -375,38 +383,6 @@ function set_map_provider(provider) {
 }
 
 
-function set_marker_shapes(update) {
-    var shape_indices = shape_attr && shape_attr.values;
-    if (shape_indices && markers.length != shape_indices.length)
-        return console.error('markers.length != shapes.length ???');
-    update && _update_markers();
-}
-
-
-function set_marker_colors(update) {
-    var css_colors = color_attr && color_attr.values;
-    if (css_colors && markers.length != css_colors.length)
-        return console.error('markers.length != colors.length ???');
-    update && _update_markers();
-}
-
-
-function set_marker_sizes(update) {
-    var sizes = size_attr && size_attr.values;
-    if (sizes && markers.length != sizes.length)
-        return console.error('markers.length != sizes.length ???');
-    update && _update_markers();
-}
-
-
-function set_marker_labels(update) {
-    var labels = label_attr && label_attr.values;
-    if (labels && markers.length != labels.length)
-        return console.error('markers.length != labels.length ???');
-    update && _update_markers();
-}
-
-
 function _update_markers() {
     var shapes = shape_attr.values,
         colors = color_attr.values,
@@ -436,7 +412,7 @@ function _update_marker_icon(marker) {
         img.style.width = img.style.height = marker._our_icon_size;
     icon.style.marginTop = icon.style.marginLeft = marker._our_icon_margin;
     icon.lastChild.innerHTML = marker._our_icon_label;
-    if (marker._our_selected)
+    if (marker.isSelected())
         icon.classList.add('orange-marker-selected');
 }
 
@@ -493,7 +469,7 @@ function reset_heatmap() {
             points.push([latlon.lat, latlon.lng]);
         }
     }
-    __self.latlon_viewport_extremes(points);
+    __self.recompute_heatmap(points);
 }
 
 var _heatmap_canvas_ctx = document.getElementById('heatmap_canvas').getContext('2d'),
@@ -525,11 +501,30 @@ function draw_heatmap() {
 }
 
 function clear_heatmap() {
-    // On WebKit, this lengthy 1px transparent PNG is the only thing that works
-    heatmapLayer.setUrl('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQI12NgYGBgAAAABQABXvMqOgAAAABJRU5ErkJggg==');
+    heatmapLayer.setUrl(_TRANSPARENT_IMAGE);
+}
+
+function clear_markers_overlay_image() {
+    markersImageLayer.setUrl(_TRANSPARENT_IMAGE);
+    $(markersImageLayer.getPane()).show(0);
+}
+
+map.on('zoomstart', function() { $(markersImageLayer.getPane()).hide(0); });
+
+
+function redraw_markers_overlay_image() {
+    var bbox = map.getBounds(),
+        size = map.getSize(),
+        origin = map.getPixelOrigin(),
+        pane_pos = map.getPane('mapPane')._leaflet_pos;
+    __self.redraw_markers_overlay_image(
+        bbox.getNorth(), bbox.getEast(), bbox.getSouth(), bbox.getWest(),
+        size.x, size.y,
+        map.getZoom(), [origin.x, origin.y], [pane_pos.x, pane_pos.y]);
 }
 
 
 $(document).ready(function() {
     setTimeout(function() { map.on('moveend', reset_heatmap); }, 100);
+    setTimeout(function() { map.on('moveend', redraw_markers_overlay_image); }, 100);
 });
