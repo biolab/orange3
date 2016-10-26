@@ -97,7 +97,6 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.clear()
-        self.warning(0)
         self.data = data
 
         if data is not None:

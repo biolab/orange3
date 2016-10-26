@@ -1,6 +1,7 @@
 import contextlib
 import csv
 import locale
+import os
 import pickle
 import re
 import subprocess
@@ -668,6 +669,14 @@ class CSVReader(FileFormat):
                 try:
                     reader = csv.reader(file, dialect=dialect)
                     data = self.data_table(reader)
+
+                    # TODO: Name can be set unconditionally when/if
+                    # self.filename will always be a string with the file name.
+                    # Currently, some tests pass StringIO instead of
+                    # the file name to a reader.
+                    if isinstance(self.filename, str):
+                        data.name = os.path.splitext(
+                            os.path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
@@ -731,8 +740,10 @@ class BasketReader(FileFormat):
         classes = constr_vars(class_indices)
         meta_attrs = constr_vars(meta_indices)
         domain = Domain(attrs, classes, meta_attrs)
-        return Table.from_numpy(
+        table = Table.from_numpy(
             domain, attrs and X, classes and Y, metas and meta_attrs)
+        table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+        return table
 
 
 class ExcelReader(FileFormat):
@@ -767,6 +778,9 @@ class ExcelReader(FileFormat):
                              for col in range(first_col, row_len)]
                             for row in range(first_row, ss.nrows)])
             table = self.data_table(cells)
+            table.name = os.path.splitext(os.path.split(self.filename)[-1])[0]
+            if self.sheet:
+                table.name = '-'.join((table.name, self.sheet))
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table

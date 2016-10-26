@@ -2,12 +2,13 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import unittest.mock
 
 import numpy as np
 from numpy.testing import assert_almost_equal
 
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
-    StringVariable, Table, Domain
+    StringVariable, TimeVariable, Table, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.discretize import EqualWidth
 from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
@@ -367,16 +368,66 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-    def test_date(self):
+    def test_time_date(self):
         table = np.array(['2014-04-12', '2014-04-13', '2014-04-14',
                           '2014-04-15', '2014-04-16']).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['date'])
 
         sql_table = SqlTable(conn, table_name, inspect_values=False)
-        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
-        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_time(self):
+        table = np.array(['17:39:51', '11:51:48.46', '05:20:21.492149',
+                          '21:47:06', '04:47:35.8']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['time'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_timetz(self):
+        table = np.array(['17:39:51+0200', '11:51:48.46+01', '05:20:21.4921',
+                          '21:47:06-0600', '04:47:35.8+0330']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['timetz'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_timestamp(self):
+        table = np.array(['2014-07-15 17:39:51.348149',
+                          '2008-10-05 11:51:48.468149',
+                          '2008-11-03 05:20:21.492149',
+                          '2015-01-02 21:47:06.228149',
+                          '2016-04-16 04:47:35.892149']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['timestamp'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+    def test_time_timestamptz(self):
+        table = np.array(['2014-07-15 17:39:51.348149+0200',
+                          '2008-10-05 11:51:48.468149+02',
+                          '2008-11-03 05:20:21.492149+01',
+                          '2015-01-02 21:47:06.228149+0100',
+                          '2016-04-16 04:47:35.892149+0330']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['timestamptz'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstAttrIsInstance(sql_table, TimeVariable)
 
     def test_double_precision(self):
         table = np.arange(25).reshape((-1, 1))
@@ -451,6 +502,23 @@ class TestSqlTable(PostgresTest):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+    def test_other(self):
+        table = np.array(['bcd4d9c0-361e-bad4-7ceb-0d171cdec981',
+                          '544b7ddc-d861-0201-81c8-9f7ad0bbf531',
+                          'b35a10f7-7901-f313-ec16-5ad9778040a6',
+                          'b267c4be-4a26-60b5-e664-737a90a40e93']
+                         ).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['uuid'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+
+        filters = filter.Values([filter.FilterString(-1, 0, 'foo')])
+        self.assertEqual(len(filters(sql_table)), 0)
 
     def test_recovers_connection_after_sql_error(self):
         import psycopg2

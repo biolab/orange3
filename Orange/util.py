@@ -5,7 +5,8 @@ from itertools import chain, count
 from collections import OrderedDict
 import warnings
 
-import numpy as np
+# Backwards-compat
+from Orange.data.util import scale  # pylint: disable=unused-import
 
 
 class OrangeWarning(UserWarning):
@@ -80,30 +81,6 @@ def try_(func, default=None):
 def flatten(lst):
     """Flatten iterable a single level."""
     return chain.from_iterable(lst)
-
-
-def scale(values, min=0, max=1):
-    """Return values scaled to [min, max]"""
-    ptp = np.nanmax(values) - np.nanmin(values)
-    if ptp == 0:
-        return np.clip(values, min, max)
-    return (-np.nanmin(values) + values) / ptp * (max - min) + min
-
-
-def one_hot(values, dtype=float):
-    """Return a one-hot transform of values
-
-    Parameters
-    ----------
-    values : 1d array
-        Integer values (hopefully 0-max).
-
-    Returns
-    -------
-    result
-        2d array with ones in respective indicator columns.
-    """
-    return np.eye(np.max(values) + 1, dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
 class Registry(type):

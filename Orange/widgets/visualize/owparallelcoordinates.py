@@ -110,10 +110,10 @@ class OWParallelCoordinates(OWVisWidget):
     def flip_attribute(self, item):
         if self.graph.flip_attribute(str(item.text())):
             self.update_graph()
-            self.information(0)
+            self.information()
         else:
-            self.information(0, "Didn't flip the attribute. To flip a continuous "
-                                "attribute uncheck 'Global value scaling' checkbox.")
+            self.information("To flip a numeric feature, disable"
+                             "'Global value scaling'")
 
     def update_graph(self):
         self.graph.update_data(self.shown_attributes)

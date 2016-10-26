@@ -81,7 +81,7 @@ class OWDistributions(widget.OWWidget):
     name = "Distributions"
     description = "Display value distributions of a data feature in a graph."
     icon = "icons/Distribution.svg"
-    priority = 100
+    priority = 120
     inputs = [InputSignal("Data", Orange.data.Table, "set_data",
                           doc="Set the input data set")]
 
@@ -211,11 +211,11 @@ class OWDistributions(widget.OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.clear()
-        self.warning(0)
+        self.warning()
         self.data = data
         if self.data is not None:
             if not self.data:
-                self.warning(0, "Empty input data cannot be visualized")
+                self.warning("Empty input data cannot be visualized")
                 return
             domain = self.data.domain
             self.varmodel[:] = list(domain)

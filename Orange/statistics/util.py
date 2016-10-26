@@ -5,14 +5,14 @@ and once used from the bottlechest package (fork of bottleneck).
 It also patches bottleneck to contain these functions.
 """
 import numpy as np
-from scipy.sparse import issparse
+import scipy.sparse as sp
 import bottleneck as bn
 
 
 def bincount(X, max_val=None, weights=None, minlength=None):
     """Return counts of values in array X.
 
-    Works exactly like np.bincount(), except that it also supports non-integer
+    Works kind of like np.bincount(), except that it also supports floating
     arrays with nans.
     """
     X = np.asanyarray(X)
@@ -23,10 +23,12 @@ def bincount(X, max_val=None, weights=None, minlength=None):
         if weights is not None:
             weights = weights[nonnan]
     else:
-        nans = 0 if X.ndim == 1 else np.zeros(X.shape[1])
+        nans = 0. if X.ndim == 1 else np.zeros(X.shape[1], dtype=float)
+    if minlength is None and max_val is not None:
+        minlength = max_val + 1
     return (np.bincount(X.astype(np.int32, copy=False),
                         weights=weights,
-                        minlength=minlength or max_val + 1),
+                        minlength=minlength).astype(float),
             nans)
 
 
@@ -114,7 +116,7 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
             continue
         col = X[..., i]
         nx = np.unique(col[~np.isnan(col)]).size if max_X is None else max_X + 1
-        if issparse(col):
+        if sp.issparse(col):
             col = np.ravel(col.todense())
         contingencies.append(
             bincount(y + ny * col,
@@ -158,22 +160,46 @@ def stats(X, weights=None, compute_variance=False):
         If the length of the weight vector does not match the length of the
         array
     """
-    if weights is not None:
-        X = X * weights
     is_numeric = np.issubdtype(X.dtype, np.number)
-    nans = (np.isnan(X) if is_numeric else X.astype(bool)).sum(axis=0)
-    variance = np.nanvar(X, axis=0) if compute_variance else np.zeros(X.shape[1])
-    return np.column_stack((np.nanmin(X, axis=0) if is_numeric else np.inf,
-                            np.nanmax(X, axis=0) if is_numeric else -np.inf,
-                            np.nanmean(X, axis=0) if is_numeric else 0,
-                            nans,
-                            variance if is_numeric else 0,
-                            X.shape[0] - nans))
+    is_sparse = sp.issparse(X)
+    weighted = weights is not None and X.dtype != object
 
+    if weighted:
+        weights = np.c_[weights] / sum(weights)
+        if is_sparse:
+            w_X = X.multiply(sp.csr_matrix(weights))
+            weighted_mean = np.asarray(w_X.sum(axis=0)).ravel()
+        else:
+            weighted_mean = np.nansum(X * weights, axis=0)
 
-# Patch bottleneck to contain these additions
-for func in (bincount, countnans, contingency, stats):
-    if getattr(bn, func.__name__, bincount).__module__ != func.__module__:
-        raise DeprecationWarning('bottleneck got its own {}();'
-                                 'consider deprecating our own.'.format(func.__name__))
-    setattr(bn, func.__name__, func)
+    if X.size and is_numeric and not is_sparse:
+        nans = np.isnan(X).sum(axis=0)
+        return np.column_stack((
+            np.nanmin(X, axis=0),
+            np.nanmax(X, axis=0),
+            np.nanmean(X, axis=0) if not weighted else weighted_mean,
+            np.nanvar(X, axis=0) if compute_variance else np.zeros(X.shape[1]),
+            nans,
+            X.shape[0] - nans))
+    elif is_sparse:
+        if compute_variance:
+            raise NotImplementedError
+
+        non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
+        X = X.tocsc()
+        return np.column_stack((
+            X.min(axis=0).toarray().ravel(),
+            X.max(axis=0).toarray().ravel(),
+            np.asarray(X.mean(axis=0)).ravel() if not weighted else weighted_mean,
+            np.zeros(X.shape[1]),      # variance not supported
+            X.shape[1] - non_zero,
+            non_zero))
+    else:
+        nans = ~X.astype(bool).sum(axis=0) if X.size else np.zeros(X.shape[1])
+        return np.column_stack((
+            np.tile(np.inf, X.shape[1]),
+            np.tile(-np.inf, X.shape[1]),
+            np.zeros(X.shape[1]),
+            np.zeros(X.shape[1]),
+            nans,
+            X.shape[0] - nans))

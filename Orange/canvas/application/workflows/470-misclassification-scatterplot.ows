@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="Cross-validation of, say, logistic regression can expose the data instances which were misclassified. There are six such instances for Iris Data set and ridge-regularized logistic regression. We can select different types of misclassification in Confusion Matrix and highlight them in the Scatter Plot. No surprise: the misclassified instances are close to the class-bordering regions in the scatter plot projection." title="Where are Misclassifications?" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(77.0, 71.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Test &amp; Score" position="(196.0, 149.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owtestlearners.OWTestLearners" title="Test &amp; Score" version="" />
+		<node id="2" name="Logistic Regression" position="(69.0, 228.0)" project_name="Orange3" qualified_name="Orange.widgets.classify.owlogisticregression.OWLogisticRegression" title="Logistic Regression" version="" />
+		<node id="3" name="Confusion Matrix" position="(339.0, 148.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owconfusionmatrix.OWConfusionMatrix" title="Confusion Matrix" version="" />
+		<node id="4" name="Scatter Plot" position="(490.0, 44.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="2" />
+		<link enabled="true" id="2" sink_channel="Evaluation Results" sink_node_id="3" source_channel="Evaluation Results" source_node_id="1" />
+		<link enabled="true" id="3" sink_channel="Data" sink_node_id="4" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="4" sink_channel="Data Subset" sink_node_id="4" source_channel="Selected Data" source_node_id="3" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(266.0, 236.0, 150.0, 72.0)">Shows different types of misclassifications. For Iris data set, Iris virginica are confused with versicolor and vice versa.</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(469.0, 146.0, 150.0, 60.0)">Misclassifications for Iris data sets are best seen in petal length-petal width projection.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(36.0, 319.0, 150.0, 48.0)">Replace logistic regression with any other classification method.</text>
+		<arrow end="(494.0, 98.0)" fill="#C1272D" id="3" start="(522.0, 142.0)" />
+		<arrow end="(337.0, 199.0)" fill="#C1272D" id="4" start="(335.0, 233.0)" />
+		<arrow end="(82.0, 283.0)" fill="#39B54A" id="5" start="(99.0, 316.0)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAMAAAB1cmxxAVgAAAAAcQJYEAAAAGNvbnRleHRfc2V0dGluZ3NxA11xBFgMAAAAcmVj
+ZW50X3BhdGhzcQVdcQZjT3JhbmdlLndpZGdldHMudXRpbHMuZmlsZWRpYWxvZ3MKUmVjZW50UGF0
+aApxBymBcQh9cQkoWAUAAABzaGVldHEKaAJYBwAAAGFic3BhdGhxC1g4AAAAL1VzZXJzL2JsYXov
+RHJvcGJveC9kZXYvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWJxDFgHAAAAcmVscGF0
+aHENWAgAAABpcmlzLnRhYnEOWAYAAABwcmVmaXhxD1gPAAAAc2FtcGxlLWRhdGFzZXRzcRBYBQAA
+AHRpdGxlcRFoAnViYVgLAAAAc2hlZXRfbmFtZXNxEn1xE1gGAAAAc291cmNlcRRLAFgLAAAAcmVj
+ZW50X3VybHNxFV1xFlgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEXY3NpcApfdW5waWNrbGVfdHlw
+ZQpxGFgMAAAAUHlRdDQuUXRDb3JlcRlYCgAAAFFCeXRlQXJyYXlxGkMuAdnQywABAAAAAAP/AAAC
+XAAABfAAAAMtAAAD/wAAAnIAAAXwAAADLQAAAAAAAHEbhXEch3EdUnEedS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWAcAAABuX2ZvbGRzcQFLA1gSAAAAc2h1ZmZsZV9zdHJhdGlmaWVkcQKIWA0AAABjdl9z
+dHJhdGlmaWVkcQOIWBAAAABjb250ZXh0X3NldHRpbmdzcQRdcQVjT3JhbmdlLndpZGdldHMuc2V0
+dGluZ3MKQ29udGV4dApxBimBcQd9cQgoWAQAAAB0aW1lcQlHQdXgmz/u6d1YBwAAAGNsYXNzZXNx
+Cl1xCyhYCwAAAElyaXMtc2V0b3NhcQxYDwAAAElyaXMtdmVyc2ljb2xvcnENWA4AAABJcmlzLXZp
+cmdpbmljYXEOZVgGAAAAdmFsdWVzcQ99cRAoWA8AAABjbGFzc19zZWxlY3Rpb25xEVgWAAAAKEF2
+ZXJhZ2Ugb3ZlciBjbGFzc2VzKXESWAcAAABuX2ZvbGRzcRNLA1gNAAAAY3Zfc3RyYXRpZmllZHEU
+iFgSAAAAc2h1ZmZsZV9zdHJhdGlmaWVkcRWIWAoAAAByZXNhbXBsaW5ncRZLAFgJAAAAbl9yZXBl
+YXRzcRdLA1gTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEYQy4B2dDLAAEAAAAAA3IAAAJxAAAGfQAA
+A/oAAANyAAAChwAABn0AAAP6AAAAAAAAcRlYCwAAAHNhbXBsZV9zaXplcRpLCXV1YmFYCgAAAHJl
+c2FtcGxpbmdxG0sAWAkAAABuX3JlcGVhdHNxHEsDWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cR1o
+GVgLAAAAc2FtcGxlX3NpemVxHksJdS4=
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWAwAAABwZW5hbHR5X3R5cGVxAUsBWAoAAABhdXRvX2FwcGx5cQKIWBMAAABzYXZlZFdp
+ZGdldEdlb21ldHJ5cQNDLgHZ0MsAAQAAAAAEYgAAAi8AAAWOAAADTAAABGIAAAJFAAAFjgAAA0wA
+AAAAAABxBFgHAAAAQ19pbmRleHEFSz1YDAAAAGxlYXJuZXJfbmFtZXEGWBMAAABMb2dpc3RpYyBS
+ZWdyZXNzaW9ucQd1Lg==
+</properties>
+		<properties format="pickle" node_id="3">gAN9cQAoWBAAAABjb250ZXh0X3NldHRpbmdzcQFdcQJjT3JhbmdlLndpZGdldHMuc2V0dGluZ3MK
+Q29udGV4dApxAymBcQR9cQUoWAQAAAB0aW1lcQZHQdXgm0BR3B5YBwAAAGNsYXNzZXNxB11xCChY
+CwAAAElyaXMtc2V0b3NhcQlYDwAAAElyaXMtdmVyc2ljb2xvcnEKWA4AAABJcmlzLXZpcmdpbmlj
+YXELZVgGAAAAdmFsdWVzcQx9cQ0oWAkAAABzZWxlY3Rpb25xDmNidWlsdGlucwpzZXQKcQ9dcRAo
+SwBLAYZxEUsBSwKGcRJLAksAhnETSwFLAIZxFEsASwKGcRVLAksBhnEWZYVxF1JxGFgRAAAAc2Vs
+ZWN0ZWRfcXVhbnRpdHlxGUsAWBQAAABhcHBlbmRfcHJvYmFiaWxpdGllc3EaiVgKAAAAYXV0b2Nv
+bW1pdHEbiFgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEcQy4B2dDLAAEAAAAAA4EAAAG+AAAGbgAA
+A8AAAAOBAAAB1AAABm4AAAPAAAAAAAAAcR1YEgAAAGFwcGVuZF9wcmVkaWN0aW9uc3EeiFgQAAAA
+c2VsZWN0ZWRfbGVhcm5lcnEfSwB1dWJhWBEAAABzZWxlY3RlZF9xdWFudGl0eXEgSwBYFAAAAGFw
+cGVuZF9wcm9iYWJpbGl0aWVzcSGJWAoAAABhdXRvY29tbWl0cSKIWBIAAABhcHBlbmRfcHJlZGlj
+dGlvbnNxI4hYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxJGgdWBAAAABzZWxlY3RlZF9sZWFybmVy
+cSVLAHUu
+</properties>
+		<properties format="pickle" node_id="4">gAN9cQAoWAUAAABncmFwaHEBfXECKFgRAAAAaml0dGVyX2NvbnRpbnVvdXNxA4hYDQAAAGNsYXNz
+X2RlbnNpdHlxBIhYEQAAAHRvb2x0aXBfc2hvd3NfYWxscQWJWAkAAABzaG93X2dyaWRxBolYEwAA
+AGxhYmVsX29ubHlfc2VsZWN0ZWRxB4lYCwAAAHNob3dfbGVnZW5kcQiIWAsAAABqaXR0ZXJfc2l6
+ZXEJSwFYCwAAAHBvaW50X3dpZHRocQpLClgLAAAAYWxwaGFfdmFsdWVxC0uAdVgTAAAAYXV0b19z
+ZW5kX3NlbGVjdGlvbnEMiFgRAAAAdG9vbGJhcl9zZWxlY3Rpb25xDUsAWBAAAABjb250ZXh0X3Nl
+dHRpbmdzcQ5dcQ9jT3JhbmdlLndpZGdldHMuc2V0dGluZ3MKQ29udGV4dApxECmBcRF9cRIoWA4A
+AABvcmRlcmVkX2RvbWFpbnETXXEUKFgMAAAAc2VwYWwgbGVuZ3RocRVLAoZxFlgLAAAAc2VwYWwg
+d2lkdGhxF0sChnEYWAwAAABwZXRhbCBsZW5ndGhxGUsChnEaWAsAAABwZXRhbCB3aWR0aHEbSwKG
+cRxYBAAAAGlyaXNxHUsBhnEeZVgKAAAAYXR0cmlidXRlc3EffXEgKGgVSwJoG0sCaBlLAmgXSwJo
+HUsBdVgGAAAAdmFsdWVzcSF9cSIoaAF9cSMoaAOISv7///+GcSRoBIhK/v///4ZxJVgKAAAAYXR0
+cl9zaGFwZXEmWAAAAABxJ0r+////hnEoWAoAAABhdHRyX2xhYmVscSloJ0r+////hnEqWAoAAABh
+dHRyX2NvbG9ycStoHUsBhnEsWAkAAABhdHRyX3NpemVxLWgnSv7///+GcS5oBolK/v///4ZxL2gJ
+SwFK/v///4ZxMGgFiUr+////hnExaAeJSv7///+GcTJoC0uASv7///+GcTNoCIhK/v///4ZxNGgK
+SwpK/v///4ZxNXVoDIhK/v///4ZxNmgNSwBK/v///4ZxN1gGAAAAYXR0cl94cThYDAAAAHBldGFs
+IGxlbmd0aHE5SwKGcTpYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxO0MuAdnQywABAAAAAAWKAAAB
+pgAACL8AAAR1AAAFigAAAbwAAAi/AAAEdQAAAAAAAHE8Sv7///+GcT1YCwAAAGF1dG9fc2FtcGxl
+cT6ISv7///+GcT9YBgAAAGF0dHJfeXFAWAsAAABwZXRhbCB3aWR0aHFBSwKGcUJ1WAUAAABtZXRh
+c3FDfXFEWAQAAAB0aW1lcUVHQdXgm0BSTV51YmFoO2g8aD6IdS4=
+</properties>
+	</node_properties>
+</scheme>

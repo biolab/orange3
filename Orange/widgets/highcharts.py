@@ -13,8 +13,8 @@ from urllib.request import pathname2url
 
 import numpy as np
 
-from PyQt4.QtCore import QUrl, QObject, pyqtProperty, pyqtSlot, QEventLoop
-from PyQt4.QtGui import qApp, QColor
+from PyQt4.QtCore import QUrl, QObject, pyqtProperty, pyqtSlot, QTimer
+from PyQt4.QtGui import QColor
 
 from Orange.widgets.webview import WebView
 
@@ -181,19 +181,19 @@ class Highchart(WebView):
             _merge_dicts(options, _kwargs_options(kwargs))
 
         super_evalJS = super().evalJS
+        super_evalJS('window.__js_queue = [];')
+        self._is_init = False
 
         def evalOptions():
             super_evalJS(javascript)
-            self.evalJS('''
+            super_evalJS('''
                 var options = {options};
                 fixupOptionsObject(options);
                 Highcharts.setOptions(options);
             '''.format(options=json(options)))
+            self._is_init = True
 
         self.frame.loadFinished.connect(evalOptions)
-        # Give above scripts time to load
-        qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-        qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
 
     def contextMenuEvent(self, event):
         """ Zoom out on right click. Also disable context menu."""
@@ -279,9 +279,6 @@ class Highchart(WebView):
         instead of converting it ``some_data.tolist()``, which is done
         implicitly.
         """
-        # Give default options some time to apply
-        qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-
         options = (options or {}).copy()
         if not isinstance(options, MutableMapping):
             raise ValueError('options must be dict')
@@ -300,10 +297,17 @@ class Highchart(WebView):
 
     def evalJS(self, javascript):
         """ Asynchronously evaluate JavaScript code. """
-        # Why do we need this async? I don't know. But performance of
-        # loading/evaluating any JS code is greatly improved this way.
-        _ASYNC = 'setTimeout(function() { %s; }, 10);'
-        super().evalJS(_ASYNC % javascript)
+        _ENQUEUE = '__js_queue.push(function() { %s; });'
+        evalJS = super().evalJS
+
+        def _dequeue():
+            if not self._is_init:
+                QTimer.singleShot(1, _dequeue)
+                return
+            return evalJS('while (__js_queue.length) (__js_queue.shift())();')
+
+        evalJS(_ENQUEUE % javascript)
+        return _dequeue()
 
     def clear(self):
         """Remove all series from the chart"""

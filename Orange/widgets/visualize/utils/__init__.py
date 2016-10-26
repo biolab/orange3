@@ -10,10 +10,12 @@ from PyQt4.QtGui import (
 from Orange.data import Variable
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
+from Orange.widgets.utils.messages import WidgetMessagesMixin
 from Orange.widgets.utils.progressbar import ProgressBarMixin
+from Orange.widgets.widget import Msg
 
 
-class VizRankDialog(QDialog, ProgressBarMixin):
+class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     """
     Base class for VizRank dialogs, providing a GUI with a table and a button,
     and the skeleton for managing the evaluation of visualizations.
@@ -58,10 +60,17 @@ class VizRankDialog(QDialog, ProgressBarMixin):
 
     processingStateChanged = Signal(int)
     progressBarValueChanged = Signal(float)
+    messageActivated = Signal(Msg)
+    messageDeactivated = Signal(Msg)
 
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
-        super().__init__(windowTitle=self.captionTitle)
+        QDialog.__init__(self, windowTitle=self.captionTitle)
+        WidgetMessagesMixin.__init__(self)
+        self.setLayout(QVBoxLayout())
+
+        self.insert_message_bar()
+        self.layout().insertWidget(0, self.message_bar)
         self.master = master
 
         self.keep_running = False
@@ -69,7 +78,6 @@ class VizRankDialog(QDialog, ProgressBarMixin):
         self.saved_progress = 0
         self.scores = []
 
-        self.setLayout(QVBoxLayout())
         self.rank_model = QStandardItemModel(self)
         self.rank_table = view = QTableView(
             selectionBehavior=QTableView.SelectRows,
@@ -218,10 +226,15 @@ class VizRankDialogAttrPair(VizRankDialog):
     """
 
     pairSelected = Signal(Variable, Variable)
+
     _AttrRole = next(gui.OrangeUserRole)
 
+    class Information(VizRankDialog.Information):
+        nothing_to_rank = Msg("There is nothing to rank.")
+
     def __init__(self, master):
-        super().__init__(master)
+        VizRankDialog.__init__(self, master)
+        self.resize(320, 512)
         self.attrs = []
 
     def sizeHint(self):
@@ -231,13 +244,11 @@ class VizRankDialogAttrPair(VizRankDialog):
 
     def check_preconditions(self):
         """Refuse ranking if there are less than two feature or instances."""
-        if self.master.data is None or \
-                len(self.master.data.domain.attributes) < 2 or \
-                len(self.master.data) < 2:
-            self.master.information(33, "There is nothing to rank.")
-            return False
-        self.master.information(33)
-        return True
+        can_rank = self.master.data is not None and \
+            len(self.master.data.domain.attributes) >= 2 and \
+            len(self.master.data) >= 2
+        self.Information.nothing_to_rank(shown=not can_rank)
+        return can_rank
 
     def on_selection_changed(self, selected, deselected):
         attrs = [selected.indexes()[i].data(self._AttrRole) for i in (0, 1)]

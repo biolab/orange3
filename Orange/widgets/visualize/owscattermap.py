@@ -455,7 +455,7 @@ class OWScatterMap(widget.OWWidget):
     name = "Scatter Map"
     description = "Draw a two dimensional rectangular bin density plot."
     icon = "icons/Scattermap.svg"
-    priority = 100
+    priority = 500
 
     inputs = [("Data", Orange.data.Table, "set_data")]
 
@@ -638,11 +638,7 @@ class OWScatterMap(widget.OWWidget):
                 item = self.z_values_view.item(i)
                 item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
 
-        if not cvars:
-            self.error(1, "Data contains no continuous features")
-        else:
-            self.error(1)
-
+        self.error("Data contains no continuous features", shown=not cvars)
         self.setup_plot()
 
     def clear(self):

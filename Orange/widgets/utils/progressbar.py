@@ -70,7 +70,7 @@ class ProgressBarMixin:
             else:
                 text = "{}:{}:{:02}".format(hrs, mins, secs)
             self.setWindowTitle("{} ({:d}%, ETA: {})"
-                                .format(self.captionTitle, value, text))
+                                .format(self.captionTitle, int(value), text))
         else:
             self.setWindowTitle(self.captionTitle + " (0% complete)")
 

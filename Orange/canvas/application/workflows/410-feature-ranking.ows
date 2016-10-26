@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="For supervised problems, where data instances are annotated with class labels, we would like to know which are the most informative features. Rank widget provides a table of features and their informativity scores, and supports manual feature selection. In the workflow, we used it to find the best two features (of initial 79 from brown-selected data set) and display its scatter plot." title="Feature Ranking" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(39.0, 195.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Rank" position="(296.0, 195.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owrank.OWRank" title="Rank" version="" />
+		<node id="2" name="Scatter Plot" position="(423.0, 195.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
+		<node id="3" name="Impute" position="(163.0, 93.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owimpute.OWImpute" title="Impute" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="2" source_channel="Reduced Data" source_node_id="1" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="3" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="2" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="3" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(242.0, 17.0, 150.0, 60.0)">We imputed the missing values to be able to visualize all the data points.</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(311.0, 292.0, 218.0, 61.0)">Scatter plot with most informative features. Do they provide a good separation of classes? Open the widget to check this out.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(101.0, 256.0, 150.0, 60.0)">Displays the feature scores. We used the widget to select two most informative features.</text>
+		<arrow end="(262.0, 209.0)" fill="#C1272D" id="3" start="(209.0, 254.0)" />
+		<arrow end="(399.0, 253.0)" fill="#C1272D" id="4" start="(394.0, 290.0)" />
+		<arrow end="(198.0, 68.0)" fill="#C1272D" id="5" start="(237.0, 47.00000000000001)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAYAAABzb3VyY2VxAUsAWAwAAAByZWNlbnRfcGF0aHNxAl1xAyhjT3JhbmdlLndpZGdl
+dHMudXRpbHMuZmlsZWRpYWxvZ3MKUmVjZW50UGF0aApxBCmBcQV9cQYoWAYAAABwcmVmaXhxB1gP
+AAAAc2FtcGxlLWRhdGFzZXRzcQhYBwAAAGFic3BhdGhxCVhCAAAAL1VzZXJzL2JsYXovRHJvcGJv
+eC9kZXYvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvYnJvd24tc2VsZWN0ZWQudGFicQpYBwAAAHJl
+bHBhdGhxC1gSAAAAYnJvd24tc2VsZWN0ZWQudGFicQxYBQAAAHNoZWV0cQ1YAAAAAHEOWAUAAAB0
+aXRsZXEPaA51YmgEKYFxEH1xEShoB2gIaAlYOAAAAC9Vc2Vycy9ibGF6L0Ryb3Bib3gvZGV2L29y
+YW5nZTMvT3JhbmdlL2RhdGFzZXRzL2lyaXMudGFicRJoC1gIAAAAaXJpcy50YWJxE2gNaA5oD2gO
+dWJlWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cRRDLgHZ0MsAAQAAAAAD/wAAAlwAAAXwAAAEQwAA
+A/8AAAJyAAAF8AAABEMAAAAAAABxFVgDAAAAdXJscRZoDlgQAAAAY29udGV4dF9zZXR0aW5nc3EX
+XXEYWAsAAABzaGVldF9uYW1lc3EZfXEaWAsAAAByZWNlbnRfdXJsc3EbXXEcdS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFDLgHZ0MsAAQAAAAACtQAAAQoAAAc7AAAE
+WgAAArUAAAEgAAAHOwAABFoAAAAAAABxAlgKAAAAYXV0b19hcHBseXEDiFgLAAAAaGVhZGVyU3Rh
+dGVxBENmAAAA/wAAAAAAAAABAAAAAQAAAAEBAAAAAAAAAAAAAAAAAAAAAAAAAtAAAAAIAAEBAAAA
+AAAAAAAAAAAAAGT/////AAAAhAAAAAAAAAACAAAAFAAAAAEAAAAAAAACvAAAAAcAAAAAcQVDZgAA
+AP8AAAAAAAAAAQAAAAEAAAABAQAAAAAAAAAAAAAAAAAAAAAAAADcAAAAAwABAQAAAAAAAAAAAAAA
+AABk/////wAAAIQAAAAAAAAAAgAAABQAAAABAAAAAAAAAMgAAAACAAAAAHEGhnEHWAwAAABzZWxl
+Y3RNZXRob2RxCEsDWAkAAABuU2VsZWN0ZWRxCUsCdS4=
+</properties>
+		<properties format="pickle" node_id="2">gAN9cQAoWBMAAABhdXRvX3NlbmRfc2VsZWN0aW9ucQGIWAsAAABhdXRvX3NhbXBsZXECiFgTAAAA
+c2F2ZWRXaWRnZXRHZW9tZXRyeXEDQy4B2dDLAAEAAAAAA60AAAGsAAAGbAAABJ0AAAOtAAABwgAA
+BmwAAASdAAAAAAAAcQRYEQAAAHRvb2xiYXJfc2VsZWN0aW9ucQVLAFgFAAAAZ3JhcGhxBn1xByhY
+DQAAAGNsYXNzX2RlbnNpdHlxCIlYCwAAAHNob3dfbGVnZW5kcQmIWBEAAAB0b29sdGlwX3Nob3dz
+X2FsbHEKiVgJAAAAc2hvd19ncmlkcQuJWAsAAABqaXR0ZXJfc2l6ZXEMSwpYEQAAAGppdHRlcl9j
+b250aW51b3VzcQ2JWAsAAABhbHBoYV92YWx1ZXEOS4BYEwAAAGxhYmVsX29ubHlfc2VsZWN0ZWRx
+D4lYCwAAAHBvaW50X3dpZHRocRBLCnVYEAAAAGNvbnRleHRfc2V0dGluZ3NxEV1xEmNPcmFuZ2Uu
+d2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0CnETKYFxFH1xFShYBQAAAG1ldGFzcRZ9cRdYBgAAAHZh
+bHVlc3EYfXEZKGgBiEr+////hnEaaAKISv7///+GcRtoBn1xHChYCgAAAGF0dHJfY29sb3JxHVgI
+AAAAZnVuY3Rpb25xHksBhnEfWAoAAABhdHRyX3NoYXBlcSBYAAAAAHEhSv7///+GcSJoDEsKSv7/
+//+GcSNoDkuASv7///+GcSRoCIlK/v///4ZxJWgJiEr+////hnEmaAqJSv7///+GcSdoC4lK/v//
+/4ZxKFgJAAAAYXR0cl9zaXplcSloIUr+////hnEqaA+JSv7///+GcStoDYlK/v///4ZxLFgKAAAA
+YXR0cl9sYWJlbHEtaCFK/v///4ZxLmgQSwpK/v///4ZxL3VoA2gESv7///+GcTBYBgAAAGF0dHJf
+eHExWAYAAABkaWF1IGZxMksChnEzaAVLAEr+////hnE0WAYAAABhdHRyX3lxNVgKAAAAc3BvLSBl
+YXJseXE2SwKGcTd1WAQAAAB0aW1lcThHQdXgoeNUYjVYCgAAAGF0dHJpYnV0ZXNxOX1xOihYCgAA
+AHNwby0gZWFybHlxO0sCaB5LAVgGAAAAZGlhdSBmcTxLAnVYDgAAAG9yZGVyZWRfZG9tYWlucT1d
+cT4oaDxLAoZxP2g7SwKGcUBoHksBhnFBZXViYXUu
+</properties>
+		<properties format="pickle" node_id="3">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
+iXUu
+</properties>
+	</node_properties>
+</scheme>

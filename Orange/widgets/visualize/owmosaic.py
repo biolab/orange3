@@ -21,13 +21,14 @@ from Orange.widgets.utils import to_html
 from Orange.widgets.utils.scaling import get_variable_values_sorted
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress)
-from Orange.widgets.widget import OWWidget, Default
+from Orange.widgets.widget import OWWidget, Default, Msg
 
 
 class OWMosaicDisplay(OWWidget):
     name = "Mosaic Display"
     description = "Display data in a mosaic plot."
     icon = "icons/MosaicDisplay.svg"
+    priority = 320
 
     inputs = [("Data", Table, "set_data", Default),
               ("Data Subset", Table, "set_subset_data")]
@@ -57,6 +58,12 @@ class OWMosaicDisplay(OWWidget):
                   QColor(255, 100, 100), QColor(255, 0, 0)]
 
     graph_name = "canvas"
+
+    class Warning(OWWidget.Warning):
+        incompatible_subset = Msg("Data subset is incompatible with Data")
+        no_valid_data = Msg("No valid data")
+        no_cont_selection_sql = \
+            Msg("Selection of continuous variables on SQL is not supported")
 
     def __init__(self):
         super().__init__()
@@ -144,14 +151,9 @@ class OWMosaicDisplay(OWWidget):
         self.closeContext()
         self.data = data
         self.init_combos(self.data)
-        self.information([0, 1, 2])
         if not self.data:
             self.discrete_data = None
             return
-        """ TODO: check
-        if data.has_missing_class():
-            self.information(1, "Examples with missing classes were removed.")
-        """
         if any(attr.is_continuous for attr in data.domain):
             self.discrete_data = Discretize(method=EqualFreq(n=4))(data)
         else:
@@ -174,19 +176,15 @@ class OWMosaicDisplay(OWWidget):
             self.unprocessed_subset_data = None
 
     def set_subset_data(self, data):
+        self.Warning.incompatible_subset.clear()
         if self.data is None:
             self.unprocessed_subset_data = data
-            self.warning(10)
             return
         try:
             self.subset_data = data.from_table(self.data.domain, data)
-            self.warning(10)
         except:
             self.subset_data = None
-            self.warning(
-                10,
-                "'Data' and 'Data Subset' are incompatible" if data is not None
-                else "")
+            self.Warning.incompatible_subset(shown=data is not None)
 
     # this is called by widget after setData and setSubsetData are called.
     # this way the graph is updated only once
@@ -224,12 +222,10 @@ class OWMosaicDisplay(OWWidget):
             self.send("Selected Data", None)
             return
         filters = []
-        self.warning(6)
+        self.Warning.no_cont_selection_sql.clear()
         if self.discrete_data is not self.data:
             if isinstance(self.data, SqlTable):
-                self.warning(
-                    6,
-                    "Selection of continuous variables on SQL is not supported")
+                self.Warning.no_cont_selection_sql()
         for i in self.selection:
             cols, vals, area = self.areas[i]
             filters.append(
@@ -642,10 +638,10 @@ class OWMosaicDisplay(OWWidget):
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
         if len(data) == 0:
-            self.warning(5, "No valid data for current attributes.")
+            self.Warning.no_valid_data()
             return
         else:
-            self.warning(5)
+            self.Warning.no_valid_data.clear()
 
         if self.interior_coloring == self.PEARSON:
             apriori_dists = [get_distribution(data, attr) for attr in attr_list]

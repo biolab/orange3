@@ -58,7 +58,7 @@ class OWSieveDiagram(OWWidget):
     """
     name = "Sieve Diagram"
     icon = "icons/SieveDiagram.svg"
-    priority = 4200
+    priority = 310
 
     inputs = [("Data", Table, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
@@ -213,14 +213,14 @@ class OWSieveDiagram(OWWidget):
         and at least two attributes appear in the domain. If there are
         multiple, use the first two. Combos are disabled if inputs are used.
         """
-        self.warning(1)
+        self.warning()
         self.attr_box.setEnabled(True)
         if not self.input_features:  # None or empty
             return
         features = [f for f in self.input_features if f in self.attrs]
         if not features:
-            self.warning(1, "Features from the input signal "
-                            "are not present in the data")
+            self.warning(
+                "Features from the input signal are not present in the data")
             return
         old_attrs = self.attrX, self.attrY
         self.attrX, self.attrY = [f.name for f in (features * 2)[:2]]

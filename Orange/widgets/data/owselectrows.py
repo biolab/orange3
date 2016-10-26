@@ -344,7 +344,7 @@ class OWSelectRows(widget.OWWidget):
     def commit(self):
         matching_output = self.data
         non_matching_output = None
-        self.error(21)
+        self.error()
         if self.data:
             domain = self.data.domain
             conditions = []
@@ -352,17 +352,18 @@ class OWSelectRows(widget.OWWidget):
                 attr_index = domain.index(attr_name)
                 attr = domain[attr_index]
 
-                # Parse datetime strings into floats
-                if isinstance(attr, TimeVariable):
-                    try:
-                        values = [attr.parse(v) for v in values]
-                    except ValueError as e:
-                        self.error(21, e.args[0])
-                        return
-
                 if attr.is_continuous:
                     if any(not v for v in values):
                         continue
+
+                    # Parse datetime strings into floats
+                    if isinstance(attr, TimeVariable):
+                        try:
+                            values = [attr.parse(v) for v in values]
+                        except ValueError as e:
+                            self.error(e.args[0])
+                            return
+
                     filter = data_filter.FilterContinuous(
                         attr_index, oper, *[float(v) for v in values])
                 elif attr.is_string:

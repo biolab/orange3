@@ -43,6 +43,16 @@ Example
 .. index:: mean fitter
    pair: regression; mean fitter
 
+
+Polynomial
+----------
+
+*Polynomial model* is a wrapper that constructs polynomial features of
+a specified degree and learns a model on them.
+
+.. autoclass:: Orange.regression.linear.PolynomialLearner
+
+
 Mean
 ----
 

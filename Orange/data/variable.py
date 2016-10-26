@@ -852,6 +852,8 @@ class TimeVariable(ContinuousVariable):
 
         (1, 0, '%Y-%m-%d'),
 
+        (1, 1, '%Y-%m-%d %H:%M:%S.%f'),
+        (1, 1, '%Y-%m-%dT%H:%M:%S.%f'),
         (1, 1, '%Y-%m-%d %H:%M:%S.%f%z'),
         (1, 1, '%Y-%m-%dT%H:%M:%S.%f%z'),
 
@@ -936,7 +938,8 @@ class TimeVariable(ContinuousVariable):
             return Unknown
         datestr = datestr.strip().rstrip('Z')
 
-        ERROR = ValueError('Invalid datetime format. Only ISO 8601 supported.')
+        ERROR = ValueError("Invalid datetime format '{}'. "
+                           "Only ISO 8601 supported.".format(datestr))
         if not self._matches_iso_format(datestr):
             try:
                 # If it is a number, assume it is a unix timestamp
@@ -986,3 +989,12 @@ class TimeVariable(ContinuousVariable):
         try: return dt.timestamp()
         except OverflowError:
             return -(self.UNIX_EPOCH - dt).total_seconds()
+
+    def to_val(self, s):
+        """
+        Convert a value, given as an instance of an arbitrary type, to a float.
+        """
+        if isinstance(s, str):
+            return self.parse(s)
+        else:
+            return super().to_val(s)

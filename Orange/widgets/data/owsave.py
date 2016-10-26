@@ -83,9 +83,10 @@ class OWSave(widget.OWWidget):
         else:
             try:
                 self.writer.write(self.filename, self.data)
-                self.error()
             except Exception as errValue:
                 self.error(str(errValue))
+            else:
+                self.error()
 
 
 if __name__ == "__main__":

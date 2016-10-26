@@ -36,18 +36,21 @@ class OWLogisticRegression(OWBaseLearner):
     intercept_scaling = 1.0
 
     penalty_types = ("Lasso (L1)", "Ridge (L2)")
+    penalty_types_short = ["l1", "l2"]
 
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, box=True)
-        gui.comboBox(box, self, "penalty_type", label="Regularization type: ",
-                     items=self.penalty_types, orientation=Qt.Horizontal,
-                     addSpace=4, callback=self.settings_changed)
+        self.penalty_combo = gui.comboBox(
+            box, self, "penalty_type", label="Regularization type: ",
+            items=self.penalty_types, orientation=Qt.Horizontal,
+            addSpace=4, callback=self.settings_changed)
         gui.widgetLabel(box, "Strength:")
         box2 = gui.hBox(gui.indentedBox(box))
         gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
-        gui.hSlider(box2, self, "C_index",
-                    minValue=0, maxValue=len(self.C_s) - 1,
-                    callback=self.set_c, createLabel=False)
+        self.c_slider = gui.hSlider(
+            box2, self, "C_index", minValue=0, maxValue=len(self.C_s) - 1,
+            callback=lambda: (self.set_c(), self.settings_changed()),
+            createLabel=False)
         gui.widgetLabel(box2, "Strong").setStyleSheet("margin-top:6px")
         box2 = gui.hBox(box)
         box2.layout().setAlignment(Qt.AlignCenter)
@@ -58,10 +61,9 @@ class OWLogisticRegression(OWBaseLearner):
         self.C = self.C_s[self.C_index]
         fmt = "C={}" if self.C >= 1 else "C={:.3f}"
         self.c_label.setText(fmt.format(self.C))
-        self.settings_changed()
 
     def create_learner(self):
-        penalty = ["l1", "l2"][self.penalty_type]
+        penalty = self.penalty_types_short[self.penalty_type]
         return self.LEARNER(
             penalty=penalty,
             dual=self.dual,

@@ -1,5 +1,3 @@
-from inspect import getmembers
-
 import numpy
 from PyQt4.QtCore import Qt
 from scipy.sparse import issparse
@@ -7,15 +5,24 @@ from scipy.sparse import issparse
 import Orange.data
 import Orange.misc
 from Orange import distance
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import OWWidget, Msg
 
-DENSE_METRICS = [obj for name, obj in getmembers(distance,
-                                                 lambda x: isinstance(x, distance.Distance))]
-SPARSE_METRICS = list(filter(lambda x: x.supports_sparse, DENSE_METRICS))
+METRICS = [
+    distance.Euclidean,
+    distance.Manhattan,
+    distance.Mahalanobis,
+    distance.Cosine,
+    distance.Jaccard,
+    distance.SpearmanR,
+    distance.SpearmanRAbsolute,
+    distance.PearsonR,
+    distance.PearsonRAbsolute,
+]
 
 
-class OWDistances(widget.OWWidget):
+class OWDistances(OWWidget):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
@@ -30,18 +37,25 @@ class OWDistances(widget.OWWidget):
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
 
+    class Error(OWWidget.Error):
+        no_continuous_features = Msg("No continuous features")
+        sparse_data = Msg("Selected metric does not support sparse data")
+        empty_data = Msg("Empty data (shape = {})")
+
+    class Warning(OWWidget.Warning):
+        ignoring_discrete = Msg("Ignoring discrete features")
+
     def __init__(self):
         super().__init__()
 
         self.data = None
-        self.available_metrics = DENSE_METRICS
 
         gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
         )
         self.metrics_combo = gui.comboBox(self.controlArea, self, "metric_idx",
                                           box="Distance Metric",
-                                          items=[m.name for m in self.available_metrics],
+                                          items=[m.name for m in METRICS],
                                           callback=self._invalidate
         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
@@ -53,54 +67,70 @@ class OWDistances(widget.OWWidget):
 
     @check_sql_input
     def set_data(self, data):
+        """
+        Set the input data set from which to compute the distances
+        """
         self.data = data
         self.refresh_metrics()
         self.unconditional_commit()
 
     def refresh_metrics(self):
-        sparse = self.data and issparse(self.data.X)
-        self.available_metrics = SPARSE_METRICS if sparse else DENSE_METRICS
+        """
+        Refresh available metrics depending on the input data's sparsenes
+        """
+        sparse = self.data is not None and issparse(self.data.X)
+        for i, metric in enumerate(METRICS):
+            item = self.metrics_combo.model().item(i)
+            item.setEnabled(not sparse or metric.supports_sparse)
 
-        self.metrics_combo.clear()
-        self.metric_idx = 0
-        for m in self.available_metrics:
-            self.metrics_combo.addItem(m.name)
+        self._checksparse()
+
+    def _checksparse(self):
+        # Check the current metric for input data compatibility and set/clear
+        # appropriate informational GUI state
+        self.Error.sparse_data(
+            shown=self.data is not None and issparse(self.data.X) and
+            not METRICS[self.metric_idx].supports_sparse)
 
     def commit(self):
-        self.warning(1)
-        self.error(1)
+        metric = METRICS[self.metric_idx]
+        distances = None
+        data = self.data
+        if data is not None and issparse(data.X) and \
+                not metric.supports_sparse:
+            data = None
+        self.clear_messages()
 
-        data = distances = None
-        if self.data is not None:
-            metric = self.available_metrics[self.metric_idx]
+        if data is not None:
             if isinstance(metric, distance.MahalanobisDistance):
                 metric.fit(self.data, axis=1-self.axis)
 
             if not any(a.is_continuous for a in self.data.domain.attributes):
-                self.error(1, "No continuous features")
+                self.Error.no_continuous_features()
                 data = None
             elif any(a.is_discrete for a in self.data.domain.attributes) or \
                     (not issparse(self.data.X) and numpy.any(numpy.isnan(self.data.X))):
                 data = distance._preprocess(self.data)
                 if len(self.data.domain.attributes) - len(data.domain.attributes) > 0:
-                    self.warning(1, "Ignoring discrete features")
+                    self.Warning.ignoring_discrete()
             else:
                 data = self.data
 
         if data is not None:
             shape = (len(data), len(data.domain.attributes))
             if numpy.product(shape) == 0:
-                self.error(1, "Empty data (shape == {})".format(shape))
+                self.Error.empty_data(shape)
             else:
                 distances = metric(data, data, 1 - self.axis, impute=True)
 
         self.send("Distances", distances)
 
     def _invalidate(self):
+        self._checksparse()
         self.commit()
 
     def send_report(self):
         self.report_items((
             ("Distances Between", ["Rows", "Columns"][self.axis]),
-            ("Metric", self.available_metrics[self.metric_idx].name)
+            ("Metric", METRICS[self.metric_idx].name)
         ))

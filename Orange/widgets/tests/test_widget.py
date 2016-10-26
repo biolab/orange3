@@ -1,6 +1,8 @@
-from unittest import TestCase
-from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS, OWComponent
-from Orange.widgets.tests.base import GuiTest
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, OWComponent
+from Orange.widgets.settings import Setting
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget
 
 
@@ -9,20 +11,21 @@ class DummyComponent(OWComponent):
 
 
 class MyWidget(OWWidget):
-    def __init__(self, depth=1):
+    name = "Dummy"
+
+    field = Setting(42)
+
+    def __init__(self):
         super().__init__()
 
-        self.field = 42
         self.component = DummyComponent(self)
-        if depth:
-            self.widget = MyWidget(depth=depth-1)
-        else:
-            self.widget = None
+        self.widget = None
 
 
-class WidgetTestCase(GuiTest):
+class WidgetTestCase(WidgetTest):
     def test_setattr(self):
-        widget = MyWidget()
+        widget = self.create_widget(MyWidget)
+        widget.widget = self.create_widget(MyWidget)
 
         setattr(widget, 'field', 1)
         self.assertEqual(widget.field, 1)
@@ -43,7 +46,11 @@ class WidgetTestCase(GuiTest):
             setattr(widget, 'unknown_field2.field', 6)
 
     def test_notify_controller_on_attribute_change(self):
-        widget = MyWidget(depth=3)
+        widget = self.create_widget(MyWidget)
+        widget.widget = self.create_widget(MyWidget)
+        widget.widget.widget = self.create_widget(MyWidget)
+        widget.widget.widget.widget = self.create_widget(MyWidget)
+
         delattr(widget.widget, CONTROLLED_ATTRIBUTES)
         delattr(widget.widget.widget, CONTROLLED_ATTRIBUTES)
         delattr(widget.widget.widget.widget, CONTROLLED_ATTRIBUTES)
@@ -66,5 +73,11 @@ class WidgetTestCase(GuiTest):
 
         self.assertEqual(len(calls), 5)
 
+    def test_widget_tests_do_not_use_stored_settings(self):
+        widget = self.create_widget(MyWidget)
 
+        widget.field = 5
+        widget.saveSettings()
 
+        widget2 = self.create_widget(MyWidget)
+        self.assertEqual(widget2.field, 42)

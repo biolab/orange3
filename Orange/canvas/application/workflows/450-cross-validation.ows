@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="How good are supervised data mining methods on your classification data set? Here's a workflow that scores various classification techniques on a data set from medicine. The central widget here is the one for testing and scoring, which is given the data and a set of learners, does cross-validation and scores predictive accuracy, and outputs the scores for further examination." title="Cross-Validation" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(91.0, 170.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Test &amp; Score" position="(364.0, 218.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owtestlearners.OWTestLearners" title="Test &amp; Score" version="" />
+		<node id="2" name="Logistic Regression" position="(202.0, 245.0)" project_name="Orange3" qualified_name="Orange.widgets.classify.owlogisticregression.OWLogisticRegression" title="Logistic Regression" version="" />
+		<node id="3" name="Random Forest Classification" position="(225.0, 328.0)" project_name="Orange3" qualified_name="Orange.widgets.classify.owrandomforest.OWRandomForest" title="Random Forest Classification" version="" />
+		<node id="4" name="SVM" position="(295.0, 395.0)" project_name="Orange3" qualified_name="Orange.widgets.classify.owsvmclassification.OWSVMClassification" title="SVM" version="" />
+		<node id="5" name="Confusion Matrix" position="(482.0, 218.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owconfusionmatrix.OWConfusionMatrix" title="Confusion Matrix" version="" />
+		<node id="6" name="Data Table" position="(300.0, 93.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="7" name="Data Table" position="(651.0, 218.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table (1)" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="1" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="2" />
+		<link enabled="true" id="2" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="3" />
+		<link enabled="true" id="3" sink_channel="Learner" sink_node_id="1" source_channel="Learner" source_node_id="4" />
+		<link enabled="true" id="4" sink_channel="Evaluation Results" sink_node_id="5" source_channel="Evaluation Results" source_node_id="1" />
+		<link enabled="true" id="5" sink_channel="Data" sink_node_id="6" source_channel="Data" source_node_id="0" />
+		<link enabled="true" id="6" sink_channel="Data" sink_node_id="7" source_channel="Selected Data" source_node_id="5" />
+	</links>
+	<annotations>
+		<text font-family="Helvetica" font-size="14" id="0" rect="(16.0, 56.0, 180.0, 82.0)">Choose class-labeled data set. Say, "iris.tab" from documentation data sets.</text>
+		<text font-family="Helvetica" font-size="14" id="1" rect="(381.0, 76.0, 171.0, 54.0)">It's always a good idea to check out the data first.</text>
+		<text font-family="Helvetica" font-size="14" id="2" rect="(586.0, 90.0, 197.0, 96.0)">Select a cell in confusion matrix to obtain related data instances. Here we examine them in the spreadheet.</text>
+		<text font-family="Helvetica" font-size="14" id="3" rect="(533.0, 308.0, 150.0, 54.0)">Use for additional analysis of cross-validation results.</text>
+		<text font-family="Helvetica" font-size="14" id="4" rect="(373.0, 319.0, 132.0, 82.0)">Cross-validation takes place here. Double click to see the performance scores.</text>
+		<text font-family="Helvetica" font-size="14" id="5" rect="(42.0, 394.0, 150.0, 68.0)">Several learners can be scored in cross-validation at the same time.</text>
+		<arrow end="(67.0, 150.0)" fill="#C1272D" id="6" start="(47.0, 116.0)" />
+		<arrow end="(336.0, 94.0)" fill="#C1272D" id="7" start="(378.0, 94.0)" />
+		<arrow end="(373.0, 272.0)" fill="#C1272D" id="8" start="(398.0, 318.0)" />
+		<arrow end="(490.0, 273.0)" fill="#C1272D" id="9" start="(529.0, 321.0)" />
+		<arrow end="(646.0, 188.0)" fill="#C1272D" id="10" start="(647.0, 158.0)" />
+		<arrow end="(172.0, 335.0)" fill="#39B54A" id="11" start="(115.0, 381.0)" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWAwAAAByZWNlbnRfcGF0aHNxAV1xAmNPcmFuZ2Uud2lkZ2V0cy51dGlscy5maWxlZGlh
+bG9ncwpSZWNlbnRQYXRoCnEDKYFxBH1xBShYBgAAAHByZWZpeHEGWA8AAABzYW1wbGUtZGF0YXNl
+dHNxB1gHAAAAcmVscGF0aHEIWAgAAABpcmlzLnRhYnEJWAUAAAB0aXRsZXEKWAAAAABxC1gHAAAA
+YWJzcGF0aHEMWFQAAAAvVXNlcnMvYmxhei8udmlydHVhbGVudnMvb3JhbmdlL2xpYi9weXRob24z
+LjUvc2l0ZS1wYWNrYWdlcy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWJxDVgFAAAAc2hlZXRxDmgL
+dWJhWAYAAABzb3VyY2VxD0sAWAsAAAByZWNlbnRfdXJsc3EQXXERWBMAAABzYXZlZFdpZGdldEdl
+b21ldHJ5cRJDLgHZ0MsAAQAAAAACEwAAATwAAAOqAAACNQAAAhMAAAFSAAADqgAAAjUAAAAAAABx
+E1gDAAAAdXJscRRoC1gQAAAAY29udGV4dF9zZXR0aW5nc3EVXXEWWAsAAABzaGVldF9uYW1lc3EX
+fXEYdS4=
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWAkAAABuX3JlcGVhdHNxAUsDWBAAAABjb250ZXh0X3NldHRpbmdzcQJdcQNjT3Jhbmdl
+LndpZGdldHMuc2V0dGluZ3MKQ29udGV4dApxBCmBcQV9cQYoWAcAAABjbGFzc2VzcQddcQgoWAsA
+AABJcmlzLXNldG9zYXEJWA8AAABJcmlzLXZlcnNpY29sb3JxClgOAAAASXJpcy12aXJnaW5pY2Fx
+C2VYBgAAAHZhbHVlc3EMfXENKGgBSwNYCwAAAHNhbXBsZV9zaXplcQ5LCVgKAAAAcmVzYW1wbGlu
+Z3EPSwBYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxEGNzaXAKX3VucGlja2xlX3R5cGUKcRFYDAAA
+AFB5UXQ0LlF0Q29yZXESWAoAAABRQnl0ZUFycmF5cRNDLgHZ0MsAAQAAAAABywAAAPUAAARWAAAC
+agAAAcsAAAELAAAEVgAAAmoAAAAAAABxFIVxFYdxFlJxF1gHAAAAbl9mb2xkc3EYSwNYEgAAAHNo
+dWZmbGVfc3RyYXRpZmllZHEZiFgNAAAAY3Zfc3RyYXRpZmllZHEaiFgPAAAAY2xhc3Nfc2VsZWN0
+aW9ucRtYFgAAAChBdmVyYWdlIG92ZXIgY2xhc3NlcylxHHVYBAAAAHRpbWVxHUdB1eCVfZv0DnVi
+YWgOSwloD0sAaBBoEWgSWAoAAABRQnl0ZUFycmF5cR5DLgHZ0MsAAQAAAAABywAAAPUAAARWAAAC
+agAAAcsAAAELAAAEVgAAAmoAAAAAAABxH4VxIIdxIVJxImgYSwNoGYhoGoh1Lg==
+</properties>
+		<properties format="literal" node_id="2">{'C_index': 61, 'savedWidgetGeometry': None, 'learner_name': 'Logistic Regression', 'auto_apply': True, 'penalty_type': 1}</properties>
+		<properties format="literal" node_id="3">{'use_random_state': False, 'max_leaf_nodes': 5, 'auto_apply': True, 'use_max_features': False, 'random_state': 0, 'use_max_depth': False, 'savedWidgetGeometry': None, 'max_depth': 3, 'use_max_leaf_nodes': True, 'max_features': 5, 'learner_name': 'Random Forest Learner', 'n_estimators': 10, 'index_output': 0}</properties>
+		<properties format="literal" node_id="4">{'degree': 3, 'auto_apply': True, 'svmtype': 0, 'savedWidgetGeometry': None, 'gamma': 0.0, 'max_iter': 100, 'nu': 0.5, 'coef0': 0.0, 'C': 1.0, 'probability': False, 'tol': 0.001, 'limit_iter': True, 'learner_name': 'SVM Learner', 'kernel_type': 0}</properties>
+		<properties format="pickle" node_id="5">gAN9cQAoWBQAAABhcHBlbmRfcHJvYmFiaWxpdGllc3EBiVgKAAAAYXV0b2NvbW1pdHECiFgTAAAA
+c2F2ZWRXaWRnZXRHZW9tZXRyeXEDY3NpcApfdW5waWNrbGVfdHlwZQpxBFgMAAAAUHlRdDQuUXRD
+b3JlcQVYCgAAAFFCeXRlQXJyYXlxBkMuAdnQywABAAAAAAOBAAABvgAABm4AAAO9AAADgQAAAdQA
+AAZuAAADvQAAAAAAAHEHhXEIh3EJUnEKWBEAAABzZWxlY3RlZF9xdWFudGl0eXELSwBYEAAAAGNv
+bnRleHRfc2V0dGluZ3NxDF1xDWNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0CnEOKYFx
+D31xEChYBwAAAGNsYXNzZXNxEV1xEihYCwAAAElyaXMtc2V0b3NhcRNYDwAAAElyaXMtdmVyc2lj
+b2xvcnEUWA4AAABJcmlzLXZpcmdpbmljYXEVZVgGAAAAdmFsdWVzcRZ9cRcoaAGJaAKIaANoBGgF
+WAoAAABRQnl0ZUFycmF5cRhDLgHZ0MsAAQAAAAADgQAAAb4AAAZuAAADvQAAA4EAAAHUAAAGbgAA
+A70AAAAAAABxGYVxGodxG1JxHFgJAAAAc2VsZWN0aW9ucR1jYnVpbHRpbnMKc2V0CnEeXXEfhXEg
+UnEhaAtLAFgQAAAAc2VsZWN0ZWRfbGVhcm5lcnEiSwBYEgAAAGFwcGVuZF9wcmVkaWN0aW9uc3Ej
+iHVYBAAAAHRpbWVxJEdB1eCVfhUcN3ViYWgiSwBoI4h1Lg==
+</properties>
+		<properties format="pickle" node_id="6">gAN9cQAoWBIAAABzaG93X2Rpc3RyaWJ1dGlvbnNxAYlYCwAAAHNlbGVjdF9yb3dzcQKIWAsAAABh
+dXRvX2NvbW1pdHEDiFgVAAAAc2hvd19hdHRyaWJ1dGVfbGFiZWxzcQSIWBMAAABzYXZlZFdpZGdl
+dEdlb21ldHJ5cQVOWA4AAABjb2xvcl9ieV9jbGFzc3EGiFgQAAAAY29udGV4dF9zZXR0aW5nc3EH
+XXEIY09yYW5nZS53aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcQkpgXEKfXELKFgEAAAAdGltZXEM
+R0HV4JV+Fb1/WAUAAABtZXRhc3ENfXEOWAoAAABhdHRyaWJ1dGVzcQ99cRAoWAQAAABpcmlzcRFd
+cRIoWAsAAABJcmlzLXNldG9zYXETWA8AAABJcmlzLXZlcnNpY29sb3JxFFgOAAAASXJpcy12aXJn
+aW5pY2FxFWVYCwAAAHNlcGFsIHdpZHRocRZLAlgMAAAAc2VwYWwgbGVuZ3RocRdLAlgMAAAAcGV0
+YWwgbGVuZ3RocRhLAlgLAAAAcGV0YWwgd2lkdGhxGUsCdVgGAAAAdmFsdWVzcRp9cRsoWA0AAABz
+ZWxlY3RlZF9yb3dzcRxdcR1YEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxHk5K/v///4ZxH1gNAAAA
+c2VsZWN0ZWRfY29sc3EgXXEhWAsAAABzZWxlY3Rfcm93c3EiiEr+////hnEjWAsAAABhdXRvX2Nv
+bW1pdHEkiEr+////hnElWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxJohK/v///4ZxJ1gSAAAA
+c2hvd19kaXN0cmlidXRpb25zcSiJSv7///+GcSlYDgAAAGNvbG9yX2J5X2NsYXNzcSqISv7///+G
+cStYDgAAAGRpc3RfY29sb3JfUkdCcSwoS9xL3EvcS/90cS1K/v///4ZxLnVYDgAAAG9yZGVyZWRf
+ZG9tYWlucS9dcTAoaBdLAoZxMWgWSwKGcTJoGEsChnEzaBlLAoZxNGgRSwGGcTVldWJhWA4AAABk
+aXN0X2NvbG9yX1JHQnE2aC11Lg==
+</properties>
+		<properties format="pickle" node_id="7">gAN9cQAoWBIAAABzaG93X2Rpc3RyaWJ1dGlvbnNxAYlYCwAAAHNlbGVjdF9yb3dzcQKIWAsAAABh
+dXRvX2NvbW1pdHEDiFgVAAAAc2hvd19hdHRyaWJ1dGVfbGFiZWxzcQSIWBMAAABzYXZlZFdpZGdl
+dEdlb21ldHJ5cQVOWA4AAABjb2xvcl9ieV9jbGFzc3EGiFgQAAAAY29udGV4dF9zZXR0aW5nc3EH
+XXEIY09yYW5nZS53aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcQkpgXEKfXELKFgEAAAAdGltZXEM
+R0HVktQu4mADWAUAAABtZXRhc3ENfXEOWAoAAABhdHRyaWJ1dGVzcQ99cRAoWAQAAABpcmlzcRFd
+cRIoWAsAAABJcmlzLXNldG9zYXETWA8AAABJcmlzLXZlcnNpY29sb3JxFFgOAAAASXJpcy12aXJn
+aW5pY2FxFWVYCwAAAHNlcGFsIHdpZHRocRZLAlgMAAAAc2VwYWwgbGVuZ3RocRdLAlgMAAAAcGV0
+YWwgbGVuZ3RocRhLAlgLAAAAcGV0YWwgd2lkdGhxGUsCdVgGAAAAdmFsdWVzcRp9cRsoWA0AAABz
+ZWxlY3RlZF9yb3dzcRxdcR1YEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxHk5K/v///4ZxH1gNAAAA
+c2VsZWN0ZWRfY29sc3EgXXEhWBUAAABzZWxlY3RlZF9zY2hlbWFfaW5kZXhxIksASv7///+GcSNY
+DgAAAGNvbG9yX3NldHRpbmdzcSROSv7///+GcSVYCwAAAGF1dG9fY29tbWl0cSaISv7///+GcSdY
+FQAAAHNob3dfYXR0cmlidXRlX2xhYmVsc3EoiEr+////hnEpWBIAAABzaG93X2Rpc3RyaWJ1dGlv
+bnNxKolK/v///4ZxK1gOAAAAY29sb3JfYnlfY2xhc3NxLIhK/v///4ZxLVgOAAAAZGlzdF9jb2xv
+cl9SR0JxLihL3EvcS9xL/3RxL0r+////hnEwWAsAAABzZWxlY3Rfcm93c3ExiEr+////hnEydVgO
+AAAAb3JkZXJlZF9kb21haW5xM11xNChoF0sChnE1aBZLAoZxNmgYSwKGcTdoGUsChnE4aBFLAYZx
+OWV1YmFYDgAAAGRpc3RfY29sb3JfUkdCcTpoL3Uu
+</properties>
+	</node_properties>
+</scheme>

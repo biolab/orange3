@@ -157,12 +157,12 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
-        self.information(0)
+        self.information()
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
             elif not remotely:
-                self.information(0, "Data has been sampled")
+                self.information("Data has been sampled")
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
@@ -262,7 +262,7 @@ class OWPCA(widget.OWWidget):
             y = curve[cutidx]
             line.setData([-1, cutidx], 2 * [y])
             label.setPos(cutidx, y)
-            label.setPlainText("{:.2f}".format(y))
+            label.setPlainText("{:.3f}".format(y))
 
     def _on_cut_changed(self, line):
         # cut changed by means of a cut line over the scree plot.
@@ -307,8 +307,8 @@ class OWPCA(widget.OWWidget):
             return
 
         cut = numpy.searchsorted(self._cumulative,
-                                 self.variance_covered / 100.0)
-        self.ncomponents = cut + 1
+                                 self.variance_covered / 100.0) + 1
+        self.ncomponents = cut
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
         self._invalidate_selection()

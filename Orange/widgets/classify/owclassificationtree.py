@@ -26,22 +26,25 @@ class OWClassificationTree(OWBaseLearner):
     scores = (("Entropy", "entropy"), ("Gini Index", "gini"))
 
     def add_main_layout(self):
-        gui.comboBox(self.controlArea, self, "attribute_score",
-                     box='Feature Selection',
-                     items=[name for name, _ in self.scores],
-                     callback=self.settings_changed)
+        self.score_combo = gui.comboBox(
+            self.controlArea, self, "attribute_score", box='Feature Selection',
+            items=[name for name, _ in self.scores],
+            callback=self.settings_changed)
 
         box = gui.vBox(self.controlArea, 'Pruning')
-        gui.spin(box, self, "min_leaf", 1, 1000,
-                 label="Min. instances in leaves: ", checked="limit_min_leaf",
-                 callback=self.settings_changed)
-        gui.spin(box, self, "min_internal", 1, 1000,
-                 label="Stop splitting nodes with less instances than: ",
-                 checked="limit_min_internal",
-                 callback=self.settings_changed)
-        gui.spin(box, self, "max_depth", 1, 1000,
-                 label="Limit the depth to: ", checked="limit_depth",
-                 callback=self.settings_changed)
+        self.min_leaf_spin = gui.spin(
+            box, self, "min_leaf", 1, 1000, label="Min. instances in leaves: ",
+            checked="limit_min_leaf", callback=self.settings_changed,
+            checkCallback=self.settings_changed)
+        self.min_internal_spin = gui.spin(
+            box, self, "min_internal", 1, 1000,
+            label="Stop splitting nodes with less instances than: ",
+            checked="limit_min_internal", callback=self.settings_changed,
+            checkCallback=self.settings_changed)
+        self.max_depth_spin = gui.spin(
+            box, self, "max_depth", 1, 1000, label="Limit the depth to: ",
+            checked="limit_depth", callback=self.settings_changed,
+            checkCallback=self.settings_changed)
 
     def create_learner(self):
         return self.LEARNER(

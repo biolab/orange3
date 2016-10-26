@@ -1,19 +1,20 @@
 import math
 import itertools
+
+from PyQt4.QtCore import Qt
 from collections import defaultdict
 
 from PyQt4 import QtGui
 import numpy
 
 import Orange
-from Orange.widgets import widget
-from Orange.widgets import gui
+from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 
 
-INSTANCEID = "Same source"
-INDEX = "Index"
+INSTANCEID = "Source position (index)"
+INDEX = "Position (index)"
 
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
@@ -25,6 +26,9 @@ class OWMergeData(widget.OWWidget):
               ("Data B", Orange.data.Table, "setDataB")]
     outputs = [("Merged Data A+B", Orange.data.Table, ),
                ("Merged Data B+A", Orange.data.Table, )]
+
+    attr_a = settings.Setting('', schema_only=True)
+    attr_b = settings.Setting('', schema_only=True)
 
     want_main_area = False
 
@@ -45,30 +49,24 @@ class OWMergeData(widget.OWWidget):
         # attribute A selection
         boxAttrA = gui.vBox(self, self.tr("Attribute A"), addToLayout=False)
         grid.addWidget(boxAttrA, 0, 0)
-        self.attrViewA = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection
-        )
 
+        self.attrViewA = gui.comboBox(boxAttrA, self, 'attr_a',
+                                      orientation=Qt.Horizontal,
+                                      sendSelectedValue=True,
+                                      callback=self._invalidate)
         self.attrModelA = itemmodels.VariableListModel()
         self.attrViewA.setModel(self.attrModelA)
-        self.attrViewA.selectionModel().selectionChanged.connect(
-            self._selectedAttrAChanged)
-
-        boxAttrA.layout().addWidget(self.attrViewA)
 
         # attribute  B selection
         boxAttrB = gui.vBox(self, self.tr("Attribute B"), addToLayout=False)
         grid.addWidget(boxAttrB, 0, 1)
-        self.attrViewB = QtGui.QListView(
-            selectionMode=QtGui.QListView.SingleSelection
-        )
 
+        self.attrViewB = gui.comboBox(boxAttrB, self, 'attr_b',
+                                      orientation=Qt.Horizontal,
+                                      sendSelectedValue=True,
+                                      callback=self._invalidate)
         self.attrModelB = itemmodels.VariableListModel()
         self.attrViewB.setModel(self.attrModelB)
-        self.attrViewB.selectionModel().selectionChanged.connect(
-            self._selectedAttrBChanged)
-
-        boxAttrB.layout().addWidget(self.attrViewB)
 
         # info A
         boxDataA = gui.vBox(self, self.tr("Data A Input"), addToLayout=False)
@@ -80,36 +78,43 @@ class OWMergeData(widget.OWWidget):
         grid.addWidget(boxDataB, 1, 1)
         self.infoBoxDataB = gui.widgetLabel(boxDataB, self.dataInfoText(None))
 
-        gui.rubber(self.buttonsArea)
-        # resize
-        self.resize(400, 500)
+        gui.rubber(self)
 
-    def setAttrs(self):
-        add = ()
-        if self.dataA is not None and self.dataB is not None \
-                and len(numpy.intersect1d(self.dataA.ids, self.dataB.ids)):
-            add = (INSTANCEID,)
-        if self.dataA is not None:
-            self.attrModelA[:] = add + allvars(self.dataA)
-        else:
-            self.attrModelA[:] = []
-        if self.dataB is not None:
-            self.attrModelB[:] = add + allvars(self.dataB)
-        else:
-            self.attrModelB[:] = []
+    def _setAttrs(self, model, data, othermodel, otherdata):
+        model[:] = allvars(data) if data is not None else []
+
+        if data is not None and otherdata is not None and \
+                len(numpy.intersect1d(data.ids, otherdata.ids)):
+            for model_ in (model, othermodel):
+                if len(model_) and model_[0] != INSTANCEID:
+                    model_.insert(0, INSTANCEID)
 
     @check_sql_input
     def setDataA(self, data):
-        #self.closeContext()
         self.dataA = data
-        self.setAttrs()
+        self._setAttrs(self.attrModelA, data, self.attrModelB, self.dataB)
+        curr_index = -1
+        if self.attr_a:
+            curr_index = next((i for i, val in enumerate(self.attrModelA)
+                               if str(val) == self.attr_a), -1)
+        if curr_index != -1:
+            self.attrViewA.setCurrentIndex(curr_index)
+        else:
+            self.attr_a = INDEX
         self.infoBoxDataA.setText(self.dataInfoText(data))
 
     @check_sql_input
     def setDataB(self, data):
-        #self.closeContext()
         self.dataB = data
-        self.setAttrs()
+        self._setAttrs(self.attrModelB, data, self.attrModelA, self.dataA)
+        curr_index = -1
+        if self.attr_b:
+            curr_index = next((i for i, val in enumerate(self.attrModelB)
+                               if str(val) == self.attr_b), -1)
+        if curr_index != -1:
+            self.attrViewB.setCurrentIndex(curr_index)
+        else:
+            self.attr_b = INDEX
         self.infoBoxDataB.setText(self.dataInfoText(data))
 
     def handleNewSignals(self):
@@ -126,48 +131,38 @@ class OWMergeData(widget.OWWidget):
         attributes = self.tr("%n variable(s)", None, nvariables)
         return "\n".join([instances, attributes])
 
-    def selectedIndexA(self):
-        return selected_row(self.attrViewA)
-
-    def selectedIndexB(self):
-        return selected_row(self.attrViewB)
-
     def commit(self):
-        indexA = self.selectedIndexA()
-        indexB = self.selectedIndexB()
         AB, BA = None, None
-        if indexA is not None and indexB is not None:
-            varA = self.attrModelA[indexA]
-            varB = self.attrModelB[indexB]
+        if (self.attr_a and self.attr_b and
+                self.dataA is not None and
+                self.dataB is not None):
+            varA = (self.attr_a if self.attr_a in (INDEX, INSTANCEID) else
+                    self.dataA.domain[self.attr_a])
+            varB = (self.attr_b if self.attr_b in (INDEX, INSTANCEID) else
+                    self.dataB.domain[self.attr_b])
             AB = merge(self.dataA, varA, self.dataB, varB)
             BA = merge(self.dataB, varB, self.dataA, varA)
         self.send("Merged Data A+B", AB)
         self.send("Merged Data B+A", BA)
 
-    def _selectedAttrAChanged(self, *args):
-        self._invalidate()
-
-    def _selectedAttrBChanged(self, *args):
-        self._invalidate()
-
     def _invalidate(self):
         self.commit()
 
     def send_report(self):
-        attr_a = self.selectedIndexA()
-        attr_b = self.selectedIndexB()
+        attr_a = None
+        attr_b = None
+        if self.dataA is not None:
+            attr_a = self.attr_a
+            if attr_a in self.dataA.domain:
+                attr_a = self.dataA.domain[attr_a]
+        if self.dataB is not None:
+            attr_b = self.attr_b
+            if attr_b in self.dataB.domain:
+                attr_b = self.dataB.domain[attr_b]
         self.report_items((
-            ("Attribute A", attr_a and self.attrModelA[attr_a]),
-            ("Attribute B", attr_b and self.attrModelB[attr_b])
+            ("Attribute A", attr_a),
+            ("Attribute B", attr_b),
         ))
-
-
-def selected_row(view):
-    rows = view.selectionModel().selectedRows()
-    if rows:
-        return rows[0].row()
-    else:
-        return None
 
 
 def allvars(data):

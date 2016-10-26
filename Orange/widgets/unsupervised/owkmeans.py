@@ -13,8 +13,8 @@ from Orange.widgets.utils.sql import check_sql_input
 
 
 class OWKMeans(widget.OWWidget):
-    name = "k-means"
-    description = "k-means clustering algorithm with silhouette-based " \
+    name = "k-Means"
+    description = "k-Means clustering algorithm with silhouette-based " \
                   "quality estimation."
     icon = "icons/KMeans.svg"
     priority = 2100
@@ -199,12 +199,16 @@ class OWKMeans(widget.OWWidget):
         self.updateOptimizationGui()
         self.update()
 
-    def check_data_size(self, n, msg_func):
+    def check_data_size(self, n, msg_group):
+        msg_group.add_message(
+            "not_enough_data",
+            "Too few ({}) unique data instances for {} clusters")
         if n > len(self.data):
-            msg_func("Too few unique data instances ({}) for {} clusters".
-                     format(len(self.data), n))
+            msg_group.not_enough_data(len(self.data), n)
             return False
-        return True
+        else:
+            msg_group.not_enough_data.clear()
+            return True
 
     def run_optimization(self):
         # Disabling is needed since this function is not reentrant
@@ -212,9 +216,9 @@ class OWKMeans(widget.OWWidget):
         try:
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
-            if not self.check_data_size(self.k_from, self.error):
+            if not self.check_data_size(self.k_from, self.Error):
                 return
-            self.check_data_size(self.k_to, self.warning)
+            self.check_data_size(self.k_to, self.Warning)
             k_to = min(self.k_to, len(self.data))
             kmeans = KMeans(
                 init=['random', 'k-means++'][self.smart_init],
@@ -231,7 +235,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def cluster(self):
-        if not self.check_data_size(self.k, self.error):
+        if not self.check_data_size(self.k, self.Error):
             return
         self.km = KMeans(
             n_clusters=self.k,
@@ -241,8 +245,7 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def run(self):
-        self.error()
-        self.warning()
+        self.clear_messages()
         if not self.data:
             return
         if self.optimize_k:
@@ -266,7 +269,7 @@ class OWKMeans(widget.OWWidget):
         score_span = (best_score - worst_score) or 1
         max_score = max(scores)
         nplaces = min(5, np.floor(abs(math.log(max(max_score, 1e-10)))) + 2)
-        fmt = "{{:.{}f}}".format(nplaces)
+        fmt = "{{:.{}f}}".format(int(nplaces))
         model = self.table_model
         model.setRowCount(len(k_scores))
         for i, (k, score) in enumerate(k_scores):
@@ -355,10 +358,11 @@ class OWKMeans(widget.OWWidget):
             self.run()
 
     def send_report(self):
+        k_clusters = self.k
+        if self.optimize_k and self.optimization_runs and self.selected_row() is not None:
+            k_clusters = self.optimization_runs[self.selected_row()][1].k
         self.report_items((
-            ("Number of clusters",
-             self.optimization_runs[self.selected_row()][1].k
-             if self.optimize_k else self.k),
+            ("Number of clusters", k_clusters),
             ("Optimization",
              self.optimize_k != 0 and
              "{}, {} re-runs limited to {} steps".format(

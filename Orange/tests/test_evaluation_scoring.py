@@ -171,7 +171,7 @@ class TestLogLoss(unittest.TestCase):
 
         ll_calc = self._log_loss(actual, probab)
         ll_orange = LogLoss(results)
-        self.assertEqual(ll_calc, ll_orange[0])
+        self.assertAlmostEqual(ll_calc, ll_orange[0])
 
 
 class TestF1(unittest.TestCase):

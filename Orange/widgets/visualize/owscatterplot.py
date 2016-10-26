@@ -16,7 +16,7 @@ from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
-from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -38,12 +38,14 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
     K = 10
 
     def check_preconditions(self):
+        self.Information.add_message(
+            "class_required", "Data with a class variable is required.")
+        self.Information.class_required.clear()
         if not super().check_preconditions():
             return False
         if not self.master.data.domain.class_var:
-            self.information(33, "Data with a class variable is required.")
+            self.Information.class_required()
             return False
-        self.master.information(33)
         return True
 
     def iterate_states(self, initial_state):
@@ -86,8 +88,10 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 class OWScatterPlot(OWWidget):
     name = 'Scatter Plot'
-    description = 'Scatterplot visualization with explorative analysis and intelligent data visualization enhancements.'
+    description = "Interactive scatter plot visualization with " \
+                  "intelligent data visualization enhancements."
     icon = "icons/ScatterPlot.svg"
+    priority = 210
 
     inputs = [("Data", Table, "set_data", Default),
               ("Data Subset", Table, "set_subset_data"),
@@ -111,6 +115,9 @@ class OWScatterPlot(OWWidget):
     jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
     graph_name = "graph.plot_widget.plotItem"
+
+    class Information(OWWidget.Information):
+        sampled_sql = Msg("Large SQL table; showing a sample.")
 
     def __init__(self):
         super().__init__()
@@ -149,9 +156,10 @@ class OWScatterPlot(OWWidget):
         self.vizrank = ScatterPlotVizRank(self)
         vizrank_box = gui.hBox(box)
         gui.separator(vizrank_box, width=common_options["labelWidth"])
+        self.vizrank_button_tooltip = "Find informative projections"
         self.vizrank_button = gui.button(
             vizrank_box, self, "Score Plots", callback=self.vizrank.reshow,
-            tooltip="Find informative projections", enabled=False)
+            tooltip=self.vizrank_button_tooltip, enabled=False)
         self.vizrank.pairSelected.connect(self.set_attr)
 
         gui.separator(box)
@@ -268,7 +276,7 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
 
     def set_data(self, data):
-        self.information(1)
+        self.Information.sampled_sql.clear()
         self.__timer.stop()
         self.sampling.setVisible(False)
         self.sql_data = None
@@ -276,7 +284,7 @@ class OWScatterPlot(OWWidget):
             if data.approx_len() < 4000:
                 data = Table(data)
             else:
-                self.information(1, "Large SQL table (showing a sample)")
+                self.Information.sampled_sql()
                 self.sql_data = data
                 data_sample = data.sample_time(0.8, no_cache=True)
                 data_sample.download_data(2000, partial=True)
@@ -302,6 +310,12 @@ class OWScatterPlot(OWWidget):
         self.vizrank_button.setEnabled(
             self.data is not None and self.data.domain.class_var is not None
             and len(self.data.domain.attributes) > 1 and len(self.data) > 1)
+        if self.data is not None and self.data.domain.class_var is None \
+            and len(self.data.domain.attributes) > 1 and len(self.data) > 1:
+            self.vizrank_button.setToolTip(
+                "Data with a class variable is required.")
+        else:
+            self.vizrank_button.setToolTip(self.vizrank_button_tooltip)
         self.openContext(self.data)
 
     def add_data(self, time=0.4):
@@ -331,12 +345,12 @@ class OWScatterPlot(OWWidget):
         return data
 
     def set_subset_data(self, subset_data):
-        self.warning(0)
+        self.warning()
         if isinstance(subset_data, SqlTable):
             if subset_data.approx_len() < AUTO_DL_LIMIT:
                 subset_data = Table(subset_data)
             else:
-                self.warning(0, "Data subset does not support large Sql tables")
+                self.warning("Data subset does not support large Sql tables")
                 subset_data = None
         self.subset_data = self.move_primitive_metas_to_X(subset_data)
 
@@ -364,17 +378,21 @@ class OWScatterPlot(OWWidget):
 
     def init_attr_values(self):
         self.cb_attr_x.clear()
-        self.cb_attr_y.clear()
         self.attr_x = None
+        self.cb_attr_y.clear()
         self.attr_y = None
         self.cb_attr_color.clear()
         self.cb_attr_color.addItem("(Same color)")
+        self.graph.attr_color = None
         self.cb_attr_label.clear()
         self.cb_attr_label.addItem("(No labels)")
+        self.graph.attr_label = None
         self.cb_attr_shape.clear()
         self.cb_attr_shape.addItem("(Same shape)")
+        self.graph.attr_shape = None
         self.cb_attr_size.clear()
         self.cb_attr_size.addItem("(Same size)")
+        self.graph.attr_size = None
         if not self.data:
             return
 
@@ -447,12 +465,19 @@ class OWScatterPlot(OWWidget):
             selected = unselected = self.data
         elif self.data is not None:
             selection = self.graph.get_selection()
+            if len(selection) == 0:
+                self.send("Selected Data", None)
+                self.send("Other Data", self.data)
+                return
             selected = self.data[selection]
             unselection = np.full(len(self.data), True, dtype=bool)
             unselection[selection] = False
             unselected = self.data[unselection]
         self.send("Selected Data", selected)
-        self.send("Other Data", unselected)
+        if unselected is None or len(unselected) == 0:
+            self.send("Other Data", None)
+        else:
+            self.send("Other Data", unselected)
 
     def send_features(self):
         features = None

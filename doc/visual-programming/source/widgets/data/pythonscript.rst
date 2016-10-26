@@ -3,6 +3,8 @@ Python Script
 
 .. figure:: icons/python-script.png
 
+Extends functionalities through Python scripting.
+
 Signals
 -------
 
@@ -110,3 +112,69 @@ receives:
 
 Examples
 --------
+
+Python Script widget is intended to extend functionalities for advanced users. 
+
+
+One can, for example, do batch filtering by attributes. We used zoo.tab for the example
+and we filtered out all the attributes that have more than 5 discrete values. This in 
+our case removed only 'leg' attribute, but imagine an example where one would have
+many such attributes.
+
+::
+
+    from Orange.data import Domain, Table
+    domain = Domain([attr for attr in in_data.domain.attributes
+                     if attr.is_continuous or len(attr.values) <= 5],
+                    in_data.domain.class_vars)
+    out_data = Table(domain, in_data)
+
+.. figure:: images/PythonScript-filtering.png
+
+
+The second example shows how to round all the values in a few lines of code. This time
+we used wine.tab and rounded all the values to whole numbers.
+
+::
+
+    import numpy as np
+    out_data = in_data.copy()
+    #copy, otherwise input data will be overwritten
+    np.round(out_data.X, 0, out_data.X)
+
+.. figure:: images/PythonScript-round.png
+
+
+The third example introduces some gaussian noise to the data. Again we make a copy of the input data, then walk through all the values with a double for loop and add random noise.
+
+::
+
+    import random
+    from Orange.data import Domain, Table
+    new_data = in_data.copy()
+    for inst in new_data:
+      for f in inst.domain.attributes:
+        inst[f] += random.gauss(0, 0.02)
+    out_data = new_data
+
+
+.. figure:: images/PythonScript-gauss.png
+
+The final example uses Orange3-Text add-on. **Python Script** is very useful for 
+custom preprocessing in text mining, extracting new features from strings, or utilizing
+advanced nltk or gensim functions. Below, we simply tokenized our input data from deerwester.tab by
+splitting them by whitespace.
+
+::
+
+    print('Running Preprocessing ...')
+    tokens = [doc.split(' ') for doc in in_data.documents]
+    print('Tokens:', tokens)
+    out_object = in_data
+    out_object.store_tokens(tokens)
+
+
+You can add a lot of other preprocessing steps to further adjust the output. The output of **Python Script** can be used with any widget that accepts the type of output your script produces. In this case, connection is green, which signalizes the right type of input for Word Cloud widget.
+
+.. figure:: images/PythonScript-Example3.png
+

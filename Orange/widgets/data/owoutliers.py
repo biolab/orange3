@@ -106,7 +106,7 @@ class OWOutliers(widget.OWWidget):
         self.cont_slider.setDisabled(True)
         self.cb_emp_cov.setDisabled(True)
         self.support_fraction_spin.setDisabled(True)
-        self.warning(0, 'Too many features for covariance estimation.')
+        self.warning('Too many features for covariance estimation.')
 
     def enable_covariance(self):
         self.rb_cov.setDisabled(False)
@@ -114,7 +114,7 @@ class OWOutliers(widget.OWWidget):
         self.cont_slider.setDisabled(False)
         self.cb_emp_cov.setDisabled(False)
         self.support_fraction_spin.setDisabled(False)
-        self.warning(0)
+        self.warning()
 
     @check_sql_input
     def set_data(self, dataset):
@@ -140,7 +140,7 @@ class OWOutliers(widget.OWWidget):
             try:
                 y_pred = self.detect_outliers()
             except ValueError:
-                self.error(0, "Singular covariance matrix.")
+                self.error("Singular covariance matrix.")
                 self.in_out_info_label.setText(self.in_out_info_default)
             else:
                 inliers_ind = np.where(y_pred == 1)[0]

@@ -21,11 +21,12 @@ import pyqtgraph as pg
 
 import Orange.data
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.util import scale, namegen
+from Orange.widgets.widget import OWWidget, Msg
 
 
 def indices_to_mask(indices, size):
@@ -744,7 +745,7 @@ def _i(name, icon_path="icons/paintdata",
     return os.path.join(widg_path, icon_path, name)
 
 
-class OWPaintData(widget.OWWidget):
+class OWPaintData(OWWidget):
     TOOLS = [
         ("Brush", "Create multiple instances", AirBrushTool, _i("brush.svg")),
         ("Put", "Put individual instances", PutInstanceTool, _i("put.svg")),
@@ -774,12 +775,22 @@ class OWPaintData(widget.OWWidget):
     brushRadius = Setting(75)
     density = Setting(7)
 
+    data = Setting(None, schema_only=True)
+
     graph_name = "plot"
+
+    class Warning(OWWidget.Warning):
+        no_input_variables = Msg("Input data has no variables")
+        continuous_target = Msg("Continuous target value can not be used.")
+
+    class Information(OWWidget.Information):
+        use_first_two = \
+            Msg("Paint Data uses data from the first two attributes.")
 
     def __init__(self):
         super().__init__()
 
-        self.data = self.input_data = None
+        self.input_data = None
         self.input_classes = []
         self.input_has_attr2 = True
         self.current_tool = None
@@ -799,12 +810,14 @@ class OWPaintData(widget.OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        self.data = np.zeros((0, 3))
+        if self.data is None:
+            self.data = np.zeros((0, 3))
         self.colors = colorpalette.ColorPaletteGenerator(
             len(colorpalette.DefaultRGBColors))
         self.tools_cache = {}
 
         self._init_ui()
+        self.commit()
 
     def _init_ui(self):
         namesBox = gui.vBox(self.controlArea, "Names")
@@ -893,6 +906,7 @@ class OWPaintData(widget.OWWidget):
         redo.setShortcut(QtGui.QKeySequence.Redo)
 
         self.addActions([undo, redo])
+        self.undo_stack.indexChanged.connect(lambda _: self.invalidate())
 
         gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
@@ -974,15 +988,13 @@ class OWPaintData(widget.OWWidget):
     def set_data(self, data):
         """Set the input_data and call reset_to_input"""
         def _check_and_set_data(data):
-            self.warning()
-            self.information()
+            self.clear_messages()
             if data is not None:
                 if not data.domain.attributes:
-                    self.warning("Input data has no variables")
+                    self.Warning.no_input_variables()
                     data = None
                 elif len(data.domain.attributes) > 2:
-                    self.information(
-                        "Paint Data uses data from the first two attributes.")
+                    self.Information.use_first_two()
             self.input_data = data
             self.btResetToInput.setDisabled(data is None)
             return data is not None
@@ -995,7 +1007,7 @@ class OWPaintData(widget.OWWidget):
             y = next(cls for cls in data.domain.class_vars if cls.is_discrete)
         except StopIteration:
             if data.domain.class_vars:
-                self.warning("Target value is continuous and can not be used.")
+                self.Warning.continuous_target()
             self.input_classes = ["C1"]
             y = np.zeros(len(data))
         else:
@@ -1104,7 +1116,6 @@ class OWPaintData(widget.OWWidget):
 
         if tool not in self.tools_cache:
             newtool = tool(self, self.plot)
-            newtool.editingFinished.connect(self.invalidate)
             self.tools_cache[tool] = newtool
             newtool.issueCommand.connect(self._add_command)
 
@@ -1226,6 +1237,9 @@ class OWPaintData(widget.OWWidget):
         self.commit()
 
     def commit(self):
+        if len(self.data) == 0:
+            self.send("Data", None)
+            return
         if self.hasAttr2:
             X, Y = self.data[:, :2], self.data[:, 2]
             attrs = (Orange.data.ContinuousVariable(self.attr1),

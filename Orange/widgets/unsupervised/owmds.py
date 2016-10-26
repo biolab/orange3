@@ -23,6 +23,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
+from Orange.widgets.widget import Msg, OWWidget
 
 
 def torgerson(distances, n_components=2):
@@ -90,7 +91,7 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         super().paint(painter, option, widget)
 
 
-class OWMDS(widget.OWWidget):
+class OWMDS(OWWidget):
     name = "MDS"
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
@@ -152,12 +153,26 @@ class OWMDS(widget.OWWidget):
 
     graph_name = "plot.plotItem"
 
+    class Error(OWWidget.Error):
+        not_enough_rows = Msg("Input data needs at least 2 rows")
+        matrix_too_small = Msg("Input matrix must be at least 2x2")
+        no_attributes = Msg("Data has no attributes")
+        mismatching_dimensions = \
+            Msg("Data and distances dimensions do not match.")
+
     def __init__(self):
         super().__init__()
-        self.matrix = None
-        self.data = None
+        #: Input dissimilarity matrix
+        self.matrix = None  # type: Optional[Orange.misc.DistMatrix]
+        #: Effective data used for plot styling/annotations. Can be from the
+        #: input signal (`self.signal_data`) or the input matrix
+        #: (`self.matrix.data`)
+        self.data = None  # type: Optional[Orange.data.Table]
+        #: Input subset data table
         self.subset_data = None  # type: Optional[Orange.data.Table]
-        self.matrix_data = None
+        #: Data table from the `self.matrix.row_items` (if present)
+        self.matrix_data = None  # type: Optional[Orange.data.Table]
+        #: Input data table
         self.signal_data = None
 
         self._pen_data = None
@@ -371,6 +386,12 @@ class OWMDS(widget.OWWidget):
         ----------
         data : Optional[Orange.data.Table]
         """
+        if data is not None and len(data) < 2:
+            self.Error.not_enough_rows()
+            data = None
+        else:
+            self.Error.not_enough_rows.clear()
+
         self.signal_data = data
 
         if self.matrix is not None and data is not None and len(self.matrix) == len(data):
@@ -389,6 +410,13 @@ class OWMDS(widget.OWWidget):
         ----------
         matrix : Optional[Orange.misc.DistMatrix]
         """
+
+        if matrix is not None and len(matrix) < 2:
+            self.Error.matrix_too_small()
+            matrix = None
+        else:
+            self.Error.matrix_too_small.clear()
+
         self.matrix = matrix
         if matrix is not None and matrix.row_items:
             self.matrix_data = matrix.row_items
@@ -452,7 +480,6 @@ class OWMDS(widget.OWWidget):
             self.color_value = attr
             self.shape_value = attr
         else:
-            # initialize the graph state from data
             domain = self.data.domain
             all_vars = list(filter_visible(domain.variables + domain.metas))
             cd_vars = [var for var in all_vars if var.is_primitive()]
@@ -480,6 +507,7 @@ class OWMDS(widget.OWWidget):
         # clear everything
         self.closeContext()
         self._clear()
+        self.Error.clear()
         self.data = None
         self._effective_matrix = None
         self.embedding = None
@@ -488,25 +516,27 @@ class OWMDS(widget.OWWidget):
         if self.signal_data is None and self.matrix is None:
             return
 
-        if self.signal_data and self.matrix is not None and len(self.signal_data) != len(self.matrix):
-            self.error(1, "Data and distances dimensions do not match.")
+        if self.signal_data is not None and self.matrix is not None and \
+                len(self.signal_data) != len(self.matrix):
+            self.Error.mismatching_dimensions()
             self._update_plot()
             return
 
-        self.error(1)
-
-        if self.signal_data:
+        if self.signal_data is not None:
             self.data = self.signal_data
-        elif self.matrix_data:
+        elif self.matrix_data is not None:
             self.data = self.matrix_data
 
         if self.matrix is not None:
             self._effective_matrix = self.matrix
             if self.matrix.axis == 0 and self.data is self.matrix_data:
                 self.data = None
-        else:
+        elif self.data.domain.attributes:
             preprocessed_data = Orange.projection.MDS().preprocess(self.data)
             self._effective_matrix = Orange.distance.Euclidean(preprocessed_data)
+        else:
+            self.Error.no_attributes()
+            return
 
         self.update_controls()
         self.openContext(self.data)
@@ -1341,9 +1371,8 @@ class mdsplotutils(plotutils):
 
 def main_test(argv=sys.argv):
     import gc
-    argv = list(argv)
-    app = QtGui.QApplication(argv)
-
+    app = QtGui.QApplication(list(argv))
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:

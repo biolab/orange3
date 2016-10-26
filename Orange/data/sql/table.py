@@ -16,7 +16,7 @@ psycopg2 = Orange.misc.import_late_warning("psycopg2")
 psycopg2.pool = Orange.misc.import_late_warning("psycopg2.pool")
 
 from .. import domain, variable, table, instance, filter,\
-    DiscreteVariable, ContinuousVariable, StringVariable
+    DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
 from Orange.data.sql import filter as sql_filter
 
 
@@ -104,13 +104,15 @@ class SqlTable(table.Table):
 
         def add_to_sql(var, field_name):
             if var.is_continuous:
-                var.to_sql = ToSql("({})::double precision".format(
-                    self.quote_identifier(field_name)))
-            elif var.is_discrete:
+                if isinstance(var, TimeVariable):
+                    var.to_sql = ToSql("extract(epoch from {})".format(
+                        self.quote_identifier(field_name)))
+                else:
+                    var.to_sql = ToSql("({})::double precision".format(
+                        self.quote_identifier(field_name)))
+            else:  # discrete or string
                 var.to_sql = ToSql("({})::text".format(
                     self.quote_identifier(field_name)))
-            else:
-                var.to_sql = ToSql(self.quote_identifier(field_name))
 
         attrs, class_vars, metas = [], [], []
         for field_name, type_code, *rest in fields:
@@ -137,9 +139,18 @@ class SqlTable(table.Table):
         INT_TYPES = (20, 21, 23)  # bigint, int, smallint
         CHAR_TYPES = (25, 1042, 1043,)  # text, char, varchar
         BOOLEAN_TYPES = (16,)  # bool
+        DATE_TYPES = (1082, 1114, 1184, )  # date, timestamp, timestamptz
+        # time, timestamp, timestamptz, timetz
+        TIME_TYPES = (1083, 1114, 1184, 1266,)
 
         if type_code in FLOATISH_TYPES:
             return ContinuousVariable(field_name)
+
+        if type_code in TIME_TYPES + DATE_TYPES:
+            tv = TimeVariable(field_name)
+            tv.have_date |= type_code in DATE_TYPES
+            tv.have_time |= type_code in TIME_TYPES
+            return tv
 
         if type_code in INT_TYPES:  # bigint, int, smallint
             if inspect_values:

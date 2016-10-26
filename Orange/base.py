@@ -7,7 +7,7 @@ from Orange.data import Table, Storage, Instance, Value
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.util import one_hot
+from Orange.data.util import one_hot
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -258,11 +258,69 @@ class SklLearner(Learner, metaclass=WrapperMeta):
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 
-    def __repr__(self):
+    def __str__(self):
         return '{} {}'.format(self.name, self.params)
+
+    def __repr__(self):
+        return '{}({})'.format(type(self).__name__,
+                               ", ".join("{}={}".format(k, v)
+                                         for k, v in self.params.items()))
 
     @property
     def supports_weights(self):
         """Indicates whether this learner supports weighted instances.
         """
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
+
+
+class Tree:
+    """Interface for tree based models.
+
+    Defines members needed for drawing of the tree.
+    """
+
+    #: Domain of data the tree was built from
+    domain = None
+
+    #: Data the tree was built from (Optional)
+    instances = None
+
+    @property
+    def tree(self):
+        """Return underlying tree representation
+
+        Returns
+        -------
+        sklearn.tree._tree.Tree
+        """
+        raise NotImplementedError()
+
+
+class RandomForest:
+    """Interface for random forest models
+    """
+
+    @property
+    def trees(self):
+        """Return a list of Trees in the forest
+
+        Returns
+        -------
+        List[Tree]
+        """
+
+
+class KNNBase:
+    """Base class for KNN (classification and regression) learners
+    """
+    def __init__(self, n_neighbors=5, metric="euclidean", weights="uniform",
+                 algorithm='auto', metric_params=None,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
+
+    def fit(self, X, Y, W=None):
+        if self.params["metric_params"] is None and \
+                        self.params.get("metric") == "mahalanobis":
+            self.params["metric_params"] = {"V": np.cov(X.T)}
+        return super().fit(X, Y, W)

@@ -42,6 +42,14 @@ class OWSGDRegression(OWBaseLearner):
                  "Elastic net (L1 and L2)"]
     LEARNING_RATES = ["Constant", "Inverse scaling"]
 
+    def setup_layout(self):
+        super().setup_layout()
+
+        # enable/disable parameters based on selected loss/penalty/rate
+        self._on_func_changed()
+        self._on_penalty_changed()
+        self._on_lrate_changed()
+
     def add_main_layout(self):
         def add_form(box):
             gui.separator(box)
@@ -61,7 +69,6 @@ class OWSGDRegression(OWBaseLearner):
             box, self, "epsilon", 0.0, 10.0, 0.01, controlWidth=70)
         form.addRow("ε:", epsilon)
         self._func_params = [epsilon]
-        self._on_func_changed()
 
         box = gui.radioButtons(
             self.controlArea, self, "penalty_type", box="Penalty",
@@ -75,7 +82,6 @@ class OWSGDRegression(OWBaseLearner):
             box, self, "l1_ratio", 0.0, 10.0, 0.01, controlWidth=80)
         form.addRow("L1 ratio:", l1_ratio)
         self._penalty_params = [l1_ratio]
-        self._on_penalty_changed()
 
         box = gui.radioButtons(
             self.controlArea, self, "learning_rate", box="Learning Rate",
@@ -93,7 +99,6 @@ class OWSGDRegression(OWBaseLearner):
             box, self, "n_iter", 1, 1e+6, 1, controlWidth=70)
         form.addRow("Number of iterations:", niterations)
         self._lrate_params = [power_t]
-        self._on_lrate_changed()
 
     def create_learner(self):
         loss = ["squared_loss", "huber", "epsilon_insensitive",
