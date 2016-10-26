@@ -1,6 +1,7 @@
 import random
 import Orange
 import numpy as np
+from Orange.misc.reprable import Reprable
 from scipy.sparse import issparse
 
 from itertools import takewhile
@@ -8,12 +9,11 @@ from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
-from Orange.data import Domain
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
 
-class SelectBestFeatures:
+class SelectBestFeatures(Reprable):
     """
     A feature selector that builds a new data set consisting of either the top
     `k` features or all those that exceed a given `threshold`. Features are
@@ -89,6 +89,7 @@ class SelectBestFeatures:
                                     data.domain.class_vars, data.domain.metas)
         return data.from_table(domain, data)
 
+
     def score_only_nice_features(self, data, method):
         mask = np.array([isinstance(a, method.feature_type)
                          for a in data.domain.attributes])
@@ -101,7 +102,7 @@ class SelectBestFeatures:
         return all_scores
 
 
-class SelectRandomFeatures:
+class SelectRandomFeatures(Reprable):
     """
     A feature selector that selects random `k` features from an input
     data set and returns a data set with selected features. Parameter

@@ -9,9 +9,10 @@ import bottleneck as bn
 
 from Orange.data import Instance, Storage, Variable
 from Orange.misc.enum import Enum
+from Orange.misc.reprable import Reprable
 
 
-class Filter:
+class Filter(Reprable):
     """
     The base class for filters.
 
@@ -323,6 +324,7 @@ class FilterContinuous(ValueFilter):
         self.ref = ref
         self.max = max
         self.oper = oper
+        self.position = position
 
     @property
     def min(self):
@@ -379,8 +381,6 @@ class FilterContinuous(ValueFilter):
             return "{} is defined".format(column)
         return "invalid operator"
 
-    __repr__ = __str__
-
 
     # For PyCharm:
     Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
@@ -433,6 +433,7 @@ class FilterString(ValueFilter):
         self.max = max
         self.oper = oper
         self.case_sensitive = case_sensitive
+        self.position = position
 
     @property
     def min(self):
@@ -539,6 +540,9 @@ class FilterRegex(ValueFilter):
     def __init__(self, column, pattern, flags=0):
         super().__init__(column)
         self._re = re.compile(pattern, flags)
+        self.column = column
+        self.pattern = pattern
+        self.flags = flags
 
     def __call__(self, inst):
         return bool(self._re.search(inst or ''))

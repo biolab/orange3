@@ -3,9 +3,10 @@ from scipy.sparse import issparse
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
+from Orange.misc.reprable import Reprable
 from .transformation import Transformation, Lookup
 
-__all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", 'DropInstances',
+__all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
            "Model", "AsValue", "Random", "Default"]
 
 
@@ -31,7 +32,7 @@ class ReplaceUnknowns(Transformation):
             return numpy.where(numpy.isnan(c), self.value, c)
 
 
-class BaseImputeMethod:
+class BaseImputeMethod(Reprable):
     name = ""
     short_name = ""
     description = ""
@@ -106,7 +107,7 @@ class Average(BaseImputeMethod):
         return a
 
 
-class ImputeSql:
+class ImputeSql(Reprable):
     def __init__(self, var, default):
         self.var = var
         self.default = default
@@ -134,7 +135,7 @@ class Default(BaseImputeMethod):
         return Default(self.default)
 
 
-class ReplaceUnknownsModel:
+class ReplaceUnknownsModel(Reprable):
     """
     Replace unknown values with predicted values using a `Orange.base.Model`
 

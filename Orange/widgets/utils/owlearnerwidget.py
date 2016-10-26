@@ -194,6 +194,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                 self.valid_data = True
         return self.valid_data
 
+
     def settings_changed(self, *args, **kwargs):
         self.outdated_settings = True
         self.Warning.outdated_learner(shown=not self.auto_apply)
