@@ -6,14 +6,13 @@ from Orange.widgets.widget import OWWidget
 
 
 class TestDoubleSpin(GuiTest):
-    some_param = 0
-    some_option = False
-
     # make sure that the gui element does not crash when
     # 'checked' parameter is forwarded, ie. is not None
     def test_checked_extension(self):
         widget = OWWidget()
-        gui.doubleSpin(widget=widget, master=self, value="some_param",
+        widget.some_param = 0
+        widget.some_option = False
+        gui.doubleSpin(widget=widget, master=widget, value="some_param",
                        minv=1, maxv=10, checked="some_option")
 
 
