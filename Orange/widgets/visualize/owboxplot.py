@@ -266,16 +266,24 @@ class OWBoxPlot(widget.OWWidget):
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group)]
-                return f_oneway(*groups)[1] if groups else 2
+                p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
                 # Chi-square with the given distribution into groups
                 # (see degrees of freedom in computation of the p-value)
-                observed = contingency.get_contingency(data, group_var, attr)
+                observed = np.array(
+                    contingency.get_contingency(data, group_var, attr))
+                observed = observed[observed.sum(axis=1) != 0, :]
+                observed = observed[:, observed.sum(axis=0) != 0]
+                if min(observed.shape) < 2:
+                    return 2
                 expected = \
                     np.outer(observed.sum(axis=1), observed.sum(axis=0)) / \
                     np.sum(observed)
-                return chisquare(observed.ravel(), f_exp=expected.ravel(),
-                                 ddof=n_groups - 1)[1]
+                p = chisquare(observed.ravel(), f_exp=expected.ravel(),
+                              ddof=n_groups - 1)[1]
+            if math.isnan(p):
+                return 2
+            return p
 
         data = self.dataset
         if data is None:
