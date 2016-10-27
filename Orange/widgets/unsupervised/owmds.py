@@ -179,9 +179,9 @@ class OWMDS(OWWidget):
                     gui.spin(box, self, "max_iter", 10, 10 ** 4, step=1))
 
         form.addRow("Initialization:",
-                    gui.comboBox(box, self, "initialization",
-                                 items=["PCA (Torgerson)", "Random"],
-                                 callback=self.__invalidate_embedding))
+                    gui.radioButtons(box, self, "initialization",
+                                     btnLabels=("PCA (Torgerson)", "Random"),
+                                     callback=self.__invalidate_embedding))
 
         box.layout().addLayout(form)
         form.addRow("Refresh:",
