@@ -7,6 +7,7 @@ from AnyQt.QtCore import Qt
 import numpy
 
 import Orange
+from Orange.data import TimeVariable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
@@ -212,10 +213,36 @@ def group_table_indices(table, key_vars, exclude_unknown=False):
     return groups
 
 
+def group_table_indices_value(table, key_var, exclude_unknown=False):
+    groups = defaultdict(list)
+    for i, inst in enumerate(table):
+        key = inst[key_var]
+        if exclude_unknown and math.isnan(key):
+            continue
+        groups[key.value].append(i)
+    return groups
+
+
 def left_join_indices(table1, table2, vars1, vars2):
+    indices = []
+    var1, var2 = vars1[0], vars2[0]
+    if isinstance(var1, TimeVariable) and isinstance(var2, TimeVariable):
+        key_map1 = group_table_indices_value(table1, var1)
+        key_map2 = group_table_indices_value(table2, var2, True)
+        key_map2_sorted = sorted(key_map2)
+        for i, inst in enumerate(table1):
+            index, key1, key2 = None, inst[var1].value, key_map2_sorted[0]
+            if key1 in key_map1 and key1 >= key2:
+                for key in key_map2_sorted:
+                    if key1 < key:
+                        break
+                    key2 = key
+                index = key_map2[key2][0]
+            indices.append((i, index))
+        return indices
+
     key_map1 = group_table_indices(table1, vars1)
     key_map2 = group_table_indices(table2, vars2)
-    indices = []
     for i, inst in enumerate(table1):
         key = tuple([str(inst.id if v == INSTANCEID else
                          i if v == INDEX else inst[v])
