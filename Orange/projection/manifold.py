@@ -1,10 +1,46 @@
+import numpy as np
 import sklearn.manifold as skl_manifold
 
-from Orange.distance import SklDistance, SpearmanDistance, PearsonDistance
+from Orange.distance import (SklDistance, SpearmanDistance, PearsonDistance,
+                             Euclidean)
 from Orange.projection import SklProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
+
+
+def torgerson(distances, n_components=2):
+    """
+    Perform classical mds (Torgerson scaling).
+
+    ..note ::
+        If the distances are euclidean then this is equivalent to projecting
+        the original data points to the first `n` principal components.
+
+    """
+    distances = np.asarray(distances)
+    assert distances.shape[0] == distances.shape[1]
+    N = distances.shape[0]
+    # O ^ 2
+    D_sq = distances ** 2
+
+    # double center the D_sq
+    rsum = np.sum(D_sq, axis=1, keepdims=True)
+    csum = np.sum(D_sq, axis=0, keepdims=True)
+    total = np.sum(csum)
+    D_sq -= rsum / N
+    D_sq -= csum / N
+    D_sq += total / (N ** 2)
+    B = np.multiply(D_sq, -0.5, out=D_sq)
+
+    U, L, _ = np.linalg.svd(B)
+    if n_components > N:
+        U = np.hstack((U, np.zeros((N, n_components - N))))
+        L = np.hstack((L, np.zeros((n_components - N))))
+    U = U[:, :n_components]
+    L = L[:n_components]
+    D = np.diag(np.sqrt(L))
+    return np.dot(U, D)
 
 
 class MDS(SklProjector):
@@ -13,33 +49,38 @@ class MDS(SklProjector):
 
     def __init__(self, n_components=2, metric=True, n_init=4, max_iter=300,
                  eps=0.001, n_jobs=1, random_state=None,
-                 dissimilarity='euclidean',
+                 dissimilarity='euclidean', init_type="random", init_data=None,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
         self._metric = dissimilarity
+        self.init_type = init_type
+        self.init_data = init_data
 
     def __call__(self, data):
         distances = SklDistance, SpearmanDistance, PearsonDistance
         if isinstance(self._metric, distances):
             data = self.preprocess(data)
-            X, Y, domain = data.X, data.Y, data.domain
-            dist_matrix = self._metric(X)
+            _X, Y, domain = data.X, data.Y, data.domain
+            X = dist_matrix = self._metric(_X)
             self.params['dissimilarity'] = 'precomputed'
-            clf = self.fit(dist_matrix, Y=Y)
         elif self._metric is 'precomputed':
             dist_matrix, Y, domain = data, None, None
-            clf = self.fit(dist_matrix, Y=Y)
+            X = dist_matrix
         else:
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
-            clf = self.fit(X, Y=Y)
+            if self.init_type == "PCA":
+                dist_matrix = Euclidean(X)
+        if self.init_type == "PCA" and self.init_data is None:
+            self.init_data = torgerson(dist_matrix, self.params['n_components'])
+        clf = self.fit(X, Y=Y)
         clf.domain = domain
         return clf
 
-    def fit(self, X, init=None, Y=None):
+    def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
-        return proj.fit(X, init=init, y=Y)
+        return proj.fit(X, init=self.init_data, y=Y)
 
 
 class Isomap(SklProjector):
