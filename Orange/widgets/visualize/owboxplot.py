@@ -13,6 +13,7 @@ from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
 
 import scipy.special
+from scipy.stats import f_oneway, chisquare
 
 import Orange.data
 from Orange.statistics import contingency, distribution
@@ -72,12 +73,14 @@ class OWBoxPlot(widget.OWWidget):
     Here's how the widget's functions call each other:
 
     - `set_data` is a signal handler fills the list boxes and calls
-    `attr_changed`.
+    `grouping_changed`.
 
-    - `attr_changed` handles changes of attribute or grouping (callbacks for
-    list boxes). It recomputes box data by calling `compute_box_data`, shows
-    the appropriate display box (discrete/continuous) and then calls
-    `layout_changed`
+    - `grouping_changed` handles changes of grouping attribute: it enables or
+    disables the box for ordering, orders attributes and calls `attr_changed`.
+
+    - `attr_changed` handles changes of attribute. It recomputes box data by
+    calling `compute_box_data`, shows the appropriate display box
+    (discrete/continuous) and then calls`layout_changed`
 
     - `layout_changed` constructs all the elements for the scene (as lists of
     QGraphicsItemGroup) and calls `display_changed`. It is called when the
@@ -104,9 +107,10 @@ class OWBoxPlot(widget.OWWidget):
     settingsHandler = DomainContextHandler()
 
     attribute = ContextSetting(None)
+    order_by_importance = Setting(False)
     group_var = ContextSetting(None)
     show_annotations = Setting(True)
-    compare = Setting(CompareMedians)
+    compare = Setting(CompareMeans)
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
     stretched = Setting(True)
@@ -152,19 +156,34 @@ class OWBoxPlot(widget.OWWidget):
         self.scale_x = self.scene_min_x = self.scene_width = 0
         self.label_width = 0
 
-        common_options = dict(
-            callback=self.attr_changed, sizeHint=(200, 100))
         self.attrs = VariableListModel()
-        gui.listView(
+        view = gui.listView(
             self.controlArea, self, "attribute", box="Variable",
-            model=self.attrs, **common_options)
+            model=self.attrs, callback=self.attr_changed)
+        view.setMinimumSize(QSize(30, 30))
+        # Any other policy than Ignored will let the QListBox's scrollbar
+        # set the minimal height (see the penultimate paragraph of
+        # http://doc.qt.io/qt-4.8/qabstractscrollarea.html#addScrollBarWidget)
+        view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        gui.separator(view.box, 6, 6)
+        self.cb_order = gui.checkBox(
+            view.box, self, "order_by_importance",
+            "Order by relevance",
+            tooltip="Order by 𝜒² or ANOVA over the subgroups",
+            callback=self.apply_sorting)
         self.group_vars = VariableListModel()
-        gui.listView(
-            self.controlArea, self, "group_var", box="Grouping",
-            model=self.group_vars, **common_options)
+        view = gui.listView(
+            self.controlArea, self, "group_var", box="Subgroups",
+            model=self.group_vars, callback=self.grouping_changed)
+        view.setMinimumSize(QSize(30, 30))
+        # See the comment above
+        view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
 
         # TODO: move Compare median/mean to grouping box
-        self.display_box = gui.vBox(self.controlArea, "Display")
+        # The vertical size policy is needed to let only the list views expand
+        self.display_box = gui.vBox(
+            self.controlArea, "Display",
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.display_changed)
@@ -173,9 +192,11 @@ class OWBoxPlot(widget.OWWidget):
             btnLabels=["No comparison", "Compare medians", "Compare means"],
             callback=self.display_changed)
 
+        # The vertical size policy is needed to let only the list views expand
         self.stretching_box = gui.checkBox(
             self.controlArea, self, 'stretched', "Stretch bars", box='Display',
-            callback=self.display_changed).box
+            callback=self.display_changed,
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum)).box
 
         gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QGraphicsScene()
@@ -189,12 +210,15 @@ class OWBoxPlot(widget.OWWidget):
 
         e = gui.hBox(self.mainArea, addSpace=False)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
-        self.mainArea.setMinimumWidth(650)
+        self.mainArea.setMinimumWidth(600)
 
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
 
         self.update_display_box()
+
+    def sizeHint(self):
+        return QSize(100, 500)  # Vertical size is regulated by mainArea
 
     def eventFilter(self, obj, event):
         if obj is self.box_view.viewport() and \
@@ -228,9 +252,56 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 self.group_var = None  # Reset to trigger selection via callback
             self.openContext(self.dataset)
-            self.attr_changed()
+            self.grouping_changed()
         else:
             self.reset_all_data()
+
+    def apply_sorting(self):
+        def compute_score(attr):
+            if attr is group_var:
+                return 3
+            if attr.is_continuous:
+                # One-way ANOVA
+                col = data.get_column_view(attr)[0]
+                groups = (col[group_col == i] for i in range(n_groups))
+                groups = (col[~np.isnan(col)] for col in groups)
+                groups = [group for group in groups if len(group)]
+                p = f_oneway(*groups)[1] if len(groups) > 1 else 2
+            else:
+                # Chi-square with the given distribution into groups
+                # (see degrees of freedom in computation of the p-value)
+                observed = np.array(
+                    contingency.get_contingency(data, group_var, attr))
+                observed = observed[observed.sum(axis=1) != 0, :]
+                observed = observed[:, observed.sum(axis=0) != 0]
+                if min(observed.shape) < 2:
+                    return 2
+                expected = \
+                    np.outer(observed.sum(axis=1), observed.sum(axis=0)) / \
+                    np.sum(observed)
+                p = chisquare(observed.ravel(), f_exp=expected.ravel(),
+                              ddof=n_groups - 1)[1]
+            if math.isnan(p):
+                return 2
+            return p
+
+        data = self.dataset
+        if data is None:
+            return
+        domain = data.domain
+        attribute = self.attribute
+        group_var = self.group_var
+        if self.order_by_importance and group_var is not None:
+            n_groups = len(group_var.values)
+            group_col = data.get_column_view(group_var)[0] \
+                if domain.has_continuous_attributes(include_class=True) \
+                else None
+            self.attrs.sort(key=compute_score)
+        else:
+            self.attrs[:] = chain(
+                domain.variables,
+                (a for a in data.domain.metas if a.is_primitive()))
+        self.attribute = attribute
 
     def reset_all_data(self):
         self.clear_scene()
@@ -239,6 +310,11 @@ class OWBoxPlot(widget.OWWidget):
         self.group_vars[:] = []
         self.is_continuous = False
         self.update_display_box()
+
+    def grouping_changed(self):
+        self.cb_order.setEnabled(self.group_var is not None)
+        self.apply_sorting()
+        self.attr_changed()
 
     def attr_changed(self):
         self.compute_box_data()
@@ -796,7 +872,7 @@ def main(argv=None):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "brown-selected"
+        filename = "heart_disease"
 
     data = Orange.data.Table(filename)
     w = OWBoxPlot()
