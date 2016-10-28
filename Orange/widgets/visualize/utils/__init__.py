@@ -225,13 +225,13 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         """
         raise NotImplementedError
 
-    def row_for_state(self, state, score):
+    def row_for_state(self, score, state):
         """
         Abstract method that return the items that are inserted into the table.
 
         Args:
-            state: the state, e.g. combination of attributes
             score: score, computed by :obj:`compute_score`
+            state: the state, e.g. combination of attributes
             """
         raise NotImplementedError
 
