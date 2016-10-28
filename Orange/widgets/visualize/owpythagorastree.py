@@ -198,7 +198,9 @@ class OWPythagorasTree(OWWidget):
             self.color_palette = self._tree_specific('_get_color_palette')()
 
             self.ptree.clear()
-            self.ptree.set_tree(self.tree_adapter)
+            self.ptree.set_tree(
+                self.tree_adapter,
+                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1])
             self.ptree.set_tooltip_func(self._tree_specific('_get_tooltip'))
             self.ptree.set_node_color_func(
                 self._tree_specific('_get_node_color')
