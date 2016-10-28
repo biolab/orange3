@@ -4,7 +4,8 @@
 import unittest
 import numpy as np
 
-from Orange.projection import MDS, Isomap
+from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
+                               SpectralEmbedding, TSNE)
 from Orange.distance import Euclidean
 from Orange.data import Table
 
@@ -45,3 +46,58 @@ class TestManifold(unittest.TestCase):
         isomap_fit = isomap_fit(data)
         eshape = data.X.shape[0], n_com
         self.assertEqual(eshape, isomap_fit.embedding_.shape)
+
+    def test_lle(self):
+        for i in range(1, 4):
+            self.__lle_test_helper(self.ionosphere, n_com=i)
+
+    def __lle_test_helper(self, data, n_com):
+        lle = LocallyLinearEmbedding(n_neighbors=5, n_components=n_com)
+        lle = lle(data)
+
+        ltsa = LocallyLinearEmbedding(n_neighbors=5, n_components=n_com,
+                                      method="ltsa")
+        ltsa = ltsa(data)
+
+        hessian = LocallyLinearEmbedding(n_neighbors=15, n_components=n_com,
+                                         method="hessian",
+                                         eigen_solver="dense")
+        hessian = hessian(data)
+
+        modified = LocallyLinearEmbedding(n_neighbors=5, n_components=n_com,
+                                          method="modified",
+                                          eigen_solver="dense")
+        modified = modified(data)
+
+        self.assertEqual((data.X.shape[0], n_com), lle.embedding_.shape)
+        self.assertEqual((data.X.shape[0], n_com), ltsa.embedding_.shape)
+        self.assertEqual((data.X.shape[0], n_com), hessian.embedding_.shape)
+        self.assertEqual((data.X.shape[0], n_com), modified.embedding_.shape)
+
+    def test_se(self):
+        for i in range(1, 4):
+            self.__se_test_helper(self.ionosphere, n_com=i)
+
+    def __se_test_helper(self, data, n_com):
+        se = SpectralEmbedding(n_components=n_com, n_neighbors=5)
+        se = se(data)
+        self.assertEqual((data.X.shape[0], n_com), se.embedding_.shape)
+
+    def test_tsne(self):
+        data = self.ionosphere[:50]
+        for i in range(1, 4):
+            self.__tsne_test_helper(data, n_com=i)
+
+    def __tsne_test_helper(self, data, n_com):
+        tsne_def = TSNE(n_components=n_com, metric='euclidean')
+        tsne_def = tsne_def(data)
+
+        tsne_euc = TSNE(n_components=n_com, metric=Euclidean)
+        tsne_euc = tsne_euc(data)
+
+        tsne_pre = TSNE(n_components=n_com, metric='precomputed')
+        tsne_pre = tsne_pre(Euclidean(data))
+
+        self.assertEqual((data.X.shape[0], n_com), tsne_def.embedding_.shape)
+        self.assertEqual((data.X.shape[0], n_com), tsne_euc.embedding_.shape)
+        self.assertEqual((data.X.shape[0], n_com), tsne_pre.embedding_.shape)
