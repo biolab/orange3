@@ -12,6 +12,17 @@ matrix:
           cache: {}
         - python: '3.4'
         - python: '3.5'
+        - python: '3.5'
+          env: QT_API=pyqt5
+          addons:
+              apt:
+                  packages:
+                      - libxcb-dri2-0
+                      - libxcb-xfixes0
+                      - libxcb-render0
+                      - libxcb-shape0
+                      - libxcb-sync0
+                      - libx11-xcb1
         - &docs
           env: BUILD_DOCS=true
           python: '3.4'
