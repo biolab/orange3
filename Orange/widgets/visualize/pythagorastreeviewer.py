@@ -114,13 +114,15 @@ class PythagorasTreeViewer(QGraphicsWidget):
         if adapter is not None:
             self.set_tree(adapter)
 
-    def set_tree(self, tree_adapter):
+    def set_tree(self, tree_adapter, weight_adjustment=lambda x: x):
         """Pass in a new tree adapter instance and perform updates to canvas.
 
         Parameters
         ----------
         tree_adapter : TreeAdapter
             The new tree adapter that is to be used.
+        weight_adjustment : callable
+            A weight adjustment function that with signature `x -> x`
 
         Returns
         -------
@@ -130,7 +132,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
         self.tree_adapter = tree_adapter
 
         if self.tree_adapter is not None:
-            self._tree = self._calculate_tree(self.tree_adapter)
+            self._tree = self._calculate_tree(
+                self.tree_adapter, weight_adjustment)
             self.set_depth_limit(tree_adapter.max_depth)
             self._draw_tree(self._tree)
 
@@ -240,10 +243,11 @@ class PythagorasTreeViewer(QGraphicsWidget):
         self._tree = None
         self._clear_scene()
 
-    @staticmethod
-    def _calculate_tree(tree_adapter):
+    def _calculate_tree(self, tree_adapter, weight_adjustment):
         """Actually calculate the tree squares"""
-        tree_builder = PythagorasTree()
+        tree_builder = PythagorasTree(
+            weight_adjustment=weight_adjustment
+        )
         return tree_builder.pythagoras_tree(
             tree_adapter, tree_adapter.root, Square(Point(0, 0), 200, -pi / 2)
         )
@@ -583,9 +587,15 @@ class PythagorasTree:
     Contains all the logic that converts a given tree adapter to a tree
     consisting of node classes.
 
+    Parameters
+    ----------
+    weight_adjustment : callable
+        The function to be used to adjust child weights
+
     """
 
-    def __init__(self):
+    def __init__(self, weight_adjustment=lambda x: x):
+        self.adjust_weight = weight_adjustment
         # store the previous angles of each square children so that slopes can
         # be computed
         self._slopes = defaultdict(list)
@@ -615,9 +625,15 @@ class PythagorasTree:
         if node == tree.root:
             self._slopes.clear()
 
+        # Calculate the adjusted child weights for the node children
+        child_weights = [self.adjust_weight(tree.weight(c))
+                         for c in tree.children(node)]
+        total_weight = sum(child_weights)
+        normalized_child_weights = [cw / total_weight for cw in child_weights]
+
         children = tuple(
-            self._compute_child(tree, square, child)
-            for child in tree.children(node)
+            self._compute_child(tree, square, child, cw)
+            for child, cw in zip(tree.children(node), normalized_child_weights)
         )
         # make sure to pass a reference to parent to each child
         obj = TreeNode(node, square, tree.parent(node), children)
@@ -626,7 +642,7 @@ class PythagorasTree:
             c.parent = obj
         return obj
 
-    def _compute_child(self, tree, parent_square, node):
+    def _compute_child(self, tree, parent_square, node, weight):
         """Compute all the properties for a single child.
 
         Parameters
@@ -637,6 +653,9 @@ class PythagorasTree:
             The parent square of the given child.
         node : int
             The node label of the child.
+        weight : float
+            The weight of the node relative to its parent e.g. two children in
+            relation 3:1 should have weights .75 and .25, respectively.
 
         Returns
         -------
@@ -645,7 +664,6 @@ class PythagorasTree:
             subtree.
 
         """
-        weight = tree.weight(node)
         # the angle of the child from its parent
         alpha = weight * pi
         # the child side length
