@@ -259,6 +259,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             self._select_first_if_none()
             self.button.setText("Finished")
             self.button.setEnabled(False)
+            self.keep_running = False
+            self.saved_state = None
 
     def toggle(self):
         """Start or pause the computation."""

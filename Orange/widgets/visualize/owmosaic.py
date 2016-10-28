@@ -60,6 +60,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         if self.max_attrs != self.last_run_max_attr:
             self.saved_state = None
             self.saved_progress = 0
+        if self.saved_state is None:
             self.scores = []
             self.rank_model.clear()
         self.last_run_max_attr = self.max_attrs
