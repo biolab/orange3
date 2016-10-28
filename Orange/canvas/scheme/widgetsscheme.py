@@ -711,7 +711,7 @@ def user_message_from_state(message_group):
         severity=message_group.severity,
         message_id=message_group,
         contents="<br/>".join(msg.formatted
-                              for msg in message_group.active.values()) or None,
+                              for msg in message_group.active) or None,
         data={"content-type": "text/html"})
 
 

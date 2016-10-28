@@ -1,9 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+
+from unittest.mock import patch
+
 from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, OWComponent
 from Orange.widgets.settings import Setting
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.widget import OWWidget
+from Orange.widgets.widget import OWWidget, Msg
 
 
 class DummyComponent(OWComponent):
@@ -81,3 +84,83 @@ class WidgetTestCase(WidgetTest):
 
         widget2 = self.create_widget(MyWidget)
         self.assertEqual(widget2.field, 42)
+
+
+class WidgetMsgTestCase(WidgetTest):
+
+    class TestWidget(OWWidget):
+        name = "Test"
+
+        class Information(OWWidget.Information):
+            hello = Msg("A message")
+
+        def __init__(self):
+            super().__init__()
+
+            self.Information.hello()
+
+    @staticmethod
+    def active_messages(widget):
+        """Return all active messages in a widget"""
+        return [m for g in widget.message_groups for m in g.active]
+
+    def test_widget_emits_messages(self):
+        """Widget emits messageActivates/messageDeactivated signals"""
+
+        w = WidgetMsgTestCase.TestWidget()
+        messages = set(self.active_messages(w))
+
+        self.assertEqual(len(messages), 1, )
+
+        w.messageActivated.connect(messages.add)
+        w.messageDeactivated.connect(messages.remove)
+
+        w.Information.hello()
+        self.assertEqual(len(messages), 1)
+        self.assertSetEqual(messages, set(self.active_messages(w)))
+
+        w.Information.hello.clear()
+        self.assertEqual(len(messages), 0)
+        self.assertSetEqual(set(self.active_messages(w)), set())
+
+        with patch.object(
+                WidgetMsgTestCase.TestWidget,
+                "want_basic_layout", False):
+            # OWWidget without a basic layout (completely empty; no default
+            # message bar)
+            w = WidgetMsgTestCase.TestWidget()
+
+        messages = set(self.active_messages(w))
+
+        w.messageActivated.connect(messages.add)
+        w.messageDeactivated.connect(messages.remove)
+
+        self.assertEqual(len(messages), 1)
+
+        w.Information.hello.clear()
+        self.assertEqual(len(messages), 0)
+
+    def test_old_style_messages(self):
+        w = WidgetMsgTestCase.TestWidget()
+        w.Information.clear()
+
+        messages = set(self.active_messages(w))
+
+        w.messageActivated.connect(messages.add)
+        w.messageDeactivated.connect(messages.remove)
+
+        w.error(1, "A")
+
+        self.assertEqual(len(w.Error.active), 1)
+        self.assertEqual(len(messages), 1)
+
+        w.error(1)
+
+        self.assertEqual(len(messages), 0)
+        self.assertEqual(len(w.Error.active), 0)
+
+        w.error(2, "B")
+        self.assertEqual(len(messages), 1)
+
+        w.Error.clear()
+        self.assertEqual(len(messages), 0)

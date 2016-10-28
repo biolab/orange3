@@ -148,18 +148,24 @@ class MessageGroup:
 
     Attributes:
         widget (widget.OWWidget): the widget instance to which the group belongs
-        active (dict): active messages
-
-    Note: active messages are stored in the dictionary, in which the key and
-    the corresponding value are one and the same object, except for old-style
-    classes, for which the key is an (old-style) id. When we remove support for
-    old-style messages, this dictionary can be replaced with a set.
     """
     def __init__(self, widget):
         self.widget = widget
-        self.active = {}
+        # Note: active messages are stored in the dictionary, in which
+        # the key and the corresponding value are one and the same object,
+        # except for old-style classes, for which the key is an (old-style)
+        # id. When we remove support for old-style messages (Orange 4),
+        # this dictionary  can be replaced with a set.
+        self._active = {}
         self._general = UnboundMsg("{}")
         self._bind_messages()
+
+    @property
+    def active(self):
+        """
+        Sequence[_BoundMsg]: Sequence of all currently active messages.
+        """
+        return self._active.values()
 
     def _bind_messages(self):
         # type(self).__dict__ wouldn't return inherited messages, hence dir
@@ -203,10 +209,10 @@ class MessageGroup:
             msg_id (int): id for old-style message (to be removed in the future)
         """
         key = msg if msg_id is None else msg_id
-        if self.active.get(key) == msg:
+        if self._active.get(key) == msg:
             self.widget.messageActivated.emit(msg)
             return
-        self.active[key] = msg
+        self._active[key] = msg
         self.widget.messageActivated.emit(msg)
 
     def deactivate_msg(self, msg):
@@ -215,23 +221,23 @@ class MessageGroup:
         Args:
             msg (_BoundMsg): the message to deactivate
         """
-        if msg not in self.active:
+        if msg not in self._active:
             return
-        inst_msg = self.active.pop(msg)
+        inst_msg = self._active.pop(msg)
         self.widget.messageDeactivated.emit(
             inst_msg if isinstance(msg, int) else msg)
 
         # When when we no longer support old-style messages, replace with:
-        # if msg not in self.active:
+        # if msg not in self._active:
         #     return
-        # del self.active[msg]
+        # del self._active[msg]
         # self.widget.messageDeactivated.emit(msg)
 
     # self has default value to avoid PyCharm warnings when calling
     # self.Error.clear(): PyCharm doesn't know that Error is instantiated
     def clear(self=None):
         """Deactivate all active message from this group."""
-        for msg in list(self.active):
+        for msg in list(self._active):
             self.deactivate_msg(msg)
 
     def _add_general(self, id_or_text, text, shown):
@@ -322,11 +328,11 @@ class WidgetMessagesMixin(MessagesMixin):
         """
         messages = [msg
                     for group in self.message_groups
-                    for msg in group.active.values()]
+                    for msg in group.active]
         if not messages:
             self._hide_message_bar()
             return
-        else:
+        elif self.message_bar is not None:
             font_size = self.message_bar.fontInfo().pixelSize()
             group = messages[0].group
             text = str(messages[0]) if len(messages) == 1 \
@@ -357,22 +363,19 @@ class WidgetMessagesMixin(MessagesMixin):
         gui.rubber(self.message_bar)
         self.message_bar.setVisible(False)
 
-    def _check_has_message_bar(self):
-        if self.message_bar is None:
-            raise RuntimeError(
-                "Did you forget to call WidgetMessagesMixin.insert_message_bar "
-                "for {} (or one of its parent classes)?".
-                format(type(self).__name__))
-
     def _hide_message_bar(self):
-        self._check_has_message_bar()
+        if self.message_bar is None:
+            return
+
         if not self.message_bar.isHidden():
             new_height = self.height() - self.message_bar.height()
             self.message_bar.setVisible(False)
             self.resize(self.width(), new_height)
 
     def _set_message_bar(self, group, text=None, tooltip=None):
-        self._check_has_message_bar()
+        if self.message_bar is None:
+            return
+
         current_height = self.height()
         style = QApplication.instance().style()
         self.message_icon.setPixmap(
