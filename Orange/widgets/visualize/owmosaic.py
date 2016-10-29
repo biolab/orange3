@@ -5,6 +5,7 @@ from math import sqrt, log
 from operator import mul, attrgetter
 
 from scipy.stats import distributions
+from scipy.misc import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem
@@ -13,8 +14,8 @@ from Orange.data import Table, filter, Variable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
-from Orange.preprocess.score import ReliefF
-from Orange.statistics.distribution import get_distribution
+from Orange.preprocess.score import ReliefF, RReliefF
+from Orange.statistics.distribution import get_distribution, get_distributions
 from Orange.widgets import gui, widget
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import (
@@ -75,50 +76,53 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.button.setEnabled(self.check_preconditions())
 
     def check_preconditions(self):
-        self.Information.add_message(
-            "class_required",
-            "Data with a discrete class variable is required.")
-        self.Information.add_message(
-            "no_attributes", "Mosaic requires at least one variable.")
-        self.Information.class_required.clear()
+        self.Information.add_message("no_attributes", "No variables to rank.")
         self.Information.no_attributes.clear()
         if not super().check_preconditions():
             return False
-        domain = self.master.discrete_data.domain
-        if not domain.class_var:
-            self.Information.class_required()
-            return False
-        if not domain.attributes:
+        if not self.master.discrete_data.domain.attributes:
             self.Information.no_attributes()
             return False
         return True
 
     def score_heuristic(self):
         data = self.master.discrete_data
-        weights = ReliefF(n_iterations=100, k_nearest=self.K)(data)
+        if data.domain.class_var is None:
+            return data.domain.attributes
+        relief = ReliefF if data.domain.has_discrete_class else RReliefF
+        weights = relief(n_iterations=100, k_nearest=self.K)(data)
         attrs = sorted(zip(weights, data.domain.attributes),
                        key=lambda x: (-x[0], x[1].name))
         return [a for _, a in attrs]
 
+    def _compute_class_dists(self):
+        master = self.master
+        return master.interior_coloring == master.CLASS_DISTRIBUTION and \
+            master.data.domain.has_discrete_class
+
     def state_count(self):
         n_attrs = len(self.master.discrete_data.domain.attributes)
-        total = 0
-        count = 1
-        for i in range(min(n_attrs, self.max_attrs)):
-            count *= (n_attrs - i)
-            count //= (i + 1)  # (n_attrs - i) may not be divisible by (i + 1)
-            total += count
-        return total
+        min_attrs = 1 if self._compute_class_dists() else 2
+        max_attrs = min(n_attrs, self.max_attrs)
+        return sum(comb(n_attrs, k, exact=True)
+                   for k in range(min_attrs, max_attrs + 1))
 
     def iterate_states(self, state):
         # If we put initialization of `self.attrs` to `initialize`,
         # `score_heuristic` would be run on every call to `set_data`.
-        data = self.master.discrete_data
+        master = self.master
+        data = master.discrete_data
         if state is None:  # on the first call, compute order
             self.attrs = self.score_heuristic()
-            self.marginal = get_distribution(data, data.domain.class_var)
-            self.marginal.normalize()
-            state = [0]
+            if self._compute_class_dists():
+                self.marginal = get_distribution(data, data.domain.class_var)
+                self.marginal.normalize()
+                state = [0]
+            else:
+                self.marginal = get_distributions(data)
+                for dist in self.marginal:
+                    dist.normalize()
+                state = [0, 1]
         n_attrs = len(data.domain.attributes)
         while True:
             yield state
@@ -134,23 +138,40 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                     break
 
     def compute_score(self, state):
-        data = self.master.discrete_data
+        master = self.master
+        data = master.discrete_data
+        domain = data.domain
         attrlist = [self.attrs[i] for i in state]
         cond_dist = get_conditional_distribution(data, attrlist)[0]
+        n = cond_dist[""]
         ss = 0
-        class_values = data.domain.class_var.values
+        if self._compute_class_dists():
+            class_values = domain.class_var.values
+        else:
+            class_values = None
+            attr_indices = [domain.index(attr) for attr in attrlist]
         for indices in product(*(range(len(a.values)) for a in attrlist)):
-            attr_vals = "-".join(attrlist[k].values[ind]
-                                 for k, ind in enumerate(indices))
+            attr_vals = "-".join(attr.values[ind]
+                                 for attr, ind in zip(attrlist, indices))
             total = cond_dist[attr_vals]
-            for i, class_val in enumerate(class_values):
-                expected = total * self.marginal[i]
-                if expected > 1e-6:
-                    observed = cond_dist[attr_vals + '-' + class_val]
-                    ss += (expected - observed) ** 2 / expected
-        dof = reduce(mul,
-                     (len(attr.values) for attr in attrlist),
-                     len(class_values) - 1)
+            if class_values:  # showing class distributions
+                for i, class_val in enumerate(class_values):
+                    expected = total * self.marginal[i]
+                    if expected > 1e-6:
+                        observed = cond_dist[attr_vals + '-' + class_val]
+                        ss += (expected - observed) ** 2 / expected
+            else:
+                observed = cond_dist[attr_vals]
+                expected = n * reduce(
+                    mul,
+                    (self.marginal[attr_idx][ind]
+                     for attr_idx, ind in zip(attr_indices, indices)))
+                ss += (expected - observed) ** 2 / expected
+        if class_values:
+            dof = (len(class_values) - 1) * \
+                  reduce(mul, (len(attr.values) for attr in attrlist))
+        else:
+            dof = reduce(mul, (len(attr.values) - 1 for attr in attrlist))
         return distributions.chi2.sf(ss, dof)
 
     def on_selection_changed(self, selected, deselected):
@@ -176,6 +197,10 @@ class OWMosaicDisplay(OWWidget):
     outputs = [("Selected Data", Table, widget.Default),
                (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
+    PEARSON, CLASS_DISTRIBUTION = 0, 1
+    interior_coloring_opts = ["Pearson residuals",
+                              "Class distribution"]
+
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)
     variable1 = ContextSetting("", exclude_metas=False)
@@ -185,11 +210,8 @@ class OWMosaicDisplay(OWWidget):
     selection = ContextSetting(set())
     # interior_coloring is context setting to properly reset it
     # if the widget switches to regression and back (set setData)
-    interior_coloring = ContextSetting(1)
+    interior_coloring = ContextSetting(CLASS_DISTRIBUTION)
 
-    PEARSON, CLASS_DISTRIBUTION = 0, 1
-    interior_coloring_opts = ["Pearson residuals",
-                              "Class distribution"]
     BAR_WIDTH = 5
     SPACING = 4
     ATTR_NAME_OFFSET = 20
@@ -241,7 +263,7 @@ class OWMosaicDisplay(OWWidget):
         self.rb_colors = gui.radioButtonsInBox(
             self.controlArea, self, "interior_coloring",
             self.interior_coloring_opts, box="Interior Coloring",
-            callback=self.update_graph)
+            callback=self.coloring_changed)
         self.bar_button = gui.checkBox(
             gui.indentedBox(self.rb_colors),
             self, 'use_boxes', label='Compare with total',
@@ -253,8 +275,8 @@ class OWMosaicDisplay(OWWidget):
 
     def _compare_with_total(self):
         if self.data and self.data.domain.has_discrete_class:
-            self.interior_coloring = 1
-            self.update_graph()
+            self.interior_coloring = self.CLASS_DISTRIBUTION
+            self.coloring_changed()
 
     def init_combos(self, data):
         for combo in self.attr_combos:
@@ -284,6 +306,7 @@ class OWMosaicDisplay(OWWidget):
             if a and a != "(None)"]
 
     def set_attr(self, *attrs):
+        # TODO: this doesn't reset combos to (None)
         self.variable1, self.variable2, self.variable3, self.variable4 = \
             [a and a.name for a in attrs]
         self.reset_graph()
@@ -319,7 +342,8 @@ class OWMosaicDisplay(OWWidget):
             disc_class = self.data.domain.has_discrete_class
             self.rb_colors.group.button(2).setDisabled(not disc_class)
             self.bar_button.setDisabled(not disc_class)
-        self.interior_coloring = bool(disc_class)
+        self.interior_coloring = \
+            self.CLASS_DISTRIBUTION if disc_class else self.PEARSON
         self.vizrank.initialize()
         self.vizrank_button.setEnabled(
             self.data is not None and self.data.domain.class_var is not None
@@ -352,6 +376,10 @@ class OWMosaicDisplay(OWWidget):
         self.selection = set()
         self.update_selection_rects()
         self.send_selection()
+
+    def coloring_changed(self):
+        self.vizrank.initialize()
+        self.update_graph()
 
     def reset_graph(self):
         self.clear_selection()
