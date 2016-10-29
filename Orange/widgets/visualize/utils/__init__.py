@@ -90,6 +90,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.master = master
 
         self.keep_running = False
+        self.schedule_initialize = False
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
@@ -168,12 +169,20 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         e.g. from `set_data` handler.
         """
         self.keep_running = False
+        self.schedule_initialize = False
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
         self.rank_model.clear()
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
+
+    def stop_and_reset(self):
+        if self.keep_running:
+            self.schedule_initialize = True
+            self.keep_running = False
+        else:
+            self.initialize()
 
     def check_preconditions(self):
         """Check whether there is sufficient data for ranking."""
@@ -245,9 +254,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             progress.advance(self.saved_progress)
             for state in self.iterate_states(self.saved_state):
                 if not self.keep_running:
-                    self.saved_state = state
-                    self.saved_progress = progress.count
-                    self._select_first_if_none()
+                    if self.schedule_initialize:
+                        self.initialize()
+                    else:
+                        self.saved_state = state
+                        self.saved_progress = progress.count
+                        self._select_first_if_none()
                     return
                 score = self.compute_score(state)
                 if score is not None:

@@ -343,7 +343,7 @@ class OWMosaicDisplay(OWWidget):
             self.bar_button.setDisabled(not disc_class)
         self.interior_coloring = \
             self.CLASS_DISTRIBUTION if disc_class else self.PEARSON
-        self.vizrank.initialize()
+        self.vizrank.stop_and_reset()
         self.vizrank_button.setEnabled(
             self.data is not None and self.data.domain.class_var is not None
             and len(self.data.domain.attributes) >= 1 and len(self.data) > 1)
@@ -377,7 +377,7 @@ class OWMosaicDisplay(OWWidget):
         self.send_selection()
 
     def coloring_changed(self):
-        self.vizrank.initialize()
+        self.vizrank.stop_and_reset()
         self.update_graph()
 
     def reset_graph(self):
