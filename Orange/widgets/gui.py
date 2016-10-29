@@ -112,7 +112,22 @@ def resource_filename(path):
 
 class OWComponent:
     """
-    Mixin for classes that contain controlled attributes.
+    Mixin for classes that contain settings and/or attributes that trigger
+    callbacks when changed.
+
+    The class initializes the settings handler, provides `__setattr__` that
+    triggers callbacks, and provides `control` attribute for access to
+    Qt widgets controling particular attributes.
+
+    Callbacks are exploited by controls (e.g. check boxes, line edits,
+    combo boxes...) that are synchronized with attribute values. Changing
+    the value of the attribute triggers a call to a function that updates
+    the Qt widget accordingly.
+
+    The class is mixed into `widget.OWWidget`, and must also be mixed into
+    all widgets not derived from `widget.OWWidget` that contain settings or
+    Qt widgets inserted by function in `Orange.widgets.gui` module. See
+    `OWScatterPlotGraph` for an example.
     """
     def __init__(self, widget=None):
         self.controlled_attributes = defaultdict(list)
@@ -121,6 +136,20 @@ class OWComponent:
             widget.settingsHandler.initialize(self)
 
     def connect_control(self, name, func):
+        """
+        Add `func` to the list of functions called when the value of the
+        attribute `name` is set.
+
+        If the name includes a dot, it is assumed that the part the before the
+        first dot is a name of an attribute containing an instance of a
+        component, and the call is transferred to its `conntect_control`. For
+        instance, `calling `obj.connect_control("graph.attr_x", f)` is
+        equivalent to `obj.graph.connect_control("attr_x", f)`.
+
+        Args:
+            name (str): attribute name
+            func (callable): callback function
+        """
         if "." in name:
             name, rest = name.split(".", 1)
             sub = getattr(self, name)
@@ -129,12 +158,15 @@ class OWComponent:
             self.controlled_attributes[name].append(func)
 
     def __setattr__(self, name, value):
-        """Set value to members of this instance or any of its members.
+        """Set the attribute value and trigger any attached callbacks.
 
-        If member is used in a gui control, notify the control about the change.
+        For backward compatibility, the name can include dots, e.g.
+        `graph.attr_x`. `obj.__setattr__('x.y', v)` is equivalent to
+        `obj.x.__setattr__('x', v)`.
 
-        name: name of the member, dot is used for nesting ("graph.point.size").
-        value: value to set to the member.
+        Args:
+            name (str): attribute name
+            value (object): value to set to the member.
         """
         if "." in name:
             name, rest = name.split(".", 1)
