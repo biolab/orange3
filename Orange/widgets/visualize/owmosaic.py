@@ -255,7 +255,7 @@ class OWMosaicDisplay(OWWidget):
                 box, self, value="variable{}".format(i),
                 orientation=Qt.Horizontal, contentsLength=12,
                 callback=self.reset_graph,
-                sendSelectedValue=True, valueType=str)
+                sendSelectedValue=True, valueType=str, emptyString="(None)")
             for i in range(1, 5)]
         self.vizrank, self.vizrank_button = MosaicVizRank.add_vizrank(
             box, self, "Find Informative Mosaics", self.set_attr)
@@ -306,9 +306,8 @@ class OWMosaicDisplay(OWWidget):
             if a and a != "(None)"]
 
     def set_attr(self, *attrs):
-        # TODO: this doesn't reset combos to (None)
         self.variable1, self.variable2, self.variable3, self.variable4 = \
-            [a and a.name for a in attrs]
+            [a.name if a else "" for a in attrs]
         self.reset_graph()
 
     def resizeEvent(self, e):
