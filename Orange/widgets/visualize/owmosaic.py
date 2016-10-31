@@ -29,6 +29,7 @@ from Orange.widgets.widget import OWWidget, Default, Msg
 
 
 class MosaicVizRank(VizRankDialog, OWComponent):
+    """VizRank dialog for Mosaic"""
     captionTitle = "Mosaic Ranking"
     K = 10  # for ReliefF
     max_attrs = Setting(3)
@@ -37,6 +38,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
     _AttrRole = next(gui.OrangeUserRole)
 
     def __init__(self, master):
+        """Add the spin box for maximal number of attributes"""
         VizRankDialog.__init__(self, master)
         OWComponent.__init__(self, master)
 
@@ -53,11 +55,16 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.last_run_max_attr = None
 
     def sizeHint(self):
-        """Assuming two columns in the table, return `QSize(320, 512)` as
-        a reasonable default size."""
         return QSize(320, 512)
 
     def run(self):
+        """
+        Add handling of the spin box for maximal number of attributes.
+
+        Disable the box before running and enable afterwards.
+        Also, if the number of attributes is different than in the last run,
+        reset the saved state (if it was paused).
+        """
         if self.max_attrs != self.last_run_max_attr:
             self.saved_state = None
             self.saved_progress = 0
@@ -72,10 +79,17 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             self.max_attr_spin.setDisabled(False)
 
     def max_attr_changed(self):
+        """
+        Change the button label when the maximal number of attributes changes.
+
+        The method does not reset anything so the user can still see the
+        results until actually restarting the search.
+        """
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
 
     def check_preconditions(self):
+        """Require at least one variable to allow ranking."""
         self.Information.add_message("no_attributes", "No variables to rank.")
         self.Information.no_attributes.clear()
         if not super().check_preconditions():
@@ -86,6 +100,10 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         return True
 
     def score_heuristic(self):
+        """
+        Order attributes by ReliefF or RReliefF if there is a target
+        variable. In case of ties or without target, other by name.
+        """
         data = self.master.discrete_data
         if data.domain.class_var is None:
             return data.domain.attributes
@@ -101,6 +119,10 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             master.data.domain.has_discrete_class
 
     def state_count(self):
+        """
+        Return the number of combinations, starting with a single attribute
+        if Mosaic is colored by class distributions, and two if by Pearson
+        """
         n_attrs = len(self.master.discrete_data.domain.attributes)
         min_attrs = 1 if self._compute_class_dists() else 2
         max_attrs = min(n_attrs, self.max_attrs)
@@ -108,6 +130,11 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                    for k in range(min_attrs, max_attrs + 1))
 
     def iterate_states(self, state):
+        """
+        Iterate through all combinations of attributes as ordered by Relief,
+        starting with a single attribute if Mosaic is colored by class
+        distributions, and two if by Pearson.
+        """
         # If we put initialization of `self.attrs` to `initialize`,
         # `score_heuristic` would be run on every call to `set_data`.
         master = self.master
@@ -138,6 +165,13 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                     break
 
     def compute_score(self, state):
+        """
+        Compute score using chi-square test of independence.
+
+        If mosaic colors by class distribution, chi-square is computed by
+        comparing the expected (prior) and observed class distribution in
+        each cell. Otherwise, compute the independence of the shown attributes.
+        """
         master = self.master
         data = master.discrete_data
         domain = data.domain
