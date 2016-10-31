@@ -14,7 +14,7 @@ from Orange.data import Table, filter, Variable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
-from Orange.preprocess.score import ReliefF, RReliefF
+from Orange.preprocess.score import ReliefF
 from Orange.statistics.distribution import get_distribution, get_distributions
 from Orange.widgets import gui, widget
 from Orange.widgets.gui import OWComponent
@@ -31,7 +31,6 @@ from Orange.widgets.widget import OWWidget, Default, Msg
 class MosaicVizRank(VizRankDialog, OWComponent):
     """VizRank dialog for Mosaic"""
     captionTitle = "Mosaic Ranking"
-    K = 10  # for ReliefF
     max_attrs = Setting(3)
 
     pairSelected = Signal(Variable, Variable, Variable, Variable)
@@ -42,28 +41,37 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         VizRankDialog.__init__(self, master)
         OWComponent.__init__(self, master)
 
-        box = gui.vBox(self)
+        box = gui.hBox(self)
         self.max_attr_spin = gui.spin(
             box, self, "max_attrs", 2, 4,
             label="Limit the number of attributes to: ",
             controlWidth=50, alignment=Qt.AlignRight,
             callback=self.max_attr_changed)
+        gui.rubber(box)
         self.layout().addWidget(self.button)
-        self.resize(320, 512)
-        self.attrs = []
+        self.attr_ordering = None
         self.marginal = {}
         self.last_run_max_attr = None
 
     def sizeHint(self):
-        return QSize(320, 512)
+        return QSize(400, 512)
+
+    def initialize(self):
+        """Clear the ordering to trigger recomputation when needed"""
+        super().initialize()
+        self.attr_ordering = None
+
+    def initialize_keep_ordering(self):
+        """Initialize triggered by change of coloring"""
+        super().initialize()
 
     def run(self):
         """
         Add handling of the spin box for maximal number of attributes.
 
-        Disable the box before running and enable afterwards.
-        Also, if the number of attributes is different than in the last run,
-        reset the saved state (if it was paused).
+        Disable the spin for maximal number of attributes before running and
+        enable afterwards. Also, if the number of attributes is different than
+        in the last run, reset the saved state (if it was paused).
         """
         if self.max_attrs != self.last_run_max_attr:
             self.saved_state = None
@@ -71,6 +79,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         if self.saved_state is None:
             self.scores = []
             self.rank_model.clear()
+        self.compute_attr_order()
         self.last_run_max_attr = self.max_attrs
         self.max_attr_spin.setDisabled(True)
         try:
@@ -85,45 +94,65 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         The method does not reset anything so the user can still see the
         results until actually restarting the search.
         """
-        self.button.setText("Start")
+        if self.max_attrs != self.last_run_max_attr or self.saved_state is None:
+            self.button.setText("Start")
+        else:
+            self.button.setText("Continue")
         self.button.setEnabled(self.check_preconditions())
+
+    def coloring_changed(self):
+        self.stop_and_reset(self.initialize_keep_ordering)
 
     def check_preconditions(self):
         """Require at least one variable to allow ranking."""
         self.Information.add_message("no_attributes", "No variables to rank.")
         self.Information.no_attributes.clear()
-        if not super().check_preconditions():
+        data = self.master.discrete_data
+        if not super().check_preconditions() or data is None:
             return False
-        if not self.master.discrete_data.domain.attributes:
+        if not data.domain.attributes:
             self.Information.no_attributes()
             return False
         return True
 
-    def score_heuristic(self):
+    def compute_attr_order(self):
         """
-        Order attributes by ReliefF or RReliefF if there is a target
-        variable. In case of ties or without target, other by name.
+        Order attributes by Relief if there is a target variable. In case of
+        ties or without target, other by name.
+
+        Add the class variable at the beginning when not coloring by class
+        distribution.
+
+        If `self.attrs` is not `None`, keep the ordering and just add or remove
+        the class as needed.
         """
         data = self.master.discrete_data
-        if data.domain.class_var is None:
-            return data.domain.attributes
-        relief = ReliefF if data.domain.has_discrete_class else RReliefF
-        weights = relief(n_iterations=100, k_nearest=self.K)(data)
-        attrs = sorted(zip(weights, data.domain.attributes),
-                       key=lambda x: (-x[0], x[1].name))
-        return [a for _, a in attrs]
+        class_var = data.domain.class_var
+        if not self.attr_ordering:
+            if class_var is None:
+                self.attr_ordering = sorted(data.domain, key=attrgetter("name"))
+            else:
+                weights = ReliefF(n_iterations=100, k_nearest=10)(data)
+                attrs = sorted(zip(weights, data.domain.attributes),
+                               key=lambda x: (-x[0], x[1].name))
+                self.attr_ordering = [a for _, a in attrs]
+        if class_var is not None:
+            if self._compute_class_dists():
+                if self.attr_ordering[0] is class_var:
+                    del self.attr_ordering[0]
+            elif self.attr_ordering[0] is not class_var:
+                self.attr_ordering.insert(0, class_var)
 
     def _compute_class_dists(self):
-        master = self.master
-        return master.interior_coloring == master.CLASS_DISTRIBUTION and \
-            master.data.domain.has_discrete_class
+        return self.master.interior_coloring == self.master.CLASS_DISTRIBUTION
 
     def state_count(self):
         """
         Return the number of combinations, starting with a single attribute
         if Mosaic is colored by class distributions, and two if by Pearson
         """
-        n_attrs = len(self.master.discrete_data.domain.attributes)
+        self.compute_attr_order()
+        n_attrs = len(self.attr_ordering)
         min_attrs = 1 if self._compute_class_dists() else 2
         max_attrs = min(n_attrs, self.max_attrs)
         return sum(comb(n_attrs, k, exact=True)
@@ -136,11 +165,10 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         distributions, and two if by Pearson.
         """
         # If we put initialization of `self.attrs` to `initialize`,
-        # `score_heuristic` would be run on every call to `set_data`.
+        # `score_heuristic` would be run on every call to master's `set_data`.
         master = self.master
         data = master.discrete_data
         if state is None:  # on the first call, compute order
-            self.attrs = self.score_heuristic()
             if self._compute_class_dists():
                 self.marginal = get_distribution(data, data.domain.class_var)
                 self.marginal.normalize()
@@ -153,12 +181,15 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         n_attrs = len(data.domain.attributes)
         while True:
             yield state
+            # Reset while running; just abort
+            if self.attr_ordering is None:
+                break
             for up in range(len(state)):
                 state[up] += 1
                 if up + 1 == len(state) or state[up] < state[up + 1]:
                     break
                 state[up] = up
-            if state[-1] == len(self.attrs):
+            if state[-1] == len(self.attr_ordering):
                 if len(state) < min(self.max_attrs, n_attrs):
                     state = list(range(len(state) + 1))
                 else:
@@ -175,7 +206,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         master = self.master
         data = master.discrete_data
         domain = data.domain
-        attrlist = [self.attrs[i] for i in state]
+        attrlist = [self.attr_ordering[i] for i in state]
         cond_dist = get_conditional_distribution(data, attrlist)[0]
         n = cond_dist[""]
         ss = 0
@@ -200,7 +231,8 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                     mul,
                     (self.marginal[attr_idx][ind]
                      for attr_idx, ind in zip(attr_indices, indices)))
-                ss += (expected - observed) ** 2 / expected
+                if expected > 1e-6:
+                    ss += (expected - observed) ** 2 / expected
         if class_values:
             dof = (len(class_values) - 1) * \
                   reduce(mul, (len(attr.values) for attr in attrlist))
@@ -213,8 +245,12 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.selectionChanged.emit(attrs + (None, ) * (4 - len(attrs)))
 
     def row_for_state(self, score, state):
-        attrs = tuple(sorted((self.attrs[x] for x in state),
-                             key=attrgetter("name")))
+        """The row consists of attributes sorted by name; class is at the
+        beginning, if present, so it's on the x-axis and not lost somewhere."""
+        class_var = self.master.data.domain.class_var
+        attrs = tuple(
+            sorted((self.attr_ordering[x] for x in state),
+                   key=lambda attr: (1 - (attr is class_var), attr.name)))
         item = QStandardItem(", ".join(a.name for a in attrs))
         item.setData(attrs, self._AttrRole)
         return [item]
@@ -237,14 +273,12 @@ class OWMosaicDisplay(OWWidget):
 
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)
+    interior_coloring = Setting(CLASS_DISTRIBUTION)
     variable1 = ContextSetting("", exclude_metas=False)
     variable2 = ContextSetting("", exclude_metas=False)
     variable3 = ContextSetting("", exclude_metas=False)
     variable4 = ContextSetting("", exclude_metas=False)
     selection = ContextSetting(set())
-    # interior_coloring is context setting to properly reset it
-    # if the widget switches to regression and back (set setData)
-    interior_coloring = ContextSetting(CLASS_DISTRIBUTION)
 
     BAR_WIDTH = 5
     SPACING = 4
@@ -305,12 +339,16 @@ class OWMosaicDisplay(OWWidget):
         gui.rubber(self.controlArea)
 
     def sizeHint(self):
-        return QSize(530, 720)
+        return QSize(720, 530)
 
     def _compare_with_total(self):
-        if self.data and self.data.domain.has_discrete_class:
+        if self.data is not None and \
+                self.data.domain.class_var is not None and \
+                self.interior_coloring != self.CLASS_DISTRIBUTION:
             self.interior_coloring = self.CLASS_DISTRIBUTION
-            self.coloring_changed()
+            self.coloring_changed()  # This also calls self.update_graph
+        else:
+            self.update_graph()
 
     def init_combos(self, data):
         for combo in self.attr_combos:
@@ -359,28 +397,26 @@ class OWMosaicDisplay(OWWidget):
         self.closeContext()
         self.data = data
         self.init_combos(self.data)
-        if not self.data:
+        if self.data is None:
             self.discrete_data = None
-            return
-        if any(attr.is_continuous for attr in data.domain):
-            self.discrete_data = Discretize(method=EqualFreq(n=4))(data)
+        elif any(attr.is_continuous for attr in data.domain):
+            self.discrete_data = Discretize(
+                method=EqualFreq(n=4), discretize_classes=True)(data)
         else:
             self.discrete_data = self.data
 
-        if self.data.domain.class_var is None:
-            self.rb_colors.setDisabled(True)
-            disc_class = False
-        else:
-            self.rb_colors.setDisabled(False)
-            disc_class = self.data.domain.has_discrete_class
-            self.rb_colors.group.button(2).setDisabled(not disc_class)
-            self.bar_button.setDisabled(not disc_class)
-        self.interior_coloring = \
-            self.CLASS_DISTRIBUTION if disc_class else self.PEARSON
         self.vizrank.stop_and_reset()
         self.vizrank_button.setEnabled(
-            self.data is not None and self.data.domain.class_var is not None
-            and len(self.data.domain.attributes) >= 1 and len(self.data) > 1)
+            self.data is not None and len(self.data) > 1 \
+            and len(self.data.domain.attributes) >= 1)
+
+        if self.data is None:
+            return
+
+        has_class = self.data.domain.class_var is not None
+        self.rb_colors.setDisabled(not has_class)
+        self.interior_coloring = \
+            self.CLASS_DISTRIBUTION if has_class else self.PEARSON
 
         self.openContext(self.data)
 
@@ -411,7 +447,7 @@ class OWMosaicDisplay(OWWidget):
         self.send_selection()
 
     def coloring_changed(self):
-        self.vizrank.stop_and_reset()
+        self.vizrank.coloring_changed()
         self.update_graph()
 
     def reset_graph(self):
@@ -671,7 +707,7 @@ class OWMosaicDisplay(OWWidget):
             if x1 - x0 + y1 - y0 == 2:
                 y1 += 1
 
-            if class_var and class_var.is_discrete:
+            if class_var:
                 colors = [QColor(*col) for col in class_var.colors]
             else:
                 colors = None
@@ -922,7 +958,7 @@ def get_conditional_distribution(data, attrs):
     dist = defaultdict(int)
     cond_dist[""] = dist[""] = len(data)
     all_attrs = [data.domain[a] for a in attrs]
-    if data.domain.has_discrete_class:
+    if data.domain.class_var is not None:
         all_attrs.append(data.domain.class_var)
 
     for i in range(1, len(all_attrs) + 1):

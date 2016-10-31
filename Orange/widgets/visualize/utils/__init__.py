@@ -90,7 +90,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.master = master
 
         self.keep_running = False
-        self.schedule_initialize = False
+        self.scheduled_call = None
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
@@ -169,7 +169,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         e.g. from `set_data` handler.
         """
         self.keep_running = False
-        self.schedule_initialize = False
+        self.scheduled_call = None
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
@@ -177,9 +177,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
 
-    def stop_and_reset(self):
+    def stop_and_reset(self, reset_method=None):
         if self.keep_running:
-            self.schedule_initialize = True
+            self.scheduled_call = reset_method or self.initialize
             self.keep_running = False
         else:
             self.initialize()
@@ -254,8 +254,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             progress.advance(self.saved_progress)
             for state in self.iterate_states(self.saved_state):
                 if not self.keep_running:
-                    if self.schedule_initialize:
-                        self.initialize()
+                    if self.scheduled_call:
+                        self.scheduled_call()
                     else:
                         self.saved_state = state
                         self.saved_progress = progress.count
