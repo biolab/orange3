@@ -455,7 +455,7 @@ class OWMosaicDisplay(OWWidget):
         self.update_graph()
 
     def update_selection_rects(self):
-        for i, (attr, vals, area) in enumerate(self.areas):
+        for i, (_, _, area) in enumerate(self.areas):
             if i in self.selection:
                 area.setPen(QPen(Qt.black, 3, Qt.DotLine))
             else:
@@ -483,7 +483,7 @@ class OWMosaicDisplay(OWWidget):
             if isinstance(self.data, SqlTable):
                 self.Warning.no_cont_selection_sql()
         for i in self.selection:
-            cols, vals, area = self.areas[i]
+            cols, vals, _ = self.areas[i]
             filters.append(
                 filter.Values(
                     filter.FilterDiscrete(col, [val])
@@ -509,8 +509,7 @@ class OWMosaicDisplay(OWWidget):
         bar_width = self.BAR_WIDTH
 
         def draw_data(attr_list, x0_x1, y0_y1, side, condition,
-                      total_attrs, used_attrs=[], used_vals=[],
-                      attr_vals=""):
+                      total_attrs, used_attrs, used_vals, attr_vals=""):
             x0, x1 = x0_x1
             y0, y1 = y0_y1
             if conditionaldict[attr_vals] == 0:
@@ -695,8 +694,8 @@ class OWMosaicDisplay(OWWidget):
                     y0 + (y1 - y0) / 2,
                     align, bold=1, vertical=True)
 
-        def add_rect(x0, x1, y0, y1, condition="",
-                     used_attrs=[], used_vals=[], attr_vals=""):
+        def add_rect(x0, x1, y0, y1, condition,
+                     used_attrs, used_vals, attr_vals=""):
             area_index = len(self.areas)
             if x0 == x1:
                 x1 += 1
@@ -822,18 +821,17 @@ class OWMosaicDisplay(OWWidget):
                     text = "<br/>".join(
                         "<b>%s</b>: %d / %.1f%% (Expected %.1f / %.1f%%)" %
                         (cls, act, 100.0 * act / n_actual,
-                         apr / n_apriori * n_actual, 100.0 * apr / n_apriori
-                         )
+                         apr / n_apriori * n_actual, 100.0 * apr / n_apriori)
                         for cls, act, apr in zip(cls_values, actual, apriori))
                 else:
                     text = ""
                 outer_rect.setToolTip(
                     "{}<hr>Instances: {}<br><br>{}".format(
-                    condition, n_actual, text[:-4]))
+                        condition, n_actual, text[:-4]))
 
         def draw_legend(x0_x1, y0_y1):
             x0, x1 = x0_x1
-            y0, y1 = y0_y1
+            _, y1 = y0_y1
             if self.interior_coloring == self.PEARSON:
                 names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8",
                          "Residuals:"]
@@ -948,7 +946,7 @@ class OWMosaicDisplay(OWWidget):
         # draw rectangles
         draw_data(
             attr_list, (xoff, xoff + square_size), (yoff, yoff + square_size),
-            0, "", len(attr_list))
+            0, "", len(attr_list), [], [])
         draw_legend((xoff, xoff + square_size), (yoff, yoff + square_size))
         self.update_selection_rects()
 
@@ -983,7 +981,7 @@ def get_conditional_distribution(data, attrs):
                 for k, ind in enumerate(indices):
                     vals.append(attr[k].values[ind])
                     fd = filter.FilterDiscrete(
-                            column=attr[k], values=[attr[k].values[ind]])
+                        column=attr[k], values=[attr[k].values[ind]])
                     conditions.append(fd)
                 filt = filter.Values(conditions)
                 filtdata = filt(data)
@@ -992,8 +990,7 @@ def get_conditional_distribution(data, attrs):
     return cond_dist, dist
 
 
-# test widget appearance
-if __name__ == "__main__":
+def main():
     import sys
     from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
@@ -1003,3 +1000,6 @@ if __name__ == "__main__":
     ow.set_data(data)
     ow.handleNewSignals()
     a.exec_()
+
+if __name__ == "__main__":
+    main()
