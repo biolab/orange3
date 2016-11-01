@@ -7,21 +7,24 @@ from contextlib import contextmanager
 
 import numpy
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
-    QGraphicsScene, QGraphicsView, QTransform, QPainterPath,
-    QColor, QBrush, QPen, QFontMetrics, QGridLayout, QFormLayout,
-    QSizePolicy, QGraphicsSimpleTextItem, QPolygonF, QPainterPathStroker,
-    QGraphicsLayoutItem, QAction, QKeySequence, QFont
+    QGraphicsScene, QGraphicsView, QGridLayout, QFormLayout, QSizePolicy,
+    QGraphicsSimpleTextItem,
+    QGraphicsLayoutItem, QAction,
 )
-
-from PyQt4.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import (
+    QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
+    QFont, QFontMetrics, QPolygonF, QKeySequence
+)
+from AnyQt.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
 
 import Orange.data
 from Orange.data.domain import filter_visible
+from Orange.data import Domain
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
@@ -29,6 +32,8 @@ from Orange.clustering.hierarchical import \
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.io import FileFormat
 
 __all__ = ["OWHierarchicalClustering"]
@@ -706,7 +711,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
 
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table)]
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
 
     #: Selected linkage
     linkage = settings.Setting(1)
@@ -779,37 +784,40 @@ class OWHierarchicalClustering(widget.OWWidget):
             1, 0)
         grid.addWidget(self.max_depth_spin, 1, 1)
 
-        box = gui.radioButtons(
+        self.selection_box = gui.radioButtons(
             self.controlArea, self, "selection_method",
             box="Selection",
             callback=self._selection_method_changed)
 
         grid = QGridLayout()
-        box.layout().addLayout(grid)
+        self.selection_box.layout().addLayout(grid)
         grid.addWidget(
-            gui.appendRadioButton(box, "Manual", addToLayout=False),
+            gui.appendRadioButton(
+                self.selection_box, "Manual", addToLayout=False),
             0, 0
         )
         grid.addWidget(
-            gui.appendRadioButton(box, "Height ratio:", addToLayout=False),
+            gui.appendRadioButton(
+                self.selection_box, "Height ratio:", addToLayout=False),
             1, 0
         )
         self.cut_ratio_spin = gui.spin(
-            box, self, "cut_ratio", 0, 100, step=1e-1, spinType=float,
-            callback=self._selection_method_changed
+            self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
+            spinType=float, callback=self._selection_method_changed
         )
         self.cut_ratio_spin.setSuffix("%")
 
         grid.addWidget(self.cut_ratio_spin, 1, 1)
 
         grid.addWidget(
-            gui.appendRadioButton(box, "Top N:", addToLayout=False),
+            gui.appendRadioButton(
+                self.selection_box, "Top N:", addToLayout=False),
             2, 0
         )
-        self.top_n_spin = gui.spin(box, self, "top_n", 1, 20,
+        self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
                                    callback=self._selection_method_changed)
         grid.addWidget(self.top_n_spin, 2, 1)
-        box.layout().addLayout(grid)
+        self.selection_box.layout().addLayout(grid)
 
         self.zoom_slider = gui.hSlider(
             self.controlArea, self, "zoom_factor", box="Zoom",
@@ -1051,6 +1059,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     def _invalidate_clustering(self):
         self._update()
         self._update_labels()
+        self._invalidate_output()
 
     def _invalidate_output(self):
         self.commit()
@@ -1074,7 +1083,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
         if not items:
-            # nothing to commit
+            self.send("Selected Data", None)
+            self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
             return
 
         selection = self.dendrogram.selected_nodes()
@@ -1091,10 +1101,12 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if not selected_indices:
             self.send("Selected Data", None)
-            self.send("Other Data", None)
+            annotated_data = create_annotated_table(items, []) \
+                if self.selection_method == 0 and self.matrix.axis else None
+            self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
             return
 
-        selected_data = unselected_data = None
+        selected_data = None
 
         if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
             # Select rows
@@ -1134,8 +1146,20 @@ class OWHierarchicalClustering(widget.OWWidget):
 
             if selected_indices:
                 selected_data = data[mask]
-            if unselected_indices:
-                unselected_data = data[~mask]
+                if self.append_clusters:
+                    def remove_other_value(vars_):
+                        vars_ = list(vars_)
+                        clust_var = vars_[-1].copy()
+                        clust_var.values.pop()
+                        vars_[-1] = clust_var
+                        return vars_
+                    if self.cluster_role == self.AttributeRole:
+                        attrs = remove_other_value(attrs)
+                    elif self.cluster_role == self.ClassRole:
+                        class_ = remove_other_value(class_)
+                    elif self.cluster_role == self.MetaRole:
+                        metas = remove_other_value(metas)
+                    selected_data.domain = Domain(attrs, class_, metas)
 
         elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
             # Select columns
@@ -1143,13 +1167,12 @@ class OWHierarchicalClustering(widget.OWWidget):
                 [items.domain[i] for i in selected_indices],
                 items.domain.class_vars, items.domain.metas)
             selected_data = items.from_table(domain, items)
-            domain = Orange.data.Domain(
-                [items.domain[i] for i in unselected_indices],
-                items.domain.class_vars, items.domain.metas)
-            unselected_data = items.from_table(domain, items)
+            data = None
 
         self.send("Selected Data", selected_data)
-        self.send("Other Data", unselected_data)
+        annotated_data = create_annotated_table(data, selected_indices) if \
+            self.selection_method == 0 else None
+        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
 
     def sizeHint(self):
         return QSize(800, 500)
@@ -1279,6 +1302,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         # dendrogram view.
         self.selection_method = 0
         self._selection_method_changed()
+        self._invalidate_output()
 
     def __zoom_in(self):
         def clip(minval, maxval, val):
@@ -1603,7 +1627,7 @@ def clusters_at_height(root, height):
 
 
 def main(argv=None):
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     import sip
     import Orange.distance as distance
 

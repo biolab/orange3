@@ -1,6 +1,7 @@
 import os, sys
 
-from PyQt4 import QtGui, QtCore
+from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
+from AnyQt.QtCore import QTimer
 
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
@@ -33,14 +34,14 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         self.file_combo.activated[int].connect(self.select_file)
 
         button = gui.button(box, self, '...', callback=self.browse_file)
-        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_DirOpenIcon))
+        button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         button.setSizePolicy(
-            QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Fixed)
+            QSizePolicy.Maximum, QSizePolicy.Fixed)
 
         button = gui.button(
             box, self, "Reload", callback=self.reload, default=True)
-        button.setIcon(self.style().standardIcon(QtGui.QStyle.SP_BrowserReload))
-        button.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
+        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         box = gui.vBox(self.controlArea, "Info", addSpace=True)
         self.infoa = gui.widgetLabel(box, 'No data loaded.')
@@ -48,7 +49,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         #Set word wrap, so long warnings won't expand the widget
         self.warnings.setWordWrap(True)
         self.warnings.setSizePolicy(
-            QtGui.QSizePolicy.Ignored, QtGui.QSizePolicy.MinimumExpanding)
+            QSizePolicy.Ignored, QSizePolicy.MinimumExpanding)
 
         box = gui.hBox(self.controlArea)
         gui.button(
@@ -59,7 +60,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         self.report_button.setFixedWidth(170)
 
         self.set_file_list()
-        QtCore.QTimer.singleShot(0, self.open_file)
+        QTimer.singleShot(0, self.open_file)
 
     def set_file_list(self):
         super().set_file_list()
@@ -76,14 +77,14 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         if in_demos:
             start_file = get_sample_datasets_dir()
             if not os.path.exists(start_file):
-                QtGui.QMessageBox.information(
+                QMessageBox.information(
                     None, "File",
                     "Cannot find the directory with documentation data sets")
                 return
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        filename = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, 'Open Distance File', start_file, "(*.dst)")
         if not filename:
             return
@@ -141,7 +142,8 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
             self.report_items([("File name", self.loaded_file)])
 
 if __name__ == "__main__":
-    a = QtGui.QApplication(sys.argv)
+    from AnyQt.QtWidgets import QApplication
+    a = QApplication(sys.argv)
     ow = OWDistanceFile()
     ow.show()
     a.exec_()

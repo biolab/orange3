@@ -3,18 +3,20 @@ from itertools import chain
 import numpy as np
 from scipy.stats.distributions import chi2
 
-from PyQt4.QtCore import Qt, QSize
-from PyQt4.QtGui import (
-    QGraphicsScene, QColor, QPen, QBrush, QSizePolicy, QGraphicsLineItem)
+from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtGui import QColor, QPen, QBrush
+from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
 from Orange.data import Table, filter
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import to_html as to_html
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
@@ -56,19 +58,20 @@ class OWSieveDiagram(OWWidget):
     description = "Visualize the observed and expected frequencies " \
                   "for a combination of values."
     icon = "icons/SieveDiagram.svg"
-    priority = 310
+    priority = 200
 
     inputs = [("Data", Table, "set_data", Default),
               ("Features", AttributeList, "set_input_features")]
-    outputs = [("Selection", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     graph_name = "canvas"
 
     want_control_area = False
 
     settingsHandler = DomainContextHandler()
-    attrX = ContextSetting("")
-    attrY = ContextSetting("")
+    attrX = ContextSetting("", exclude_metas=False)
+    attrY = ContextSetting("", exclude_metas=False)
     selection = ContextSetting(set())
 
     def __init__(self):
@@ -92,11 +95,9 @@ class OWSieveDiagram(OWWidget):
         self.attrXCombo = gui.comboBox(value="attrX", **combo_args)
         gui.widgetLabel(self.attr_box, "\u2715", sizePolicy=fixed_size)
         self.attrYCombo = gui.comboBox(value="attrY", **combo_args)
-        self.vizrank = SieveRank(self)
-        self.vizrank_button = gui.button(
-            self.attr_box, self, "Score Combinations", sizePolicy=fixed_size,
-            callback=self.vizrank.reshow, enabled=False)
-        self.vizrank.pairSelected.connect(self.set_attr)
+        self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
+            self.attr_box, self, "Score Combinations", self.set_attr)
+        self.vizrank_button.setSizePolicy(*fixed_size)
 
         self.canvas = QGraphicsScene()
         self.canvasView = ViewWithPress(
@@ -119,14 +120,6 @@ class OWSieveDiagram(OWWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self.update_graph()
-
-    def closeEvent(self, event):
-        self.vizrank.close()
-        super().closeEvent(event)
-
-    def hideEvent(self, event):
-        self.vizrank.hide()
-        super().hideEvent(event)
 
     def set_data(self, data):
         """
@@ -254,7 +247,9 @@ class OWSieveDiagram(OWWidget):
         Filter and output the data.
         """
         if self.areas is None or not self.selection:
-            self.send("Selection", None)
+            self.send("Selected Data", None)
+            self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                      create_annotated_table(self.data, []))
             return
 
         filts = []
@@ -277,11 +272,13 @@ class OWSieveDiagram(OWWidget):
         else:
             filts = filter.Values(filts, conjunction=False)
         selection = filts(self.discrete_data)
+        idset = set(selection.ids)
+        sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
         if self.discrete_data is not self.data:
-            idset = set(selection.ids)
-            sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
             selection = self.data[sel_idx]
-        self.send("Selection", selection)
+        self.send("Selected Data", selection)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, sel_idx))
 
     def update_graph(self):
         # Function uses weird names like r, g, b, but it does it with utmost
@@ -461,7 +458,7 @@ class OWSieveDiagram(OWWidget):
 def main():
     # pylint: disable=missing-docstring
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
     ow = OWSieveDiagram()
     ow.show()

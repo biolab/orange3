@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from collections import OrderedDict
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QFormLayout
+from AnyQt.QtCore import  Qt
+
 
 from Orange.data import Table
 from Orange.regression.linear import SGDRegressionLearner
@@ -55,7 +56,7 @@ class OWSGDRegression(OWBaseLearner):
             gui.separator(box)
             box2 = gui.hBox(box)
             gui.rubber(box2)
-            form = QtGui.QFormLayout()
+            form = QFormLayout()
             form.setContentsMargins(0, 0, 0, 0)
             box2.layout().addLayout(form)
             return form
@@ -168,7 +169,7 @@ class OWSGDRegression(OWBaseLearner):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWSGDRegression()

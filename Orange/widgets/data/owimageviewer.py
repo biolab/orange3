@@ -16,20 +16,21 @@ from itertools import zip_longest
 
 import numpy
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsItem,
     QGraphicsTextItem, QGraphicsRectItem, QGraphicsLinearLayout,
-    QGraphicsGridLayout, QSizePolicy, QPixmap, QPen, QBrush, QColor,
-    QPainter, QPainterPath, QApplication, QImageReader, QWidget, QLabel,
+    QGraphicsGridLayout, QSizePolicy, QApplication, QWidget, QLabel,
     QStyle, QShortcut
 )
-from PyQt4.QtCore import (
+from AnyQt.QtGui import (
+    QPixmap, QPen, QBrush, QColor, QPainter, QPainterPath, QImageReader
+)
+from AnyQt.QtCore import (
     Qt, QObject, QEvent, QThread, QSize, QPoint, QRect,
     QSizeF, QRectF, QPointF, QUrl, QDir, QMargins
 )
-
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-from PyQt4.QtNetwork import (
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtNetwork import (
     QNetworkAccessManager, QNetworkDiskCache, QNetworkRequest, QNetworkReply
 )
 

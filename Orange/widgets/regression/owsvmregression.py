@@ -1,12 +1,11 @@
 from collections import OrderedDict
 
-from PyQt4 import QtGui
-from PyQt4.QtGui import QLabel
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QLabel, QGridLayout
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.regression import SVRLearner, NuSVRLearner
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.classify.owsvmclassification import OWBaseSVM
 
 
@@ -19,7 +18,7 @@ class OWSVMRegression(OWBaseSVM):
 
     LEARNER = SVRLearner
 
-    outputs = [("Support vectors", Table)]
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
     #: SVR types
     Epsilon_SVR, Nu_SVR = 0, 1
@@ -35,7 +34,7 @@ class OWSVMRegression(OWBaseSVM):
     nu = settings.Setting(0.5)
 
     def _add_type_box(self):
-        form = QtGui.QGridLayout()
+        form = QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
                 self.controlArea, self, "svrtype", [], box="SVR Type",
                 orientation=form)
@@ -47,7 +46,7 @@ class OWSVMRegression(OWBaseSVM):
         self.epsilon_spin = gui.doubleSpin(box, self, "epsilon", 0.1, 512.0,
                                            0.1, decimals=2, addToLayout=False)
         form.addWidget(self.epsilon_radio, 0, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
+        form.addWidget(QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
         form.addWidget(self.epsilon_C_spin, 0, 2)
         form.addWidget(QLabel("Loss epsilon (ε):"), 1, 1, Qt.AlignRight)
         form.addWidget(self.epsilon_spin, 1, 2)
@@ -94,7 +93,7 @@ class OWSVMRegression(OWBaseSVM):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWSVMRegression()

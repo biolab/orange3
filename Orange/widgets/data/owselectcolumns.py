@@ -1,9 +1,14 @@
 import sys
 from functools import partial, reduce
 
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import (
+    QWidget, QListView, QLineEdit, QCompleter, QSizePolicy, QGridLayout)
+from AnyQt.QtGui import QDrag
+from AnyQt.QtCore import (
+    Qt, QObject, QEvent, QMimeData, QByteArray, QModelIndex,
+    QAbstractItemModel, QSortFilterProxyModel, QStringListModel,
+    QItemSelection, QItemSelectionModel
+)
 
 from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
@@ -33,7 +38,7 @@ def source_model(view):
     """ Return the source model for the Qt Item View if it uses
     the QSortFilterProxyModel.
     """
-    if isinstance(view.model(), QtGui.QSortFilterProxyModel):
+    if isinstance(view.model(), QSortFilterProxyModel):
         return view.model().sourceModel()
     else:
         return view.model()
@@ -43,7 +48,7 @@ def source_indexes(indexes, view):
     """ Map model indexes through a views QSortFilterProxyModel
     """
     model = view.model()
-    if isinstance(model, QtGui.QSortFilterProxyModel):
+    if isinstance(model, QSortFilterProxyModel):
         return list(map(model.mapToSource, indexes))
     else:
         return indexes
@@ -54,7 +59,7 @@ def delslice(model, start, end):
     """
     if isinstance(model, itemmodels.PyListModel):
         del model[start:end]
-    elif isinstance(model, QtCore.QAbstractItemModel):
+    elif isinstance(model, QAbstractItemModel):
         model.removeRows(start, end - start)
     else:
         raise TypeError(type(model))
@@ -94,9 +99,9 @@ class VariablesListItemModel(itemmodels.VariableListModel):
             var = self[index.row()]
             descriptors.append((var.name, vartype(var)))
             vars.append(var)
-        mime = QtCore.QMimeData()
+        mime = QMimeData()
         mime.setData(self.MIME_TYPE,
-                     QtCore.QByteArray(str(descriptors).encode("utf-8")))
+                     QByteArray(str(descriptors).encode("utf-8")))
         mime._vars = vars
         return mime
 
@@ -135,7 +140,7 @@ class ClassVarListItemModel(VariablesListItemModel):
             self, mime, action, row, column, parent)
 
 
-class VariablesListItemView(QtGui.QListView):
+class VariablesListItemView(QListView):
     """ A Simple QListView subclass initialized for displaying
     variables.
     """
@@ -164,10 +169,10 @@ class VariablesListItemView(QtGui.QListView):
             if not data:
                 return
 
-            drag = QtGui.QDrag(self)
+            drag = QDrag(self)
             drag.setMimeData(data)
 
-            default_action = QtCore.Qt.IgnoreAction
+            default_action = Qt.IgnoreAction
             if hasattr(self, "defaultDropAction") and \
                     self.defaultDropAction() != Qt.IgnoreAction and \
                     supported_actions & self.defaultDropAction():
@@ -178,7 +183,7 @@ class VariablesListItemView(QtGui.QListView):
             res = drag.exec_(supported_actions, default_action)
             if res == Qt.MoveAction:
                 selected = self.selectionModel().selectedIndexes()
-                rows = list(map(QtCore.QModelIndex.row, selected))
+                rows = list(map(QModelIndex.row, selected))
                 for s1, s2 in reversed(list(slices(rows))):
                     delslice(self.model(), s1, s2)
 
@@ -235,7 +240,7 @@ class ClassVariableItemView(VariablesListItemView):
         return accepts
 
 
-class VariableFilterProxyModel(QtGui.QSortFilterProxyModel):
+class VariableFilterProxyModel(QSortFilterProxyModel):
     """ A proxy model for filtering a list of variables based on
     their names and labels.
 
@@ -265,13 +270,13 @@ class VariableFilterProxyModel(QtGui.QSortFilterProxyModel):
             return True
 
 
-class CompleterNavigator(QtCore.QObject):
+class CompleterNavigator(QObject):
     """ An event filter to be installed on a QLineEdit, to enable
     Key up/ down to navigate between posible completions.
     """
     def eventFilter(self, obj, event):
-        if (event.type() == QtCore.QEvent.KeyPress and
-                isinstance(obj, QtGui.QLineEdit)):
+        if (event.type() == QEvent.KeyPress and
+                isinstance(obj, QLineEdit)):
             if event.key() == Qt.Key_Down:
                 diff = 1
             elif event.key() == Qt.Key_Up:
@@ -307,25 +312,25 @@ class OWSelectAttributes(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.controlArea = QtGui.QWidget(self.controlArea)
+        self.controlArea = QWidget(self.controlArea)
         self.layout().addWidget(self.controlArea)
-        layout = QtGui.QGridLayout()
+        layout = QGridLayout()
         self.controlArea.setLayout(layout)
         layout.setContentsMargins(4, 4, 4, 4)
         box = gui.vBox(self.controlArea, "Available Variables",
                        addToLayout=False)
-        self.filter_edit = QtGui.QLineEdit()
+        self.filter_edit = QLineEdit()
         self.filter_edit.setToolTip("Filter the list of available variables.")
         box.layout().addWidget(self.filter_edit)
         if hasattr(self.filter_edit, "setPlaceholderText"):
             self.filter_edit.setPlaceholderText("Filter")
 
-        self.completer = QtGui.QCompleter()
-        self.completer.setCompletionMode(QtGui.QCompleter.InlineCompletion)
-        self.completer_model = QtGui.QStringListModel()
+        self.completer = QCompleter()
+        self.completer.setCompletionMode(QCompleter.InlineCompletion)
+        self.completer_model = QStringListModel()
         self.completer.setModel(self.completer_model)
         self.completer.setModelSorting(
-            QtGui.QCompleter.CaseSensitivelySortedModel)
+            QCompleter.CaseSensitivelySortedModel)
 
         self.filter_edit.setCompleter(self.completer)
         self.completer_navigator = CompleterNavigator(self)
@@ -418,8 +423,8 @@ class OWSelectAttributes(widget.OWWidget):
         autobox.layout().insertWidget(0, self.report_button)
         autobox.layout().insertWidget(1, reset)
         autobox.layout().insertSpacing(2, 10)
-        reset.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-        self.report_button.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
+        reset.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.report_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
         layout.setRowStretch(0, 4)
         layout.setRowStretch(1, 0)
@@ -503,7 +508,7 @@ class OWSelectAttributes(widget.OWWidget):
         """
         rows = view.selectionModel().selectedRows()
         model = view.model()
-        if isinstance(model, QtGui.QSortFilterProxyModel):
+        if isinstance(model, QSortFilterProxyModel):
             rows = [model.mapToSource(r) for r in rows]
         return [r.row() for r in rows]
 
@@ -514,12 +519,12 @@ class OWSelectAttributes(widget.OWWidget):
         for row, newrow in sorted(zip(rows, newrows), reverse=offset > 0):
             model[row], model[newrow] = model[newrow], model[row]
 
-        selection = QtGui.QItemSelection()
+        selection = QItemSelection()
         for nrow in newrows:
             index = model.index(nrow, 0)
             selection.select(index, index)
         view.selectionModel().select(
-            selection, QtGui.QItemSelectionModel.ClearAndSelect)
+            selection, QItemSelectionModel.ClearAndSelect)
 
     def move_up(self, view):
         selected = self.selected_rows(view)
@@ -668,10 +673,11 @@ class OWSelectAttributes(widget.OWWidget):
 
 
 def test_main(argv=None):
+    from AnyQt.QtWidgets import QApplication
     if argv is None:
         argv = sys.argv
     argv = list(argv)
-    app = QtGui.QApplication(list(argv))
+    app = QApplication(list(argv))
 
     if len(argv) > 1:
         filename = argv[1]

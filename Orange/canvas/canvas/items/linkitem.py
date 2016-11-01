@@ -6,13 +6,12 @@ Link Item
 """
 import math
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
-    QGraphicsTextItem, QGraphicsDropShadowEffect, QPen, QBrush, QColor,
-    QPainterPath, QTransform
+    QGraphicsTextItem, QGraphicsDropShadowEffect
 )
-
-from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtGui import QPen, QBrush, QColor, QPainterPath, QTransform
+from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF, QEvent
 
 from .nodeitem import SHADOW_COLOR
 from .utils import stroke_path

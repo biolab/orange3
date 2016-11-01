@@ -10,7 +10,7 @@ Signals
 
 -  **Data**
 
-Data set.
+   A data set.
 
 **Outputs**:
 
@@ -19,8 +19,7 @@ Data set.
 Description
 -----------
 
-`Correspondence
-Analysis <https://en.wikipedia.org/wiki/Correspondence_analysis>`__ (CA)
+`Correspondence Analysis <https://en.wikipedia.org/wiki/Correspondence_analysis>`_ (CA)
 computes the CA linear transformation of the input data. While it is
 similar to PCA, CA computes linear transformation on discrete rather
 than on continuous data.
@@ -29,15 +28,16 @@ than on continuous data.
 
 1. Select the variables you want to see plotted.
 2. Select the component for each axis.
-3. `Inertia <https://en.wikipedia.org/wiki/Sylvester%27s_law_of_inertia>`__
+3. `Inertia <https://en.wikipedia.org/wiki/Sylvester%27s_law_of_inertia>`_
    values (percentage of independence from transformation, i.e.
    variables are in the same dimension).
+4. Produce a report. 
 
 Example
 -------
 
-Below is a simple comparison between **Correspondence Analysis** and
-:doc:`Scatter plot<../visualize/scatterplot>` widgets on *Titanic* data. While :doc:`Scatter plot<../visualize/scatterplot>` shows
+Below, is a simple comparison between the **Correspondence Analysis** and
+:doc:`Scatter plot <../visualize/scatterplot>` widgets on the *Titanic* data set. While the :doc:`Scatter plot <../visualize/scatterplot>` shows
 fairly well which class and sex had a good survival rate and which one
 didn't, **Correspondence Analysis** can plot several variables in a 2-D
 graph, thus making it easy to see the relations between variable values.

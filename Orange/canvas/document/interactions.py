@@ -15,16 +15,12 @@ All interactions are subclasses of :class:`UserInteraction`.
 
 import logging
 
-from PyQt4.QtGui import (
-    QApplication, QGraphicsRectItem, QPen, QBrush, QColor, QFontMetrics,
-    QUndoCommand
-)
-
-from PyQt4.QtCore import (
+from AnyQt.QtWidgets import QApplication, QGraphicsRectItem, QUndoCommand
+from AnyQt.QtGui import QPen, QBrush, QColor, QFontMetrics
+from AnyQt.QtCore import (
     Qt, QObject, QCoreApplication, QSizeF, QPointF, QRect, QRectF, QLineF
 )
-
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..registry.description import WidgetDescription
 from ..registry.qt import QtWidgetRegistry
@@ -228,6 +224,7 @@ class NewLinkAction(UserInteraction):
         self.sink_item = None
         self.from_item = None
         self.direction = None
+        self.force_link_dialog = False
 
         # An `NodeItem` currently under the mouse as a possible
         # link drop target.
@@ -324,6 +321,8 @@ class NewLinkAction(UserInteraction):
                 self.tr('<h3>Create new link</h3>'
                         '<p>Drag a link to an existing node or release on '
                         'an empty spot to create a new node.</p>'
+                        '<p>Hold Shift when releasing the mouse button to '
+                        'edit connections.</p>'
 #                        '<a href="help://orange-canvas/create-new-links">'
 #                        'More ...</a>'
                         )
@@ -392,6 +391,7 @@ class NewLinkAction(UserInteraction):
 
     def mouseReleaseEvent(self, event):
         if self.tmp_link_item:
+            self.force_link_dialog = bool(event.modifiers() & Qt.ShiftModifier)
             item = self.target_node_item_at(event.scenePos())
             node = None
             stack = self.document.undoStack()
@@ -501,7 +501,7 @@ class NewLinkAction(UserInteraction):
             # to SchemeLinks later
             links_to_add = [(source, sink)]
             links_to_remove = []
-            show_link_dialog = False
+            show_link_dialog = self.force_link_dialog
 
             # Ambiguous new link request.
             if len(possible) >= 2:
@@ -582,6 +582,8 @@ class NewLinkAction(UserInteraction):
             log.error("An error occurred during the creation of a new link.",
                       exc_info=True)
             self.cancel()
+        finally:
+            self.force_link_dialog = False
 
     def edit_links(self, source_node, sink_node, initial_links=None):
         """

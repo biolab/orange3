@@ -18,7 +18,7 @@ class OWNaiveBayes(OWBaseLearner):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWNaiveBayes()

@@ -2,6 +2,7 @@ foldable pip install -U setuptools pip codecov
 
 # Install dependencies sequentially
 cat requirements-core.txt \
+    requirements-gui.txt \
     requirements-dev.txt \
     requirements-doc.txt |
     while read dep; do

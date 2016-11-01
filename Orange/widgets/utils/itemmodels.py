@@ -6,21 +6,22 @@ import operator
 from collections import namedtuple, Sequence, defaultdict
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache
+from itertools import chain
 from xml.sax.saxutils import escape
 
-from PyQt4.QtGui import  QItemSelectionModel, QColor
-from PyQt4.QtCore import (
-    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex, QByteArray
+from AnyQt.QtCore import (
+    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex,
+    QItemSelectionModel, QByteArray
 )
-from PyQt4.QtCore import pyqtSignal as Signal
-
-from PyQt4.QtGui import (
+from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import QColor
+from AnyQt.QtWidgets import (
     QWidget, QBoxLayout, QToolButton, QAbstractButton, QAction
 )
 
 import numpy
 
-from Orange.data import Variable, Storage
+from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -31,13 +32,15 @@ class _store(dict):
 
 
 def _argsort(seq, cmp=None, key=None, reverse=False):
+    indices = range(len(seq))
     if key is not None:
-        return sorted(enumerate(seq), key=lambda pair: key(pair[1]), reverse=reverse)
+        return sorted(indices, key=lambda i: key(seq[i]), reverse=reverse)
     elif cmp is not None:
         from functools import cmp_to_key
-        return sorted(enumerate(seq), key=cmp_to_key(lambda a, b: cmp(a[1], b[1])), reverse=reverse)
+        return sorted(indices, key=cmp_to_key(lambda a, b: cmp(seq[a], seq[b])),
+                      reverse=reverse)
     else:
-        return sorted(enumerate(seq), key=operator.itemgetter(1), reverse=reverse)
+        return sorted(indices, key=lambda i: seq[i], reverse=reverse)
 
 
 @contextmanager
@@ -516,7 +519,7 @@ class PyListModel(QAbstractListModel):
         indices = _argsort(self._list, *args, **kwargs)
         lst = [self._list[i] for i in indices]
         other = [self._other_data[i] for i in indices]
-        for i, new_l, new_o in enumerate(zip(lst, other)):
+        for i, (new_l, new_o) in enumerate(zip(lst, other)):
             self._list[i] = new_l
             self._other_data[i] = new_o
         self.dataChanged.emit(self.index(0), self.index(len(self) - 1))
@@ -586,12 +589,17 @@ class PyListModelTooltip(PyListModel):
 
 
 class VariableListModel(PyListModel):
-
     MIME_TYPE = "application/x-Orange-VariableList"
+
+    def __init__(self, *args, placeholder=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.placeholder = placeholder
 
     def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid_for(index, self):
             var = self[index.row()]
+            if var is None and role == Qt.DisplayRole:
+                return self.placeholder or "None"
             if not isinstance(var, Variable):
                 return super().data(index, role)
             elif role == Qt.DisplayRole:
@@ -600,6 +608,8 @@ class VariableListModel(PyListModel):
                 return gui.attributeIconDict[var]
             elif role == Qt.ToolTipRole:
                 return self.variable_tooltip(var)
+            elif role == gui.TableVariable:
+                return var
             else:
                 return PyListModel.data(self, index, role)
 
@@ -642,6 +652,67 @@ class VariableListModel(PyListModel):
         text = "<b>%s</b><br/>Python" % safe_text(var.name)
         text += self.variable_labels_tooltip(var)
         return text
+
+
+class DomainModel(VariableListModel):
+    ATTRIBUTES, CLASSES, METAS = 1, 2, 4
+    MIXED = ATTRIBUTES | CLASSES | METAS
+    SEPARATED = (CLASSES, PyListModel.Separator,
+                 METAS, PyListModel.Separator,
+                 ATTRIBUTES)
+    PRIMITIVE = (DiscreteVariable, ContinuousVariable)
+
+    def __init__(self, order=SEPARATED, placeholder=None,
+                 valid_types=None, alphabetical=False):
+        super().__init__(placeholder=placeholder)
+        if isinstance(order, int):
+            order = (order,)
+        if placeholder is not None and None not in order:
+            # Add None for the placeholder if it's not already there
+            # Include separator if the current order uses them
+            order = (None,) + \
+                    (self.Separator, ) * (self.Separator in order) + \
+                    order
+        self.order = order
+        self.valid_types = valid_types
+        self.alphabetical = alphabetical
+        self.set_domain(None)
+
+    def set_domain(self, domain):
+        self.beginResetModel()
+        content = []
+        # The logic related to separators is a bit complicated: it ensures that
+        # even when a section is empty we don't have two separators in a row
+        # or a separator at the end
+        add_separator = False
+        for section in self.order:
+            if section is self.Separator:
+                add_separator = True
+                continue
+            if isinstance(section, int):
+                if domain is None:
+                    continue
+                to_add = list(chain(
+                    *(vars for i, vars in enumerate(
+                        (domain.attributes, domain.class_vars, domain.metas))
+                      if (1 << i) & section)))
+                if self.valid_types is not None:
+                    to_add = [var for var in to_add
+                              if isinstance(var, self.valid_types)]
+                if self.alphabetical:
+                    to_add = sorted(to_add, key=lambda x: x.name)
+            elif isinstance(section, list):
+                to_add = section
+            else:
+                to_add = [section]
+            if to_add:
+                if add_separator and content:
+                    content.append(self.Separator)
+                    add_separator = False
+                content += to_add
+        self[:] = content
+        self.endResetModel()
+
 
 _html_replace = [("<", "&lt;"), (">", "&gt;")]
 
@@ -816,7 +887,7 @@ class TableModel(QAbstractTableModel):
 
         columns = []
 
-        if self.Y_density != Storage.DENSE:
+        if self.Y_density != Storage.DENSE and domain.class_vars:
             coldesc = make_basket(domain.class_vars, self.Y_density,
                                   TableModel.ClassVar)
             columns.append(coldesc)
@@ -824,7 +895,7 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.ClassVar)
                         for var in domain.class_vars]
 
-        if self.M_density != Storage.DENSE:
+        if self.M_density != Storage.DENSE and domain.metas:
             coldesc = make_basket(domain.metas, self.M_density,
                                   TableModel.Meta)
             columns.append(coldesc)
@@ -832,7 +903,7 @@ class TableModel(QAbstractTableModel):
             columns += [make_column(var, TableModel.Meta)
                         for var in domain.metas]
 
-        if self.X_density != Storage.DENSE:
+        if self.X_density != Storage.DENSE and domain.attributes:
             coldesc = make_basket(domain.attributes, self.X_density,
                                   TableModel.Attribute)
             columns.append(coldesc)
@@ -946,6 +1017,9 @@ class TableModel(QAbstractTableModel):
                 and role == TableModel.ValueRole:
             col_view, _ = self.source.get_column_view(coldesc.var)
             col_data = numpy.asarray(col_view)
+            if coldesc.var.is_continuous:
+                # continuous from metas have dtype object; cast it to float
+                col_data = col_data.astype(float)
             if self.__sortInd is not None:
                 col_data = col_data[self.__sortInd]
             return col_data

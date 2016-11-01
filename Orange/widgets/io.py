@@ -1,6 +1,8 @@
-from PyQt4 import QtGui, QtCore, QtSvg
-from PyQt4.QtCore import QMimeData
-from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QWidget, QApplication
+from AnyQt import QtGui, QtCore, QtSvg
+from AnyQt.QtCore import QMimeData
+from AnyQt.QtWidgets import (
+    QGraphicsScene, QGraphicsView, QWidget, QApplication
+)
 
 from Orange.data.io import FileFormat
 
@@ -55,7 +57,7 @@ class ImgFormat(FileFormat):
             try:
                 scene.render(painter, target, rect)
             except TypeError:
-                scene.render(painter)  # PyQt4 QWidget.render() takes different params
+                scene.render(painter)  # QWidget.render() takes different params
             cls._save_buffer(buffer, filename)
             painter.end()
 

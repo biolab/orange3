@@ -6,6 +6,7 @@ from unittest import TestCase
 from unittest.mock import Mock
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.preprocess import discretize, Discretize
 from Orange import data
@@ -150,6 +151,19 @@ class TestDiscretizer(TestCase):
             self.var, [1, 2, 3])
         X = np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5])
         np.testing.assert_equal(dvar.compute_value.transform(X), np.floor(X))
+
+    def test_discretizer_computation_sparse(self):
+        dvar = discretize.Discretizer.create_discretized_var(
+            self.var, [1, 2, 3])
+        X = sp.csr_matrix(np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5]))
+        self.assertEqual((dvar.compute_value.transform(X) != np.floor(X)).nnz, 0)
+
+    def test_discretizer_computation_sparse_no_points(self):
+        dvar = discretize.Discretizer.create_discretized_var(
+            self.var, [])
+        X = sp.csr_matrix(np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5]))
+        empty = sp.csr_matrix(X.shape)
+        self.assertEqual((dvar.compute_value.transform(X) != empty).nnz, 0)
 
     def test_transform(self):
         table = data.Table('iris')

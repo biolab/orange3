@@ -1,6 +1,7 @@
 """Various small utilities that might be useful everywhere"""
 
 from functools import wraps
+from inspect import isfunction
 from itertools import chain, count
 from collections import OrderedDict
 import warnings
@@ -85,13 +86,13 @@ def flatten(lst):
 
 class Registry(type):
     """Metaclass that registers subtypes."""
-    def __new__(cls, name, bases, attrs):
-        obj = type.__new__(cls, name, bases, attrs)
+    def __new__(mcs, name, bases, attrs):
+        cls = type.__new__(mcs, name, bases, attrs)
         if not hasattr(cls, 'registry'):
             cls.registry = OrderedDict()
         else:
-            cls.registry[name] = obj
-        return obj
+            cls.registry[name] = cls
+        return cls
 
     def __iter__(cls):
         return iter(cls.registry)
@@ -134,6 +135,18 @@ def color_to_hex(color):
 
 def hex_to_color(s):
     return int(s[1:3], 16), int(s[3:5], 16), int(s[5:7], 16)
+
+
+def inherit_docstrings(cls):
+    """Inherit methods' docstrings from first superclass that defines them"""
+    for method in cls.__dict__.values():
+        if isfunction(method) and method.__doc__ is None:
+            for parent in cls.__mro__[1:]:
+                __doc__ = getattr(parent, method.__name__, None).__doc__
+                if __doc__:
+                    method.__doc__ = __doc__
+                    break
+    return cls
 
 # For best result, keep this at the bottom
 __all__ = export_globals(globals(), __name__)

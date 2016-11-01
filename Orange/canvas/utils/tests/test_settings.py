@@ -5,7 +5,7 @@ Tests for settings utility module.
 import logging
 import tempfile
 
-from ..qtcompat import QSettings
+from AnyQt.QtCore import QSettings
 from ..settings import Settings, config_slot
 
 from ...gui import test

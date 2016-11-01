@@ -7,15 +7,17 @@ from functools import partial
 
 import numpy as np
 
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-
-from PyQt4.QtGui import (
-    QListView, QAction, QIcon, QSizePolicy, QPen
+from AnyQt.QtGui import (
+    QIcon, QPen, QBrush, QPainter, QPixmap, QCursor, QFont, QKeySequence,
+    QPalette
+)
+from AnyQt.QtWidgets import (
+    QListView, QSizePolicy, QAction, QUndoCommand, QUndoStack, QGridLayout,
+    QFormLayout, QToolButton, QActionGroup
 )
 
-from PyQt4.QtCore import Qt, QObject, QTimer, QSize, QSizeF, QPointF, QRectF
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QObject, QTimer, QSize, QSizeF, QPointF, QRectF
+from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
 
@@ -173,12 +175,12 @@ class PaintViewBox(pg.ViewBox):
 
 def crosshairs(color, radius=24, circle=False):
     radius = max(radius, 16)
-    pixmap = QtGui.QPixmap(radius, radius)
+    pixmap = QPixmap(radius, radius)
     pixmap.fill(Qt.transparent)
-    painter = QtGui.QPainter()
+    painter = QPainter()
     painter.begin(pixmap)
-    painter.setRenderHints(painter.Antialiasing)
-    pen = QtGui.QPen(QtGui.QBrush(color), 1)
+    painter.setRenderHints(QPainter.Antialiasing)
+    pen = QPen(QBrush(color), 1)
     pen.setWidthF(1.5)
     painter.setPen(pen)
     if circle:
@@ -194,7 +196,7 @@ class DataTool(QObject):
     A base class for data tools that operate on PaintViewBox.
     """
     #: Tool mouse cursor has changed
-    cursorChanged = Signal(QtGui.QCursor)
+    cursorChanged = Signal(QCursor)
     #: User started an editing operation.
     editingStarted = Signal()
     #: User ended an editing operation.
@@ -214,11 +216,11 @@ class DataTool(QObject):
         self._plot = plot
 
     def cursor(self):
-        return QtGui.QCursor(self._cursor)
+        return QCursor(self._cursor)
 
     def setCursor(self, cursor):
         if self._cursor != cursor:
-            self._cursor = QtGui.QCursor(cursor)
+            self._cursor = QCursor(cursor)
             self.cursorChanged.emit()
 
     def mousePressEvent(self, event):
@@ -474,8 +476,8 @@ class SelectTool(DataTool):
         self._delete_action = QAction(
             "Delete", self, shortcutContext=Qt.WindowShortcut
         )
-        self._delete_action.setShortcuts([QtGui.QKeySequence.Delete,
-                                          QtGui.QKeySequence("Backspace")])
+        self._delete_action.setShortcuts([QKeySequence.Delete,
+                                          QKeySequence("Backspace")])
         self._delete_action.triggered.connect(self.delete)
 
     def setSelectionRect(self, rect):
@@ -586,7 +588,7 @@ class ClearTool(DataTool):
         self.editingFinished.emit()
 
 
-class SimpleUndoCommand(QtGui.QUndoCommand):
+class SimpleUndoCommand(QUndoCommand):
     """
     :param function redo: A function expressing a redo action.
     :param function undo: A function expressing a undo action.
@@ -597,7 +599,7 @@ class SimpleUndoCommand(QtGui.QUndoCommand):
         self.undo = undo
 
 
-class UndoCommand(QtGui.QUndoCommand):
+class UndoCommand(QUndoCommand):
     """An QUndoCommand applying a data transformation operation
     """
     def __init__(self, command, model, parent=None, text=None):
@@ -723,17 +725,17 @@ def apply_jitter(data, point, density, radius, rstate=None):
 
 class ColoredListModel(itemmodels.PyListModel):
     def __init__(self, iterable, parent, flags,
-                 list_item_role=QtCore.Qt.DisplayRole,
-                 supportedDropActions=QtCore.Qt.MoveAction):
+                 list_item_role=Qt.DisplayRole,
+                 supportedDropActions=Qt.MoveAction):
 
         super().__init__(iterable, parent, flags, list_item_role,
                          supportedDropActions)
         self.colors = colorpalette.ColorPaletteGenerator(
             len(colorpalette.DefaultRGBColors))
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
+    def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid_for(index, self) and \
-                role == QtCore.Qt.DecorationRole and \
+                role == Qt.DecorationRole and \
                 0 <= index.row() < self.colors.number_of_colors:
             return gui.createAttributePixmap("", self.colors[index.row()])
         else:
@@ -798,12 +800,12 @@ class OWPaintData(OWWidget):
 
         self.labels = ["C1", "C2"]
 
-        self.undo_stack = QtGui.QUndoStack(self)
+        self.undo_stack = QUndoStack(self)
 
         self.class_model = ColoredListModel(
             self.labels, self,
-            flags=QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled |
-                  QtCore.Qt.ItemIsEditable)
+            flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled |
+                  Qt.ItemIsEditable)
 
         self.class_model.dataChanged.connect(self._class_value_changed)
         self.class_model.rowsInserted.connect(self._class_count_changed)
@@ -824,13 +826,13 @@ class OWPaintData(OWWidget):
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
         gui.lineEdit(hbox, self, "attr1", "Variable X: ",
                      controlWidth=80, orientation=Qt.Horizontal,
-                     enterPlaceholder=True, callback=self._attr_name_changed)
-        gui.separator(hbox, 18)
+                     callback=self._attr_name_changed)
+        gui.separator(hbox, 21)
         hbox = gui.hBox(namesBox, margin=0, spacing=0)
         attr2 = gui.lineEdit(hbox, self, "attr2", "Variable Y: ",
                              controlWidth=80, orientation=Qt.Horizontal,
-                             enterPlaceholder=True,
                              callback=self._attr_name_changed)
+        gui.separator(hbox)
         gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
                      labelWidth=0,
                      callback=self.set_dimensions)
@@ -867,9 +869,9 @@ class OWPaintData(OWWidget):
 
         tBox = gui.vBox(self.controlArea, "Tools", addSpace=True)
         buttonBox = gui.hBox(tBox)
-        toolsBox = gui.widgetBox(buttonBox, orientation=QtGui.QGridLayout())
+        toolsBox = gui.widgetBox(buttonBox, orientation=QGridLayout())
 
-        self.toolActions = QtGui.QActionGroup(self)
+        self.toolActions = QActionGroup(self)
         self.toolActions.setExclusive(True)
         self.toolButtons = []
 
@@ -882,7 +884,7 @@ class OWPaintData(OWWidget):
             )
             action.triggered.connect(partial(self.set_current_tool, tool))
 
-            button = QtGui.QToolButton(
+            button = QToolButton(
                 iconSize=QSize(24, 24),
                 toolButtonStyle=Qt.ToolButtonTextUnderIcon,
                 sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
@@ -901,18 +903,18 @@ class OWPaintData(OWWidget):
         undo = self.undo_stack.createUndoAction(self)
         redo = self.undo_stack.createRedoAction(self)
 
-        undo.setShortcut(QtGui.QKeySequence.Undo)
-        redo.setShortcut(QtGui.QKeySequence.Redo)
+        undo.setShortcut(QKeySequence.Undo)
+        redo.setShortcut(QKeySequence.Redo)
 
         self.addActions([undo, redo])
         self.undo_stack.indexChanged.connect(lambda _: self.invalidate())
 
         gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
-        form = QtGui.QFormLayout(
+        form = QFormLayout(
             formAlignment=Qt.AlignLeft,
             labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
         )
         indBox.layout().addLayout(form)
         slider = gui.hSlider(
@@ -941,10 +943,10 @@ class OWPaintData(OWWidget):
         self.plotview.sizeHint = lambda: QSize(200, 100)  # Minimum size for 1-d painting
         self.plot = self.plotview.getPlotItem()
 
-        axis_color = self.palette().color(QtGui.QPalette.Text)
-        axis_pen = QtGui.QPen(axis_color)
+        axis_color = self.palette().color(QPalette.Text)
+        axis_pen = QPen(axis_color)
 
-        tickfont = QtGui.QFont(self.font())
+        tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")
@@ -1277,9 +1279,10 @@ class OWPaintData(OWWidget):
         self.report_plot()
 
 def test():
+    from AnyQt.QtWidgets import QApplication
     import gc
     import sip
-    app = QtGui.QApplication([])
+    app = QApplication([])
     ow = OWPaintData()
     ow.show()
     ow.raise_()

@@ -1,6 +1,7 @@
 import os.path
 
-from PyQt4 import QtGui, QtCore
+from AnyQt.QtWidgets import QMessageBox
+from AnyQt.QtCore import QSettings
 
 from Orange.widgets.utils import filedialogs
 
@@ -9,7 +10,7 @@ from Orange.widgets.utils import filedialogs
 def save_plot(data, file_formats, filename=""):
     _LAST_DIR_KEY = "directories/last_graph_directory"
     _LAST_FILTER_KEY = "directories/last_graph_filter"
-    settings = QtCore.QSettings()
+    settings = QSettings()
     start_dir = settings.value(_LAST_DIR_KEY, filename)
     if not start_dir or \
             (not os.path.exists(start_dir) and
@@ -23,7 +24,7 @@ def save_plot(data, file_formats, filename=""):
     try:
         writer.write(filename, data)
     except Exception as e:
-        QtGui.QMessageBox.critical(
+        QMessageBox.critical(
             None, "Error", 'Error occurred while saving file "{}": {}'.format(filename, e))
     else:
         settings.setValue(_LAST_DIR_KEY, os.path.split(filename)[0])
@@ -31,9 +32,9 @@ def save_plot(data, file_formats, filename=""):
 
 
 if __name__ == "__main__":
+    from AnyQt.QtWidgets import QApplication
     from Orange.widgets.widget import OWWidget
-
-    app = QtGui.QApplication([])
+    app = QApplication([])
 
     save_plot(None, OWWidget.graph_writers)
     """

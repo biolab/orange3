@@ -45,11 +45,6 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    @property
-    def supports_weights(self):
-        # liblinear (default) cannot handle weights
-        return False
-
     def __call__(self, data):
         if len(np.unique(data.Y)) > 1:
             return super().__call__(data)

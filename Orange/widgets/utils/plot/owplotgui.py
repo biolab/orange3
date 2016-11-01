@@ -30,8 +30,9 @@ from Orange.widgets import gui
 
 from .owconstants import *
 
-from PyQt4.QtGui import QWidget, QToolButton, QGroupBox, QVBoxLayout, QHBoxLayout, QIcon, QMenu, QAction
-from PyQt4.QtCore import Qt, pyqtSignal, QObject, SLOT
+from AnyQt.QtWidgets import QWidget, QToolButton, QGroupBox, QVBoxLayout, QHBoxLayout, QMenu, QAction
+from AnyQt.QtGui import QIcon
+from AnyQt.QtCore import Qt, pyqtSignal, QObject
 
 
 class OrientedWidget(QWidget):
@@ -476,11 +477,11 @@ class OWPlotGUI:
         b.setMenu(m)
         b._actions = {}
 
-        m.triggered.connect(b, SLOT("setDefaultAction(QAction*)"))
+        m.triggered[QAction].connect(b.setDefaultAction)
 
         if main_action_id:
             main_action = OWAction(self._plot, icon_name, attr_name, attr_value, callback, parent=b)
-            m.triggered.connect(main_action, SLOT("trigger()"))
+            m.triggered.connect(main_action.trigger)
 
         for id in ids:
             id, name, attr_name, attr_value, callback, icon_name = self._expand_id(id)

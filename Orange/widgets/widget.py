@@ -3,10 +3,14 @@ import os
 import types
 from functools import reduce
 
-from PyQt4.QtCore import QByteArray, Qt, pyqtSignal as Signal, QSettings, QUrl
-from PyQt4.QtGui import QDialog, QVBoxLayout, QSizePolicy, qApp, QStyle, \
-    QIcon, QShortcut, QKeySequence, QDesktopServices, QSplitter, \
-    QSplitterHandle, QWidget, QPushButton
+from AnyQt.QtWidgets import (
+    QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
+    QShortcut, QSplitter, QSplitterHandle, QPushButton
+)
+from AnyQt.QtCore import (
+    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
+)
+from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
@@ -47,7 +51,7 @@ class WidgetMetaClass(type(QDialog)):
         from Orange.canvas.registry.description import (
             input_channel_from_args, output_channel_from_args)
 
-        cls = type.__new__(mcs, name, bases, kwargs)
+        cls = super().__new__(mcs, name, bases, kwargs)
         if not cls.name: # not a widget
             return cls
 
@@ -119,9 +123,14 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     #: Should the widget construct a `controlArea`.
     want_control_area = True
     #: Orientation of the buttonsArea box; valid only if
-    #  `want_control_area` is `True`. Possible values are Qt.Horizontal,
-    #  Qt.Vertical and None for no buttons area
+    #: `want_control_area` is `True`. Possible values are Qt.Horizontal,
+    #: Qt.Vertical and None for no buttons area
     buttons_area_orientation = Qt.Horizontal
+    #: Specify whether the default message bar widget should be created
+    #: and placed into the default layout. If False then clients are
+    #: responsible for displaying messages within the widget in an
+    #: appropriate manner.
+    want_message_bar = True
     #: Widget painted by `Save graph" button
     graph_name = None
     graph_writers = FileFormat.img_writers
@@ -157,7 +166,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
         WidgetMessagesMixin.__init__(self)
@@ -176,8 +185,11 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
         OWWidget.widget_id += 1
         self.widget_id = OWWidget.widget_id
 
-        if self.name:
-            self.setCaption(self.name)
+        captionTitle = self.name if captionTitle is None else captionTitle
+
+        # must be set without invoking setCaption
+        self.captionTitle = captionTitle
+        self.setWindowTitle(captionTitle)
 
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -202,6 +214,9 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
 
         sc = QShortcut(QKeySequence.Copy, self)
         sc.activated.connect(self.copy_to_clipboard)
+        if self.controlArea is not None:
+            # Otherwise, the first control has focus
+            self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
         return self
 
     # pylint: disable=super-init-not-called
@@ -283,8 +298,9 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
         """Provide the basic widget layout
 
         Which parts are created is regulated by class attributes
-        `want_main_area`, `want_control_area` and `buttons_area_orientation`,
-        the presence of method `send_report` and attribute `graph_name`.
+        `want_main_area`, `want_control_area`, `want_message_bar` and
+        `buttons_area_orientation`, the presence of method `send_report`
+        and attribute `graph_name`.
         """
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(2, 2, 2, 2)
@@ -293,7 +309,10 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
 
         self.want_main_area = self.want_main_area or self.graph_name
         self._create_default_buttons()
-        self.insert_message_bar()
+
+        if self.want_message_bar:
+            self.insert_message_bar()
+
         self._insert_splitter()
         if self.want_control_area:
             self._insert_control_area()
@@ -339,7 +358,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
 
             if restored and not self.windowState() & \
                     (Qt.WindowMaximized | Qt.WindowFullScreen):
-                space = qApp.desktop().availableGeometry(self)
+                space = QApplication.desktop().availableGeometry(self)
                 frame, geometry = self.frameGeometry(), self.geometry()
 
                 #Fix the widget size to fit inside the available space
@@ -765,6 +784,8 @@ Single = widget_description.Single
 #: Signal handlers with this flag have (object, id: object) -> None signature.
 Multiple = widget_description.Multiple
 #: Applies to user interaction only.
+#: Only connected if specifically requested (in a dedicated "Links" dialog)
+#: or it is the only possible connection.
 Explicit = widget_description.Explicit
 #: Dynamic output type.
 #: Specifies that the instances on the output will in general be

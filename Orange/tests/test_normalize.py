@@ -3,9 +3,13 @@
 
 import unittest
 
-from Orange.data import Table
+import numpy as np
+import scipy.sparse as sp
+
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Normalize
 from Orange.tests import test_filename
+
 
 class TestNormalizer(unittest.TestCase):
     def compare_tables(self, dataNorm, solution):
@@ -90,3 +94,40 @@ class TestNormalizer(unittest.TestCase):
                     [0., 0., 'a', 'b', 0., '?', 0.5, 'b', 'b', 0.],
                     [0., 0.5, 'a', 'b', 1., 'b', 0., 'c', 'c', 0.5]]
         self.compare_tables(data_norm, solution)
+
+    def test_normalize_sparse(self):
+        domain = Domain([ContinuousVariable(str(i)) for i in range(3)])
+        X = sp.csr_matrix(np.array([
+            [0, 0, 0,],
+            [0, -1, -2],
+            [0, 1, 2],
+        ]))
+        data = Table.from_numpy(domain, X)
+
+        solution = sp.csr_matrix(np.array([
+            [0, 0, 0,],
+            [0, -1, -1],
+            [0, 1, 1],
+        ]))
+
+        normalizer = Normalize()
+        normalized = normalizer(data)
+        self.assertEqual((normalized.X != solution).nnz, 0)
+
+        # raise error for non-zero offsets
+        data.X = sp.csr_matrix(np.array([
+            [0, 0, 0, ],
+            [0, 1, 3],
+            [0, 2, 4],
+        ]))
+        with self.assertRaises(ValueError):
+            normalizer(data)
+
+    def test_skip_normalization(self):
+        data = self.data.copy()
+        for attr in data.domain.attributes:
+            attr.attributes = {'skip-normalization': True}
+
+        normalizer = Normalize()
+        normalized = normalizer(data)
+        np.testing.assert_array_equal(data.X, normalized.X)

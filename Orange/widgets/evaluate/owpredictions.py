@@ -6,8 +6,18 @@ import sys
 from collections import OrderedDict, namedtuple
 
 import numpy
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt, pyqtSlot as Slot, QLocale
+from AnyQt.QtWidgets import (
+    QTableView, QListWidget, QSplitter, QScrollBar, QStyledItemDelegate,
+    QToolTip, QAbstractItemView, QStyleOptionViewItem, QStyle,
+    QApplication,
+)
+from AnyQt.QtGui import QColor, QPainter, QHelpEvent
+from AnyQt.QtCore import (
+    Qt, QSize, QModelIndex, QAbstractTableModel, QSortFilterProxyModel,
+    QLocale
+)
+from AnyQt.QtCore import pyqtSlot as Slot
+from AnyQt import QtCore, QtGui
 
 import Orange
 import Orange.evaluation
@@ -92,7 +102,7 @@ class OWPredictions(widget.OWWidget):
                                addSpace=False)
         gui.listBox(ibox, self, "selected_classes", "class_values",
                     callback=self._update_prediction_delegate,
-                    selectionMode=QtGui.QListWidget.MultiSelection,
+                    selectionMode=QListWidget.MultiSelection,
                     addSpace=False)
         gui.checkBox(box, self, "draw_dist", "Draw distribution bars",
                      callback=self._update_prediction_delegate)
@@ -114,7 +124,7 @@ class OWPredictions(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        self.splitter = QtGui.QSplitter(
+        self.splitter = QSplitter(
             orientation=Qt.Horizontal,
             childrenCollapsible=False,
             handleWidth=2,
@@ -122,15 +132,15 @@ class OWPredictions(widget.OWWidget):
         self.dataview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-            horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
-            selectionMode=QtGui.QTableView.NoSelection,
+            horizontalScrollMode=QTableView.ScrollPerPixel,
+            selectionMode=QTableView.NoSelection,
             focusPolicy=Qt.StrongFocus
         )
         self.predictionsview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-            horizontalScrollMode=QtGui.QTableView.ScrollPerPixel,
-            selectionMode=QtGui.QTableView.NoSelection,
+            horizontalScrollMode=QTableView.ScrollPerPixel,
+            selectionMode=QTableView.NoSelection,
             focusPolicy=Qt.StrongFocus,
             sortingEnabled=True,
         )
@@ -291,7 +301,7 @@ class OWPredictions(widget.OWWidget):
         # SortFilterProxyModel is slow due to large abstraction overhead
         # (every comparison triggers multiple `model.index(...)`,
         # model.rowCount(...), `model.parent`, ... calls)
-        hheader.setClickable(predmodel.rowCount() < 20000)
+        hheader.setSectionsClickable(predmodel.rowCount() < 20000)
 
         predmodel.layoutChanged.connect(self._update_data_sort_order)
         self._update_data_sort_order()
@@ -519,7 +529,7 @@ class OWPredictions(widget.OWWidget):
         return values, [None] * len(data)
 
 
-class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
+class PredictionsItemDelegate(QStyledItemDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
     """
@@ -531,7 +541,7 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
     def setFormat(self, fmt):
         if fmt != self.__fmt:
             self.__fmt = fmt
-            self.sizeHintChanged.emit(QtCore.QModelIndex())
+            self.sizeHintChanged.emit(QModelIndex())
 
     def setColors(self, colortable):
         if colortable is not None:
@@ -554,8 +564,7 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
                 text = fmt.format(value=value)
             return text
 
-    @Slot(QtGui.QHelpEvent, QtGui.QAbstractItemView,
-          QtGui.QStyleOptionViewItem, QtCore.QModelIndex,
+    @Slot(QHelpEvent, QAbstractItemView, QStyleOptionViewItem, QModelIndex,
           result=bool)
     def helpEvent(self, event, view, option, index):
         # reimplemented
@@ -566,7 +575,7 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
                 tooltip = tool_tip(value)
             except ValueError:
                 return False
-            QtGui.QToolTip.showText(event.globalPos(), tooltip, view)
+            QToolTip.showText(event.globalPos(), tooltip, view)
             return True
         else:
             return super().helpEvent(event, view, option, index)
@@ -585,12 +594,12 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
         if option.widget is not None:
             style = option.widget.style()
         else:
-            style = QtGui.QApplication.style()
+            style = QApplication.style()
         margin = style.pixelMetric(
-            QtGui.QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
+            QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
         metrics = option.fontMetrics
         height = sh.height() + metrics.leading() + 2 * margin
-        return QtCore.QSize(sh.width(), height)
+        return QSize(sh.width(), height)
 
     def distribution(self, index):
         value = index.data(Qt.DisplayRole)
@@ -617,7 +626,7 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
         if option.widget is not None:
             style = option.widget.style()
         else:
-            style = QtGui.QApplication.style()
+            style = QApplication.style()
 
         self.initStyleOption(option, index)
 
@@ -625,12 +634,12 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
         metrics = option.fontMetrics
 
         margin = style.pixelMetric(
-            QtGui.QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
+            QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
         bottommargin = min(margin, 1)
         rect = option.rect.adjusted(margin, margin, -margin, -bottommargin)
 
         textrect = style.subElementRect(
-            QtGui.QStyle.SE_ItemViewItemText, option, option.widget)
+            QStyle.SE_ItemViewItemText, option, option.widget)
         # Are the margins included in the subElementRect?? -> No!
         textrect = textrect.adjusted(margin, margin, -margin, -bottommargin)
 
@@ -645,14 +654,14 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
         painter.save()
         painter.setClipRect(option.rect)
         painter.setFont(option.font)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.Antialiasing)
 
         style.drawPrimitive(
-            QtGui.QStyle.PE_PanelItemViewRow, option, painter, option.widget)
+            QStyle.PE_PanelItemViewRow, option, painter, option.widget)
         style.drawPrimitive(
-            QtGui.QStyle.PE_PanelItemViewItem, option, painter, option.widget)
+            QStyle.PE_PanelItemViewItem, option, painter, option.widget)
 
-        if option.state & QtGui.QStyle.State_Selected:
+        if option.state & QStyle.State_Selected:
             color = option.palette.highlightedText().color()
         else:
             color = option.palette.text().color()
@@ -669,7 +678,7 @@ class PredictionsItemDelegate(QtGui.QStyledItemDelegate):
         if text:
             style.drawItemText(
                 painter, textrect, option.displayAlignment, option.palette,
-                option.state & QtGui.QStyle.State_Enabled, text)
+                option.state & QStyle.State_Enabled, text)
 
 
 def drawDistBar(painter, rect, distribution, colortable):
@@ -695,7 +704,7 @@ def drawDistBar(painter, rect, distribution, colortable):
     painter.restore()
 
 
-class PredictionsSortProxyModel(QtGui.QSortFilterProxyModel):
+class PredictionsSortProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.__probInd = None
@@ -721,7 +730,7 @@ class PredictionsSortProxyModel(QtGui.QSortFilterProxyModel):
         return probs, value
 
 
-class _TableModel(QtCore.QAbstractTableModel):
+class _TableModel(QAbstractTableModel):
     def __init__(self, table=None, headers=None, parent=None):
         super().__init__(parent)
         self._table = [[]] if table is None else table
@@ -730,13 +739,13 @@ class _TableModel(QtCore.QAbstractTableModel):
         self._header = headers
         self.__columnCount = max([len(row) for row in self._table] or [0])
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
+    def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
             return 0
         else:
             return len(self._table)
 
-    def columnCount(self, parent=QtCore.QModelIndex()):
+    def columnCount(self, parent=QModelIndex()):
         if parent.isValid():
             return 0
         else:
@@ -764,7 +773,7 @@ class _TableModel(QtCore.QAbstractTableModel):
 PredictionsModel = _TableModel
 
 
-class TableView(QtGui.QTableView):
+class TableView(QTableView):
     MaxSizeHintSamples = 1000
 
     def sizeHintForColumn(self, column):
@@ -810,7 +819,7 @@ class TableView(QtGui.QTableView):
         return width + 1 if self.showGrid() else width
 
 
-class TableSortProxyModel(QtGui.QSortFilterProxyModel):
+class TableSortProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.__sortInd = None
@@ -859,7 +868,7 @@ def tool_tip(value):
 
 
 def main(argv=sys.argv):
-    app = QtGui.QApplication(list(argv))
+    app = QApplication(list(argv))
     argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]

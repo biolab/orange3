@@ -3,8 +3,8 @@
 from os import path
 from unittest.mock import Mock
 
-from PyQt4.QtCore import QMimeData, QPoint, Qt, QUrl
-from PyQt4.QtGui import QDragEnterEvent, QDropEvent
+from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
+from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 
 import Orange
 from Orange.widgets.data.owfile import OWFile

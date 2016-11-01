@@ -6,9 +6,8 @@ A custom toolbar with linear uniform size layout.
 
 import logging
 
-from PyQt4.QtGui import QToolBar
-
-from PyQt4.QtCore import Qt, QSize, QEvent
+from AnyQt.QtWidgets import QToolBar
+from AnyQt.QtCore import Qt, QSize, QEvent
 
 log = logging.getLogger(__name__)
 

@@ -6,17 +6,19 @@ Positions items into a grid. This has been tested with widgets that have their
 """
 from itertools import zip_longest
 
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
+from AnyQt.QtGui import QColor, QPen, QBrush
+from AnyQt.QtWidgets import (
+    QSizePolicy, QGraphicsWidget, QGraphicsGridLayout, QGraphicsRectItem
+)
 
-
-class GridItem(QtGui.QGraphicsWidget):
+class GridItem(QGraphicsWidget):
     """The base class for grid items, takes care of positioning in grid.
 
     Parameters
     ----------
-    widget : QtGui.QGraphicsWidget
-    parent : QtGui.QGraphicsWidget
+    widget : QGraphicsWidget
+    parent : QGraphicsWidget
 
     See Also
     --------
@@ -43,8 +45,8 @@ class GridItem(QtGui.QGraphicsWidget):
         self.widget.moveBy(-rect.topLeft().x(), -rect.topLeft().y())
 
     def boundingRect(self):
-        return QtCore.QRectF(QtCore.QPointF(0, 0),
-                             self.widget.boundingRectoundingRect().size())
+        return QRectF(QPointF(0, 0),
+                      self.widget.boundingRectoundingRect().size())
 
     def sizeHint(self, size_hint, size_constraint=None, **kwargs):
         return self.widget.sizeHint(size_hint, size_constraint, **kwargs)
@@ -55,8 +57,8 @@ class SelectableGridItem(GridItem):
 
     Parameters
     ----------
-    widget : QtGui.QGraphicsWidget
-    parent : QtGui.QgraphicsWidget
+    widget : QGraphicsWidget
+    parent : QGraphicsWidget
 
     See Also
     --------
@@ -69,20 +71,20 @@ class SelectableGridItem(GridItem):
     def __init__(self, widget, parent=None, **kwargs):
         super().__init__(widget, parent, **kwargs)
 
-        self.setFlags(QtGui.QGraphicsWidget.ItemIsSelectable)
+        self.setFlags(QGraphicsWidget.ItemIsSelectable)
 
     def paint(self, painter, options, widget=None):
         super().paint(painter, options, widget)
         rect = self.boundingRect()
         painter.save()
         if self.isSelected():
-            painter.setPen(QtGui.QPen(QtGui.QColor(125, 162, 206, 192)))
-            painter.setBrush(QtGui.QBrush(QtGui.QColor(217, 232, 252, 192)))
-            painter.drawRoundedRect(QtCore.QRectF(
+            painter.setPen(QPen(QColor(125, 162, 206, 192)))
+            painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
+            painter.drawRoundedRect(QRectF(
                 rect.topLeft(), self.geometry().size()), 3, 3)
         else:
-            painter.setPen(QtGui.QPen(QtGui.QColor('#ebebeb')))
-            painter.drawRoundedRect(QtCore.QRectF(
+            painter.setPen(QPen(QColor('#ebebeb')))
+            painter.drawRoundedRect(QRectF(
                 rect.topLeft(), self.geometry().size()), 3, 3)
         painter.restore()
 
@@ -101,8 +103,8 @@ class ZoomableGridItem(GridItem):
 
     Parameters
     ----------
-    widget : QtGui.QGraphicsWidget
-    parent : QtGui.QGraphicsWidget
+    widget : QGraphicsWidget
+    parent : QGraphicsWidget
     max_size : int
         The maximum size of the grid item.
 
@@ -115,7 +117,7 @@ class ZoomableGridItem(GridItem):
     """
 
     def __init__(self, widget, parent=None, max_size=150, **kwargs):
-        self._max_size = QtCore.QSizeF(max_size, max_size)
+        self._max_size = QSizeF(max_size, max_size)
         # We store the offsets from the top left corner to move widget properly
         self.__offset_x = self.__offset_y = 0
 
@@ -125,7 +127,7 @@ class ZoomableGridItem(GridItem):
 
     def set_max_size(self, max_size):
         self.widget.resetTransform()
-        self._max_size = QtCore.QSizeF(max_size, max_size)
+        self._max_size = QSizeF(max_size, max_size)
         self._resize_widget()
 
     def _resize_widget(self):
@@ -153,13 +155,13 @@ class ZoomableGridItem(GridItem):
         self.updateGeometry()
 
     def boundingRect(self):
-        return QtCore.QRectF(QtCore.QPointF(0, 0), self._max_size)
+        return QRectF(QPointF(0, 0), self._max_size)
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
         return self._max_size
 
 
-class OWGrid(QtGui.QGraphicsWidget):
+class OWGrid(QGraphicsWidget):
     """Responsive grid layout widget.
 
     Manages grid items for various window sizes.
@@ -168,7 +170,7 @@ class OWGrid(QtGui.QGraphicsWidget):
 
     Parameters
     ----------
-    parent : QtGui.QGraphicsWidget
+    parent : QGraphicsWidget
 
     Examples
     --------
@@ -182,7 +184,7 @@ class OWGrid(QtGui.QGraphicsWidget):
 
     We then take a list of items and wrap them into our new `MyGridItem`
     instances.
-    >>> items = [QtGui.QGraphicsRectItem(0, 0, 10, 10)]
+    >>> items = [QGraphicsRectItem(0, 0, 10, 10)]
     >>> grid_items = [MyGridItem(i, grid) for i in items]
 
     We can then set the items to be displayed
@@ -193,11 +195,11 @@ class OWGrid(QtGui.QGraphicsWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setSizePolicy(QtGui.QSizePolicy.Maximum,
-                           QtGui.QSizePolicy.Maximum)
+        self.setSizePolicy(QSizePolicy.Maximum,
+                           QSizePolicy.Maximum)
         self.setContentsMargins(10, 10, 10, 10)
 
-        self.__layout = QtGui.QGraphicsGridLayout()
+        self.__layout = QGraphicsGridLayout()
         self.__layout.setContentsMargins(0, 0, 0, 0)
         self.__layout.setSpacing(10)
         self.setLayout(self.__layout)

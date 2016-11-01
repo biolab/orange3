@@ -1,7 +1,6 @@
 import sys
 
-from PyQt4.QtGui import QApplication
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.canvas.registry.description import Default
 import Orange.data
@@ -10,7 +9,7 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.widgets.gui import attributeIconDict
 from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
 from Orange.widgets.utils.plot import xBottom
-from Orange.widgets.utils.scaling import checksum
+from Orange.widgets.utils import checksum
 from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
 from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
 from Orange.widgets.visualize.owviswidget import OWVisWidget
@@ -22,7 +21,7 @@ class OWParallelCoordinates(OWVisWidget):
     name = "Parallel Coordinates"
     description = "Parallel coordinates display of multi-dimensional data."
     icon = "icons/ParallelCoordinates.svg"
-    priority = 100
+    priority = 900
     inputs = [("Data", Orange.data.Table, 'set_data', Default),
               ("Data Subset", Orange.data.Table, 'set_subset_data'),
               ("Features", AttributeList, 'set_shown_attributes')]
@@ -211,6 +210,7 @@ class OWParallelCoordinates(OWVisWidget):
 
 #test widget appearance
 if __name__ == "__main__":
+    from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
     ow = OWParallelCoordinates()
     ow.show()

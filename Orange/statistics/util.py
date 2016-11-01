@@ -192,10 +192,10 @@ def stats(X, weights=None, compute_variance=False):
             X.max(axis=0).toarray().ravel(),
             np.asarray(X.mean(axis=0)).ravel() if not weighted else weighted_mean,
             np.zeros(X.shape[1]),      # variance not supported
-            X.shape[1] - non_zero,
+            X.shape[0] - non_zero,
             non_zero))
     else:
-        nans = ~X.astype(bool).sum(axis=0) if X.size else np.zeros(X.shape[1])
+        nans = (~X.astype(bool)).sum(axis=0) if X.size else np.zeros(X.shape[1])
         return np.column_stack((
             np.tile(np.inf, X.shape[1]),
             np.tile(-np.inf, X.shape[1]),

@@ -1,4 +1,4 @@
-import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Instance, Table, Domain
 
@@ -26,7 +26,7 @@ class Transformation:
             data = Table(data.domain, [data])
         domain = Domain([self.variable])
         data = Table.from_table(domain, data)
-        transformed = self.transform(data.X.squeeze(axis=1))
+        transformed = self.transform(data.X if sp.issparse(data.X) else data.X.squeeze(axis=1))
         if inst:
             transformed = transformed[0]
         return transformed
@@ -107,7 +107,13 @@ class Normalizer(Transformation):
         self.factor = factor
 
     def transform(self, c):
-        return (c - self.offset) * self.factor
+        if sp.issparse(c):
+            if self.offset != 0:
+                raise ValueError('Non-zero offset in normalization '
+                                 'of sparse data')
+            return c * self.factor
+        else:
+            return (c - self.offset) * self.factor
 
 
 class Lookup(Transformation):

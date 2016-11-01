@@ -8,9 +8,9 @@ from collections import namedtuple
 import numpy
 import sklearn.metrics as skl_metrics
 
-from PyQt4 import QtGui
-from PyQt4.QtGui import QColor, QPen
-from PyQt4.QtCore import Qt
+from AnyQt import QtWidgets
+from AnyQt.QtGui import QColor, QPen, QPalette, QFont
+from AnyQt.QtCore import Qt
 
 import pyqtgraph as pg
 
@@ -92,21 +92,21 @@ class OWLiftCurve(widget.OWWidget):
         cbox.setFlat(True)
         self.classifiers_list_box = gui.listBox(
             cbox, self, "selected_classifiers", "classifier_names",
-            selectionMode=QtGui.QListView.MultiSelection,
+            selectionMode=QtWidgets.QListView.MultiSelection,
             callback=self._on_classifiers_changed)
 
         gui.checkBox(box, self, "display_convex_hull",
                      "Show lift convex hull", callback=self._replot)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plotview.setFrameStyle(QtGui.QFrame.StyledPanel)
+        self.plotview.setFrameStyle(QtWidgets.QFrame.StyledPanel)
 
         self.plot = pg.PlotItem()
         self.plot.getViewBox().setMenuEnabled(False)
 
-        pen = QPen(self.palette().color(QtGui.QPalette.Text))
+        pen = QPen(self.palette().color(QPalette.Text))
 
-        tickfont = QtGui.QFont(self.font())
+        tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")
@@ -238,7 +238,7 @@ def lift_curve(ytrue, ypred, target=1):
 
 def main():
     import sip
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     from Orange.classification import (LogisticRegressionLearner, SVMLearner,
                                        NuSVMLearner)
 

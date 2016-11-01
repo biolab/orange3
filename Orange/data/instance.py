@@ -1,8 +1,12 @@
 from itertools import chain
-from numbers import Real, Integral
-from ..data.variable import Value, Unknown
 from math import isnan
+from numbers import Real, Integral
+
 import numpy as np
+
+from Orange.data import Value, Unknown
+
+__all__ = ["Instance"]
 
 
 class Instance:

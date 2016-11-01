@@ -1,11 +1,12 @@
 from collections import OrderedDict
 
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+from AnyQt import QtWidgets
+from AnyQt.QtWidgets import QLabel
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification.svm import SVMLearner, NuSVMLearner
-from Orange.widgets import settings, gui
+from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
@@ -127,7 +128,7 @@ class OWSVMClassification(OWBaseSVM):
 
     LEARNER = SVMLearner
 
-    outputs = [("Support vectors", Table)]
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
     C_SVC, Nu_SVC = 0, 1
     svmtype = settings.Setting(0)
@@ -139,7 +140,7 @@ class OWSVMClassification(OWBaseSVM):
     limit_iter = settings.Setting(True)
 
     def _add_type_box(self):
-        form = QtGui.QGridLayout()
+        form = QtWidgets.QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
             self.controlArea, self, "svmtype", [], box="SVM Type",
             orientation=form, callback=self.settings_changed)
@@ -155,10 +156,10 @@ class OWSVMClassification(OWBaseSVM):
             alignment=Qt.AlignRight, controlWidth=80, addToLayout=False,
             callback=self.settings_changed)
         form.addWidget(self.c_radio, 0, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
+        form.addWidget(QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
         form.addWidget(self.c_spin, 0, 2)
         form.addWidget(self.nu_radio, 1, 0, Qt.AlignLeft)
-        form.addWidget(QtGui.QLabel("Complexity (ν):"), 1, 1, Qt.AlignRight)
+        form.addWidget(QLabel("Complexity (ν):"), 1, 1, Qt.AlignRight)
         form.addWidget(self.nu_spin, 1, 2)
 
     def _add_optimization_box(self):
@@ -199,7 +200,7 @@ class OWSVMClassification(OWBaseSVM):
 
 
 if __name__ == "__main__":
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     w = OWSVMClassification()
     w.set_data(Table("iris")[:50])
     w.show()

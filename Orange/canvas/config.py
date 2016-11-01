@@ -11,16 +11,13 @@ import itertools
 
 import pkg_resources
 
-from PyQt4.QtGui import (
+from AnyQt.QtGui import (
     QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 )
 
-from PyQt4.QtCore import Qt, QCoreApplication, QPoint, QRect
+from AnyQt.QtCore import Qt, QCoreApplication, QPoint, QRect, QSettings
 
 from .utils.settings import Settings, config_slot
-
-# Import QSettings from qtcompat module (compatibility with PyQt < 4.8.3
-from .utils.qtcompat import QSettings
 
 log = logging.getLogger(__name__)
 
@@ -115,22 +112,6 @@ spec = \
      ("logging/show-on-error", bool, True, "Show log window on error"),
 
      ("logging/dockable", bool, True, "Allow log window to be docked"),
-
-     ("output/redirect-stderr", bool, True,
-      "Redirect and display standard error output"),
-
-     ("output/redirect-stdout", bool, True,
-      "Redirect and display standard output"),
-
-     ("output/stay-on-top", bool, True, ""),
-
-     ("output/show-on-error", bool, True, "Show output window on error"),
-
-     ("output/dockable", bool, True, "Allow output window to be docked"),
-
-     ("help/stay-on-top", bool, True, ""),
-
-     ("help/dockable", bool, True, "Allow help window to be docked"),
 
      ("help/open-in-external-browser", bool, False,
       "Open help in an external browser")

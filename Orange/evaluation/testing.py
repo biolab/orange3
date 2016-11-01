@@ -337,10 +337,11 @@ class Results:
                           "subprocesses (e.g. parameter tuning with internal "
                           "cross-validation). Setting n_jobs=1", OrangeWarning)
 
-        # Workaround for NumPy locking on Macintosh.
+        # Workaround for NumPy locking on Macintosh and Ubuntu 14.04 LTS
+        # May be removed once offending libs and OSes are nowhere to be found.
         # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
         mp_ctx = mp.get_context(
-            'forkserver' if sys.platform == 'darwin' and n_jobs > 1 else None)
+            'forkserver' if sys.platform.startswith(('darwin', 'linux')) and n_jobs > 1 else None)
 
         if n_jobs > 1 and mp_ctx.get_start_method() != 'fork' and train_data.X.size < 20e3:
             n_jobs = 1
@@ -518,10 +519,11 @@ class CrossValidation(Results):
     def setup_indices(self, train_data, test_data):
         self.indices = None
         if self.stratified and test_data.domain.has_discrete_class:
-            self.indices = skl_cross_validation.StratifiedKFold(
-                test_data.Y, self.k, shuffle=True, random_state=self.random_state
-            )
-            if any(len(train) == 0 or len(test) == 0 for train, test in self.indices):
+            try:
+                self.indices = skl_cross_validation.StratifiedKFold(
+                    test_data.Y, self.k, shuffle=True, random_state=self.random_state
+                )
+            except ValueError:
                 self.warnings.append("Using non-stratified sampling.")
                 self.indices = None
         if self.indices is None:

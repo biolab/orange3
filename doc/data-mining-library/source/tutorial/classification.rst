@@ -103,7 +103,7 @@ Orange includes a variety of classification algorithms, most of them wrapped fro
 - logistic regression (``Orange.classification.LogisticRegressionLearner``)
 - k-nearest neighbors (``Orange.classification.knn.KNNLearner``)
 - support vector machines (say, ``Orange.classification.svm.LinearSVMLearner``)
-- classification trees (``Orange.classification.tree.TreeLearner``)
+- classification trees (``Orange.classification.tree.SklTreeLearner``)
 - radnom forest (``Orange.classification.RandomForestLearner``)
 
 Some of these are included in the code that estimates the probability of a target class on a testing data. This time, training and test data sets are disjoint:

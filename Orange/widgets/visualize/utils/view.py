@@ -3,11 +3,13 @@ desired functionality."""
 from itertools import repeat
 
 import numpy as np
-from PyQt4 import QtGui
-from PyQt4.QtCore import Qt
+
+from AnyQt.QtWidgets import QGraphicsView
+from AnyQt.QtGui import QTransform
+from AnyQt.QtCore import Qt
 
 
-class ZoomableGraphicsView(QtGui.QGraphicsView):
+class ZoomableGraphicsView(QGraphicsView):
     """Zoomable graphics view.
 
     Composable graphics view that adds zoom functionality.
@@ -20,7 +22,7 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
 
     Parameters
     ----------
-    scene : QtGui.QGraphicsScene
+    scene : QGraphicsScene
     padding : int or tuple, optional
         Specify the padding around the drawn widgets. Can be an int, or tuple,
         the tuple can contain either 2 or 4 elements.
@@ -54,7 +56,7 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
         self.__needs_to_recalculate_initial = True
 
     def wheelEvent(self, event):
-        self.__handle_zoom(event.delta())
+        self.__handle_zoom(event.angleDelta().y())
         super().wheelEvent(event)
 
     def mousePressEvent(self, event):
@@ -98,7 +100,7 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
             self.zoom += self.scale_factor
         else:
             self.setTransformationAnchor(self.AnchorUnderMouse)
-            self.setTransform(QtGui.QTransform().scale(self.zoom, self.zoom))
+            self.setTransform(QTransform().scale(self.zoom, self.zoom))
 
     @staticmethod
     def __zooming_out(direction):
@@ -155,8 +157,7 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
             self.fitInView(self.central_widget_rect(), Qt.KeepAspectRatio)
         else:
             self.fitInView(self.scene().sceneRect(), Qt.KeepAspectRatio)
-
-        self.__initial_zoom = self.matrix().m11()
+        self.__initial_zoom = self.transform().m11()
         self.zoom = self.__initial_zoom
 
     def reset_zoom(self):
@@ -167,10 +168,10 @@ class ZoomableGraphicsView(QtGui.QGraphicsView):
         if self.__needs_to_recalculate_initial:
             self.recalculate_and_fit()
         else:
-            self.setTransform(QtGui.QTransform().scale(self.zoom, self.zoom))
+            self.setTransform(QTransform().scale(self.zoom, self.zoom))
 
 
-class PannableGraphicsView(QtGui.QGraphicsView):
+class PannableGraphicsView(QGraphicsView):
     """Pannable graphics view.
 
     Enables panning the graphics view.
@@ -179,7 +180,7 @@ class PannableGraphicsView(QtGui.QGraphicsView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
 
     def enterEvent(self, event):
         self.viewport().setCursor(Qt.ArrowCursor)
@@ -190,7 +191,7 @@ class PannableGraphicsView(QtGui.QGraphicsView):
         self.viewport().setCursor(Qt.ArrowCursor)
 
 
-class PreventDefaultWheelEvent(QtGui.QGraphicsView):
+class PreventDefaultWheelEvent(QGraphicsView):
     """Prevent the default wheel event.
 
     The default wheel event pans the view around, if using the

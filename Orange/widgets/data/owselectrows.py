@@ -1,8 +1,15 @@
 from collections import OrderedDict
 from itertools import chain
 
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import (
+    QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
+    QMessageBox, QMenu, QListView, QGridLayout
+)
+from AnyQt.QtGui import (
+    QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
+    QFontMetrics, QPalette
+)
+from AnyQt.QtCore import Qt, QPoint, QRegExp
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
@@ -70,17 +77,16 @@ class OWSelectRows(widget.OWWidget):
         self.data_desc = self.match_desc = self.nonmatch_desc = None
 
         box = gui.vBox(self.controlArea, 'Conditions', stretch=100)
-        self.cond_list = QtGui.QTableWidget(
-            box, showGrid=False, selectionMode=QtGui.QTableWidget.NoSelection)
+        self.cond_list = QTableWidget(
+            box, showGrid=False, selectionMode=QTableWidget.NoSelection)
         box.layout().addWidget(self.cond_list)
         self.cond_list.setColumnCount(4)
         self.cond_list.setRowCount(0)
         self.cond_list.verticalHeader().hide()
         self.cond_list.horizontalHeader().hide()
         self.cond_list.resizeColumnToContents(0)
-        self.cond_list.horizontalHeader().setResizeMode(
-            QtGui.QHeaderView.Stretch)
-        self.cond_list.viewport().setBackgroundRole(QtGui.QPalette.Window)
+        self.cond_list.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.cond_list.viewport().setBackgroundRole(QPalette.Window)
 
         box2 = gui.hBox(box)
         gui.rubber(box2)
@@ -92,7 +98,7 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        boxes = gui.widgetBox(self.controlArea, orientation=QtGui.QGridLayout())
+        boxes = gui.widgetBox(self.controlArea, orientation=QGridLayout())
         layout = boxes.layout()
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
@@ -129,9 +135,9 @@ class OWSelectRows(widget.OWWidget):
         row = model.rowCount()
         model.insertRow(row)
 
-        attr_combo = QtGui.QComboBox(
+        attr_combo = QComboBox(
             minimumContentsLength=12,
-            sizeAdjustPolicy=QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row
         for var in filter_visible(chain(self.data.domain.variables, self.data.domain.metas)):
             attr_combo.addItem(*gui.attributeItem(var))
@@ -153,7 +159,7 @@ class OWSelectRows(widget.OWWidget):
 
     def add_all(self):
         if self.cond_list.rowCount():
-            Mb = QtGui.QMessageBox
+            Mb = QMessageBox
             if Mb.question(
                     self, "Remove existing filters",
                     "This will replace the existing filters with "
@@ -184,7 +190,7 @@ class OWSelectRows(widget.OWWidget):
 
     def set_new_operators(self, attr_combo, adding_all,
                           selected_index=None, selected_values=None):
-        oper_combo = QtGui.QComboBox()
+        oper_combo = QComboBox()
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
         var = self.data.domain[attr_combo.currentText()]
@@ -198,18 +204,18 @@ class OWSelectRows(widget.OWWidget):
     @staticmethod
     def _get_lineedit_contents(box):
         return [child.text() for child in getattr(box, "controls", [box])
-                if isinstance(child, QtGui.QLineEdit)]
+                if isinstance(child, QLineEdit)]
 
     @staticmethod
     def _get_value_contents(box):
         cont = []
         names = []
         for child in getattr(box, "controls", [box]):
-            if isinstance(child, QtGui.QLineEdit):
+            if isinstance(child, QLineEdit):
                 cont.append(child.text())
-            elif isinstance(child, QtGui.QComboBox):
+            elif isinstance(child, QComboBox):
                 cont.append(child.currentIndex())
-            elif isinstance(child, QtGui.QToolButton):
+            elif isinstance(child, QToolButton):
                 if child.popup is not None:
                     model = child.popup.list_view.model()
                     for row in range(model.rowCount()):
@@ -225,10 +231,10 @@ class OWSelectRows(widget.OWWidget):
                 raise TypeError('Type %s not supported.' % type(child))
         return tuple(cont)
 
-    class QDoubleValidatorEmpty(QtGui.QDoubleValidator):
+    class QDoubleValidatorEmpty(QDoubleValidator):
         def validate(self, input_, pos):
             if not input_:
-                return (QtGui.QDoubleValidator.Acceptable, input_, pos)
+                return (QDoubleValidator.Acceptable, input_, pos)
             else:
                 return super().validate(input_, pos)
 
@@ -242,7 +248,7 @@ class OWSelectRows(widget.OWWidget):
             le = gui.lineEdit(box, self, None)
             if contents:
                 le.setText(contents)
-            le.setAlignment(QtCore.Qt.AlignRight)
+            le.setAlignment(Qt.AlignRight)
             le.editingFinished.connect(self.conditions_changed)
             return le
 
@@ -253,7 +259,7 @@ class OWSelectRows(widget.OWWidget):
 
         def add_datetime(contents):
             le = add_textual(contents)
-            le.setValidator(QtGui.QRegExpValidator(QtCore.QRegExp(TimeVariable.REGEX)))
+            le.setValidator(QRegExpValidator(QRegExp(TimeVariable.REGEX)))
             return le
 
         var = self.data.domain[oper_combo.attr_combo.currentText()]
@@ -277,7 +283,7 @@ class OWSelectRows(widget.OWWidget):
                 button.var_type = vartype(var)
                 self.cond_list.setCellWidget(oper_combo.row, 2, button)
             else:
-                combo = QtGui.QComboBox()
+                combo = QComboBox()
                 combo.addItems([""] + var.values)
                 if lc[0]:
                     combo.setCurrentIndex(int(lc[0]))
@@ -518,30 +524,30 @@ class OWSelectRows(widget.OWWidget):
                   nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
 
 
-class CheckBoxPopup(QtGui.QWidget):
+class CheckBoxPopup(QWidget):
     def __init__(self, var, lc, widget_parent=None, widget=None):
-        QtGui.QWidget.__init__(self)
+        QWidget.__init__(self)
 
-        self.list_view = QtGui.QListView()
+        self.list_view = QListView()
         text = []
-        model = QtGui.QStandardItemModel(self.list_view)
+        model = QStandardItemModel(self.list_view)
         for (i, val) in enumerate(var.values):
-            item = QtGui.QStandardItem(val)
+            item = QStandardItem(val)
             item.setCheckable(True)
             if i + 1 in lc:
-                item.setCheckState(QtCore.Qt.Checked)
+                item.setCheckState(Qt.Checked)
                 text.append(val)
             model.appendRow(item)
         model.itemChanged.connect(widget_parent.conditions_changed)
         self.list_view.setModel(model)
 
-        layout = QtGui.QGridLayout(self)
+        layout = QGridLayout(self)
         layout.addWidget(self.list_view)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
         self.adjustSize()
-        self.setWindowFlags(QtCore.Qt.Popup)
+        self.setWindowFlags(Qt.Popup)
 
         self.widget = widget
         self.widget.desc_text = ', '.join(text)
@@ -550,15 +556,15 @@ class CheckBoxPopup(QtGui.QWidget):
     def moved(self):
         point = self.widget.rect().bottomRight()
         global_point = self.widget.mapToGlobal(point)
-        self.move(global_point - QtCore.QPoint(self.width(), 0))
+        self.move(global_point - QPoint(self.width(), 0))
 
 
-class DropDownToolButton(QtGui.QToolButton):
+class DropDownToolButton(QToolButton):
     def __init__(self, parent, var, lc):
-        QtGui.QToolButton.__init__(self, parent)
+        QToolButton.__init__(self, parent)
         self.desc_text = ''
         self.popup = CheckBoxPopup(var, lc, parent, self)
-        self.setMenu(QtGui.QMenu()) # to show arrow
+        self.setMenu(QMenu()) # to show arrow
         self.clicked.connect(self.open_popup)
 
     def open_popup(self):
@@ -566,9 +572,8 @@ class DropDownToolButton(QtGui.QToolButton):
         self.popup.show()
 
     def set_text(self):
-        metrics = QtGui.QFontMetrics(self.font())
-        self.setText(metrics.elidedText(self.desc_text,
-                                        QtCore.Qt.ElideRight,
+        metrics = QFontMetrics(self.font())
+        self.setText(metrics.elidedText(self.desc_text, Qt.ElideRight,
                                         self.width() - 15))
 
     def resizeEvent(self, QResizeEvent):
@@ -576,7 +581,8 @@ class DropDownToolButton(QtGui.QToolButton):
 
 
 def test():
-    app = QtGui.QApplication([])
+    from AnyQt.QtWidgets import QApplication
+    app = QApplication([])
     w = OWSelectRows()
     w.set_data(Table("zoo"))
     w.show()

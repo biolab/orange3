@@ -11,20 +11,19 @@ from collections import namedtuple
 
 from xml.sax.saxutils import escape
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QDialogButtonBox, QGraphicsScene,
     QGraphicsView, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsLineItem, QGraphicsTextItem, QGraphicsLayoutItem,
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
-    QGraphicsDropShadowEffect, QSizePolicy, QPalette, QPen,
-    QPainter, QIcon
+    QGraphicsDropShadowEffect, QSizePolicy
 )
+from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon
 
-from PyQt4.QtCore import (
-    Qt, QObject, QSize, QSizeF, QPointF, QRectF, qVersion
+from AnyQt.QtCore import (
+    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION
 )
-
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..scheme import SchemeNode, SchemeLink, compatible_channels
 from ..registry import InputSignal, OutputSignal
@@ -450,7 +449,7 @@ class LinksEditWidget(QGraphicsWidget):
         self.sourceNodeTitle = left_title
         self.sinkNodeTitle = right_title
 
-    if qVersion() < "4.7":
+    if QT_VERSION < 0x40700:
         geometryChanged = Signal()
 
         def setGeometry(self, rect):

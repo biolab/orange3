@@ -242,8 +242,7 @@ class TestDomainContextHandler(TestCase):
         def test_filter(before_value, after_value):
             data = dict(value=before_value)
             self.handler.filter_value(setting, data, *self.args)
-            self.assertIn("value", data)
-            self.assertEqual(data["value"], after_value)
+            self.assertEqual(data.get("value", None), after_value)
 
         # filter list values
         test_filter([], [])
@@ -254,6 +253,20 @@ class TestDomainContextHandler(TestCase):
                     [("d1", Discrete), ("c1", Continuous)])
         # All other values in list should remain
         test_filter([0, [1, 2, 3], "abcd", 5.4], [0, [1, 2, 3], "abcd", 5.4])
+
+    def test_encode_setting(self):
+        setting = ContextSetting(None)
+
+        var = self.domain[0]
+        val = self.handler.encode_setting(None, setting, var)
+        self.assertEqual(val, (var.name, 100 + vartype(var)))
+
+    def test_decode_setting(self):
+        setting = ContextSetting(None)
+
+        var = self.domain[0]
+        val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)), self.domain)
+        self.assertIs(val, var)
 
     def create_context(self, domain, values):
         if not domain:

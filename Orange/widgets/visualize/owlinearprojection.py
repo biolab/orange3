@@ -11,13 +11,19 @@ from xml.sax.saxutils import escape
 import pkg_resources
 
 import numpy
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import (
-    QListView, QSizePolicy, QApplication, QAction, QKeySequence,
-    QGraphicsLineItem, QSlider, QPainterPath
+
+from AnyQt.QtWidgets import (
+    QListView, QSlider, QToolButton, QFormLayout, QHBoxLayout,
+    QSizePolicy, QAction, QActionGroup, QGraphicsLineItem, QGraphicsPathItem,
+    QGraphicsRectItem, QPinchGesture, QApplication
 )
-from PyQt4.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF, QPointF
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtGui import (
+    QColor, QPen, QBrush, QKeySequence, QPainterPath, QPainter, QTransform,
+    QCursor, QIcon
+)
+from AnyQt.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF, QPointF, QMimeData
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+
 import pyqtgraph.graphicsItems.ScatterPlotItem
 import pyqtgraph as pg
 
@@ -25,6 +31,9 @@ from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
+)
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
 from Orange.widgets.utils import classdensity
 from Orange.canvas import report
@@ -50,7 +59,7 @@ class DnDVariableListModel(itemmodels.VariableListModel):
             variables.append(self[index.row()])
             itemdata.append(self.itemData(index))
 
-        mime = QtCore.QMimeData()
+        mime = QMimeData()
         mime.setData(self.MimeType, b"see properties")
         mime.setProperty("variables", variables)
         mime.setProperty("itemdata", itemdata)
@@ -94,12 +103,21 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
     def paint(self, painter, option, widget=None):
         if self.opts["pxMode"]:
-            painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
         if self.opts["antialias"]:
-            painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.Antialiasing, True)
 
         super().paint(painter, option, widget)
+
+
+class TextItem(pg.TextItem):
+    if not hasattr(pg.TextItem, "setAnchor"):
+        # Compatibility with pyqtgraph <= 0.9.10; in (as of yet unreleased)
+        # 0.9.11 the TextItem has a `setAnchor`, but not `updateText`
+        def setAnchor(self, anchor):
+            self.anchor = pg.Point(anchor)
+            self.updateText()
 
 
 class AxisItem(pg.GraphicsObject):
@@ -119,7 +137,7 @@ class AxisItem(pg.GraphicsObject):
         self._arrow = pg.ArrowItem(parent=self, angle=180 - angle)
         self._arrow.setPos(self._spine.line().p2())
 
-        self._label = pg.TextItem(text=label, color=(10, 10, 10))
+        self._label = TextItem(text=label, color=(10, 10, 10))
         self._label.setParentItem(self)
         self._label.setPos(self._spine.line().p2())
 
@@ -147,7 +165,7 @@ class AxisItem(pg.GraphicsObject):
         else:
             Tinv, ok = None, False
         if not ok:
-            T = Tinv = QtGui.QTransform()
+            T = Tinv = QTransform()
 
         # map the axis spine to viewbox coord. system
         viewbox_line = Tinv.map(self._spine.line())
@@ -165,8 +183,7 @@ class AxisItem(pg.GraphicsObject):
 
         pos = T.map(label_pos)
         self._label.setPos(pos)
-        self._label.anchor = pg.Point(*anchor)
-        self._label.updateText()
+        self._label.setAnchor(pg.Point(*anchor))
         self._label.setRotation(angle if left_quad else angle - 180)
 
 
@@ -218,13 +235,14 @@ class OWLinearProjection(widget.OWWidget):
     description = "A multi-axis projection of data onto " \
                   "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
-    priority = 420
+    priority = 240
 
     inputs = [("Data", Table, "set_data", widget.Default),
               ("Data Subset", Table, "set_subset_data")]
 #              #TODO: Allow for axes to be supplied from an external source.
 #               ("Projection", numpy.ndarray, "set_axes"),]
-    outputs = [("Selected Data", Table)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -310,7 +328,7 @@ class OWLinearProjection(widget.OWWidget):
             minimumHeight=100
         )
         view.viewport().setAcceptDrops(True)
-        moveup = QtGui.QAction(
+        moveup = QAction(
             "Move up", view,
             shortcut=QKeySequence(Qt.AltModifier | Qt.Key_Up),
             triggered=self.__activate_selection
@@ -329,10 +347,10 @@ class OWLinearProjection(widget.OWWidget):
         self.shapevar_model = itemmodels.VariableListModel(parent=self)
         self.sizevar_model = itemmodels.VariableListModel(parent=self)
 
-        form = QtGui.QFormLayout(
+        form = QFormLayout(
             formAlignment=Qt.AlignLeft,
             labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QtGui.QFormLayout.AllNonFixedFieldsGrow,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
             spacing=8
         )
         box.layout().addLayout(form)
@@ -386,7 +404,7 @@ class OWLinearProjection(widget.OWWidget):
         form.addRow("Jittering:", cb)
 
         toolbox = gui.vBox(self.controlArea, "Zoom/Select")
-        toollayout = QtGui.QHBoxLayout()
+        toollayout = QHBoxLayout()
         toolbox.layout().addLayout(toollayout)
 
         gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
@@ -397,9 +415,10 @@ class OWLinearProjection(widget.OWWidget):
 
         # Main area plot
         self.view = pg.GraphicsView(background="w")
-        self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
-        self.view.setFrameStyle(QtGui.QFrame.StyledPanel)
+        self.view.setRenderHint(QPainter.Antialiasing, True)
+        self.view.setFrameStyle(pg.GraphicsView.StyledPanel)
         self.viewbox = pg.ViewBox(enableMouse=True, enableMenu=False)
+        self.viewbox.setAspectLocked(True)
         self.viewbox.grabGesture(Qt.PinchGesture)
         self.view.setCentralItem(self.viewbox)
 
@@ -417,7 +436,7 @@ class OWLinearProjection(widget.OWWidget):
         def icon(name):
             path = "icons/Dlg_{}.png".format(name)
             path = pkg_resources.resource_filename(widget.__name__, path)
-            return QtGui.QIcon(path)
+            return QIcon(path)
 
         actions = namespace(
             zoomtofit=QAction(
@@ -445,7 +464,7 @@ class OWLinearProjection(widget.OWWidget):
         )
         self.addActions([actions.zoomtofit, actions.zoomin, actions.zoomout])
 
-        group = QtGui.QActionGroup(self, exclusive=True)
+        group = QActionGroup(self, exclusive=True)
         group.addAction(actions.select)
         group.addAction(actions.zoom)
         group.addAction(actions.pan)
@@ -466,13 +485,13 @@ class OWLinearProjection(widget.OWWidget):
                 assert False
             currenttool.setViewBox(None)
             tool.setViewBox(self.viewbox)
-            self.viewbox.setCursor(QtGui.QCursor(cursor))
+            self.viewbox.setCursor(QCursor(cursor))
             currenttool = tool
 
         group.triggered[QAction].connect(activated)
 
         def button(action):
-            b = QtGui.QToolButton()
+            b = QToolButton()
             b.setDefaultAction(action)
             return b
 
@@ -790,11 +809,11 @@ class OWLinearProjection(widget.OWWidget):
         for i, axis in enumerate(axes.T):
             axis_item = AxisItem(line=QLineF(0, 0, axis[0], axis[1]),
                                  label=variables[i].name)
-            axis_item.setPen(QtGui.QPen(Qt.darkGray, 0))
+            axis_item.setPen(QPen(Qt.darkGray, 0))
             self.viewbox.addItem(axis_item)
 
         if reset_view:
-            self.viewbox.setRange(QtCore.QRectF(-1.05, -1.05, 2.1, 2.1))
+            self.viewbox.setRange(QRectF(-1.05, -1.05, 2.1, 2.1))
         self._update_legend()
 
         color_var = self.color_var()
@@ -831,12 +850,12 @@ class OWLinearProjection(widget.OWWidget):
                  for r, g, b in color_data],
                 dtype=object)
         else:
-            color = QtGui.QColor(Qt.darkGray)
-            pen_data = QtGui.QPen(color, 1.5)
+            color = QColor(Qt.darkGray)
+            pen_data = QPen(color, 1.5)
             pen_data.setCosmetic(True)
-            color = QtGui.QColor(Qt.lightGray)
+            color = QColor(Qt.lightGray)
             color.setAlpha(self.alpha_value)
-            brush_data = QtGui.QBrush(color)
+            brush_data = QBrush(color)
 
         if self._subset_mask is not None:
             assert self._subset_mask.shape == (len(self.data),)
@@ -845,11 +864,11 @@ class OWLinearProjection(widget.OWWidget):
             else:
                 subset_mask = self._subset_mask
 
-            if isinstance(brush_data, QtGui.QBrush):
+            if isinstance(brush_data, QBrush):
                 brush_data = numpy.array([brush_data] * subset_mask.size,
                                          dtype=object)
 
-            brush_data[~subset_mask] = QtGui.QBrush(Qt.NoBrush)
+            brush_data[~subset_mask] = QBrush(Qt.NoBrush)
 
         if self._selection_mask is not None:
             assert self._selection_mask.shape == (len(self.data),)
@@ -858,7 +877,7 @@ class OWLinearProjection(widget.OWWidget):
             else:
                 selection_mask = self._selection_mask
 
-            if isinstance(pen_data, QtGui.QPen):
+            if isinstance(pen_data, QPen):
                 pen_data = numpy.array([pen_data] * selection_mask.size,
                                        dtype=object)
 
@@ -871,14 +890,14 @@ class OWLinearProjection(widget.OWWidget):
 
         pen, brush = self._color_data()
 
-        if isinstance(pen, QtGui.QPen):
+        if isinstance(pen, QPen):
             # Reset the brush for all points
             self._item.data["pen"] = None
             self._item.setPen(pen)
         else:
             self._item.setPen(pen[self._item._mask])
 
-        if isinstance(brush, QtGui.QBrush):
+        if isinstance(brush, QBrush):
             # Reset the brush for all points
             self._item.data["brush"] = None
             self._item.setBrush(brush)
@@ -973,15 +992,15 @@ class OWLinearProjection(widget.OWWidget):
         symbols = list(ScatterPlotItem.Symbols)
 
         if shape_var is color_var:
-            items = [(QtGui.QColor(*color_var.colors[i]), symbols[i], name)
+            items = [(QColor(*color_var.colors[i]), symbols[i], name)
                      for i, name in enumerate(color_var.values)]
         else:
             colors = shapes = []
             if color_var is not None:
-                colors = [(QtGui.QColor(*color_var.colors[i]), "o", name)
+                colors = [(QColor(*color_var.colors[i]), "o", name)
                           for i, name in enumerate(color_var.values)]
             if shape_var is not None:
-                shapes = [(QtGui.QColor(Qt.gray),
+                shapes = [(QColor(Qt.gray),
                            symbols[i % (len(symbols) - 1)], name)
                           for i, name in enumerate(shape_var.values)]
             items = colors + shapes
@@ -1049,12 +1068,15 @@ class OWLinearProjection(widget.OWWidget):
 
     def commit(self):
         subset = None
+        indices = None
         if self.data is not None and self._selection_mask is not None:
             indices = numpy.flatnonzero(self._selection_mask)
             if len(indices) > 0:
                 subset = self.data[indices]
 
         self.send("Selected Data", subset)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, indices))
 
     def send_report(self):
         self.report_plot(name="", plot=self.viewbox.getViewBox())
@@ -1093,7 +1115,7 @@ class PlotTool(QObject):
 
     See Also
     --------
-    PyQt4.QtCore.QObject.eventFilter
+    QObject.eventFilter
 
     """
     def __init__(self, parent=None, **kwargs):
@@ -1375,11 +1397,11 @@ class PlotSelectionTool(PlotTool):
                 self.__item = None
         else:
             if self.__item is None:
-                item = QtGui.QGraphicsPathItem()
-                color = QtGui.QColor(Qt.yellow)
-                item.setPen(QtGui.QPen(color, 0))
+                item = QGraphicsPathItem()
+                color = QColor(Qt.yellow)
+                item.setPen(QPen(color, 0))
                 color.setAlpha(50)
-                item.setBrush(QtGui.QBrush(color))
+                item.setBrush(QBrush(color))
                 self.__item = item
                 viewbox.addItem(item)
 
@@ -1476,11 +1498,11 @@ class PlotZoomTool(PlotTool):
                 self.__zoomitem = None
         else:
             if self.__zoomitem is None:
-                self.__zoomitem = QtGui.QGraphicsRectItem()
-                color = QtGui.QColor(Qt.yellow)
-                self.__zoomitem.setPen(QtGui.QPen(color, 0))
+                self.__zoomitem = QGraphicsRectItem()
+                color = QColor(Qt.yellow)
+                self.__zoomitem.setPen(QPen(color, 0))
                 color.setAlpha(50)
-                self.__zoomitem.setBrush(QtGui.QBrush(color))
+                self.__zoomitem.setBrush(QBrush(color))
                 viewbox.addItem(self.__zoomitem)
 
             self.__zoomitem.setRect(self.zoomRect())
@@ -1553,7 +1575,7 @@ class PlotPinchZoomTool(PlotTool):
         if gesture.state() == Qt.GestureStarted:
             event.accept(gesture)
             return True
-        elif gesture.changeFlags() & QtGui.QPinchGesture.ScaleFactorChanged:
+        elif gesture.changeFlags() & QPinchGesture.ScaleFactorChanged:
             viewbox = self.viewBox()
             center = viewbox.mapSceneToView(gesture.centerPoint())
             scale_prev = gesture.lastScaleFactor()
@@ -1580,7 +1602,7 @@ class plotutils:
                           through_black=False):
         if palette is None:
             palette = colorpalette.ContinuousPaletteGenerator(
-                QtGui.QColor(*low), QtGui.QColor(*high), through_black)
+                QColor(*low), QColor(*high), through_black)
         amin, amax = numpy.nanmin(data), numpy.nanmax(data)
         span = amax - amin
         data = (data - amin) / (span or 1)

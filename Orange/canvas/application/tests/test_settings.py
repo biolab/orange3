@@ -1,12 +1,11 @@
 import logging
 
-from PyQt4.QtGui import QTreeView
-
+from AnyQt.QtWidgets import QTreeView
+from AnyQt.QtCore import QSettings
 from ...gui import test
 
 from ..settings import UserSettingsDialog, UserSettingsModel
 from ...utils.settings import Settings, config_slot
-from ...utils.qtcompat import QSettings
 
 
 class TestUserSettings(test.QAppTestCase):

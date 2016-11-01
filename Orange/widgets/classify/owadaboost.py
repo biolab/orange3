@@ -1,8 +1,8 @@
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
-from Orange.classification import TreeLearner
+from Orange.classification import SklTreeLearner
 from Orange.ensembles import SklAdaBoostLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -26,7 +26,7 @@ class OWAdaBoostClassification(OWBaseLearner):
     learning_rate = Setting(1.)
     algorithm = Setting(0)
 
-    DEFAULT_BASE_ESTIMATOR = TreeLearner()
+    DEFAULT_BASE_ESTIMATOR = SklTreeLearner()
 
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Parameters")
@@ -72,7 +72,7 @@ class OWAdaBoostClassification(OWBaseLearner):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWAdaBoostClassification()

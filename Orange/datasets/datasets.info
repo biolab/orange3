@@ -89,6 +89,21 @@
             "values": 3
         }
     },
+    "banking-crises": {
+        "features": {
+            "continuous": 3,
+            "discrete": 70,
+            "meta": 0
+        },
+        "location": "banking-crises.tab",
+        "missing": true,
+        "name": "banking-crises",
+        "rows": 211,
+        "target": {
+            "type": false,
+            "values": null
+        }
+    },
     "breast-cancer": {
         "features": {
             "continuous": 0,
@@ -279,6 +294,21 @@
         "target": {
             "type": "discrete",
             "values": 2
+        }
+    },
+    "cyber-security-breaches": {
+        "features": {
+            "continuous": 4,
+            "discrete": 3,
+            "meta": 3
+        },
+        "location": "cyber-security-breaches.tab",
+        "missing": true,
+        "name": "cyber-security-breaches",
+        "rows": 1055,
+        "target": {
+            "type": false,
+            "values": null
         }
     },
     "dermatology": {

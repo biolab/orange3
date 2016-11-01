@@ -7,7 +7,7 @@ sections below.
 <!-- From menu _Help→About→Version_ or code `Orange.version.full_version` -->
 
 
-##### Expected bahavior
+##### Expected behavior
 
 
 

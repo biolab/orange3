@@ -5,8 +5,8 @@
 <title></title>
 <style>
     html, body, #container {
-        width: 100%;
-        height: 100%;
+        width: 100%%;
+        height: 100%%;
         margin: 0;
         padding: 0;
         -webkit-user-select: none;
@@ -44,6 +44,14 @@
 <script src="treemap.js"></script>
 <script src="orange-theme.js"></script>
 <script src="orange-selection.js"></script>
-<script src="orange-helpers.js"></script>
+<script>
+    (function(){
+        %(javascript)s;
+        var options = %(options)s ;  /* formatted in Highchart class */
+        fixupPythonObject(options);
+        Highcharts.setOptions(options);
+        //window.chart = new Highcharts.Chart({});
+    })();
+</script>
 </body>
 </html>

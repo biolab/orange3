@@ -1,7 +1,7 @@
 import sys
 
 import numpy as np
-from PyQt4 import QtGui
+from AnyQt.QtWidgets import QLayout
 
 from Orange.base import SklLearner
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
@@ -82,7 +82,7 @@ class OWOutliers(widget.OWWidget):
 
         gui.button(self.buttonsArea, self, "Detect Outliers",
                    callback=self.commit)
-        self.layout().setSizeConstraint(QtGui.QLayout.SetFixedSize)
+        self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
     def nu_changed(self):
         self.outlier_method = self.OneClassSVM
@@ -208,7 +208,8 @@ class OWOutliers(widget.OWWidget):
                  ("Support fraction", self.support_fraction)))
 
 def test_main():
-    app = QtGui.QApplication([])
+    from AnyQt.QtWidgets import QApplication
+    app = QApplication([])
     data = Table("iris")
     w = OWOutliers()
     w.set_data(data)

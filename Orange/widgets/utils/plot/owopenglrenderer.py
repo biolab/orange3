@@ -12,9 +12,8 @@ OpenGL Renderer (``owopenglrenderer``)
 
 from ctypes import c_void_p
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4 import QtOpenGL
+from AnyQt.QtGui import QColor, QMatrix4x4
+from AnyQt import QtOpenGL
 
 import OpenGL
 OpenGL.ERROR_CHECKING = False

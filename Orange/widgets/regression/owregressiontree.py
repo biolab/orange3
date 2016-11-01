@@ -1,22 +1,21 @@
-from Orange.regression.tree import TreeRegressionLearner
-from Orange.widgets.settings import Setting
-from Orange.widgets.classify import owclassificationtree
+"""Widget for induction of regression trees"""
+
+from Orange.regression.tree import TreeLearner
+from Orange.widgets.classify.owclassificationtree import OWTreeLearner
 
 
-class OWRegressionTree(owclassificationtree.OWClassificationTree):
+class OWRegressionTree(OWTreeLearner):
     name = "Regression Tree"
     description = "A regression tree algorithm with forward pruning."
     icon = "icons/RegressionTree.svg"
     priority = 30
 
-    LEARNER = TreeRegressionLearner
-
-    scores = (("Mean Squared Error", "mse"),)
+    LEARNER = TreeLearner
 
 
-if __name__ == "__main__":
+def _test():
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     from Orange.data import Table
 
     a = QApplication(sys.argv)
@@ -26,3 +25,6 @@ if __name__ == "__main__":
     ow.show()
     a.exec_()
     ow.saveSettings()
+
+if __name__ == "__main__":
+    _test()

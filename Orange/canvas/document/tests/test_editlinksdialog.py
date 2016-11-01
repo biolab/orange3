@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QGraphicsScene, QGraphicsView
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QGraphicsScene, QGraphicsView
+from AnyQt.QtCore import Qt
 
 from ...gui import test
 from ..editlinksdialog import EditLinksDialog, EditLinksNode, \

@@ -9,9 +9,10 @@ from collections import namedtuple, deque, OrderedDict
 
 import numpy
 import sklearn.metrics as skl_metrics
-from PyQt4 import QtGui
-from PyQt4.QtGui import QColor, QPen, QBrush
-from PyQt4.QtCore import Qt
+
+from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont
+from AnyQt.QtCore import Qt
 import pyqtgraph as pg
 
 import Orange
@@ -93,7 +94,6 @@ def ROCData_from_results(results, clf_index, target):
     folds = results.folds if results.folds is not None else [slice(0, -1)]
     fold_curves = []
     for fold in folds:
-        # TODO: Check for no FP or no TP
         points = roc_curve_for_fold(results, fold, clf_index, target)
         hull = roc_curve_convex_hull(points)
         c = ROCCurve(ROCPoints(*points), ROCPoints(*hull))
@@ -102,32 +102,49 @@ def ROCData_from_results(results, clf_index, target):
     curves = [fold.points for fold in fold_curves
               if fold.is_valid]
 
-    fpr, tpr, std = roc_curve_vertical_average(curves)
-    thresh = numpy.zeros_like(fpr) * numpy.nan
-    hull = roc_curve_convex_hull((fpr, tpr, thresh))
-    v_avg = ROCAveragedVert(
-        ROCPoints(fpr, tpr, thresh),
-        ROCPoints(*hull),
-        std
-    )
+    if curves:
+        fpr, tpr, std = roc_curve_vertical_average(curves)
 
-    all_thresh = numpy.hstack([t for _, _, t in curves])
-    all_thresh = numpy.clip(all_thresh, 0.0 - 1e-10, 1.0 + 1e-10)
-    all_thresh = numpy.unique(all_thresh)[::-1]
-    thresh = all_thresh[::max(all_thresh.size // 10, 1)]
+        thresh = numpy.zeros_like(fpr) * numpy.nan
+        hull = roc_curve_convex_hull((fpr, tpr, thresh))
+        v_avg = ROCAveragedVert(
+            ROCPoints(fpr, tpr, thresh),
+            ROCPoints(*hull),
+            std
+        )
+    else:
+        # return an invalid vertical averaged ROC
+        v_avg = ROCAveragedVert(
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            numpy.array([])
+        )
 
-    (fpr, fpr_std), (tpr, tpr_std) = \
-        roc_curve_threshold_average(curves, thresh)
+    if curves:
+        all_thresh = numpy.hstack([t for _, _, t in curves])
+        all_thresh = numpy.clip(all_thresh, 0.0 - 1e-10, 1.0 + 1e-10)
+        all_thresh = numpy.unique(all_thresh)[::-1]
+        thresh = all_thresh[::max(all_thresh.size // 10, 1)]
 
-    hull = roc_curve_convex_hull((fpr, tpr, thresh))
+        (fpr, fpr_std), (tpr, tpr_std) = \
+            roc_curve_threshold_average(curves, thresh)
 
-    t_avg = ROCAveragedThresh(
-        ROCPoints(fpr, tpr, thresh),
-        ROCPoints(*hull),
-        tpr_std,
-        fpr_std
-    )
+        hull = roc_curve_convex_hull((fpr, tpr, thresh))
 
+        t_avg = ROCAveragedThresh(
+            ROCPoints(fpr, tpr, thresh),
+            ROCPoints(*hull),
+            tpr_std,
+            fpr_std
+        )
+    else:
+        # return an invalid threshold averaged ROC
+        t_avg = ROCAveragedThresh(
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
+            numpy.array([]),
+            numpy.array([])
+        )
     return ROCData(merged_curve, fold_curves, v_avg, t_avg)
 
 ROCData.from_results = staticmethod(ROCData_from_results)
@@ -269,7 +286,7 @@ class InfiniteLine(pg.InfiniteLine):
 
     def paint(self, painter, *args):
         if self.antialias:
-            painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.Antialiasing, True)
         super().paint(painter, *args)
 
 
@@ -324,7 +341,7 @@ class OWROCAnalysis(widget.OWWidget):
         cbox.setFlat(True)
         self.classifiers_list_box = gui.listBox(
             cbox, self, "selected_classifiers", "classifier_names",
-            selectionMode=QtGui.QListView.MultiSelection,
+            selectionMode=QListView.MultiSelection,
             callback=self._on_classifiers_changed)
 
         abox = gui.vBox(box, "Combine ROC Curves From Folds")
@@ -349,35 +366,35 @@ class OWROCAnalysis(widget.OWWidget):
 
         gui.checkBox(box, self, "display_perf_line", "Show performance line",
                      callback=self._on_display_perf_line_changed)
-        grid = QtGui.QGridLayout()
+        grid = QGridLayout()
         ibox = gui.indentedBox(box, orientation=grid)
 
         sp = gui.spin(box, self, "fp_cost", 1, 1000, 10,
                       callback=self._on_display_perf_line_changed)
-        grid.addWidget(QtGui.QLabel("FP Cost:"), 0, 0)
+        grid.addWidget(QLabel("FP Cost:"), 0, 0)
         grid.addWidget(sp, 0, 1)
 
         sp = gui.spin(box, self, "fn_cost", 1, 1000, 10,
                       callback=self._on_display_perf_line_changed)
-        grid.addWidget(QtGui.QLabel("FN Cost:"))
+        grid.addWidget(QLabel("FN Cost:"))
         grid.addWidget(sp, 1, 1)
         sp = gui.spin(box, self, "target_prior", 1, 99,
                       callback=self._on_display_perf_line_changed)
         sp.setSuffix("%")
-        sp.addAction(QtGui.QAction("Auto", sp))
-        grid.addWidget(QtGui.QLabel("Prior target class probability:"))
+        sp.addAction(QAction("Auto", sp))
+        grid.addWidget(QLabel("Prior target class probability:"))
         grid.addWidget(sp, 2, 1)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plotview.setFrameStyle(QtGui.QFrame.StyledPanel)
+        self.plotview.setFrameStyle(QFrame.StyledPanel)
 
         self.plot = pg.PlotItem()
         self.plot.getViewBox().setMenuEnabled(False)
         self.plot.getViewBox().setMouseEnabled(False, False)
 
-        pen = QPen(self.palette().color(QtGui.QPalette.Text))
+        pen = QPen(self.palette().color(QPalette.Text))
 
-        tickfont = QtGui.QFont(self.font())
+        tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")
@@ -670,6 +687,8 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
 
 
 def roc_curve_vertical_average(curves, samples=10):
+    if not len(curves):
+        raise ValueError("No curves")
     fpr_sample = numpy.linspace(0.0, 1.0, samples)
     tpr_samples = []
     for fpr, tpr, _ in curves:
@@ -680,6 +699,8 @@ def roc_curve_vertical_average(curves, samples=10):
 
 
 def roc_curve_threshold_average(curves, thresh_samples):
+    if not len(curves):
+        raise ValueError("No curves")
     fpr_samples, tpr_samples = [], []
     for fpr, tpr, thresh in curves:
         ind = numpy.searchsorted(thresh[::-1], thresh_samples, side="left")
@@ -830,7 +851,7 @@ def roc_iso_performance_slope(fp_cost, fn_cost, p):
 def main():
     import gc
     import sip
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     from Orange.classification import (LogisticRegressionLearner, SVMLearner,
                                        NuSVMLearner)
 

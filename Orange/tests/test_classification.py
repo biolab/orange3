@@ -208,7 +208,7 @@ class SklTest(unittest.TestCase):
 class ClassfierListInputTest(unittest.TestCase):
     def test_discrete(self):
         table = Table("titanic")
-        tree = Orange.classification.TreeLearner()(table)
+        tree = Orange.classification.SklTreeLearner()(table)
         strlist = [["crew", "adult", "male"],
                    ["crew", "adult", None]]
         for se in strlist: #individual examples
@@ -217,7 +217,7 @@ class ClassfierListInputTest(unittest.TestCase):
 
     def test_continuous(self):
         table = Table("iris")
-        tree = Orange.classification.TreeLearner()(table)
+        tree = Orange.classification.SklTreeLearner()(table)
         strlist = [[2, 3, 4, 5],
                    [1, 2, 3, 5]]
         for se in strlist: #individual examples

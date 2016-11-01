@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt4.QtCore import QTimer, Qt
+from AnyQt.QtCore import QTimer, Qt
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
@@ -123,7 +123,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.preprocessors = None
         self.outdated_settings = False
         self.setup_layout()
-        QTimer.singleShot(0, self.apply)
+        QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
 
     def create_learner(self):
         """Creates a learner with current configuration.
@@ -199,6 +199,16 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.Warning.outdated_learner(shown=not self.auto_apply)
         self.apply()
 
+    def _change_name(self, instance, signal_name):
+        if instance:
+            instance.name = self.learner_name
+            if self.auto_apply:
+                self.send(signal_name, instance)
+
+    def learner_name_changed(self):
+        self._change_name(self.learner, "Learner")
+        self._change_name(self.model, self.OUTPUT_MODEL_NAME)
+
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
 
@@ -227,7 +237,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.name_line_edit = gui.lineEdit(
             self.controlArea, self, 'learner_name', box='Name',
             tooltip='The name will identify this model in other widgets',
-            orientation=Qt.Horizontal, callback=lambda: self.apply())
+            orientation=Qt.Horizontal, callback=self.learner_name_changed)
 
     def add_bottom_buttons(self):
         box = gui.hBox(self.controlArea, True)

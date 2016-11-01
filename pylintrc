@@ -246,7 +246,7 @@ variable-rgx=[a-zA-Z_][a-zA-Z0-9_]{0,30}$
 variable-name-hint=[a-zA-Z_][a-zA-Z0-9_]{0,30}$
 
 # Regular expression matching correct attribute names
-attr-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
+attr-rgx=[a-z_][a-zA-Z0-9_]*$
 # Naming hint for attribute names
 attr-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 
@@ -256,7 +256,7 @@ inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
 inlinevar-name-hint=[A-Za-z_][A-Za-z0-9_]*$
 
 # Regular expression matching correct argument names
-argument-rgx=[a-z_][a-zA-Z0-9_]{2,30}$
+argument-rgx=[a-z_][a-zA-Z0-9_]*$
 # Naming hint for argument names
 argument-name-hint=[a-z_][a-zA-Z0-9_]{2,30}$
 

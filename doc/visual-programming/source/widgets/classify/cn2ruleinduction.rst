@@ -1,33 +1,33 @@
 CN2 Rule Induction
 ==================
 
-.. figure:: icons/classification-tree.png
+.. figure:: icons/cn2ruleinduction.png
 
 CN2 Rule Induction
 
 Signals
 -------
 
-**Inputs**:
+**Inputs**
 
-- **Data**
+-  **Data**
 
-Data set.
+   Data set.
 
-- **Preprocessor**
+-  **Preprocessor**
 
-Preprocessed data.
+   Preprocessed data.
 
-**Outputs**:
+**Outputs**
 
 -  **Learner**
 
-The CN2 learning algorithm with settings as specified in the dialog.
+   The CN2 learning algorithm with settings as specified in the dialog.
 
 -  **CN2 Rule Classifier**
 
-Trained classifier (a subtype of Classifier). **CN2 Rule Classifier**
-is only trained and forwarded if learning data is connected.
+   Trained classifier (a subtype of Classifier). **CN2 Rule Classifier**
+   is only trained and forwarded if learning data is connected.
 
 Description
 -----------
@@ -39,7 +39,7 @@ then predict *class*", even in domains where noise may be present.
 .. figure:: images/CN2RuleInduction-stamped.png
 
 1. Name under which the learner appears in other widgets. The default
-   name is “CN2 Rule Induction”.
+   name is *CN2 Rule Induction*.
 
 2. *Rule ordering*:
 
@@ -65,7 +65,7 @@ then predict *class*", even in domains where noise may be present.
    - **Evaluation measure**; select a heuristic to evaluate found
      hypotheses:
 
-     a. `Entropy <https://en.wikipedia.org/wiki/Entropy_(information_theory)>`__ (measure of unpredictability of content)
+     a. `Entropy <https://en.wikipedia.org/wiki/Entropy_(information_theory)>`_ (measure of unpredictability of content)
      b. Laplace Accuracy
      c. Weighted Relative Accuracy
 
@@ -89,7 +89,7 @@ then predict *class*", even in domains where noise may be present.
      specialised (less frequently applicable) rules in regard to the
      parent class distribution.
 
-6. Tick ‘Apply Automatically‘ to auto-communicate changes to other
+6. Tick 'Apply Automatically' to auto-communicate changes to other
    widgets and to immediately train the classifier if learning data is
    connected. Alternatively, press ‘Apply‘ after configuration.
 
@@ -98,17 +98,15 @@ Examples
 
 Having trained the model, induced rules can be quickly reviewed and
 interpreted. Showcased in the example below is the
-:doc:`CN2 Rule Viewer <\cn2ruleviewer>` widget .
+:doc:`CN2 Rule Viewer <../visualize/cn2ruleviewer>` widget .
 
-.. figure:: images/CN2RuleViewer.png
-
-TODO: windows screenshots
+.. figure:: images/CN2-Induction-Example1.png
 
 The second schema tests the accuracy of the algorithm, compares its
-performance to tree learner on a specific data set, and presents a
-standard use of the widget.
+performance to the :doc:`Classification Tree <../classify/classificationtree>` 
+on a specific data set, and presents a standard use of the widget.
 
-TODO: windows screenshots
+.. figure:: images/CN2-Induction-Example2.png
 
 References
 ----------

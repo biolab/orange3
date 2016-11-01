@@ -19,7 +19,7 @@ from distutils.command.build_ext import build_ext
 
 NAME = 'Orange3'
 
-VERSION = '3.3.8'
+VERSION = '3.3.9'
 ISRELEASED = False
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -184,6 +184,7 @@ PACKAGE_DATA = {
     "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.regression": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
+    "Orange.widgets.utils": ["_webview/*.js"],
     "Orange.widgets.utils.plot": ["*.fs", "*.gs", "*.vs"],
     "Orange.widgets.utils.plot.primitives": ["*.obj"],
     "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]

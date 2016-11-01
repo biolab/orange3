@@ -4,9 +4,9 @@ Test for DynamicResizeToolbar
 """
 import logging
 
-from PyQt4.QtGui import QAction
+from AnyQt.QtWidgets import QAction
 
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from .. import test
 from .. import toolbar

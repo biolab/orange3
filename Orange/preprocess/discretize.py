@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
@@ -19,10 +20,19 @@ class Discretizer(Transformation):
 
     @staticmethod
     def digitize(x, bins):
-        return np.digitize(x, bins) if len(bins) else [0]*len(x)
+        if sp.issparse(x):
+            if len(bins):
+                x.data = np.digitize(x.data, bins)
+            else:
+                x = sp.csr_matrix(x.shape)
+            return x
+        else:
+            return np.digitize(x, bins) if len(bins) else [0]*len(x)
 
     def transform(self, c):
-        if c.size:
+        if sp.issparse(c):
+            return self.digitize(c, self.points)
+        elif c.size:
             return np.where(np.isnan(c), np.NaN, self.digitize(c, self.points))
         else:
             return np.array([], dtype=int)

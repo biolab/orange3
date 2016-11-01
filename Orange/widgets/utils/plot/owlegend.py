@@ -12,8 +12,9 @@ Plot legend (``owlegend``)
 
 """
 
-from PyQt4.QtGui import QGraphicsTextItem, QGraphicsRectItem, QGraphicsObject, QPen, QLinearGradient
-from PyQt4.QtCore import QPointF, QRectF, Qt, QPropertyAnimation, QSizeF
+from AnyQt.QtWidgets import QGraphicsTextItem, QGraphicsRectItem, QGraphicsObject
+from AnyQt.QtGui import QPen, QLinearGradient
+from AnyQt.QtCore import QPointF, QRectF, Qt, QPropertyAnimation, QSizeF
 
 from .owpoint import *
 from .owcurve import OWCurve

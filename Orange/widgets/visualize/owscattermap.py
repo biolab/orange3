@@ -8,9 +8,15 @@ from functools import reduce
 from collections import namedtuple
 
 import numpy as np
+
+from AnyQt.QtWidgets import QListView, QFrame, QGraphicsItem
+from AnyQt.QtGui import (
+    QColor, QPen, QPainter, QPainterPath, QPicture, QFont, QFontInfo,
+    QPalette
+)
+from AnyQt.QtCore import Qt, QRectF, QPointF
+
 import pyqtgraph as pg
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt, QRectF, QPointF
 
 import Orange.data
 from Orange.data.sql.table import SqlTable
@@ -159,7 +165,7 @@ class DensityPatch(pg.GraphicsObject):
     def __init__(self, root=None, cell_size=10, cell_shape=Rect,
                  color_scale=Sqrt, palette=None):
         super().__init__()
-        self.setFlag(QtGui.QGraphicsItem.ItemUsesExtendedStyleOption, True)
+        self.setFlag(QGraphicsItem.ItemUsesExtendedStyleOption, True)
         self._root = root
         self._cache = {}
         self._cell_size = cell_size
@@ -264,7 +270,7 @@ class DensityPatch(pg.GraphicsObject):
         else:
             patch = self._cache[p, cell_shape, cell_size]
 
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(Qt.NoPen)
 
         for picture in picture_intersect(patch, option.exposedRect):
@@ -341,7 +347,7 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
 
     """
     if node.is_empty:
-        return Patch(node, once(lambda: QtGui.QPicture()), once(lambda: ()))
+        return Patch(node, once(lambda: QPicture()), once(lambda: ()))
     else:
         @once
         def picture_this_level():
@@ -350,8 +356,8 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
             # not empty and does not have a computed sub-contingency
             # (i.e. the node does not have a child in that cell).
 
-            pic = QtGui.QPicture()
-            painter = QtGui.QPainter(pic)
+            pic = QPicture()
+            painter = QPainter(pic)
             ctng = node.contingencies
             colors = create_image(ctng, palette, scale=scale)
             x, y, w, h = node.brect
@@ -373,7 +379,7 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
             indices = itertools.product(range(N), range(M))
             for (i, j), skip, any_ in zip(indices, skip, any_mask.flat):
                 if not skip and any_:
-                    painter.setBrush(QtGui.QColor(*colors[i, j]))
+                    painter.setBrush(QColor(*colors[i, j]))
                     if shape == Rect:
                         painter.drawRect(i, j, 1, 1)
                     elif shape == Circle:
@@ -400,8 +406,8 @@ def Patch_create(node, palette=None, scale=None, shape=Rect):
         def picture_children():
             # Return a QPicture displaying all children patches of this
             # node.
-            pic = QtGui.QPicture()
-            painter = QtGui.QPainter(pic)
+            pic = QPicture()
+            painter = QPainter(pic)
             for ch in child_patches():
                 painter.drawPicture(0, 0, ch.picture())
             painter.end()
@@ -455,7 +461,7 @@ class OWScatterMap(widget.OWWidget):
     name = "Scatter Map"
     description = "Draw a two dimensional rectangular bin density plot."
     icon = "icons/Scattermap.svg"
-    priority = 500
+    priority = 5000
 
     inputs = [("Data", Orange.data.Table, "set_data")]
 
@@ -519,7 +525,7 @@ class OWScatterMap(widget.OWWidget):
         self.z_values_view = gui.listBox(
             box, self, "selected_z_values", "z_values",
             callback=self._on_z_values_selection_changed,
-            selectionMode=QtGui.QListView.MultiSelection,
+            selectionMode=QListView.MultiSelection,
             addSpace=False
         )
         gui.comboBox(box, self, "color_scale", label="Scale: ",
@@ -539,12 +545,12 @@ class OWScatterMap(widget.OWWidget):
 
         self.plot = pg.PlotWidget(background="w")
         self.plot.setMenuEnabled(False)
-        self.plot.setFrameStyle(QtGui.QFrame.StyledPanel)
+        self.plot.setFrameStyle(QFrame.StyledPanel)
         self.plot.setMinimumSize(500, 500)
 
         def font_resize(font, factor, minsize=None, maxsize=None):
-            font = QtGui.QFont(font)
-            fontinfo = QtGui.QFontInfo(font)
+            font = QFont(font)
+            fontinfo = QFontInfo(font)
             size = fontinfo.pointSizeF() * factor
 
             if minsize is not None:
@@ -556,7 +562,7 @@ class OWScatterMap(widget.OWWidget):
             return font
 
         axisfont = font_resize(self.font(), 0.8, minsize=11)
-        axispen = QtGui.QPen(self.palette().color(QtGui.QPalette.Text))
+        axispen = QPen(self.palette().color(QPalette.Text))
         axis = self.plot.getAxis("bottom")
         axis.setTickFont(axisfont)
         axis.setPen(axispen)
@@ -780,7 +786,7 @@ class OWScatterMap(widget.OWWidget):
         rect = viewb.boundingRect()
         p1 = viewb.mapToView(rect.topLeft())
         p2 = viewb.mapToView(rect.bottomRight())
-        rect = QtCore.QRectF(p1, p2).normalized()
+        rect = QRectF(p1, p2).normalized()
 
         self.sharpen_region(rect)
 
@@ -832,7 +838,6 @@ class OWScatterMap(widget.OWWidget):
         rect = item.rect()
 
         T = self.plot.transform() * item.sceneTransform()
-#         lod = QtGui.QStyleOptionGraphicsItem.levelOfDetailFromTransform(T)
         lod = lod_from_transform(T)
         size1 = np.sqrt(rect.width() * rect.height()) / self.n_bins
         cell_size = 10
@@ -1352,10 +1357,11 @@ def compute_chi_squares(observes):
 
 def main(argv=None):
     import sip
+    from AnyQt.QtWidgets import QApplication
     if argv is None:
         argv = sys.argv
     argv = list(argv)
-    app = QtGui.QApplication(argv)
+    app = QApplication(argv)
 
     w = OWScatterMap()
     w.show()
@@ -1364,7 +1370,7 @@ def main(argv=None):
     if len(argv) > 1:
         filename = argv[1]
     else:
-        filename = "zoo"
+        filename = "adult"
 
     data = Orange.data.Table(filename)
 

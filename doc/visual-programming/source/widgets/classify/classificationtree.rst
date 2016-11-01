@@ -12,39 +12,38 @@ Signals
 
 -  **Data**
 
-Data set
+   A data set
 
 -  **Preprocessor**
 
-Preprocessed data.
+   Preprocessed data.
 
 **Outputs**:
 
 -  **Learner**
 
-The classification tree learning algorithm with settings as specified in
-the dialog.
+   A classification tree learning algorithm with settings as specified in
+   the dialog.
 
 -  **Classification Tree**
 
-Trained classifier (a subtype of Classifier). Signal *Classification
-Tree* sends data only if the learning data (signal **Classified Data**)
-is present.
+   A trained classifier (a subtype of Classifier). The signal *Classification
+   Tree* sends data only if the learning data (signal **Classified Data**)
+   is present.
 
 Description
 -----------
 
 .. figure:: images/ClassificationTree-stamped.png
 
-1. Learner can be given a name under which it will appear in other
-   widgets. The default name is “Classification Tree”.
+1. The learner can be given a name under which it will appear in other
+   widgets. The default name is "Classification Tree".
 
-2. In *Feature selection* you can choose a measure for split selection:
+2. In *Feature selection*, you can choose a measure for split selection:
 
-   -  `Entropy <http://www.saedsayad.com/decision_tree.htm>`__
+   -  `Entropy <http://www.saedsayad.com/decision_tree.htm>`_
       (measure of homogeneity)
-   -  `Gini
-      index <https://en.wikipedia.org/wiki/Gini_coefficient>`__
+   -  `Gini index <https://en.wikipedia.org/wiki/Gini_coefficient>`_
       (measure of dispersion)
 
 3. *Pruning* criteria:
@@ -57,20 +56,24 @@ Description
       instances.
    -  **Limit the depth** of the classification tree.
 
-4. After changing the settings, you need to click *Apply*, which will
+4. Produce a report. 
+
+5. After changing the settings, you need to click *Apply*, which will
    put the new learner in the output and, if the training examples are
-   given, construct a new classifier and output it as well.
+   given, construct a new classifier and output it as well. Alternatively, tick the box on the left and changes will be communicated automatically. 
 
 Examples
 --------
 
 There are two typical uses for this widget. First, you may want to
-induce the model and check what it looks like. You do it with the schema
+induce a model and check what it looks like. You do it with the schema
 below; to learn more about it, see the documentation on
-:doc:`Classification Tree Viewer <\classificationtreeviewer>`.
+:doc:`Classification Tree Viewer <classificationtreeviewer>`.
 
 .. figure:: images/ClassificationTreeViewer-SimpleSchema.png
 
 The second schema checks the accuracy of the algorithm.
 
 .. figure:: images/ClassificationTreeViewer-Interaction.png
+
+We used the *Iris* data set in both examples. 

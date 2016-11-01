@@ -16,23 +16,31 @@ to be used, and the methods need to be implemented, then it should work for any
 kind of trees.
 
 """
+import sys
 from math import sqrt, log
 
 import numpy as np
+
+from AnyQt.QtWidgets import QLabel, QSizePolicy
+from AnyQt.QtGui import QColor, QPainter
+
+from Orange.tree import TreeModel
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
+from Orange.widgets.visualize.utils.tree.rules import Rule
 from Orange.widgets.visualize.utils.view import (
     PannableGraphicsView,
     ZoomableGraphicsView,
     PreventDefaultWheelEvent
 )
-from PyQt4 import QtGui
 
-from Orange.base import Tree
-from Orange.classification.tree import TreeClassifier
 from Orange.data.table import Table
-from Orange.regression.tree import TreeRegressor
-from Orange.widgets import gui, settings
+from Orange.widgets import gui, settings, widget
+from Orange.widgets.utils import to_html
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table,
+    ANNOTATED_DATA_SIGNAL_NAME
+)
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
@@ -44,8 +52,7 @@ from Orange.widgets.visualize.utils.owlegend import (
     OWDiscreteLegend,
     OWContinuousLegend
 )
-from Orange.widgets.visualize.utils.tree.skltreeadapter import \
-    SklTreeAdapter
+from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 from Orange.widgets.widget import OWWidget
 
 
@@ -54,10 +61,11 @@ class OWPythagorasTree(OWWidget):
     description = 'Pythagorean Tree visualization for tree like-structures.'
     icon = 'icons/PythagoreanTree.svg'
 
-    priority = 610
+    priority = 1000
 
-    inputs = [('Tree', Tree, 'set_tree')]
-    outputs = [('Selected Data', Table)]
+    inputs = [('Tree', TreeModel, 'set_tree')]
+    outputs = [('Selected Data', Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -100,7 +108,7 @@ class OWPythagorasTree(OWWidget):
 
         # Color modes for regression trees
         self.REGRESSION_COLOR_CALC = [
-            ('None', lambda _, __: QtGui.QColor(255, 255, 255)),
+            ('None', lambda _, __: QColor(255, 255, 255)),
             ('Class mean', self._color_class_mean),
             ('Standard deviation', self._color_stddev),
         ]
@@ -142,7 +150,7 @@ class OWPythagorasTree(OWWidget):
         gui.rubber(self.controlArea)
 
         self.controlArea.setSizePolicy(
-            QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
+            QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # MAIN AREA
         # The QGraphicsScene doesn't actually require a parent, but not linking
@@ -151,7 +159,7 @@ class OWPythagorasTree(OWWidget):
         self.scene = TreeGraphicsScene(self)
         self.scene.selectionChanged.connect(self.commit)
         self.view = TreeGraphicsView(self.scene, padding=(150, 150))
-        self.view.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        self.view.setRenderHint(QPainter.Antialiasing, True)
         self.mainArea.layout().addWidget(self.view)
 
         self.ptree = PythagorasTreeViewer()
@@ -170,9 +178,9 @@ class OWPythagorasTree(OWWidget):
         if model is not None:
             # We need to know what kind of tree we have in order to properly
             # show colors and tooltips
-            if isinstance(model, TreeClassifier):
+            if model.domain.class_var.is_discrete:
                 self.tree_type = self.CLASSIFICATION
-            elif isinstance(model, TreeRegressor):
+            elif model.domain.class_var.is_continuous:
                 self.tree_type = self.REGRESSION
             else:
                 self.tree_type = self.GENERAL
@@ -190,7 +198,9 @@ class OWPythagorasTree(OWWidget):
             self.color_palette = self._tree_specific('_get_color_palette')()
 
             self.ptree.clear()
-            self.ptree.set_tree(self.tree_adapter)
+            self.ptree.set_tree(
+                self.tree_adapter,
+                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1])
             self.ptree.set_tooltip_func(self._tree_specific('_get_tooltip'))
             self.ptree.set_node_color_func(
                 self._tree_specific('_get_node_color')
@@ -225,6 +235,8 @@ class OWPythagorasTree(OWWidget):
             # if hasattr(model, 'meta_depth_limit'):
             #     self.depth_limit = model.meta_depth_limit
             #     self.update_depth()
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.instances, None))
 
     def clear(self):
         """Clear all relevant data from the widget."""
@@ -262,7 +274,10 @@ class OWPythagorasTree(OWWidget):
         """When the tree needs to be recalculated. E.g. change of size calc."""
         if self.model is not None:
             self.tree_adapter = self._get_tree_adapter(self.model)
-            self.ptree.set_tree(self.tree_adapter)
+            self.ptree.set_tree(
+                self.tree_adapter,
+                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1]
+            )
             self.ptree.set_depth_limit(self.depth_limit)
             self._update_main_area()
 
@@ -329,11 +344,7 @@ class OWPythagorasTree(OWWidget):
         self.view.update_anchored_items()
 
     def _get_tree_adapter(self, model):
-        return SklTreeAdapter(
-            model.tree,
-            model.domain,
-            adjust_weight=self.SIZE_CALCULATION[self.size_calc_idx][1],
-        )
+        return TreeAdapter(model)
 
     def onDeleteWidget(self):
         """When deleting the widget."""
@@ -344,14 +355,16 @@ class OWPythagorasTree(OWWidget):
         """Commit the selected data to output."""
         if self.instances is None:
             self.send('Selected Data', None)
+            self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
             return
-        # this is taken almost directly from the owclassificationtreegraph.py
-        items = filter(lambda x: isinstance(x, SquareGraphicsItem),
-                       self.scene.selectedItems())
-
+        nodes = [i.tree_node.label for i in self.scene.selectedItems()
+                 if isinstance(i, SquareGraphicsItem)]
         data = self.tree_adapter.get_instances_in_nodes(
-            self.clf_dataset, [item.tree_node for item in items])
+            self.clf_dataset, nodes)
         self.send('Selected Data', data)
+        selected_indices = self.model.get_indices(nodes)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.instances, selected_indices))
 
     def send_report(self):
         """Send report."""
@@ -388,7 +401,7 @@ class OWPythagorasTree(OWWidget):
     def _classification_update_target_class_combo(self):
         self._clear_target_class_combo()
         list(filter(
-            lambda x: isinstance(x, QtGui.QLabel),
+            lambda x: isinstance(x, QLabel),
             self.target_class_combo.parent().children()
         ))[0].setText('Target class')
         self.target_class_combo.addItem('None')
@@ -407,7 +420,7 @@ class OWPythagorasTree(OWWidget):
             items = (
                 (self.target_class_combo.itemText(self.target_class_index),
                  self.color_palette[self.target_class_index - 1]),
-                ('other', QtGui.QColor('#ffffff'))
+                ('other', QColor('#ffffff'))
             )
             self.legend = OWDiscreteLegend(items=items, **self.LEGEND_OPTIONS)
 
@@ -415,7 +428,7 @@ class OWPythagorasTree(OWWidget):
         self.scene.addItem(self.legend)
 
     def _classification_get_color_palette(self):
-        return [QtGui.QColor(*c) for c in self.model.domain.class_var.colors]
+        return [QColor(*c) for c in self.model.domain.class_var.colors]
 
     def _classification_get_node_color(self, adapter, tree_node):
         # this is taken almost directly from the existing classification tree
@@ -426,12 +439,24 @@ class OWPythagorasTree(OWWidget):
 
         if self.target_class_index:
             p = distribution[self.target_class_index - 1] / total
-            color = colors[self.target_class_index - 1].light(200 - 100 * p)
+            color = colors[self.target_class_index - 1].lighter(200 - 100 * p)
         else:
             modus = np.argmax(distribution)
             p = distribution[modus] / (total or 1)
-            color = colors[int(modus)].light(400 - 300 * p)
+            color = colors[int(modus)].lighter(400 - 300 * p)
         return color
+
+    def _rules_for_tooltip(self, node):
+        rules = self.tree_adapter.rules(node.label)
+        if len(rules):
+            if isinstance(rules[0], Rule):
+                sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
+                return '<br>'.join(str(rule) for rule in sorted_rules) + \
+                       '<br><b>%s</b>' % rules[-1]
+            else:
+                return '<br>'.join(to_html(rule) for rule in rules)
+        else:
+            return ''
 
     def _classification_get_tooltip(self, node):
         distribution = self.tree_adapter.get_distribution(node.label)[0]
@@ -446,13 +471,7 @@ class OWPythagorasTree(OWWidget):
                 '<br>'
         ratio = samples / np.sum(distribution)
 
-        rules = self.tree_adapter.rules(node.label)
-        sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
-        rules_str = ''
-        if len(rules):
-            rules_str += '<br>'.join(str(rule) for rule in sorted_rules)
-            rules_str += '<br><b>%s</b>' % rules[-1]
-
+        rules_str = self._rules_for_tooltip(node)
         splitting_attr = self.tree_adapter.attribute(node.label)
 
         return '<p>' \
@@ -463,7 +482,7 @@ class OWPythagorasTree(OWWidget):
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
             + ('<br><br>'
-               if len(rules) and not self.tree_adapter.is_leaf(node.label)
+               if rules_str and not self.tree_adapter.is_leaf(node.label)
                else '') \
             + rules_str \
             + '</p>'
@@ -472,7 +491,7 @@ class OWPythagorasTree(OWWidget):
     def _regression_update_target_class_combo(self):
         self._clear_target_class_combo()
         list(filter(
-            lambda x: isinstance(x, QtGui.QLabel),
+            lambda x: isinstance(x, QLabel),
             self.target_class_combo.parent().children()
         ))[0].setText('Node color')
         self.target_class_combo.addItems(
@@ -487,10 +506,10 @@ class OWPythagorasTree(OWWidget):
             class_var = domain.class_var
             start, end, pass_through_black = class_var.colors
             if pass_through_black:
-                lst_colors = [QtGui.QColor(*c) for c
+                lst_colors = [QColor(*c) for c
                               in [start, (0, 0, 0), end]]
             else:
-                lst_colors = [QtGui.QColor(*c) for c in [start, end]]
+                lst_colors = [QColor(*c) for c in [start, end]]
             return lst_colors
 
         # Currently, the first index just draws the outline without any color
@@ -532,7 +551,8 @@ class OWPythagorasTree(OWWidget):
         # calculate node colors relative to the mean of the node samples
         min_mean = np.min(self.clf_dataset.Y)
         max_mean = np.max(self.clf_dataset.Y)
-        instances = adapter.get_instances_in_nodes(self.clf_dataset, tree_node)
+        instances = adapter.get_instances_in_nodes(self.clf_dataset,
+                                                   tree_node.label)
         mean = np.mean(instances.Y)
 
         return self.color_palette[(mean - min_mean) / (max_mean - min_mean)]
@@ -541,39 +561,30 @@ class OWPythagorasTree(OWWidget):
         # calculate node colors relative to the standard deviation in the node
         # samples
         min_mean, max_mean = 0, np.std(self.clf_dataset.Y)
-        instances = adapter.get_instances_in_nodes(self.clf_dataset, tree_node)
+        instances = adapter.get_instances_in_nodes(self.clf_dataset,
+                                                   tree_node.label)
         std = np.std(instances.Y)
 
         return self.color_palette[(std - min_mean) / (max_mean - min_mean)]
 
     def _regression_get_tooltip(self, node):
-        total = self.tree_adapter.num_samples(
-            self.tree_adapter.parent(node.label))
-        samples = self.tree_adapter.num_samples(node.label)
-        ratio = samples / total
+        num_samples = self.tree_adapter.num_samples(node.label)
 
         instances = self.tree_adapter.get_instances_in_nodes(
-            self.clf_dataset, node)
+            self.clf_dataset, node.label)
         mean = np.mean(instances.Y)
         std = np.std(instances.Y)
 
-        rules = self.tree_adapter.rules(node.label)
-        sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
-        rules_str = ''
-        if len(rules):
-            rules_str += '<br>'.join(str(rule) for rule in sorted_rules)
-            rules_str += '<br><b>%s</b>' % rules[-1]
-
+        rules_str = self._rules_for_tooltip(node)
         splitting_attr = self.tree_adapter.attribute(node.label)
 
         return '<p>Mean: {:2.3f}'.format(mean) \
             + '<br>Standard deviation: {:2.3f}'.format(std) \
-            + '<br>{}/{} samples ({:2.3f}%)'.format(
-              int(samples), total, ratio * 100) \
+            + '<br>{} samples'.format(num_samples) \
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree_adapter.is_leaf(node.label) else '') \
-            + ('<br><br>' if len(rules) and not self.tree_adapter.is_leaf(
+            + ('<br><br>' if rules_str and not self.tree_adapter.is_leaf(
                node.label) else '') \
             + rules_str \
             + '</p>'
@@ -595,22 +606,30 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     pass
 
 
-def main():
-    import sys
+def main(argv=sys.argv):
+    from AnyQt.QtWidgets import QApplication
     import Orange
-    from Orange.classification.tree import TreeLearner
 
-    argv = sys.argv
+    app = QApplication(list(argv))
+    argv = app.arguments()
+
     if len(argv) > 1:
         filename = argv[1]
     else:
         filename = 'iris'
 
-    app = QtGui.QApplication(argv)
     ow = OWPythagorasTree()
     data = Orange.data.Table(filename)
-    clf = TreeLearner(max_depth=1000)(data)
-    ow.set_tree(clf)
+
+    if data.domain.has_discrete_class:
+        from Orange.classification.tree import TreeLearner
+    else:
+        from Orange.regression.tree import TreeLearner
+    model = TreeLearner(max_depth=1000)(data)
+
+    model.instances = data
+
+    ow.set_tree(model)
 
     ow.show()
     ow.raise_()
@@ -618,7 +637,6 @@ def main():
     app.exec_()
 
     sys.exit(0)
-
 
 if __name__ == '__main__':
     main()

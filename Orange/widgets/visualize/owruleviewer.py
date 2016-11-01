@@ -1,25 +1,32 @@
 import numpy as np
 
-from Orange.data import Table
-from Orange.widgets import widget, gui, settings
-from Orange.classification.rules import _RuleClassifier
+from AnyQt.QtCore import (
+    Qt, QLineF, QSize, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+)
+from AnyQt.QtGui import QPainter, QPen, QBrush, QColor
+from AnyQt.QtWidgets import (
+    QItemDelegate, QHeaderView, QPushButton, QApplication
+)
 
-from PyQt4.QtCore import Qt, QLineF, QSize, QAbstractTableModel, QModelIndex
-from PyQt4.QtGui import (QSortFilterProxyModel, QPainter, QPen, QBrush, QColor,
-                         QItemDelegate, QHeaderView, QPushButton, QApplication)
+from Orange.data import Table
+from Orange.classification.rules import _RuleClassifier
+from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 
 class OWRuleViewer(widget.OWWidget):
     name = "CN2 Rule Viewer"
     description = "Review rules induced from data."
     icon = "icons/CN2RuleViewer.svg"
-    priority = 18
+    priority = 1140
 
     inputs = [("Data", Table, 'set_data'),
               ("Classifier", _RuleClassifier, 'set_classifier')]
 
-    data_output_identifier = "Filtered data"
-    outputs = [(data_output_identifier, Table)]
+    data_output_identifier = "Selected Data"
+    outputs = [(data_output_identifier, Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     compact_view = settings.Setting(False)
 
@@ -94,10 +101,10 @@ class OWRuleViewer(widget.OWWidget):
 
         self.model.set_compact_view(self.compact_view)
         if self.compact_view:
-            self.view.horizontalHeader().setResizeMode(
+            self.view.horizontalHeader().setSectionResizeMode(
                 0, QHeaderView.Interactive)  # QHeaderView.Stretch
         else:
-            self.view.horizontalHeader().setResizeMode(
+            self.view.horizontalHeader().setSectionResizeMode(
                 QHeaderView.ResizeToContents)
         self.view.resizeColumnsToContents()
         self.view.resizeRowsToContents()
@@ -136,22 +143,27 @@ class OWRuleViewer(widget.OWWidget):
     def commit(self):
         data_output = None
         self._save_selected(actual=True)
+        selected_indices = []
 
+        data = self.data or self.classifier and self.classifier.instances
         if (self.selected is not None and
-                self.data is not None and
+                data is not None and
                 self.classifier is not None and
-                self.data.domain.attributes ==
+                data.domain.attributes ==
                 self.classifier.original_domain.attributes):
 
-            status = np.ones(self.data.X.shape[0], dtype=bool)
+            status = np.ones(data.X.shape[0], dtype=bool)
             for i in self.selected:
                 rule = self.classifier.rule_list[i]
-                status &= rule.evaluate_data(self.data.X)
+                status &= rule.evaluate_data(data.X)
 
-            data_output = self.data.from_table_rows(
-                self.data, status.nonzero()[0])
+            selected_indices = status.nonzero()[0]
+            data_output = data.from_table_rows(data, selected_indices) \
+                if len(selected_indices) else None
 
         self.send(OWRuleViewer.data_output_identifier, data_output)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(data, selected_indices))
 
     def send_report(self):
         if self.classifier is not None:
@@ -362,8 +374,16 @@ class DistributionItemDelegate(QItemDelegate):
 if __name__ == "__main__":
     from PyQt4.QtGui import QApplication
 
+    from Orange.classification import CN2Learner
+
+    data = Table("iris")
+    learner = CN2Learner()
+    model = learner(data)
+    model.instances = data
+
     a = QApplication([])
     ow = OWRuleViewer()
+    ow.set_classifier(model)
 
     ow.show()
     a.exec()

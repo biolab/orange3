@@ -2,7 +2,7 @@ import sklearn.ensemble as skl_ensemble
 
 from Orange.base import RandomForest
 from Orange.classification import SklLearner, SklModel
-from Orange.classification.tree import TreeClassifier
+from Orange.classification.tree import SklTreeClassifier
 from Orange.data import Variable, DiscreteVariable
 from Orange.preprocess.score import LearnerScorer
 
@@ -22,7 +22,7 @@ class RandomForestClassifier(SklModel, RandomForest):
     @property
     def trees(self):
         def wrap(tree, i):
-            t = TreeClassifier(tree)
+            t = SklTreeClassifier(tree)
             t.domain = self.domain
             t.supports_multiclass = self.supports_multiclass
             t.name = "{} - tree {}".format(self.name, i)

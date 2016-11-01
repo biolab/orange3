@@ -77,14 +77,21 @@ and sentence case otherwise.
 [OS X Human Interface Guidelines]: https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/TerminologyWording.html
 
 
-Tests
------
+Testing
+-------
 [tests]: #tests
-Ensure the tests pass by running:
+If you contribute new code, write [unit tests] for it in _Orange/tests_ or
+_Orange/widgets/*/tests_, as appropriate. Ensure the tests pass by running:
 
     python setup.py test
 
-If you contribute new code, make [unit tests] for it in _Orange/tests_.
+Additionally, check that the tests for widgets pass:
+
+    python -m unittest -v Orange.widgets.tests \
+                          Orange.canvas.report.tests
+
+If testing on GNU/Linux, perhaps install _xvfb_ package and prefix the above
+command with `xvfb-run `.
 
 Prefer [doctests] for public APIs. Note, we unit-test doctests with
 `NORMALIZE_WHITESPACE` and `ELLIPSIS` options enabled, so you can use them

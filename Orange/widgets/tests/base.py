@@ -1,7 +1,11 @@
 import unittest
 
-from PyQt4.QtGui import (QApplication, QComboBox, QSpinBox, QDoubleSpinBox,
-                         QSlider)
+import numpy as np
+
+from Orange.base import SklLearner, SklModel
+from AnyQt.QtWidgets import (
+    QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
+)
 import sip
 
 from Orange.data import Table
@@ -12,6 +16,8 @@ from Orange.classification.base_classification import (LearnerClassification,
 from Orange.regression.base_regression import LearnerRegression, ModelRegression
 from Orange.canvas.report.owreport import OWReport
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 app = None
 
@@ -133,6 +139,8 @@ class WidgetTest(GuiTest):
             settings_handler.bind(cls)
             # Reset defaults read from disk
             settings_handler.defaults = {}
+            # Reset context settings
+            settings_handler.global_contexts = []
 
     @staticmethod
     def process_events():
@@ -151,7 +159,7 @@ class WidgetTest(GuiTest):
         widget.show()
         app.exec()
 
-    def send_signal(self, input_name, value, id=None, widget=None):
+    def send_signal(self, input_name, value, *args, widget=None):
         """ Send signal to widget by calling appropriate triggers.
 
         Parameters
@@ -167,7 +175,7 @@ class WidgetTest(GuiTest):
             widget = self.widget
         for input_signal in widget.inputs:
             if input_signal.name == input_name:
-                getattr(widget, input_signal.handler)(value)
+                getattr(widget, input_signal.handler)(value, *args)
                 break
         widget.handleNewSignals()
 
@@ -271,6 +279,14 @@ class ParameterMapping(BaseParameterMapping):
                          setter or self._default_set_value(gui_element, values))
 
     @staticmethod
+    def get_gui_element(widget, attribute):
+        return widget.controlledAttributes[attribute][0].control
+
+    @classmethod
+    def from_attribute(cls, widget, attribute, parameter=None):
+        return cls(parameter or attribute, cls.get_gui_element(widget, attribute))
+
+    @staticmethod
     def _default_values(gui_element):
         if isinstance(gui_element, (QSpinBox, QDoubleSpinBox, QSlider)):
             return [gui_element.minimum(), gui_element.maximum()]
@@ -331,6 +347,9 @@ class WidgetLearnerTestMixin:
             self.model_class = ModelRegression
         self.parameters = []
 
+    def test_has_unconditional_apply(self):
+        self.assertTrue(hasattr(self.widget, "unconditional_apply"))
+
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
@@ -381,10 +400,14 @@ class WidgetLearnerTestMixin:
 
     def test_output_learner(self):
         """Check if learner is on output after apply"""
-        self.assertIsNone(self.get_output("Learner"))
+        initial = self.get_output("Learner")
+        self.assertIsNotNone(initial, "Does not initialize the learner output")
         self.widget.apply_button.button.click()
-        self.assertIsNotNone(self.get_output("Learner"))
-        self.assertIsInstance(self.get_output("Learner"), self.widget.LEARNER)
+        newlearner = self.get_output("Learner")
+        self.assertIsNot(initial, newlearner,
+                         "Does not send a new learner instance on `Apply`.")
+        self.assertIsNotNone(newlearner)
+        self.assertIsInstance(newlearner, self.widget.LEARNER)
 
     def test_output_model(self):
         """Check if model is on output after sending data and apply"""
@@ -426,6 +449,13 @@ class WidgetLearnerTestMixin:
                                  parameter.get_value())
 
     def test_parameters(self):
+        def get_value(learner, name):
+            # Handle SKL and skl-like learners, and non-SKL learners
+            if hasattr(learner, "params"):
+                return learner.params.get(name)
+            else:
+                return getattr(learner, name)
+
         """Check learner and model for various values of all parameters"""
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
@@ -433,14 +463,92 @@ class WidgetLearnerTestMixin:
                 self.send_signal("Data", self.data)
                 parameter.set_value(value)
                 self.widget.apply_button.button.click()
-                param = self.widget.learner.params.get(parameter.name)
-                self.assertEqual(param, parameter.get_value())
-                self.assertEqual(param, value)
-                param = self.get_output("Learner").params.get(parameter.name)
-                self.assertEqual(param, value)
-                model = self.get_output(self.model_name)
-                if model is not None:
-                    self.assertEqual(model.params.get(parameter.name), value)
-                    self.assertFalse(self.widget.Error.active)
-                else:
-                    self.assertTrue(self.widget.Error.active)
+                param = get_value(self.widget.learner, parameter.name)
+                self.assertEqual(param, parameter.get_value(),
+                                 "Mismatching setting for parameter '{}'".
+                                 format(parameter.name))
+                self.assertEqual(param, value,
+                                 "Mismatching setting for parameter '{}'".
+                                 format(parameter.name))
+                param = get_value(self.get_output("Learner"), parameter.name)
+                self.assertEqual(param, value,
+                                 "Mismatching setting for parameter '{}'".
+                                 format(parameter.name))
+                if issubclass(self.widget.LEARNER, SklModel):
+                    model = self.get_output(self.model_name)
+                    if model is not None:
+                        self.assertEqual(get_value(model, parameter.name), value)
+                        self.assertFalse(self.widget.Error.active)
+                    else:
+                        self.assertTrue(self.widget.Error.active)
+
+
+class WidgetOutputsTestMixin:
+    """Class for widget's outputs testing.
+
+    Contains init method to set up testing parameters and a test method, which
+    checks Selected Data and (Annotated) Data outputs.
+
+    Since widgets have different ways of selecting data instances, _select_data
+    method should be implemented when subclassed. The method should assign
+    value to selected_indices parameter.
+
+    If output's expected domain differs from input's domain, parameter
+    same_input_output_domain should be set to False.
+
+    If Selected Data and Data domains differ, override method
+    _compare_selected_annotated_domains.
+    """
+
+    def init(self):
+        self.data = Table("iris")
+        self.same_input_output_domain = True
+
+    def test_outputs(self):
+        self.send_signal(self.signal_name, self.signal_data)
+
+        # only needed in TestOWMDS
+        if type(self).__name__ == "TestOWMDS":
+            from AnyQt.QtCore import QEvent
+            self.widget.customEvent(QEvent(QEvent.User))
+            self.widget.commit()
+
+        # check selected data output
+        self.assertIsNone(self.get_output("Selected Data"))
+
+        # check annotated data output
+        feature_name = ANNOTATED_DATA_FEATURE_NAME
+        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
+
+        # select data instances
+        selected_indices = self._select_data()
+
+        # check selected data output
+        selected = self.get_output("Selected Data")
+        n_sel, n_attr = len(selected), len(self.data.domain.attributes)
+        self.assertGreater(n_sel, 0)
+        self.assertEqual(selected.domain == self.data.domain,
+                         self.same_input_output_domain)
+        np.testing.assert_array_equal(selected.X[:, :n_attr],
+                                      self.data.X[selected_indices])
+
+        # check annotated data output
+        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+
+        # compare selected and annotated data domains
+        self._compare_selected_annotated_domains(selected, annotated)
+
+        # check output when data is removed
+        self.send_signal(self.signal_name, None)
+        self.assertIsNone(self.get_output("Selected Data"))
+        self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
+
+    def _select_data(self):
+        raise NotImplementedError("Subclasses should implement select_data")
+
+    def _compare_selected_annotated_domains(self, selected, annotated):
+        selected_vars = selected.domain.variables + selected.domain.metas
+        annotated_vars = annotated.domain.variables + annotated.domain.metas
+        self.assertLess(set(selected_vars), set(annotated_vars))

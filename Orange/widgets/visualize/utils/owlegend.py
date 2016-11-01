@@ -1,10 +1,15 @@
 """Legend classes to use with `QGraphicsScene` objects."""
 import numpy as np
-from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import Qt
+
+from AnyQt.QtWidgets import (
+    QGraphicsWidget, QGraphicsItem, QGraphicsRectItem, QGraphicsEllipseItem,
+    QGraphicsTextItem, QGraphicsLinearLayout, QGraphicsView, QApplication
+)
+from AnyQt.QtGui import QColor, QBrush, QPen, QLinearGradient, QFont
+from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF, QPoint, QSize, QRect
 
 
-class Anchorable(QtGui.QGraphicsWidget):
+class Anchorable(QGraphicsWidget):
     """Anchorable base class.
 
     Subclassing the `Anchorable` class will anchor the given
@@ -35,8 +40,8 @@ class Anchorable(QtGui.QGraphicsWidget):
 
         if isinstance(offset, tuple) or isinstance(offset, list):
             assert len(offset) == 2
-            self.__offset = QtCore.QPoint(*offset)
-        elif isinstance(offset, QtCore.QPoint):
+            self.__offset = QPoint(*offset)
+        elif isinstance(offset, QPoint):
             self.__offset = offset
 
     def moveEvent(self, event):
@@ -44,7 +49,7 @@ class Anchorable(QtGui.QGraphicsWidget):
         # This check is needed because simply resizing the window will cause
         # the item to move and trigger a `moveEvent` therefore we need to check
         # that the movement was done intentionally by the user using the mouse
-        if QtGui.QApplication.mouseButtons() == Qt.LeftButton:
+        if QApplication.mouseButtons() == Qt.LeftButton:
             self.recalculate_offset()
 
     def resizeEvent(self, event):
@@ -96,21 +101,21 @@ class Anchorable(QtGui.QGraphicsWidget):
         height = self.boundingRect().height()
 
         if self.__corner_str == self.TOP_LEFT:
-            return QtCore.QPoint(-off_x, -off_y)
+            return QPoint(-off_x, -off_y)
         elif self.__corner_str == self.TOP_RIGHT:
-            return QtCore.QPoint(off_x + width, -off_y)
+            return QPoint(off_x + width, -off_y)
         elif self.__corner_str == self.BOTTOM_RIGHT:
-            return QtCore.QPoint(off_x + width, off_y + height)
+            return QPoint(off_x + width, off_y + height)
         elif self.__corner_str == self.BOTTOM_LEFT:
-            return QtCore.QPoint(-off_x, off_y + height)
+            return QPoint(-off_x, off_y + height)
 
     def __get_closest_corner(self):
         view = self.__get_view()
         # Get the view box and position of legend relative to the view,
         # not the scene
         pos = view.mapFromScene(self.pos())
-        legend_box = QtCore.QRect(pos, self.size().toSize())
-        view_box = QtCore.QRect(QtCore.QPoint(0, 0), view.size())
+        legend_box = QRect(pos, self.size().toSize())
+        view_box = QRect(QPoint(0, 0), view.size())
 
         def distance(pt1, pt2):
             # 2d euclidean distance
@@ -127,7 +132,7 @@ class Anchorable(QtGui.QGraphicsWidget):
     def __get_own_corner(self):
         view = self.__get_view()
         pos = view.mapFromScene(self.pos())
-        legend_box = QtCore.QRect(pos, self.size().toSize())
+        legend_box = QRect(pos, self.size().toSize())
         return getattr(legend_box, self.__corner_str)()
 
     def __get_view(self):
@@ -150,11 +155,11 @@ class Anchorable(QtGui.QGraphicsWidget):
         else:
             width = 0
 
-        size = view.size() - QtCore.QSize(width, height)
-        return QtCore.QRect(QtCore.QPoint(0, 0), size)
+        size = view.size() - QSize(width, height)
+        return QRect(QPoint(0, 0), size)
 
 
-class AnchorableGraphicsView(QtGui.QGraphicsView):
+class AnchorableGraphicsView(QGraphicsView):
     """Subclass when wanting to use Anchorable items in your view."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -190,7 +195,7 @@ class AnchorableGraphicsView(QtGui.QGraphicsView):
         return [i for i in self.scene().items() if isinstance(i, Anchorable)]
 
 
-class ColorIndicator(QtGui.QGraphicsWidget):
+class ColorIndicator(QGraphicsWidget):
     """Base class for an item indicator.
 
     Usually the little square or circle in the legend in front of the text."""
@@ -207,9 +212,9 @@ class LegendItemSquare(ColorIndicator):
 
     Parameters
     ----------
-    color : QtGui.QColor
+    color : QColor
         The color of the square.
-    parent : QtGui.QGraphicsItem
+    parent : QGraphicsItem
 
     See Also
     --------
@@ -217,19 +222,19 @@ class LegendItemSquare(ColorIndicator):
 
     """
 
-    SIZE = QtCore.QSizeF(12, 12)
+    SIZE = QSizeF(12, 12)
 
     def __init__(self, color, parent):
         super().__init__(parent)
 
         height, width = self.SIZE.height(), self.SIZE.width()
-        self.__square = QtGui.QGraphicsRectItem(0, 0, height, width)
-        self.__square.setBrush(QtGui.QBrush(color))
-        self.__square.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 0)))
+        self.__square = QGraphicsRectItem(0, 0, height, width)
+        self.__square.setBrush(QBrush(color))
+        self.__square.setPen(QPen(QColor(0, 0, 0, 0)))
         self.__square.setParentItem(self)
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QtCore.QSizeF(self.__square.boundingRect().size())
+        return QSizeF(self.__square.boundingRect().size())
 
 
 class LegendItemCircle(ColorIndicator):
@@ -242,9 +247,9 @@ class LegendItemCircle(ColorIndicator):
 
     Parameters
     ----------
-    color : QtGui.QColor
+    color : QColor
         The color of the square.
-    parent : QtGui.QGraphicsItem
+    parent : QGraphicsItem
 
     See Also
     --------
@@ -252,22 +257,22 @@ class LegendItemCircle(ColorIndicator):
 
     """
 
-    SIZE = QtCore.QSizeF(12, 12)
+    SIZE = QSizeF(12, 12)
 
     def __init__(self, color, parent):
         super().__init__(parent)
 
         height, width = self.SIZE.height(), self.SIZE.width()
-        self.__circle = QtGui.QGraphicsEllipseItem(0, 0, height, width)
-        self.__circle.setBrush(QtGui.QBrush(color))
-        self.__circle.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 0)))
+        self.__circle = QGraphicsEllipseItem(0, 0, height, width)
+        self.__circle.setBrush(QBrush(color))
+        self.__circle.setPen(QPen(QColor(0, 0, 0, 0)))
         self.__circle.setParentItem(self)
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QtCore.QSizeF(self.__circle.boundingRect().size())
+        return QSizeF(self.__circle.boundingRect().size())
 
 
-class LegendItemTitle(QtGui.QGraphicsWidget):
+class LegendItemTitle(QGraphicsWidget):
     """Legend item title - the text displayed in the legend.
 
     This should only really be used in conjunction with ˙LegendItem˙.
@@ -275,8 +280,8 @@ class LegendItemTitle(QtGui.QGraphicsWidget):
     Parameters
     ----------
     text : str
-    parent : QtGui.QGraphicsItem
-    font : QtGui.QFont
+    parent : QGraphicsItem
+    font : QFont
         This
 
     """
@@ -284,15 +289,15 @@ class LegendItemTitle(QtGui.QGraphicsWidget):
     def __init__(self, text, parent, font):
         super().__init__(parent)
 
-        self.__text = QtGui.QGraphicsTextItem(text.title())
+        self.__text = QGraphicsTextItem(text.title())
         self.__text.setParentItem(self)
         self.__text.setFont(font)
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QtCore.QSizeF(self.__text.boundingRect().size())
+        return QSizeF(self.__text.boundingRect().size())
 
 
-class LegendItem(QtGui.QGraphicsLinearLayout):
+class LegendItem(QGraphicsLinearLayout):
     """Legend item - one entry in the legend.
 
     This represents one entry in the legend i.e. a color indicator and the text
@@ -300,14 +305,14 @@ class LegendItem(QtGui.QGraphicsLinearLayout):
 
     Parameters
     ----------
-    color : QtGui.QColor
+    color : QColor
         The color that the entry will represent.
     title : str
         The text that will be displayed for the color.
-    parent : QtGui.QGraphicsItem
+    parent : QGraphicsItem
     color_indicator_cls : ColorIndicator
         The type of `ColorIndicator` that will be used for the color.
-    font : QtGui.QFont, optional
+    font : QFont, optional
 
     """
 
@@ -329,15 +334,15 @@ class LegendItem(QtGui.QGraphicsLinearLayout):
         self.setSpacing(5)
 
 
-class LegendGradient(QtGui.QGraphicsWidget):
+class LegendGradient(QGraphicsWidget):
     """Gradient widget.
 
     A gradient square bar that can be used to display continuous values.
 
     Parameters
     ----------
-    palette : iterable[QtGui.QColor]
-    parent : QtGui.QGraphicsWidget
+    palette : iterable[QColor]
+    parent : QGraphicsWidget
     orientation : Qt.Orientation
 
     Notes
@@ -355,17 +360,17 @@ class LegendGradient(QtGui.QGraphicsWidget):
     def __init__(self, palette, parent, orientation):
         super().__init__(parent)
 
-        self.__gradient = QtGui.QLinearGradient()
+        self.__gradient = QLinearGradient()
         num_colors = len(palette)
         for idx, stop in enumerate(palette):
             self.__gradient.setColorAt(idx * (1. / (num_colors - 1)), stop)
 
         # We need to tell the gradient where it's start and stop points are
-        self.__gradient.setStart(QtCore.QPointF(0, 0))
+        self.__gradient.setStart(QPointF(0, 0))
         if orientation == Qt.Vertical:
-            final_stop = QtCore.QPointF(0, self.GRADIENT_HEIGHT)
+            final_stop = QPointF(0, self.GRADIENT_HEIGHT)
         else:
-            final_stop = QtCore.QPointF(self.GRADIENT_HEIGHT, 0)
+            final_stop = QPointF(self.GRADIENT_HEIGHT, 0)
         self.__gradient.setFinalStop(final_stop)
 
         # Get the appropriate rectangle dimensions based on orientation
@@ -374,15 +379,15 @@ class LegendGradient(QtGui.QGraphicsWidget):
         elif orientation == Qt.Horizontal:
             width, height = self.GRADIENT_HEIGHT, self.GRADIENT_WIDTH
 
-        self.__rect_item = QtGui.QGraphicsRectItem(0, 0, width, height, self)
-        self.__rect_item.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 0)))
-        self.__rect_item.setBrush(QtGui.QBrush(self.__gradient))
+        self.__rect_item = QGraphicsRectItem(0, 0, width, height, self)
+        self.__rect_item.setPen(QPen(QColor(0, 0, 0, 0)))
+        self.__rect_item.setBrush(QBrush(self.__gradient))
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QtCore.QSizeF(self.__rect_item.boundingRect().size())
+        return QSizeF(self.__rect_item.boundingRect().size())
 
 
-class ContinuousLegendItem(QtGui.QGraphicsLinearLayout):
+class ContinuousLegendItem(QGraphicsLinearLayout):
     """Continuous legend item.
 
     Contains a gradient bar with the color ranges, as well as two labels - one
@@ -390,12 +395,12 @@ class ContinuousLegendItem(QtGui.QGraphicsLinearLayout):
 
     Parameters
     ----------
-    palette : iterable[QtGui.QColor]
+    palette : iterable[QColor]
     values : iterable[float...]
         The number of values must match the number of colors in passed in the
         color palette.
-    parent : QtGui.QGraphicsWidget
-    font : QtGui.QFont
+    parent : QGraphicsWidget
+    font : QFont
     orientation : Qt.Orientation
 
     """
@@ -412,7 +417,7 @@ class ContinuousLegendItem(QtGui.QGraphicsLinearLayout):
         self.__values = values
 
         self.__gradient = LegendGradient(palette, parent, orientation)
-        self.__labels_layout = QtGui.QGraphicsLinearLayout(orientation)
+        self.__labels_layout = QGraphicsLinearLayout(orientation)
 
         str_vals = self._format_values(values)
 
@@ -446,15 +451,15 @@ class Legend(Anchorable):
 
     Parameters
     ----------
-    parent : QtGui.QGraphicsItem, optional
+    parent : QGraphicsItem, optional
     orientation : Qt.Orientation, optional
         The default orientation is vertical
     domain : Orange.data.domain.Domain, optional
         This field is left optional as in some cases, we may want to simply
         pass in a list that represents the legend.
-    items : Iterable[QtGui.QColor, str]
-    bg_color : QtGui.QColor, optional
-    font : QtGui.QFont, optional
+    items : Iterable[QColor, str]
+    bg_color : QColor, optional
+    font : QFont, optional
     color_indicator_cls : ColorIndicator
         The color indicator class that will be used to render the indicators.
 
@@ -472,24 +477,24 @@ class Legend(Anchorable):
     """
 
     def __init__(self, parent=None, orientation=Qt.Vertical, domain=None,
-                 items=None, bg_color=QtGui.QColor(232, 232, 232, 196),
+                 items=None, bg_color=QColor(232, 232, 232, 196),
                  font=None, color_indicator_cls=LegendItemSquare, **kwargs):
         super().__init__(parent, **kwargs)
 
         self._layout = None
         self.orientation = orientation
-        self.bg_color = QtGui.QBrush(bg_color)
+        self.bg_color = QBrush(bg_color)
         self.color_indicator_cls = color_indicator_cls
 
         # Set default font if none is given
         if font is None:
-            self.font = QtGui.QFont()
+            self.font = QFont()
             self.font.setPointSize(10)
         else:
             self.font = font
 
-        self.setFlags(QtGui.QGraphicsWidget.ItemIsMovable |
-                      QtGui.QGraphicsItem.ItemIgnoresTransformations)
+        self.setFlags(QGraphicsWidget.ItemIsMovable |
+                      QGraphicsItem.ItemIgnoresTransformations)
 
         if domain is not None:
             self.set_domain(domain)
@@ -504,7 +509,7 @@ class Legend(Anchorable):
     def _setup_layout(self):
         self._clear_layout()
 
-        self._layout = QtGui.QGraphicsLinearLayout(self.orientation)
+        self._layout = QGraphicsLinearLayout(self.orientation)
         self._layout.setContentsMargins(10, 5, 10, 5)
         # If horizontal, there needs to be horizontal space between the items
         if self.orientation == Qt.Horizontal:
@@ -537,7 +542,7 @@ class Legend(Anchorable):
 
         Parameters
         ----------
-        values : iterable[object, QtGui.QColor]
+        values : iterable[object, QColor]
 
         Returns
         -------
@@ -547,18 +552,18 @@ class Legend(Anchorable):
 
     @staticmethod
     def _convert_to_color(obj):
-        if isinstance(obj, QtGui.QColor):
+        if isinstance(obj, QColor):
             return obj
         elif isinstance(obj, tuple) or isinstance(obj, list):
             assert len(obj) in (3, 4)
-            return QtGui.QColor(*obj)
+            return QColor(*obj)
         else:
-            return QtGui.QColor(obj)
+            return QColor(obj)
 
     def paint(self, painter, options, widget=None):
         painter.save()
-        pen = QtGui.QPen(QtGui.QColor(196, 197, 193, 200), 1)
-        brush = QtGui.QBrush(QtGui.QColor(self.bg_color))
+        pen = QPen(QColor(196, 197, 193, 200), 1)
+        brush = QBrush(QColor(self.bg_color))
 
         painter.setPen(pen)
         painter.setBrush(brush)

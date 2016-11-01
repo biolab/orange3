@@ -1,10 +1,9 @@
 import math
 import itertools
-
-from PyQt4.QtCore import Qt
 from collections import defaultdict
 
-from PyQt4 import QtGui
+from AnyQt.QtWidgets import QWidget, QGridLayout
+from AnyQt.QtCore import Qt
 import numpy
 
 import Orange
@@ -40,9 +39,9 @@ class OWMergeData(widget.OWWidget):
         self.dataB = None
 
         # GUI
-        w = QtGui.QWidget(self)
+        w = QWidget(self)
         self.controlArea.layout().addWidget(w)
-        grid = QtGui.QGridLayout()
+        grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         w.setLayout(grid)
 
@@ -296,7 +295,8 @@ def join_array_by_indices(left, right, indices, masked=float("nan")):
 
 
 def test():
-    app = QtGui.QApplication([])
+    from AnyQt.QtWidgets import QApplication
+    app = QApplication([])
 
     w = OWMergeData()
     zoo = Orange.data.Table("zoo")

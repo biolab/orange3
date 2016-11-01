@@ -1,4 +1,4 @@
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.classification import KNNLearner
@@ -53,7 +53,7 @@ class OWKNNLearner(OWBaseLearner):
 
 if __name__ == "__main__":
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWKNNLearner()

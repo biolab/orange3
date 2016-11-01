@@ -2,9 +2,11 @@ from math import isnan
 import itertools
 
 import numpy as np
-from PyQt4.QtGui import QTableView, QColor, QItemSelectionModel, \
-    QItemDelegate, QPen, QBrush, QItemSelection, QHeaderView
-from PyQt4.QtCore import Qt, QAbstractTableModel, QModelIndex, QSize
+
+from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView
+from AnyQt.QtGui import QColor, QPen, QBrush
+from AnyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, \
+    QItemSelectionModel, QItemSelection, QSize
 
 from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
 from Orange.misc import DistMatrix
@@ -182,13 +184,13 @@ class DistanceMatrixContextHandler(ContextHandler):
             return 0
         return 1 + (context.annotations == annotations)
 
-    def settings_from_widget(self, widget):
+    def settings_from_widget(self, widget, *args):
         context = widget.current_context
         if context is not None:
             context.annotation = widget.annot_combo.currentText()
             context.selection = widget.tableview.selectionModel().selected_items()
 
-    def settings_to_widget(self, widget):
+    def settings_to_widget(self, widget, *args):
         context = widget.current_context
         widget.annotation_idx = context.annotations.index(context.annotation)
         widget.tableview.selectionModel().set_selected_items(context.selection)
@@ -223,9 +225,9 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setModel(self.tablemodel)
         view.setShowGrid(False)
         for header in (view.horizontalHeader(), view.verticalHeader()):
-            header.setResizeMode(QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(QHeaderView.ResizeToContents)
             header.setHighlightSections(True)
-            header.setClickable(False)
+            header.setSectionsClickable(False)
         view.verticalHeader().setDefaultAlignment(
             Qt.AlignRight | Qt.AlignVCenter)
         selmodel = SymmetricSelectionModel(view.model(), view)

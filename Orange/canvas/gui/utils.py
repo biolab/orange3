@@ -8,12 +8,13 @@ import traceback
 
 from contextlib import contextmanager
 
-from PyQt4.QtGui import (
-    QWidget, QMessageBox, QGradient, QLinearGradient, QRadialGradient, QBrush,
-    QPainter, QStyleOption, QStyle
+from AnyQt.QtWidgets import (
+    QWidget, QMessageBox, QStyleOption, QStyle
 )
-
-from PyQt4.QtCore import QPointF, QUrl
+from AnyQt.QtGui import (
+    QGradient, QLinearGradient, QRadialGradient, QBrush, QPainter
+)
+from AnyQt.QtCore import QPointF, QUrl
 
 import sip
 
@@ -104,7 +105,7 @@ def has_x11():
     Is Qt build against X11 server.
     """
     try:
-        from PyQt4.QtGui import QX11Info
+        from AnyQt.QtX11Extras import QX11Info
         return True
     except ImportError:
         return False
@@ -114,11 +115,14 @@ def is_x11_compositing_enabled():
     """Is X11 compositing manager running.
     """
     try:
-        from PyQt4.QtGui import QX11Info
+        from AnyQt.QtX11Extras import QX11Info
     except ImportError:
         return False
-
-    return QX11Info.isCompositingManagerRunning()
+    if hasattr(QX11Info, "isCompositingManagerRunning"):
+        return QX11Info.isCompositingManagerRunning()
+    else:
+        # not available on Qt5
+        return False  # ?
 
 
 def is_dwm_compositing_enabled():

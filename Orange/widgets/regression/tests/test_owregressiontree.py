@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from Orange.base import Model
 from Orange.widgets.regression.owregressiontree import OWRegressionTree
 from Orange.widgets.tests.base import (WidgetTest, DefaultParameterMapping,
                                        ParameterMapping, WidgetLearnerTestMixin)
@@ -10,22 +11,24 @@ class TestOWRegressionTree(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWRegressionTree,
                                          stored_settings={"auto_apply": False})
         self.init()
-        scores = [score[1] for score in self.widget.scores]
+        self.model_class = Model
         self.parameters = [
-            ParameterMapping('criterion', self.widget.score_combo, scores),
-            ParameterMapping('max_depth', self.widget.max_depth_spin[1]),
-            ParameterMapping('min_samples_split',
-                             self.widget.min_internal_spin[1]),
-            ParameterMapping('min_samples_leaf', self.widget.min_leaf_spin[1])]
+            ParameterMapping.from_attribute(self.widget, 'max_depth'),
+            ParameterMapping.from_attribute(
+                self.widget, 'min_internal', 'min_samples_split'),
+            ParameterMapping.from_attribute(
+                self.widget, 'min_leaf', 'min_samples_leaf')]
+        # NB. sufficient_majority is divided by 100, so it cannot be tested like
+        # this
+
+        self.checks = [sb.gui_element.cbox for sb in self.parameters]
 
     def test_parameters_unchecked(self):
         """Check learner and model for various values of all parameters
         when pruning parameters are not checked
         """
-        self.widget.max_depth_spin[0].setCheckState(False)
-        self.widget.min_internal_spin[0].setCheckState(False)
-        self.widget.min_leaf_spin[0].setCheckState(False)
-        for i, val in ((1, None), (2, 2), (3, 1)):
-            self.parameters[i] = DefaultParameterMapping(
-                self.parameters[i].name, val)
+        for cb in self.checks:
+            cb.setCheckState(False)
+        self.parameters = [DefaultParameterMapping(par.name, val)
+                           for par, val in zip(self.parameters, (None, 2, 1))]
         self.test_parameters()

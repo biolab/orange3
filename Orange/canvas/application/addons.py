@@ -25,18 +25,22 @@ try:
 except ImportError:
     docutils = None
 
-from PyQt4.QtGui import (
+from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
-    QTextBrowser, QTextOption, QDialogButtonBox, QProgressDialog,
-    QVBoxLayout, QPalette, QStandardItemModel, QStandardItem,
-    QSortFilterProxyModel, QItemSelectionModel, QStyle, QStyledItemDelegate,
-    QStyleOptionViewItemV4, QApplication, QHBoxLayout
+    QTextBrowser, QDialogButtonBox, QProgressDialog,
+    QVBoxLayout, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
+    QApplication, QHBoxLayout
 )
 
-from PyQt4.QtCore import (
+from AnyQt.QtGui import (
+    QStandardItemModel, QStandardItem, QPalette, QTextOption
+)
+
+from AnyQt.QtCore import (
+    QSortFilterProxyModel, QItemSelectionModel,
     Qt, QObject, QMetaObject, QEvent, QSize, QTimer, QThread, Q_ARG
 )
-from PyQt4.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from ..config import ADDON_KEYWORD
 from ..gui.utils import message_warning, message_information, \
@@ -125,7 +129,7 @@ class TristateCheckItemDelegate(QStyledItemDelegate):
         if event.type() in {QEvent.MouseButtonPress, QEvent.MouseButtonRelease,
                             QEvent.MouseButtonDblClick}:
             pos = event.pos()
-            opt = QStyleOptionViewItemV4(option)
+            opt = QStyleOptionViewItem(option)
             self.initStyleOption(opt, index)
             rect = style.subElementRect(
                 QStyle.SE_ItemViewItemCheckIndicator, opt, widget)
@@ -222,8 +226,8 @@ class AddonManagerWidget(QWidget):
             self.__update_details
         )
         header = self.__view.header()
-        header.setResizeMode(0, QHeaderView.Fixed)
-        header.setResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(0, QHeaderView.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
         self.__details = QTextBrowser(
             frameShape=QTextBrowser.NoFrame,

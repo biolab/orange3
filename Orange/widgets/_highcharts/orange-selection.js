@@ -37,7 +37,7 @@ function unselectAllPoints(e) {
           e.target.parentElement.tagName.toLowerCase() == 'svg'))
         return true;
     this.deselectPointsIfNot(false);
-    __highchart._on_selected_points([]);
+    __self._on_selected_points([]);
 }
 
 function clickedPointSelect(e) {
@@ -49,7 +49,7 @@ function clickedPointSelect(e) {
         selected.splice(selected.indexOf(this.index), 1);
     } else
         points[this.series.index].push(this.index);
-    __highchart._on_selected_points(points);
+    __self._on_selected_points(points);
     return true;
 }
 
@@ -83,6 +83,6 @@ function rectSelectPoints(e) {
         }
     }
 
-    __highchart._on_selected_points(this.getSelectedPointsForExport());
+    __self._on_selected_points(this.getSelectedPointsForExport());
     return false;  // Don't zoom
 }

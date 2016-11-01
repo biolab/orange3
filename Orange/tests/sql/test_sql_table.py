@@ -1,10 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import pickle
 import unittest
 import unittest.mock
 
 import numpy as np
+
 from numpy.testing import assert_almost_equal
 
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
@@ -530,14 +532,14 @@ class TestSqlTable(PostgresTest):
         try:
             broken_query = "SELECT 1/%s FROM %s" % (
                 sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
-            with sql_table._execute_sql_query(broken_query) as cur:
+            with sql_table.backend.execute_sql_query(broken_query) as cur:
                 cur.fetchall()
         except psycopg2.DataError:
             pass
 
         working_query = "SELECT %s FROM %s" % (
             sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
-        with sql_table._execute_sql_query(working_query) as cur:
+        with sql_table.backend.execute_sql_query(working_query) as cur:
             cur.fetchall()
 
     def test_basic_stats(self):
@@ -587,6 +589,27 @@ class TestSqlTable(PostgresTest):
         self.assertIsInstance(conts[0], Continuous)
         self.assertIsInstance(conts[1], Continuous)
         self.assertIsInstance(conts[2], Discrete)
+
+    def test_pickling_restores_connection_pool(self):
+        iris = SqlTable(self.conn, self.iris, inspect_values=True)
+        iris2 = pickle.loads(pickle.dumps(iris))
+
+        self.assertEqual(iris[0], iris2[0])
+
+    def test_list_tables_with_schema(self):
+        with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE") as cur:
+            cur.execute("CREATE SCHEMA orange_tests")
+            cur.execute("CREATE TABLE orange_tests.efgh (id int)")
+            cur.execute("INSERT INTO orange_tests.efgh (id) VALUES (1)")
+            cur.execute("INSERT INTO orange_tests.efgh (id) VALUES (2)")
+
+        try:
+            tables = self.backend.list_tables("orange_tests")
+            self.assertTrue(any([t.name == "efgh" for t in tables]))
+            SqlTable(self.conn, tables[0], inspect_values=True)
+        finally:
+            with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE"):
+                pass
 
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain), 0)

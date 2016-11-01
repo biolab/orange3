@@ -17,6 +17,7 @@ class Normalizer:
         self.transform_class = transform_class
 
     def __call__(self, data):
+
         dists = distribution.get_distributions(data)
         new_attrs = [self.normalize(dists[i], var) for
                      (i, var) in enumerate(data.domain.attributes)]
@@ -37,7 +38,7 @@ class Normalizer:
             return self.normalize_by_span(dist, var)
 
     def normalize_by_sd(self, dist, var):
-        avg, sd = dist.mean(), dist.standard_deviation()
+        avg, sd = (dist.mean(), dist.standard_deviation()) if dist.size else (0, 1)
         if sd == 0:
             sd = 1
         return ContinuousVariable(var.name, compute_value=Norm(var, avg, 1 / sd))

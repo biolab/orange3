@@ -12,18 +12,22 @@ from functools import reduce
 from xml.sax.saxutils import escape
 
 import numpy
-from PyQt4.QtGui import (
+
+from AnyQt.QtWidgets import (
     QComboBox, QGraphicsScene, QGraphicsView, QGraphicsWidget,
-    QGraphicsPathItem, QGraphicsTextItem, QPainterPath, QPainter,
-    QTransform, QColor, QBrush, QPen, QStyle, QPalette,
-    QApplication
+    QGraphicsPathItem, QGraphicsTextItem, QStyle, QApplication
 )
-from PyQt4.QtCore import Qt, QPointF, QRectF, QLineF
-from PyQt4.QtCore import pyqtSignal as Signal
+from AnyQt.QtGui import (
+    QPainterPath, QPainter, QTransform, QColor, QBrush, QPen, QPalette
+)
+from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
+from AnyQt.QtCore import pyqtSignal as Signal
 
 import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
 
@@ -37,10 +41,11 @@ class OWVennDiagram(widget.OWWidget):
     description = "A graphical visualization of the overlap of data instances " \
                   "from a collection of input data sets."
     icon = "icons/VennDiagram.svg"
-    priority = 410
+    priority = 280
 
     inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]
-    outputs = [("Selected Data", Orange.data.Table)]
+    outputs = [("Selected Data", Orange.data.Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
 
     # Selected disjoint subset indices
     selection = settings.Setting([])
@@ -507,11 +512,14 @@ class OWVennDiagram(widget.OWWidget):
 
     def commit(self):
         selected_subsets = []
-
+        annotated_data = None
+        annotated_data_subsets = []
+        annotated_data_masks = []
         selected_items = reduce(
             set.union, [self.disjoint[index] for index in self.selection],
             set()
         )
+
         def match(val):
             if numpy.isnan(val):
                 return False
@@ -534,16 +542,37 @@ class OWVennDiagram(widget.OWWidget):
 
                 def instance_key(inst):
                     return str(inst[attr])
+
+                def instance_key_all(inst):
+                    return str(inst[attr])
             else:
                 mask = [ComparableInstance(inst) in selected_items
                         for inst in input.table]
                 _map = {item: str(i) for i, item in enumerate(selected_items)}
+                _map_all = {
+                    ComparableInstance(i):  hash(ComparableInstance(i))
+                    for i in input.table
+                }
 
                 def instance_key(inst):
                     return _map[ComparableInstance(inst)]
 
+                def instance_key_all(inst):
+                    return _map_all[ComparableInstance(inst)]
+
             mask = numpy.array(mask, dtype=bool)
             subset = input.table[mask]
+
+            annotated_subset = input.table
+            id_column = numpy.array(
+                [[instance_key_all(inst)] for inst in annotated_subset])
+            source_names = numpy.array([[names[i]]] * len(annotated_subset))
+            annotated_subset = append_column(
+                annotated_subset, "M", source_var, source_names)
+            annotated_subset = append_column(
+                annotated_subset, "M", item_id_var, id_column)
+            annotated_data_subsets.append(annotated_subset)
+            annotated_data_masks.append(mask)
 
             if len(subset) == 0:
                 continue
@@ -578,7 +607,19 @@ class OWVennDiagram(widget.OWWidget):
         else:
             data = None
 
+        if annotated_data_subsets:
+            annotated_data = table_concat(annotated_data_subsets)
+            indices = numpy.hstack(annotated_data_masks)
+            annotated_data = create_annotated_table(annotated_data, indices)
+            varying = varying_between(annotated_data, [item_id_var])
+            if source_var in varying:
+                varying.remove(source_var)
+            annotated_data = reshape_wide(annotated_data, varying,
+                                          [item_id_var], [source_var])
+            annotated_data = drop_columns(annotated_data, [item_id_var])
+
         self.send("Selected Data", data)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
 
     def getSettings(self, *args, **kwargs):
         self._storeHints()

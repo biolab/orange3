@@ -1,29 +1,27 @@
+import operator
 import os
-import re
 import zlib
+
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
 from numbers import Real, Integral
-import operator
 from functools import reduce
 from warnings import warn
 from threading import Lock
-from tempfile import NamedTemporaryFile
-from urllib.parse import urlparse, unquote as urlunquote
-from urllib.request import urlopen
-from urllib.error import URLError
 
+import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
 
+from Orange.data import (
+    _contingency, _valuecount,
+    Domain, Variable, Storage, StringVariable, Unknown, Value, Instance
+)
+from Orange.data.util import SharedComputeValue
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from .instance import *
 from Orange.util import flatten
-from Orange.data import Domain, Variable, StringVariable
-from Orange.data.storage import Storage
-from . import _contingency
-from . import _valuecount
-from .util import SharedComputeValue
+
+__all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
 
 def get_sample_datasets_dir():
@@ -266,15 +264,14 @@ class Table(MutableSequence, Storage):
 
         global _conversion_cache
 
-        def sparse_to_flat(x):
-            if sp.issparse(x):
-                x = np.ravel(x.toarray())
-            return x
-
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64):
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
+                        is_sparse=False):
 
             if not len(src_cols):
-                return np.zeros((n_rows, 0), dtype=source.X.dtype)
+                if is_sparse:
+                    return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
+                else:
+                    return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
             n_src_attrs = len(source.domain.attributes)
             if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
@@ -282,7 +279,7 @@ class Table(MutableSequence, Storage):
                 return _subarray(source.X, row_indices, src_cols)
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
                 arr = _subarray(source.metas, row_indices,
-                                 [-1 - x for x in src_cols])
+                                [-1 - x for x in src_cols])
                 if arr.dtype != dtype:
                     return arr.astype(dtype)
                 return arr
@@ -291,7 +288,20 @@ class Table(MutableSequence, Storage):
                 return _subarray(source._Y, row_indices,
                                  [x - n_src_attrs for x in src_cols])
 
-            a = np.empty((n_rows, len(src_cols)), dtype=dtype)
+            if is_sparse:
+                a = sp.dok_matrix((n_rows, len(src_cols)), dtype=dtype)
+            else:
+                a = np.empty((n_rows, len(src_cols)), dtype=dtype)
+
+            def match_type(x):
+                """ Assure that matrix and column are both dense or sparse. """
+                if is_sparse == sp.issparse(x):
+                    return x
+                elif is_sparse:
+                    return sp.csc_matrix(x.reshape(-1, 1).astype(np.float))
+                else:
+                    return np.ravel(x.toarray())
+
             shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
@@ -302,20 +312,27 @@ class Table(MutableSequence, Storage):
                             shared_cache[id(col.compute_shared), id(source)] = col.compute_shared(source)
                         shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
-                            a[:, i] = col(source, shared_data=shared)[row_indices]
+                            a[:, i] = match_type(
+                                col(source, shared_data=shared)[row_indices])
                         else:
-                            a[:, i] = col(source, shared_data=shared)
+                            a[:, i] = match_type(
+                                col(source, shared_data=shared))
                     else:
                         if row_indices is not ...:
-                            a[:, i] = col(source)[row_indices]
+                            a[:, i] = match_type(col(source)[row_indices])
                         else:
-                             a[:, i] = col(source)
+                            a[:, i] = match_type(col(source))
                 elif col < 0:
-                    a[:, i] = source.metas[row_indices, -1 - col]
+                    a[:, i] = match_type(source.metas[row_indices, -1 - col])
                 elif col < n_src_attrs:
-                    a[:, i] = sparse_to_flat(source.X[row_indices, col])
+                    a[:, i] = match_type(source.X[row_indices, col])
                 else:
-                    a[:, i] = source._Y[row_indices, col - n_src_attrs]
+                    a[:, i] = match_type(
+                        source._Y[row_indices, col - n_src_attrs])
+
+            if is_sparse:
+                a = a.tocsr()
+
             return a
 
         new_cache = _conversion_cache is None
@@ -342,16 +359,19 @@ class Table(MutableSequence, Storage):
             self = cls()
             self.domain = domain
             conversion = domain.get_conversion(source.domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows)
+            self.X = get_columns(row_indices, conversion.attributes, n_rows,
+                                 is_sparse=sp.issparse(source.X))
             if self.X.ndim == 1:
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = sparse_to_flat(get_columns(row_indices, conversion.class_vars, n_rows))
+            self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
+                                 is_sparse=sp.issparse(source.Y))
 
             dtype = np.float64
             if any(isinstance(var, StringVariable) for var in domain.metas):
                 dtype = np.object
             self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype)
+                                     n_rows, dtype,
+                                     is_sparse=sp.issparse(source.metas))
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             if source.has_weights():
@@ -885,10 +905,8 @@ class Table(MutableSequence, Storage):
                 table.extend(t)
             return table
         elif axis == CONCAT_COLS:
-            from operator import iand, attrgetter
-            from functools import reduce
-            if reduce(iand,
-                      (set(map(attrgetter('name'),
+            if reduce(operator.iand,
+                      (set(map(operator.attrgetter('name'),
                                chain(t.domain.variables, t.domain.metas)))
                        for t in tables)):
                 raise ValueError('Concatenating two domains with variables '
@@ -1126,6 +1144,7 @@ class Table(MutableSequence, Storage):
             if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
                     or isinstance(f, data_filter.FilterContinuous) and \
                                     f.oper == f.IsDefined:
+                col = col.astype(float)
                 if conjunction:
                     sel *= ~np.isnan(col)
                 else:
@@ -1374,8 +1393,10 @@ class Table(MutableSequence, Storage):
                     mask = [i in disc_indi for i in range(arr.shape[1])]
                     conts, nans = contingency(arr, row_data, max_vals - 1,
                                               n_rows - 1, W, mask)
-                    for col_i, arr_i, _ in disc_vars:
-                        contingencies[col_i] = (conts[arr_i], nans[arr_i])
+                    for col_i, arr_i, var in disc_vars:
+                        n_vals = len(var.values)
+                        contingencies[col_i] = (conts[arr_i][:, :n_vals],
+                                                nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
                         contingencies[col_i] = contingency(
