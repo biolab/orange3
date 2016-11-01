@@ -145,7 +145,7 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
         index = QPersistentModelIndex(model.index(row, 3))
-        temp_button = QPushButton('X', self, flat = True)
+        temp_button = QPushButton(u'\u00d7', self, flat=True)
         temp_button.clicked.connect(lambda: self.remove_one(index.row()))
         self.cond_list.setCellWidget(row, 3, temp_button)
 
