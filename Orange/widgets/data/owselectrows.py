@@ -3,13 +3,13 @@ from itertools import chain
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
-    QMessageBox, QMenu, QListView, QGridLayout
+    QMessageBox, QMenu, QListView, QGridLayout, QPushButton
 )
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
 )
-from AnyQt.QtCore import Qt, QPoint, QRegExp
+from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
@@ -144,8 +144,8 @@ class OWSelectRows(widget.OWWidget):
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
-        index = QtCore.QPersistentModelIndex(model.index(row, 3))
-        temp_button = QtGui.QPushButton('Remove', self)
+        index = QPersistentModelIndex(model.index(row, 3))
+        temp_button = QPushButton('X', self, flat = True)
         temp_button.clicked.connect(lambda: self.remove_one(index.row()))
         self.cond_list.setCellWidget(row, 3, temp_button)
 
@@ -180,7 +180,7 @@ class OWSelectRows(widget.OWWidget):
 
     def remove_one_row(self, rownum):
         self.cond_list.removeRow(rownum)
-        if(self.cond_list.model().rowCount() == 0):
+        if self.cond_list.model().rowCount() == 0:
             self.remove_all_button.setDisabled(True)
 
     def remove_all_rows(self):
