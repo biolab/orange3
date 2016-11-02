@@ -30,7 +30,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         self.__spin_parameter_update(name)
         return gui.spin(
             self.main_area, self, name, minv, maxv, label=label,
-            alignment=Qt.AlignRight,
+            alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=lambda f=self.__spin_parameter_update,
                             p=name: self.__parameter_changed(f, p))
 
@@ -210,7 +210,7 @@ class OWManifoldLearning(OWWidget):
         output_box = gui.vBox(self.controlArea, "Output")
         self.n_components_spin = gui.spin(
             output_box, self, "n_components", 1, 10, label="Components:",
-            alignment=Qt.AlignRight,
+            alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
         self.apply_button = gui.auto_commit(
             output_box, self, "auto_apply", "&Apply",
