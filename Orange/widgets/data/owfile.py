@@ -91,7 +91,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     want_main_area = False
 
     SEARCH_PATHS = [("sample-datasets", get_sample_datasets_dir())]
-
+    SIZE_LIMIT = 1e7
     LOCAL_FILE, URL = range(2)
 
     settingsHandler = PerfectDomainContextHandler()
@@ -117,6 +117,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
                   for f in sorted(set(FileFormat.readers.values()),
                                   key=list(FileFormat.readers.values()).index)))
+
+    class Warning(widget.OWWidget.Warning):
+        file_too_big = widget.Msg("The file is too large to load automatically."
+                                  " Press Reload to load.")
 
     def __init__(self):
         super().__init__()
@@ -214,9 +218,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
-        QTimer.singleShot(0, self.load_data)
 
         self.setAcceptDrops(True)
+
+        if self.source == self.LOCAL_FILE and \
+                        os.path.getsize(self.last_path()) > self.SIZE_LIMIT:
+            self.Warning.file_too_big()
+            return
+
+        QTimer.singleShot(0, self.load_data)
 
     def sizeHint(self):
         return QSize(600, 550)
@@ -263,7 +273,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # file readers
         # pylint: disable=broad-except
         self.editor_model.set_domain(None)
-
+        self.Warning.file_too_big.clear()
         error = None
         try:
             self.reader = self._get_reader()
