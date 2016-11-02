@@ -56,7 +56,8 @@ class TestManifold(unittest.TestCase):
         lle = lle(data)
 
         ltsa = LocallyLinearEmbedding(n_neighbors=5, n_components=n_com,
-                                      method="ltsa")
+                                      method="ltsa",
+                                      eigen_solver="dense")
         ltsa = ltsa(data)
 
         hessian = LocallyLinearEmbedding(n_neighbors=15, n_components=n_com,
