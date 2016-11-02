@@ -64,6 +64,25 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         values = getattr(self, name + "_values")
         self.parameters[name] = values[checked]
 
+    def _create_radio_parameter(self, name, label):
+        self.__radio_parameter_update(name)
+        values = (x[1] for x in getattr(self, name + "_values"))
+        gui.separator(self.main_area)
+        box = gui.hBox(self.main_area)
+        lbl = gui.label(box, self, label + ":")
+        rbt = gui.radioButtons(
+            box, self, name + "_index", btnLabels=values,
+            callback=lambda f=self.__radio_parameter_update,
+                            p=name: self.__parameter_changed(f, p))
+        rbt.layout().setAlignment(Qt.AlignTop)
+        lbl.setAlignment(Qt.AlignTop)
+        return rbt
+
+    def __radio_parameter_update(self, name):
+        index = getattr(self, name + "_index")
+        values = getattr(self, name + "_values")
+        self.parameters[name] = values[index][0]
+
 
 class TSNEParametersEditor(ManifoldParametersEditor):
     _metrics = ("manhattan", "chebyshev", "jaccard", "mahalanobis")
@@ -81,15 +100,16 @@ class TSNEParametersEditor(ManifoldParametersEditor):
 
 class MDSParametersEditor(ManifoldParametersEditor):
     max_iter = Setting(300)
-    random_state = Setting(1)
-    random_state_values = (0, None)
+    init_type_index = Setting(0)
+    init_type_values = (("PCA", "PCA (Torgerson)"),
+                        ("random", "Random"))
 
     def __init__(self, parent):
         super().__init__(parent)
         self.max_iter_spin = self._create_spin_parameter(
             "max_iter", 10, 10 ** 4, "Max iterations:")
-        self.random_state_check = self._create_check_parameter(
-            "random_state", "Random initialization")
+        self.random_state_radio = self._create_radio_parameter(
+            "init_type", "Initialization")
 
 
 class IsomapParametersEditor(ManifoldParametersEditor):
