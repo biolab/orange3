@@ -4,21 +4,15 @@ from PyQt4.QtCore import Qt
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
-from Orange.widgets.widget import OWWidget, Msg, SettingsHandler
-from Orange.widgets.settings import Setting
+from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets import gui
 
 
-class ManifoldParametersEditor(QWidget):
-    def __new__(cls, parent, **kwargs):
-        self = super().__new__(cls, parent)
-        QWidget.__init__(self, parent)
-        cls.settingsHandler = SettingsHandler.create(cls)
-        if self.settingsHandler:
-            self.settingsHandler.initialize(self)
-        return self
-
+class ManifoldParametersEditor(QWidget, gui.OWComponent):
     def __init__(self, parent):
+        QWidget.__init__(self, parent)
+        gui.OWComponent.__init__(self, parent)
         self.parameters = {}
         self.parent_callback = parent.settings_changed
 
@@ -69,12 +63,6 @@ class ManifoldParametersEditor(QWidget):
         checked = getattr(self, name)
         values = getattr(self, name + "_values")
         self.parameters[name] = values[checked]
-
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-        if self.settingsHandler:
-            self.settingsHandler.fast_save(self, name, value)
-        self.settingsHandler.update_defaults(self)
 
 
 class TSNEParametersEditor(ManifoldParametersEditor):
@@ -154,10 +142,12 @@ class OWManifoldLearning(OWWidget):
 
     MANIFOLD_METHODS = (TSNE, MDS, Isomap, LocallyLinearEmbedding,
                         SpectralEmbedding)
-    parameter_editors = (TSNEParametersEditor, MDSParametersEditor,
-                         IsomapParametersEditor,
-                         LocallyLinearEmbeddingParametersEditor,
-                         SpectralEmbeddingParametersEditor)
+
+    tsne_editor = SettingProvider(TSNEParametersEditor)
+    mds_editor = SettingProvider(MDSParametersEditor)
+    isomap_editor = SettingProvider(IsomapParametersEditor)
+    lle_editor = SettingProvider(LocallyLinearEmbeddingParametersEditor)
+    spectral_editor = SettingProvider(SpectralEmbeddingParametersEditor)
 
     resizing_enabled = False
     want_main_area = False
@@ -182,9 +172,20 @@ class OWManifoldLearning(OWWidget):
 
         self.params_box = gui.vBox(self.controlArea, "Parameters")
 
-        editor = self.parameter_editors[self.manifold_method_index]
-        self.params_widget = editor(self)
-        self.params_box.layout().addWidget(self.params_widget)
+        self.tsne_editor = TSNEParametersEditor(self)
+        self.mds_editor = MDSParametersEditor(self)
+        self.isomap_editor = IsomapParametersEditor(self)
+        self.lle_editor = LocallyLinearEmbeddingParametersEditor(self)
+        self.spectral_editor = SpectralEmbeddingParametersEditor(self)
+        self.parameter_editors = [
+            self.tsne_editor, self.mds_editor, self.isomap_editor,
+            self.lle_editor, self.spectral_editor]
+
+        for editor in self.parameter_editors:
+            self.params_box.layout().addWidget(editor)
+            editor.hide()
+        self.params_widget = self.parameter_editors[self.manifold_method_index]
+        self.params_widget.show()
 
         output_box = gui.vBox(self.controlArea, "Output")
         self.n_components_spin = gui.spin(
@@ -196,11 +197,9 @@ class OWManifoldLearning(OWWidget):
             box=False, commit=self.apply)
 
     def manifold_method_changed(self):
-        self.params_box.layout().removeWidget(self.params_widget)
-        self.params_widget.deleteLater()
-        editor = self.parameter_editors[self.manifold_method_index]
-        self.params_widget = editor(self)
-        self.params_box.layout().addWidget(self.params_widget)
+        self.params_widget.hide()
+        self.params_widget = self.parameter_editors[self.manifold_method_index]
+        self.params_widget.show()
         self.apply()
 
     def settings_changed(self):
