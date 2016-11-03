@@ -151,8 +151,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def set_preprocessor(self, preprocessor):
         """Add user-set preprocessors before the default, mandatory ones"""
-        self.preprocessors = ((preprocessor,) if preprocessor else ()) \
-            + tuple(self.LEARNER.preprocessors)
+        self.preprocessors = ((preprocessor,) if preprocessor else ())
         self.apply()
 
     @check_sql_input

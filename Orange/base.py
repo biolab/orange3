@@ -72,7 +72,7 @@ class Learner:
         """
         Apply the `preprocessors` to the data.
         """
-        for pp in self.preprocessors:
+        for pp in self.preprocessors + list(type(self).preprocessors):
             data = pp(data)
         return data
 
