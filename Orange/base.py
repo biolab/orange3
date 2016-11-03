@@ -347,17 +347,6 @@ class LearnerDispatcher(Learner):
         elif self.problem_type == self.REGRESSION and self.regression_params:
             kwarg_keys = set(kwargs.keys()) & self.regression_params
             kwargs = {k: kwargs[k] for k in kwarg_keys}
-        return self.handle_kwargs(kwargs)
-
-    def handle_kwargs(self, kwargs):
-        """If the kwargs need to be modified before being sent to the learner
-        that the dispatcher wraps, this would be the place to do it.
-
-        Returns
-        -------
-        kwargs : dict
-
-        """
         return kwargs
 
     @property
