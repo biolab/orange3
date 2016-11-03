@@ -175,6 +175,7 @@ class OWDataSampler(OWWidget):
             self.dataInfoLabel.setText('No data on input.')
             self.outputInfoLabel.setText('')
             self.indices = None
+            self.clear_messages()
         self.commit()
 
     def commit(self):
