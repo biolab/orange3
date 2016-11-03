@@ -1,8 +1,9 @@
 import unittest
+from collections import namedtuple
 
 import numpy as np
 
-from Orange.base import SklLearner, SklModel
+from Orange.base import SklLearner, SklModel, LearnerDispatcher, Model
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
@@ -331,20 +332,30 @@ class WidgetLearnerTestMixin:
     widget = None  # type: OWBaseLearner
 
     def init(self):
-        self.iris = Table("iris")
-        self.housing = Table("housing")
-        if issubclass(self.widget.LEARNER, LearnerClassification):
-            self.data = self.iris
-            self.inadequate_data = self.housing
+        iris = Table("iris")
+        housing = Table("housing")
+        self.supports_any_input_type = False
+
+        if issubclass(self.widget.LEARNER, LearnerDispatcher):
+            self.supports_any_input_type = True
+            self.data = (iris, housing)
+            self.inadequate_data = ()
+            self.learner_class = LearnerDispatcher
+            self.model = Model
+            self.model_name = 'Model'
+        elif issubclass(self.widget.LEARNER, LearnerClassification):
+            self.data = (iris,)
+            self.inadequate_data = (housing,)
             self.learner_class = LearnerClassification
-            self.model_name = "Classifier"
-            self.model_class = ModelClassification
+            self.model = ModelClassification
+            self.model_name = 'Classifier'
         else:
-            self.data = self.housing
-            self.inadequate_data = self.iris
+            self.data = (housing,)
+            self.inadequate_data = (iris,)
             self.learner_class = LearnerRegression
-            self.model_name = "Predictor"
-            self.model_class = ModelRegression
+            self.model = ModelRegression
+            self.model_name = 'Predictor'
+
         self.parameters = []
 
     def test_has_unconditional_apply(self):
@@ -353,13 +364,13 @@ class WidgetLearnerTestMixin:
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
-        self.send_signal("Data", self.data)
-        self.assertEqual(self.widget.data, self.data)
+        self.send_signal("Data", self.data[0])
+        self.assertEqual(self.widget.data, self.data[0])
 
     def test_input_data_disconnect(self):
         """Check widget's data and model after disconnecting data from input"""
-        self.send_signal("Data", self.data)
-        self.assertEqual(self.widget.data, self.data)
+        self.send_signal("Data", self.data[0])
+        self.assertEqual(self.widget.data, self.data[0])
         self.widget.apply_button.button.click()
         self.send_signal("Data", None)
         self.assertEqual(self.widget.data, None)
@@ -367,11 +378,13 @@ class WidgetLearnerTestMixin:
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
-        self.send_signal("Data", self.inadequate_data)
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.data_error.is_shown())
-        self.send_signal("Data", self.data)
-        self.assertFalse(self.widget.Error.data_error.is_shown())
+        for inadequate in self.inadequate_data:
+            self.send_signal("Data", inadequate)
+            self.widget.apply_button.button.click()
+            self.assertTrue(self.widget.Error.data_error.is_shown())
+        for valid in self.data:
+            self.send_signal("Data", valid)
+            self.assertFalse(self.widget.Error.data_error.is_shown())
 
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
@@ -414,12 +427,12 @@ class WidgetLearnerTestMixin:
         self.assertIsNone(self.get_output(self.model_name))
         self.widget.apply_button.button.click()
         self.assertIsNone(self.get_output(self.model_name))
-        self.send_signal("Data", self.data)
+        self.send_signal('Data', self.data[0])
         self.widget.apply_button.button.click()
         model = self.get_output(self.model_name)
         self.assertIsNotNone(model)
         self.assertIsInstance(model, self.widget.LEARNER.__returns__)
-        self.assertIsInstance(model, self.model_class)
+        self.assertIsInstance(model, self.model)
 
     def test_output_learner_name(self):
         """Check if learner's name properly changes"""
@@ -435,12 +448,13 @@ class WidgetLearnerTestMixin:
         """Check if model's name properly changes"""
         new_name = "Model Name"
         self.widget.name_line_edit.setText(new_name)
-        self.send_signal("Data", self.data)
+        self.send_signal("Data", self.data[0])
         self.widget.apply_button.button.click()
         self.assertEqual(self.get_output(self.model_name).name, new_name)
 
     def test_parameters_default(self):
-        """Check if learner's parameters are set to default (widget's) values"""
+        """Check if learner's parameters are set to default (widget's) values
+        """
         self.widget.apply_button.button.click()
         if hasattr(self.widget.learner, "params"):
             learner_params = self.widget.learner.params
@@ -449,6 +463,8 @@ class WidgetLearnerTestMixin:
                                  parameter.get_value())
 
     def test_parameters(self):
+        """Check learner and model for various values of all parameters"""
+
         def get_value(learner, name):
             # Handle SKL and skl-like learners, and non-SKL learners
             if hasattr(learner, "params"):
@@ -456,11 +472,10 @@ class WidgetLearnerTestMixin:
             else:
                 return getattr(learner, name)
 
-        """Check learner and model for various values of all parameters"""
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
             for value in parameter.values:
-                self.send_signal("Data", self.data)
+                self.send_signal("Data", self.data[0])
                 parameter.set_value(value)
                 self.widget.apply_button.button.click()
                 param = get_value(self.widget.learner, parameter.name)
