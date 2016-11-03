@@ -24,7 +24,6 @@ class TestRandomizer(unittest.TestCase):
         self.assertTrue((np.sort(data.Y, axis=0) == np.sort(
             data_rand.Y, axis=0)).all())
 
-
     def test_randomize_classes(self):
         data = self.zoo
         randomizer = Randomize(rand_type=Randomize.RandomizeClasses)
@@ -64,3 +63,12 @@ class TestRandomizer(unittest.TestCase):
         self.assertTrue((data.X == data_orig.X).all())
         self.assertTrue((data.metas == data_orig.metas).all())
         self.assertTrue((data.Y == data_orig.Y).all())
+
+    def test_randomize_replicate(self):
+        randomizer1 = Randomize(rand_seed=1)
+        rand_data11 = randomizer1(self.zoo)
+        rand_data12 = randomizer1(self.zoo)
+        randomizer2 = Randomize(rand_seed=1)
+        rand_data2 = randomizer2(self.zoo)
+        np.testing.assert_array_equal(rand_data11.Y, rand_data12.Y)
+        np.testing.assert_array_equal(rand_data11.Y, rand_data2.Y)
