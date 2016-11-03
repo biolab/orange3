@@ -1,7 +1,8 @@
 from AnyQt.QtCore import Qt
+from Orange.base import Learner
 
 from Orange.classification import SklTreeLearner
-from Orange.classification.base_classification import LearnerClassification
+from Orange.classification import SklTreeLearner
 from Orange.data import Table
 from Orange.ensembles import SklAdaBoostLearner
 from Orange.widgets import gui
@@ -19,7 +20,7 @@ class OWAdaBoostClassification(OWBaseLearner):
 
     LEARNER = SklAdaBoostLearner
 
-    inputs = [("Learner", LearnerClassification, "set_base_learner")]
+    inputs = [("Learner", Learner, "set_base_learner")]
 
     losses = ["SAMME", "SAMME.R"]
 

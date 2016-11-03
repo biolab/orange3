@@ -331,7 +331,7 @@ class LearnerDispatcher(Learner):
         self.args = args
         self.kwargs = kwargs
         self.problem_type = None
-        self.regression_learner = self.classification_learner = None
+        self.__regression_learner = self.__classification_learner = None
 
     def __call__(self, data):
         # Set the appropriate problem type from the data
@@ -361,26 +361,34 @@ class LearnerDispatcher(Learner):
         return kwargs
 
     @property
-    def learner(self):
-        if not isinstance(self.__dispatches__, collections.Iterable):
+    def classification_learner(self):
+        self.__check_dispatches(self.__dispatches__)
+        if self.__classification_learner is None:
+            learner_cls = self.__dispatches__.classification
+            self.__classification_learner = learner_cls(
+                *self.args, **self.__get_kwargs(self.kwargs))
+        return self.__classification_learner
+
+    @property
+    def regression_learner(self):
+        self.__check_dispatches(self.__dispatches__)
+        if self.__regression_learner is None:
+            learner_cls = self.__dispatches__.regression
+            self.__regression_learner = learner_cls(
+                *self.args, **self.__get_kwargs(self.kwargs))
+        return self.__regression_learner
+
+    def __check_dispatches(self, dispatches):
+        if not isinstance(dispatches, collections.Iterable):
             raise AssertionError(
                 'The `__dispatches__` property must be an instance of '
                 '`collections.Iterable`. See `Orange.base.LearnerTypes`.')
 
-        if self.problem_type == self.CLASSIFICATION:
-            if self.classification_learner is None:
-                learner_cls = self.__dispatches__.classification
-                self.classification_learner = learner_cls(
-                    *self.args, **self.__get_kwargs(self.kwargs))
-            learner = self.classification_learner
-        else:
-            if self.regression_learner is None:
-                learner_cls = self.__dispatches__.regression
-                self.regression_learner = learner_cls(
-                    *self.args, **self.__get_kwargs(self.kwargs))
-            learner = self.regression_learner
-
-        return learner
+    @property
+    def learner(self):
+        return self.classification_learner if \
+            self.problem_type == self.CLASSIFICATION else \
+            self.regression_learner
 
     def __getattr__(self, item):
         return getattr(self.learner, item)
