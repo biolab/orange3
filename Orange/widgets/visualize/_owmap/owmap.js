@@ -55,6 +55,51 @@ var map = L.map('map', {
 map.fitWorld();
 map.on('zoom', reposition_markers);
 
+L.easyButton('<img src="target.png" class="custom-button">', function () {
+    __self.fit_to_bounds();
+}).addTo(map);
+
+map.on('mousedown', function (e) {
+    if (map.dragging.enabled()) return;
+
+    try{
+        var ev = new MouseEvent('mousedown', $.extend({}, e.originalEvent, {shiftKey: true}));
+    } catch (err) {  // Old JS events
+        var orig = e.originalEvent,
+            ev = document.createEvent("MouseEvents");
+        ev.initMouseEvent(
+            'mousedown', orig.bubbles, orig.cancelable, window, orig.detail,
+            orig.screenX, orig.screenY, orig.clientX, orig.clientY,
+            orig.ctrlKey, orig.altKey, true, orig.metaKey, orig.button,
+            orig.relatedTarget || null);
+    }
+    map.boxZoom._onMouseDown(ev);
+    return false;
+});
+var zoomButton = L.easyButton({
+    states: [{
+        stateName: 'default',
+        icon: '<img src="zoom.png" class="custom-button">',
+        title: 'Zoom to rectangle selection',
+        onClick: function (control) {
+            control.state('active');
+            control.button.classList.add('custom-button-toggle');
+            $('.leaflet-container').css('cursor','crosshair');
+            map.dragging.disable();
+        }
+    }, {
+        stateName: 'active',
+        icon: '<img src="zoom.png" class="custom-button">',
+        title: 'Cancel zooming',
+        onClick: function (control) {
+            control.state('default');
+            control.button.classList.remove('custom-button-toggle');
+            $('.leaflet-container').css('cursor','');
+            map.dragging.enable();
+        }
+    }]
+}).addTo(map);
+
 var heatmapLayer = L.imageOverlay('data:', [[0, 0], [0, 0]], {attribution: 'Orange – Data Mining Fruitful &amp; Fun'}).addTo(map);
 var markersImageLayer = L.imageOverlay(_TRANSPARENT_IMAGE, [[0, 0], [0, 0]]).addTo(map);
 
@@ -70,18 +115,23 @@ var BoxSelect = L.Map.BoxZoom.extend({
     }
 });
 // Disable internal boxZoom handler and override it with our BoxSelect handler
-map['boxZoom'].disable();
+map.boxZoom.disable();
 map.addHandler('boxZoom', BoxSelect);
 map.on("boxzoomend", function(e) {
-    var box = e.boxZoomBounds;
-    for (var i = 0; i < markers.length; i++) {
-        var marker = markers[i];
-        marker._our_selected = false;
-        if (box.contains(marker.getLatLng())) {
-            marker.setSelected(true);
+    if (!map.dragging.enabled()) {
+        zoomButton.options.states[1].onClick(zoomButton);
+        map.flyToBounds(e.boxZoomBounds, {padding: [-.1, -.1]});
+    } else {
+        var box = e.boxZoomBounds;
+        for (var i = 0; i < markers.length; i++) {
+            var marker = markers[i];
+            marker._our_selected = false;
+            if (box.contains(marker.getLatLng())) {
+                marker.setSelected(true);
+            }
         }
+        __self.selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
     }
-    __self.selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
 });
 map.on('click', function() {
     for (var i = 0; i < markers.length; i++) {

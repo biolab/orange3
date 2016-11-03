@@ -8,16 +8,20 @@
     <link rel="stylesheet" href="orange-style.css">
     <link rel="stylesheet" href="MarkerCluster.css" />
     <link rel="stylesheet" href="MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="easy-button.css" />
     <script src="jquery.js"></script>
     <script src="leaflet.js"></script>
     <script src="leaflet-providers.js"></script>
     <script src="leaflet.markercluster.js"></script>
+    <script src="easy-button.js"></script>
 
     <style>
         html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; user-select: none;}
         .leaflet-control-attribution { pointer-events: none; }
         .leaflet-popup-pane { cursor: default; }
         .leaflet-popup-close-button { display: none; }
+        .custom-button { width:16px;vertical-align: text-bottom; }
+        .custom-button-toggle { background: #ccf !important;}
         canvas#heatmap_canvas,
         canvas#icons_canvas {display: none}
     </style>

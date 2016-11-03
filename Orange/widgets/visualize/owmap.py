@@ -78,8 +78,8 @@ class LeafletMap(WebviewWidget):
         lon_data = self.data.get_column_view(self.lon_attr)[0]
         north, south = np.nanmax(lat_data), np.nanmin(lat_data)
         east, west = np.nanmin(lon_data), np.nanmax(lon_data)
-        self.evalJS('map.fitBounds([[%f, %f], [%f, %f]], {padding: [.1, .1]})'
-                    % (south, west, north, east))
+        self.evalJS('map.%sBounds([[%f, %f], [%f, %f]], {padding: [0,0], minZoom: 2, maxZoom: 13})'
+                    % ('flyTo' if fly else 'fit', south, west, north, east))
 
     @pyqtSlot(float, float, float, float)
     def selected_area(self, north, east, south, west):
