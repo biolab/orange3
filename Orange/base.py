@@ -1,5 +1,6 @@
 import collections
 import inspect
+from itertools import chain
 
 import numpy as np
 import scipy
@@ -72,7 +73,7 @@ class Learner:
         """
         Apply the `preprocessors` to the data.
         """
-        for pp in self.preprocessors + list(type(self).preprocessors):
+        for pp in set(self.preprocessors) | set(type(self).preprocessors):
             data = pp(data)
         return data
 
