@@ -8,7 +8,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
 class OWKNNLearner(OWBaseLearner):
-    name = "Nearest Neighbors"
+    name = "K-Nearest Neighbors"
     description = "Predict according to the nearest training instances."
     icon = "icons/KNN.svg"
     priority = 20
@@ -18,7 +18,7 @@ class OWKNNLearner(OWBaseLearner):
     weights = ["uniform", "distance"]
     metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
 
-    learner_name = Setting("kNN")
+    learner_name = Setting("K-Nearest Neighbors")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
     weight_type = Setting(0)
