@@ -27,7 +27,8 @@ class OWKNNLearner(OWBaseLearner):
         box = gui.vBox(self.controlArea, "Neighbors")
         self.n_neighbors_spin = gui.spin(
             box, self, "n_neighbors", 1, 100, label="Number of neighbors:",
-            alignment=Qt.AlignRight, callback=self.settings_changed)
+            alignment=Qt.AlignRight, callback=self.settings_changed,
+            controlWidth=80)
         self.metrics_combo = gui.comboBox(
             box, self, "metric_index", orientation=Qt.Horizontal,
             label="Metric:", items=[i.capitalize() for i in self.metrics],
