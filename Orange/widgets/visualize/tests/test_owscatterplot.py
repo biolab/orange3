@@ -81,3 +81,13 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def _select_data(self):
         self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
         return self.widget.graph.get_selection()
+
+    def test_error_message(self):
+        """Check if error message appears and then disappears when
+        data is removed from input"""
+        data = self.data.copy()
+        data.X[:, 0] = np.nan
+        self.send_signal("Data", data)
+        self.assertTrue(self.widget.Warning.missing_coords.is_shown())
+        self.send_signal("Data", None)
+        self.assertFalse(self.widget.Warning.missing_coords.is_shown())

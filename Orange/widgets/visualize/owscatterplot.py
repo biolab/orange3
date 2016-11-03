@@ -294,6 +294,7 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
 
     def set_data(self, data):
+        self.clear_messages()
         self.Information.sampled_sql.clear()
         self.__timer.stop()
         self.sampling.setVisible(False)
