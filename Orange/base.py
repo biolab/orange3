@@ -1,15 +1,19 @@
+import collections
 import inspect
 
 import numpy as np
 import scipy
-
 from Orange.data import Table, Storage, Instance, Value
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 
-__all__ = ["Learner", "Model", "SklLearner", "SklModel"]
+__all__ = ['Learner', 'Model', 'SklLearner', 'SklModel', 'LearnerDispatcher',
+           'LearnerTypes']
+
+LearnerTypes = collections.namedtuple(
+    'LearnerTypes', ['classification', 'regression'])
 
 
 class Learner:
@@ -95,7 +99,8 @@ class Model:
 
     def predict(self, X):
         if type(self).predict_storage is Model.predict_storage:
-            raise TypeError("Descendants of Model must overload method predict")
+            raise TypeError(
+                "Descendants of Model must overload method predict")
         else:
             Y = np.zeros((len(X), len(self.domain.class_vars)))
             Y[:] = np.nan
@@ -229,6 +234,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def _get_sklparams(self, values):
         skllearner = self.__wraps__
+
         if skllearner is not None:
             spec = inspect.getargs(skllearner.__init__.__code__)
             # first argument is 'self'
@@ -257,6 +263,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
+
         Y = Y.reshape(-1)
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
@@ -294,6 +301,7 @@ class RandomForest:
 class KNNBase:
     """Base class for KNN (classification and regression) learners
     """
+
     def __init__(self, n_neighbors=5, metric="euclidean", weights="uniform",
                  algorithm='auto', metric_params=None,
                  preprocessors=None):
@@ -302,6 +310,77 @@ class KNNBase:
 
     def fit(self, X, Y, W=None):
         if self.params["metric_params"] is None and \
-                        self.params.get("metric") == "mahalanobis":
+                self.params.get("metric") == "mahalanobis":
             self.params["metric_params"] = {"V": np.cov(X.T)}
         return super().fit(X, Y, W)
+
+
+class LearnerDispatcher(Learner):
+    __dispatches__ = None
+
+    classification_params = None
+    regression_params = None
+
+    __returns__ = Model
+
+    # Constants to indicate what kind of problem we're dealing with
+    CLASSIFICATION, REGRESSION = range(2)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(preprocessors=kwargs.get('preprocessors', None))
+        self.args = args
+        self.kwargs = kwargs
+        self.problem_type = None
+        self.regression_learner = self.classification_learner = None
+
+    def __call__(self, data):
+        # Set the appropriate problem type from the data
+        self.problem_type = self.CLASSIFICATION if \
+            data.domain.has_discrete_class else self.REGRESSION
+
+        return self.learner(data)
+
+    def __get_kwargs(self, kwargs):
+        if self.problem_type == self.CLASSIFICATION and self.classification_params:
+            kwarg_keys = set(kwargs.keys()) & self.classification_params
+            kwargs = {k: kwargs[k] for k in kwarg_keys}
+        elif self.problem_type == self.REGRESSION and self.regression_params:
+            kwarg_keys = set(kwargs.keys()) & self.regression_params
+            kwargs = {k: kwargs[k] for k in kwarg_keys}
+        return self.handle_kwargs(kwargs)
+
+    def handle_kwargs(self, kwargs):
+        """If the kwargs need to be modified before being sent to the learner
+        that the dispatcher wraps, this would be the place to do it.
+
+        Returns
+        -------
+        kwargs : dict
+
+        """
+        return kwargs
+
+    @property
+    def learner(self):
+        if not isinstance(self.__dispatches__, collections.Iterable):
+            raise AssertionError(
+                'The `__dispatches__` property must be an instance of '
+                '`collections.Iterable`. See `Orange.base.LearnerTypes`.')
+
+        if self.problem_type == self.CLASSIFICATION:
+            if self.classification_learner is None:
+                learner_cls = self.__dispatches__.classification
+                self.classification_learner = learner_cls(
+                    *self.args, **self.__get_kwargs(self.kwargs))
+            learner = self.classification_learner
+        else:
+            if self.regression_learner is None:
+                learner_cls = self.__dispatches__.regression
+                self.regression_learner = learner_cls(
+                    *self.args, **self.__get_kwargs(self.kwargs))
+            learner = self.regression_learner
+
+        return learner
+
+    def __getattr__(self, item):
+        return getattr(self.learner, item)

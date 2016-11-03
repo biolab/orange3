@@ -1,5 +1,7 @@
 import inspect
 
+import collections
+
 
 class WrapperMeta(type):
     """
@@ -40,7 +42,14 @@ class WrapperMeta(type):
     """
     def __new__(cls, name, bases, dict_):
         cls = type.__new__(cls, name, bases, dict_)
+        # Get the wrapped skl object
         wrapped = getattr(cls, "__wraps__", getattr(cls, "__wrapped__", None))
+
+        # Check if learner can handle multiple types of data
+        if isinstance(wrapped, collections.Iterable):
+            # TODO This is not okay
+            wrapped, *_ = wrapped
+
         if wrapped is not None:
             doc = cls.__doc__ or """
 A wrapper for `${sklname}`. The following is its documentation:

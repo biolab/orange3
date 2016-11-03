@@ -1,9 +1,11 @@
 import numpy as np
 from AnyQt.QtCore import QTimer, Qt
+from Orange.base import LearnerDispatcher
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
 from Orange.preprocess.preprocess import Preprocess
+from Orange.regression.base_regression import LearnerRegression
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -21,8 +23,9 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
         if attrib.get('name', False):
             # Ensure all needed attributes are present
             if not all(attr in attrib for attr in mcls.REQUIRED_ATTRIBUTES):
-                raise AttributeError("'{name}' must have '{attrs}' attributes"
-                                     .format(name=name, attrs="', '".join(mcls.REQUIRED_ATTRIBUTES)))
+                raise AttributeError(
+                    "'{}' must have '{}' attributes"
+                    .format(name, "', '".join(mcls.REQUIRED_ATTRIBUTES)))
 
             attrib['outputs'] = mcls.update_channel(
                 mcls.default_outputs(attrib),
@@ -70,19 +73,23 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
 
     @classmethod
     def default_inputs(cls, attrib):
-        return [("Data", Table, "set_data"), ("Preprocessor", Preprocess, "set_preprocessor")]
+        return [("Data", Table, "set_data"),
+                ("Preprocessor", Preprocess, "set_preprocessor")]
 
     @classmethod
     def default_outputs(cls, attrib):
         learner_class = attrib['LEARNER']
         if issubclass(learner_class, LearnerClassification):
             model_name = 'Classifier'
-        else:
+        elif issubclass(learner_class, LearnerRegression):
             model_name = 'Predictor'
+        else:
+            model_name = 'Model'
 
         attrib['OUTPUT_MODEL_NAME'] = model_name
+
         return [("Learner", learner_class),
-                (model_name, attrib['LEARNER'].__returns__)]
+                (model_name, learner_class.__returns__)]
 
     @classmethod
     def add_extra_attributes(cls, name, attrib):
@@ -144,7 +151,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def set_preprocessor(self, preprocessor):
         """Add user-set preprocessors before the default, mandatory ones"""
-        self.preprocessors = ((preprocessor,) if preprocessor else ()) + tuple(self.LEARNER.preprocessors)
+        self.preprocessors = ((preprocessor,) if preprocessor else ()) \
+            + tuple(self.LEARNER.preprocessors)
         self.apply()
 
     @check_sql_input
@@ -224,6 +232,20 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     def setup_layout(self):
         self.add_learner_name_widget()
         self.add_main_layout()
+        # Options specific to target variable type, if supported
+        if self.__handles_any_input_type():
+            # Only add a classification section if the method is overridden
+            if type(self).add_classification_layout is not \
+                    OWBaseLearner.add_classification_layout:
+                self.classification_box = \
+                    gui.widgetBox(self.controlArea, 'Classification')
+                self.add_classification_layout(self.classification_box)
+            # Only add a regression section if the method is overridden
+            if type(self).add_regression_layout is not \
+                    OWBaseLearner.add_regression_layout:
+                self.regression_box = \
+                    gui.widgetBox(self.controlArea, 'Regression')
+                self.add_regression_layout(self.regression_box)
         self.add_bottom_buttons()
 
     def add_main_layout(self):
@@ -231,6 +253,24 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
         Override this method for laying out any learner-specific parameter controls.
         See setup_layout() method for execution order.
+        """
+        pass
+
+    def add_classification_layout(self, box):
+        """Creates layout for classification specific options.
+
+        If a widget outputs a learner dispatcher, sometimes the classification
+        and regression learners require different options.
+        See `setup_layout()` method for execution order.
+        """
+        pass
+
+    def add_regression_layout(self, box):
+        """Creates layout for regression specific options.
+
+        If a widget outputs a learner dispatcher, sometimes the classification
+        and regression learners require different options.
+        See `setup_layout()` method for execution order.
         """
         pass
 
@@ -246,3 +286,6 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         gui.separator(box, 15)
         self.apply_button = gui.auto_commit(box, self, 'auto_apply', '&Apply',
                                             box=False, commit=self.apply)
+
+    def __handles_any_input_type(self):
+        return issubclass(self.LEARNER, LearnerDispatcher)
