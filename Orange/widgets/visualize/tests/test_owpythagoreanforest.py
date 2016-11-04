@@ -48,3 +48,17 @@ class TestOWPythagoreanForest(WidgetTest):
         self.send_signal('Random forest', self.housing)
         self.assertEqual(len(self.get_tree_widgtes()), 3,
                          'Incorrect number of trees when forest on input')
+
+    def test_info_label(self):
+        regex = r'Trees:(.+)'
+        # If no forest on input, display a message saying that
+        self.assertNotRegex(self.widget.ui_info.text(), regex,
+                            'Initial info should not contain info on trees')
+
+        self.send_signal('Random forest', self.titanic)
+        self.assertRegex(self.widget.ui_info.text(), regex,
+                         'Valid RF does not update info')
+
+        self.send_signal('Random forest', None)
+        self.assertNotRegex(self.widget.ui_info.text(), regex,
+                            'Removing RF does not clear info box')
