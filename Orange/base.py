@@ -317,10 +317,6 @@ class KNNBase:
 
 class Fitter(Learner):
     __fits__ = None
-
-    classification_params = None
-    regression_params = None
-
     __returns__ = Model
 
     # Constants to indicate what kind of problem we're dealing with
@@ -340,12 +336,14 @@ class Fitter(Learner):
 
         return self.learner(data)
 
-    def __get_kwargs(self, kwargs):
-        if self.problem_type == self.CLASSIFICATION and self.classification_params:
-            kwarg_keys = set(kwargs.keys()) & self.classification_params
+    def __get_kwargs(self, kwargs, problem_type):
+        if problem_type == self.CLASSIFICATION:
+            params = self._get_learner_kwargs(self.__fits__.classification)
+            kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
-        elif self.problem_type == self.REGRESSION and self.regression_params:
-            kwarg_keys = set(kwargs.keys()) & self.regression_params
+        elif problem_type == self.REGRESSION:
+            params = self._get_learner_kwargs(self.__fits__.regression)
+            kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
         return kwargs
 
@@ -353,28 +351,36 @@ class Fitter(Learner):
     def classification_learner(self):
         self.__check_dispatches(self.__fits__)
         if self.__classification_learner is None:
-            learner_cls = self.__fits__.classification
-            self.__classification_learner = learner_cls(
-                *self.args, **self.__get_kwargs(self.kwargs))
+            self.__classification_learner = self.__fits__.classification(
+                *self.args,
+                **self.__get_kwargs(self.kwargs, self.CLASSIFICATION))
         return self.__classification_learner
 
     @property
     def regression_learner(self):
         self.__check_dispatches(self.__fits__)
         if self.__regression_learner is None:
-            learner_cls = self.__fits__.regression
-            self.__regression_learner = learner_cls(
-                *self.args, **self.__get_kwargs(self.kwargs))
+            self.__regression_learner = self.__fits__.regression(
+                *self.args, **self.__get_kwargs(self.kwargs, self.REGRESSION))
         return self.__regression_learner
 
-    def __check_dispatches(self, dispatches):
+    @staticmethod
+    def _get_learner_kwargs(learner):
+        """Get a `set` of kwarg names that belong to the given learner."""
+        # Get function params except `self`
+        params = learner.__init__.__code__.co_varnames[1:]
+        return set(params)
+
+    @staticmethod
+    def __check_dispatches(dispatches):
         if not isinstance(dispatches, LearnerTypes):
             raise AssertionError(
-                'The `__dispatches__` property must be an instance of '
+                'The `__fits__` property must be an instance of '
                 '`Orange.base.LearnerTypes`.')
 
     @property
     def learner(self):
+        self._get_learner_kwargs(self.classification_learner)
         return self.classification_learner if \
             self.problem_type == self.CLASSIFICATION else \
             self.regression_learner
