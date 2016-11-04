@@ -229,7 +229,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         data = None
         if results is not None and results.data is not None:
-            data = results.data
+            data = results.data[results.row_indices]
 
         if data is not None and not data.domain.has_discrete_class:
             self.Error.no_regression()
@@ -374,9 +374,8 @@ class OWConfusionMatrix(widget.OWWidget):
             data.name = learner_name
 
             if selected:
-                row_indices = self.results.row_indices[selected]
-                annotated_data = create_annotated_table(data, row_indices)
-                data = data[row_indices]
+                annotated_data = create_annotated_table(data, selected)
+                data = data[selected]
             else:
                 annotated_data = create_annotated_table(data, [])
                 data = None
