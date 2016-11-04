@@ -10,7 +10,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 
-__all__ = ['Learner', 'Model', 'SklLearner', 'SklModel', 'LearnerDispatcher',
+__all__ = ['Learner', 'Model', 'SklLearner', 'SklModel', 'Fitter',
            'LearnerTypes']
 
 LearnerTypes = collections.namedtuple(
@@ -316,8 +316,8 @@ class KNNBase:
         return super().fit(X, Y, W)
 
 
-class LearnerDispatcher(Learner):
-    __dispatches__ = None
+class Fitter(Learner):
+    __fits__ = None
 
     classification_params = None
     regression_params = None
@@ -352,18 +352,18 @@ class LearnerDispatcher(Learner):
 
     @property
     def classification_learner(self):
-        self.__check_dispatches(self.__dispatches__)
+        self.__check_dispatches(self.__fits__)
         if self.__classification_learner is None:
-            learner_cls = self.__dispatches__.classification
+            learner_cls = self.__fits__.classification
             self.__classification_learner = learner_cls(
                 *self.args, **self.__get_kwargs(self.kwargs))
         return self.__classification_learner
 
     @property
     def regression_learner(self):
-        self.__check_dispatches(self.__dispatches__)
+        self.__check_dispatches(self.__fits__)
         if self.__regression_learner is None:
-            learner_cls = self.__dispatches__.regression
+            learner_cls = self.__fits__.regression
             self.__regression_learner = learner_cls(
                 *self.args, **self.__get_kwargs(self.kwargs))
         return self.__regression_learner

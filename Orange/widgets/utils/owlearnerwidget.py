@@ -1,6 +1,6 @@
 import numpy as np
 from AnyQt.QtCore import QTimer, Qt
-from Orange.base import LearnerDispatcher
+from Orange.base import Fitter
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
@@ -287,4 +287,4 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                                             box=False, commit=self.apply)
 
     def __handles_any_input_type(self):
-        return issubclass(self.LEARNER, LearnerDispatcher)
+        return issubclass(self.LEARNER, Fitter)

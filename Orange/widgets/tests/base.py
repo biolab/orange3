@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from Orange.base import SklLearner, SklModel, LearnerDispatcher, Model
+from Orange.base import SklLearner, SklModel, Fitter, Model
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
@@ -336,11 +336,11 @@ class WidgetLearnerTestMixin:
         housing = Table("housing")
         self.supports_any_input_type = False
 
-        if issubclass(self.widget.LEARNER, LearnerDispatcher):
+        if issubclass(self.widget.LEARNER, Fitter):
             self.supports_any_input_type = True
             self.data = (iris, housing)
             self.inadequate_data = ()
-            self.learner_class = LearnerDispatcher
+            self.learner_class = Fitter
             self.model = Model
             self.model_name = 'Model'
         elif issubclass(self.widget.LEARNER, LearnerClassification):

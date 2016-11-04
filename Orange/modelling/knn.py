@@ -1,12 +1,12 @@
-from Orange.base import LearnerTypes, LearnerDispatcher, Model
+from Orange.base import LearnerTypes, Fitter, Model
 from Orange.classification import KNNLearner
 from Orange.regression import KNNRegressionLearner
 
 
-class KNNLearner(LearnerDispatcher):
+class KNNLearner(Fitter):
     name = 'knn'
 
-    __dispatches__ = LearnerTypes(classification=KNNLearner,
-                                  regression=KNNRegressionLearner)
+    __fits__ = LearnerTypes(classification=KNNLearner,
+                            regression=KNNRegressionLearner)
 
     __returns__ = Model
