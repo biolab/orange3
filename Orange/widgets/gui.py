@@ -2060,12 +2060,20 @@ class ControlledList(list):
             return item
 
     def __setitem__(self, index, item):
+        def unselect(i):
+            item = self.listBox.item(i)
+            if item is None:
+                # Labels changed before clearing the selection: clear everything
+                self.listBox.selectionModel().clear()
+            else:
+                item.setSelected(0)
+
         if isinstance(index, int):
-            self.listBox.item(self[index]).setSelected(0)
+            unselect(self[index])
             item.setSelected(1)
         else:
             for i in self[index]:
-                self.listBox.item(i).setSelected(0)
+                unselect(i)
             for i in item:
                 self.listBox.item(i).setSelected(1)
         super().__setitem__(index, item)

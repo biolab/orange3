@@ -257,7 +257,8 @@ class OWConfusionMatrix(widget.OWWidget):
             self._init_table(len(class_values))
             self.openContext(data.domain.class_var)
             if not prev_sel_learner or prev_sel_learner[0] >= len(self.learners):
-                self.selected_learner[:] = [0]
+                if self.learners:
+                    self.selected_learner[:] = [0]
             else:
                 self.selected_learner[:] = prev_sel_learner
             self._update()
