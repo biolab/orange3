@@ -17,7 +17,7 @@ def widget_discovery(discovery):
         "Orange.widgets.visualize",
         "Orange.widgets.classify",
         "Orange.widgets.regression",
-        "Orange.widgets.learners",
+        "Orange.widgets.model",
         "Orange.widgets.evaluate",
         "Orange.widgets.unsupervised",
     ]

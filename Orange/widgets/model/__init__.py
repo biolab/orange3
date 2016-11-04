@@ -1,6 +1,6 @@
 """Learners"""
 
-NAME = 'Learners'
+NAME = 'Model'
 
 DESCRIPTION = 'Prediction.'
 
