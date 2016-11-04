@@ -83,3 +83,36 @@ class TestOWPythagoreanForest(WidgetTest):
         self.widget.ui_depth_slider.setValue(0)
         for tree in trees:
             tree.set_depth_limit.assert_called_once_with(0)
+
+    def test_target_class_for_classification_rf(self):
+        self.send_signal('Random forest', self.titanic)
+
+        trees = self.get_tree_widgets()
+        for tree in trees:
+            tree.target_class_has_changed = Mock()
+
+        self.set_combo_option(self.widget.ui_target_class_combo, 'No')
+        for tree in trees:
+            tree.target_class_has_changed.assert_called_with()
+            tree.target_class_has_changed.reset_mock()
+
+        self.set_combo_option(self.widget.ui_target_class_combo, 'Yes')
+        for tree in trees:
+            tree.target_class_has_changed.assert_called_with()
+
+    def test_target_class_for_regression_rf(self):
+        self.send_signal('Random forest', self.housing)
+
+        trees = self.get_tree_widgets()
+        for tree in trees:
+            tree.target_class_has_changed = Mock()
+
+        self.set_combo_option(self.widget.ui_target_class_combo, 'Class mean')
+        for tree in trees:
+            tree.target_class_has_changed.assert_called_with()
+            tree.target_class_has_changed.reset_mock()
+
+        self.set_combo_option(self.widget.ui_target_class_combo,
+                              'Standard deviation')
+        for tree in trees:
+            tree.target_class_has_changed.assert_called_with()
