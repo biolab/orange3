@@ -372,7 +372,7 @@ class LearnerDispatcher(Learner):
         if not isinstance(dispatches, LearnerTypes):
             raise AssertionError(
                 'The `__dispatches__` property must be an instance of '
-                '`collections.Iterable`. See `Orange.base.LearnerTypes`.')
+                '`Orange.base.LearnerTypes`.')
 
     @property
     def learner(self):
