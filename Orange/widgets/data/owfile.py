@@ -27,7 +27,13 @@ from Orange.widgets.utils.filedialogs import RecentPath
 
 
 def add_origin(examples, filename):
-    """Adds attribute with file location to each variable"""
+    """
+    Adds attribute with file location to each string variable
+    Used for relative filenames stored in string variables (e.g. pictures)
+    TODO: we should consider a cleaner solution (special variable type, ...)
+    """
+    if not filename:
+        return
     vars = examples.domain.variables + examples.domain.metas
     strings = [var for var in vars if var.is_string]
     dir_name, basename = os.path.split(filename)
