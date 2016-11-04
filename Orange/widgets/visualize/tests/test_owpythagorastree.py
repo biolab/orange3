@@ -14,7 +14,6 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
     SquareGraphicsItem,
 )
 
-
 # pylint: disable=protected-access
 from Orange.widgets.visualize.utils.owlegend import OWDiscreteLegend, \
     OWContinuousLegend
@@ -120,8 +119,11 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
     def get_squares(self):
         """Get all the `SquareGraphicsItems` in the widget scene."""
-        return (i for i in self.widget.scene.items()
-                if isinstance(i, SquareGraphicsItem))
+        return [i for i in self.widget.scene.items()
+                if isinstance(i, SquareGraphicsItem)]
+
+    def get_visible_squares(self):
+        return [x for x in self.get_squares() if x.isVisible()]
 
     def get_tree_nodes(self):
         """Get all the `TreeNode` instances in the widget scene."""
@@ -138,11 +140,11 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
     def test_sending_classification_tree_is_drawn(self):
         self.send_signal('Tree', self.titanic)
-        self.assertTrue(len(list(self.get_squares())) > 0)
+        self.assertTrue(len(self.get_squares()) > 0)
 
     def test_sending_classification_tree_is_drawn(self):
         self.send_signal('Tree', self.housing)
-        self.assertTrue(len(list(self.get_squares())) > 0)
+        self.assertTrue(len(self.get_squares()) > 0)
 
     def test_changing_color_changes_node_coloring(self):
         """Changing the `Target class` combo box should update colors."""
@@ -192,24 +194,45 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
     def test_regression_tree_creates_correct_legend(self):
         self.send_signal('Tree', self.housing)
-
         # Put the widget into a coloring scheme that builds the legend
         # We'll put it into the the class mean coloring mode
-        self.widget.target_class_index = 1
-        self.widget.update_colors()
-
+        self.set_combo_option(self.widget.target_class_combo, 'Class mean')
         self.assertIsInstance(self.widget.legend, OWContinuousLegend)
 
     def test_checking_legend_checkbox_shows_and_hides_legend(self):
-        def legend_visible(val):
-            """Change legend_visible state and call update method."""
-            self.widget.show_legend = val
-            self.widget.update_show_legend()
+        self.send_signal('Tree', self.titanic)
+        # Hide the legend
+        self.widget.cb_show_legend.setChecked(False)
+        self.assertFalse(self.widget.legend.isVisible(),
+                         'Hiding legend failed')
+        # Show the legend
+        self.widget.cb_show_legend.setChecked(True)
+        self.assertTrue(self.widget.legend.isVisible(),
+                        'Showing legend failed')
+
+    def test_checking_tooltip_shows_and_hides_tooltips(self):
+        self.send_signal('Tree', self.titanic)
+        square = self.get_squares()[0]
+        # Hide tooltips
+        self.widget.cb_show_tooltips.setChecked(False)
+        self.assertEqual(square.toolTip(), '', 'Hiding tooltips failed')
+        # Show tooltips
+        self.widget.cb_show_tooltips.setChecked(True)
+        self.assertNotEqual(square.toolTip(), '', 'Showing tooltips failed')
+
+    def test_changing_max_depth_slider(self):
         self.send_signal('Tree', self.titanic)
 
-        legend_visible(False)
+        max_depth = self.widget.tree_adapter.max_depth
+        num_squares_full = len(self.get_visible_squares())
+        self.assertEqual(self.widget.depth_limit, max_depth,
+                         'Full tree should be drawn initially')
 
-        self.assertFalse(self.widget.legend.isVisible())
+        self.widget.depth_slider.setValue(max_depth - 1)
+        num_squares_less = len(self.get_visible_squares())
+        self.assertLess(num_squares_less, num_squares_full,
+                        'Lowering tree depth limit did not hide squares')
 
-        legend_visible(True)
-        self.assertTrue(self.widget.legend.isVisible())
+        self.widget.depth_slider.setValue(max_depth + 1)
+        self.assertGreater(len(self.get_visible_squares()), num_squares_less,
+                           'Increasing tree depth limit did not show squares')

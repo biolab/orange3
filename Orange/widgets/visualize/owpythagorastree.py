@@ -140,10 +140,10 @@ class OWPythagorasTree(OWWidget):
 
         # Plot properties area
         box_plot = gui.widgetBox(self.controlArea, 'Plot Properties')
-        gui.checkBox(
+        self.cb_show_tooltips = gui.checkBox(
             box_plot, self, 'tooltips_enabled', label='Enable tooltips',
             callback=self.update_tooltip_enabled)
-        gui.checkBox(
+        self.cb_show_legend = gui.checkBox(
             box_plot, self, 'show_legend', label='Show legend',
             callback=self.update_show_legend)
 
