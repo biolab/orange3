@@ -1,9 +1,9 @@
-from io import BytesIO
+from contextlib import contextmanager
 import os
 import pickle
 from tempfile import mkstemp
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, mock_open
 import warnings
 from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider
 
@@ -25,10 +25,10 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_create_uses_template_if_provided(self):
         template = SettingsHandler()
-        template.read_defaults = lambda: None
         template.a = 'a'
         template.b = 'b'
-        handler = SettingsHandler.create(SimpleWidget, template)
+        with self.override_defaults():
+            handler = SettingsHandler.create(SimpleWidget, template)
         self.assertEqual(handler.a, 'a')
         self.assertEqual(handler.b, 'b')
 
@@ -37,19 +37,14 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(template.b, 'b')
 
     def test_read_defaults(self):
-        default_settings = {'a': 5, 'b': {1: 5}}
-        fd, settings_file = mkstemp(suffix='.ini')
-        with open(settings_file, 'wb') as f:
-            pickle.dump(default_settings, f)
-        os.close(fd)
-
         handler = SettingsHandler()
-        handler._get_settings_filename = lambda: settings_file
-        handler.read_defaults()
+        handler.widget_class = SimpleWidget
 
-        self.assertEqual(handler.defaults, default_settings)
+        defaults = {'a': 5, 'b': {1: 5}}
+        with self.override_defaults(defaults):
+            handler.read_defaults()
 
-        os.remove(settings_file)
+        self.assertEqual(handler.defaults, defaults)
 
     def test_write_defaults(self):
         fd, settings_file = mkstemp(suffix='.ini')
@@ -71,6 +66,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler = SettingsHandler()
         handler.defaults = {'default': 42, 'setting': 1}
         handler.provider = provider = Mock()
+        handler.widget_class = SimpleWidget
         provider.get_provider.return_value = provider
         widget = SimpleWidget()
 
@@ -100,6 +96,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler = SettingsHandler()
         handler.defaults = {'default': 42}
         provider = Mock()
+        handler.widget_class = SimpleWidget
         handler.provider = Mock(get_provider=Mock(return_value=provider))
         widget = SimpleWidget()
 
@@ -122,6 +119,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         """:type SettingProvider: unittest.mock.Mock"""
         handler = SettingsHandler()
         handler.provider = Mock(get_provider=Mock(return_value=None))
+        handler.widget_class = SimpleWidget
         provider = Mock()
         SettingProvider.return_value = provider
         widget = SimpleWidget()
@@ -137,8 +135,8 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_fast_save(self):
         handler = SettingsHandler()
-        handler.read_defaults = lambda: None
-        handler.bind(SimpleWidget)
+        with self.override_defaults():
+            handler.bind(SimpleWidget)
 
         widget = SimpleWidget()
 
@@ -153,8 +151,8 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_fast_save_siblings_spill(self):
         handler_mk1 = SettingsHandler()
-        handler_mk1.read_defaults = lambda: None
-        handler_mk1.bind(SimpleWidgetMk1)
+        with self.override_defaults():
+            handler_mk1.bind(SimpleWidgetMk1)
 
         widget_mk1 = SimpleWidgetMk1()
 
@@ -174,8 +172,8 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(widget_mk1.component.int_setting, 1)
 
         handler_mk2 = SettingsHandler()
-        handler_mk2.read_defaults = lambda: None
-        handler_mk2.bind(SimpleWidgetMk2)
+        with self.override_defaults():
+            handler_mk2.bind(SimpleWidgetMk2)
 
         widget_mk2 = SimpleWidgetMk2()
 
@@ -193,8 +191,8 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_schema_only_settings(self):
         handler = SettingsHandler()
-        handler.read_defaults = lambda: None
-        handler.bind(SimpleWidget)
+        with self.override_defaults():
+            handler.bind(SimpleWidget)
 
         # fast_save should not update defaults
         widget = SimpleWidget()
@@ -212,6 +210,16 @@ class SettingHandlerTestCase(unittest.TestCase):
         widget.schema_only_setting = 5
         data = handler.pack_data(widget)
         self.assertEqual(data['schema_only_setting'], 5)
+
+
+    @contextmanager
+    def override_defaults(self, defaults=None):
+        if defaults is None:
+            defaults = {}
+        defaults_pickle = pickle.dumps(defaults)
+        with patch("builtins.open", mock_open(read_data=defaults_pickle)),\
+                patch("os.path.isfile", Mock(return_value=True)):
+            yield
 
 
 class Component:
