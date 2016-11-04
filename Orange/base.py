@@ -1,6 +1,5 @@
 import collections
 import inspect
-from itertools import chain
 
 import numpy as np
 import scipy
