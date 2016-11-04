@@ -19,6 +19,7 @@ import Orange
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.widget import Msg
 
 
 def confusion_matrix(res, index):
@@ -104,6 +105,9 @@ class OWConfusionMatrix(widget.OWWidget):
             "Clicking on cells or in headers outputs the corresponding "
             "data instances",
             "click_cell")]
+
+    class Error(widget.OWWidget.Error):
+        no_regression = Msg("Confusion Matrix cannot show regression results.")
 
     def __init__(self):
         super().__init__()
@@ -228,7 +232,10 @@ class OWConfusionMatrix(widget.OWWidget):
             data = results.data
 
         if data is not None and not data.domain.has_discrete_class:
-            self.warning("Confusion Matrix cannot show regression results.")
+            self.Error.no_regression()
+            data = results = None
+        else:
+            self.Error.no_regression.clear()
 
         self.results = results
         self.data = data
