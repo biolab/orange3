@@ -1,9 +1,9 @@
 import numpy as np
 from AnyQt.QtCore import QTimer, Qt
-from Orange.base import Fitter
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
+from Orange.modelling import Fitter
 from Orange.preprocess.preprocess import Preprocess
 from Orange.regression.base_regression import LearnerRegression
 from Orange.widgets import gui
