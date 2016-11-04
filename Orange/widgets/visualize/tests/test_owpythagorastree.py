@@ -16,6 +16,10 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
 
 
 # pylint: disable=protected-access
+from Orange.widgets.visualize.utils.owlegend import OWDiscreteLegend, \
+    OWContinuousLegend
+
+
 class TestPythagorasTree(unittest.TestCase):
     """Pythagorean tree testing, make sure calculating square positions works
     properly.
@@ -181,3 +185,31 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         # Only compare to the -1 list element since the base square is always
         # the same
         self.assertTrue(all(eqs[:-1]))
+
+    def test_classification_tree_creates_correct_legend(self):
+        self.send_signal('Tree', self.titanic)
+        self.assertIsInstance(self.widget.legend, OWDiscreteLegend)
+
+    def test_regression_tree_creates_correct_legend(self):
+        self.send_signal('Tree', self.housing)
+
+        # Put the widget into a coloring scheme that builds the legend
+        # We'll put it into the the class mean coloring mode
+        self.widget.target_class_index = 1
+        self.widget.update_colors()
+
+        self.assertIsInstance(self.widget.legend, OWContinuousLegend)
+
+    def test_checking_legend_checkbox_shows_and_hides_legend(self):
+        def legend_visible(val):
+            """Change legend_visible state and call update method."""
+            self.widget.show_legend = val
+            self.widget.update_show_legend()
+        self.send_signal('Tree', self.titanic)
+
+        legend_visible(False)
+
+        self.assertFalse(self.widget.legend.isVisible())
+
+        legend_visible(True)
+        self.assertTrue(self.widget.legend.isVisible())
