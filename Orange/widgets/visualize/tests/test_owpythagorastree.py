@@ -236,3 +236,20 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         self.widget.depth_slider.setValue(max_depth + 1)
         self.assertGreater(len(self.get_visible_squares()), num_squares_less,
                            'Increasing tree depth limit did not show squares')
+
+    def test_label_on_tree_connect_and_disconnect(self):
+        regex = r'Nodes:(.+)\s*Depth:(.+)'
+        # Should contain no info by default
+        self.assertNotRegex(
+            self.widget.info.text(), regex,
+            'Initial info should not contain node or depth info')
+        # Test info label for tree
+        self.send_signal('Tree', self.titanic)
+        self.assertRegex(
+            self.widget.info.text(), regex,
+            'Valid tree does not update info')
+        # Remove tree from input
+        self.send_signal('Tree', None)
+        self.assertNotRegex(
+            self.widget.info.text(), regex,
+            'Initial info should not contain node or depth info')
