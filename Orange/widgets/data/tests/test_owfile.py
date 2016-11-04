@@ -64,4 +64,8 @@ class TestOWFile(WidgetTest):
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
 
-
+    def test_check_file_size(self):
+        self.assertFalse(self.widget.Warning.file_too_big.is_shown())
+        self.widget.SIZE_LIMIT = 4000
+        self.widget.__init__()
+        self.assertTrue(self.widget.Warning.file_too_big.is_shown())
