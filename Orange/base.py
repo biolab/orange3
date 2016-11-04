@@ -369,7 +369,7 @@ class LearnerDispatcher(Learner):
         return self.__regression_learner
 
     def __check_dispatches(self, dispatches):
-        if not isinstance(dispatches, collections.Iterable):
+        if not isinstance(dispatches, LearnerTypes):
             raise AssertionError(
                 'The `__dispatches__` property must be an instance of '
                 '`collections.Iterable`. See `Orange.base.LearnerTypes`.')
