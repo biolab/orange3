@@ -1,5 +1,6 @@
 import sklearn.ensemble as skl_ensemble
-from Orange.base import SklLearner, Fitter
+from Orange.base import SklLearner
+from Orange.modelling import Fitter
 from Orange.classification.base_classification import (SklLearnerClassification,
                                                        SklModelClassification)
 from Orange.regression.base_regression import (SklLearnerRegression,

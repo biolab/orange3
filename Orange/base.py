@@ -2,13 +2,14 @@ import inspect
 
 import numpy as np
 import scipy
+
 from Orange.data import Table, Storage, Instance, Value
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
 
-__all__ = ['Learner', 'Model', 'SklLearner', 'SklModel']
+__all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
 class Learner:
@@ -67,7 +68,7 @@ class Learner:
         """
         Apply the `preprocessors` to the data.
         """
-        for pp in set(self.preprocessors) | set(type(self).preprocessors):
+        for pp in self.preprocessors:
             data = pp(data)
         return data
 
@@ -94,8 +95,7 @@ class Model:
 
     def predict(self, X):
         if type(self).predict_storage is Model.predict_storage:
-            raise TypeError(
-                "Descendants of Model must overload method predict")
+            raise TypeError("Descendants of Model must overload method predict")
         else:
             Y = np.zeros((len(X), len(self.domain.class_vars)))
             Y[:] = np.nan
@@ -229,7 +229,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def _get_sklparams(self, values):
         skllearner = self.__wraps__
-
         if skllearner is not None:
             spec = inspect.getargs(skllearner.__init__.__code__)
             # first argument is 'self'
@@ -258,7 +257,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
-
         Y = Y.reshape(-1)
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
@@ -296,7 +294,6 @@ class RandomForest:
 class KNNBase:
     """Base class for KNN (classification and regression) learners
     """
-
     def __init__(self, n_neighbors=5, metric="euclidean", weights="uniform",
                  algorithm='auto', metric_params=None,
                  preprocessors=None):
@@ -305,6 +302,6 @@ class KNNBase:
 
     def fit(self, X, Y, W=None):
         if self.params["metric_params"] is None and \
-                self.params.get("metric") == "mahalanobis":
+                        self.params.get("metric") == "mahalanobis":
             self.params["metric_params"] = {"V": np.cov(X.T)}
         return super().fit(X, Y, W)
