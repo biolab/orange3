@@ -2,7 +2,8 @@
 
 from Orange.data import Table
 from Orange.classification import NaiveBayesLearner, TreeLearner
-from Orange.evaluation.testing import CrossValidation
+from Orange.regression import MeanLearner
+from Orange.evaluation.testing import CrossValidation, TestOnTrainingData
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
@@ -54,3 +55,17 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
             self.widget.results.actual, self.widget.results.predicted[0]))
                     if t in indices]
         return self.widget.results.row_indices[selected]
+
+    def test_show_error_on_regression(self):
+        """On regression data, the widget must show error"""
+        housing = Table("housing")
+        results = TestOnTrainingData(housing, [MeanLearner()])
+        results.data = housing
+        self.send_signal("Evaluation Results", results)
+        self.assertTrue(self.widget.Error.no_regression.is_shown())
+        self.send_signal("Evaluation Results", None)
+        self.assertFalse(self.widget.Error.no_regression.is_shown())
+        self.send_signal("Evaluation Results", results)
+        self.assertTrue(self.widget.Error.no_regression.is_shown())
+        self.send_signal("Evaluation Results", self.results_1_iris)
+        self.assertFalse(self.widget.Error.no_regression.is_shown())
