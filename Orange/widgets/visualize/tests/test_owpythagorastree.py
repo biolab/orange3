@@ -188,6 +188,40 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         # the same
         self.assertTrue(all(eqs[:-1]))
 
+    def test_log_scale_slider(self):
+        # Disabled when no tree
+        self.assertFalse(self.widget.log_scale_box.isEnabled(),
+                         'Should be disabled with no tree')
+
+        self.send_signal('Tree', self.titanic)
+        # No size adjustment
+        self.set_combo_option(self.widget.size_calc_combo, 'Normal')
+        self.assertFalse(self.widget.log_scale_box.isEnabled(),
+                         'Should be disabled when no size adjustment')
+        # Square root adjustment
+        self.set_combo_option(self.widget.size_calc_combo, 'Square root')
+        self.assertFalse(self.widget.log_scale_box.isEnabled(),
+                         'Should be disabled when square root size adjustment')
+        # Log adjustment
+        self.set_combo_option(self.widget.size_calc_combo, 'Logarithmic')
+        self.assertTrue(self.widget.log_scale_box.isEnabled(),
+                        'Should be enabled when square root size adjustment')
+
+        # Get squares for one value of log factor
+        self.widget.log_scale_box.setValue(1)
+        inital_sizing_sq = [n.square for n in self.get_tree_nodes()]
+        # Get squares for a different value of log factor
+        self.widget.log_scale_box.setValue(2)
+        updated_sizing_sq = [n.square for n in self.get_tree_nodes()]
+
+        eqs = [x != y for x, y in zip(inital_sizing_sq, updated_sizing_sq)]
+        # Only compare to the -1 list element since the base square is always
+        # the same
+        self.assertTrue(
+            all(eqs[:-1]),
+            'Squares are drawn in same positions after changing log factor')
+
+
     def test_classification_tree_creates_correct_legend(self):
         self.send_signal('Tree', self.titanic)
         self.assertIsInstance(self.widget.legend, OWDiscreteLegend)
