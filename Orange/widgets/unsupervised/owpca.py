@@ -308,6 +308,7 @@ class OWPCA(widget.OWWidget):
 
         cut = numpy.searchsorted(self._cumulative,
                                  self.variance_covered / 100.0) + 1
+        cut = min(cut, len(self._cumulative))
         self.ncomponents = cut
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
