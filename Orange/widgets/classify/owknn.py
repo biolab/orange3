@@ -1,10 +1,5 @@
 from Orange.data import Table
-from Orange.widgets.learners.owknn import OWKNNLearner as OWKNNBase
-
-
-class OWKNNLearner(OWKNNBase):
-    pass
-
+from Orange.widgets.model.owknn import OWKNNLearner
 
 if __name__ == "__main__":
     import sys
