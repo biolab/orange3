@@ -21,6 +21,7 @@ from math import sqrt, log
 
 import numpy as np
 
+from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QSizePolicy
 from AnyQt.QtGui import QColor, QPainter
 
@@ -125,11 +126,11 @@ class OWPythagorasTree(OWWidget):
             callback=self.update_depth)
         self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
-            orientation='horizontal', items=[], contentsLength=8,
+            orientation=Qt.Horizontal, items=[], contentsLength=8,
             callback=self.update_colors)
         self.size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
-            orientation='horizontal',
+            orientation=Qt.Horizontal,
             items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
             callback=self.update_size_calc)
         self.log_scale_box = gui.hSlider(
