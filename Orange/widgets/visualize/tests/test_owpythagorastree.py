@@ -19,6 +19,7 @@ from Orange.widgets.visualize.utils.owlegend import (
 )
 
 
+# pylint: disable=protected-access
 class TestPythagorasTree(unittest.TestCase):
     """Pythagorean tree testing, make sure calculating square positions works
     properly.
@@ -137,10 +138,6 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         combo_box.setCurrentIndex(index)
         # Apparently `currentIndexChanged` just isn't good enough...
         combo_box.activated.emit(index)
-
-    def test_sending_classification_tree_is_drawn(self):
-        self.send_signal('Tree', self.titanic)
-        self.assertTrue(len(self.get_squares()) > 0)
 
     def test_sending_classification_tree_is_drawn(self):
         self.send_signal('Tree', self.housing)
