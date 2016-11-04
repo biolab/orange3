@@ -87,11 +87,11 @@ class OWPythagoreanForest(OWWidget):
             callback=self.max_depth_changed)
         self.ui_target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
-            orientation='horizontal', items=[], contentsLength=8,
+            orientation=Qt.Horizontal, items=[], contentsLength=8,
             callback=self.target_colors_changed)
         self.ui_size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
-            orientation='horizontal',
+            orientation=Qt.Horizontal,
             items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
             callback=self.size_calc_changed)
         self.ui_zoom_slider = gui.hSlider(
