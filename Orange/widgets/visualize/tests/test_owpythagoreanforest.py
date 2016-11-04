@@ -4,7 +4,8 @@ from Orange.classification.random_forest import RandomForestLearner
 from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
+from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest, \
+    GridItem
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
 
 
@@ -29,6 +30,10 @@ class TestOWPythagoreanForest(WidgetTest):
     def get_tree_widgets(self):
         return [x for x in self.widget.scene.items()
                 if isinstance(x, PythagorasTreeViewer)]
+
+    def get_grid_items(self):
+        return [x for x in self.widget.scene.items()
+                if isinstance(x, GridItem)]
 
     @staticmethod
     def set_combo_option(combo_box, text):
@@ -116,3 +121,23 @@ class TestOWPythagoreanForest(WidgetTest):
                               'Standard deviation')
         for tree in trees:
             tree.target_class_has_changed.assert_called_with()
+
+    def test_zoom(self):
+        self.send_signal('Random forest', self.titanic)
+
+        grid_item, zoom = self.get_grid_items()[0], self.widget.zoom
+
+        def destructure_rectf(r):
+            return r.width(), r.height()
+
+        iw, ih = destructure_rectf(grid_item.boundingRect())
+
+        # Increase the size of grid item
+        self.widget.ui_zoom_slider.setValue(zoom + 1)
+        lw, lh = destructure_rectf(grid_item.boundingRect())
+        self.assertTrue(iw < lw and ih < lh)
+
+        # Decrease the size of grid item
+        self.widget.ui_zoom_slider.setValue(zoom - 1)
+        lw, lh = destructure_rectf(grid_item.boundingRect())
+        self.assertTrue(iw > lw and ih > lh)
