@@ -827,7 +827,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
                                    callback=self._selection_method_changed)
         grid.addWidget(self.top_n_spin, 2, 1)
-        self.selection_box.layout().addLayout(grid)
 
         self.zoom_slider = gui.hSlider(
             self.controlArea, self, "zoom_factor", box="Zoom",
