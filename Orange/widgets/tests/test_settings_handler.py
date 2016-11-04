@@ -5,7 +5,7 @@ from tempfile import mkstemp
 import unittest
 from unittest.mock import patch, Mock, mock_open
 import warnings
-from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider
+from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider, VERSION_KEY
 
 
 class SettingHandlerTestCase(unittest.TestCase):
@@ -211,6 +211,57 @@ class SettingHandlerTestCase(unittest.TestCase):
         data = handler.pack_data(widget)
         self.assertEqual(data['schema_only_setting'], 5)
 
+    def test_read_defaults_migrates_settings(self):
+        handler = SettingsHandler()
+        handler.widget_class = SimpleWidget
+
+        migrate_settings = Mock()
+        with patch.object(SimpleWidget, "migrate_settings", migrate_settings):
+            # Old settings without version
+            settings = {"value": 5}
+            with self.override_defaults(settings):
+                handler.read_defaults()
+            migrate_settings.assert_called_with(settings, None)
+
+            migrate_settings.reset()
+            # Settings with version
+            settings_with_version = dict(settings)
+            settings_with_version[VERSION_KEY] = 1
+            with self.override_defaults(settings_with_version):
+                handler.read_defaults()
+            migrate_settings.assert_called_with(settings, 1)
+
+    def test_initialize_migrates_settings(self):
+        handler = SettingsHandler()
+        with self.override_defaults():
+            handler.bind(SimpleWidget)
+
+        widget = SimpleWidget()
+
+        migrate_settings = Mock()
+        with patch.object(SimpleWidget, "migrate_settings", migrate_settings):
+            # Old settings without version
+            settings = {"value": 5}
+
+            handler.initialize(widget, settings)
+            migrate_settings.assert_called_with(settings, None)
+
+            migrate_settings.reset_mock()
+            # Settings with version
+
+            settings_with_version = dict(settings)
+            settings_with_version[VERSION_KEY] = 1
+            handler.initialize(widget, settings_with_version)
+            migrate_settings.assert_called_with(settings, 1)
+
+    def test_pack_settings_stores_version(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+
+        widget = SimpleWidget()
+
+        settings = handler.pack_data(widget)
+        self.assertIn(VERSION_KEY, settings)
 
     @contextmanager
     def override_defaults(self, defaults=None):
@@ -227,6 +278,8 @@ class Component:
 
 
 class SimpleWidget:
+    settings_version = 1
+
     setting = Setting(42)
     schema_only_setting = Setting(None, schema_only=True)
     non_setting = 5
@@ -235,6 +288,9 @@ class SimpleWidget:
 
     def __init__(self):
         self.component = Component()
+
+    migrate_settings = Mock()
+    migrate_context = Mock()
 
 
 class SimpleWidgetMk1(SimpleWidget):

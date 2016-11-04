@@ -154,6 +154,13 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     settingsHandler = None
     """:type: SettingsHandler"""
 
+    #: Version of the settings representation
+    #: Subclasses should increase this number when they make breaking
+    #: changes to settings representation (a settings that used to store
+    #: int now stores string) and handle migrations in migrate and
+    #: migrate_context settings.
+    settings_version = 1
+
     savedWidgetGeometry = settings.Setting(None)
 
     #: A list of advice messages (:class:`Message`) to display to the user.
@@ -737,6 +744,32 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
             session_hist.sync()
 
         self.__msgwidget.accepted.connect(_userconfirmed)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        """Fix settings to work with the current version of widgets
+
+        Parameters
+        ----------
+        settings : dict
+            dict of name - value mappings
+        version : Optional[int]
+            version of the saved settings
+            or None if settings were created before migrations
+        """
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        """Fix contexts to work with the current version of widgets
+
+        Parameters
+        ----------
+        context : Context
+            Context object
+        version : Optional[int]
+            version of the saved context
+            or None if context was created before migrations
+        """
 
 
 class Message(object):
