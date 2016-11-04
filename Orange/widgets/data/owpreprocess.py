@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QDoubleSpinBox, QComboBox, QSpinBox, QListView, QDockWidget, QLabel,
     QScrollArea, QVBoxLayout, QHBoxLayout, QFormLayout, QSpacerItem,
     QSizePolicy, QStyle, QStylePainter, QStyleOptionFrame, QAction, QLabel,
-    QApplication
+    QApplication, QCheckBox
 )
 
 from AnyQt.QtGui import (
@@ -806,11 +806,12 @@ class _Randomize(preprocess.preprocess.Preprocess):
     Randomize data preprocessor.
     """
 
-    def __init__(self, rand_type=Random.RandomizeClasses):
+    def __init__(self, rand_type=Random.RandomizeClasses, rand_seed=None):
         self.rand_type = rand_type
+        self.rand_seed = rand_seed
 
     def __call__(self, data):
-        randomizer = Random(rand_type=self.rand_type)
+        randomizer = Random(rand_type=self.rand_type, rand_seed=self.rand_seed)
         return randomizer(data)
 
 
@@ -827,25 +828,35 @@ class Randomize(BaseEditor):
                                       "Features",
                                       "Meta data"])
 
-        form.addRow("Randomize:", self.__rand_type_cb)
-        self.layout().addLayout(form)
         self.__rand_type_cb.currentIndexChanged.connect(self.changed)
         self.__rand_type_cb.activated.connect(self.edited)
+
+        self.__rand_seed_ch = QCheckBox()
+        self.__rand_seed_ch.clicked.connect(self.edited)
+
+        form.addRow("Randomize:", self.__rand_type_cb)
+        form.addRow("Replicable shuffling:", self.__rand_seed_ch)
+        self.layout().addLayout(form)
 
     def setParameters(self, params):
         rand_type = params.get("rand_type", Randomize.RandomizeClasses)
         self.__rand_type_cb.setCurrentIndex(rand_type)
+        self.__rand_seed_ch.setChecked(params.get("rand_seed", 1) or 0)
 
     def parameters(self):
-        return {"rand_type": self.__rand_type_cb.currentIndex()}
+        return {"rand_type": self.__rand_type_cb.currentIndex(),
+                "rand_seed": 1 if self.__rand_seed_ch.isChecked() else None}
 
     @staticmethod
     def createinstance(params):
         rand_type = params.get("rand_type", Randomize.RandomizeClasses)
-        return _Randomize(rand_type=rand_type)
+        rand_seed = params.get("rand_seed", 1)
+        return _Randomize(rand_type=rand_type, rand_seed=rand_seed)
 
     def __repr__(self):
-        return self.__rand_type_cb.currentText()
+        return "{}, {}".format(self.__rand_type_cb.currentText(),
+                               "Replicable" if self.__rand_seed_ch.isChecked()
+                               else "Not replicable")
 
 
 class PCA(BaseEditor):
