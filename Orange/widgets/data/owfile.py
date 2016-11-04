@@ -217,9 +217,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
-        self.apply_button.hide()
+        self.apply_button.setEnabled(False)
         self.apply_button.setFixedWidth(170)
-        self.editor_model.dataChanged.connect(self.apply_button.show)
+        self.editor_model.dataChanged.connect(
+            lambda: self.apply_button.setEnabled(True))
 
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
@@ -279,7 +280,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # file readers
         # pylint: disable=broad-except
         self.editor_model.set_domain(None)
+        self.apply_button.setEnabled(False)
         self.Warning.file_too_big.clear()
+
         error = None
         try:
             self.reader = self._get_reader()
@@ -439,7 +442,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         m = np.array(m, dtype=dtpe).T if len(m) else None
         table = Table.from_numpy(domain, X, y, m, self.data.W)
         self.send("Data", table)
-        self.apply_button.hide()
+        self.apply_button.setEnabled(False)
 
     def get_widget_name_extension(self):
         _, name = os.path.split(self.loaded_file)
