@@ -605,10 +605,20 @@ class DendrogramWidget(QGraphicsWidget):
         else:
             drect = QSizeF(leaf_count, self._root.value.height)
 
-        transform = QTransform().scale(
-            crect.width() / drect.width(),
-            crect.height() / drect.height()
-        )
+        eps = numpy.finfo(numpy.float64).eps
+
+        if abs(drect.width()) < eps:
+            sx = 1.0
+        else:
+            sx = crect.width() / drect.width()
+
+        if abs(drect.height()) < eps:
+            sy = 1.0
+        else:
+            sy = crect.height() / drect.height()
+
+        transform = QTransform().scale(sx, sy)
+
         self._itemgroup.setPos(crect.topLeft())
         self._itemgroup.setTransform(transform)
         self._selection_items = None
@@ -817,7 +827,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
                                    callback=self._selection_method_changed)
         grid.addWidget(self.top_n_spin, 2, 1)
-        self.selection_box.layout().addLayout(grid)
 
         self.zoom_slider = gui.hSlider(
             self.controlArea, self, "zoom_factor", box="Zoom",
