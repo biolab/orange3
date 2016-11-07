@@ -1,5 +1,5 @@
-from functools import reduce
 from Orange.data.variable import TimeVariable
+from Orange.util import deepgetattr
 
 
 def vartype(var):
@@ -22,14 +22,7 @@ def progress_bar_milestones(count, iterations=100):
 def getdeepattr(obj, attr, *arg, **kwarg):
     if isinstance(obj, dict):
         return obj.get(attr)
-    try:
-        return reduce(getattr, attr.split("."), obj)
-    except AttributeError:
-        if arg:
-            return arg[0]
-        if kwarg:
-            return kwarg["default"]
-        raise
+    return deepgetattr(obj, attr, *arg, **kwarg)
 
 
 def to_html(str):
