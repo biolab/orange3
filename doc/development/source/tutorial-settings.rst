@@ -227,3 +227,50 @@ its class definition
 ``settingsHandler = DomainContextHandler()`` declares that Scatter plot uses
 :class:`DomainContextHandler`. The :obj:`attr_x` and :obj:`attr_y` are
 declared as :class:`~Orange.widgets.settings.ContextSetting`.
+
+
+Migrations
+**********
+
+At the beginning of this section of the tutorial, we created a widget with
+a setting called proportion, which contains a value between 0 and 100. But
+imagine that for some reason, we are not satisfied with the value any more
+and decide that the setting should hold a value between 0 and 1.
+
+We update the setting's default value, modify the appropriate code and we
+are done. That is, until someone that has already used the old version of
+the widget open the new one and the widget crashes. Remember, when the
+widget is opened, it has the same settings that were used the last time.
+
+Is there anything we can do, as settings are replaced with saved before
+the __init__ function is called? There is! Migrations to the rescue.
+
+Widget has a special attribute called `settings_version`. All widgets start
+with a settings_version of 1. When incompatible changes are done to the
+widget's settings, its settings_version should be increased. But increasing
+the version by it self does not solve our problems. While the widget now
+knows that it uses different settings, the old ones are still broken and
+need to be updated before they can be used with the new widget. This can be
+accomplished by reimplementing widget's methods `migrate_settings`
+(for ordinary settings) and `migrate_context` (for context settings).
+Both method are called with the old object and the version of the settings
+stored with it.
+
+If we bumped settings_version from 1 to 2 when we did the above mentioned
+change, our migrate_settings method would look like this:
+
+.. code-block:: python
+
+    def migrate_settings(settings, version):
+       if version < 2:
+         if "proportion" in settings:
+            settings["proportion"] = settings["proportion"] / 100
+
+Your migration rules can be simple or complex, but try to avoid simply
+forgetting the values, as settings are also used in saved workflows.
+Imagine opening a complex workflow you have designed a year ago with the
+new version of Orange and finding out that all the settings are back to
+default. Not fun!
+
+So take some time, write the migrations and do not forget to bump the
+settings_version when you do breaking changes.
