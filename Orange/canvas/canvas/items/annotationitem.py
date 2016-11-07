@@ -240,7 +240,7 @@ class TextAnnotation(Annotation):
     ])  # type: Dict[str, Callable[[str], [str]]]
 
     def __init__(self, parent=None, **kwargs):
-        Annotation.__init__(self, parent, **kwargs)
+        super().__init__(None, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setFlag(QGraphicsItem.ItemIsSelectable)
 
@@ -269,11 +269,24 @@ class TextAnnotation(Annotation):
         self.__textItem.setTextInteractionFlags(self.__defaultInteractionFlags)
         self.__textItem.setFont(self.font())
         self.__textItem.editingFinished.connect(self.__textEditingFinished)
-
+        if self.__textItem.scene() is not None:
+            self.__textItem.installSceneEventFilter(self)
         layout = self.__textItem.document().documentLayout()
         layout.documentSizeChanged.connect(self.__onDocumentSizeChanged)
 
         self.__updateFrame()
+        # set parent item at the end in order to ensure
+        # QGraphicsItem.ItemSceneHasChanged is delivered after initialization
+        if parent is not None:
+            self.setParentItem(parent)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSceneHasChanged:
+            if self.__textItem.scene() is not None:
+                self.__textItem.installSceneEventFilter(self)
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            self.__updateFrameStyle()
+        return super().itemChange(change, value)
 
     def adjustSize(self):
         """Resize to a reasonable size.
@@ -412,7 +425,6 @@ class TextAnnotation(Annotation):
         content = self.__textItem.toPlainText()
 
         self.__textItem.setTextInteractionFlags(self.__defaultInteractionFlags)
-        self.__textItem.removeSceneEventFilter(self)
         self.__textItem.document().contentsChanged.disconnect(
             self.textEdited
         )
@@ -454,11 +466,17 @@ class TextAnnotation(Annotation):
     def __textEditingFinished(self):
         self.endEdit()
 
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.__updateFrameStyle()
-
-        return Annotation.itemChange(self, change, value)
+    def sceneEventFilter(self, obj, event):
+        if obj is self.__textItem and \
+                not (self.__textItem.hasFocus() and
+                     self.__textItem.textInteractionFlags() & Qt.TextEditable) and \
+                event.type() in {QEvent.GraphicsSceneContextMenu} and \
+                event.modifiers() & Qt.AltModifier:
+            # Handle Alt + context menu events here
+            self.contextMenuEvent(event)
+            event.accept()
+            return True
+        return super().sceneEventFilter(obj, event)
 
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
@@ -483,6 +501,10 @@ class TextAnnotation(Annotation):
             menu.addAction("text/markdown")
             menu.addAction("text/rst")
             menu.addAction("text/html")
+
+            for action in menu.actions():
+                action.setCheckable(True)
+                action.setChecked(action.text() == self.__contentType.lower())
 
             @menu.triggered.connect
             def ontriggered(action):
