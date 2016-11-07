@@ -40,17 +40,9 @@ var color_attr = {},
 
 var map = L.map('map', {
     preferCanvas: true,
-    center: [51.505, -0.09],
     minZoom: 2,
     layers: [tileLayer, markersLayer],
-    worldCopyJump: true,
-    // Disable animation. Works better when lots of markers (over 9000)
-    // This can't be set in add_markers() with L.setOptions() as by then the
-    // event handlers are already installed
-    zoomAnimation: false,
-    // With disabled animation, the default wheel zooms seems too responsive
-    wheelPxPerZoomLevel: 500,
-    wheelDebounceTime: 200
+    worldCopyJump: true
 });
 map.fitWorld();
 map.on('zoom', reposition_markers);
