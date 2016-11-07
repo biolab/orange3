@@ -1,4 +1,5 @@
 import os
+import logging
 from itertools import chain, count
 from warnings import catch_warnings
 
@@ -24,6 +25,9 @@ from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 # and it is used in saved (pickled) settings. It must be imported into the
 # module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
+
+
+log = logging.getLogger(__name__)
 
 
 def add_origin(examples, filename):
@@ -301,6 +305,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 try:
                     data = self.reader.read()
                 except Exception as ex:
+                    log.exception(ex)
                     error = ex
                 self.warning(warnings[-1].message.args[0] if warnings else '')
 

@@ -570,6 +570,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
             cols, domain_vars = append_to
             cols.append(col)
+            var = None
             if domain_vars is not None:
                 if names and names[col]:
                     # Use existing variable if available
@@ -594,10 +595,11 @@ class FileFormat(metaclass=FileFormatMeta):
                                 continue
                             bn.replace(column, offset + oldval, new_order.index(val))
 
-            if coltype is TimeVariable:
+            if isinstance(var, TimeVariable) or coltype is TimeVariable:
                 # Re-parse the values because only now after coltype.make call
                 # above, variable var is the correct one
-                values = [var.parse(i) for i in orig_values]
+                _var = var if isinstance(var, TimeVariable) else TimeVariable('_')
+                values = [_var.parse(i) for i in orig_values]
 
             # Write back the changed data. This is needeed to pass the
             # correct, converted values into Table.from_numpy below
