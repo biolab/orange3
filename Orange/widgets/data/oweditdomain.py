@@ -217,7 +217,7 @@ class VariableEditor(QWidget):
         labels = self.labels_model.get_dict()
 
         # Is the variable actually changed.
-        if not self.is_same():
+        if self.var is not None and not self.is_same():
             var = type(self.var)(name)
             var.attributes.update(labels)
             self.var = var
@@ -321,7 +321,7 @@ class DiscreteVariableEditor(VariableEditor):
         labels = self.labels_model.get_dict()
         values = map(str, self.values_model)
 
-        if not self.is_same():
+        if self.var is not None and not self.is_same():
             var = type(self.var)(name, values=values)
             var.attributes.update(labels)
             self.var = var
@@ -333,8 +333,9 @@ class DiscreteVariableEditor(VariableEditor):
     def is_same(self):
         """Is the current model state the same as the input.
         """
-        values = map(str, self.values_model)
-        return VariableEditor.is_same(self) and self.var.values == values
+        values = list(map(str, self.values_model))
+        return (VariableEditor.is_same(self) and self.var is not None and
+                self.var.values == values)
 
     def clear(self):
         """Clear the model state.
