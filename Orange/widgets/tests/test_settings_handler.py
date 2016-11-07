@@ -13,7 +13,8 @@ class SettingHandlerTestCase(unittest.TestCase):
     def test_create(self, SettingProvider):
         """:type SettingProvider: unittest.mock.Mock"""
 
-        with patch.object(SettingsHandler, 'read_defaults'):
+        mock_read_defaults = Mock()
+        with patch.object(SettingsHandler, 'read_defaults', mock_read_defaults):
             handler = SettingsHandler.create(SimpleWidget)
 
             self.assertEqual(handler.widget_class, SimpleWidget)
@@ -21,13 +22,13 @@ class SettingHandlerTestCase(unittest.TestCase):
             # the widget definition and collects all settings and read
             # all settings and for widget class
             SettingProvider.assert_called_once_with(SimpleWidget)
-            SettingsHandler.read_defaults.assert_called_once_with()
+            mock_read_defaults.assert_called_once_with()
 
     def test_create_uses_template_if_provided(self):
         template = SettingsHandler()
         template.a = 'a'
         template.b = 'b'
-        with self.override_defaults():
+        with self.override_default_settings(SimpleWidget):
             handler = SettingsHandler.create(SimpleWidget, template)
         self.assertEqual(handler.a, 'a')
         self.assertEqual(handler.b, 'b')
@@ -41,7 +42,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler.widget_class = SimpleWidget
 
         defaults = {'a': 5, 'b': {1: 5}}
-        with self.override_defaults(defaults):
+        with self.override_default_settings(SimpleWidget, defaults):
             handler.read_defaults()
 
         self.assertEqual(handler.defaults, defaults)
@@ -135,7 +136,8 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_fast_save(self):
         handler = SettingsHandler()
-        with self.override_defaults():
+
+        with self.override_default_settings(SimpleWidget):
             handler.bind(SimpleWidget)
 
         widget = SimpleWidget()
@@ -151,7 +153,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_fast_save_siblings_spill(self):
         handler_mk1 = SettingsHandler()
-        with self.override_defaults():
+        with self.override_default_settings(SimpleWidgetMk1):
             handler_mk1.bind(SimpleWidgetMk1)
 
         widget_mk1 = SimpleWidgetMk1()
@@ -172,7 +174,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(widget_mk1.component.int_setting, 1)
 
         handler_mk2 = SettingsHandler()
-        with self.override_defaults():
+        with self.override_default_settings(SimpleWidgetMk2):
             handler_mk2.bind(SimpleWidgetMk2)
 
         widget_mk2 = SimpleWidgetMk2()
@@ -191,7 +193,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_schema_only_settings(self):
         handler = SettingsHandler()
-        with self.override_defaults():
+        with self.override_default_settings(SimpleWidget):
             handler.bind(SimpleWidget)
 
         # fast_save should not update defaults
@@ -219,7 +221,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         with patch.object(SimpleWidget, "migrate_settings", migrate_settings):
             # Old settings without version
             settings = {"value": 5}
-            with self.override_defaults(settings):
+            with self.override_default_settings(SimpleWidget, settings):
                 handler.read_defaults()
             migrate_settings.assert_called_with(settings, None)
 
@@ -227,13 +229,13 @@ class SettingHandlerTestCase(unittest.TestCase):
             # Settings with version
             settings_with_version = dict(settings)
             settings_with_version[VERSION_KEY] = 1
-            with self.override_defaults(settings_with_version):
+            with self.override_default_settings(SimpleWidget, settings_with_version):
                 handler.read_defaults()
             migrate_settings.assert_called_with(settings, 1)
 
     def test_initialize_migrates_settings(self):
         handler = SettingsHandler()
-        with self.override_defaults():
+        with self.override_default_settings(SimpleWidget):
             handler.bind(SimpleWidget)
 
         widget = SimpleWidget()
@@ -264,13 +266,20 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertIn(VERSION_KEY, settings)
 
     @contextmanager
-    def override_defaults(self, defaults=None):
+    def override_default_settings(self, widget, defaults=None):
         if defaults is None:
             defaults = {}
-        defaults_pickle = pickle.dumps(defaults)
-        with patch("builtins.open", mock_open(read_data=defaults_pickle)),\
-                patch("os.path.isfile", Mock(return_value=True)):
-            yield
+
+        h = SettingsHandler()
+        h.widget_class = widget
+        filename = h._get_settings_filename()
+        with open(filename, "wb") as f:
+            pickle.dump(defaults, f)
+
+        yield
+
+        if os.path.isfile(filename):
+            os.remove(filename)
 
 
 class Component:
