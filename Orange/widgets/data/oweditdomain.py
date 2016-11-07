@@ -122,6 +122,7 @@ class VariableEditor(QWidget):
 
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
+        self.var = None
         self.setup_gui()
 
     def setup_gui(self):
@@ -231,7 +232,8 @@ class VariableEditor(QWidget):
         name = str(self.name_edit.text())
         labels = self.labels_model.get_dict()
 
-        return self.var and name == self.var.name and labels == self.var.attributes
+        return (self.var is not None and name == self.var.name and
+                labels == self.var.attributes)
 
     def clear(self):
         """Clear the editor state.
