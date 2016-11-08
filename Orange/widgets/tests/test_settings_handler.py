@@ -1,11 +1,11 @@
-from io import BytesIO
+from contextlib import contextmanager
 import os
 import pickle
 from tempfile import mkstemp
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, mock_open
 import warnings
-from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider
+from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider, VERSION_KEY
 
 
 class SettingHandlerTestCase(unittest.TestCase):
@@ -13,7 +13,8 @@ class SettingHandlerTestCase(unittest.TestCase):
     def test_create(self, SettingProvider):
         """:type SettingProvider: unittest.mock.Mock"""
 
-        with patch.object(SettingsHandler, 'read_defaults'):
+        mock_read_defaults = Mock()
+        with patch.object(SettingsHandler, 'read_defaults', mock_read_defaults):
             handler = SettingsHandler.create(SimpleWidget)
 
             self.assertEqual(handler.widget_class, SimpleWidget)
@@ -21,14 +22,14 @@ class SettingHandlerTestCase(unittest.TestCase):
             # the widget definition and collects all settings and read
             # all settings and for widget class
             SettingProvider.assert_called_once_with(SimpleWidget)
-            SettingsHandler.read_defaults.assert_called_once_with()
+            mock_read_defaults.assert_called_once_with()
 
     def test_create_uses_template_if_provided(self):
         template = SettingsHandler()
-        template.read_defaults = lambda: None
         template.a = 'a'
         template.b = 'b'
-        handler = SettingsHandler.create(SimpleWidget, template)
+        with self.override_default_settings(SimpleWidget):
+            handler = SettingsHandler.create(SimpleWidget, template)
         self.assertEqual(handler.a, 'a')
         self.assertEqual(handler.b, 'b')
 
@@ -37,19 +38,14 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(template.b, 'b')
 
     def test_read_defaults(self):
-        default_settings = {'a': 5, 'b': {1: 5}}
-        fd, settings_file = mkstemp(suffix='.ini')
-        with open(settings_file, 'wb') as f:
-            pickle.dump(default_settings, f)
-        os.close(fd)
-
         handler = SettingsHandler()
-        handler._get_settings_filename = lambda: settings_file
-        handler.read_defaults()
+        handler.widget_class = SimpleWidget
 
-        self.assertEqual(handler.defaults, default_settings)
+        defaults = {'a': 5, 'b': {1: 5}}
+        with self.override_default_settings(SimpleWidget, defaults):
+            handler.read_defaults()
 
-        os.remove(settings_file)
+        self.assertEqual(handler.defaults, defaults)
 
     def test_write_defaults(self):
         fd, settings_file = mkstemp(suffix='.ini')
@@ -71,6 +67,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler = SettingsHandler()
         handler.defaults = {'default': 42, 'setting': 1}
         handler.provider = provider = Mock()
+        handler.widget_class = SimpleWidget
         provider.get_provider.return_value = provider
         widget = SimpleWidget()
 
@@ -100,6 +97,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler = SettingsHandler()
         handler.defaults = {'default': 42}
         provider = Mock()
+        handler.widget_class = SimpleWidget
         handler.provider = Mock(get_provider=Mock(return_value=provider))
         widget = SimpleWidget()
 
@@ -122,6 +120,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         """:type SettingProvider: unittest.mock.Mock"""
         handler = SettingsHandler()
         handler.provider = Mock(get_provider=Mock(return_value=None))
+        handler.widget_class = SimpleWidget
         provider = Mock()
         SettingProvider.return_value = provider
         widget = SimpleWidget()
@@ -137,8 +136,9 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_fast_save(self):
         handler = SettingsHandler()
-        handler.read_defaults = lambda: None
-        handler.bind(SimpleWidget)
+
+        with self.override_default_settings(SimpleWidget):
+            handler.bind(SimpleWidget)
 
         widget = SimpleWidget()
 
@@ -153,8 +153,8 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_fast_save_siblings_spill(self):
         handler_mk1 = SettingsHandler()
-        handler_mk1.read_defaults = lambda: None
-        handler_mk1.bind(SimpleWidgetMk1)
+        with self.override_default_settings(SimpleWidgetMk1):
+            handler_mk1.bind(SimpleWidgetMk1)
 
         widget_mk1 = SimpleWidgetMk1()
 
@@ -174,8 +174,8 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(widget_mk1.component.int_setting, 1)
 
         handler_mk2 = SettingsHandler()
-        handler_mk2.read_defaults = lambda: None
-        handler_mk2.bind(SimpleWidgetMk2)
+        with self.override_default_settings(SimpleWidgetMk2):
+            handler_mk2.bind(SimpleWidgetMk2)
 
         widget_mk2 = SimpleWidgetMk2()
 
@@ -193,8 +193,8 @@ class SettingHandlerTestCase(unittest.TestCase):
 
     def test_schema_only_settings(self):
         handler = SettingsHandler()
-        handler.read_defaults = lambda: None
-        handler.bind(SimpleWidget)
+        with self.override_default_settings(SimpleWidget):
+            handler.bind(SimpleWidget)
 
         # fast_save should not update defaults
         widget = SimpleWidget()
@@ -213,12 +213,82 @@ class SettingHandlerTestCase(unittest.TestCase):
         data = handler.pack_data(widget)
         self.assertEqual(data['schema_only_setting'], 5)
 
+    def test_read_defaults_migrates_settings(self):
+        handler = SettingsHandler()
+        handler.widget_class = SimpleWidget
+
+        migrate_settings = Mock()
+        with patch.object(SimpleWidget, "migrate_settings", migrate_settings):
+            # Old settings without version
+            settings = {"value": 5}
+            with self.override_default_settings(SimpleWidget, settings):
+                handler.read_defaults()
+            migrate_settings.assert_called_with(settings, None)
+
+            migrate_settings.reset()
+            # Settings with version
+            settings_with_version = dict(settings)
+            settings_with_version[VERSION_KEY] = 1
+            with self.override_default_settings(SimpleWidget, settings_with_version):
+                handler.read_defaults()
+            migrate_settings.assert_called_with(settings, 1)
+
+    def test_initialize_migrates_settings(self):
+        handler = SettingsHandler()
+        with self.override_default_settings(SimpleWidget):
+            handler.bind(SimpleWidget)
+
+        widget = SimpleWidget()
+
+        migrate_settings = Mock()
+        with patch.object(SimpleWidget, "migrate_settings", migrate_settings):
+            # Old settings without version
+            settings = {"value": 5}
+
+            handler.initialize(widget, settings)
+            migrate_settings.assert_called_with(settings, None)
+
+            migrate_settings.reset_mock()
+            # Settings with version
+
+            settings_with_version = dict(settings)
+            settings_with_version[VERSION_KEY] = 1
+            handler.initialize(widget, settings_with_version)
+            migrate_settings.assert_called_with(settings, 1)
+
+    def test_pack_settings_stores_version(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+
+        widget = SimpleWidget()
+
+        settings = handler.pack_data(widget)
+        self.assertIn(VERSION_KEY, settings)
+
+    @contextmanager
+    def override_default_settings(self, widget, defaults=None):
+        if defaults is None:
+            defaults = {}
+
+        h = SettingsHandler()
+        h.widget_class = widget
+        filename = h._get_settings_filename()
+        with open(filename, "wb") as f:
+            pickle.dump(defaults, f)
+
+        yield
+
+        if os.path.isfile(filename):
+            os.remove(filename)
+
 
 class Component:
     int_setting = Setting(42)
 
 
 class SimpleWidget:
+    settings_version = 1
+
     setting = Setting(42)
     schema_only_setting = Setting(None, schema_only=True)
     non_setting = 5
@@ -227,6 +297,9 @@ class SimpleWidget:
 
     def __init__(self):
         self.component = Component()
+
+    migrate_settings = Mock()
+    migrate_context = Mock()
 
 
 class SimpleWidgetMk1(SimpleWidget):
