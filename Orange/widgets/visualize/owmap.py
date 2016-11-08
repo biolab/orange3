@@ -12,7 +12,7 @@ from AnyQt.QtGui import QImage, QPainter, QPen, QBrush, QColor
 from Orange.util import color_to_hex
 from Orange.base import Learner
 from Orange.data.util import scale
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, TimeVariable
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.webview import WebviewWidget
@@ -48,6 +48,9 @@ class LeafletMap(WebviewWidget):
         self._label_attr = None
         self._shape_attr = None
         self._size_attr = None
+        self._legend_colors = []
+        self._legend_shapes = []
+        self._legend_sizes = []
 
         self._drawing_args = None
         self._image_token = None
@@ -119,22 +122,46 @@ class LeafletMap(WebviewWidget):
         '''.format(jittering))
         self.redraw_markers_overlay_image()
 
+    @staticmethod
+    def _legend_values(variable, values):
+        strs = [variable.repr_val(val) for val in values]
+        if any(len(val) > 10 for val in strs):
+            if isinstance(variable, TimeVariable):
+                strs = [s.replace(' ', '<br>') for s in strs]
+            elif variable.is_continuous:
+                strs = ['{:.4e}'.format(val) for val in values]
+            elif variable.is_discrete:
+                strs = [s if len(s) <= 12 else (s[:8] + '…' + s[-3:])
+                        for s in strs]
+        return strs
+
     def set_marker_color(self, attr, update=True):
         try:
             self._color_attr = variable = self.data.domain[attr]
         except Exception:
             self._color_attr = None
+            self._legend_colors = []
         else:
             if variable.is_continuous:
                 self._raw_color_values = values = self.data.get_column_view(variable)[0]
                 self._scaled_color_values = scale(values)
                 self._colorgen = ContinuousPaletteGenerator(*variable.colors)
+                min = np.nanmin(values)
+                self._legend_colors = (['c',
+                                        self._legend_values(variable, [min, np.nanmax(values)]),
+                                        [color_to_hex(i) for i in variable.colors if i]]
+                                       if not np.isnan(min) else [])
             elif variable.is_discrete:
                 _values = np.asarray(self.data.domain[attr].values)
                 __values = self.data.get_column_view(variable)[0].astype(np.uint16)
                 self._raw_color_values = _values[__values]  # The joke's on you
                 self._scaled_color_values = __values
                 self._colorgen = ColorPaletteGenerator(len(variable.colors), variable.colors)
+                self._legend_colors = ['d',
+                                       self._legend_values(variable, range(len(_values))),
+                                       list(_values),
+                                       [color_to_hex(self._colorgen.getRGB(i))
+                                        for i in range(len(_values))]]
         finally:
             if update:
                 self.redraw_markers_overlay_image()
@@ -160,11 +187,14 @@ class LeafletMap(WebviewWidget):
             self._shape_attr = variable = self.data.domain[attr]
         except Exception:
             self._shape_attr = None
+            self._legend_shapes = []
         else:
             assert variable.is_discrete
             _values = np.asarray(self.data.domain[attr].values)
             self._shape_values = __values = self.data.get_column_view(variable)[0].astype(np.uint16)
             self._raw_shape_values = _values[__values]
+            self._legend_shapes = [self._legend_values(variable, range(len(_values))),
+                                   list(_values)]
         finally:
             if update:
                 self.redraw_markers_overlay_image()
@@ -174,10 +204,15 @@ class LeafletMap(WebviewWidget):
             self._size_attr = variable = self.data.domain[attr]
         except Exception:
             self._size_attr = None
+            self._legend_sizes = []
         else:
             assert variable.is_continuous
             self._raw_sizes = values = self.data.get_column_view(variable)[0]
+            # Note, [5, 60] is also hardcoded in legend-size-indicator.svg
             self._sizes = scale(values, 5, 60).astype(np.uint8)
+            min = np.nanmin(values)
+            self._legend_sizes = self._legend_values(variable,
+                                                     [min, np.nanmax(values)]) if not np.isnan(min) else []
         finally:
             if update:
                 self.redraw_markers_overlay_image()
@@ -210,8 +245,11 @@ class LeafletMap(WebviewWidget):
             return
         else:
             self._owwidget.Error.model_error.clear()
+        extrema = self._legend_values(self.model.domain.class_var,
+                                      [np.nanmin(predictions),
+                                       np.nanmax(predictions)])
         predictions = scale(np.round(predictions, 7))  # Avoid small errors
-        self.exposeObject('model_predictions', dict(data=predictions))
+        self.exposeObject('model_predictions', dict(data=predictions, extrema=extrema))
         self.evalJS('draw_heatmap()')
 
     def _update_js_markers(self, visible):
@@ -299,7 +337,19 @@ class LeafletMap(WebviewWidget):
         visible = ((lat <= north) & (lat >= south) &
                    (lon <= east) & (lon >= west)).nonzero()[0]
 
-        if len(visible) <= 500:
+        is_js_path = len(visible) <= 500
+
+        self.evalJS('''
+            window.legend_colors = %s;
+            window.legend_shapes = %s;
+            window.legend_sizes  = %s;
+            legendControl.remove();
+            legendControl.addTo(map);
+        ''' % (self._legend_colors,
+               self._legend_shapes if is_js_path else [],
+               self._legend_sizes))
+
+        if is_js_path:
             self.evalJS('clear_markers_overlay_image()')
             self._update_js_markers(visible)
             self._owwidget.disable_some_controls(False)

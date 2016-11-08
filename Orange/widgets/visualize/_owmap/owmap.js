@@ -25,6 +25,7 @@ var markers = [],
     latlon_data = [],
     markersLayer = L.featureGroup(),
     jittering_offsets = [],
+    model_predictions = {},
     cluster_points = false;
 
 /* Objects passed from Python:
@@ -540,6 +541,7 @@ function draw_heatmap() {
     heatmapLayer
         .setUrl(_heatmap_canvas_ctx.canvas.toDataURL())
         .setBounds(map.getBounds());
+    legendControl.remove().addTo(map);
 }
 
 function clear_heatmap() {
@@ -570,3 +572,95 @@ $(document).ready(function() {
     setTimeout(function() { map.on('moveend', reset_heatmap); }, 100);
     setTimeout(function() { map.on('moveend', redraw_markers_overlay_image); }, 100);
 });
+
+
+var legendControl = L.control({position: 'topright'}),
+    legend_colors = [],
+    legend_shapes = [],
+    legend_sizes = [];
+legendControl.onAdd = function () {
+    if (legend_colors.length == 0 &&
+        legend_shapes.length == 0 &&
+        legend_sizes.length == 0 &&
+        !model_predictions.extrema)
+        return L.DomUtil.create('span');
+
+    var div = L.DomUtil.create('div', 'legend');
+
+    if (legend_colors.length) {
+        var box = L.DomUtil.create('div', 'legend-box', div);
+        box.innerHTML += '<h3>Color</h3><hr/>';
+        if (legend_colors[0] == 'c') {
+            box.innerHTML += L.Util.template(
+                '<table class="colors continuous">' +  // I'm sorry
+                '<tr><td rowspan="2" style="width:2em; background:linear-gradient({colors})"></td><td> {minval}</td></tr>' +
+                '<tr><td> {maxval}</td></tr>' +
+                '</table>', {
+                    minval: legend_colors[1][0],
+                    maxval: legend_colors[1][1],
+                    colors: legend_colors[2].join(',')
+                });
+        } else {
+            var str = '';
+            for (var i=0; i<legend_colors[1].length; ++i) {
+                if (i >= 9) {
+                    str += L.Util.template('<div>&nbsp;&nbsp;+ {n_more} more ...</div>', {
+                        n_more: legend_colors[1].length - i });
+                    break;
+                }
+                str += L.Util.template(
+                    '<div title="{full_value}"><div class="legend-icon" style="background:{color}">&nbsp;</div> {value}</div>', {
+                        color: legend_colors[3][i],
+                        value: legend_colors[1][i],
+                        full_value: legend_colors[2][i]});
+            }
+            box.innerHTML += str;
+        }
+    }
+
+    if (legend_shapes.length) {
+        var box = L.DomUtil.create('div', 'legend-box', div);
+        var str = '';
+        for (var i=0; i<legend_shapes[0].length; ++i) {
+            if (i >= _N_SHAPES) {
+                str += L.Util.template('<div>&nbsp;&nbsp;+ {n_more} more ...</div>', {
+                    n_more: legend_shapes[0].length - i });
+                break;
+            }
+            str += L.Util.template(
+                '<div title="{full_value}"><img class="legend-icon" style="vertical-align:middle" src="{shape}"/> {value}</div>', {
+                    shape: _construct_icon(i, '#555', true),
+                    value: legend_shapes[0][i],
+                    full_value: legend_shapes[1][i]});
+        }
+        box.innerHTML = '<h3>Shape</h3><hr/>' + str;
+    }
+
+    if (legend_sizes.length) {
+        var box = L.DomUtil.create('div', 'legend-box', div);
+        box.innerHTML += '<h3>Size</h3><hr/>' + L.Util.template(
+            '<table class="sizes continuous">' +  // I'm sorry
+            '<tr><td rowspan="2"><img src="legend-sizes-indicator.svg"></td><td> {minval}</td></tr>' +
+            '<tr><td> {maxval}</td></tr>' +
+            '</table>', {
+                minval: legend_sizes[0],
+                maxval: legend_sizes[1],
+            });
+    }
+
+    if (model_predictions.extrema) {
+        var box = L.DomUtil.create('div', 'legend-box', div);
+        box.innerHTML += L.Util.template(
+            '<h3>Heatmap</h3><hr/>' +
+            '<table class="continuous">' +  // I'm sorry
+            '<tr><td rowspan="2" style="width:2em; background:linear-gradient({colors})"></td><td> {minval}</td></tr>' +
+            '<tr><td> {maxval}</td></tr>' +
+            '</table>', {
+                minval: model_predictions.extrema[0],
+                maxval: model_predictions.extrema[1],
+                colors: 'transparent, ' + _heatmap_canvas_ctx.fillStyle
+            });
+    }
+
+    return div;
+};
