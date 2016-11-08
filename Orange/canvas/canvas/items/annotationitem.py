@@ -8,7 +8,7 @@ import CommonMark
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsPathItem, QGraphicsWidget, QGraphicsTextItem,
-    QGraphicsDropShadowEffect, QMenu
+    QGraphicsDropShadowEffect, QMenu, QAction, QActionGroup
 )
 from AnyQt.QtGui import (
     QPainterPath, QPainterPathStroker, QPolygonF, QColor, QPen
@@ -496,20 +496,41 @@ class TextAnnotation(Annotation):
         if event.modifiers() & Qt.AltModifier:
             menu = QMenu(event.widget())
             menu.setAttribute(Qt.WA_DeleteOnClose)
+            formatmenu = menu.addMenu("Render as")
+            group = QActionGroup(self, exclusive=True)
 
-            menu.addAction("text/plain")
-            menu.addAction("text/markdown")
-            menu.addAction("text/rst")
-            menu.addAction("text/html")
+            def makeaction(text, parent, data=None, **kwargs):
+                action = QAction(text, parent, **kwargs)
+                if data is not None:
+                    action.setData(data)
+                return action
 
-            for action in menu.actions():
-                action.setCheckable(True)
-                action.setChecked(action.text() == self.__contentType.lower())
+            formatactions = [
+                makeaction("Plain Text", group, checkable=True,
+                           toolTip=self.tr("Render contents as plain text"),
+                           data="text/plain"),
+                makeaction("HTML", group, checkable=True,
+                           toolTip=self.tr("Render contents as HTML"),
+                           data="text/html"),
+                makeaction("RST", group, checkable=True,
+                           toolTip=self.tr("Render contents as RST "
+                                           "(reStructuredText)"),
+                           data="text/rst"),
+                makeaction("Markdown", group, checkable=True,
+                           toolTip=self.tr("Render contents as Markdown"),
+                           data="text/markdown")
+            ]
+            for action in formatactions:
+                action.setChecked(action.data() == self.__contentType.lower())
+                formatmenu.addAction(action)
 
-            @menu.triggered.connect
             def ontriggered(action):
-                self.setContent(self.content(), action.text())
+                mimetype = action.data()
+                content = self.content()
+                self.setContent(content, mimetype)
+                self.editingFinished.emit()
 
+            menu.triggered.connect(ontriggered)
             menu.popup(event.screenPos())
             event.accept()
         else:
