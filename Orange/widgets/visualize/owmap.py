@@ -383,6 +383,8 @@ class LeafletMap(WebviewWidget):
 
         self._image_token = image_token = np.random.random()
 
+        n_iters = np.ceil(len(visible) / self.N_POINTS_PER_ITER)
+
         def add_points():
             nonlocal cur, image_token
             if image_token != self._image_token:
@@ -434,7 +436,12 @@ class LeafletMap(WebviewWidget):
             cur += self.N_POINTS_PER_ITER
             if cur < len(visible):
                 QTimer.singleShot(10, add_points)
+                self._owwidget.progressBarAdvance(100 / n_iters, None)
+            else:
+                self._owwidget.progressBarFinished(None)
 
+        self._owwidget.progressBarFinished(None)
+        self._owwidget.progressBarInit(None)
         QTimer.singleShot(10, add_points)
 
 
