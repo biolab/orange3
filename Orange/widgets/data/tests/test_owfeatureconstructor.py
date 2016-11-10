@@ -4,15 +4,17 @@ import sys
 
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
                                                       ContinuousDescriptor,
                                                       StringDescriptor,
-                                                      construct_variables)
+                                                      construct_variables, OWFeatureConstructor)
 
 from Orange.widgets.data.owfeatureconstructor import (
     freevars, make_lambda, validate_exp
 )
+
 
 class FeatureConstructorTest(unittest.TestCase):
     def test_construct_variables_discrete(self):
@@ -175,3 +177,12 @@ class TestTools(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             validate_("{a:1 for a in s}")
+
+
+class OWFeatureConstructorTests(WidgetTest):
+    def setUp(self):
+        self.widget = OWFeatureConstructor()
+
+    def test_create_variable_with_no_data(self):
+        self.widget.addFeature(
+            ContinuousDescriptor("X1", "", 3))
