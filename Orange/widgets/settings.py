@@ -447,7 +447,7 @@ class SettingsHandler:
     def _migrate_settings(self, settings):
         """Ask widget to migrate settings to the latest version."""
         if settings:
-            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, None))
+            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, 0))
 
     def _select_provider(self, instance):
         provider = self.provider.get_provider(instance.__class__)
@@ -612,7 +612,7 @@ class ContextHandler(SettingsHandler):
 
     def _migrate_contexts(self, contexts):
         for context in contexts:
-            self.widget_class.migrate_context(context, context.values.pop(VERSION_KEY, None))
+            self.widget_class.migrate_context(context, context.values.pop(VERSION_KEY, 0))
 
     def write_defaults_file(self, settings_file):
         """Call the inherited method, then add global context to the pickle."""
