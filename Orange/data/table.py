@@ -15,7 +15,8 @@ from scipy import sparse as sp
 
 from Orange.data import (
     _contingency, _valuecount,
-    Domain, Variable, Storage, StringVariable, Unknown, Value, Instance
+    Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
+    ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
 from Orange.data.util import SharedComputeValue
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
@@ -1431,6 +1432,101 @@ class Table(MutableSequence, Storage):
                     contingencies[col_i] = ([U, C], unknown)
 
         return contingencies, unknown_rows
+
+    @classmethod
+    def transpose(cls, table, feature_names_column="",
+                  meta_attr_name="Feature name"):
+        """
+        Transpose the table.
+
+        :param table: Table - table to transpose
+        :param feature_names_column: str - name of (String) meta attribute to
+            use for feature names
+        :param meta_attr_name: str - name of new meta attribute into which
+            feature names are mapped
+        :return: Table - transposed table
+        """
+        self = cls()
+        n_cols, self.n_rows = table.X.shape
+        old_domain = table.attributes.get("old_domain")
+
+        # attributes
+        # - classes and metas to attributes of attributes
+        # - arbitrary meta column to feature names
+        self.X = table.X.T
+        attributes = [ContinuousVariable(str(row[feature_names_column]))
+                      for row in table] if feature_names_column else \
+            [ContinuousVariable("Feature " + str(i + 1).zfill(
+                int(np.ceil(np.log10(n_cols))))) for i in range(n_cols)]
+        if old_domain and feature_names_column:
+            for i in range(len(attributes)):
+                if attributes[i].name in old_domain:
+                    var = old_domain[attributes[i].name]
+                    attr = ContinuousVariable(var.name) if var.is_continuous \
+                        else DiscreteVariable(var.name, var.values)
+                    attr.attributes = var.attributes.copy()
+                    attributes[i] = attr
+
+        def set_attributes_of_attributes(_vars, _table):
+            for i, variable in enumerate(_vars):
+                if variable.name == feature_names_column:
+                    continue
+                for j, row in enumerate(_table):
+                    value = variable.repr_val(row) if np.isscalar(row) \
+                        else row[i] if isinstance(row[i], str) \
+                        else variable.repr_val(row[i])
+
+                    if value not in MISSING_VALUES:
+                        attributes[j].attributes[variable.name] = value
+
+        set_attributes_of_attributes(table.domain.class_vars, table.Y)
+        set_attributes_of_attributes(table.domain.metas, table.metas)
+
+        # weights
+        self.W = np.empty((self.n_rows, 0))
+
+        def get_table_from_attributes_of_attributes(_vars, _dtype=float):
+            T = np.empty((self.n_rows, len(_vars)), dtype=_dtype)
+            for i, _attr in enumerate(table.domain.attributes):
+                for j, _var in enumerate(_vars):
+                    val = str(_attr.attributes.get(_var.name, ""))
+                    if not _var.is_string:
+                        val = np.nan if val in MISSING_VALUES else \
+                            _var.values.index(val) if \
+                                _var.is_discrete else float(val)
+                    T[i, j] = val
+            return T
+
+        # class_vars - attributes of attributes to class - from old domain
+        class_vars = []
+        if old_domain:
+            class_vars = old_domain.class_vars
+        self.Y = get_table_from_attributes_of_attributes(class_vars)
+
+        # metas
+        # - feature names and attributes of attributes to metas
+        self.metas, metas = np.empty((self.n_rows, 0), dtype=object), []
+        if meta_attr_name not in [m.name for m in table.domain.metas]:
+            self.metas = np.array([[a.name] for a in table.domain.attributes],
+                                  dtype=object)
+            metas.append(StringVariable(meta_attr_name))
+
+        names = chain.from_iterable(list(attr.attributes)
+                                    for attr in table.domain.attributes)
+        names = sorted(set(names) - {var.name for var in class_vars})
+        _metas = [StringVariable(n) for n in names]
+        if old_domain:
+            _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
+        M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
+        if _metas:
+            self.metas = np.hstack((self.metas, M))
+            metas.extend(_metas)
+
+        self.domain = Domain(attributes, class_vars, metas)
+        cls._init_ids(self)
+        self.attributes = table.attributes.copy()
+        self.attributes["old_domain"] = table.domain
+        return self
 
 
 def _check_arrays(*arrays, dtype=None):
