@@ -5,7 +5,8 @@ from tempfile import mkstemp
 import unittest
 from unittest.mock import patch, Mock, mock_open
 import warnings
-from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider, VERSION_KEY
+from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider,\
+    VERSION_KEY, rename_setting, Context, migrate_str_to_variable
 
 
 class SettingHandlerTestCase(unittest.TestCase):
@@ -313,3 +314,39 @@ class SimpleWidgetMk2(SimpleWidget):
 class WidgetWithNoProviderDeclared:
     def __init__(self):
         self.undeclared_component = Component()
+
+
+class MigrationsTestCase(unittest.TestCase):
+    def test_rename_settings(self):
+        some_settings = dict(foo=42, bar=13)
+        rename_setting(some_settings, "foo", "baz")
+        self.assertDictEqual(some_settings, dict(baz=42, bar=13))
+
+        self.assertRaises(KeyError, rename_setting, some_settings, "qux", "quux")
+
+        context = Context(values=dict(foo=42, bar=13))
+        rename_setting(context, "foo", "baz")
+        self.assertDictEqual(context.values, dict(baz=42, bar=13))
+
+    def test_migrate_str_to_variable(self):
+        values = dict(foo=("foo", 1), baz=("baz", 2), qux=("qux", 102), bar=13)
+
+        context = Context(values=values.copy())
+        migrate_str_to_variable(context)
+        self.assertDictEqual(
+            context.values,
+            dict(foo=("foo", 101), baz=("baz", 102), qux=("qux", 102), bar=13))
+
+        context = Context(values=values.copy())
+        migrate_str_to_variable(context, ("foo", "qux"))
+        self.assertDictEqual(
+            context.values,
+            dict(foo=("foo", 101), baz=("baz", 2), qux=("qux", 102), bar=13))
+
+        context = Context(values=values.copy())
+        migrate_str_to_variable(context, "foo")
+        self.assertDictEqual(
+            context.values,
+            dict(foo=("foo", 101), baz=("baz", 2), qux=("qux", 102), bar=13))
+
+        self.assertRaises(KeyError, migrate_str_to_variable, context, "quuux")
