@@ -147,14 +147,6 @@ class ToolGrid(QFrame):
         self.__toolButtonStyle = toolButtonStyle
 
         self.__gridSlots = []
-
-        self.__buttonListener = ToolButtonEventListener(self)
-        self.__buttonListener.buttonRightClicked.connect(
-                self.__onButtonRightClick)
-
-        self.__buttonListener.buttonEnter.connect(
-                self.__onButtonEnter)
-
         self.__mapper = QSignalMapper()
         self.__mapper.mapped[QObject].connect(self.__onClicked)
 
@@ -331,7 +323,6 @@ class ToolGrid(QFrame):
 
         self.__mapper.setMapping(button, action)
         button.clicked.connect(self.__mapper.map)
-        button.installEventFilter(self.__buttonListener)
         button.installEventFilter(self)
 
     def __removeActionButton(self, action):
@@ -341,7 +332,6 @@ class ToolGrid(QFrame):
         index = actions.index(action)
         slot = self.__gridSlots.pop(index)
 
-        slot.button.removeEventFilter(self.__buttonListener)
         slot.button.removeEventFilter(self)
         self.__mapper.removeMappings(slot.button)
 
@@ -391,9 +381,6 @@ class ToolGrid(QFrame):
         buttons = [slot.button for slot in self.__gridSlots]
         return buttons.index(button)
 
-    def __onButtonRightClick(self, button):
-        pass
-
     def __onButtonEnter(self, button):
         action = button.defaultAction()
         self.actionHovered.emit(action)
@@ -412,7 +399,8 @@ class ToolGrid(QFrame):
                 if self.__focusMove(obj, key):
                     event.accept()
                     return True
-
+        elif etype == QEvent.HoverEnter and obj.parent() is self:
+            self.__onButtonEnter(obj)
         return QFrame.eventFilter(self, obj, event)
 
     def __focusMove(self, focus, key):
@@ -437,43 +425,3 @@ class ToolGrid(QFrame):
             return True
         else:
             return False
-
-
-class ToolButtonEventListener(QObject):
-    """
-    An event listener(filter) for :class:`QToolButtons`.
-    """
-    buttonLeftClicked = Signal(QToolButton)
-    buttonRightClicked = Signal(QToolButton)
-    buttonEnter = Signal(QToolButton)
-    buttonLeave = Signal(QToolButton)
-
-    def __init__(self, parent=None):
-        QObject.__init__(self, parent)
-        self.button_down = None
-        self.button = None
-        self.button_down_pos = None
-
-    def eventFilter(self, obj, event):
-        if not isinstance(obj, QToolButton):
-            return False
-
-        if event.type() == QEvent.MouseButtonPress:
-            self.button = obj
-            self.button_down = event.button()
-            self.button_down_pos = event.pos()
-
-        elif event.type() == QEvent.MouseButtonRelease:
-            if self.button.underMouse():
-                if event.button() == Qt.RightButton:
-                    self.buttonRightClicked.emit(self.button)
-                elif event.button() == Qt.LeftButton:
-                    self.buttonLeftClicked.emit(self.button)
-
-        elif event.type() == QEvent.Enter:
-            self.buttonEnter.emit(obj)
-
-        elif event.type() == QEvent.Leave:
-            self.buttonLeave.emit(obj)
-
-        return False
