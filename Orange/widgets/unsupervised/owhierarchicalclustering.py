@@ -24,7 +24,7 @@ import pyqtgraph as pg
 
 import Orange.data
 from Orange.data.domain import filter_visible
-from Orange.data import Domain
+from Orange.data import Domain, StringVariable
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
@@ -726,7 +726,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Selected linkage
     linkage = settings.Setting(1)
     #: Index of the selected annotation item (variable, ...)
-    annotation_idx = settings.Setting(0)
+    settingsHandler = settings.PerfectDomainContextHandler(metas_in_res=True)
+    annotation_idx = settings.ContextSetting(0)
     #: Selected tree pruning (none/max depth)
     pruning = settings.Setting(0)
     #: Maximum depth when max depth pruning is selected
@@ -968,13 +969,18 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.unconditional_commit()
 
     def _set_items(self, items, axis=1):
+        self.closeContext()
         self.items = items
+        self.annotation_idx = 0
+        domain = None
         model = self.label_cb.model()
         if items is None:
             model[:] = ["None", "Enumeration"]
         elif not axis:
             model[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
+            domain = Domain(items.domain.attributes, items.domain.class_vars,
+                            items.domain.metas + (StringVariable("columns"),))
         elif isinstance(items, Orange.data.Table):
             model[:] = chain(
                 ["None", "Enumeration"],
@@ -985,13 +991,17 @@ class OWHierarchicalClustering(widget.OWWidget):
                                      next(filter_visible(items.domain.attributes), False) else [],
                 filter_visible(items.domain.attributes)
             )
+            domain = Domain(items.domain.attributes, items.domain.class_vars,
+                            items.domain.metas + (StringVariable("rows"),))
         elif isinstance(items, list) and \
                 all(isinstance(var, Orange.data.Variable) for var in items):
             model[:] = ["None", "Enumeration", "Name"]
         else:
             model[:] = ["None", "Enumeration"]
-        self.annotation_idx = min(self.annotation_idx,
-                                  len(model) - 1)
+
+        self.openContext(domain)
+        self.annotation_idx = min(self.annotation_idx, len(model) - 1)
+        self._update_labels()
 
     def _clear_plot(self):
         self.labels.set_labels([])
