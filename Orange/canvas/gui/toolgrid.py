@@ -309,7 +309,7 @@ class ToolGrid(QFrame):
         self.__shiftGrid(index, 1)
         button = self.createButtonForAction(action)
 
-        row = index / self.__columns
+        row = index // self.__columns
         column = index % self.__columns
 
         self.layout().addWidget(
