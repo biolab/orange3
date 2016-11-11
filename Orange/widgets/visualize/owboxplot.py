@@ -64,8 +64,11 @@ class BoxData:
                     q.append(float(dist[0, i]))
                 thresh_i += 1
                 if thresh_i == 3:
+                    self.q25, self.median, self.q75 = q
                     break
-        self.q25, self.median, self.q75, *_ = q + [-1] * 3
+        else:
+            self.q25 = self.q75 = None
+            self.median = q[1] if len(q) == 2 else None
 
 
 class OWBoxPlot(widget.OWWidget):
@@ -429,9 +432,10 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 stat = self.stats[box_index]
 
-                if self.compare == OWBoxPlot.CompareMedians:
+                if self.compare == OWBoxPlot.CompareMedians and \
+                        stat.median is not None:
                     pos = stat.median + 5 / self.scale_x
-                elif self.compare == OWBoxPlot.CompareMeans:
+                elif self.compare == OWBoxPlot.CompareMeans or stat.q25 is None:
                     pos = stat.mean + 5 / self.scale_x
                 else:
                     pos = stat.q25
@@ -714,28 +718,31 @@ class OWBoxPlot(widget.OWWidget):
         mean_lab.setPos(m, -22)
         line(m, -1)
 
-        msc = stat.median * self.scale_x
-        med_t = centered_text(stat.median, msc)
-        med_box_width2 = med_t.boundingRect().width()
-        line(msc)
+        if stat.median is not None:
+            msc = stat.median * self.scale_x
+            med_t = centered_text(stat.median, msc)
+            med_box_width2 = med_t.boundingRect().width()
+            line(msc)
 
-        x = stat.q25 * self.scale_x
-        t = centered_text(stat.q25, x)
-        t_box = t.boundingRect()
-        med_left = msc - med_box_width2
-        if x + t_box.width() / 2 >= med_left - 5:
-            move_label(t, x, med_left - t_box.width() - 5)
-        else:
-            line(x)
+        if stat.q25 is not None:
+            x = stat.q25 * self.scale_x
+            t = centered_text(stat.q25, x)
+            t_box = t.boundingRect()
+            med_left = msc - med_box_width2
+            if x + t_box.width() / 2 >= med_left - 5:
+                move_label(t, x, med_left - t_box.width() - 5)
+            else:
+                line(x)
 
-        x = stat.q75 * self.scale_x
-        t = centered_text(stat.q75, x)
-        t_box = t.boundingRect()
-        med_right = msc + med_box_width2
-        if x - t_box.width() / 2 <= med_right + 5:
-            move_label(t, x, med_right + 5)
-        else:
-            line(x)
+        if stat.q75 is not None:
+            x = stat.q75 * self.scale_x
+            t = centered_text(stat.q75, x)
+            t_box = t.boundingRect()
+            med_right = msc + med_box_width2
+            if x - t_box.width() / 2 <= med_right + 5:
+                move_label(t, x, med_right + 5)
+            else:
+                line(x)
 
         return labels
 
@@ -755,17 +762,19 @@ class OWBoxPlot(widget.OWWidget):
         var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0, box)
         var_line.setPen(self._pen_paramet)
 
-        mbox = QGraphicsRectItem(stat.q25 * scale_x, -height / 2,
-                                 (stat.q75 - stat.q25) * scale_x, height,
-                                 box)
-        mbox.setBrush(self._box_brush)
-        mbox.setPen(QPen(Qt.NoPen))
-        mbox.setZValue(-200)
+        if stat.q25 is not None and stat.q75 is not None:
+            mbox = QGraphicsRectItem(stat.q25 * scale_x, -height / 2,
+                                     (stat.q75 - stat.q25) * scale_x, height,
+                                     box)
+            mbox.setBrush(self._box_brush)
+            mbox.setPen(QPen(Qt.NoPen))
+            mbox.setZValue(-200)
 
-        median_line = line(stat.median, -height / 2,
-                           stat.median, height / 2, box)
-        median_line.setPen(self._pen_median)
-        median_line.setZValue(-150)
+        if stat.median is not None:
+            median_line = line(stat.median, -height / 2,
+                               stat.median, height / 2, box)
+            median_line.setPen(self._pen_median)
+            median_line.setZValue(-150)
 
         return box
 
