@@ -21,6 +21,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
     def setUp(self):
         self.widget = self.create_widget(OWSilhouettePlot,
                                          stored_settings={"auto_commit": True})
+        self.widget = self.widget  # type: OWSilhouettePlot
 
     def test_outputs_add_scores(self):
         # check output when appending scores
@@ -39,3 +40,14 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         points = random.sample(range(0, len(self.data)), 20)
         self.widget._silplot.setSelection(points)
         return sorted(points)
+
+    def test_insufficient_clusters(self):
+        iris = self.data
+        data_one_cluster = iris[:3]  # three instances Iris-setosa only
+        self.send_signal("Data", data_one_cluster)
+        self.assertTrue(self.widget.Error.need_two_clusters.is_shown())
+
+        data_singletons = iris[[0, 50, 100]]
+        assert len(np.unique(data_singletons.Y)) == 3  # 3 instances 3 labels
+        self.send_signal("Data", data_singletons)
+        self.assertTrue(self.widget.Error.singleton_clusters_all.is_shown())

@@ -73,6 +73,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")
+        singleton_clusters_all = Msg("All clusters are singletons")
 
     def __init__(self):
         super().__init__()
@@ -204,6 +205,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self.cluster_var_model[:] = []
         self.annotation_var_model[:] = ["None"]
         self._clear_scene()
+        self.Error.clear()
 
     def _clear_scene(self):
         # Clear the graphics scene and associated objects
@@ -239,15 +241,21 @@ class OWSilhouettePlot(widget.OWWidget):
 
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
-        labels = labels.astype(int)
-        _, counts = numpy.unique(labels, return_counts=True)
-        if numpy.count_nonzero(counts) >= 2:
-            self.Error.need_two_clusters.clear()
-            silhouette = sklearn.metrics.silhouette_samples(
-                self._matrix, labels, metric="precomputed")
-        else:
+
+        labels_unq, counts = numpy.unique(labels, return_counts=True)
+
+        self.Error.singleton_clusters_all.clear()
+        self.Error.need_two_clusters.clear()
+
+        if len(labels_unq) < 2:
             self.Error.need_two_clusters()
             labels = silhouette = None
+        elif len(labels_unq) == len(labels):
+            self.Error.singleton_clusters_all()
+            labels = silhouette = None
+        else:
+            silhouette = sklearn.metrics.silhouette_samples(
+                self._matrix, labels, metric="precomputed")
 
         self._labels = labels
         self._silhouette = silhouette
