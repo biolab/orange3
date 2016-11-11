@@ -192,7 +192,8 @@ class DistanceMatrixContextHandler(ContextHandler):
 
     def settings_to_widget(self, widget, *args):
         context = widget.current_context
-        widget.annotation_idx = context.annotations.index(context.annotation)
+        if hasattr(context, 'annotation'):
+            widget.annotation_idx = context.annotations.index(context.annotation)
         widget.tableview.selectionModel().set_selected_items(context.selection)
 
 
