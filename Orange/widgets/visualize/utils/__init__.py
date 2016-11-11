@@ -13,7 +13,7 @@ from AnyQt.QtWidgets import (
 )
 from Orange.data import Variable
 from Orange.widgets import gui
-from Orange.widgets.gui import HorizontalGridDelegate
+from Orange.widgets.gui import HorizontalGridDelegate, TableBarItem
 from Orange.widgets.utils.messages import WidgetMessagesMixin
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.widget import Msg
@@ -38,6 +38,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     - `on_selection_changed` that handles event triggered when the user selects
       a table row. The method should emit signal
       `VizRankDialog.selectionChanged(object)`.
+    - `bar_length` returns the length of the bar corresponding to the score.
 
     The class provides a table and a button. A widget constructs a single
     instance of this dialog in its `__init__`, like (in Sieve) by using a
@@ -100,7 +101,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             selectionBehavior=QTableView.SelectRows,
             selectionMode=QTableView.SingleSelection,
             showGrid=False)
-        view.setItemDelegate(HorizontalGridDelegate())
+        if self._has_bars:
+            view.setItemDelegate(TableBarItem())
+        else:
+            view.setItemDelegate(HorizontalGridDelegate())
         view.setModel(self.rank_model)
         view.selectionModel().selectionChanged.connect(
             self.on_selection_changed)
@@ -110,6 +114,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         self.button = gui.button(
             self, self, "Start", callback=self.toggle, default=True)
+
+    @property
+    def _has_bars(self):
+        return type(self).bar_length is not VizRankDialog.bar_length
 
     @classmethod
     def add_vizrank(cls, widget, master, button_label, set_attr_callback):
@@ -234,6 +242,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         """
         raise NotImplementedError
 
+    def bar_length(self, score):
+        """Compute the bar length (between 0 and 1) corresponding to the score.
+        Return `None` if the score cannot be normalized.
+        """
+        return None
+
     def row_for_state(self, score, state):
         """
         Abstract method that return the items that are inserted into the table.
@@ -264,8 +278,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
                 score = self.compute_score(state)
                 if score is not None:
                     pos = bisect_left(self.scores, score)
-                    self.rank_model.insertRow(
-                        pos, self.row_for_state(score, state))
+                    row_items = self.row_for_state(score, state)
+                    if self._has_bars:
+                        bar = self.bar_length(score)
+                        if bar is not None:
+                            row_items[0].setData(bar, gui.TableBarItem.BarRole)
+                    self.rank_model.insertRow(pos, row_items)
                     self.scores.insert(pos, score)
                 progress.advance()
             self._select_first_if_none()

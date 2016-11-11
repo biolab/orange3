@@ -1,4 +1,5 @@
 from itertools import chain
+import math
 
 import numpy as np
 from scipy.stats.distributions import chi2
@@ -50,7 +51,11 @@ class SieveRank(VizRankDialogAttrPair):
         self.attrs = self.master.attrs
 
     def compute_score(self, state):
-        return ChiSqStats(self.master.discrete_data, *state).p
+        p = ChiSqStats(self.master.discrete_data, *state).p
+        return 2 if np.isnan(p) else p
+
+    def bar_length(self, score):
+        return min(1, -math.log(score, 10) / 50) if 0 < score <= 1 else 0
 
 
 class OWSieveDiagram(OWWidget):
