@@ -28,7 +28,7 @@ def build_widget_catalog(index_html, outfile, webdocprefix):
     ret = []
 
     for li in div.find_all():
-        if li.name == "h2":
+        if li.name == "h3":
             cat = li.text.strip("¶").strip()
             ret.append((cat, []))
         if li.name == "li":
