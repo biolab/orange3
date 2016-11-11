@@ -370,7 +370,7 @@ class VizRankDialogAttrPair(VizRankDialog):
         return can_rank
 
     def on_selection_changed(self, selected, deselected):
-        attrs = [selected.indexes()[i].data(self._AttrRole) for i in (0, 1)]
+        attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit(attrs)
 
     def state_count(self):
@@ -385,13 +385,10 @@ class VizRankDialogAttrPair(VizRankDialog):
             sj = 0
 
     def row_for_state(self, score, state):
-        items = []
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
-        for attr in attrs:
-            item = QStandardItem(attr.name)
-            item.setData(attr, self._AttrRole)
-            items.append(item)
-        return items
+        item = QStandardItem(", ".join(a.name for a in attrs))
+        item.setData(attrs, self._AttrRole)
+        return [item]
 
 
 class CanvasText(QGraphicsTextItem):
