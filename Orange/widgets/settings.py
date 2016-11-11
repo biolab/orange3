@@ -447,7 +447,7 @@ class SettingsHandler:
     def _migrate_settings(self, settings):
         """Ask widget to migrate settings to the latest version."""
         if settings:
-            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, None))
+            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, 0))
 
     def _select_provider(self, instance):
         provider = self.provider.get_provider(instance.__class__)
@@ -612,7 +612,7 @@ class ContextHandler(SettingsHandler):
 
     def _migrate_contexts(self, contexts):
         for context in contexts:
-            self.widget_class.migrate_context(context, context.values.pop(VERSION_KEY, None))
+            self.widget_class.migrate_context(context, context.values.pop(VERSION_KEY, 0))
 
     def write_defaults_file(self, settings_file):
         """Call the inherited method, then add global context to the pickle."""
@@ -1182,3 +1182,41 @@ class PerfectDomainContextHandler(DomainContextHandler):
             return value, -1
         else:
             return super().encode_setting(context, setting, value)
+
+
+def rename_setting(settings, old_name, new_name):
+    """
+    Rename setting from `old_name` to `new_name`. Used in migrations.
+
+    The argument `settings` can be `dict` or `Context`.
+    """
+    if isinstance(settings, Context):
+        rename_setting(settings.values, old_name, new_name)
+    else:
+        settings[new_name] = settings.pop(old_name)
+
+
+def migrate_str_to_variable(settings, names=None):
+    """
+    Change variables stored as `(str, int)` to `(Variable, int)`.
+
+    Args:
+        settings (Context): context that is being migrated
+        names (sequence): names of settings to be migrated. If omitted,
+            all settings with values `(str, int)` are migrated.
+    """
+    def _fix(name):
+        var, vartype = settings.values[name]
+        if 0 <= vartype <= 100:
+            settings.values[name] = (var, 100 + vartype)
+
+    if names is None:
+        for name, setting in settings.values.items():
+            if isinstance(setting, tuple) and len(setting) == 2 and \
+                    isinstance(setting[0], str) and isinstance(setting[1], int):
+                _fix(name)
+    elif isinstance(names, str):
+        _fix(names)
+    else:
+        for name in names:
+            _fix(name)

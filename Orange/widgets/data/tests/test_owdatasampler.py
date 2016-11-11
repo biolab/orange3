@@ -17,8 +17,7 @@ class TestOWDataSampler(WidgetTest):
     def test_error_message(self):
         """ Check if error message appears and then disappears when
         data is removed from input"""
-        self.widget.controlledAttributes["sampling_type"][0].control.buttons[
-            2].click()
+        self.widget.controls.sampling_type.buttons[2].click()
         self.send_signal("Data", self.iris)
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
         self.send_signal("Data", self.iris[:5])
