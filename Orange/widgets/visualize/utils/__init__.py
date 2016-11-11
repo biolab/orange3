@@ -5,11 +5,11 @@ Utility classes for visualization widgets
 from bisect import bisect_left
 from operator import attrgetter
 
-from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
     QTableView, QGraphicsTextItem, QGraphicsRectItem, QGraphicsView, QDialog,
-    QVBoxLayout
+    QVBoxLayout, QLineEdit
 )
 from Orange.data import Variable
 from Orange.widgets import gui
@@ -96,7 +96,16 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.saved_progress = 0
         self.scores = []
 
+        self.filter = QLineEdit()
+        self.filter.setPlaceholderText("Filter ...")
+        self.filter.textChanged.connect(self.filter_changed)
+        self.layout().addWidget(self.filter)
+        # Remove focus from line edit
+        self.setFocus(Qt.ActiveWindowFocusReason)
+
         self.rank_model = QStandardItemModel(self)
+        self.model_proxy = QSortFilterProxyModel(self)
+        self.model_proxy.setSourceModel(self.rank_model)
         self.rank_table = view = QTableView(
             selectionBehavior=QTableView.SelectRows,
             selectionMode=QTableView.SingleSelection,
@@ -105,7 +114,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             view.setItemDelegate(TableBarItem())
         else:
             view.setItemDelegate(HorizontalGridDelegate())
-        view.setModel(self.rank_model)
+        view.setModel(self.model_proxy)
         view.selectionModel().selectionChanged.connect(
             self.on_selection_changed)
         view.horizontalHeader().setStretchLastSection(True)
@@ -184,6 +193,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.rank_model.clear()
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
+
+    def filter_changed(self, text):
+        self.model_proxy.setFilterFixedString(text)
 
     def stop_and_reset(self, reset_method=None):
         if self.keep_running:
@@ -388,6 +400,9 @@ class VizRankDialogAttrPair(VizRankDialog):
         return can_rank
 
     def on_selection_changed(self, selected, deselected):
+        selection = selected.indexes()
+        if not selection:
+            return
         attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit(attrs)
 
