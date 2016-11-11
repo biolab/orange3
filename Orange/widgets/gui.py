@@ -8,6 +8,7 @@ import re
 import itertools
 import warnings
 from types import LambdaType
+from collections import defaultdict
 
 import pkg_resources
 
@@ -32,8 +33,6 @@ from Orange.widgets.utils import getdeepattr
 from Orange.data import \
     ContinuousVariable, StringVariable, TimeVariable, DiscreteVariable, Variable
 from Orange.widgets.utils import vartype
-from Orange.widgets.utils.constants import \
-    CONTROLLED_ATTRIBUTES, ATTRIBUTE_CONTROLLERS
 from Orange.widgets.utils.buttons import VariableTextPushButton
 from Orange.util import namegen
 
@@ -111,86 +110,74 @@ def resource_filename(path):
     return pkg_resources.resource_filename(__name__, path)
 
 
-class ControlledAttributesDict(dict):
-    """
-    Dictionary with names of attributes for which the `master` needs to be
-    notified of their changes
-    """
-    def __init__(self, master):
-        super().__init__()
-        self.master = master
-
-    def __setitem__(self, key, value):
-        if key not in self:
-            super().__setitem__(key, [value])
-        else:
-            super().__getitem__(key).append(value)
-        set_controllers(self.master, key, self.master, "")
-
-
-def callbacks(obj):
-    return getattr(obj, CONTROLLED_ATTRIBUTES, {})
-
-
-def subcontrollers(obj):
-    return getattr(obj, ATTRIBUTE_CONTROLLERS, {})
-
-
-def notify_changed(obj, name, value):
-    if name in callbacks(obj):
-        for callback in callbacks(obj)[name]:
-            callback(value)
-        return
-
-    for controller, prefix in list(subcontrollers(obj)):
-        if getdeepattr(controller, prefix, None) != obj:
-            del subcontrollers(obj)[(controller, prefix)]
-            continue
-
-        full_name = prefix + "." + name
-        if full_name in callbacks(controller):
-            for callback in callbacks(controller)[full_name]:
-                callback(value)
-            continue
-
-        prefix = full_name + "."
-        prefix_length = len(prefix)
-        for controlled in callbacks(controller):
-            if controlled[:prefix_length] == prefix:
-                set_controllers(value, controlled[prefix_length:], controller, full_name)
-
-
-def set_controllers(obj, controlled_name, controller, prefix):
-    while obj:
-        if prefix:
-            if hasattr(obj, ATTRIBUTE_CONTROLLERS):
-                getattr(obj, ATTRIBUTE_CONTROLLERS)[(controller, prefix)] = True
-            else:
-                setattr(obj, ATTRIBUTE_CONTROLLERS, {(controller, prefix): True})
-        parts = controlled_name.split(".", 1)
-        if len(parts) < 2:
-            break
-        new_prefix, controlled_name = parts
-        obj = getattr(obj, new_prefix, None)
-        if prefix:
-            prefix += '.'
-        prefix += new_prefix
-
-
 class OWComponent:
     """
-    Mixin for classes that are not derived from :obj:`Orange.widgets.OWWidget`
-    but still contain controlled attributes.
-    """
-    def __init__(self, widget):
-        setattr(self, CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
+    Mixin for classes that contain settings and/or attributes that trigger
+    callbacks when changed.
 
-        if widget.settingsHandler:
+    The class initializes the settings handler, provides `__setattr__` that
+    triggers callbacks, and provides `control` attribute for access to
+    Qt widgets controling particular attributes.
+
+    Callbacks are exploited by controls (e.g. check boxes, line edits,
+    combo boxes...) that are synchronized with attribute values. Changing
+    the value of the attribute triggers a call to a function that updates
+    the Qt widget accordingly.
+
+    The class is mixed into `widget.OWWidget`, and must also be mixed into
+    all widgets not derived from `widget.OWWidget` that contain settings or
+    Qt widgets inserted by function in `Orange.widgets.gui` module. See
+    `OWScatterPlotGraph` for an example.
+    """
+    def __init__(self, widget=None):
+        self.controlled_attributes = defaultdict(list)
+        self.controls = ControlGetter(self)
+        if widget is not None and widget.settingsHandler:
             widget.settingsHandler.initialize(self)
 
-    def __setattr__(self, key, value):
-        super().__setattr__(key, value)
-        notify_changed(self, key, value)
+    def connect_control(self, name, func):
+        """
+        Add `func` to the list of functions called when the value of the
+        attribute `name` is set.
+
+        If the name includes a dot, it is assumed that the part the before the
+        first dot is a name of an attribute containing an instance of a
+        component, and the call is transferred to its `conntect_control`. For
+        instance, `calling `obj.connect_control("graph.attr_x", f)` is
+        equivalent to `obj.graph.connect_control("attr_x", f)`.
+
+        Args:
+            name (str): attribute name
+            func (callable): callback function
+        """
+        if "." in name:
+            name, rest = name.split(".", 1)
+            sub = getattr(self, name)
+            sub.connect_control(rest, func)
+        else:
+            self.controlled_attributes[name].append(func)
+
+    def __setattr__(self, name, value):
+        """Set the attribute value and trigger any attached callbacks.
+
+        For backward compatibility, the name can include dots, e.g.
+        `graph.attr_x`. `obj.__setattr__('x.y', v)` is equivalent to
+        `obj.x.__setattr__('x', v)`.
+
+        Args:
+            name (str): attribute name
+            value (object): value to set to the member.
+        """
+        if "." in name:
+            name, rest = name.split(".", 1)
+            sub = getattr(self, name)
+            setattr(sub, rest, value)
+        else:
+            super().__setattr__(name, value)
+            # First check that the widget is not just being constructed
+            if hasattr(self, "controlled_attributes"):
+                for callback in self.controlled_attributes.get(name, ()):
+                    callback(value)
 
 
 def miscellanea(control, box, parent,
@@ -482,7 +469,7 @@ def label(widget, master, label, labelWidth=None, box=None,
     lbl = QtWidgets.QLabel("", b)
     reprint = CallFrontLabel(lbl, label, master)
     for mo in __re_label.finditer(label):
-        getattr(master, CONTROLLED_ATTRIBUTES)[mo.group("value")] = reprint
+        master.connect_control(mo.group("value"), reprint)
     reprint()
     if labelWidth:
         lbl.setFixedSize(labelWidth, lbl.sizeHint().height())
@@ -1125,8 +1112,7 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
 
     if labels is not None:
         setattr(master, labels, getdeepattr(master, labels))
-        if hasattr(master, CONTROLLED_ATTRIBUTES):
-            getattr(master, CONTROLLED_ATTRIBUTES)[labels] = CallFrontListBoxLabels(lb)
+        master.connect_control(labels, CallFrontListBoxLabels(lb))
     if value is not None:
         clist = getdeepattr(master, value)
         if not isinstance(clist, (int, ControlledList)):
@@ -2115,8 +2101,8 @@ def connectControl(master, value, f, signal,
         if signal:
             signal.connect(cback)
         cback.opposite = cfront
-        if value and cfront and hasattr(master, CONTROLLED_ATTRIBUTES):
-            getattr(master, CONTROLLED_ATTRIBUTES)[value] = cfront
+        if value and cfront:
+            master.connect_control(value, cfront)
     cfunc = cfunc or f and FunctionCallback(master, f)
     if cfunc:
         if signal:
@@ -3248,3 +3234,32 @@ class FloatSlider(QSlider):
         # For compatibility with qwtSlider
         # TODO If it's related to Qwt, remove it
         self.setScale(minValue, maxValue, step)
+
+
+class ControlGetter:
+    """
+    Provide access to GUI elements based on their corresponding attributes
+    in widget.
+
+    Every widget has an attribute `controls` that is an instance of this
+    class, which uses the `controlled_attributes` dictionary to retrieve the
+    control (e.g. `QCheckBox`, `QComboBox`...) corresponding to the attribute.
+    For `OWComponents`, it returns its controls so that subsequent
+    `__getattr__` will retrieve the control.
+    """
+    def __init__(self, widget):
+        self.widget = widget
+
+    def __getattr__(self, name):
+        widget = self.widget
+        callfronts = widget.controlled_attributes.get(name, None)
+        if callfronts is None:
+            # This must be an OWComponent
+            try:
+                return getattr(widget, name).controls
+            except AttributeError:
+                raise AttributeError(
+                    "'{}' is not an attribute related to a gui element or "
+                    "component".format(name))
+        else:
+            return callfronts[0].control

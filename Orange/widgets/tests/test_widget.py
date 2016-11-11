@@ -1,9 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
-from Orange.widgets.gui import CONTROLLED_ATTRIBUTES, OWComponent
+from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget, Msg
@@ -50,31 +50,15 @@ class WidgetTestCase(WidgetTest):
 
     def test_notify_controller_on_attribute_change(self):
         widget = self.create_widget(MyWidget)
-        widget.widget = self.create_widget(MyWidget)
-        widget.widget.widget = self.create_widget(MyWidget)
-        widget.widget.widget.widget = self.create_widget(MyWidget)
 
-        delattr(widget.widget, CONTROLLED_ATTRIBUTES)
-        delattr(widget.widget.widget, CONTROLLED_ATTRIBUTES)
-        delattr(widget.widget.widget.widget, CONTROLLED_ATTRIBUTES)
-        calls = []
+        callback = MagicMock()
+        callback2 = MagicMock()
 
-        def callback(*args, **kwargs):
-            calls.append((args, kwargs))
-
-        getattr(widget, CONTROLLED_ATTRIBUTES)['field'] = callback
-        getattr(widget, CONTROLLED_ATTRIBUTES)['component.b'] = callback
-        getattr(widget, CONTROLLED_ATTRIBUTES)['widget.field'] = callback
-        getattr(widget, CONTROLLED_ATTRIBUTES)['widget.widget.component.b'] = callback
-        getattr(widget, CONTROLLED_ATTRIBUTES)['widget.widget.widget.field'] = callback
-
+        widget.connect_control('field', callback)
+        widget.connect_control('field', callback2)
         widget.field = 5
-        widget.component.b = 5
-        widget.widget.field = 5
-        widget.widget.widget.component.b = 5
-        widget.widget.widget.widget.field = 5
-
-        self.assertEqual(len(calls), 5)
+        self.assertTrue(callback.called)
+        self.assertTrue(callback2.called)
 
     def test_widget_tests_do_not_use_stored_settings(self):
         widget = self.create_widget(MyWidget)

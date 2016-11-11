@@ -62,9 +62,9 @@ class OWBoxPlotTests(WidgetTest):
         self.send_signal("Data", data)
 
     def test_apply_sorting(self):
-        controls = self.widget.controlledAttributes
-        group_list = controls["group_var"][0].control
-        order_check = controls["order_by_importance"][0].control
+        controls = self.widget.controls
+        group_list = controls.group_var
+        order_check = controls.order_by_importance
         attributes = self.widget.attrs
 
         def select_group(i):

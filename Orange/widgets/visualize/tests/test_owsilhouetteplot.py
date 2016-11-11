@@ -25,7 +25,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
     def test_outputs_add_scores(self):
         # check output when appending scores
         self.send_signal("Data", self.data)
-        self.widget.controlledAttributes["add_scores"][0].control.setChecked(1)
+        self.widget.controls.add_scores.setChecked(1)
         selected_indices = self._select_data()
         name = "Silhouette ({})".format(self.data.domain.class_var.name)
         selected = self.get_output("Selected Data")

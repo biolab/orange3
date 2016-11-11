@@ -64,7 +64,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # check output when "Merge by k-means" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output("Selected Data"))
-        self.widget.controlledAttributes["merge_kmeans"][0].control.setChecked(True)
+        self.widget.controls.merge_kmeans.setChecked(True)
         self.assertIsNone(self.get_output("Selected Data"))
 
     def _select_data(self):

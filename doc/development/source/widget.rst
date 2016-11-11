@@ -109,7 +109,7 @@ Input/Output flags:
 .. attribute:: Dynamic
 
    Only applies to output. Specifies that the instances on the output
-   will in general be subtypes of the declared type and that the output 
+   will in general be subtypes of the declared type and that the output
    can be connected to any input which can accept a subtype of the
    declared output type.
 
@@ -152,6 +152,27 @@ connection/link on which the value was sent (see also :doc:`tutorial-channels`)
 
 The widgets publish their outputs using :meth:`OWWidget.send` method.
 
+Accessing Controls though Attribute Names
+-----------------------------------------
+
+The preferred way for constructing the user interface is to use functions from
+module :obj:`Orange.widgets.gui` that insert a Qt widget and establish the
+signals for synchronization with the widget's attributes.
+
+     gui.checkBox(box, self, "binary_trees", "Induce binary tree")
+
+This inserts a `QCheckBox` into the layout of `box`, and make it reflect and
+changes the attriubte `self.binary_trees`. The instance of `QCheckbox`
+can be accessed through the name it controls. E.g. we can disable the check box
+by calling
+
+   self.controls.binary_trees.setDisabled(True)
+
+This may be more practical than having to store the attribute and the Qt
+widget that controls it, e.g. with
+
+     self.binarization_cb = gui.checkBox(
+         box, self, "binary_trees", "Induce binary tree")
 
 Class Member Documentation
 --------------------------
