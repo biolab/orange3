@@ -7,6 +7,7 @@ import traceback
 import uuid
 from html import escape
 from threading import Thread
+from pprint import pformat
 
 from tempfile import mkstemp
 from collections import OrderedDict
@@ -49,6 +50,7 @@ class ErrorReporting(QDialog):
         MACHINE_ID = 'Machine ID'
         WIDGET_SCHEME = 'Widget Scheme'
         STACK_TRACE = 'Stack Trace'
+        LOCALS = 'Local Variables'
 
     def __init__(self, data):
         icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxWarning)
@@ -101,7 +103,7 @@ class ErrorReporting(QDialog):
                     if not add_scheme:
                         continue
                     v = '<a href="{}">{}</a>'.format(urljoin('file:', pathname2url(_v)), v)
-                if k == F.STACK_TRACE:
+                if k in (F.STACK_TRACE, F.LOCALS):
                     v = v.replace('\n', '<br>').replace(' ', '&nbsp;')
                 lines.append('<tr><th align="left">{}:</th><td>{}</td></tr>'.format(k, v))
             lines.append('</table>')
@@ -163,11 +165,12 @@ class ErrorReporting(QDialog):
                 tb = tb.tb_next
             return tb
 
-        err_module, frame = None, _find_last_frame(tb)
+        err_locals, err_module, frame = None, None, _find_last_frame(tb)
         if frame:
             err_module = '{}:{}'.format(
                 frame.tb_frame.f_globals.get('__name__', frame.tb_frame.f_code.co_filename),
                 frame.tb_lineno)
+            err_locals = pformat(OrderedDict(sorted(frame.tb_frame.f_locals.items())))
 
         def _find_widget_frame(tb):
             while tb:
@@ -218,6 +221,8 @@ class ErrorReporting(QDialog):
             platform.version(), platform.machine())
         data[F.MACHINE_ID] = str(uuid.getnode())
         data[F.STACK_TRACE] = stacktrace
+        if err_locals:
+            data[F.LOCALS] = err_locals
 
         cls(data=data).exec()
 
