@@ -51,3 +51,24 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         assert len(np.unique(data_singletons.Y)) == 3  # 3 instances 3 labels
         self.send_signal("Data", data_singletons)
         self.assertTrue(self.widget.Error.singleton_clusters_all.is_shown())
+
+    def test_unknowns_in_labels(self):
+        self.widget.controls.add_scores.setChecked(1)
+        scorename = "Silhouette (iris)"
+        data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
+        data.Y[::3] = np.nan
+        valid = ~np.isnan(data.Y.flatten())
+        self.send_signal("Data", data)
+        output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        scores = output[:, scorename].metas.flatten()
+        self.assertTrue(np.all(np.isnan(scores[::3])))
+        self.assertTrue(np.all(np.isfinite(scores[valid])))
+
+        # Run again on subset with known labels
+        data_1 = data[np.flatnonzero(valid)]
+        self.send_signal("Data", data_1)
+        output_1 = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        scores_1 = output_1[:, scorename].metas.flatten()
+        self.assertTrue(np.all(np.isfinite(scores_1)))
+        # the scores must match
+        np.testing.assert_almost_equal(scores_1, scores[valid], decimal=12)
