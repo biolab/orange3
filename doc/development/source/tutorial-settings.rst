@@ -272,5 +272,21 @@ Imagine opening a complex workflow you have designed a year ago with the
 new version of Orange and finding out that all the settings are back to
 default. Not fun!
 
+There are two helper functions you can use.
+:obj:`Orange.widget.settings.rename_settings(settings, old_name, new_name)`
+does the obvious operation on `settings`, which can be either a dictionary
+or a context, thus it can be called from `migrate_settings` or
+`migrate_context`.
+
+Another common operation may be upgrading your widget from storing variable
+names (as `str`) to storing variables (instances of classes derived from
+`Variable`). In a typical scenario, this happenswhen combo boxes are upgraded to
+using models. Function
+:obj:`Orange.widget.settings.migrate_str_to_variable(settings, names=None)`
+makes the necessary changes to the settings listed in `names`. `names` can be
+a list of setting names, a single string or `None`. In the latter case, all
+settings that may refer to variables (that is two-elements tuples constisting
+of a string and an int) are migrated.
+
 So take some time, write the migrations and do not forget to bump the
-settings_version when you do breaking changes.
+`settings_version` when you do breaking changes.
