@@ -723,10 +723,16 @@ class OWHierarchicalClustering(widget.OWWidget):
     outputs = [("Selected Data", Orange.data.Table, widget.Default),
                (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
 
+    settingsHandler = settings.DomainContextHandler()
+
     #: Selected linkage
     linkage = settings.Setting(1)
     #: Index of the selected annotation item (variable, ...)
-    annotation_idx = settings.Setting(0)
+    annotation = settings.ContextSetting("Enumeration")
+    #: Out-of-context setting for the case when the "Name" option is available
+    annotation_if_names = settings.Setting("Name")
+    #: Out-of-context setting for the case with just "Enumerate" and "None"
+    annotation_if_enumerate = settings.Setting("Enumerate")
     #: Selected tree pruning (none/max depth)
     pruning = settings.Setting(0)
     #: Maximum depth when max depth pruning is selected
@@ -753,6 +759,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     AttributeRole, ClassRole, MetaRole = 0, 1, 2
 
     cluster_roles = ["Attribute", "Class variable", "Meta variable"]
+    basic_annotations = ["None", "Enumeration"]
 
     def __init__(self):
         super().__init__()
@@ -768,11 +775,11 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
 
+        model = itemmodels.VariableListModel()
+        model[:] = self.basic_annotations
         self.label_cb = gui.comboBox(
-            self.controlArea, self, "annotation_idx", box="Annotation",
-            callback=self._update_labels, contentsLength=12)
-        self.label_cb.setModel(itemmodels.VariableListModel())
-        self.label_cb.model()[:] = ["None", "Enumeration"]
+            self.controlArea, self, "annotation", box="Annotation",
+            model=model, callback=self._update_labels, contentsLength=12)
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
@@ -952,7 +959,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def set_distances(self, matrix):
         self.error()
-        self._set_items(None)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
@@ -960,24 +966,25 @@ class OWHierarchicalClustering(widget.OWWidget):
                 matrix = None
 
         self.matrix = matrix
-        self._invalidate_clustering()
-
         if matrix is not None:
             self._set_items(matrix.row_items, matrix.axis)
+        else:
+            self._set_items(None)
+        self._invalidate_clustering()
 
         self.unconditional_commit()
 
     def _set_items(self, items, axis=1):
+        self.closeContext()
         self.items = items
         model = self.label_cb.model()
-        if items is None:
-            model[:] = ["None", "Enumeration"]
-        elif not axis:
-            model[:] = ["None", "Enumeration", "Attribute names"]
-            self.annotation_idx = 2
-        elif isinstance(items, Orange.data.Table):
+        if len(model) == 3:
+            self.annotation_if_names = self.annotation
+        elif len(model) == 2:
+            self.annotation_if_enumerate = self.annotation
+        if isinstance(items, Orange.data.Table) and axis:
             model[:] = chain(
-                ["None", "Enumeration"],
+                self.basic_annotations,
                 [model.Separator],
                 items.domain.class_vars,
                 items.domain.metas,
@@ -985,13 +992,20 @@ class OWHierarchicalClustering(widget.OWWidget):
                                      next(filter_visible(items.domain.attributes), False) else [],
                 filter_visible(items.domain.attributes)
             )
-        elif isinstance(items, list) and \
-                all(isinstance(var, Orange.data.Variable) for var in items):
-            model[:] = ["None", "Enumeration", "Name"]
+            if items.domain.class_vars:
+                self.annotation = items.domain.class_vars[0]
+            else:
+                self.annotation = "Enumeration"
+            self.openContext(items.domain)
         else:
-            model[:] = ["None", "Enumeration"]
-        self.annotation_idx = min(self.annotation_idx,
-                                  len(model) - 1)
+            name_option = bool(
+                items is not None and (
+                not axis or
+                isinstance(items, list) and
+                all(isinstance(var, Orange.data.Variable) for var in items)))
+            model[:] = self.basic_annotations + ["Name"] * name_option
+            self.annotation = self.annotation_if_names if name_option \
+                else self.annotation_if_enumerate
 
     def _clear_plot(self):
         self.labels.set_labels([])
@@ -1042,17 +1056,16 @@ class OWHierarchicalClustering(widget.OWWidget):
         if self.root and self._displayed_root:
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
-            if self.annotation_idx == 0:
+            if self.annotation == "None":
                 labels = []
-            elif self.annotation_idx == 1:
+            elif self.annotation == "Enumeration":
                 labels = [str(i+1) for i in indices]
-            elif self.label_cb.model()[self.annotation_idx] == "Attribute names":
+            elif self.annotation == "Name":
                 attr = self.matrix.row_items.domain.attributes
                 labels = [str(attr[i]) for i in indices]
-            elif isinstance(self.items, Orange.data.Table):
-                var = self.label_cb.model()[self.annotation_idx]
-                col_data, _ = self.items.get_column_view(var)
-                labels = [var.str_val(val) for val in col_data]
+            elif isinstance(self.annotation, Orange.data.Variable):
+                col_data, _ = self.items.get_column_view(self.annotation)
+                labels = [self.annotation.str_val(val) for val in col_data]
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []
@@ -1350,7 +1363,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def send_report(self):
         annot = self.label_cb.currentText()
-        if self.annotation_idx <= 1:
+        if isinstance(self.annotation, str):
             annot = annot.lower()
         if self.selection_method == 0:
             sel = "manual"
