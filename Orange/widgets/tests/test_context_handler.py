@@ -59,7 +59,7 @@ class TestContextHandler(TestCase):
         with patch.object(SimpleWidget, "migrate_context", migrate_context):
             handler.read_defaults_file(create_defaults_file(contexts))
         self.assertSequenceEqual(handler.global_contexts, contexts)
-        migrate_context.assert_has_calls([call(c, None) for c in contexts])
+        migrate_context.assert_has_calls([call(c, 0) for c in contexts])
 
         # Settings with version
         contexts = [DummyContext(version=i) for i in range(1, 4)]
@@ -98,7 +98,7 @@ class TestContextHandler(TestCase):
         migrate_context = Mock()
         with patch.object(SimpleWidget, "migrate_context", migrate_context):
             handler.initialize(widget, dict(context_settings=contexts))
-        migrate_context.assert_has_calls([call(c, None) for c in contexts])
+        migrate_context.assert_has_calls([call(c, 0) for c in contexts])
 
         # Settings with version
         contexts = [DummyContext(version=i) for i in range(1, 4)]
