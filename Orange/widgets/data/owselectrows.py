@@ -3,7 +3,7 @@ from itertools import chain
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
-    QMessageBox, QMenu, QListView, QGridLayout, QPushButton
+    QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy
 )
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
@@ -84,8 +84,9 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.setRowCount(0)
         self.cond_list.verticalHeader().hide()
         self.cond_list.horizontalHeader().hide()
-        self.cond_list.resizeColumnToContents(0)
-        self.cond_list.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        for i in range(3):
+            self.cond_list.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+        self.cond_list.horizontalHeader().resizeSection(3, 30)
         self.cond_list.viewport().setBackgroundRole(QPalette.Window)
 
         box2 = gui.hBox(box)
@@ -145,7 +146,9 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
         index = QPersistentModelIndex(model.index(row, 3))
-        temp_button = QPushButton(u'\u00d7', self, flat=True)
+        temp_button = QPushButton(u'\u00d7', self, flat=True,
+                                  styleSheet='* {font-size: 16pt; color: silver}'
+                                             '*:hover {color: black}')
         temp_button.clicked.connect(lambda: self.remove_one(index.row()))
         self.cond_list.setCellWidget(row, 3, temp_button)
 
@@ -245,7 +248,9 @@ class OWSelectRows(widget.OWWidget):
         #         child.setParent(None)
 
         def add_textual(contents):
-            le = gui.lineEdit(box, self, None)
+            le = gui.lineEdit(box, self, None,
+                              sizePolicy=QSizePolicy(QSizePolicy.Expanding,
++                                                     QSizePolicy.Expanding))
             if contents:
                 le.setText(contents)
             le.setAlignment(Qt.AlignRight)
@@ -302,7 +307,6 @@ class OWSelectRows(widget.OWWidget):
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
                     box.controls.append(validator(lc[1]))
-                gui.rubber(box)
             elif var.is_string:
                 box.controls = [add_textual(lc[0])]
                 if oper in [6, 7]:
