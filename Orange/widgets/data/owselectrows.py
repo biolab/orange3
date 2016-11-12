@@ -3,13 +3,13 @@ from itertools import chain
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
-    QMessageBox, QMenu, QListView, QGridLayout
+    QMessageBox, QMenu, QListView, QGridLayout, QPushButton
 )
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
 )
-from AnyQt.QtCore import Qt, QPoint, QRegExp
+from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
@@ -80,7 +80,7 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list = QTableWidget(
             box, showGrid=False, selectionMode=QTableWidget.NoSelection)
         box.layout().addWidget(self.cond_list)
-        self.cond_list.setColumnCount(3)
+        self.cond_list.setColumnCount(4)
         self.cond_list.setRowCount(0)
         self.cond_list.verticalHeader().hide()
         self.cond_list.horizontalHeader().hide()
@@ -144,6 +144,11 @@ class OWSelectRows(widget.OWWidget):
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
+        index = QPersistentModelIndex(model.index(row, 3))
+        temp_button = QPushButton(u'\u00d7', self, flat=True)
+        temp_button.clicked.connect(lambda: self.remove_one(index.row()))
+        self.cond_list.setCellWidget(row, 3, temp_button)
+
         self.remove_all_button.setDisabled(False)
         self.set_new_operators(attr_combo, attr is not None,
                                condition_type, condition_value)
@@ -165,9 +170,18 @@ class OWSelectRows(widget.OWWidget):
         for i in range(len(domain.variables) + len(domain.metas)):
             self.add_row(i)
 
+    def remove_one(self, rownum):
+        self.remove_one_row(rownum)
+        self.conditions_changed()
+
     def remove_all(self):
         self.remove_all_rows()
         self.conditions_changed()
+
+    def remove_one_row(self, rownum):
+        self.cond_list.removeRow(rownum)
+        if self.cond_list.model().rowCount() == 0:
+            self.remove_all_button.setDisabled(True)
 
     def remove_all_rows(self):
         self.cond_list.clear()

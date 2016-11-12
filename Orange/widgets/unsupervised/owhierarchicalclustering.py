@@ -975,6 +975,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         elif not axis:
             model[:] = ["None", "Enumeration", "Attribute names"]
             self.annotation_idx = 2
+            self._update_labels()
         elif isinstance(items, Orange.data.Table):
             model[:] = chain(
                 ["None", "Enumeration"],
