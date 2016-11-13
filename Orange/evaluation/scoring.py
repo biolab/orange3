@@ -188,7 +188,10 @@ class AUC(Score):
         if n_classes < 2:
             raise ValueError("Class variable has less than two values")
         elif n_classes == 2:
-            return self.from_predicted(results, skl_metrics.roc_auc_score)
+            return np.fromiter(
+                    (skl_metrics.roc_auc_score(results.actual, probabilities[:, 1])
+                     for probabilities in results.probabilities),
+                    dtype=np.float64, count=len(results.predicted))
         else:
             if target is None:
                 return self.multi_class_auc(results)
