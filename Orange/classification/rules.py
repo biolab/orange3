@@ -287,30 +287,29 @@ class LRSValidator(Validator):
         self.default_alpha = default_alpha
 
     def validate_rule(self, rule, _default=False):
-        if _default:
-            p_dist = rule.initial_class_dist
-            alpha = self.default_alpha
-        elif rule.parent_rule is not None:
-            p_dist = rule.parent_rule.curr_class_dist
-            alpha = self.parent_alpha
-        else:
-            return True
-
-        if alpha >= 1.0:
-            return True
-
         tc = rule.target_class
         dist = rule.curr_class_dist
 
+        if self.default_alpha < 1.0:
+            sig = self.test_sig(dist, rule.initial_class_dist, tc, self.default_alpha)
+            if not sig:
+                return False
+        if self.parent_alpha < 1.0 and rule.parent_rule is not None:
+            expdist = rule.parent_rule.curr_class_dist
+            alpha = self.parent_alpha
+            return self.test_sig(dist, expdist, tc, alpha)
+        return True
+
+    def test_sig(self, obsdist, expdist, tc, alpha):
         if tc is not None:
-            x = np.array([dist[tc], dist.sum() - dist[tc]], dtype=float)
-            y = np.array([p_dist[tc], p_dist.sum() - p_dist[tc]], dtype=float)
+            x = np.array([obsdist[tc], obsdist.sum() - obsdist[tc]], dtype=float)
+            y = np.array([expdist[tc], expdist.sum() - expdist[tc]], dtype=float)
         else:
-            x = dist.astype(float)
-            y = p_dist.astype(float)
+            x = obsdist.astype(float)
+            y = expdist.astype(float)
 
         lrs = likelihood_ratio_statistic(x, y)
-        df = len(x) - 1
+        df = len(obsdist) - 1
         return lrs > 0 and chi2.sf(lrs, df) <= alpha
 
 
@@ -930,8 +929,8 @@ class _RuleLearner(Learner):
         self.cover_and_remove = self.exclusive_cover_and_remove
         self.rule_stopping = self.lrs_significance_rule_stopping
 
-    def fit(self, X, Y, W=None):
-        raise NotImplementedError
+    #def fit_storage(self, data):
+    #    raise NotImplementedError
 
     # base_rules and domain not accessed using self to avoid
     # possible crashes and to enable quick use of the algorithm
