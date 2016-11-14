@@ -97,9 +97,9 @@ class OWLoadClassifier(widget.OWWidget):
         try:
             classifier = pickle.load(open(filename, "rb"))
         except pickle.UnpicklingError:
-            raise  # TODO: error reporting
+            raise pickle.UnpicklingError("Failed to load '{}'.".format(filename))
         except os.error:
-            raise  # TODO: error reporting
+            raise OSError("Failed to load '{}'.".format(filename))
         else:
             self._remember(filename)
             self.send("Classifier", classifier)
