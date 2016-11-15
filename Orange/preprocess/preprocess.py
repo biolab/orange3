@@ -326,6 +326,9 @@ class Randomize(Preprocess):
         If Randomize.RandomizeAttributes, attributes are shuffled.
         If Randomize.RandomizeMetas, metas are shuffled.
 
+    rand_seed : int (optional)
+        Random seed
+
     Examples
     --------
     >>> from Orange.data import Table
@@ -339,8 +342,9 @@ class Randomize(Preprocess):
                      "RandomizeMetas")
     (RandomizeClasses, RandomizeAttributes, RandomizeMetas) = RandTypes
 
-    def __init__(self, rand_type=RandomizeClasses):
+    def __init__(self, rand_type=RandomizeClasses, rand_seed=None):
         self.rand_type = rand_type
+        self.rand_seed = rand_seed
 
     def __call__(self, data):
         """
@@ -372,9 +376,10 @@ class Randomize(Preprocess):
         return new_data
 
     def randomize(self, table):
+        np.random.seed(self.rand_seed)
         if len(table.shape) > 1:
             for i in range(table.shape[1]):
-                np.random.shuffle(table[:,i])
+                np.random.shuffle(table[:, i])
         else:
             np.random.shuffle(table)
 

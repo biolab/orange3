@@ -122,6 +122,7 @@ class VariableEditor(QWidget):
 
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
+        self.var = None
         self.setup_gui()
 
     def setup_gui(self):
@@ -216,7 +217,7 @@ class VariableEditor(QWidget):
         labels = self.labels_model.get_dict()
 
         # Is the variable actually changed.
-        if not self.is_same():
+        if self.var is not None and not self.is_same():
             var = type(self.var)(name)
             var.attributes.update(labels)
             self.var = var
@@ -231,7 +232,8 @@ class VariableEditor(QWidget):
         name = str(self.name_edit.text())
         labels = self.labels_model.get_dict()
 
-        return self.var and name == self.var.name and labels == self.var.attributes
+        return (self.var is not None and name == self.var.name and
+                labels == self.var.attributes)
 
     def clear(self):
         """Clear the editor state.
@@ -319,7 +321,7 @@ class DiscreteVariableEditor(VariableEditor):
         labels = self.labels_model.get_dict()
         values = map(str, self.values_model)
 
-        if not self.is_same():
+        if self.var is not None and not self.is_same():
             var = type(self.var)(name, values=values)
             var.attributes.update(labels)
             self.var = var
@@ -331,8 +333,9 @@ class DiscreteVariableEditor(VariableEditor):
     def is_same(self):
         """Is the current model state the same as the input.
         """
-        values = map(str, self.values_model)
-        return VariableEditor.is_same(self) and self.var.values == values
+        values = list(map(str, self.values_model))
+        return (VariableEditor.is_same(self) and self.var is not None and
+                self.var.values == values)
 
     def clear(self):
         """Clear the model state.

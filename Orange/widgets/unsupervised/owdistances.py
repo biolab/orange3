@@ -99,10 +99,10 @@ class OWDistances(OWWidget):
         self.send("Distances", self.compute_distances(metric, self.data))
 
     def compute_distances(self, metric, data):
+        self.clear_messages()
+
         if data is None:
             return
-
-        self.clear_messages()
 
         if issparse(data.X) and not metric.supports_sparse:
             self.Error.dense_metric_sparse_data()

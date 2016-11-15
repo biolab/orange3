@@ -10,7 +10,7 @@ import Orange
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.tests.base import WidgetTest
 
-TITANIC_URL = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
+TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
 
 
 class TestOWFile(WidgetTest):
@@ -22,17 +22,17 @@ class TestOWFile(WidgetTest):
         self.widget = self.create_widget(OWFile)
 
     def test_dragEnterEvent_accepts_urls(self):
-        event = self._drag_enter_event(TITANIC_URL)
+        event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
         self.widget.dragEnterEvent(event)
         self.assertTrue(event.isAccepted())
 
     def test_dragEnterEvent_skips_osx_file_references(self):
-        event = self._drag_enter_event('/.file/id=12345')
+        event = self._drag_enter_event(QUrl.fromLocalFile('/.file/id=12345'))
         self.widget.dragEnterEvent(event)
         self.assertFalse(event.isAccepted())
 
     def test_dragEnterEvent_skips_usupported_files(self):
-        event = self._drag_enter_event('file.unsupported')
+        event = self._drag_enter_event(QUrl.fromLocalFile('file.unsupported'))
         self.widget.dragEnterEvent(event)
         self.assertFalse(event.isAccepted())
 
@@ -48,11 +48,11 @@ class TestOWFile(WidgetTest):
         self.widget.load_data = Mock()
         self.widget.source = OWFile.URL
 
-        event = self._drop_event(TITANIC_URL)
+        event = self._drop_event(QUrl.fromLocalFile(TITANIC_PATH))
         self.widget.dropEvent(event)
 
         self.assertEqual(self.widget.source, OWFile.LOCAL_FILE)
-        self.assertEqual(self.widget.last_path(), TITANIC_URL)
+        self.assertTrue(path.samefile(self.widget.last_path(), TITANIC_PATH))
         self.widget.load_data.assert_called_with()
 
     def _drop_event(self, url):
@@ -64,4 +64,8 @@ class TestOWFile(WidgetTest):
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
 
-
+    def test_check_file_size(self):
+        self.assertFalse(self.widget.Warning.file_too_big.is_shown())
+        self.widget.SIZE_LIMIT = 4000
+        self.widget.__init__()
+        self.assertTrue(self.widget.Warning.file_too_big.is_shown())

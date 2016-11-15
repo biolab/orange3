@@ -294,6 +294,7 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
 
     def set_data(self, data):
+        self.clear_messages()
         self.Information.sampled_sql.clear()
         self.__timer.stop()
         self.sampling.setVisible(False)
@@ -398,6 +399,7 @@ class OWScatterPlot(OWWidget):
                 self.warning("Data subset does not support large Sql tables")
                 subset_data = None
         self.subset_data = self.move_primitive_metas_to_X(subset_data)
+        self.controls.graph.alpha_value.setEnabled(subset_data is None)
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):

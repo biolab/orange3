@@ -1,7 +1,6 @@
 import sys
 import os
 import types
-from functools import reduce
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
@@ -16,7 +15,7 @@ from Orange.data import FileFormat
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
-from Orange.widgets.gui import ControlledAttributesDict, notify_changed
+from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
@@ -74,8 +73,8 @@ class WidgetMetaClass(type(QDialog)):
         return cls
 
 
-class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
-               metaclass=WidgetMetaClass):
+class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
+               WidgetMessagesMixin, metaclass=WidgetMetaClass):
     """Base widget class"""
 
     # Global widget count
@@ -154,6 +153,13 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     settingsHandler = None
     """:type: SettingsHandler"""
 
+    #: Version of the settings representation
+    #: Subclasses should increase this number when they make breaking
+    #: changes to settings representation (a settings that used to store
+    #: int now stores string) and handle migrations in migrate and
+    #: migrate_context settings.
+    settings_version = 1
+
     savedWidgetGeometry = settings.Setting(None)
 
     #: A list of advice messages (:class:`Message`) to display to the user.
@@ -169,6 +175,7 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
     def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
+        OWComponent.__init__(self)
         WidgetMessagesMixin.__init__(self)
 
         stored_settings = kwargs.get('stored_settings', None)
@@ -178,7 +185,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
         self.signalManager = kwargs.get('signal_manager', None)
         self.__env = _asmappingproxy(kwargs.get("env", {}))
 
-        setattr(self, gui.CONTROLLED_ATTRIBUTES, ControlledAttributesDict(self))
         self.graphButton = None
         self.report_button = None
 
@@ -462,30 +468,6 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
         if self.signalManager is not None:
             self.signalManager.send(self, signalName, value, id)
 
-    def __setattr__(self, name, value):
-        """Set value to members of this instance or any of its members.
-
-        If member is used in a gui control, notify the control about the change.
-
-        name: name of the member, dot is used for nesting ("graph.point.size").
-        value: value to set to the member.
-        """
-        names = name.rsplit(".")
-        field_name = names.pop()
-        obj = reduce(lambda o, n: getattr(o, n, None), names, self)
-        if obj is None:
-            raise AttributeError("Cannot set '{}' to {} ".format(name, value))
-
-        if obj is self:
-            super().__setattr__(field_name, value)
-        else:
-            setattr(obj, field_name, value)
-
-        notify_changed(obj, field_name, value)
-
-        if self.settingsHandler:
-            self.settingsHandler.fast_save(self, name, value)
-
     def openContext(self, *a):
         """Open a new context corresponding to the given data.
 
@@ -737,6 +719,32 @@ class OWWidget(QDialog, Report, ProgressBarMixin, WidgetMessagesMixin,
             session_hist.sync()
 
         self.__msgwidget.accepted.connect(_userconfirmed)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        """Fix settings to work with the current version of widgets
+
+        Parameters
+        ----------
+        settings : dict
+            dict of name - value mappings
+        version : Optional[int]
+            version of the saved settings
+            or None if settings were created before migrations
+        """
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        """Fix contexts to work with the current version of widgets
+
+        Parameters
+        ----------
+        context : Context
+            Context object
+        version : Optional[int]
+            version of the saved context
+            or None if context was created before migrations
+        """
 
 
 class Message(object):

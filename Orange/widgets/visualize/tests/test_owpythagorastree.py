@@ -13,6 +13,10 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
     Square,
     SquareGraphicsItem,
 )
+from Orange.widgets.visualize.utils.owlegend import (
+    OWDiscreteLegend,
+    OWContinuousLegend
+)
 
 
 # pylint: disable=protected-access
@@ -97,11 +101,11 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         cls.signal_data = cls.model
 
         # Set up for widget tests
-        titanic_data = Table('titanic')
+        titanic_data = Table('titanic')[::50]
         cls.titanic = TreeClassificationLearner(max_depth=1)(titanic_data)
         cls.titanic.instances = titanic_data
 
-        housing_data = Table('housing')
+        housing_data = Table('housing')[:10]
         cls.housing = TreeRegressionLearner(max_depth=1)(housing_data)
         cls.housing.instances = housing_data
 
@@ -116,8 +120,11 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
     def get_squares(self):
         """Get all the `SquareGraphicsItems` in the widget scene."""
-        return (i for i in self.widget.scene.items()
-                if isinstance(i, SquareGraphicsItem))
+        return [i for i in self.widget.scene.items()
+                if isinstance(i, SquareGraphicsItem)]
+
+    def get_visible_squares(self):
+        return [x for x in self.get_squares() if x.isVisible()]
 
     def get_tree_nodes(self):
         """Get all the `TreeNode` instances in the widget scene."""
@@ -133,12 +140,8 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         combo_box.activated.emit(index)
 
     def test_sending_classification_tree_is_drawn(self):
-        self.send_signal('Tree', self.titanic)
-        self.assertTrue(len(list(self.get_squares())) > 0)
-
-    def test_sending_classification_tree_is_drawn(self):
         self.send_signal('Tree', self.housing)
-        self.assertTrue(len(list(self.get_squares())) > 0)
+        self.assertTrue(len(self.get_squares()) > 0)
 
     def test_changing_color_changes_node_coloring(self):
         """Changing the `Target class` combo box should update colors."""
@@ -181,3 +184,102 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         # Only compare to the -1 list element since the base square is always
         # the same
         self.assertTrue(all(eqs[:-1]))
+
+    def test_log_scale_slider(self):
+        # Disabled when no tree
+        self.assertFalse(self.widget.log_scale_box.isEnabled(),
+                         'Should be disabled with no tree')
+
+        self.send_signal('Tree', self.titanic)
+        # No size adjustment
+        self.set_combo_option(self.widget.size_calc_combo, 'Normal')
+        self.assertFalse(self.widget.log_scale_box.isEnabled(),
+                         'Should be disabled when no size adjustment')
+        # Square root adjustment
+        self.set_combo_option(self.widget.size_calc_combo, 'Square root')
+        self.assertFalse(self.widget.log_scale_box.isEnabled(),
+                         'Should be disabled when square root size adjustment')
+        # Log adjustment
+        self.set_combo_option(self.widget.size_calc_combo, 'Logarithmic')
+        self.assertTrue(self.widget.log_scale_box.isEnabled(),
+                        'Should be enabled when square root size adjustment')
+
+        # Get squares for one value of log factor
+        self.widget.log_scale_box.setValue(1)
+        inital_sizing_sq = [n.square for n in self.get_tree_nodes()]
+        # Get squares for a different value of log factor
+        self.widget.log_scale_box.setValue(2)
+        updated_sizing_sq = [n.square for n in self.get_tree_nodes()]
+
+        eqs = [x != y for x, y in zip(inital_sizing_sq, updated_sizing_sq)]
+        # Only compare to the -1 list element since the base square is always
+        # the same
+        self.assertTrue(
+            all(eqs[:-1]),
+            'Squares are drawn in same positions after changing log factor')
+
+    def test_classification_tree_creates_correct_legend(self):
+        self.send_signal('Tree', self.titanic)
+        self.assertIsInstance(self.widget.legend, OWDiscreteLegend)
+
+    def test_regression_tree_creates_correct_legend(self):
+        self.send_signal('Tree', self.housing)
+        # Put the widget into a coloring scheme that builds the legend
+        # We'll put it into the the class mean coloring mode
+        self.set_combo_option(self.widget.target_class_combo, 'Class mean')
+        self.assertIsInstance(self.widget.legend, OWContinuousLegend)
+
+    def test_checking_legend_checkbox_shows_and_hides_legend(self):
+        self.send_signal('Tree', self.titanic)
+        # Hide the legend
+        self.widget.cb_show_legend.setChecked(False)
+        self.assertFalse(self.widget.legend.isVisible(),
+                         'Hiding legend failed')
+        # Show the legend
+        self.widget.cb_show_legend.setChecked(True)
+        self.assertTrue(self.widget.legend.isVisible(),
+                        'Showing legend failed')
+
+    def test_checking_tooltip_shows_and_hides_tooltips(self):
+        self.send_signal('Tree', self.titanic)
+        square = self.get_squares()[0]
+        # Hide tooltips
+        self.widget.cb_show_tooltips.setChecked(False)
+        self.assertEqual(square.toolTip(), '', 'Hiding tooltips failed')
+        # Show tooltips
+        self.widget.cb_show_tooltips.setChecked(True)
+        self.assertNotEqual(square.toolTip(), '', 'Showing tooltips failed')
+
+    def test_changing_max_depth_slider(self):
+        self.send_signal('Tree', self.titanic)
+
+        max_depth = self.widget.tree_adapter.max_depth
+        num_squares_full = len(self.get_visible_squares())
+        self.assertEqual(self.widget.depth_limit, max_depth,
+                         'Full tree should be drawn initially')
+
+        self.widget.depth_slider.setValue(max_depth - 1)
+        num_squares_less = len(self.get_visible_squares())
+        self.assertLess(num_squares_less, num_squares_full,
+                        'Lowering tree depth limit did not hide squares')
+
+        self.widget.depth_slider.setValue(max_depth + 1)
+        self.assertGreater(len(self.get_visible_squares()), num_squares_less,
+                           'Increasing tree depth limit did not show squares')
+
+    def test_label_on_tree_connect_and_disconnect(self):
+        regex = r'Nodes:(.+)\s*Depth:(.+)'
+        # Should contain no info by default
+        self.assertNotRegex(
+            self.widget.info.text(), regex,
+            'Initial info should not contain node or depth info')
+        # Test info label for tree
+        self.send_signal('Tree', self.titanic)
+        self.assertRegex(
+            self.widget.info.text(), regex,
+            'Valid tree does not update info')
+        # Remove tree from input
+        self.send_signal('Tree', None)
+        self.assertNotRegex(
+            self.widget.info.text(), regex,
+            'Initial info should not contain node or depth info')

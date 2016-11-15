@@ -27,7 +27,13 @@ from Orange.widgets.utils.filedialogs import RecentPath
 
 
 def add_origin(examples, filename):
-    """Adds attribute with file location to each variable"""
+    """
+    Adds attribute with file location to each string variable
+    Used for relative filenames stored in string variables (e.g. pictures)
+    TODO: we should consider a cleaner solution (special variable type, ...)
+    """
+    if not filename:
+        return
     vars = examples.domain.variables + examples.domain.metas
     strings = [var for var in vars if var.is_string]
     dir_name, basename = os.path.split(filename)
@@ -91,7 +97,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     want_main_area = False
 
     SEARCH_PATHS = [("sample-datasets", get_sample_datasets_dir())]
-
+    SIZE_LIMIT = 1e7
     LOCAL_FILE, URL = range(2)
 
     settingsHandler = PerfectDomainContextHandler()
@@ -117,6 +123,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
                   for f in sorted(set(FileFormat.readers.values()),
                                   key=list(FileFormat.readers.values()).index)))
+
+    class Warning(widget.OWWidget.Warning):
+        file_too_big = widget.Msg("The file is too large to load automatically."
+                                  " Press Reload to load.")
 
     def __init__(self):
         super().__init__()
@@ -207,16 +217,23 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
-        self.apply_button.hide()
+        self.apply_button.setEnabled(False)
         self.apply_button.setFixedWidth(170)
-        self.editor_model.dataChanged.connect(self.apply_button.show)
+        self.editor_model.dataChanged.connect(
+            lambda: self.apply_button.setEnabled(True))
 
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
-        QTimer.singleShot(0, self.load_data)
 
         self.setAcceptDrops(True)
+
+        if self.source == self.LOCAL_FILE and \
+                        os.path.getsize(self.last_path()) > self.SIZE_LIMIT:
+            self.Warning.file_too_big()
+            return
+
+        QTimer.singleShot(0, self.load_data)
 
     def sizeHint(self):
         return QSize(600, 550)
@@ -263,6 +280,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # file readers
         # pylint: disable=broad-except
         self.editor_model.set_domain(None)
+        self.apply_button.setEnabled(False)
+        self.Warning.file_too_big.clear()
 
         error = None
         try:
@@ -423,7 +442,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         m = np.array(m, dtype=dtpe).T if len(m) else None
         table = Table.from_numpy(domain, X, y, m, self.data.W)
         self.send("Data", table)
-        self.apply_button.hide()
+        self.apply_button.setEnabled(False)
 
     def get_widget_name_extension(self):
         _, name = os.path.split(self.loaded_file)

@@ -541,13 +541,11 @@ class OWPythonScript(widget.OWWidget):
         self.setSelectedScript(len(self.libraryList) - 1)
 
     def onAddScriptFromFile(self, *args):
-        filename = QFileDialog.getOpenFileName(
+        filename, _ = QFileDialog.getOpenFileName(
             self, 'Open Python Script',
             os.path.expanduser("~/"),
             'Python files (*.py)\nAll files(*.*)'
         )
-
-        filename = str(filename)
         if filename:
             name = os.path.basename(filename)
             contents = open(filename, "rb").read().decode("utf-8", errors="ignore")
@@ -623,7 +621,7 @@ class OWPythonScript(widget.OWWidget):
         else:
             filename = os.path.expanduser("~/")
 
-        filename = QFileDialog.getSaveFileName(
+        filename, _ = QFileDialog.getSaveFileName(
             self, 'Save Python Script',
             filename,
             'Python files (*.py)\nAll files(*.*)'

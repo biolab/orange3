@@ -919,13 +919,21 @@ class TimeVariable(ContinuousVariable):
     def repr_val(self, val):
         if isnan(val):
             return '?'
+        if not self.have_date and not self.have_time:
+            # The time is relative, unitless. The value is absolute.
+            return str(val)
+
+        # If you know how to simplify this, be my guest
         seconds = int(val)
         microseconds = int(round((val - seconds) * 1e6))
         if val < 0:
+            if microseconds:
+                seconds, microseconds = seconds - 1, int(1e6) + microseconds
             date = datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=seconds)
         else:
             date = datetime.fromtimestamp(seconds, tz=self.timezone)
         date = str(date.replace(microsecond=microseconds))
+
         if self.have_date and not self.have_time:
             date = date.split()[0]
         elif not self.have_date and self.have_time:
@@ -956,7 +964,9 @@ class TimeVariable(ContinuousVariable):
         if not self._matches_iso_format(datestr):
             try:
                 # If it is a number, assume it is a unix timestamp
-                return float(datestr)
+                value = float(datestr)
+                self.have_date = self.have_time = 1
+                return value
             except ValueError:
                 raise ERROR
 

@@ -52,7 +52,7 @@ class OWLinearRegression(OWBaseLearner):
         gui.separator(box, 20, 20)
         self.alpha_box = box2 = gui.vBox(box, margin=10)
         gui.widgetLabel(box2, "Regularization strength:")
-        self.alpha_slider = gui.hSlider(
+        gui.hSlider(
             box2, self, "alpha_index",
             minValue=0, maxValue=len(self.alphas) - 1,
             callback=self._alpha_changed, createLabel=False)
@@ -80,14 +80,14 @@ class OWLinearRegression(OWBaseLearner):
         box5.layout().setAlignment(Qt.AlignCenter)
         self._set_l2_ratio_label()
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
-        self.alpha_slider.setEnabled(self.reg_type != self.OLS)
+        self.controls.alpha_index.setEnabled(self.reg_type != self.OLS)
         self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
 
     def handleNewSignals(self):
         self.apply()
 
     def _reg_type_changed(self):
-        self.alpha_slider.setEnabled(self.reg_type != self.OLS)
+        self.controls.alpha_index.setEnabled(self.reg_type != self.OLS)
         self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
         self.apply()
 

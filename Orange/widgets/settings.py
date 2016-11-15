@@ -47,6 +47,8 @@ __all__ = ["Setting", "SettingsHandler",
 
 _IMMUTABLES = (str, int, bytes, bool, float, tuple)
 
+VERSION_KEY = "__version__"
+
 
 class Setting:
     """Description of a setting.
@@ -386,6 +388,7 @@ class SettingsHandler:
             for key, value in defaults.items()
             if not isinstance(value, Setting)
         }
+        self._migrate_settings(self.defaults)
 
     def write_defaults(self):
         """Write (global) defaults for this widget class to a file.
@@ -434,11 +437,17 @@ class SettingsHandler:
 
         if isinstance(data, bytes):
             data = pickle.loads(data)
+        self._migrate_settings(data)
 
         if provider is self.provider:
             data = self._add_defaults(data)
 
         provider.initialize(instance, data)
+
+    def _migrate_settings(self, settings):
+        """Ask widget to migrate settings to the latest version."""
+        if settings:
+            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, 0))
 
     def _select_provider(self, instance):
         provider = self.provider.get_provider(instance.__class__)
@@ -473,7 +482,9 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
-        return self.provider.pack(widget)
+        packed_settings = self.provider.pack(widget)
+        packed_settings[VERSION_KEY] = self.widget_class.settings_version
+        return packed_settings
 
     def update_defaults(self, widget):
         """
@@ -588,6 +599,7 @@ class ContextHandler(SettingsHandler):
         super().initialize(instance, data)
         if data and "context_settings" in data:
             instance.context_settings = data["context_settings"]
+            self._migrate_contexts(instance.context_settings)
         else:
             instance.context_settings = []
 
@@ -596,6 +608,11 @@ class ContextHandler(SettingsHandler):
            pickle."""
         super().read_defaults_file(settings_file)
         self.global_contexts = pickle.load(settings_file)
+        self._migrate_contexts(self.global_contexts)
+
+    def _migrate_contexts(self, contexts):
+        for context in contexts:
+            self.widget_class.migrate_context(context, context.values.pop(VERSION_KEY, 0))
 
     def write_defaults_file(self, settings_file):
         """Call the inherited method, then add global context to the pickle."""
@@ -603,9 +620,11 @@ class ContextHandler(SettingsHandler):
         pickle.dump(self.global_contexts, settings_file, -1)
 
     def pack_data(self, widget):
-        """Call the inherited method, then add local contexts to the pickle."""
+        """Call the inherited method, then add local contexts to the dict."""
         data = super().pack_data(widget)
         self.settings_from_widget(widget)
+        for context in widget.context_settings:
+            context.values[VERSION_KEY] = self.widget_class.settings_version
         data["context_settings"] = widget.context_settings
         return data
 
@@ -1163,3 +1182,41 @@ class PerfectDomainContextHandler(DomainContextHandler):
             return value, -1
         else:
             return super().encode_setting(context, setting, value)
+
+
+def rename_setting(settings, old_name, new_name):
+    """
+    Rename setting from `old_name` to `new_name`. Used in migrations.
+
+    The argument `settings` can be `dict` or `Context`.
+    """
+    if isinstance(settings, Context):
+        rename_setting(settings.values, old_name, new_name)
+    else:
+        settings[new_name] = settings.pop(old_name)
+
+
+def migrate_str_to_variable(settings, names=None):
+    """
+    Change variables stored as `(str, int)` to `(Variable, int)`.
+
+    Args:
+        settings (Context): context that is being migrated
+        names (sequence): names of settings to be migrated. If omitted,
+            all settings with values `(str, int)` are migrated.
+    """
+    def _fix(name):
+        var, vartype = settings.values[name]
+        if 0 <= vartype <= 100:
+            settings.values[name] = (var, 100 + vartype)
+
+    if names is None:
+        for name, setting in settings.values.items():
+            if isinstance(setting, tuple) and len(setting) == 2 and \
+                    isinstance(setting[0], str) and isinstance(setting[1], int):
+                _fix(name)
+    elif isinstance(names, str):
+        _fix(names)
+    else:
+        for name in names:
+            _fix(name)

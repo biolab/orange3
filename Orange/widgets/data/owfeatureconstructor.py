@@ -168,7 +168,7 @@ class FeatureEditor(QFrame):
         self.setModified(False)
         self.featureChanged.emit()
         self.attrs_model[:] = ["Select Feature"]
-        if domain or domain.metas:
+        if domain is not None and (domain or domain.metas):
             self.attrs_model[:] += chain(domain.attributes,
                                          domain.class_vars,
                                          domain.metas)

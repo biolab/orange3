@@ -90,6 +90,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.master = master
 
         self.keep_running = False
+        self.scheduled_call = None
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
@@ -168,12 +169,20 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         e.g. from `set_data` handler.
         """
         self.keep_running = False
+        self.scheduled_call = None
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
         self.rank_model.clear()
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
+
+    def stop_and_reset(self, reset_method=None):
+        if self.keep_running:
+            self.scheduled_call = reset_method or self.initialize
+            self.keep_running = False
+        else:
+            self.initialize()
 
     def check_preconditions(self):
         """Check whether there is sufficient data for ranking."""
@@ -225,13 +234,13 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         """
         raise NotImplementedError
 
-    def row_for_state(self, state, score):
+    def row_for_state(self, score, state):
         """
         Abstract method that return the items that are inserted into the table.
 
         Args:
-            state: the state, e.g. combination of attributes
             score: score, computed by :obj:`compute_score`
+            state: the state, e.g. combination of attributes
             """
         raise NotImplementedError
 
@@ -245,9 +254,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             progress.advance(self.saved_progress)
             for state in self.iterate_states(self.saved_state):
                 if not self.keep_running:
-                    self.saved_state = state
-                    self.saved_progress = progress.count
-                    self._select_first_if_none()
+                    if self.scheduled_call:
+                        self.scheduled_call()
+                    else:
+                        self.saved_state = state
+                        self.saved_progress = progress.count
+                        self._select_first_if_none()
                     return
                 score = self.compute_score(state)
                 if score is not None:
@@ -259,6 +271,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             self._select_first_if_none()
             self.button.setText("Finished")
             self.button.setEnabled(False)
+            self.keep_running = False
+            self.saved_state = None
 
     def toggle(self):
         """Start or pause the computation."""

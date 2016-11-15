@@ -7,8 +7,6 @@ import uuid
 
 import Orange
 from Orange.data.sql.table import SqlTable
-from Orange.data.sql.backend.postgres import Psycopg2Backend
-from psycopg2.pool import ThreadedConnectionPool
 
 
 def sql_test(f):
@@ -150,6 +148,9 @@ class TestParseUri(unittest.TestCase):
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from psycopg2.pool import ThreadedConnectionPool
+        from Orange.data.sql.backend.postgres import Psycopg2Backend
+
         Psycopg2Backend.connection_pool = \
             ThreadedConnectionPool(1, 1, **connection_params())
         cls.backend = Psycopg2Backend(connection_params())
@@ -157,6 +158,7 @@ class PostgresTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        from Orange.data.sql.backend.postgres import Psycopg2Backend
         Psycopg2Backend.connection_pool.closeall()
         Psycopg2Backend.connection_pool = None
 
@@ -166,6 +168,7 @@ class PostgresTest(unittest.TestCase):
 
     @contextlib.contextmanager
     def sql_table_from_data(self, data, guess_values=True):
+        from Orange.data.sql.backend.postgres import Psycopg2Backend
         assert Psycopg2Backend.connection_pool is not None
 
         table_name = self._create_sql_table(data)

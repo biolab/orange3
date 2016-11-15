@@ -6,11 +6,12 @@ import numpy as np
 
 from AnyQt.QtCore import QModelIndex, Qt
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Table, Domain
+from Orange.data import ContinuousVariable, DiscreteVariable, \
+    StringVariable, Table, Domain
 from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \
-    ContinuousVariableEditor
+    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor
 from Orange.widgets.data.owcolor import OWColor, ColorRole
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, GuiTest
 
 SECTION_NAME = "NAME"
 
@@ -138,3 +139,56 @@ class TestOWEditDomain(WidgetTest):
         self.widget.unconditional_commit()
         t2 = self.get_output("Data")
         self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])
+
+
+class TestEditors(GuiTest):
+    def test_variable_editor(self):
+        w = VariableEditor()
+        self.assertIs(w.get_data(), None)
+
+        v = StringVariable(name="S")
+        v.attributes.update({"A": 1, "B": "b"},)
+        w.set_data(v)
+
+        self.assertEqual(w.name_edit.text(), v.name)
+        self.assertEqual(w.labels_model.get_dict(), v.attributes)
+        self.assertTrue(w.is_same())
+
+        w.set_data(None)
+        self.assertEqual(w.name_edit.text(), "")
+        self.assertEqual(w.labels_model.get_dict(), {})
+        self.assertIs(w.get_data(), None)
+
+    def test_continuous_editor(self):
+        w = ContinuousVariableEditor()
+        self.assertIs(w.get_data(), None)
+
+        v = ContinuousVariable("X", number_of_decimals=5)
+        v.attributes.update({"A": 1, "B": "b"})
+        w.set_data(v)
+
+        self.assertEqual(w.name_edit.text(), v.name)
+        self.assertEqual(w.labels_model.get_dict(), v.attributes)
+        self.assertTrue(w.is_same())
+
+        w.set_data(None)
+        self.assertEqual(w.name_edit.text(), "")
+        self.assertEqual(w.labels_model.get_dict(), {})
+        self.assertIs(w.get_data(), None)
+
+    def test_discrete_editor(self):
+        w = DiscreteVariableEditor()
+        self.assertIs(w.get_data(), None)
+
+        v = DiscreteVariable("C", values=["a", "b", "c"])
+        v.attributes.update({"A": 1, "B": "b"})
+        w.set_data(v)
+
+        self.assertEqual(w.name_edit.text(), v.name)
+        self.assertEqual(w.labels_model.get_dict(), v.attributes)
+        self.assertTrue(w.is_same())
+
+        w.set_data(None)
+        self.assertEqual(w.name_edit.text(), "")
+        self.assertEqual(w.labels_model.get_dict(), {})
+        self.assertIs(w.get_data(), None)
