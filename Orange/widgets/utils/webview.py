@@ -310,7 +310,8 @@ class _WebViewBase:
             if not self.__is_init and self.__js_queue:
                 return QTimer.singleShot(1, _later)
             if self.__js_queue:
-                code = ';'.join(self.__js_queue)
+                # '/n' is required when the last line is a comment
+                code = '\n;'.join(self.__js_queue)
                 self.__js_queue.clear()
                 self._evalJS(code)
 
@@ -365,9 +366,10 @@ if HAVE_WEBKIT:
             WebKitView.__init__(self, parent, bridge, debug=debug, **kwargs)
             _WebViewBase.__init__(self)
 
-            self.frame.addToJavaScriptWindowObject('__self', self)
-            self.loadFinished.connect(
-                lambda: self._evalJS('setTimeout(function(){ __self._load_really_finished(); }, 100);'))
+            def load_finished():
+                self.frame.addToJavaScriptWindowObject('__self', self)
+                self._evalJS('setTimeout(function(){ __self._load_really_finished(); }, 100);')
+            self.loadFinished.connect(load_finished)
 
         @pyqtSlot()
         def _load_really_finished(self):
