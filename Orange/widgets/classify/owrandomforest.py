@@ -52,7 +52,7 @@ class OWRandomForest(OWBaseLearner):
             callback=self.settings_changed, checked="use_max_depth",
             checkCallback=self.settings_changed)
         self.min_samples_split_spin = gui.spin(
-            box, self, "min_samples_split", 1, 1000, controlWidth=50,
+            box, self, "min_samples_split", 2, 1000, controlWidth=50,
             label="Do not split subsets smaller than: ",
             callback=self.settings_changed, checked="use_min_samples_split",
             checkCallback=self.settings_changed)
