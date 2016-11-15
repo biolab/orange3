@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QWidget, QVBoxLayout
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
@@ -273,7 +273,7 @@ class OWManifoldLearning(OWWidget):
 
 
 if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication([])
     ow = OWManifoldLearning()
