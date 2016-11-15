@@ -1,5 +1,5 @@
-from PyQt4.QtGui import QWidget, QVBoxLayout
-from PyQt4.QtCore import Qt
+from AnyQt.QtWidgets import QWidget, QVBoxLayout
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
@@ -30,7 +30,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         self.__spin_parameter_update(name)
         return gui.spin(
             self.main_area, self, name, minv, maxv, label=label,
-            alignment=Qt.AlignRight,
+            alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=lambda f=self.__spin_parameter_update,
                             p=name: self.__parameter_changed(f, p))
 
@@ -64,6 +64,25 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         values = getattr(self, name + "_values")
         self.parameters[name] = values[checked]
 
+    def _create_radio_parameter(self, name, label):
+        self.__radio_parameter_update(name)
+        values = (x[1] for x in getattr(self, name + "_values"))
+        gui.separator(self.main_area)
+        box = gui.hBox(self.main_area)
+        lbl = gui.label(box, self, label + ":")
+        rbt = gui.radioButtons(
+            box, self, name + "_index", btnLabels=values,
+            callback=lambda f=self.__radio_parameter_update,
+                            p=name: self.__parameter_changed(f, p))
+        rbt.layout().setAlignment(Qt.AlignTop)
+        lbl.setAlignment(Qt.AlignTop)
+        return rbt
+
+    def __radio_parameter_update(self, name):
+        index = getattr(self, name + "_index")
+        values = getattr(self, name + "_values")
+        self.parameters[name] = values[index][0]
+
 
 class TSNEParametersEditor(ManifoldParametersEditor):
     _metrics = ("manhattan", "chebyshev", "jaccard", "mahalanobis")
@@ -81,15 +100,16 @@ class TSNEParametersEditor(ManifoldParametersEditor):
 
 class MDSParametersEditor(ManifoldParametersEditor):
     max_iter = Setting(300)
-    random_state = Setting(1)
-    random_state_values = (0, None)
+    init_type_index = Setting(0)
+    init_type_values = (("PCA", "PCA (Torgerson)"),
+                        ("random", "Random"))
 
     def __init__(self, parent):
         super().__init__(parent)
         self.max_iter_spin = self._create_spin_parameter(
             "max_iter", 10, 10 ** 4, "Max iterations:")
-        self.random_state_check = self._create_check_parameter(
-            "random_state", "Random initialization")
+        self.random_state_radio = self._create_radio_parameter(
+            "init_type", "Initialization")
 
 
 class IsomapParametersEditor(ManifoldParametersEditor):
@@ -190,7 +210,7 @@ class OWManifoldLearning(OWWidget):
         output_box = gui.vBox(self.controlArea, "Output")
         self.n_components_spin = gui.spin(
             output_box, self, "n_components", 1, 10, label="Components:",
-            alignment=Qt.AlignRight,
+            alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
         self.apply_button = gui.auto_commit(
             output_box, self, "auto_apply", "&Apply",
@@ -253,7 +273,7 @@ class OWManifoldLearning(OWWidget):
 
 
 if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication([])
     ow = OWManifoldLearning()

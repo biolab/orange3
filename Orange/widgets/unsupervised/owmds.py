@@ -21,6 +21,7 @@ import pyqtgraph.graphicsItems.ScatterPlotItem
 
 import Orange.data
 import Orange.projection
+from Orange.projection.manifold import torgerson
 import Orange.distance
 from Orange.data.domain import filter_visible
 import Orange.misc
@@ -31,40 +32,6 @@ from Orange.canvas import report
 from Orange.widgets.widget import Msg, OWWidget
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-
-
-def torgerson(distances, n_components=2):
-    """
-    Perform classical mds (Torgerson scaling).
-
-    ..note ::
-        If the distances are euclidean then this is equivalent to projecting
-        the original data points to the first `n` principal components.
-
-    """
-    distances = numpy.asarray(distances)
-    assert distances.shape[0] == distances.shape[1]
-    N = distances.shape[0]
-    # O ^ 2
-    D_sq = distances ** 2
-
-    # double center the D_sq
-    rsum = numpy.sum(D_sq, axis=1, keepdims=True)
-    csum = numpy.sum(D_sq, axis=0, keepdims=True)
-    total = numpy.sum(csum)
-    D_sq -= rsum / N
-    D_sq -= csum / N
-    D_sq += total / (N ** 2)
-    B = numpy.multiply(D_sq, -0.5, out=D_sq)
-
-    U, L, _ = numpy.linalg.svd(B)
-    if n_components > N:
-        U = numpy.hstack((U, numpy.zeros((N, n_components - N))))
-        L = numpy.hstack((L, numpy.zeros((n_components - N))))
-    U = U[:, :n_components]
-    L = L[:n_components]
-    D = numpy.diag(numpy.sqrt(L))
-    return numpy.dot(U, D)
 
 
 def stress(X, D):
@@ -212,9 +179,9 @@ class OWMDS(OWWidget):
                     gui.spin(box, self, "max_iter", 10, 10 ** 4, step=1))
 
         form.addRow("Initialization:",
-                    gui.comboBox(box, self, "initialization",
-                                 items=["PCA (Torgerson)", "Random"],
-                                 callback=self.__invalidate_embedding))
+                    gui.radioButtons(box, self, "initialization",
+                                     btnLabels=("PCA (Torgerson)", "Random"),
+                                     callback=self.__invalidate_embedding))
 
         box.layout().addLayout(form)
         form.addRow("Refresh:",
@@ -572,13 +539,7 @@ class OWMDS(OWWidget):
     def __start(self):
         self.__draw_similar_pairs = False
         X = self._effective_matrix
-
-        if self.embedding is not None:
-            init = self.embedding
-        elif self.initialization == OWMDS.PCA:
-            init = torgerson(X, n_components=2)
-        else:
-            init = None
+        init = self.embedding
 
         # number of iterations per single GUI update step
         _, step_size = OWMDS.RefreshRate[self.refresh_rate]
@@ -593,14 +554,16 @@ class OWMDS(OWWidget):
             done = False
             iterations_done = 0
             oldstress = numpy.finfo(numpy.float).max
+            init_type = "PCA" if self.initialization == OWMDS.PCA else "random"
 
             while not done:
                 step_iter = min(max_iter - iterations_done, step)
                 mds = Orange.projection.MDS(
                     dissimilarity="precomputed", n_components=2,
-                    n_init=1, max_iter=step_iter)
+                    n_init=1, max_iter=step_iter,
+                    init_type=init_type, init_data=init)
 
-                mdsfit = mds.fit(X, init=init)
+                mdsfit = mds(X)
                 iterations_done += step_iter
 
                 embedding, stress = mdsfit.embedding_, mdsfit.stress_

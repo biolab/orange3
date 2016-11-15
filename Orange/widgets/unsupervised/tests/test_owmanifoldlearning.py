@@ -42,6 +42,7 @@ class TestOWManifoldLearning(WidgetTest):
                        self.widget.n_components_spin.maximum()):
             self.assertEqual(self.widget.data, self.iris)
             self.widget.n_components_spin.setValue(i)
+            self.widget.n_components_spin.onEnter()
             self.widget.apply_button.button.click()
             self._compare_tables(self.get_output("Transformed data"), i)
 

@@ -14,6 +14,7 @@ class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ionosphere = Table('ionosphere')
+        cls.iris = Table('iris')
 
     def test_mds(self):
         data = self.ionosphere[:50]
@@ -21,13 +22,16 @@ class TestManifold(unittest.TestCase):
             self.__mds_test_helper(data, n_com=i)
 
     def __mds_test_helper(self, data, n_com):
-        mds_fit = MDS(n_components=n_com, dissimilarity=Euclidean, random_state=0)
+        mds_fit = MDS(
+            n_components=n_com, dissimilarity=Euclidean, random_state=0)
         mds_fit = mds_fit(data)
 
-        mds_odist = MDS(n_components=n_com, dissimilarity='precomputed', random_state=0)
+        mds_odist = MDS(
+            n_components=n_com, dissimilarity='precomputed', random_state=0)
         mds_odist = mds_odist(Euclidean(data))
 
-        mds_sdist = MDS(n_components=n_com, dissimilarity='euclidean', random_state=0)
+        mds_sdist = MDS(
+            n_components=n_com, dissimilarity='euclidean', random_state=0)
         mds_sdist = mds_sdist(data)
 
         eshape = data.X.shape[0], n_com
@@ -36,6 +40,30 @@ class TestManifold(unittest.TestCase):
         self.assertEqual(eshape, mds_fit.embedding_.shape)
         self.assertEqual(eshape, mds_odist.embedding_.shape)
         self.assertEqual(eshape, mds_sdist.embedding_.shape)
+
+    def test_mds_pca_init(self):
+        result = np.array([-2.6928912, 0.32603512])
+
+        projector = MDS(
+            n_components=2, dissimilarity=Euclidean, init_type='PCA')
+        X = projector(self.iris).embedding_
+        np.testing.assert_array_almost_equal(X[0], result)
+
+        projector = MDS(
+            n_components=2, dissimilarity='precomputed', init_type='PCA')
+        X = projector(Euclidean(self.iris)).embedding_
+        np.testing.assert_array_almost_equal(X[0], result)
+
+        projector = MDS(
+            n_components=2, dissimilarity='euclidean', init_type='PCA')
+        X = projector(self.iris).embedding_
+        np.testing.assert_array_almost_equal(X[0], result)
+
+        projector = MDS(
+            n_components=6, dissimilarity='euclidean', init_type='PCA')
+        X = projector(self.iris[:5]).embedding_
+        result = np.array([-0.31871, -0.064644, 0.015653, -1.5e-08, -4.3e-11, 0])
+        np.testing.assert_array_almost_equal(X[0], result)
 
     def test_isomap(self):
         for i in range(1, 4):
