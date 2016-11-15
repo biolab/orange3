@@ -5,6 +5,9 @@ import enum
 from xml.sax.saxutils import escape
 from types import SimpleNamespace as namespace
 
+if sys.version_info > (3, 5):
+    from typing import Optional
+
 import numpy
 import sklearn.metrics
 
@@ -57,7 +60,7 @@ class OWSilhouettePlot(widget.OWWidget):
     cluster_var_idx = settings.ContextSetting(0)
     #: Annotation variable index
     annotation_var_idx = settings.ContextSetting(0)
-    #: Group the silhouettes by cluster
+    #: Group the (displayed) silhouettes by cluster
     group_by_cluster = settings.Setting(True)
     #: A fixed size for an instance bar
     bar_size = settings.Setting(3)
@@ -73,16 +76,30 @@ class OWSilhouettePlot(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")
+        singleton_clusters_all = Msg("All clusters are singletons")
+
+    class Warning(widget.OWWidget.Warning):
+        missing_cluster_assignment = Msg(
+            "{} instance{s} omitted (missing cluster assignment)")
 
     def __init__(self):
         super().__init__()
-
-        self.data = None
-        self._effective_data = None
-        self._matrix = None
-        self._silhouette = None
-        self._labels = None
-        self._silplot = None
+        #: The input data
+        self.data = None         # type: Optional[Orange.data.Table]
+        #: Data after any applied pre-processing step
+        self._effective_data = None  # type: Optional[Orange.data.Table]
+        #: Distance matrix computed from _effective_data
+        self._matrix = None      # type: Optional[Orange.misc.DistMatrix]
+        #: An bool mask (size == len(data)) indicating missing group/cluster
+        #: assignments
+        self._mask = None        # type: Optional[numpy.ndarray]
+        #: An array of cluster/group labels for instances with valid group
+        #: assignment
+        self._labels = None      # type: Optional[numpy.ndarray]
+        #: An array of silhouette scores for instances with valid group
+        #: assignment
+        self._silhouette = None  # type: Optional[numpy.ndarray]
+        self._silplot = None     # type: Optional[SilhouettePlot]
 
         gui.comboBox(
             self.controlArea, self, "distance_idx", box="Distance",
@@ -199,11 +216,14 @@ class OWSilhouettePlot(widget.OWWidget):
         self.data = None
         self._effective_data = None
         self._matrix = None
+        self._mask = None
         self._silhouette = None
         self._labels = None
         self.cluster_var_model[:] = []
         self.annotation_var_model[:] = ["None"]
         self._clear_scene()
+        self.Error.clear()
+        self.Warning.clear()
 
     def _clear_scene(self):
         # Clear the graphics scene and associated objects
@@ -218,7 +238,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _invalidate_scores(self):
         # Invalidate and recompute the current silhouette scores.
-        self._labels = self._silhouette = None
+        self._labels = self._silhouette = self._mask = None
         self._update()
         self._replot()
         if self.data is not None:
@@ -227,6 +247,7 @@ class OWSilhouettePlot(widget.OWWidget):
     def _update(self):
         # Update/recompute the distances/scores as required
         if self.data is None:
+            self._mask = None
             self._silhouette = None
             self._labels = None
             self._matrix = None
@@ -239,18 +260,34 @@ class OWSilhouettePlot(widget.OWWidget):
 
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
+        mask = numpy.isnan(labels)
         labels = labels.astype(int)
-        _, counts = numpy.unique(labels, return_counts=True)
-        if numpy.count_nonzero(counts) >= 2:
-            self.Error.need_two_clusters.clear()
-            silhouette = sklearn.metrics.silhouette_samples(
-                self._matrix, labels, metric="precomputed")
-        else:
-            self.Error.need_two_clusters()
-            labels = silhouette = None
+        labels = labels[~mask]
 
+        labels_unq, counts = numpy.unique(labels, return_counts=True)
+
+        self.Error.singleton_clusters_all.clear()
+        self.Error.need_two_clusters.clear()
+        self.Warning.missing_cluster_assignment.clear()
+
+        if len(labels_unq) < 2:
+            self.Error.need_two_clusters()
+            labels = silhouette = mask = None
+        elif len(labels_unq) == len(labels):
+            self.Error.singleton_clusters_all()
+            labels = silhouette = mask = None
+        else:
+            silhouette = sklearn.metrics.silhouette_samples(
+                self._matrix[~mask, :][:, ~mask], labels, metric="precomputed")
+        self._mask = mask
         self._labels = labels
         self._silhouette = silhouette
+
+        if labels is not None:
+            count_missing = numpy.count_nonzero(mask)
+            if count_missing:
+                self.Warning.missing_cluster_assignment(
+                    count_missing, s="s" if count_missing > 1 else "")
 
     def _set_bar_height(self):
         visible = self.bar_size >= 5
@@ -304,6 +341,9 @@ class OWSilhouettePlot(widget.OWWidget):
         if self._silplot is not None:
             if annot_var is not None:
                 column, _ = self.data.get_column_view(annot_var)
+                if self._mask is not None:
+                    assert column.shape == self._mask.shape
+                    column = column[~self._mask]
                 self._silplot.setRowNames(
                     [annot_var.str_val(value) for value in column])
             else:
@@ -318,8 +358,18 @@ class OWSilhouettePlot(widget.OWWidget):
             selectedmask = numpy.full(len(self.data), False, dtype=bool)
             if self._silplot is not None:
                 indices = self._silplot.selection()
+                assert (numpy.diff(indices) > 0).all(), "strictly increasing"
+                if self._mask is not None:
+                    indices = numpy.flatnonzero(~self._mask)[indices]
                 selectedmask[indices] = True
-            scores = self._silhouette
+
+            if self._mask is not None:
+                scores = numpy.full(shape=selectedmask.shape,
+                                    fill_value=numpy.nan)
+                scores[~self._mask] = self._silhouette
+            else:
+                scores = self._silhouette
+
             silhouette_var = None
             if self.add_scores:
                 var = self.cluster_var_model[self.cluster_var_idx]
@@ -421,7 +471,9 @@ class SilhouettePlot(QGraphicsWidget):
             raise ValueError("rownames must have the same size as scores")
 
         Ck = numpy.unique(labels)
-        assert Ck[0] >= 0 and Ck[-1] < len(values)
+        if not Ck[0] >= 0 and Ck[-1] < len(values):
+            raise ValueError(
+                "All indices in `labels` must be in `range(len(values))`")
         cluster_indices = [numpy.flatnonzero(labels == i)
                            for i in range(len(values))]
         cluster_indices = [indices[numpy.argsort(scores[indices])[::-1]]
