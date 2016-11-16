@@ -3,13 +3,13 @@ from itertools import chain
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
-    QMessageBox, QMenu, QListView, QGridLayout
+    QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy
 )
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
 )
-from AnyQt.QtCore import Qt, QPoint, QRegExp
+from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
@@ -80,12 +80,13 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list = QTableWidget(
             box, showGrid=False, selectionMode=QTableWidget.NoSelection)
         box.layout().addWidget(self.cond_list)
-        self.cond_list.setColumnCount(3)
+        self.cond_list.setColumnCount(4)
         self.cond_list.setRowCount(0)
         self.cond_list.verticalHeader().hide()
         self.cond_list.horizontalHeader().hide()
-        self.cond_list.resizeColumnToContents(0)
-        self.cond_list.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        for i in range(3):
+            self.cond_list.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+        self.cond_list.horizontalHeader().resizeSection(3, 30)
         self.cond_list.viewport().setBackgroundRole(QPalette.Window)
 
         box2 = gui.hBox(box)
@@ -144,6 +145,13 @@ class OWSelectRows(widget.OWWidget):
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
+        index = QPersistentModelIndex(model.index(row, 3))
+        temp_button = QPushButton('×', self, flat=True,
+                                  styleSheet='* {font-size: 16pt; color: silver}'
+                                             '*:hover {color: black}')
+        temp_button.clicked.connect(lambda: self.remove_one(index.row()))
+        self.cond_list.setCellWidget(row, 3, temp_button)
+
         self.remove_all_button.setDisabled(False)
         self.set_new_operators(attr_combo, attr is not None,
                                condition_type, condition_value)
@@ -165,9 +173,18 @@ class OWSelectRows(widget.OWWidget):
         for i in range(len(domain.variables) + len(domain.metas)):
             self.add_row(i)
 
+    def remove_one(self, rownum):
+        self.remove_one_row(rownum)
+        self.conditions_changed()
+
     def remove_all(self):
         self.remove_all_rows()
         self.conditions_changed()
+
+    def remove_one_row(self, rownum):
+        self.cond_list.removeRow(rownum)
+        if self.cond_list.model().rowCount() == 0:
+            self.remove_all_button.setDisabled(True)
 
     def remove_all_rows(self):
         self.cond_list.clear()
@@ -231,7 +248,9 @@ class OWSelectRows(widget.OWWidget):
         #         child.setParent(None)
 
         def add_textual(contents):
-            le = gui.lineEdit(box, self, None)
+            le = gui.lineEdit(box, self, None,
+                              sizePolicy=QSizePolicy(QSizePolicy.Expanding,
+                                                     QSizePolicy.Expanding))
             if contents:
                 le.setText(contents)
             le.setAlignment(Qt.AlignRight)
@@ -288,7 +307,6 @@ class OWSelectRows(widget.OWWidget):
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
                     box.controls.append(validator(lc[1]))
-                gui.rubber(box)
             elif var.is_string:
                 box.controls = [add_textual(lc[0])]
                 if oper in [6, 7]:
