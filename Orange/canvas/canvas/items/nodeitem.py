@@ -10,13 +10,15 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsObject, QGraphicsTextItem,
-    QGraphicsDropShadowEffect, QGraphicsView, QStyle, QApplication
+    QGraphicsDropShadowEffect, QStyle, QApplication
 )
 from AnyQt.QtGui import (
     QPen, QBrush, QColor, QPalette, QIcon, QPainter, QPainterPath,
     QPainterPathStroker
 )
-from AnyQt.QtCore import Qt, QPointF, QRectF, QSize, QTimer, QPropertyAnimation
+from AnyQt.QtCore import (
+    Qt, QPointF, QRectF, QRect, QSize, QTimer, QPropertyAnimation
+)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from .graphicspathobject import GraphicsPathObject
@@ -656,34 +658,13 @@ class GraphicsIconItem(QGraphicsItem):
             else:
                 mode = QIcon.Disabled
 
-            transform = self.sceneTransform()
-
-            if widget is not None:
-                # 'widget' is the QGraphicsView.viewport()
-                view = widget.parent()
-                if isinstance(view, QGraphicsView):
-                    # Combine the scene transform with the view transform.
-                    view_transform = view.transform()
-                    transform = view_transform * view_transform
-
-            lod = option.levelOfDetailFromTransform(transform)
-
             w, h = self.__iconSize.width(), self.__iconSize.height()
-            target = QRectF(0, 0, w, h)
-            source = QRectF(0, 0, w * lod, w * lod).toRect()
-
-            # The actual size of the requested pixmap can be smaller.
-            size = self.__icon.actualSize(source.size(), mode=mode)
-            source.setSize(size)
-
-            pixmap = self.__icon.pixmap(source.size(), mode=mode)
-
+            target = QRect(0, 0, w, h)
             painter.setRenderHint(
                 QPainter.SmoothPixmapTransform,
                 self.__transformationMode == Qt.SmoothTransformation
             )
-
-            painter.drawPixmap(target, pixmap, QRectF(source))
+            self.__icon.paint(painter, target, Qt.AlignCenter, mode)
 
 
 class NameTextItem(QGraphicsTextItem):

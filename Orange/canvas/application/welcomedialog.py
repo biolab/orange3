@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QSizePolicy, QLabel
 )
 from AnyQt.QtGui import QFont, QIcon, QPixmap, QPainter, QColor, QBrush
-from AnyQt.QtCore import Qt, QRect, QPoint
+from AnyQt.QtCore import Qt, QRect, QSize, QPoint, QT_VERSION
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..canvas.items.utils import radial_gradient
@@ -19,17 +19,15 @@ def decorate_welcome_icon(icon, background_color):
     """Return a `QIcon` with a circle shaped background.
     """
     welcome_icon = QIcon()
-    sizes = [32, 48, 64, 80]
+    sizes = [32, 48, 64, 80, 128, 256]
     background_color = NAMED_COLORS.get(background_color, background_color)
     background_color = QColor(background_color)
     grad = radial_gradient(background_color)
     for size in sizes:
-        icon_pixmap = icon.pixmap(5 * size / 8, 5 * size / 8)
-        icon_size = icon_pixmap.size()
+        icon_size = QSize(5 * size / 8, 5 * size / 8)
         icon_rect = QRect(QPoint(0, 0), icon_size)
-
         pixmap = QPixmap(size, size)
-        pixmap.fill(QColor(0, 0, 0, 0))
+        pixmap.fill(Qt.transparent)
         p = QPainter(pixmap)
         p.setRenderHint(QPainter.Antialiasing, True)
         p.setBrush(QBrush(grad))
@@ -37,7 +35,7 @@ def decorate_welcome_icon(icon, background_color):
         ellipse_rect = QRect(0, 0, size, size)
         p.drawEllipse(ellipse_rect)
         icon_rect.moveCenter(ellipse_rect.center())
-        p.drawPixmap(icon_rect.topLeft(), icon_pixmap)
+        icon.paint(p, icon_rect, Qt.AlignCenter, )
         p.end()
 
         welcome_icon.addPixmap(pixmap)

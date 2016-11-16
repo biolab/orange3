@@ -100,21 +100,6 @@ class ToolBoxTabButton(QToolButton):
             background_brush = palette.button()
 
         rect = opt.rect
-        icon = opt.icon
-        icon_size = opt.iconSize
-
-        # TODO: add shift for pressed as set by the style (PM_ButtonShift...)
-
-        pm = None
-        if not icon.isNull():
-            if opt.state & QStyle.State_Enabled:
-                mode = QIcon.Normal
-            else:
-                mode = QIcon.Disabled
-
-            pm = opt.icon.pixmap(
-                    rect.size().boundedTo(icon_size), mode,
-                    QIcon.On if opt.state & QStyle.State_On else QIcon.Off)
 
         icon_area_rect = QRect(rect)
         icon_area_rect.setRight(int(icon_area_rect.height() * 1.26))
@@ -176,11 +161,20 @@ class ToolBoxTabButton(QToolButton):
                    int(Qt.AlignVCenter | Qt.AlignLeft) | \
                    int(Qt.TextSingleLine),
                    text)
-        if pm:
-            pm_rect = QRect(QPoint(0, 0), pm.size())
-            centered_rect = QRect(pm_rect)
-            centered_rect.moveCenter(icon_area_rect.center())
-            p.drawPixmap(centered_rect, pm, pm_rect)
+
+        if not opt.icon.isNull():
+            if opt.state & QStyle.State_Enabled:
+                mode = QIcon.Normal
+            else:
+                mode = QIcon.Disabled
+            if opt.state & QStyle.State_On:
+                state = QIcon.On
+            else:
+                state = QIcon.Off
+            icon_area_rect = icon_area_rect
+            icon_rect = QRect(QPoint(0, 0), opt.iconSize)
+            icon_rect.moveCenter(icon_area_rect.center())
+            opt.icon.paint(p, icon_rect, Qt.AlignCenter, mode, state)
         p.restore()
 
 
