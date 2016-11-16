@@ -146,7 +146,7 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
         index = QPersistentModelIndex(model.index(row, 3))
-        temp_button = QPushButton(u'\u00d7', self, flat=True,
+        temp_button = QPushButton('×', self, flat=True,
                                   styleSheet='* {font-size: 16pt; color: silver}'
                                              '*:hover {color: black}')
         temp_button.clicked.connect(lambda: self.remove_one(index.row()))
@@ -250,7 +250,7 @@ class OWSelectRows(widget.OWWidget):
         def add_textual(contents):
             le = gui.lineEdit(box, self, None,
                               sizePolicy=QSizePolicy(QSizePolicy.Expanding,
-+                                                     QSizePolicy.Expanding))
+                                                     QSizePolicy.Expanding))
             if contents:
                 le.setText(contents)
             le.setAlignment(Qt.AlignRight)
