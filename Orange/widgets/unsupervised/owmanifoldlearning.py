@@ -85,7 +85,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
 
 
 class TSNEParametersEditor(ManifoldParametersEditor):
-    _metrics = ("manhattan", "chebyshev", "jaccard", "mahalanobis")
+    _metrics = ("manhattan", "chebyshev", "jaccard", "mahalanobis", "cosine")
     metric_index = Setting(0)
     metric_values = [(x, x.capitalize()) for x in _metrics]
     # rename l2 to Euclidean
