@@ -1,3 +1,13 @@
+import pickle
+from unittest.mock import patch
+# Needed because the pure-Python Unpickler that dill uses can also fail
+# with struct.error Exception. This seems to work, side effects unknown.
+with patch('pickle._Unpickler', pickle.Unpickler):
+    import dill
+dill.settings['protocol'] = pickle.HIGHEST_PROTOCOL
+dill.settings['recurse'] = True
+dill.settings['byref'] = True
+
 from .misc.lazy_module import _LazyModule
 from .misc.datasets import _DatasetInfo
 from .version import \

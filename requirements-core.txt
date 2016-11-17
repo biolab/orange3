@@ -10,3 +10,4 @@ chardet>=2.3.0
 joblib>=0.9.4
 keyring
 keyrings.alt    # for alternative keyring implementations
+dill

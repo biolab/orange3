@@ -1,12 +1,14 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import os
-import pickle
 from tempfile import mkstemp
 
 from Orange.classification.majority import ConstantModel
 from Orange.widgets.classify.owloadclassifier import OWLoadClassifier
 from Orange.widgets.tests.base import WidgetTest
+
+import pickle
+import dill    # Import dill after Orange because patched
 
 
 class TestOWMajority(WidgetTest):
@@ -21,10 +23,11 @@ class TestOWMajority(WidgetTest):
         fd, fname = mkstemp(suffix='.pkcls')
         os.close(fd)
         try:
-            with open(fname, "wb") as f:
-                pickle.dump(clsf, f)
-            self.widget.load(fname)
-            self.assertFalse(self.widget.Error.load_error.is_shown())
+            for pickle_impl in (pickle, dill):
+                with open(fname, 'wb') as f:
+                    pickle_impl.dump(clsf, f)
+                self.widget.load(fname)
+                self.assertFalse(self.widget.Error.load_error.is_shown())
 
             with open(fname, "w") as f:
                 f.write("X")
