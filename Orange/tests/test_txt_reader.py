@@ -85,3 +85,19 @@ class TestTabReader(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             table = CSVReader(file.name).read()
         self.assertIn('line 5, column 2', cm.exception.args[0])
+
+    def test_pr1734(self):
+        ContinuousVariable('foo')
+        file = NamedTemporaryFile("wt", delete=False)
+        filename = file.name
+        try:
+            file.write('''\
+foo
+time
+
+123123123
+''')
+            file.close()
+            CSVReader(filename).read()
+        finally:
+            os.remove(filename)
