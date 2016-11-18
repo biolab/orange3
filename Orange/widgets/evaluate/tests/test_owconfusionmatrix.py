@@ -1,9 +1,11 @@
 # pylint: disable=missing-docstring
+import numpy as np
 
 from Orange.data import Table
 from Orange.classification import NaiveBayesLearner, TreeLearner
 from Orange.regression import MeanLearner
-from Orange.evaluation.testing import CrossValidation, TestOnTrainingData
+from Orange.evaluation.testing import CrossValidation, TestOnTrainingData, \
+    ShuffleSplit
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
@@ -16,11 +18,11 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
 
         bayes = NaiveBayesLearner()
         tree = TreeLearner()
-        iris = cls.data
+        cls.iris = cls.data
         titanic = Table("titanic")
         common = dict(k=3, store_data=True)
-        cls.results_1_iris = CrossValidation(iris, [bayes], **common)
-        cls.results_2_iris = CrossValidation(iris, [bayes, tree], **common)
+        cls.results_1_iris = CrossValidation(cls.iris, [bayes], **common)
+        cls.results_2_iris = CrossValidation(cls.iris, [bayes, tree], **common)
         cls.results_2_titanic = CrossValidation(titanic, [bayes, tree],
                                                 **common)
 
@@ -59,8 +61,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
     def test_show_error_on_regression(self):
         """On regression data, the widget must show error"""
         housing = Table("housing")
-        results = TestOnTrainingData(housing, [MeanLearner()])
-        results.data = housing
+        results = TestOnTrainingData(housing, [MeanLearner()], store_data=True)
         self.send_signal("Evaluation Results", results)
         self.assertTrue(self.widget.Error.no_regression.is_shown())
         self.send_signal("Evaluation Results", None)
@@ -69,3 +70,15 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Error.no_regression.is_shown())
         self.send_signal("Evaluation Results", self.results_1_iris)
         self.assertFalse(self.widget.Error.no_regression.is_shown())
+
+    def test_row_indices(self):
+        """Map data instances when using random shuffling"""
+        results = ShuffleSplit(self.iris, [NaiveBayesLearner()],
+                               store_data=True)
+        self.send_signal("Evaluation Results", results)
+        self.widget.select_correct()
+        selected = self.get_output("Selected Data")
+        correct = np.equal(results.actual, results.predicted)[0]
+        correct_indices = results.row_indices[correct]
+        self.assertSetEqual(set(self.iris[correct_indices].ids),
+                            set(selected.ids))
