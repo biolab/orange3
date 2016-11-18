@@ -34,3 +34,12 @@ class TestListModel(GuiTest):
         selection = view.selectedIndexes()
         self.assertEqual(len(selection), 1)
         self.assertEqual(selection[0].row(), 1)
+
+class ComboBoxText(GuiTest):
+    def test_set_initial_value(self):
+        widget = OWWidget()
+        variables = [ContinuousVariable(x) for x in "abc"]
+        model = VariableListModel(variables)
+        widget.foo = variables[1]
+        combo = gui.comboBox(widget.controlArea, widget, "foo", model=model)
+        self.assertEqual(combo.currentIndex(), 1)
