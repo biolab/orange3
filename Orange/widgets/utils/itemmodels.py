@@ -456,6 +456,9 @@ class PyListModel(QAbstractListModel):
     def __len__(self):
         return len(self._list)
 
+    def __contains__(self, value):
+        return value in self._list
+
     def __iter__(self):
         return iter(self._list)
 
