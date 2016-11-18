@@ -5,15 +5,15 @@ Utility classes for visualization widgets
 from bisect import bisect_left
 from operator import attrgetter
 
-from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
     QTableView, QGraphicsTextItem, QGraphicsRectItem, QGraphicsView, QDialog,
-    QVBoxLayout
+    QVBoxLayout, QLineEdit
 )
 from Orange.data import Variable
 from Orange.widgets import gui
-from Orange.widgets.gui import HorizontalGridDelegate
+from Orange.widgets.gui import HorizontalGridDelegate, TableBarItem
 from Orange.widgets.utils.messages import WidgetMessagesMixin
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.widget import Msg
@@ -38,6 +38,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     - `on_selection_changed` that handles event triggered when the user selects
       a table row. The method should emit signal
       `VizRankDialog.selectionChanged(object)`.
+    - `bar_length` returns the length of the bar corresponding to the score.
 
     The class provides a table and a button. A widget constructs a single
     instance of this dialog in its `__init__`, like (in Sieve) by using a
@@ -95,13 +96,25 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.saved_progress = 0
         self.scores = []
 
+        self.filter = QLineEdit()
+        self.filter.setPlaceholderText("Filter ...")
+        self.filter.textChanged.connect(self.filter_changed)
+        self.layout().addWidget(self.filter)
+        # Remove focus from line edit
+        self.setFocus(Qt.ActiveWindowFocusReason)
+
         self.rank_model = QStandardItemModel(self)
+        self.model_proxy = QSortFilterProxyModel(self)
+        self.model_proxy.setSourceModel(self.rank_model)
         self.rank_table = view = QTableView(
             selectionBehavior=QTableView.SelectRows,
             selectionMode=QTableView.SingleSelection,
             showGrid=False)
-        view.setItemDelegate(HorizontalGridDelegate())
-        view.setModel(self.rank_model)
+        if self._has_bars:
+            view.setItemDelegate(TableBarItem())
+        else:
+            view.setItemDelegate(HorizontalGridDelegate())
+        view.setModel(self.model_proxy)
         view.selectionModel().selectionChanged.connect(
             self.on_selection_changed)
         view.horizontalHeader().setStretchLastSection(True)
@@ -110,6 +123,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         self.button = gui.button(
             self, self, "Start", callback=self.toggle, default=True)
+
+    @property
+    def _has_bars(self):
+        return type(self).bar_length is not VizRankDialog.bar_length
 
     @classmethod
     def add_vizrank(cls, widget, master, button_label, set_attr_callback):
@@ -177,6 +194,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
 
+    def filter_changed(self, text):
+        self.model_proxy.setFilterFixedString(text)
+
     def stop_and_reset(self, reset_method=None):
         if self.keep_running:
             self.scheduled_call = reset_method or self.initialize
@@ -234,6 +254,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         """
         raise NotImplementedError
 
+    def bar_length(self, score):
+        """Compute the bar length (between 0 and 1) corresponding to the score.
+        Return `None` if the score cannot be normalized.
+        """
+        return None
+
     def row_for_state(self, score, state):
         """
         Abstract method that return the items that are inserted into the table.
@@ -264,8 +290,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
                 score = self.compute_score(state)
                 if score is not None:
                     pos = bisect_left(self.scores, score)
-                    self.rank_model.insertRow(
-                        pos, self.row_for_state(score, state))
+                    row_items = self.row_for_state(score, state)
+                    if self._has_bars:
+                        bar = self.bar_length(score)
+                        if bar is not None:
+                            row_items[0].setData(bar, gui.TableBarItem.BarRole)
+                    self.rank_model.insertRow(pos, row_items)
                     self.scores.insert(pos, score)
                 progress.advance()
             self._select_first_if_none()
@@ -370,7 +400,10 @@ class VizRankDialogAttrPair(VizRankDialog):
         return can_rank
 
     def on_selection_changed(self, selected, deselected):
-        attrs = [selected.indexes()[i].data(self._AttrRole) for i in (0, 1)]
+        selection = selected.indexes()
+        if not selection:
+            return
+        attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit(attrs)
 
     def state_count(self):
@@ -385,13 +418,10 @@ class VizRankDialogAttrPair(VizRankDialog):
             sj = 0
 
     def row_for_state(self, score, state):
-        items = []
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
-        for attr in attrs:
-            item = QStandardItem(attr.name)
-            item.setData(attr, self._AttrRole)
-            items.append(item)
-        return items
+        item = QStandardItem(", ".join(a.name for a in attrs))
+        item.setData(attrs, self._AttrRole)
+        return [item]
 
 
 class CanvasText(QGraphicsTextItem):

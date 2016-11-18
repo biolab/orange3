@@ -240,6 +240,9 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             dof = reduce(mul, (len(attr.values) - 1 for attr in attrlist))
         return distributions.chi2.sf(ss, dof)
 
+    def bar_length(self, score):
+        return 1 if score == 0 else -log(score, 10) / 50
+
     def on_selection_changed(self, selected, deselected):
         attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit(attrs + (None, ) * (4 - len(attrs)))
