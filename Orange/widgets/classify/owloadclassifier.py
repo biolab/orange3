@@ -99,7 +99,8 @@ class OWLoadClassifier(widget.OWWidget):
     def load(self, filename):
         """Load the object from filename and send it to output."""
         try:
-            classifier = pickle.load(open(filename, "rb"))
+            with open(filename, "rb") as f:
+                classifier = pickle.load(f)
         except (pickle.UnpicklingError, OSError, EOFError):
             self.Error.load_error(os.path.split(filename)[-1])
         else:
