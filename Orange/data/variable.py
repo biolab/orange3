@@ -921,7 +921,7 @@ class TimeVariable(ContinuousVariable):
             return '?'
         if not self.have_date and not self.have_time:
             # The time is relative, unitless. The value is absolute.
-            return str(val)
+            return str(val.value) if isinstance(val, Value) else str(val)
 
         # If you know how to simplify this, be my guest
         seconds = int(val)
