@@ -336,6 +336,8 @@ def compute_grouped_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
 
     cdef:
         int i, n
+        #: number of valid nodes (having at least `min_leaf` instances)
+        int nvalid = 0
         double sum = 0, inter, tx
 
         np.int32_t[:] group_sizes = np.zeros(n_values, dtype=np.int32)
@@ -358,7 +360,10 @@ def compute_grouped_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
             inter += group_sums[i] * group_sums[i] / group_sizes[i]
             sum += group_sums[i]
             n += group_sizes[i]
-    if n < 2:
+            nvalid += 1
+    if nvalid < 2:
+        # NOTE: the `inter - sum * sum / n` below does not necessarily
+        # cancel out
         return 0
     # factor n / x.shape[0] is the punishment for missing values
     #return (inter - sum * sum / n) / n * n / x.shape[0]

@@ -19,12 +19,15 @@ class TestOWMajority(WidgetTest):
 
         clsf = ConstantModel([1, 1, 1])
         fd, fname = mkstemp(suffix='.pkcls')
+        os.close(fd)
         try:
-            pickle.dump(clsf, open(fname, "wb"))
+            with open(fname, "wb") as f:
+                pickle.dump(clsf, f)
             self.widget.load(fname)
             self.assertFalse(self.widget.Error.load_error.is_shown())
 
-            open(fname, "w").write("X")
+            with open(fname, "w") as f:
+                f.write("X")
             self.widget.load(fname)
             self.assertTrue(self.widget.Error.load_error.is_shown())
         finally:
