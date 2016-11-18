@@ -3,7 +3,7 @@
 import numpy as np
 
 from Orange.data import Table
-from Orange.distance import MahalanobisDistance
+from Orange.distance import MahalanobisDistance, Mahalanobis
 from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS
 from Orange.widgets.tests.base import WidgetTest
 
@@ -40,3 +40,9 @@ class TestOWDistances(WidgetTest):
         self.assertTrue(self.widget.Error.no_continuous_features.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
+
+    def test_mahalanobis_error(self):
+        self.widget.axis = 1
+        self.send_signal("Data", self.iris)
+        self.widget.compute_distances(Mahalanobis, self.iris)
+        self.assertTrue(self.widget.Error.too_few_observations.is_shown())
