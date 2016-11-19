@@ -14,7 +14,6 @@ class Transformation:
         :type variable: int or str or :obj:`~Orange.data.Variable`
         """
         self.variable = variable
-        self._last_domain = None
 
     def __call__(self, data):
         """
@@ -26,11 +25,15 @@ class Transformation:
             data = Table(data.domain, [data])
         if self.variable.is_primitive():
             domain = Domain([self.variable])
-            data = Table.from_table(domain, data).X
+            data = Table.from_table(domain, data)
+            col = data.X
         else:
-            domain = Domain([], [], metas=[self.variable])
-            data = Table.from_table(domain, data).metas
-        transformed = self.transform(data if sp.issparse(data) else data.squeeze(axis=1))
+            domain = Domain([], metas=[self.variable])
+            data = Table.from_table(domain, data)
+            col = data.metas
+        if not sp.issparse(col):
+            col = col.squeeze(axis=1)
+        transformed = self.transform(col)
         if inst:
             transformed = transformed[0]
         return transformed
