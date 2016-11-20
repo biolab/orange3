@@ -1,9 +1,10 @@
 import unittest
+
 import numpy as np
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
     StringVariable
-from Orange.preprocess.transformation import Identity, Transformation
+from Orange.preprocess.transformation import Identity, Transformation, Lookup
 
 
 class TestTransformation(unittest.TestCase):
@@ -59,3 +60,12 @@ class TestTransformation(unittest.TestCase):
         np.testing.assert_equal(D1.X, D.X)
         np.testing.assert_equal(D1.Y, D.Y)
         np.testing.assert_equal(D1.metas, D.metas)
+
+
+class LookupTest(unittest.TestCase):
+    def test_transform(self):
+        lookup = Lookup(None, np.array([1, 2, 0, 2]))
+        column = np.array([1, 2, 3, 0, np.nan, 0], dtype=np.float64)
+        np.testing.assert_array_equal(
+            lookup.transform(column),
+            np.array([2, 0, 2, 1, np.nan, 1], dtype=np.float64))
