@@ -1,9 +1,9 @@
 import unittest
-from collections import namedtuple
 
 import numpy as np
 
-from Orange.base import SklLearner, SklModel, Fitter, Model
+from Orange.base import SklModel, Model
+from Orange.modelling import Fitter
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
