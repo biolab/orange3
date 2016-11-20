@@ -101,12 +101,13 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
 class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     """Abstract widget for classification/regression learners.
 
-    Notes:
-        All learner widgets should define learner class LEARNER.
-        LEARNER should have __returns__ attribute.
+    Notes
+    -----
+    All learner widgets should define learner class LEARNER.
+    LEARNER should have __returns__ attribute.
 
-        Overwrite `create_learner`, `add_main_layout` and
-        `get_learner_parameters` in case LEARNER has extra parameters.
+    Overwrite `create_learner`, `add_main_layout` and `get_learner_parameters`
+    in case LEARNER has extra parameters.
 
     """
     LEARNER = None
@@ -127,9 +128,13 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.valid_data = False
         self.learner = None
         self.model = None
-        self.preprocessors = None
         self.outdated_settings = False
         self.setup_layout()
+
+        # The preprocessors that appear on the preprocessors input get stored
+        # here, the learner class preprocessors get added later
+        self.__preprocessors = ()
+
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
 
     def create_learner(self):
@@ -139,6 +144,34 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             Leaner: an instance of Orange.base.learner subclass.
         """
         return self.LEARNER(preprocessors=self.preprocessors)
+
+    @property
+    def preprocessors(self):
+        """The preprocessors that the learner uses.
+
+        All the preprocessors that the learner uses. When using the learners
+        with this widget, the learners automatically use the default
+        preprocessors, as defined in the learner classes.
+
+        The user-set preprocessors come before the default ones.
+
+        Returns
+        -------
+        tuple, optional
+
+        """
+        if issubclass(self.LEARNER, Fitter):
+            if self.learner is not None:
+                default_pp = tuple(type(self.learner.learner).preprocessors)
+                return self.__preprocessors + default_pp
+            else:
+                return None
+        else:
+            return self.__preprocessors + tuple(self.LEARNER.preprocessors)
+
+    @preprocessors.setter
+    def preprocessors(self, value):
+        self.__preprocessors = tuple(value)
 
     def get_learner_parameters(self):
         """Creates an `OrderedDict` or a sequence of pairs with current model
@@ -150,8 +183,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         return []
 
     def set_preprocessor(self, preprocessor):
-        """Add user-set preprocessors before the default, mandatory ones"""
-        self.preprocessors = ((preprocessor,) if preprocessor else ())
+        self.preprocessors = (preprocessor,) if preprocessor else ()
         self.apply()
 
     @check_sql_input
