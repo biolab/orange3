@@ -1,22 +1,27 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from unittest import skip
 
 import numpy as np
+
 from Orange.data import Table, ContinuousVariable
-from Orange.widgets.visualize.owboxplot import OWBoxPlot
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
+from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
 
-class OWBoxPlotTests(WidgetTest):
+class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
         cls.iris = Table("iris")
         cls.zoo = Table("zoo")
         cls.housing = Table("housing")
         cls.titanic = Table("titanic")
         cls.heart = Table("heart_disease")
+        cls.data = cls.iris
+        cls.signal_name = "Data"
+        cls.signal_data = cls.data
 
     def setUp(self):
         self.widget = self.create_widget(OWBoxPlot)
@@ -36,7 +41,7 @@ class OWBoxPlotTests(WidgetTest):
 
     def test_input_data_missings_cont_group_var(self):
         """Check widget with continuous data with missing values and group variable"""
-        data = self.iris
+        data = self.iris.copy()
         data.X[:, 0] = np.nan
         self.send_signal("Data", data)
         # used to crash, see #1568
@@ -100,3 +105,11 @@ class OWBoxPlotTests(WidgetTest):
                           'slope peak exc ST', 'gender', 'age', 'rest SBP',
                           'rest ECG', 'cholesterol',
                           'fasting blood sugar > 120', 'diameter narrowing'])
+
+    def _select_data(self):
+        items = [item for item in self.widget.box_scene.items()
+                 if isinstance(item, FilterGraphicsRectItem)]
+        items[0].setSelected(True)
+        return [100, 103, 104, 108, 110, 111, 112, 115, 116,
+                120, 123, 124, 126, 128, 132, 133, 136, 137,
+                139, 140, 141, 143, 144, 145, 146, 147, 148]
