@@ -523,7 +523,7 @@ class LinkItem(QGraphicsObject):
         if self.__sourceName or self.__sinkName:
             if self.__sourceName != self.__sinkName:
                 text = "{0} \u2192 {1}".format(self.__sourceName,
-                                                self.__sinkName)
+                                               self.__sinkName)
             else:
                 # If the names are the same show only one.
                 # Is this right? If the sink has two input channels of the
@@ -533,7 +533,8 @@ class LinkItem(QGraphicsObject):
         else:
             text = ""
 
-        self.linkTextItem.setPlainText(text)
+        self.linkTextItem.setHtml('<div align="center">{0}</div>'.format(text))
+        self.linkTextItem.document().setTextWidth(100)
 
         path = self.curveItem.curvePath()
         if not path.isEmpty():
