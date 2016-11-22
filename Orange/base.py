@@ -23,8 +23,8 @@ class Learner:
 
     def __init__(self, preprocessors=None):
         if preprocessors is None:
-            preprocessors = type(self).preprocessors
-        self.preprocessors = list(preprocessors)
+            preprocessors = tuple(type(self).preprocessors)
+        self.preprocessors = tuple(preprocessors)
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
@@ -63,6 +63,11 @@ class Learner:
         model.name = self.name
         model.original_domain = origdomain
         return model
+
+    @property
+    def default_preprocessors(self):
+        """The default preprocessors, defined in learner classes."""
+        return tuple(type(self).preprocessors)
 
     def preprocess(self, data):
         """

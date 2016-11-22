@@ -16,7 +16,7 @@ class Fitter(Learner):
         super().__init__(preprocessors=kwargs.get('preprocessors', None))
         self.args = args
         self.kwargs = kwargs
-        self.problem_type = None
+        self.problem_type = self.CLASSIFICATION
         self.__regression_learner = self.__classification_learner = None
 
     def __call__(self, data):
@@ -35,6 +35,9 @@ class Fitter(Learner):
             params = self._get_learner_kwargs(self.__fits__.regression)
             kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
+        # In case the preprocessors were changed since instantionation, we must
+        # make sure to build the model with the latest preprocessors
+        kwargs['preprocessors'] = self.preprocessors
         return kwargs
 
     @property
@@ -74,6 +77,13 @@ class Fitter(Learner):
         return self.classification_learner if \
             self.problem_type == self.CLASSIFICATION else \
             self.regression_learner
+
+    @property
+    def default_preprocessors(self):
+        """Since the fitter is a proxy, it inherently has no preprocessors.
+        Instead, it will pass the active learner preprocessors as the default
+        ones."""
+        return self.learner.default_preprocessors
 
     def __getattr__(self, item):
         return getattr(self.learner, item)

@@ -332,12 +332,10 @@ class WidgetLearnerTestMixin:
     widget = None  # type: OWBaseLearner
 
     def init(self):
-        iris = Table("iris")
-        housing = Table("housing")
-        self.supports_any_input_type = False
+        self.iris = iris = Table("iris")
+        self.housing = housing = Table("housing")
 
         if issubclass(self.widget.LEARNER, Fitter):
-            self.supports_any_input_type = True
             self.data = (iris, housing)
             self.inadequate_data = ()
             self.learner_class = Fitter
@@ -386,30 +384,48 @@ class WidgetLearnerTestMixin:
             self.send_signal("Data", valid)
             self.assertFalse(self.widget.Error.data_error.is_shown())
 
+    def test_default_learner_preprocessors(self):
+        """Check that a widget contains the default learner preprocessors"""
+        self.assertEqual(
+            self.widget.preprocessors,
+            self.widget.learner.default_preprocessors,
+            'Widget does not contain default learner preprocessors')
+
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
-        self.assertIsNone(self.widget.preprocessors)
         self.send_signal("Preprocessor", Randomize)
-        pp = (Randomize,) + tuple(self.widget.LEARNER.preprocessors)
-        self.assertEqual(pp, self.widget.preprocessors)
+        self.assertIn(
+            Randomize, self.widget.preprocessors,
+            'Preprocessor not added to widget preprocessors')
         self.widget.apply_button.button.click()
-        self.assertEqual(pp, tuple(self.widget.learner.preprocessors))
+        self.assertIn(
+            Randomize, tuple(self.widget.learner.preprocessors),
+            'Preprocessors were not passed to the learner')
 
     def test_input_preprocessors(self):
         """Check multiple preprocessors on input"""
         pp_list = PreprocessorList([Randomize, RemoveNaNColumns])
         self.send_signal("Preprocessor", pp_list)
         self.widget.apply_button.button.click()
-        self.assertEqual([pp_list] + list(self.widget.LEARNER.preprocessors),
-                         self.widget.learner.preprocessors)
+        self.assertEqual(
+            (pp_list,) + self.widget.learner.default_preprocessors,
+            self.widget.learner.preprocessors,
+            '`PreprocessorList` was not added')
 
     def test_input_preprocessor_disconnect(self):
         """Check learner's preprocessors after disconnecting pp from input"""
         self.send_signal("Preprocessor", Randomize)
-        self.assertIsNotNone(self.widget.preprocessors)
+        self.widget.apply_button.button.click()
+        self.assertIn(Randomize, self.widget.preprocessors)
+
         self.send_signal("Preprocessor", None)
-        self.assertEqual(self.widget.preprocessors,
-                         tuple(self.widget.LEARNER.preprocessors))
+        self.widget.apply_button.button.click()
+        self.assertNotIn(
+            Randomize, self.widget.preprocessors,
+            'Preprocessor was not removed.')
+        self.assertEqual(
+            self.widget.preprocessors, self.widget.learner.preprocessors,
+            'Clearing preprocessor clears default preprocessors')
 
     def test_output_learner(self):
         """Check if learner is on output after apply"""
