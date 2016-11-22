@@ -5,7 +5,7 @@ from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency
 from Orange.statistics.basic_stats import BasicStats
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 from .transformation import Transformation
 from . import _discretize
 

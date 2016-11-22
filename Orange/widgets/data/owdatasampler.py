@@ -12,7 +12,7 @@ from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
 from Orange.widgets.widget import Msg, OWWidget
-from Orange.preprocess.reprable import Reprable
+from Orange.util import Reprable
 
 
 class OWDataSampler(OWWidget):

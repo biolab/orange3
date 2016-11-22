@@ -4,7 +4,7 @@ import re
 from math import isnan
 from numbers import Real
 
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 import numpy as np
 import bottleneck as bn
 
@@ -317,15 +317,9 @@ class FilterContinuous(ValueFilter):
         `IsDefined`.
     """
 
-    def __init__(self, position, oper, ref=None, max=None, **a):
+    def __init__(self, position, oper, ref=None, max=None, min=None):
         super().__init__(position)
-        if a:
-            if len(a) != 1 or "min" not in a:
-                raise TypeError(
-                    "FilterContinuous got unexpected keyword arguments")
-            else:
-                ref = a["min"]
-        self.ref = ref
+        self.ref = ref if min is None else min
         self.max = max
         self.oper = oper
         self.position = position

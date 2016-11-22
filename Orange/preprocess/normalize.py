@@ -2,7 +2,7 @@ from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
 from .transformation import Normalizer as Norm
 from .preprocess import Normalize
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 import warnings
 
 __all__ = ["Normalizer"]

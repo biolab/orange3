@@ -3,7 +3,7 @@ from scipy.sparse import issparse
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 from .transformation import Transformation, Lookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",

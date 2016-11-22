@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 
 from Orange.data import Instance, Table, Domain
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 
 
 class Transformation(Reprable):

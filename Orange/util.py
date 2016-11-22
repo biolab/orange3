@@ -1,7 +1,6 @@
 """Various small utilities that might be useful everywhere"""
-
+import inspect
 from functools import wraps
-from inspect import isfunction
 from operator import attrgetter
 from itertools import chain, count
 from collections import OrderedDict
@@ -156,13 +155,57 @@ def hex_to_color(s):
 def inherit_docstrings(cls):
     """Inherit methods' docstrings from first superclass that defines them"""
     for method in cls.__dict__.values():
-        if isfunction(method) and method.__doc__ is None:
+        if inspect.isfunction(method) and method.__doc__ is None:
             for parent in cls.__mro__[1:]:
                 __doc__ = getattr(parent, method.__name__, None).__doc__
                 if __doc__:
                     method.__doc__ = __doc__
                     break
     return cls
+
+
+class Reprable:
+    """A type that inherits from this class has its __repr__ string
+    auto-generated so that it "[...] should look like a valid Python
+    expression that could be used to recreate an object with the same
+    value [...]" (see See Also section below).
+
+    This relies on the instances of type to have attributes that
+    match the arguments of the type's constructor. Only the values that
+    don't match the arguments' defaults are printed, i.e.:
+
+        >>> class C(Reprable):
+        ...     def __init__(self, a, b=2):
+        ...         self.a = a
+        ...         self.b = b
+        >>> C(1, 2)
+        C(a=1)
+        >>> C(1, 3)
+        C(a=1, b=3)
+
+    See Also
+    --------
+    https://docs.python.org/3/reference/datamodel.html#object.__repr__
+    """
+    def __repr__(self):
+        cls = self.__class__
+        names_values = []
+        # Only use params of __init__; skip __new__
+        if cls.__init__ != object.__init__:
+            sig = inspect.signature(cls.__init__)
+            for param in sig.parameters.values():
+                # Skip self, *args, **kwargs
+                if (param.name != 'self' and
+                    param.kind not in (param.VAR_POSITIONAL,
+                                       param.VAR_KEYWORD)):
+                    value = getattr(self, param.name)
+                    if value != param.default:
+                        names_values.append((param.name, value))
+
+        return '{}({})'.format(cls.__name__,
+                               ', '.join('{}={!r}'.format(*pair)
+                                         for pair in names_values))
+
 
 # For best result, keep this at the bottom
 __all__ = export_globals(globals(), __name__)

@@ -1,7 +1,7 @@
 import random
 import Orange
 import numpy as np
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 from scipy.sparse import issparse
 
 from itertools import takewhile

@@ -10,7 +10,7 @@ import bottleneck as bn
 import Orange.data
 from Orange.data import Table
 from Orange.statistics import distribution
-from Orange.misc.reprable import Reprable
+from Orange.util import Reprable
 from . import impute, discretize, transformation
 from ..misc.enum import Enum
 
