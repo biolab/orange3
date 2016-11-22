@@ -339,19 +339,19 @@ class WidgetLearnerTestMixin:
             self.data = (iris, housing)
             self.inadequate_data = ()
             self.learner_class = Fitter
-            self.model = Model
+            self.model_class = Model
             self.model_name = 'Model'
         elif issubclass(self.widget.LEARNER, LearnerClassification):
             self.data = (iris,)
             self.inadequate_data = (housing,)
             self.learner_class = LearnerClassification
-            self.model = ModelClassification
+            self.model_class = ModelClassification
             self.model_name = 'Classifier'
         else:
             self.data = (housing,)
             self.inadequate_data = (iris,)
             self.learner_class = LearnerRegression
-            self.model = ModelRegression
+            self.model_class = ModelRegression
             self.model_name = 'Predictor'
 
         self.parameters = []
@@ -448,7 +448,7 @@ class WidgetLearnerTestMixin:
         model = self.get_output(self.model_name)
         self.assertIsNotNone(model)
         self.assertIsInstance(model, self.widget.LEARNER.__returns__)
-        self.assertIsInstance(model, self.model)
+        self.assertIsInstance(model, self.model_class)
 
     def test_output_learner_name(self):
         """Check if learner's name properly changes"""
