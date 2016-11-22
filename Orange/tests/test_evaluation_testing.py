@@ -16,7 +16,7 @@ from Orange.util import OrangeWarning
 
 def random_data(nrows, ncols):
     np.random.seed(42)
-    x = np.random.random_integers(0, 1, (nrows, ncols))
+    x = np.random.randint(0, 2, (nrows, ncols))
     col = np.random.randint(ncols)
     y = x[:nrows, col].reshape(nrows, 1)
     table = Table(x, y)

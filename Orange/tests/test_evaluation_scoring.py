@@ -64,7 +64,7 @@ class TestCA(unittest.TestCase):
         np.testing.assert_almost_equal(ca(res), [0.99, 0])
 
     def test_bayes(self):
-        x = np.random.random_integers(0, 1, (100, 5))
+        x = np.random.randint(2, size=(100, 5))
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
         t = Table(x, y)

@@ -22,7 +22,7 @@ class TestLinearRegressionLearner(unittest.TestCase):
     def test_LinearRegression(self):
         nrows = 1000
         ncols = 3
-        x = np.random.random_integers(-20, 50, (nrows, ncols))
+        x = np.random.randint(-20, 51, (nrows, ncols))
         c = np.random.rand(ncols, 1) * 10 - 3
         e = np.random.rand(nrows, 1) - 0.5
         y = np.dot(x, c) + e
