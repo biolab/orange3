@@ -30,7 +30,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, \
-    ProjectCUR, Scaling, Randomize as _Randomize
+    ProjectCUR, Scale, Randomize as _Randomize
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
@@ -629,6 +629,18 @@ class RandomFeatureSelectEditor(BaseEditor):
             raise NotImplementedError
 
 
+def _index_to_enum(enum, i):
+    """Enums, by default, are not int-comparable, so use an ad-hoc mapping of
+    int to enum value at that position"""
+    return list(enum)[i]
+
+
+def _enum_to_index(enum, key):
+    """Enums, by default, are not int-comparable, so use an ad-hoc mapping of
+    enum key to its int position"""
+    return list(enum).index(key)
+
+
 class Scale(BaseEditor):
     NoCentering, CenterMean, CenterMedian = 0, 1, 2
     NoScaling, ScaleBySD, ScaleBySpan = 0, 1, 2
@@ -657,12 +669,14 @@ class Scale(BaseEditor):
     def setParameters(self, params):
         center = params.get("center", Scale.CenterMean)
         scale = params.get("scale", Scale.ScaleBySD)
-        self.__centercb.setCurrentIndex(center)
-        self.__scalecb.setCurrentIndex(scale)
+        self.__centercb.setCurrentIndex(_enum_to_index(Scale.CenteringType, center))
+        self.__scalecb.setCurrentIndex(_enum_to_index(Scale.ScalingType, scale))
 
     def parameters(self):
-        return {"center": self.__centercb.currentIndex(),
-                "scale": self.__scalecb.currentIndex()}
+        return {"center": _index_to_enum(Scale.CenteringType,
+                                         self.__centercb.currentIndex()),
+                "scale": _index_to_enum(Scale.ScalingType,
+                                        self.__scalecb.currentIndex())}
 
     @staticmethod
     def createinstance(params):
@@ -672,22 +686,22 @@ class Scale(BaseEditor):
         if center == Scale.NoCentering:
             center = None
         elif center == Scale.CenterMean:
-            center = Scaling.mean
+            center = Scale.Mean
         elif center == Scale.CenterMedian:
-            center = Scaling.median
+            center = Scale.Median
         else:
             assert False
 
         if scale == Scale.NoScaling:
             scale = None
         elif scale == Scale.ScaleBySD:
-            scale = Scaling.std
+            scale = Scale.Std
         elif scale == Scale.ScaleBySpan:
-            scale = Scaling.span
+            scale = Scale.Span
         else:
             assert False
 
-        return Scaling(center=center, scale=scale)
+        return Scale(center=center, scale=scale)
 
     def __repr__(self):
         return "{}, {}".format(self.__centercb.currentText(),
@@ -695,7 +709,7 @@ class Scale(BaseEditor):
 
 
 class Randomize(BaseEditor):
-    RandomizeClasses, RandomizeAttributes, RandomizeMetas = _Randomize.RandTypes
+    RandomizeClasses, RandomizeAttributes, RandomizeMetas = _Randomize.Type
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -719,11 +733,12 @@ class Randomize(BaseEditor):
 
     def setParameters(self, params):
         rand_type = params.get("rand_type", Randomize.RandomizeClasses)
-        self.__rand_type_cb.setCurrentIndex(rand_type)
+        self.__rand_type_cb.setCurrentIndex(_enum_to_index(_Randomize.Type, rand_type))
         self.__rand_seed_ch.setChecked(params.get("rand_seed", 1) or 0)
 
     def parameters(self):
-        return {"rand_type": self.__rand_type_cb.currentIndex(),
+        return {"rand_type": _index_to_enum(_Randomize.Type,
+                                            self.__rand_type_cb.currentIndex()),
                 "rand_seed": 1 if self.__rand_seed_ch.isChecked() else None}
 
     @staticmethod
@@ -899,7 +914,7 @@ PREPROCESSORS = [
         RandomFeatureSelectEditor
     ),
     PreprocessAction(
-        "Normalize", "orange.preprocess.scale", "Scaling",
+        "Normalize", "orange.preprocess.scale", "Scale",
         Description("Normalize Features",
                     icon_path("Normalize.svg")),
         Scale

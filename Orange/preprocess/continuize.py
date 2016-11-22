@@ -4,7 +4,7 @@ from Orange.util import Reprable
 from .transformation import Identity, Indicator, Indicator1, Normalizer
 from .preprocess import Continuize
 
-__all__ = ["DomainContinuizer", "MultinomialTreatment"]
+__all__ = ["DomainContinuizer"]
 
 
 class DomainContinuizer(Reprable):
@@ -92,6 +92,3 @@ class DomainContinuizer(Reprable):
         else:
             new_classes = domain.class_vars
         return Domain(new_attrs, new_classes, domain.metas)
-
-
-MultinomialTreatment = Continuize.MultinomialTreatment

@@ -92,12 +92,12 @@ class TestScaling(unittest.TestCase):
                            [4, 5, 6]])
 
     def test_scaling_mean_span(self):
-        table = Scaling(center=Scaling.mean, scale=Scaling.span)(self.table)
+        table = Scale(center=Scale.Mean, scale=Scale.Span)(self.table)
         np.testing.assert_almost_equal(np.mean(table, 0), 0)
         np.testing.assert_almost_equal(np.ptp(table, 0), 1)
 
     def test_scaling_median_stddev(self):
-        table = Scaling(center=Scaling.median, scale=Scaling.std)(self.table)
+        table = Scale(center=Scale.Median, scale=Scale.Std)(self.table)
         np.testing.assert_almost_equal(np.std(table, 0), 1)
         # NB: This test just covers. The following fails. You figure it out.
         # np.testing.assert_almost_equal(np.median(table, 0), 0)
@@ -106,7 +106,7 @@ class TestScaling(unittest.TestCase):
 class TestReprs(unittest.TestCase):
     def test_reprs(self):
         preprocs = [Continuize, Discretize, Impute, SklImpute, Normalize,
-                    Randomize, RemoveNaNClasses, ProjectPCA, ProjectCUR, Scaling,
+                    Randomize, RemoveNaNClasses, ProjectPCA, ProjectCUR, Scale,
                     EqualFreq, EqualWidth, EntropyMDL, SelectBestFeatures,
                     SelectRandomFeatures, RemoveNaNColumns, DoNotImpute, DropInstances,
                     Average, Default]

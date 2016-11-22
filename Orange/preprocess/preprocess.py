@@ -10,14 +10,13 @@ import bottleneck as bn
 import Orange.data
 from Orange.data import Table
 from Orange.statistics import distribution
-from Orange.util import Reprable
+from Orange.util import Reprable, Enum
 from . import impute, discretize, transformation
-from ..misc.enum import Enum
 
 
 __all__ = ["Continuize", "Discretize", "Impute",
            "SklImpute", "Normalize", "Randomize",
-           "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scaling"]
+           "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scale"]
 
 
 class Preprocess(Reprable):
@@ -47,16 +46,15 @@ class Preprocess(Reprable):
 
 
 class Continuize(Preprocess):
-    MultinomialTreatment = Enum(
-        "Indicators", "FirstAsBase", "FrequentAsBase",
-        "Remove", "RemoveMultinomial", "ReportError", "AsOrdinal",
-        "AsNormalizedOrdinal", "Leave"
-    )
+    (Indicators, FirstAsBase, FrequentAsBase,Remove, RemoveMultinomial,
+     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = Enum(
+        "Continuize",
+        "Indicators, FirstAsBase, FrequentAsBase,"
+        "Remove, RemoveMultinomial, ReportError, AsOrdinal,"
+        "AsNormalizedOrdinal, Leave")
 
-    (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
-     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = MultinomialTreatment
-
-    def __init__(self, zero_based=True, multinomial_treatment=Indicators):
+    def __init__(self, zero_based=True,
+                 multinomial_treatment=Indicators):
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
 
@@ -270,9 +268,9 @@ class Normalize(Preprocess):
     >>> normalizer = Normalize(norm_type=Normalize.NormalizeBySpan)
     >>> normalized_data = normalizer(data)
     """
-
-    NormTypes = Enum("NormalizeBySpan", "NormalizeBySD")
-    (NormalizeBySpan, NormalizeBySD) = NormTypes
+    Type = Enum("Normalize",
+                "NormalizeBySpan, NormalizeBySD")
+    NormalizeBySpan, NormalizeBySD = Type
 
     def __init__(self,
                  zero_based=True,
@@ -341,10 +339,9 @@ class Randomize(Preprocess):
     >>> randomizer = Randomize(Randomize.RandomizeClasses)
     >>> randomized_data = randomizer(data)
     """
-
-    RandTypes = Enum("RandomizeClasses", "RandomizeAttributes",
-                     "RandomizeMetas")
-    (RandomizeClasses, RandomizeAttributes, RandomizeMetas) = RandTypes
+    Type = Enum("Randomize",
+                "RandomizeClasses, RandomizeAttributes, RandomizeMetas")
+    RandomizeClasses, RandomizeAttributes, RandomizeMetas = Type
 
     def __init__(self, rand_type=RandomizeClasses, rand_seed=None):
         self.rand_type = rand_type
@@ -413,50 +410,48 @@ class ProjectCUR(Preprocess):
         return cur(data)
 
 
-class WrappedFunc:
-    def __init__(self):
-        return None
-
-    def __repr__(self):
-        return "Scaling." + self.__class__.__name__
-
-
-class Scaling(Preprocess):
+class Scale(Preprocess):
     """
     Scale data preprocessor.  Scales data so that its distribution remains
     the same but its location on the axis changes.
     """
-    class mean(WrappedFunc):
-        def __call__(self, dist):
-            values, counts = np.array(dist)
-            return np.average(values, weights=counts)
+    class _MethodEnum(Enum):
+        def __call__(self, *args, **kwargs):
+            return getattr(Scale, '_' + self.name)(*args, **kwargs)
 
-    class median(WrappedFunc):
-        def __call__(self, dist):
-            values, counts = np.array(dist)
-            cumdist = np.cumsum(counts)
-            if cumdist[-1] > 0:
-                cumdist /= cumdist[-1]
+    CenteringType = _MethodEnum('Scale', 'Mean, Median', type=int)
+    ScalingType = _MethodEnum('Scale', 'Std, Span', type=int)
+    Mean, Median = CenteringType
+    Std, Span = ScalingType
 
-            return np.interp(0.5, cumdist, values)
+    @staticmethod
+    def _Mean(dist):
+        values, counts = np.array(dist)
+        return np.average(values, weights=counts)
 
-    class span(WrappedFunc):
-        def __call__(self, dist):
-            values = np.array(dist[0])
-            minval = np.min(values)
-            maxval = np.max(values)
-            return maxval - minval
+    @staticmethod
+    def _Median(dist):
+        values, counts = np.array(dist)
+        cumdist = np.cumsum(counts)
+        if cumdist[-1] > 0:
+            cumdist /= cumdist[-1]
+        return np.interp(.5, cumdist, values)
 
-    class std(WrappedFunc):
-        def __call__(self, dist):
-            values, counts = np.array(dist)
-            mean = np.average(values, weights=counts)
-            diff = values - mean
-            return np.sqrt(np.average(diff ** 2, weights=counts))
+    @staticmethod
+    def _Std(dist):
+        values, counts = np.array(dist)
+        mean = np.average(values, weights=counts)
+        diff = values - mean
+        return np.sqrt(np.average(diff ** 2, weights=counts))
 
-    def __init__(self, center=mean, scale=std):
-        self.center = center() if center is not None else None
-        self.scale = scale() if scale is not None else None
+    @staticmethod
+    def _Span(dist):
+        values = np.array(dist[0])
+        return np.max(values) - np.min(values)
+
+    def __init__(self, center=Mean, scale=Std):
+        self.center = center
+        self.scale = scale
 
     def __call__(self, data):
         if self.center is None and self.scale is None:

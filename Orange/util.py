@@ -1,5 +1,6 @@
 """Various small utilities that might be useful everywhere"""
 import inspect
+from enum import Enum as _Enum
 from functools import wraps
 from operator import attrgetter
 from itertools import chain, count
@@ -165,6 +166,11 @@ def inherit_docstrings(cls):
                     method.__doc__ = __doc__
                     break
     return cls
+
+
+class Enum(_Enum):
+    """Enum that represents itself with the qualified name, e.g. Color.red"""
+    __repr__ = _Enum.__str__
 
 
 class Reprable:

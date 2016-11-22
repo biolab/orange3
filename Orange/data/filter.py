@@ -9,7 +9,7 @@ import numpy as np
 import bottleneck as bn
 
 from Orange.data import Instance, Storage, Variable
-from Orange.misc.enum import Enum
+from Orange.util import Enum
 
 
 class Filter(Reprable):
@@ -316,6 +316,11 @@ class FilterContinuous(ValueFilter):
         `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside` or
         `IsDefined`.
     """
+    Type = Enum('FilterContinuous',
+                'Equal, NotEqual, Less, LessEqual, Greater,'
+                'GreaterEqual, Between, Outside, IsDefined')
+    (Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual,
+     Between, Outside, IsDefined) = Type
 
     def __init__(self, position, oper, ref=None, max=None, min=None):
         super().__init__(position)
@@ -385,15 +390,6 @@ class FilterContinuous(ValueFilter):
         return "invalid operator"
 
 
-    # For PyCharm:
-    Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
-    Between = Outside = IsDefined = 0
-
-
-Enum("Equal", "NotEqual", "Less", "LessEqual", "Greater", "GreaterEqual",
-     "Between", "Outside", "IsDefined").pull_up(FilterContinuous)
-
-
 class FilterString(ValueFilter):
     """
     Subfilter for string variables.
@@ -422,6 +418,12 @@ class FilterString(ValueFilter):
 
         Tells whether the comparisons are case sensitive
     """
+    Type = Enum('FilterString',
+                'Equal, NotEqual, Less, LessEqual, Greater,'
+                'GreaterEqual, Between, Outside, Contains,'
+                'StartsWith, EndsWith, IsDefined')
+    (Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual,
+     Between, Outside, Contains, StartsWith, EndsWith, IsDefined) = Type
 
     def __init__(self, position, oper, ref=None, max=None,
                  case_sensitive=True, **a):
@@ -482,17 +484,6 @@ class FilterString(ValueFilter):
         if self.oper == self.Outside:
             return not refval <= value <= high
         raise ValueError("invalid operator")
-
-    # For PyCharm:
-    Equal = NotEqual = Less = LessEqual = Greater = GreaterEqual = 0
-    Between = Outside = Contains = StartsWith = EndsWith = IsDefined = 0
-
-
-Enum("Equal", "NotEqual",
-     "Less", "LessEqual", "Greater", "GreaterEqual",
-     "Between", "Outside",
-     "Contains", "StartsWith", "EndsWith",
-     "IsDefined").pull_up(FilterString)
 
 
 class FilterStringList(ValueFilter):
