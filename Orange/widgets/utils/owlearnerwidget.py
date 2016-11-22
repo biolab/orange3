@@ -133,7 +133,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
         # The preprocessors that appear on the preprocessors input get stored
         # here, the learner class preprocessors get added later
-        self.__preprocessors = None
+        self.__preprocessors = ()
 
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
 
@@ -162,13 +162,12 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         """
         if self.learner:
             own_pp = self.__preprocessors if self.__preprocessors else ()
-            return own_pp + self.learner.default_preprocessors
+            return own_pp + tuple(self.learner.default_preprocessors)
         return None
 
     @preprocessors.setter
     def preprocessors(self, value):
-        self.__preprocessors = value
-
+        self.__preprocessors = (value,) if value else ()
 
     def get_learner_parameters(self):
         """Creates an `OrderedDict` or a sequence of pairs with current model
@@ -180,7 +179,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         return []
 
     def set_preprocessor(self, preprocessor):
-        self.preprocessors = (preprocessor,) if preprocessor else ()
+        self.preprocessors = preprocessor
         self.apply()
 
     @check_sql_input

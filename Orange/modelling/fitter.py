@@ -6,6 +6,18 @@ LearnerTypes = namedtuple('LearnerTypes', ['classification', 'regression'])
 
 
 class Fitter(Learner):
+    """Handle multiple types of target variable with one learner.
+
+    Subclasses of this class serve as a sort of dispatcher. When subclassing,
+    we provide a `LearnerTypes` instance which contain actual learner classes
+    that handle appropriate data types. The fitter can then be used on any
+    data and will delegate the work to the appropriate learner.
+
+    If the learners that handle each data type require different parameters,
+    you should pass in all the possible parameters to the fitter. The fitter
+    will then determine which parameters have to passed to individual learners.
+
+    """
     __fits__ = None
     __returns__ = Model
 
