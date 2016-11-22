@@ -24,9 +24,13 @@ class Transformation:
         inst = isinstance(data, Instance)
         if inst:
             data = Table(data.domain, [data])
-        domain = Domain([self.variable])
-        data = Table.from_table(domain, data)
-        transformed = self.transform(data.X if sp.issparse(data.X) else data.X.squeeze(axis=1))
+        if self.variable.is_primitive():
+            domain = Domain([self.variable])
+            data = Table.from_table(domain, data).X
+        else:
+            domain = Domain([], [], metas=[self.variable])
+            data = Table.from_table(domain, data).metas
+        transformed = self.transform(data if sp.issparse(data) else data.squeeze(axis=1))
         if inst:
             transformed = transformed[0]
         return transformed
