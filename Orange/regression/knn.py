@@ -7,4 +7,3 @@ __all__ = ["KNNRegressionLearner"]
 
 class KNNRegressionLearner(KNNBase, SklLearner):
     __wraps__ = skl_neighbors.KNeighborsRegressor
-    name = 'knn regression'

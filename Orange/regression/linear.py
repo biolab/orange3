@@ -28,7 +28,6 @@ class _FeatureScorerMixin(LearnerScorer):
 
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
-    name = 'linreg'
 
     def __init__(self, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -40,7 +39,6 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
 
 class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
-    name = 'ridge'
 
     def __init__(self, alpha=1.0, fit_intercept=True,
                  normalize=False, copy_X=True, max_iter=None,
@@ -51,7 +49,6 @@ class RidgeRegressionLearner(LinearRegressionLearner):
 
 class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
-    name = 'lasso'
 
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
@@ -63,7 +60,6 @@ class LassoRegressionLearner(LinearRegressionLearner):
 
 class ElasticNetLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNet
-    name = 'elastic'
 
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
                  normalize=False, precompute=False, max_iter=1000,
@@ -75,7 +71,6 @@ class ElasticNetLearner(LinearRegressionLearner):
 
 class ElasticNetCVLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNetCV
-    name = 'elasticCV'
 
     def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
                  fit_intercept=True, normalize=False, precompute='auto',
@@ -87,7 +82,6 @@ class ElasticNetCVLearner(LinearRegressionLearner):
 
 class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
-    name = 'sgd'
 
     def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,
                  eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25,

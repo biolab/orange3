@@ -19,8 +19,6 @@ class NaiveBayesLearner(Learner):
         An ordered list of preprocessors applied to data before training
         or testing.
     """
-    name = 'naive bayes'
-
     preprocessors = [Discretize()]
 
     def fit_storage(self, table):

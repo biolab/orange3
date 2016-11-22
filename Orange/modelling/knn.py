@@ -4,7 +4,5 @@ from Orange.regression import KNNRegressionLearner
 
 
 class KNNLearner(Fitter):
-    name = 'knn'
-
     __fits__ = {'classification': KNNClassification,
                 'regression': KNNRegressionLearner}

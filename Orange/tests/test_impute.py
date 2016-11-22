@@ -253,7 +253,7 @@ class TestModel(unittest.TestCase):
 
     def test_str(self):
         imputer = impute.Model(MajorityLearner())
-        self.assertIn(MajorityLearner.name, imputer.format_variable(data.Variable()))
+        self.assertIn(MajorityLearner().name, imputer.format_variable(data.Variable()))
 
     def test_bad_domain(self):
         table = data.Table.from_file('iris')

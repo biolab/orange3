@@ -19,9 +19,6 @@ class MajorityLearner(Learner):
     class value is selected randomly. In order to produce consistent results on
     the same data set, this value is selected based on hash of the class vector.
     """
-
-    name = 'majority'
-
     def fit_storage(self, dat):
         if not dat.domain.has_discrete_class:
             raise ValueError("classification.MajorityLearner expects a domain "

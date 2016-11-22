@@ -6,6 +6,9 @@ from itertools import chain, count
 from collections import OrderedDict
 import warnings
 
+# Exposed here for convenience. Prefer patching to try-finally blocks
+from unittest.mock import patch  # pylint: disable=unused-import
+
 # Backwards-compat
 from Orange.data.util import scale  # pylint: disable=unused-import
 

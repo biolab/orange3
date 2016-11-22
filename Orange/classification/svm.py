@@ -24,7 +24,6 @@ class SVMClassifier(SklModel):
 class SVMLearner(SklLearner):
     __wraps__ = skl_svm.SVC
     __returns__ = SVMClassifier
-    name = 'svm'
     preprocessors = svm_pps
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma="auto",
@@ -37,7 +36,6 @@ class SVMLearner(SklLearner):
 
 class LinearSVMLearner(SklLearner):
     __wraps__ = skl_svm.LinearSVC
-    name = 'linear svm'
     preprocessors = svm_pps
 
     def __init__(self, penalty='l2', loss='squared_hinge', dual=True,
@@ -61,7 +59,6 @@ class NuSVMClassifier(SklModel):
 class NuSVMLearner(SklLearner):
     __wraps__ = skl_svm.NuSVC
     __returns__ = NuSVMClassifier
-    name = 'nu svm'
     preprocessors = svm_pps
 
     def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
@@ -73,7 +70,6 @@ class NuSVMLearner(SklLearner):
 
 class OneClassSVMLearner(SklLearnerBase):
     __wraps__ = skl_svm.OneClassSVM
-    name = 'one class svm'
     preprocessors = svm_pps
 
     def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,

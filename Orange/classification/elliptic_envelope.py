@@ -27,7 +27,6 @@ class EllipticEnvelopeClassifier(SklModel):
 class EllipticEnvelopeLearner(SklLearner):
     __wraps__ = skl_covariance.EllipticEnvelope
     __returns__ = EllipticEnvelopeClassifier
-    name = 'elliptic envelope'
 
     def __init__(self, store_precision=True, assume_centered=False,
                  support_fraction=None, contamination=0.1,

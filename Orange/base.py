@@ -1,5 +1,6 @@
 import inspect
 from collections import Iterable
+import re
 
 import numpy as np
 import scipy
@@ -9,11 +10,13 @@ from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute)
+from Orange.util import Reprable, patch
+
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
-class Learner:
+class Learner(Reprable):
     """The base learner class.
 
     Preprocessors can behave in a number of different ways, all of which are
@@ -55,7 +58,6 @@ class Learner:
     """
     supports_multiclass = False
     supports_weights = False
-    name = 'learner'
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
@@ -118,18 +120,46 @@ class Learner:
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    def __repr__(self):
-        return '{}({})'.format(type(self).__name__,
-            ", ".join("{}={}".format(k, repr(v))
-                for k, v in self.params.items()) if
-                "params" in dir(self) else ""
-       )
-
     def check_learner_adequacy(self, domain):
         return True
 
+    @property
+    def name(self):
+        """Return a short name derived from Learner type name"""
+        try:
+            return self.__name
+        except AttributeError:
+            name = self.__class__.__name__
+            if name.endswith('Learner'):
+                name = name[:-len('Learner')]
+            if name.endswith('Fitter'):
+                name = name[:-len('Fitter')]
+            if isinstance(self, SklLearner) and name.startswith('Skl'):
+                name = name[len('Skl'):]
+            name = name or 'learner'
+            # From http://stackoverflow.com/a/1176023/1090455 <3
+            self.name = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2',
+                               re.sub(r'(.)([A-Z][a-z]+)', r'\1 \2', name)).lower()
+            return self.name
 
-class Model:
+    @name.setter
+    def name(self, value):
+        self.__name = value
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        preprocessors = self.preprocessors
+        # TODO: Implement __eq__ on preprocessors to avoid comparing reprs
+        if repr(preprocessors) == repr(list(self.__class__.preprocessors)):
+            # If they are default, set to None temporarily to avoid printing
+            preprocessors = None
+        with patch.object(self, 'preprocessors', preprocessors):
+            return super().__repr__()
+
+
+class Model(Reprable):
     supports_multiclass = False
     supports_weights = False
     Value = 0
@@ -229,9 +259,6 @@ class Model:
         else:  # ret == Model.ValueProbs
             return value, probs
 
-    def __repr__(self):
-        return self.name
-
 
 class SklModel(Model, metaclass=WrapperMeta):
     used_vals = None
@@ -247,7 +274,8 @@ class SklModel(Model, metaclass=WrapperMeta):
         return value
 
     def __repr__(self):
-        return '{} {}'.format(self.name, self.params)
+        # Params represented as a comment because not passed into constructor
+        return super().__repr__() + '  # params=' + repr(self.params)
 
 
 class SklLearner(Learner, metaclass=WrapperMeta):
@@ -263,7 +291,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     __returns__ = SklModel
     _params = {}
 
-    name = 'skl learner'
     preprocessors = default_preprocessors = [
         RemoveNaNClasses(),
         Continuize(),
@@ -313,18 +340,10 @@ class SklLearner(Learner, metaclass=WrapperMeta):
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 
-    def __str__(self):
-        return '{} {}'.format(self.name, self.params)
-
     def __repr__(self):
-        return '{}({}{})'.format(type(self).__name__,
-           ", ".join("{}={}".format(k, repr(v))
-                     for k, v in self.params.items()),
-            "{}preprocessors={}".format(
-                ", " if len(self.params.items()) > 0
-                    else "",
-                repr(self.preprocessors)
-            ))
+        # In addition to saving values onto self, SklLearners save into params
+        with patch.object(self, '__dict__', dict(self.__dict__, **self.params)):
+            return super().__repr__()
 
     @property
     def supports_weights(self):

@@ -1260,8 +1260,6 @@ class CN2Learner(_RuleLearner):
     .. [1] "The CN2 Induction Algorithm", Peter Clark and Tim Niblett,
            Machine Learning Journal, 3 (4), pp261-283, (1989)
     """
-    name = 'CN2 inducer'
-
     def __init__(self, preprocessors=None, base_rules=None):
         super().__init__(preprocessors, base_rules)
         self.rule_finder.quality_evaluator = EntropyEvaluator()
