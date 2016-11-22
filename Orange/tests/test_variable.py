@@ -71,7 +71,7 @@ class TestVariable(unittest.TestCase):
         cls.var = Variable("x")
 
     def test_name(self):
-        self.assertEqual(repr(self.var), "Variable('x')")
+        self.assertEqual(repr(self.var), "Variable(name='x')")
 
     def test_to_val(self):
         string_var = StringVariable("x")
@@ -199,21 +199,21 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertEqual(
             repr(var),
-            "DiscreteVariable('a', values=['F', 'M'])")
+            "DiscreteVariable(name='a', values=['F', 'M'])")
         var.base_value = 1
         self.assertEqual(
             repr(var),
-            "DiscreteVariable('a', values=['F', 'M'], base_value=1)")
+            "DiscreteVariable(name='a', values=['F', 'M'], base_value=1)")
         var.ordered = True
         self.assertEqual(
             repr(var),
-            "DiscreteVariable('a', values=['F', 'M'], "
+            "DiscreteVariable(name='a', values=['F', 'M'], "
             "ordered=True, base_value=1)")
 
         var = DiscreteVariable.make("a", values="1234567")
         self.assertEqual(
             repr(var),
-            "DiscreteVariable('a', values=['1', '2', '3', '4', '5', ...])")
+            "DiscreteVariable(name='a', values=['1', '2', '3', '4', '5', '6', '7'])")
 
     @unittest.skipUnless(is_on_path("PyQt4") or is_on_path("PyQt5"), "PyQt is not importable")
     def test_colors(self):
