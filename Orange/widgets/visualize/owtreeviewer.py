@@ -268,7 +268,6 @@ class OWTreeGraph(OWTreeViewer2D):
                 self.color_combo.setCurrentIndex(self.regression_colors)
             self.openContext(self.domain.class_var)
             self.root_node = self.walkcreate(model.root, None)
-            self.scene.addItem(self.root_node)
             self.info.setText('{} nodes, {} leaves'.
                               format(model.node_count(), model.leaf_count()))
         self.setup_scene()
