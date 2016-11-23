@@ -131,7 +131,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.outdated_settings = False
         # The preprocessors that appear on the preprocessors input get stored
         # here, the learner class preprocessors get added later
-        self.__preprocessors = ()
+        self.preprocessors = ()
 
         self.setup_layout()
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
@@ -142,31 +142,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Returns:
             Leaner: an instance of Orange.base.learner subclass.
         """
-        return self.LEARNER(preprocessors=self.preprocessors)
-
-    @property
-    def preprocessors(self):
-        """The preprocessors that the learner uses.
-
-        All the preprocessors that the learner uses. When using learners with
-        this widget, the learners automatically use the default preprocessors
-        defined in the learner classes.
-
-        The user-defined preprocessors come before the default ones.
-
-        Returns
-        -------
-        tuple, optional
-
-        """
-        if self.learner:
-            own_pp = self.__preprocessors if self.__preprocessors else ()
-            return own_pp + tuple(self.learner.default_preprocessors)
-        return None
-
-    @preprocessors.setter
-    def preprocessors(self, value):
-        self.__preprocessors = (value,) if value else ()
+        if issubclass(self.LEARNER, Fitter):
+            return self.LEARNER(preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
         """Creates an `OrderedDict` or a sequence of pairs with current model
@@ -178,7 +155,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         return []
 
     def set_preprocessor(self, preprocessor):
-        self.preprocessors = preprocessor
+        self.preprocessors = (preprocessor,) if preprocessor else None
         self.apply()
 
     @check_sql_input
@@ -201,6 +178,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.learner = self.create_learner()
         if self.learner is not None:
             self.learner.name = self.learner_name
+        if issubclass(self.LEARNER, Fitter):
+            self.learner.use_default_preprocessors = True
         self.send("Learner", self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()

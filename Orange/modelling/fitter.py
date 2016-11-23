@@ -24,11 +24,12 @@ class Fitter(Learner):
     # Constants to indicate what kind of problem we're dealing with
     CLASSIFICATION, REGRESSION = range(2)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, use_default_preprocessors=False, **kwargs):
         super().__init__(preprocessors=kwargs.get('preprocessors', None))
         self.args = args
         self.kwargs = kwargs
         self.problem_type = self.CLASSIFICATION
+        self.use_default_preprocessors = use_default_preprocessors
         self.__regression_learner = self.__classification_learner = None
 
     def __call__(self, data):
@@ -43,13 +44,18 @@ class Fitter(Learner):
             params = self._get_learner_kwargs(self.__fits__.classification)
             kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
+            default_pps = self.__fits__.classification.preprocessors
         elif problem_type == self.REGRESSION:
             params = self._get_learner_kwargs(self.__fits__.regression)
             kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
+            default_pps = self.__fits__.classification.preprocessors
         # In case the preprocessors were changed since instantionation, we must
         # make sure to build the model with the latest preprocessors
-        kwargs['preprocessors'] = self.preprocessors
+        if self.use_default_preprocessors:
+            kwargs['preprocessors'] = self.preprocessors + tuple(default_pps)
+        else:
+            kwargs['preprocessors'] = self.preprocessors
         return kwargs
 
     @property
@@ -73,8 +79,7 @@ class Fitter(Learner):
     def _get_learner_kwargs(learner):
         """Get a `set` of kwarg names that belong to the given learner."""
         # Get function params except `self`
-        params = learner.__init__.__code__.co_varnames[1:]
-        return set(params)
+        return set(learner.__init__.__code__.co_varnames[1:])
 
     @staticmethod
     def __check_dispatches(dispatches):
