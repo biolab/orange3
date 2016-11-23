@@ -36,7 +36,6 @@ class Fitter(Learner):
         # Set the appropriate problem type from the data
         self.problem_type = self.CLASSIFICATION if \
             data.domain.has_discrete_class else self.REGRESSION
-
         return self.learner(data)
 
     def __get_kwargs(self, kwargs, problem_type):
@@ -90,17 +89,9 @@ class Fitter(Learner):
 
     @property
     def learner(self):
-        self._get_learner_kwargs(self.classification_learner)
         return self.classification_learner if \
             self.problem_type == self.CLASSIFICATION else \
             self.regression_learner
-
-    @property
-    def default_preprocessors(self):
-        """Since the fitter is a proxy, it inherently has no preprocessors.
-        Instead, it will pass the active learner preprocessors as the default
-        ones."""
-        return self.learner.default_preprocessors
 
     def __getattr__(self, item):
         return getattr(self.learner, item)
