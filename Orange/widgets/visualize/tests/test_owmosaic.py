@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from PyQt4.QtCore import QEvent, QPoint, Qt
-from PyQt4.QtGui import QMouseEvent
+from AnyQt.QtCore import QEvent, QPoint, Qt
+from AnyQt.QtGui import QMouseEvent
 
 from Orange.data import Table, DiscreteVariable, Domain
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
