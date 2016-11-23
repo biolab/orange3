@@ -9,12 +9,31 @@ import scipy.sparse as sp
 import bottleneck as bn
 
 
+def _count_nans_per_row_sparse(X, weights):
+    """ Count the number of nans (undefined) values per row. """
+    items_per_row = 1 if X.ndim == 1 else X.shape[1]
+    counts = np.ones(X.shape[0]) * items_per_row
+    nnz_per_row = np.bincount(X.indices, minlength=len(counts))
+    counts -= nnz_per_row
+    if weights is not None:
+        counts *= weights
+    return np.sum(counts)
+
+
 def bincount(X, max_val=None, weights=None, minlength=None):
     """Return counts of values in array X.
 
     Works kind of like np.bincount(), except that it also supports floating
     arrays with nans.
     """
+    if sp.issparse(X):
+        minlength = max_val + 1
+        bin_weights = weights[X.indices] if weights is not None else None
+        return (np.bincount(X.data.astype(int),
+                            weights=bin_weights,
+                            minlength=minlength, ),
+                _count_nans_per_row_sparse(X, weights))
+
     X = np.asanyarray(X)
     if X.dtype.kind == 'f' and bn.anynan(X):
         nonnan = ~np.isnan(X)
@@ -61,13 +80,7 @@ def countnans(X, weights=None, axis=None, dtype=None, keepdims=False):
             raise ValueError('Arguments axis, dtype and keepdims'
                              'are not yet supported on sparse data!')
 
-        items_per_row = 1 if X.ndim == 1 else X.shape[1]
-        counts = np.ones(X.shape[0]) * items_per_row
-        nnz_per_row = np.bincount(X.indices, minlength=len(counts))
-        counts -= nnz_per_row
-        if weights is not None:
-            counts *= weights
-        counts = np.sum(counts)
+        counts = _count_nans_per_row_sparse(X, weights)
     return counts
 
 
