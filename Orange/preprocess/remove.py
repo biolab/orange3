@@ -204,10 +204,14 @@ def purge_var_M(var, data, flags):
 
 
 def has_at_least_two_values(data, var):
-    ((dist, _),) = data._compute_distributions([var])
+    ((dist, unknowns),) = data._compute_distributions([var])
+    # TODO this check is suboptimal for sparse since get_column_view
+    # densifies the data. Should be irrelevant after Pandas.
+    _, sparse = data.get_column_view(var)
     if var.is_continuous:
         dist = dist[1, :]
-    return np.sum(dist > 0.0) > 1
+    min_size = 0 if sparse and unknowns else 1
+    return np.sum(dist > 0.0) > min_size
 
 
 def remove_constant(var, data):
