@@ -128,10 +128,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.valid_data = False
         self.learner = None
         self.model = None
+        self.preprocessors = None
         self.outdated_settings = False
-        # The preprocessors that appear on the preprocessors input get stored
-        # here, the learner class preprocessors get added later
-        self.preprocessors = ()
 
         self.setup_layout()
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
@@ -154,7 +152,11 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         return []
 
     def set_preprocessor(self, preprocessor):
-        self.preprocessors = (preprocessor,) if preprocessor else None
+        if preprocessor:
+            self.preprocessors = (preprocessor,) + \
+                                 tuple(self.LEARNER.preprocessors)
+        else:
+            self.preprocessors = None
         self.apply()
 
     @check_sql_input
