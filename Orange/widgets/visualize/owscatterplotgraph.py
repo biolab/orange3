@@ -775,7 +775,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.brush_colors = np.hstack(
                     [self.pen_colors,
                      np.full((self.n_points, 1), self.alpha_value, dtype=int)])
-                self.pen_colors *= 100 // self.DarkerValue
+                self.pen_colors *= 100
+                self.pen_colors //= self.DarkerValue
                 self.pen_colors = [make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
             if subset is not None:
