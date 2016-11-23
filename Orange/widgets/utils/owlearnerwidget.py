@@ -142,8 +142,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Returns:
             Leaner: an instance of Orange.base.learner subclass.
         """
-        if issubclass(self.LEARNER, Fitter):
-            return self.LEARNER(preprocessors=self.preprocessors)
+        return self.LEARNER(preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
         """Creates an `OrderedDict` or a sequence of pairs with current model
