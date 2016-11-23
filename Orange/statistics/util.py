@@ -47,13 +47,27 @@ def countnans(X, weights=None, axis=None, dtype=None, keepdims=False):
     -------
     counts
     """
-    X = np.asanyarray(X)
-    isnan = np.isnan(X)
-    if weights is not None and weights.shape == X.shape:
-        isnan = isnan * weights
-    counts = isnan.sum(axis=axis, dtype=dtype, keepdims=keepdims)
-    if weights is not None and weights.shape != X.shape:
-        counts = counts * weights
+    if not sp.issparse(X):
+        X = np.asanyarray(X)
+        isnan = np.isnan(X)
+        if weights is not None and weights.shape == X.shape:
+            isnan = isnan * weights
+        counts = isnan.sum(axis=axis, dtype=dtype, keepdims=keepdims)
+        if weights is not None and weights.shape != X.shape:
+            counts = counts * weights
+    else:
+        if any(attr is not None for attr in [axis, dtype]) or \
+                        keepdims is not False:
+            raise ValueError('Arguments axis, dtype and keepdims'
+                             'are not yet supported on sparse data!')
+
+        items_per_row = 1 if X.ndim == 1 else X.shape[1]
+        counts = np.ones(X.shape[0]) * items_per_row
+        nnz_per_row = np.bincount(X.indices, minlength=len(counts))
+        counts -= nnz_per_row
+        if weights is not None:
+            counts *= weights
+        counts = np.sum(counts)
     return counts
 
 
