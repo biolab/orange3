@@ -129,12 +129,11 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.learner = None
         self.model = None
         self.outdated_settings = False
-        self.setup_layout()
-
         # The preprocessors that appear on the preprocessors input get stored
         # here, the learner class preprocessors get added later
         self.__preprocessors = ()
 
+        self.setup_layout()
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
 
     def create_learner(self):

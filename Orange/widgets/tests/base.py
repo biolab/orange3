@@ -1,24 +1,22 @@
+import sip
 import unittest
 
 import numpy as np
-
-from Orange.base import SklModel, Model
-from Orange.modelling import Fitter
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
-import sip
-
-from Orange.data import Table
-from Orange.preprocess import RemoveNaNColumns, Randomize
-from Orange.preprocess.preprocess import PreprocessorList
+from Orange.base import SklModel, Model
+from Orange.canvas.report.owreport import OWReport
 from Orange.classification.base_classification import (LearnerClassification,
                                                        ModelClassification)
+from Orange.data import Table
+from Orange.modelling import Fitter
+from Orange.preprocess import RemoveNaNColumns, Randomize
+from Orange.preprocess.preprocess import PreprocessorList
 from Orange.regression.base_regression import LearnerRegression, ModelRegression
-from Orange.canvas.report.owreport import OWReport
-from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 app = None
 
