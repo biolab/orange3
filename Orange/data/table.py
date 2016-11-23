@@ -1273,20 +1273,15 @@ class Table(MutableSequence, Storage):
     def _compute_distributions(self, columns=None):
         def _get_matrix(M, cachedM, col):
             nonlocal single_column
+            W = self.W if self.has_weights() else None
             if not sp.issparse(M):
-                return M[:, col], self.W if self.has_weights() else None, None
+                return M[:, col], W, None
             if cachedM is None:
                 if single_column:
                     warn("computing distributions on sparse data "
                          "for a single column is inefficient")
                 cachedM = sp.csc_matrix(self.X)
-            data = cachedM.data[cachedM.indptr[col]:cachedM.indptr[col + 1]]
-            if self.has_weights():
-                weights = self.W[
-                    cachedM.indices[cachedM.indptr[col]:cachedM.indptr[col + 1]]]
-            else:
-                weights = None
-            return data, weights, cachedM
+            return cachedM[:, col], W, cachedM
 
         if columns is None:
             columns = range(len(self.domain.variables))
@@ -1308,18 +1303,25 @@ class Table(MutableSequence, Storage):
                 if W is not None:
                     W = W.ravel()
                 dist, unknowns = bincount(m, len(var.values) - 1, W)
-            elif not len(m):
+            elif not m.shape[0]:
                 dist, unknowns = np.zeros((2, 0)), 0
             else:
                 if W is not None:
-                    ranks = np.argsort(m)
-                    vals = np.vstack((m[ranks], W[ranks].flatten()))
                     unknowns = countnans(m, W)
+                    if sp.issparse(m):
+                        arg_sort = np.argsort(m.data)
+                        ranks = m.indices[arg_sort]
+                        vals = np.vstack((m.data[arg_sort], W[ranks].flatten()))
+                    else:
+                        ranks = np.argsort(m)
+                        vals = np.vstack((m[ranks], W[ranks].flatten()))
                 else:
+                    unknowns = countnans(m.astype(float))
+                    if sp.issparse(m):
+                        m = m.data
                     vals = np.ones((2, m.shape[0]))
                     vals[0, :] = m
                     vals[0, :].sort()
-                    unknowns = countnans(m.astype(float))
                 dist = np.array(_valuecount.valuecount(vals))
             distributions.append((dist, unknowns))
 
