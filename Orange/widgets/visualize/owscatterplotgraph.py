@@ -684,7 +684,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.master.Information.missing_size.clear()
         size_index = self.get_size_index()
         if size_index == -1:
-            size_data = np.full((self.n_points,), self.point_width)
+            size_data = np.full((self.n_points,), self.point_width,
+                                dtype=float)
         else:
             size_data = \
                 self.MinShapeSize + \
@@ -773,7 +774,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.pen_colors = palette.getRGB(c_data)
                 self.brush_colors = np.hstack(
                     [self.pen_colors,
-                     np.full((self.n_points, 1), self.alpha_value)])
+                     np.full((self.n_points, 1), self.alpha_value, dtype=int)])
                 self.pen_colors *= 100 // self.DarkerValue
                 self.pen_colors = [make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
