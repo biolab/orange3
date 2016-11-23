@@ -101,7 +101,7 @@ class Discrete(np.ndarray):
                 if math.isnan(cval):
                     self.unknowns[cval] += w
                 else:
-                    self[rval, cval] += w
+                    self[int(rval), int(cval)] += w
         self.row_variable = row_variable
         self.col_variable = col_variable
         return self
