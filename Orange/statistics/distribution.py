@@ -268,7 +268,7 @@ class Continuous(np.ndarray):
                 return x
 
     def mean(self):
-        return np.average(self[0], weights=np.asarray(self[1]))
+        return np.average(np.asarray(self[0]), weights=np.asarray(self[1]))
 
     def variance(self):
         avg = self.mean()
