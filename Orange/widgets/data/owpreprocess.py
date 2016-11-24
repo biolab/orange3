@@ -34,6 +34,7 @@ from Orange.preprocess import Continuize, ProjectPCA, \
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.util import Reprable
 
 from Orange.widgets.data.utils.preprocess import (
     BaseEditor, blocked, StandardItemModel, DescriptionRole,
@@ -48,11 +49,10 @@ class _NoneDisc(preprocess.discretize.Discretization):
     all discrete features from the domain.
 
     """
+    _reprable_module = True
+
     def __call__(self, data, variable):
         return None
-
-    def __repr__(self):
-        return "Orange.widgets.data.owpreprocess._NoneDisc()"
 
 
 class DiscretizeEditor(BaseEditor):
@@ -253,13 +253,12 @@ class ContinuizeEditor(BaseEditor):
 
 
 class _RemoveNaNRows(preprocess.preprocess.Preprocess):
+    _reprable_module = True
+
     def __call__(self, data):
         mask = numpy.isnan(data.X)
         mask = numpy.any(mask, axis=1)
         return data[~mask]
-
-    def __repr__(self):
-        return "Orange.widgets.data.owpreprocess._RemoveNaNRows()"
 
 
 class ImputeEditor(BaseEditor):

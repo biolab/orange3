@@ -192,10 +192,32 @@ class Reprable:
         >>> C(1, 3)
         C(a=1, b=3)
 
+    If Reprable instances define `_reprable_module`, that string is used
+    as a fully-qualified module name and is printed. `_reprable_module`
+    can also be True in which case the type's home module is used.
+
+        >>> class C(Reprable):
+        ...     _reprable_module = True
+        >>> C()
+        Orange.util.C()
+        >>> class C(Reprable):
+        ...     _reprable_module = 'something_else'
+        >>> C()
+        something_else.C()
+        >>> class C(Reprable):
+        ...     class ModuleResolver:
+        ...         def __str__(self):
+        ...             return 'magic'
+        ...     _reprable_module = ModuleResolver()
+        >>> C()
+        magic.C()
+
     See Also
     --------
     https://docs.python.org/3/reference/datamodel.html#object.__repr__
     """
+    _reprable_module = ''
+
     def __repr__(self):
         cls = self.__class__
         names_values = []
@@ -211,9 +233,14 @@ class Reprable:
                     if value != param.default:
                         names_values.append((param.name, value))
 
-        return '{}({})'.format(cls.__name__,
-                               ', '.join('{}={!r}'.format(*pair)
-                                         for pair in names_values))
+        module = self._reprable_module
+        if module is True:
+            module = cls.__module__
+
+        return '{}{}({})'.format(str(module) + '.' if module else '',
+                                 cls.__name__,
+                                 ', '.join('{}={!r}'.format(*pair)
+                                           for pair in names_values))
 
 
 # For best result, keep this at the bottom
