@@ -220,14 +220,13 @@ class OWDistributions(widget.OWWidget):
                 self.warning("Empty input data cannot be visualized")
                 return
             domain = self.data.domain
-            self.varmodel[:] = list(domain)
-            for meta in domain._metas:
-                if meta.is_continuous or meta.is_discrete:
-                    self.varmodel.append(meta)
-
+            self.varmodel[:] = list(domain) + \
+                               [meta for meta in domain.metas
+                                if meta.is_continuous or meta.is_discrete]
             self.groupvarview.clear()
             self.groupvarmodel = \
-                ["(None)"] + [var for var in domain if var.is_discrete]
+                ["(None)"] + [var for var in domain if var.is_discrete] + \
+                [meta for meta in domain.metas if meta.is_discrete]
             self.groupvarview.addItem("(None)")
             for var in self.groupvarmodel[1:]:
                 self.groupvarview.addItem(self.icons[var], var.name)
@@ -290,7 +289,7 @@ class OWDistributions(widget.OWWidget):
             disc = Orange.preprocess.discretize.EqualWidth(n=self.bins[self.smoothing_index])
             data = Orange.preprocess.Discretize(data, method=disc,
                                                 remove_const=False)
-            self.var = data.domain[0]
+            self.var = (list(data.domain) + list(data.domain.metas))[0]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
         if self.cvar:
