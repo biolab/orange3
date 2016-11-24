@@ -140,9 +140,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Returns:
             Leaner: an instance of Orange.base.learner subclass.
         """
-        learner = self.LEARNER(preprocessors=self.preprocessors)
-        learner.use_default_preprocessors = True
-        return learner
+        return self.LEARNER(preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
         """Creates an `OrderedDict` or a sequence of pairs with current model
@@ -175,10 +173,11 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def update_learner(self):
         self.learner = self.create_learner()
-        if self.learner is not None:
-            self.learner.name = self.learner_name
         if issubclass(self.LEARNER, Fitter):
             self.learner.use_default_preprocessors = True
+        if self.learner is not None:
+            self.learner.name = self.learner_name
+        self.learner.use_default_preprocessors = True
         self.send("Learner", self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
