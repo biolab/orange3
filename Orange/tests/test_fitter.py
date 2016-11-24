@@ -23,18 +23,18 @@ class DummyFitter(Fitter):
         regression=DummyRegressionLearner)
 
 
-class DummyClassificationLearnerPreprocessors(LearnerClassification):
+class DummyClassificationLearnerPPs(LearnerClassification):
     preprocessors = (Randomize(),)
 
 
-class DummyRegressionLearnerPreprocessors(LearnerRegression):
+class DummyRegressionLearnerPPs(LearnerRegression):
     preprocessors = (Randomize(),)
 
 
-class DummyFitterPreprocessors(Fitter):
+class DummyFitterPPs(Fitter):
     __fits__ = LearnerTypes(
-        classification=DummyClassificationLearnerPreprocessors,
-        regression=DummyRegressionLearnerPreprocessors)
+        classification=DummyClassificationLearnerPPs,
+        regression=DummyRegressionLearnerPPs)
 
 
 class FitterTest(unittest.TestCase):
@@ -86,10 +86,12 @@ class FitterTest(unittest.TestCase):
 
         class DummyClassificationLearner(LearnerClassification):
             def __init__(self, classification_param=1, **_):
+                super().__init__()
                 self.param = classification_param
 
         class DummyRegressionLearner(LearnerRegression):
             def __init__(self, regression_param=2, **_):
+                super().__init__()
                 self.param = regression_param
 
         class DummyFitter(Fitter):
@@ -117,7 +119,7 @@ class FitterTest(unittest.TestCase):
     def test_uses_default_preprocessors_unless_custom_pps_specified(self):
         """Learners should use their default preprocessors unless custom
         preprocessors were passed in to the constructor"""
-        fitter = DummyFitterPreprocessors()
+        fitter = DummyFitterPPs()
         self.assertEqual(
             type(fitter.classification_learner).preprocessors,
             fitter.classification_learner.active_preprocessors,
@@ -131,7 +133,7 @@ class FitterTest(unittest.TestCase):
 
     def test_overrides_custom_preprocessors(self):
         pp = Discretize()
-        fitter = DummyFitterPreprocessors(preprocessors=(pp,))
+        fitter = DummyFitterPPs(preprocessors=(pp,))
         self.assertEqual(
             fitter.classification_learner.active_preprocessors, (pp,),
             'Classification learner should override default preprocessors '
@@ -142,7 +144,7 @@ class FitterTest(unittest.TestCase):
             'when specified in constructor')
 
     def test_use_deafult_preprocessors_property(self):
-        fitter = DummyFitterPreprocessors(preprocessors=(Discretize(),))
+        fitter = DummyFitterPPs(preprocessors=(Discretize(),))
         fitter.use_default_preprocessors = True
         self.assertTrue(
             fitter.classification_learner.use_default_preprocessors,
@@ -160,7 +162,7 @@ class FitterTest(unittest.TestCase):
 
     def test_preprocessors_can_be_passed_in_as_non_iterable(self):
         pp = Discretize()
-        fitter = DummyFitterPreprocessors(preprocessors=pp)
+        fitter = DummyFitterPPs(preprocessors=pp)
         self.assertEqual(
             fitter.learner.active_preprocessors, (pp,),
             'Preprocessors should be able to be passed in as single object '

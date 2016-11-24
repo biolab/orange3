@@ -1,10 +1,11 @@
-import sip
 import unittest
+import sip
 
 import numpy as np
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
+
 from Orange.base import SklModel, Model
 from Orange.canvas.report.owreport import OWReport
 from Orange.classification.base_classification import (LearnerClassification,
