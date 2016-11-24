@@ -1,4 +1,5 @@
 import inspect
+from collections import Iterable
 
 import numpy as np
 import scipy
@@ -18,12 +19,11 @@ class Learner:
     name = 'learner'
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
-    preprocessors = ()
+    preprocessors = None
     learner_adequacy_err_msg = ''
 
     def __init__(self, preprocessors=None):
-        if preprocessors is None:
-            preprocessors = tuple(type(self).preprocessors)
+        self.use_default_preprocessors = False
         self.preprocessors = preprocessors
 
     def fit(self, X, Y, W=None):
@@ -68,9 +68,23 @@ class Learner:
         """
         Apply the `preprocessors` to the data.
         """
-        for pp in self.preprocessors:
+        for pp in self.active_preprocessors:
             data = pp(data)
         return data
+
+    @property
+    def active_preprocessors(self):
+        if self.preprocessors is not None:
+            pps = []
+            if isinstance(self.preprocessors, Iterable):
+                pps += list(self.preprocessors)
+            else:
+                pps += [self.preprocessors]
+            if self.use_default_preprocessors and type(self).preprocessors:
+                pps += list(type(self).preprocessors)
+        else:
+            pps = type(self).preprocessors if type(self).preprocessors else ()
+        return tuple(pps)
 
     def __repr__(self):
         return self.name

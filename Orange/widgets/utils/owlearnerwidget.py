@@ -140,7 +140,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         Returns:
             Leaner: an instance of Orange.base.learner subclass.
         """
-        return self.LEARNER(preprocessors=self.preprocessors)
+        learner = self.LEARNER(preprocessors=self.preprocessors)
+        learner.use_default_preprocessors = True
+        return learner
 
     def get_learner_parameters(self):
         """Creates an `OrderedDict` or a sequence of pairs with current model
@@ -152,11 +154,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         return []
 
     def set_preprocessor(self, preprocessor):
-        if preprocessor:
-            self.preprocessors = (preprocessor,) + \
-                                 tuple(self.LEARNER.preprocessors)
-        else:
-            self.preprocessors = None
+        self.preprocessors = preprocessor
         self.apply()
 
     @check_sql_input

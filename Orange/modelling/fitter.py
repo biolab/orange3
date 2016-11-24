@@ -24,12 +24,13 @@ class Fitter(Learner):
     # Constants to indicate what kind of problem we're dealing with
     CLASSIFICATION, REGRESSION = range(2)
 
-    def __init__(self, *args, use_default_preprocessors=False, **kwargs):
-        super().__init__(preprocessors=kwargs.get('preprocessors', None))
+    def __init__(self, *args, preprocessors=None, **kwargs):
+        super().__init__(preprocessors=preprocessors)
         self.args = args
         self.kwargs = kwargs
+        # Make sure to pass preprocessor params to individual learners
+        self.kwargs['preprocessors'] = preprocessors
         self.problem_type = self.CLASSIFICATION
-        self.use_default_preprocessors = use_default_preprocessors
         self.__regression_learner = self.__classification_learner = None
 
     def __call__(self, data):
@@ -43,18 +44,10 @@ class Fitter(Learner):
             params = self._get_learner_kwargs(self.__fits__.classification)
             kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
-            default_pps = self.__fits__.classification.preprocessors
         elif problem_type == self.REGRESSION:
             params = self._get_learner_kwargs(self.__fits__.regression)
             kwarg_keys = params & set(kwargs.keys())
             kwargs = {k: kwargs[k] for k in kwarg_keys}
-            default_pps = self.__fits__.classification.preprocessors
-        # In case the preprocessors were changed since instantionation, we must
-        # make sure to build the model with the latest preprocessors
-        if self.use_default_preprocessors:
-            kwargs['preprocessors'] = self.preprocessors + tuple(default_pps)
-        else:
-            kwargs['preprocessors'] = self.preprocessors
         return kwargs
 
     @property
@@ -64,6 +57,8 @@ class Fitter(Learner):
             self.__classification_learner = self.__fits__.classification(
                 *self.args,
                 **self.__get_kwargs(self.kwargs, self.CLASSIFICATION))
+        self.__classification_learner.use_default_preprocessors = \
+            self.use_default_preprocessors
         return self.__classification_learner
 
     @property
@@ -72,6 +67,8 @@ class Fitter(Learner):
         if self.__regression_learner is None:
             self.__regression_learner = self.__fits__.regression(
                 *self.args, **self.__get_kwargs(self.kwargs, self.REGRESSION))
+        self.__regression_learner.use_default_preprocessors = \
+            self.use_default_preprocessors
         return self.__regression_learner
 
     @staticmethod
