@@ -1,17 +1,5 @@
-var _IS_WEBENGINE = /QtWebEngine/.test(navigator.userAgent);
-
-if (!_IS_WEBENGINE) {
-    // On WebKit, the styling applied in CSS does not produce sufficient border
-    var stylesheet = document.styleSheets[document.styleSheets.length - 1];
-    stylesheet.insertRule(
-        '.orange-marker img {\
-            -webkit-filter: drop-shadow(0px 0px 1px black);\
-            filter: drop-shadow(0px 0px 1px black);\
-        }', stylesheet.rules.length);
-}
-
-
-var _DEFAULT_COLOR = 'red',
+var _IS_WEBENGINE = /QtWebEngine/.test(navigator.userAgent),
+    _DEFAULT_COLOR = '#ff0000',  // Need hex RGB for lightenColor
     _DEFAULT_SIZE = 12,
     _DEFAULT_SHAPE = 0,
     _MAX_SIZE = 120,
@@ -229,146 +217,139 @@ function add_markers(latlon_data) {
 var _icons_canvas_ctx = document.getElementById('icons_canvas').getContext('2d'),
     _icons_cache = {};
 
-function _construct_icon(shape, color) {
+function _construct_icon(shape, color, do_fill) {
     shape = shape % _N_SHAPES;
     var cached;
-    if (cached = _icons_cache[[shape, color]])
+    if (cached = _icons_cache[[shape, color, do_fill]])
         return cached;
 
     var ctx = _icons_canvas_ctx,
         size = _MAX_SIZE,
-        stroke = size / 20,
+        stroke = size / 10,
         size = size - 2 * stroke;
 
     ctx.clearRect(0, 0, size + 2 * stroke, size + 2 * stroke);
     ctx.canvas.width = ctx.canvas.height = size + 2 * stroke;
     ctx.fillStyle = color;
-    ctx.strokeStyle = "black";
+    ctx.strokeStyle = lightenColor(color, -30);
     ctx.lineWidth = stroke;
 
     // Strokes for shapes added with CSS via filter:drop-shadow()
+    ctx.save();
+    ctx.translate(stroke, stroke);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
     switch (shape) {
-        case 0:
-            // Circle
-            ctx.beginPath();
-            ctx.arc(size / 2 + stroke, size / 2 + stroke, size / 2, 0, Math.PI * 2, true);
-            ctx.fill();
-            ctx.closePath();
+
+        case 0:  // Circle
+            var s2 = size / 2;
+            ctx.moveTo(size, s2);
+            ctx.arc(s2, s2, s2, 0, Math.PI * 2, true);
             break;
 
-        case 1:
-            // Cross
-            ctx.rect(stroke, stroke, size, size);
-            ctx.clip();
-            ctx.beginPath();
-            ctx.moveTo(stroke, stroke);
-            ctx.lineTo(size + stroke, size + stroke);
-            ctx.moveTo(size + stroke, stroke);
-            ctx.lineTo(stroke, size + stroke);
-            ctx.save();
-            ctx.lineWidth = size / 3;
-            ctx.strokeStyle = color;
-            ctx.stroke();
-            ctx.restore();
-            ctx.closePath();
-            break;
-
-        case 2:
-            // Triangle
-            ctx.beginPath();
-            ctx.moveTo(stroke + size / 2, stroke);
-            ctx.lineTo(stroke + size, stroke + size);
-            ctx.lineTo(stroke, stroke + size);
-            ctx.lineTo(stroke + size / 2, stroke);
-            ctx.closePath();
-            ctx.fill();
-            break;
-
-        case 3:
-            // Plus
-            ctx.beginPath();
-            ctx.moveTo(size / 2 + stroke, stroke);
-            ctx.lineTo(size / 2 + stroke, size + stroke);
-            ctx.moveTo(stroke, size / 2 + stroke);
-            ctx.lineTo(size + stroke, size / 2 + stroke);
-            ctx.closePath();
-            ctx.save();
-            ctx.lineWidth = size / 3;
-            ctx.strokeStyle = color;
-            ctx.stroke();
-            ctx.restore();
-            break;
-
-        case 4:
-            // Diamond
-            ctx.beginPath();
-            ctx.save();
-            ctx.rotate(Math.PI / 4);
-            size /= Math.SQRT2;
-            ctx.rect(2 * stroke + size / 2, - size / 2, size, size);
-            ctx.restore();
-            ctx.closePath();
-            ctx.fill();
-            break;
-
-        case 5:
-            // Square
-            ctx.beginPath();
-            ctx.rect(stroke, stroke, size, size);
-            ctx.closePath();
-            ctx.fill();
-            break;
-
-        case 6:
-            // Inverse triangle
-            ctx.beginPath();
-            ctx.moveTo(stroke, stroke);
-            ctx.lineTo(stroke + size, stroke);
-            ctx.lineTo(stroke + size / 2, stroke + size);
-            ctx.lineTo(stroke, stroke);
-            ctx.closePath();
-            ctx.fill();
-            break;
-
-        case 7:
-            // Bowtie
-            ctx.beginPath();
-            ctx.moveTo(stroke, stroke);
-            ctx.lineTo(stroke + size / 2, stroke + size / 2);
-            ctx.lineTo(stroke, stroke + size);
-            ctx.lineTo(stroke, stroke);
-            ctx.moveTo(stroke + size, stroke);
-            ctx.lineTo(stroke + size / 2, stroke + size / 2);
-            ctx.lineTo(stroke + size, stroke + size);
-            ctx.lineTo(stroke + size, stroke);
-            ctx.closePath();
-            ctx.fill();
-            break;
-
-        case 8:
-            // Flank
-            size += 2 * stroke;
-            ctx.beginPath();
-            ctx.save();
-            ctx.translate(size / 2 + stroke, size / 2 + stroke);
+        case 1:  // Cross
+            var s2 = size / 2,
+                s4 = size / 4;
             for (var i=0; i<4; ++i) {
-                ctx.moveTo(0, 0);
-                ctx.lineTo(0, -size / 2 + size / 9 + 2 * stroke);
-                ctx.lineTo(size / 2 - 2 * stroke, -size / 2 + size / 9 + 2 * stroke);
-                ctx.rotate(-Math.PI / 2);
+                ctx.lineTo(s4, 0);
+                ctx.lineTo(s2, s4);
+                ctx.lineTo(size - s4, 0);
+                ctx.lineTo(size, 0);
+                ctx.translate(s2, s2);
+                ctx.rotate(Math.PI / 2);
+                ctx.translate(-s2, -s2);
             }
-            ctx.strokeStyle = color;
-            ctx.lineWidth = size / 6;
-            ctx.stroke();
-            ctx.restore();
-            ctx.closePath();
+            break;
+
+        case 2:  // Triangle
+            var s2 = size / 2;
+            ctx.moveTo(0, size);
+            ctx.lineTo(s2, 0);
+            ctx.lineTo(size, size);
+            break;
+
+        case 3:  // Plus
+            var s2 = size / 2,
+                s3 = size / 3,
+                s23 = size * 2 / 3;
+            ctx.moveTo(s3, s3);
+            for (var i=0; i<4; ++i) {
+                ctx.lineTo(s3, 0);
+                ctx.lineTo(s23, 0);
+                ctx.lineTo(s23, s3);
+                ctx.translate(s2, s2);
+                ctx.rotate(Math.PI / 2);
+                ctx.translate(-s2, -s2);
+            }
+            break;
+
+        case 4:  // Diamond
+            var s2 = size / 2;
+            ctx.moveTo(s2, 0);
+            ctx.lineTo(size, s2);
+            ctx.lineTo(s2, size);
+            ctx.lineTo(0, s2);
+            break;
+
+        case 5:  // Square
+            ctx.lineTo(size, 0);
+            ctx.lineTo(size, size);
+            ctx.lineTo(0, size);
+            break;
+
+        case 6:  // Inverse triangle
+            var s2 = size / 2;
+            ctx.lineTo(size, 0);
+            ctx.lineTo(s2, size);
+            break;
+
+        case 7:  // Bowtie
+            ctx.lineTo(0, size);
+            ctx.lineTo(size, 0);
+            ctx.lineTo(size, size);
+            break;
+
+        case 8:  // VBowtie
+            ctx.lineTo(size, size);
+            ctx.lineTo(0, size);
+            ctx.lineTo(size, 0);
+            break;
+
+        case 9:  // Star
+            var s2 = size / 2,
+                s5 = size / 5,
+                s25 = size * 2 / 5,
+                s35 = size * 3 / 5;
+            ctx.moveTo(s25, s25);
+            for (var i=0; i<4; ++i) {
+                ctx.lineTo(s25, 0);
+                ctx.lineTo(size, 0);
+                ctx.lineTo(size, s5);
+                ctx.lineTo(s35, s5);
+                ctx.lineTo(s35, s25);
+                ctx.translate(s2, s2);
+                ctx.rotate(Math.PI / 2);
+                ctx.translate(-s2, -s2);
+            }
             break;
 
         default:
             console.error('invalid shape: ' + shape);
             return '';
     }
-    return _icons_cache[[shape, color]] = ctx.canvas.toDataURL();
+    ctx.closePath();
+    ctx.translate(-stroke, -stroke);
+    if (do_fill)
+        ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    return _icons_cache[[shape, color, do_fill]] = ctx.canvas.toDataURL();
+}
+
+function lightenColor(hexcolor, percent) {
+    // From: https://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
+    var num = parseInt(hexcolor.substring(1), 16), amt = Math.round(2.55 * percent), R = (num >> 16) + amt, G = (num >> 8 & 0x00FF) + amt, B = (num & 0x0000FF) + amt;
+    return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 + (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255)).toString(16).slice(1);
 }
 
 
@@ -436,7 +417,8 @@ function _update_markers() {
             size = (sizes && sizes[i] || _DEFAULT_SIZE) * _size_coefficient;
         marker._our_icon_uri = _construct_icon(
             shapes && shapes[i] || _DEFAULT_SHAPE,
-            colors && colors[i] || _DEFAULT_COLOR);
+            colors && colors[i] || _DEFAULT_COLOR,
+            in_subset[i]);
         marker.options.icon.options.popupAnchor = [0, -size / 2];
         marker._our_icon_size = size + 'px';
         marker._our_icon_margin = -size / 2 + 'px';
@@ -446,7 +428,6 @@ function _update_markers() {
         if (markers[i]._icon)
             _update_marker_icon(markers[i]);
 }
-
 function _update_marker_icon(marker) {
     var icon = marker._icon,
         img = icon.firstChild;

@@ -21,21 +21,9 @@ canvas#icons_canvas {display: none}
     border-radius: 5px;
     float: right;
     position: absolute;
-    bottom: -5px;
-    margin-left: 5px;
+    bottom: 0px;
+    margin-left: 0px;
     z-index: inherit;
-}
-.orange-marker img {
-    -webkit-filter:
-        drop-shadow(.5px .5px 0px black)
-        drop-shadow(-.5px .5px 0px black)
-        drop-shadow(.5px -.5px 0px black)
-        drop-shadow(-.5px -.5px 0px black);
-    filter:
-        drop-shadow(.5px .5px 0px black)
-        drop-shadow(-.5px .5px 0px black)
-        drop-shadow(.5px -.5px 0px black)
-        drop-shadow(-.5px -.5px 0px black);
 }
 .orange-marker-selected img {
     -webkit-filter: drop-shadow(0px 0px 1.5px lime) drop-shadow(0px 0px 1.5px lime) !important;

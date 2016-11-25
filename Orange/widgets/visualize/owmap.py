@@ -1,5 +1,5 @@
 import os
-from itertools import chain, repeat, groupby
+from itertools import chain, repeat
 from collections import OrderedDict
 from tempfile import mkstemp
 
@@ -17,7 +17,6 @@ from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.webview import WebviewWidget
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, ContinuousPaletteGenerator
-from operator import itemgetter
 
 
 if QT_VERSION_STR <= '5.3':
@@ -58,6 +57,7 @@ class LeafletMap(WebviewWidget):
         self._prev_map_pane_pos = None
         self._prev_origin = None
         self._overlay_image_path = mkstemp(prefix='orange-Map-', suffix='.png')[1]
+        self._subset_ids = np.array([])
 
     def __del__(self):
         os.remove(self._overlay_image_path)
@@ -266,13 +266,14 @@ class LeafletMap(WebviewWidget):
         self.exposeObject('model_predictions', dict(data=predictions, extrema=extrema))
         self.evalJS('draw_heatmap()')
 
-    def _update_js_markers(self, visible):
+    def _update_js_markers(self, visible, in_subset):
         self._visible = visible
         latlon = np.c_[self.data.get_column_view(self.lat_attr)[0],
                        self.data.get_column_view(self.lon_attr)[0]]
         self.exposeObject('latlon_data', dict(data=latlon[visible]))
         self.exposeObject('selected_markers', dict(data=(self._selected_indices[visible]
                                                          if self._selected_indices is not None else 0)))
+        self.exposeObject('in_subset', in_subset.astype(np.int8))
         if not self._color_attr:
             self.exposeObject('color_attr', dict())
         else:
@@ -350,6 +351,9 @@ class LeafletMap(WebviewWidget):
         lon = self.data.get_column_view(self.lon_attr)[0]
         visible = ((lat <= north) & (lat >= south) &
                    (lon <= east) & (lon >= west)).nonzero()[0]
+        in_subset = (np.in1d(self.data.ids, self._subset_ids)
+                     if self._subset_ids.size else
+                     np.tile(True, len(lon)))
 
         is_js_path = len(visible) <= 500
 
@@ -365,7 +369,7 @@ class LeafletMap(WebviewWidget):
 
         if is_js_path:
             self.evalJS('clear_markers_overlay_image()')
-            self._update_js_markers(visible)
+            self._update_js_markers(visible, in_subset[visible])
             self._owwidget.disable_some_controls(False)
             return
 
@@ -405,7 +409,6 @@ class LeafletMap(WebviewWidget):
 
             batch_lat = lat[batch]
             batch_lon = lon[batch]
-            batch_selected = selected[batch]
 
             x, y = self.Projection.latlon_to_easting_northing(batch_lat, batch_lon)
             x, y = self.Projection.easting_northing_to_pixel(x, y, zoom, origin, map_pane_pos)
@@ -417,28 +420,31 @@ class LeafletMap(WebviewWidget):
             colors = (self._colorgen.getRGB(self._scaled_color_values[batch]).tolist()
                       if self._color_attr else
                       repeat((0xff, 0, 0)))
-            sizes = self._sizes[batch] if self._size_attr else repeat(10)
+            sizes = self._size_coef * \
+                (self._sizes[batch] if self._size_attr else np.tile(10, len(batch)))
 
-            zipped = zip(x, y, batch_selected, sizes, colors)
-            sortkey, penkey, sizekey, brushkey = itemgetter(2, 3, 4), itemgetter(2), itemgetter(3), itemgetter(4)
-            for is_selected, points in groupby(sorted(zipped, key=sortkey),
-                                               key=penkey):
-                for size, points in groupby(points, key=sizekey):
-                    pensize, pencolor = ((3, Qt.green) if is_selected else
-                                         (.7, QColor(0, 0, 0, self._opacity)))
-                    size *= self._size_coef
-                    if size < 5:
-                        pensize /= 3
-                    size += pensize
-                    size2 = size / 2
-                    painter.setPen(Qt.NoPen if size < 5 and not is_selected else
-                                   QPen(QBrush(pencolor), pensize))
+            for x, y, is_selected, size, color, _in_subset in \
+                    zip(x, y, selected[batch], sizes, colors, in_subset[batch]):
 
-                    for color, points in groupby(points, key=brushkey):
-                        color = tuple(color) + (self._opacity,)
-                        painter.setBrush(QBrush(QColor(*color)))
-                        for x, y, *_ in points:
-                            painter.drawEllipse(x - size2, y - size2, size, size)
+                pensize2, selpensize2 = (.35, 1.5) if size >= 5 else (.15, .7)
+                pensize2 *= self._size_coef
+                selpensize2 *= self._size_coef
+
+                size2 = size / 2
+                if is_selected:
+                    painter.setPen(QPen(QBrush(Qt.green), 2 * selpensize2))
+                    painter.drawEllipse(x - size2 - selpensize2,
+                                        y - size2 - selpensize2,
+                                        size + selpensize2,
+                                        size + selpensize2)
+                color = QColor(*color)
+                color.setAlpha(self._opacity)
+                painter.setBrush(QBrush(color) if _in_subset else Qt.NoBrush)
+                painter.setPen(QPen(QBrush(color.darker(180)), 2 * pensize2))
+                painter.drawEllipse(x - size2 - pensize2,
+                                    y - size2 - pensize2,
+                                    size + pensize2,
+                                    size + pensize2)
 
             im.save(self._overlay_image_path, 'PNG')
             self.evalJS('markersImageLayer.setUrl("{}#{}"); 0;'
@@ -456,6 +462,10 @@ class LeafletMap(WebviewWidget):
         self._owwidget.progressBarInit(None)
         QTimer.singleShot(10, add_points)
 
+    def set_subset_ids(self, ids):
+        self._subset_ids = ids
+        self.redraw_markers_overlay_image(new_image=True)
+
 
 class OWMap(widget.OWWidget):
     name = 'Map'
@@ -463,6 +473,7 @@ class OWMap(widget.OWWidget):
     icon = "icons/Map.svg"
 
     inputs = [("Data", Table, "set_data", widget.Default),
+              ("Data Subset", Table, "set_subset"),
               ("Learner", Learner, "set_learner")]
 
     outputs = [("Selected Data", Table, widget.Default)]
@@ -699,6 +710,9 @@ class OWMap(widget.OWWidget):
         self.map.set_marker_label(self.label_attr, update=False)
         self.map.set_marker_shape(self.shape_attr, update=False)
         self.map.set_marker_size(self.size_attr, update=True)
+
+    def set_subset(self, subset):
+        self.map.set_subset_ids(subset.ids if subset is not None else np.array([]))
 
     def handleNewSignals(self):
         super().handleNewSignals()
