@@ -1602,7 +1602,9 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
 
     if value:
         cindex = getdeepattr(master, value)
-        model = misc.get("model", None)
+        model = misc.pop("model", None)
+        if model is not None:
+            combo.setModel(model)
         if isinstance(model, VariableListModel):
             callfront = CallFrontComboBoxModel(combo, model)
             callfront.action(cindex)
