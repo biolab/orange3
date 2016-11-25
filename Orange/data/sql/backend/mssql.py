@@ -19,7 +19,7 @@ class PymssqlBackend(Backend):
 
         super().__init__(connection_params)
         try:
-            self.connection = pymssql.connect(**connection_params)
+            self.connection = pymssql.connect(login_timeout=5, **connection_params)
         except pymssql.Error as ex:
             raise BackendError(str(ex)) from ex
 
