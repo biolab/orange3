@@ -101,8 +101,9 @@ class TreeLearner(Learner):
             if score == 0:
                 return  REJECT_ATTRIBUTE
             score *= non_nans / len(col_x)
-            branches = (col_x > cut).astype(int)
-            branches[np.isnan(col_x)] = -1
+            branches = np.full(len(col_x), -1, dtype=int)
+            mask = ~np.isnan(col_x)
+            branches[mask] = (col_x[mask] > cut).astype(int)
             node = NumericNode(attr, attr_no, cut, None)
             return score, node, branches, 2
 

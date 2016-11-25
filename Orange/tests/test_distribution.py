@@ -72,6 +72,18 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(fallback, default)
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
+    def test_fallback_with_weights_and_nan(self):
+        d = data.Table("zoo")
+        d.set_weights(np.random.uniform(0., 1., size=len(d)))
+        d.Y[::10] = np.nan
+
+        default = distribution.Discrete(d, "type")
+        d._compute_distributions = Mock(side_effect=NotImplementedError)
+        fallback = distribution.Discrete(d, "type")
+
+        np.testing.assert_almost_equal(fallback, default)
+        np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
+
     def test_equality(self):
         d = data.Table("zoo")
         d1 = distribution.Discrete(d, 0)

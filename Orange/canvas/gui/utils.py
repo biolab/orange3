@@ -318,6 +318,6 @@ def OSX_NSURL_toLocalFile(url):
     if not url.startswith('file:///.file/id='):
         return ''
     from subprocess import Popen, PIPE, DEVNULL
-    process = Popen(['osascript', '-e', 'get POSIX path of POSIX file "{}"'.format(url)],
-                    stdout=PIPE, stderr=DEVNULL)
-    return process.stdout.read().strip().decode()
+    cmd = ['osascript', '-e', 'get POSIX path of POSIX file "{}"'.format(url)]
+    with Popen(cmd, stdout=PIPE, stderr=DEVNULL) as p:
+        return p.stdout.read().strip().decode()

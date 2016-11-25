@@ -216,7 +216,8 @@ def main(argv=None):
 
     if stylesheet != "none":
         if os.path.isfile(stylesheet):
-            stylesheet_string = open(stylesheet, "rb").read()
+            with open(stylesheet, "r") as f:
+                stylesheet_string = f.read()
         else:
             if not os.path.splitext(stylesheet)[1]:
                 # no extension
@@ -295,14 +296,15 @@ def main(argv=None):
 
     cache_filename = os.path.join(cache_dir(), "widget-registry.pck")
     if options.no_discovery:
-        widget_registry = pickle.load(open(cache_filename, "rb"))
+        with open(cache_filename, "rb") as f:
+            widget_registry = pickle.load(f)
         widget_registry = qt.QtWidgetRegistry(widget_registry)
     else:
         widget_discovery.run(config.widgets_entry_points())
         # Store cached descriptions
         cache.save_registry_cache(widget_discovery.cached_descriptions)
-        pickle.dump(WidgetRegistry(widget_registry),
-                     open(cache_filename, "wb"))
+        with open(cache_filename, "wb") as f:
+            pickle.dump(WidgetRegistry(widget_registry), f)
     set_global_registry(widget_registry)
     canvas_window.set_widget_registry(widget_registry)
     canvas_window.show()

@@ -71,7 +71,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         elif isinstance(self.variable, DiscreteVariable):
             value = self.values[ind]
             if not isnan(value):
-                color = QColor(*self.variable.colors[value])
+                color = QColor(*self.variable.colors[int(value)])
         return QBrush(color)
 
     def color_for_cell(self, row, col):

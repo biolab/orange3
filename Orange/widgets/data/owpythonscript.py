@@ -548,7 +548,9 @@ class OWPythonScript(widget.OWWidget):
         )
         if filename:
             name = os.path.basename(filename)
-            contents = open(filename, "rb").read().decode("utf-8", errors="ignore")
+            # TODO: use `tokenize.detect_encoding`
+            with open(filename, encoding="utf-8") as f:
+                contents = f.read()
             self.libraryList.append(Script(name, contents, 0, filename))
             self.setSelectedScript(len(self.libraryList) - 1)
 

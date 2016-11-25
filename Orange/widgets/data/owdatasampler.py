@@ -324,7 +324,7 @@ def sample_random_n(table, n, stratified=False, replace=False,
             rgen = np.random
         else:
             rgen = np.random.mtrand.RandomState(random_state)
-        sample = rgen.random_integers(0, len(table) - 1, n)
+        sample = rgen.randint(len(table), size=n)
         o = np.ones(len(table))
         o[sample] = 0
         others = np.nonzero(o)[0]

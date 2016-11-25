@@ -652,7 +652,7 @@ def sample(table, n=0.7, stratified=False, replace=False,
             rgen = np.random
         else:
             rgen = np.random.mtrand.RandomState(random_state)
-        sample = rgen.random_integers(0, len(table) - 1, n)
+        sample = rgen.randint(0, len(table), n)
         o = np.ones(len(table))
         o[sample] = 0
         others = np.nonzero(o)[0]

@@ -944,7 +944,8 @@ class OWLinearProjection(widget.OWWidget):
     def _size_data(self, mask=None):
         size_var = self.size_var()
         if size_var is None:
-            size_data = numpy.full((len(self.data),), self.point_size)
+            size_data = numpy.full((len(self.data),), self.point_size,
+                                   dtype=float)
         else:
             size_data = plotutils.normalized(self._get_data(size_var))
             size_data -= numpy.nanmin(size_data)

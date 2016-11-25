@@ -57,6 +57,6 @@ class KMeansModel(Projection):
             domain = Domain([c])
             return Table(
                 domain,
-                np.atleast_2d(self.proj.predict(data._x)).astype(int))
+                np.atleast_2d(self.proj.predict(data._x.reshape(1, -1))).astype(int))
         else:
             return self.proj.predict(data).reshape((len(data), 1))

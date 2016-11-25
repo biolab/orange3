@@ -32,8 +32,8 @@ class TestKNNLearner(unittest.TestCase):
 
     def test_random(self):
         nrows, ncols = 1000, 5
-        x = np.random.random_integers(-20, 50, (nrows, ncols))
-        y = np.random.random_integers(-2, 2, (nrows, 1))
+        x = np.random.randint(-20, 51, (nrows, ncols))
+        y = np.random.randint(-2, 3, (nrows, 1))
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
         attr = (ContinuousVariable('Feature 1'),

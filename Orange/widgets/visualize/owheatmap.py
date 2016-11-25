@@ -2380,7 +2380,10 @@ class HeatmapSelectionManager(QObject):
             """
             rows2hm = self.rows_to_heatmaps()
             selections = iter(selections)
-            start = end = next(selections)
+            try:
+                start = end = next(selections)
+            except StopIteration:
+                return
             end_heatmaps = rows2hm[end]
             try:
                 while True:

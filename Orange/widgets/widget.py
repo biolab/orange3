@@ -286,7 +286,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.splitter, margin=4,
             sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         )
-        self.splitter.setCollapsible(1, False)
+        self.splitter.addWidget(self.mainArea)
+        self.splitter.setCollapsible(
+            self.splitter.indexOf(self.mainArea), False)
         self.mainArea.layout().setContentsMargins(
             0 if self.want_control_area else 4, 4, 4, 4)
 

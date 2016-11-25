@@ -64,7 +64,8 @@ class BaseInventoryProvider(HelpProvider):
             self._reply = manager.get(req)
             manager.finished.connect(self._on_finished)
         else:
-            self._load_inventory(open(str(url.toLocalFile()), "rb"))
+            with open(str(url.toLocalFile()), "rb") as f:
+                self._load_inventory(f)
 
     def _on_finished(self, reply):
         if reply.error() != QNetworkReply.NoError:
@@ -190,9 +191,8 @@ class HtmlIndexProvider(BaseInventoryProvider):
         super().__init__(inventory, parent)
 
     def _load_inventory(self, stream):
-        contents = io.TextIOWrapper(stream, encoding="utf-8").read()
         try:
-            self.items = self._parse(contents)
+            self.items = self._parse(stream.read().decode("utf-8"))
         except Exception:
             log.exception("Error parsing")
 

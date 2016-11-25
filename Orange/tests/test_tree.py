@@ -103,7 +103,7 @@ class TestDecisionTreeClassifier(unittest.TestCase):
     def test_navigate_tree(self):
         table = self.iris
         clf = skl_tree.DecisionTreeClassifier(max_depth=1)
-        clf = clf.fit(table.X, table.Y)
+        clf = clf.fit(table.X, table.Y.reshape(-1, 1))
         t = clf.tree_
 
         x = table.X[0]
@@ -111,4 +111,4 @@ class TestDecisionTreeClassifier(unittest.TestCase):
             v = t.value[t.children_left[0]][0]
         else:
             v = t.value[t.children_right[0]][0]
-        self.assertEqual(np.argmax(v), clf.predict(table.X[0]))
+        self.assertEqual(np.argmax(v), clf.predict(table.X[:1]))

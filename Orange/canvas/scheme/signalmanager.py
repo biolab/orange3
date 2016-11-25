@@ -301,7 +301,7 @@ class SignalManager(QObject):
         Take one node node from the pending input queue and deliver
         all scheduled signals.
         """
-        if max_nodes is not None or max_nodes != 1:
+        if not (max_nodes is None or max_nodes == 1):
             warnings.warn(
                 "`max_nodes` is deprecated and unused (will always equal 1)",
                 DeprecationWarning, stacklevel=2)

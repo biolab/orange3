@@ -45,22 +45,26 @@ class TestManifold(unittest.TestCase):
         result = np.array([-2.6928912, 0.32603512])
 
         projector = MDS(
-            n_components=2, dissimilarity=Euclidean, init_type='PCA')
+            n_components=2, dissimilarity=Euclidean, init_type='PCA',
+            n_init=1)
         X = projector(self.iris).embedding_
         np.testing.assert_array_almost_equal(X[0], result)
 
         projector = MDS(
-            n_components=2, dissimilarity='precomputed', init_type='PCA')
+            n_components=2, dissimilarity='precomputed', init_type='PCA',
+            n_init=1)
         X = projector(Euclidean(self.iris)).embedding_
         np.testing.assert_array_almost_equal(X[0], result)
 
         projector = MDS(
-            n_components=2, dissimilarity='euclidean', init_type='PCA')
+            n_components=2, dissimilarity='euclidean', init_type='PCA',
+            n_init=1)
         X = projector(self.iris).embedding_
         np.testing.assert_array_almost_equal(X[0], result)
 
         projector = MDS(
-            n_components=6, dissimilarity='euclidean', init_type='PCA')
+            n_components=6, dissimilarity='euclidean', init_type='PCA',
+            n_init=1)
         X = projector(self.iris[:5]).embedding_
         result = np.array([-0.31871, -0.064644, 0.015653, -1.5e-08, -4.3e-11, 0])
         np.testing.assert_array_almost_equal(X[0], result)

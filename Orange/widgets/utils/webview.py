@@ -81,16 +81,17 @@ if HAVE_WEBENGINE:
                              **kwargs)
             self.bridge = bridge
             self.debug = debug
-
-            self._onloadJS(open(_WEBVIEW_HELPERS).read(),
-                           name='webview_helpers',
-                           injection_point=QWebEngineScript.DocumentCreation)
+            with open(_WEBVIEW_HELPERS, encoding="utf-8") as f:
+                self._onloadJS(f.read(),
+                               name='webview_helpers',
+                               injection_point=QWebEngineScript.DocumentCreation)
 
             qtwebchannel_js = QFile("://qtwebchannel/qwebchannel.js")
             if qtwebchannel_js.open(QFile.ReadOnly):
                 source = bytes(qtwebchannel_js.readAll()).decode("utf-8")
-                self._onloadJS(source +
-                               open(_WEBENGINE_INIT_WEBCHANNEL).read() %
+                with open(_WEBENGINE_INIT_WEBCHANNEL, encoding="utf-8") as f:
+                    init_webchannel_src = f.read()
+                self._onloadJS(source + init_webchannel_src %
                                    dict(exposeObject_prefix=self._EXPOSED_OBJ_PREFIX),
                                name='webchannel_init',
                                injection_point=QWebEngineScript.DocumentCreation)
@@ -174,7 +175,8 @@ if HAVE_WEBKIT:
                     self.frame = self.page().mainFrame()
                     self.frame.javaScriptWindowObjectCleared.connect(
                         lambda: self.frame.addToJavaScriptWindowObject('pybridge', bridge))
-                    self.frame.evaluateJavaScript(open(_WEBVIEW_HELPERS).read())
+                    with open(_WEBVIEW_HELPERS, encoding="utf-8") as f:
+                        self.frame.evaluateJavaScript(f.read())
 
             self.loadFinished.connect(_onload)
             _onload(True)

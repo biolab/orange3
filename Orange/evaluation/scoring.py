@@ -172,8 +172,10 @@ class AUC(Score):
         weights = self.calculate_weights(results)
 
         auc_array = np.array([np.fromiter(
-            (skl_metrics.roc_auc_score(results.actual == class_, predicted)
-             for predicted in results.predicted == class_),
+            (skl_metrics.roc_auc_score(
+                results.actual == class_,
+                (predicted == class_).astype(float))
+             for predicted in results.predicted),
             dtype=np.float64, count=len(results.predicted))
                               for class_ in classes])
 

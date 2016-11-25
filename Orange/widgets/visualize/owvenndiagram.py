@@ -638,7 +638,10 @@ def pairwise(iterable):
 
     """
     it = iter(iterable)
-    first = next(it)
+    try:
+        first = next(it)
+    except StopIteration:
+        return
     for second in it:
         yield first, second
         first = second

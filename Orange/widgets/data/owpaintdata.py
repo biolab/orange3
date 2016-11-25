@@ -1192,7 +1192,7 @@ class OWPaintData(OWWidget):
         elif isinstance(cmd, AirBrush):
             data = create_data(cmd.pos.x(), cmd.pos.y(),
                                self.brushRadius / 1000,
-                               1 + self.density / 20, cmd.rstate)
+                               int(1 + self.density / 20), cmd.rstate)
             self._add_command(Append([QPointF(*p) for p in zip(*data.T)]))
         elif isinstance(cmd, Jitter):
             point = np.array([cmd.pos.x(), cmd.pos.y()])

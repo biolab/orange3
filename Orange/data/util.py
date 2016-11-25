@@ -18,7 +18,7 @@ def one_hot(values, dtype=float):
     result
         2d array with ones in respective indicator columns.
     """
-    return np.eye(np.max(values) + 1, dtype=dtype)[np.asanyarray(values, dtype=int)]
+    return np.eye(int(np.max(values) + 1), dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
 def scale(values, min=0, max=1):
