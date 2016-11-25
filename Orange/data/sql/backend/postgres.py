@@ -79,6 +79,8 @@ class Psycopg2Backend(Backend):
             cur.execute(query, params)
             yield cur
             log.info("%.2f ms: %s", 1000 * (time() - t), utfquery)
+        except Error as ex:
+            raise BackendError(str(ex)) from ex
         finally:
             connection.commit()
             self.connection_pool.putconn(connection)

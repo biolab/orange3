@@ -73,6 +73,8 @@ class PymssqlBackend(Backend):
             with self.connection.cursor() as cur:
                 cur.execute(query, *params)
                 yield cur
+        except pymssql.Error as ex:
+            raise BackendError(str(ex)) from ex
         finally:
             self.connection.commit()
 

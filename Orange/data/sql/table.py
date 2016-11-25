@@ -624,7 +624,7 @@ class SqlTable(Table):
                 with self.backend.execute_sql_query(query): pass
                 create = True
 
-        except psycopg2.ProgrammingError:
+        except BackendError:
             create = True
 
         if create:
