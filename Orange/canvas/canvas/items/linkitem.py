@@ -319,7 +319,8 @@ class LinkItem(QGraphicsObject):
         self.sinkIndicator.hide()
 
         self.linkTextItem = QGraphicsTextItem(self)
-
+        self.linkTextItem.setAcceptedMouseButtons(Qt.NoButton)
+        self.linkTextItem.setAcceptHoverEvents(False)
         self.__sourceName = ""
         self.__sinkName = ""
 
