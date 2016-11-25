@@ -107,7 +107,7 @@ class PymssqlBackend(Backend):
 
         if type_code == STRING:
             if inspect_table:
-                values = [] #self._get_distinct_values(field_name, inspect_table)
+                values = self.get_distinct_values(field_name, inspect_table)
                 if values:
                     return DiscreteVariable(field_name, values)
 
