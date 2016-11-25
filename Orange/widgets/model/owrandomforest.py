@@ -1,5 +1,5 @@
 from Orange.data import Table
-from Orange.modelling.randomforest import RandomForestLearner
+from Orange.modelling import RandomForestLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.widget import Msg

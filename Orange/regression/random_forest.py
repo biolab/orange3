@@ -1,9 +1,9 @@
 import sklearn.ensemble as skl_ensemble
 
 from Orange.base import RandomForestModel
-from Orange.regression import SklLearner, SklModel
 from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess.score import LearnerScorer
+from Orange.regression import SklLearner, SklModel
 from Orange.regression.tree import SklTreeRegressor
 
 __all__ = ["RandomForestRegressionLearner"]
