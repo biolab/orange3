@@ -143,7 +143,7 @@ class FitterTest(unittest.TestCase):
             'Regression learner should override default preprocessors '
             'when specified in constructor')
 
-    def test_use_deafult_preprocessors_property(self):
+    def test_use_default_preprocessors_property(self):
         fitter = DummyFitterPPs(preprocessors=(Discretize(),))
         fitter.use_default_preprocessors = True
         self.assertTrue(
