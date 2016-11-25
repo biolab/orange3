@@ -1,5 +1,3 @@
-from AnyQt.QtCore import Qt
-
 from Orange.data import Table, StringVariable
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
@@ -45,8 +43,7 @@ class OWTranspose(OWWidget):
             gui.indentedBox(
                 box, gui.checkButtonOffsetHint(self.feature_radio.buttons[0])),
             self, "feature_names_column", callback=self._feature_combo_changed,
-            model=self.feature_model, sendSelectedValue=True,
-            labelWidth=100, contentsLength=12, orientation=Qt.Horizontal)
+            model=self.feature_model)
 
         self.apply_button = gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply",
@@ -57,20 +54,23 @@ class OWTranspose(OWWidget):
         self.apply()
 
     def set_data(self, data):
-        self.closeContext()
+        # Skip the context if the combo is empty: a context with
+        # feature_model == None would then match all domains
+        if self.feature_model:
+            self.closeContext()
         self.data = data
         self.update_controls()
-        self.openContext(data)
+        if self.data is not None and self.feature_model:
+            self.openContext(data)
         self.apply()
 
     def update_controls(self):
         self.feature_model.set_domain(None)
         if self.data:
             self.feature_model.set_domain(self.data.domain)
-            if len(self.feature_model):
-                _names = [m.name for m in self.data.domain.metas if m.is_string]
-                self.feature_names_column = _names[0]
-        enabled = bool(len(self.feature_model))
+            if self.feature_model:
+                self.feature_names_column = self.feature_model[0]
+        enabled = bool(self.feature_model)
         self.feature_radio.buttons[1].setEnabled(enabled)
         self.feature_combo.setEnabled(enabled)
         self.feature_type = int(enabled)
@@ -79,11 +79,9 @@ class OWTranspose(OWWidget):
         self.clear_messages()
         transposed = None
         if self.data:
-            options = dict()
-            if self.feature_type:
-                options["feature_names_column"] = self.feature_names_column
             try:
-                transposed = Table.transpose(self.data, **options)
+                transposed = Table.transpose(
+                    self.data, self.feature_type and self.feature_names_column)
             except ValueError as e:
                 self.Error.value_error(e)
         self.send("Data", transposed)
@@ -101,6 +99,8 @@ if __name__ == "__main__":
 
     app = QApplication([])
     ow = OWTranspose()
+    d = Table("iris")
+    ow.set_data(d)
     d = Table("zoo")
     ow.set_data(d)
     ow.show()
