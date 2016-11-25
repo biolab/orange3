@@ -524,19 +524,20 @@ class LinkItem(QGraphicsObject):
 
         if self.__sourceName or self.__sinkName:
             if self.__sourceName != self.__sinkName:
-                text = "{0} \u2192 {1}".format(self.__sourceName,
-                                               self.__sinkName)
+                text = ("<nobr>{0}</nobr> \u2192 <nobr>{1}</nobr>"
+                        .format(escape(self.__sourceName),
+                                escape(self.__sinkName)))
             else:
                 # If the names are the same show only one.
                 # Is this right? If the sink has two input channels of the
                 # same type having the name on the link help elucidate
                 # the scheme.
-                text = self.__sourceName
+                text = escape(self.__sourceName)
         else:
             text = ""
 
         self.linkTextItem.setHtml('<div align="center">{0}</div>'
-                                  .format(escape(text)))
+                                  .format(text))
         path = self.curveItem.curvePath()
 
         # Constrain the text width if it is too long to fit on a single line
