@@ -5,6 +5,7 @@ Link Item
 
 """
 import math
+from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
@@ -533,10 +534,31 @@ class LinkItem(QGraphicsObject):
         else:
             text = ""
 
-        self.linkTextItem.setHtml('<div align="center">{0}</div>'.format(text))
-        self.linkTextItem.document().setTextWidth(100)
-
+        self.linkTextItem.setHtml('<div align="center">{0}</div>'
+                                  .format(escape(text)))
         path = self.curveItem.curvePath()
+
+        # Constrain the text width if it is too long to fit on a single line
+        # between the two ends
+        if not path.isEmpty():
+            # Use the distance between the start/end points as a measure of
+            # available space
+            diff = path.pointAtPercent(0.0) - path.pointAtPercent(1.0)
+            available_width = math.sqrt(diff.x() ** 2 + diff.y() ** 2)
+            # Get the ideal text width if it was unconstrained
+            doc = self.linkTextItem.document().clone(self)
+            doc.setTextWidth(-1)
+            idealwidth = doc.idealWidth()
+            doc.deleteLater()
+
+            # Constrain the text width but not below a certain min width
+            minwidth = 100
+            textwidth = max(minwidth, min(available_width, idealwidth))
+            self.linkTextItem.setTextWidth(textwidth)
+        else:
+            # Reset the fixed width
+            self.linkTextItem.setTextWidth(-1)
+
         if not path.isEmpty():
             center = path.pointAtPercent(0.5)
             angle = path.angleAtPercent(0.5)
