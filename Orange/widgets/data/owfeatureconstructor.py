@@ -849,7 +849,7 @@ def bind_variable(descriptor, env):
     values = []
     if isinstance(descriptor, DiscreteDescriptor):
         values = [sanitized_name(v) for v in descriptor.values]
-    return descriptor, FeatureFunc(exp_ast, source_vars, values)
+    return descriptor, FeatureFunc(descriptor.expression, source_vars, values)
 
 
 def make_lambda(expression, args, values):
@@ -938,7 +938,8 @@ class FeatureFunc:
         self.expression = expression
         self.args = args
         self.values = values
-        self.func = make_lambda(expression, [name for name, _ in args], values)
+        self.func = make_lambda(ast.parse(expression, mode="eval"),
+                                [name for name, _ in args], values)
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
@@ -946,6 +947,12 @@ class FeatureFunc:
         else:
             args = [instance[var] for _, var in self.args]
             return self.func(*args)
+
+    def __reduce__(self):
+        return type(self), (self.expression, self.args, self.values)
+
+    def __repr__(self):
+        return "{0.__name__}{1!r}".format(*self.__reduce__())
 
 
 def unique(seq):
