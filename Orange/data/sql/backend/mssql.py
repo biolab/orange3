@@ -95,7 +95,7 @@ class PymssqlBackend(Backend):
     def _guess_variable(self, field_name, field_metadata, inspect_table):
         from pymssql import STRING, NUMBER, DATETIME, DECIMAL
 
-        type_code, *rest = field_metadata
+        type_code, *_ = field_metadata
 
         if type_code in (NUMBER, DECIMAL):
             return ContinuousVariable(field_name)
