@@ -1,3 +1,5 @@
+import re
+import warnings
 from contextlib import contextmanager
 
 import pymssql
@@ -113,6 +115,20 @@ class PymssqlBackend(Backend):
 
         return StringVariable(field_name)
 
+    EST_ROWS_RE = re.compile(r'StatementEstRows="(\d+)"')
+
     def count_approx(self, query):
-        # TODO: Figure out how to do count estimates on mssql
-        raise NotImplementedError
+        try:
+            with self.connection.cursor() as cur:
+                cur.execute("SET SHOWPLAN_XML ON")
+                try:
+                    cur.execute(query)
+                    result = cur.fetchone()
+                    return int(self.EST_ROWS_RE.search(result[0]).group(1))
+                finally:
+                    cur.execute("SET SHOWPLAN_XML OFF")
+        except pymssql.Error as ex:
+            if "SHOWPLAN permission denied" in str(ex):
+                warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
+                return None
+            raise BackendError(str(ex)) from ex
