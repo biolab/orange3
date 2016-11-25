@@ -1,3 +1,5 @@
+import re
+import warnings
 from contextlib import contextmanager
 
 import pymssql
@@ -19,7 +21,7 @@ class PymssqlBackend(Backend):
 
         super().__init__(connection_params)
         try:
-            self.connection = pymssql.connect(**connection_params)
+            self.connection = pymssql.connect(login_timeout=5, **connection_params)
         except pymssql.Error as ex:
             raise BackendError(str(ex)) from ex
 
@@ -66,13 +68,12 @@ class PymssqlBackend(Backend):
 
     @contextmanager
     def execute_sql_query(self, query, params=()):
-        print(query)
         try:
             with self.connection.cursor() as cur:
                 cur.execute(query, *params)
                 yield cur
-        finally:
-            self.connection.commit()
+        except pymssql.Error as ex:
+            raise BackendError(str(ex)) from ex
 
     def create_variable(self, field_name, field_metadata, type_hints, inspect_table=None):
         if field_name in type_hints:
@@ -94,7 +95,7 @@ class PymssqlBackend(Backend):
     def _guess_variable(self, field_name, field_metadata, inspect_table):
         from pymssql import STRING, NUMBER, DATETIME, DECIMAL
 
-        type_code, *rest = field_metadata
+        type_code, *_ = field_metadata
 
         if type_code in (NUMBER, DECIMAL):
             return ContinuousVariable(field_name)
@@ -107,12 +108,26 @@ class PymssqlBackend(Backend):
 
         if type_code == STRING:
             if inspect_table:
-                values = [] #self._get_distinct_values(field_name, inspect_table)
+                values = self.get_distinct_values(field_name, inspect_table)
                 if values:
                     return DiscreteVariable(field_name, values)
 
         return StringVariable(field_name)
 
+    EST_ROWS_RE = re.compile(r'StatementEstRows="(\d+)"')
+
     def count_approx(self, query):
-        # TODO: Figure out how to do count estimates on mssql
-        raise NotImplementedError
+        try:
+            with self.connection.cursor() as cur:
+                cur.execute("SET SHOWPLAN_XML ON")
+                try:
+                    cur.execute(query)
+                    result = cur.fetchone()
+                    return int(self.EST_ROWS_RE.search(result[0]).group(1))
+                finally:
+                    cur.execute("SET SHOWPLAN_XML OFF")
+        except pymssql.Error as ex:
+            if "SHOWPLAN permission denied" in str(ex):
+                warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
+                return None
+            raise BackendError(str(ex)) from ex
