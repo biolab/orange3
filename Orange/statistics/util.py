@@ -18,10 +18,12 @@ def bincount(X, max_val=None, weights=None, minlength=None):
     X = np.asanyarray(X)
     if X.dtype.kind == 'f' and bn.anynan(X):
         nonnan = ~np.isnan(X)
-        nans = (~nonnan).sum(axis=0)
         X = X[nonnan]
         if weights is not None:
+            nans = (~nonnan * weights).sum(axis=0)
             weights = weights[nonnan]
+        else:
+            nans = (~nonnan).sum(axis=0)
     else:
         nans = 0. if X.ndim == 1 else np.zeros(X.shape[1], dtype=float)
     if minlength is None and max_val is not None:
