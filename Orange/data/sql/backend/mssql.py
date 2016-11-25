@@ -68,15 +68,12 @@ class PymssqlBackend(Backend):
 
     @contextmanager
     def execute_sql_query(self, query, params=()):
-        print(query)
         try:
             with self.connection.cursor() as cur:
                 cur.execute(query, *params)
                 yield cur
         except pymssql.Error as ex:
             raise BackendError(str(ex)) from ex
-        finally:
-            self.connection.commit()
 
     def create_variable(self, field_name, field_metadata, type_hints, inspect_table=None):
         if field_name in type_hints:
