@@ -1,3 +1,4 @@
+"""Widget for creating classes from non-numeric attribute by substrings"""
 import numpy as np
 
 from AnyQt.QtWidgets import QGridLayout, QLabel, QLineEdit, QSizePolicy
@@ -13,19 +14,48 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import Msg
 
 
-def map_by_substring(a, patterns, case_sensitive, at_beginning):
+def map_by_substring(a, patterns, case_sensitive, match_beginning):
+    """
+    Map values in a using a list of patterns. The patterns are considered in
+    order of appearance.
+
+    Args:
+        a (np.array): input array of `dtype` `str`
+        patterns (list of str): list of stirngs
+        case_sensitive (bool): case sensitive match
+        match_beginning (bool): match only at the beginning of the string
+
+    Returns:
+        np.array of floats representing indices of matched patterns
+    """
     res = np.full(len(a), np.nan)
     if not case_sensitive:
         a = np.char.lower(a)
         patterns = (pattern.lower() for pattern in patterns)
     for val_idx, pattern in reversed(list(enumerate(patterns))):
         indices = np.char.find(a, pattern)
-        matches = indices == 0 if at_beginning else indices != -1
+        matches = indices == 0 if match_beginning else indices != -1
         res[matches] = val_idx
     return res
 
 
 class ValueFromStringSubstring(Transformation):
+    """
+    Transformation that computes a discrete variable from a string variable by
+    pattern matching.
+
+    Given patterns `["abc", "a", "bc", ""]`, string data
+    `["abcd", "aa", "bcd", "rabc", "x"]` is transformed to values of the new
+    attribute with indices`[0, 1, 2, 0, 3]`.
+
+    Args:
+        variable (:obj:`~Orange.data.StringVariable`): the original variable
+        patterns (list of str): list of string patterns
+        case_sensitive (bool, optional): if set to `True`, the match is case
+            sensitive
+        match_beginning (bool, optional): if set to `True`, the pattern must
+            appear at the beginning of the string
+    """
     def __init__(self, variable, patterns,
                  case_sensitive=False, match_beginning=False):
         super().__init__(variable)
@@ -34,6 +64,15 @@ class ValueFromStringSubstring(Transformation):
         self.match_beginning = match_beginning
 
     def transform(self, c):
+        """
+        Transform the given data.
+
+        Args:
+            c (np.array): an array of type that can be cast to dtype `str`
+
+        Returns:
+            np.array of floats representing indices of matched patterns
+        """
         nans = np.equal(c, None)
         c = c.astype(str)
         c[nans] = ""
@@ -44,6 +83,23 @@ class ValueFromStringSubstring(Transformation):
 
 
 class ValueFromDiscreteSubstring(Lookup):
+    """
+    Transformation that computes a discrete variable from discrete variable by
+    pattern matching.
+
+    Say that the original attribute has values
+    `["abcd", "aa", "bcd", "rabc", "x"]`. Given patterns
+    `["abc", "a", "bc", ""]`, the values are mapped to the values of the new
+    attribute with indices`[0, 1, 2, 0, 3]`.
+
+    Args:
+        variable (:obj:`~Orange.data.DiscreteVariable`): the original variable
+        patterns (list of str): list of string patterns
+        case_sensitive (bool, optional): if set to `True`, the match is case
+            sensitive
+        match_beginning (bool, optional): if set to `True`, the pattern must
+            appear at the beginning of the string
+    """
     def __init__(self, variable, patterns,
                  case_sensitive=False, match_beginning=False):
         super().__init__(variable, [])
@@ -52,6 +108,8 @@ class ValueFromDiscreteSubstring(Lookup):
         self.patterns = patterns  # Finally triggers computation of the lookup
 
     def __setattr__(self, key, value):
+        """__setattr__ is overloaded to recompute the lookup table when the
+        patterns, the original attribute or the flags change."""
         super().__setattr__(key, value)
         if hasattr(self, "patterns") and \
                 key in ("case_sensitive", "match_beginning", "patterns",
@@ -88,11 +146,20 @@ class OWCreateClass(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.data = None
-        self.line_edits = []
-        self.remove_buttons = []
-        self.counts = []
+
+        # The following lists are of the same length as self.activeRules
+
+        #: list of pairs with counts of matches for each patter when the
+        #     patterns are applied in order and when applied on the entire set,
+        #     disregarding the preceding patterns
         self.match_counts = []
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
+        #: list of list of QLineEdit: line edit pairs for each pattern
+        self.line_edits = []
+        #: list of QPushButton: list of remove buttons
+        self.remove_buttons = []
+        #: list of list of QLabel: pairs of labels with counts
+        self.counts = []
 
         patternbox = gui.vBox(self.controlArea, box="Patterns")
         box = gui.hBox(patternbox)
@@ -102,6 +169,8 @@ class OWCreateClass(widget.OWWidget):
             model=DomainModel(valid_types=(StringVariable, DiscreteVariable)),
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
 
+        #: QWidget: the box that contains the remove buttons, line edits and
+        #    count labels. The lines are added and removed dynamically.
         self.rules_box = rules_box = QGridLayout()
         patternbox.layout().addLayout(self.rules_box)
         self.add_button = gui.button(None, self, "+", flat=True,
@@ -129,17 +198,27 @@ class OWCreateClass(widget.OWWidget):
         gui.rubber(box)
         gui.button(box, self, "Apply", autoDefault=False, callback=self.apply)
 
+        # TODO: Resizing upon changing the number of rules does not work
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
     @property
     def active_rules(self):
+        """
+        Returns the class names and patterns corresponding to the currently
+            selected attribute. If the attribute is not yet in the dictionary,
+            set the default.
+        """
         return self.rules.setdefault(self.attribute and self.attribute.name,
                                      [["C1", ""], ["C2", ""]])
 
     def rules_to_edits(self):
+        """Fill the line edites with the rules from the current settings."""
         for editr, textr in zip(self.line_edits, self.active_rules):
             for edit, text in zip(editr, textr):
                 edit.setText(text)
 
     def set_data(self, data):
+        """Input data signal handler."""
         self.closeContext()
         self.rules = {}
         self.data = data
@@ -156,14 +235,19 @@ class OWCreateClass(widget.OWWidget):
         self.apply()
 
     def update_rules(self):
+        """Called when the rules are changed: adjust the number of lines in
+        the form and fill them, update the counts. The widget does not have
+        auto-apply."""
         self.adjust_n_rule_rows()
         self.rules_to_edits()
         self.update_counts()
+        # TODO: Indicator that changes need to be applied
 
     def options_changed(self):
         self.update_counts()
 
     def adjust_n_rule_rows(self):
+        """Add or remove lines if needed and fix the tab order."""
         def _add_line():
             self.line_edits.append([])
             n_lines = len(self.line_edits)
@@ -213,21 +297,29 @@ class OWCreateClass(widget.OWWidget):
         _fix_tab_order()
 
     def add_row(self):
+        """Append a new row at the end."""
         self.active_rules.append(["", ""])
         self.adjust_n_rule_rows()
 
     def remove_row(self):
+        """Remove a row."""
         remove_idx = self.remove_buttons.index(self.sender())
         del self.active_rules[remove_idx]
         self.update_rules()
 
     def sync_edit(self, text):
+        """Handle changes in line edits: update the active rules and counts"""
         edit = self.sender()
         edit.row[edit.col_idx] = text
         self.update_counts()
 
     def update_counts(self):
+        """Recompute and update the counts of matches."""
         def _matcher(strings, pattern):
+            """Return indices of strings into patterns; consider case
+            sensitivity and matching at the beginning. The given strings are
+            assumed to be in lower case if match is case insensitive. Patterns
+            are fixed on the fly."""
             if not self.case_sensitive:
                 pattern = pattern.lower()
             indices = np.char.find(strings, pattern)
@@ -237,6 +329,15 @@ class OWCreateClass(widget.OWWidget):
             return strings if self.case_sensitive else np.char.lower(strings)
 
         def _string_counts():
+            """
+            Generate pairs of arrays for each rule until running out of data
+            instances. np.sum over the two arrays in each pair gives the
+            number of matches of the remaining instances (considering the
+            order of patterns) and of the original data.
+
+            For _string_counts, the arrays contain bool masks referring to the
+            original data
+            """
             nonlocal data
             data = data.astype(str)
             data = data[~np.char.equal(data, "")]
@@ -251,6 +352,10 @@ class OWCreateClass(widget.OWWidget):
                     break
 
         def _discrete_counts():
+            """
+            Generate pairs similar to _string_counts, except that the arrays
+            contain bin counts for the attribute's values matching the pattern.
+            """
             attr_vals = np.array(attr.values)
             attr_vals = _lower_if_needed(attr_vals)
             bins = bincount(data, max_val=len(attr.values) - 1)[0]
@@ -263,11 +368,13 @@ class OWCreateClass(widget.OWWidget):
                     break
 
         def _clear_labels():
+            """Clear all labels"""
             for lab_matched, lab_total in self.counts:
                 lab_matched.setText("")
                 lab_total.setText("")
 
         def _set_labels():
+            """Set the labels to show the counts"""
             for (n_matched, n_total), (lab_matched, lab_total) in \
                     zip(self.match_counts, self.counts):
                 n_before = n_total - n_matched
@@ -287,6 +394,7 @@ class OWCreateClass(widget.OWWidget):
         _set_labels()
 
     def apply(self):
+        """Output the transformed data."""
         if not self.attribute or not self.active_rules:
             self.send("Data", None)
             return
@@ -307,6 +415,7 @@ class OWCreateClass(widget.OWWidget):
 
 
 def main():  # pragma: no cover
+    """Simple test for manual inspection of the widget"""
     import sys
     from AnyQt.QtWidgets import QApplication
 

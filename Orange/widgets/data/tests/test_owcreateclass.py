@@ -22,22 +22,22 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
-                             case_sensitive=True, at_beginning=False),
+                             case_sensitive=True, match_beginning=False),
             [0, 1, 2, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "Bc", ""],
-                             case_sensitive=True, at_beginning=False),
+                             case_sensitive=True, match_beginning=False),
             [0, 1, 3, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "Bc", ""],
-                             case_sensitive=False, at_beginning=False),
+                             case_sensitive=False, match_beginning=False),
             [0, 1, 2, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
-                             case_sensitive=False, at_beginning=True),
+                             case_sensitive=False, match_beginning=True),
             [0, 1, 2, 3, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr, ["", ""], False, False),
