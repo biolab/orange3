@@ -51,8 +51,6 @@ class Fitter(Learner, metaclass=FitterMeta):
         return self.get_learner(self.problem_type)(data)
 
     def get_learner(self, problem_type):
-        if problem_type not in self.__learners:
-            return None
         if self.__learners[problem_type] is None:
             learner = self.__fits__[problem_type](**self.__get_kwargs(
                 self.kwargs, problem_type))
@@ -71,4 +69,7 @@ class Fitter(Learner, metaclass=FitterMeta):
         return set(learner.__init__.__code__.co_varnames[1:])
 
     def __getattr__(self, item):
+        # Prevent trying to access the learner when there's no actual learner
+        if self.problem_type is None:
+            raise AttributeError()
         return getattr(self.get_learner(self.problem_type), item)

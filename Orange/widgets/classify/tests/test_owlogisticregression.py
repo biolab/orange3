@@ -55,6 +55,6 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
     def test_output_coefficients(self):
         """Check if coefficients are on output after apply"""
         self.assertIsNone(self.get_output("Coefficients"))
-        self.send_signal("Data", self.data[0])
+        self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
         self.assertIsInstance(self.get_output("Coefficients"), Table)

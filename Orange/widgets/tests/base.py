@@ -335,20 +335,23 @@ class WidgetLearnerTestMixin:
         self.housing = housing = Table("housing")
 
         if issubclass(self.widget.LEARNER, Fitter):
-            self.data = (iris, housing)
-            self.inadequate_data = ()
+            self.data = iris
+            self.valid_datasets = (iris, housing)
+            self.inadequate_dataset = ()
             self.learner_class = Fitter
             self.model_class = Model
             self.model_name = 'Model'
         elif issubclass(self.widget.LEARNER, LearnerClassification):
-            self.data = (iris,)
-            self.inadequate_data = (housing,)
+            self.data = iris
+            self.valid_datasets = (iris,)
+            self.inadequate_dataset = (housing,)
             self.learner_class = LearnerClassification
             self.model_class = ModelClassification
             self.model_name = 'Classifier'
         else:
-            self.data = (housing,)
-            self.inadequate_data = (iris,)
+            self.data = housing
+            self.valid_datasets = (housing,)
+            self.inadequate_dataset = (iris,)
             self.learner_class = LearnerRegression
             self.model_class = ModelRegression
             self.model_name = 'Predictor'
@@ -361,13 +364,13 @@ class WidgetLearnerTestMixin:
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
-        self.send_signal("Data", self.data[0])
-        self.assertEqual(self.widget.data, self.data[0])
+        self.send_signal("Data", self.data)
+        self.assertEqual(self.widget.data, self.data)
 
     def test_input_data_disconnect(self):
         """Check widget's data and model after disconnecting data from input"""
-        self.send_signal("Data", self.data[0])
-        self.assertEqual(self.widget.data, self.data[0])
+        self.send_signal("Data", self.data)
+        self.assertEqual(self.widget.data, self.data)
         self.widget.apply_button.button.click()
         self.send_signal("Data", None)
         self.assertEqual(self.widget.data, None)
@@ -375,11 +378,11 @@ class WidgetLearnerTestMixin:
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
-        for inadequate in self.inadequate_data:
+        for inadequate in self.inadequate_dataset:
             self.send_signal("Data", inadequate)
             self.widget.apply_button.button.click()
             self.assertTrue(self.widget.Error.data_error.is_shown())
-        for valid in self.data:
+        for valid in self.valid_datasets:
             self.send_signal("Data", valid)
             self.assertFalse(self.widget.Error.data_error.is_shown())
 
@@ -430,7 +433,7 @@ class WidgetLearnerTestMixin:
         self.assertIsNone(self.get_output(self.model_name))
         self.widget.apply_button.button.click()
         self.assertIsNone(self.get_output(self.model_name))
-        self.send_signal('Data', self.data[0])
+        self.send_signal('Data', self.data)
         self.widget.apply_button.button.click()
         model = self.get_output(self.model_name)
         self.assertIsNotNone(model)
@@ -451,7 +454,7 @@ class WidgetLearnerTestMixin:
         """Check if model's name properly changes"""
         new_name = "Model Name"
         self.widget.name_line_edit.setText(new_name)
-        self.send_signal("Data", self.data[0])
+        self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
         self.assertEqual(self.get_output(self.model_name).name, new_name)
 
@@ -478,7 +481,7 @@ class WidgetLearnerTestMixin:
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
             for value in parameter.values:
-                self.send_signal("Data", self.data[0])
+                self.send_signal("Data", self.data)
                 parameter.set_value(value)
                 self.widget.apply_button.button.click()
                 param = get_value(self.widget.learner, parameter.name)
