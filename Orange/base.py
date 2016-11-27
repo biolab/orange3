@@ -113,13 +113,10 @@ class Learner:
 
     @property
     def active_preprocessors(self):
-        # Check if preprocessors were overriden
-        if self.preprocessors is not type(self).preprocessors:
-            yield from self.preprocessors
-            if self.use_default_preprocessors:
-                yield from tuple(type(self).preprocessors)
-        else:
-            yield from type(self).preprocessors or ()
+        yield from self.preprocessors
+        if (self.use_default_preprocessors and
+                self.preprocessors is not type(self).preprocessors):
+            yield from type(self).preprocessors
 
     def __repr__(self):
         return self.name
