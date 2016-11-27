@@ -15,7 +15,7 @@ class DummyLearnerPP(Learner):
     preprocessors = (Randomize(),)
 
 
-class TestLeaner(unittest.TestCase):
+class TestLearner(unittest.TestCase):
     def test_uses_default_preprocessors_unless_custom_pps_specified(self):
         """Learners should use their default preprocessors unless custom
         preprocessors were passed in to the constructor"""
