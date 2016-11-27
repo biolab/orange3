@@ -13,31 +13,52 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import Msg
 
 
-def map_by_substring(a, patterns):
+def map_by_substring(a, patterns, case_sensitive, at_beginning):
     res = np.full(len(a), np.nan)
+    if not case_sensitive:
+        a = np.char.lower(a)
+        patterns = (pattern.lower() for pattern in patterns)
     for val_idx, pattern in reversed(list(enumerate(patterns))):
-        res[np.char.find(a, pattern) != -1] = val_idx
+        indices = np.char.find(a, pattern)
+        matches = indices == 0 if at_beginning else indices != -1
+        res[matches] = val_idx
     return res
 
 
-class ClassFromStringSubstring(Transformation):
-    def __init__(self, variable, patterns):
+class ValueFromStringSubstring(Transformation):
+    def __init__(self, variable, patterns,
+                 case_sensitive=False, match_beginning=False):
         super().__init__(variable)
         self.patterns = patterns
+        self.case_sensitive = case_sensitive
+        self.match_beginning = match_beginning
 
     def transform(self, c):
         nans = np.equal(c, None)
         c = c.astype(str)
         c[nans] = ""
-        res = map_by_substring(c, self.patterns)
+        res = map_by_substring(
+            c, self.patterns, self.case_sensitive, self.match_beginning)
         res[nans] = np.nan
         return res
 
 
-class ClassFromDiscreteSubstring(Lookup):
-    def __init__(self, variable, patterns):
-        lookup_table = map_by_substring(variable.values, patterns)
-        super().__init__(variable, lookup_table)
+class ValueFromDiscreteSubstring(Lookup):
+    def __init__(self, variable, patterns,
+                 case_sensitive=False, match_beginning=False):
+        super().__init__(variable, [])
+        self.case_sensitive = case_sensitive
+        self.match_beginning = match_beginning
+        self.patterns = patterns  # Finally triggers computation of the lookup
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
+        if hasattr(self, "patterns") and \
+                key in ("case_sensitive", "match_beginning", "patterns",
+                        "variable"):
+            self.lookup_table = map_by_substring(
+                self.variable.values, self.patterns,
+                self.case_sensitive, self.match_beginning)
 
 
 class OWCreateClass(widget.OWWidget):
@@ -55,9 +76,11 @@ class OWCreateClass(widget.OWWidget):
     settingsHandler = DomainContextHandler()
     attribute = ContextSetting(None)
     rules = ContextSetting({})
+    match_beginning = ContextSetting(False)
+    case_sensitive = ContextSetting(False)
 
-    TRANSFORMERS = {StringVariable: ClassFromStringSubstring,
-                    DiscreteVariable: ClassFromDiscreteSubstring}
+    TRANSFORMERS = {StringVariable: ValueFromStringSubstring,
+                    DiscreteVariable: ValueFromDiscreteSubstring}
 
     class Warning(widget.OWWidget.Warning):
         no_nonnumeric_vars = Msg("Data contains only numeric variables.")
@@ -68,9 +91,11 @@ class OWCreateClass(widget.OWWidget):
         self.line_edits = []
         self.remove_buttons = []
         self.counts = []
+        self.match_counts = []
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
-        box = gui.hBox(self.controlArea)
+        patternbox = gui.vBox(self.controlArea, box="Patterns")
+        box = gui.hBox(patternbox)
         gui.widgetLabel(box, "Class from column: ", addSpace=12)
         gui.comboBox(
             box, self, "attribute", callback=self.update_rules,
@@ -78,7 +103,7 @@ class OWCreateClass(widget.OWWidget):
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
 
         self.rules_box = rules_box = QGridLayout()
-        self.controlArea.layout().addLayout(self.rules_box)
+        patternbox.layout().addLayout(self.rules_box)
         self.add_button = gui.button(None, self, "+", flat=True,
                                      callback=self.add_row,
                                      minimumSize=QSize(12, 20))
@@ -91,6 +116,14 @@ class OWCreateClass(widget.OWWidget):
         rules_box.addWidget(QLabel("Pattern"), 0, 2)
         rules_box.addWidget(QLabel("#Instances"), 0, 3, 1, 2)
         self.update_rules()
+
+        optionsbox = gui.vBox(self.controlArea, box=True)
+        gui.checkBox(
+            optionsbox, self, "match_beginning", "Match only at the beginning",
+            callback=self.options_changed)
+        gui.checkBox(
+            optionsbox, self, "case_sensitive", "Case sensitive",
+            callback=self.options_changed)
 
         box = gui.hBox(self.controlArea)
         gui.rubber(box)
@@ -125,6 +158,9 @@ class OWCreateClass(widget.OWWidget):
     def update_rules(self):
         self.adjust_n_rule_rows()
         self.rules_to_edits()
+        self.update_counts()
+
+    def options_changed(self):
         self.update_counts()
 
     def adjust_n_rule_rows(self):
@@ -191,61 +227,81 @@ class OWCreateClass(widget.OWWidget):
         self.update_counts()
 
     def update_counts(self):
-        def _set_labels(labels, matching, total_matching):
-            n_matched = int(np.sum(matching))
-            n_before = int(np.sum(total_matching)) - n_matched
-            labels[0].setText("{}".format(n_matched))
-            if n_before:
-                labels[1].setText("+ {}".format(n_before))
+        def _matcher(strings, pattern):
+            if not self.case_sensitive:
+                pattern = pattern.lower()
+            indices = np.char.find(strings, pattern)
+            return indices == 0 if self.match_beginning else indices != -1
 
-        def _string_counts(data):
+        def _lower_if_needed(strings):
+            return strings if self.case_sensitive else np.char.lower(strings)
+
+        def _string_counts():
+            nonlocal data
             data = data.astype(str)
             data = data[~np.char.equal(data, "")]
+            data = _lower_if_needed(data)
             remaining = np.array(data)
-            for labels, (_, pattern) in zip(self.counts, self.active_rules):
-                matching = np.char.find(remaining, pattern) != -1
-                total_matching = np.char.find(data, pattern) != -1
-                _set_labels(labels, matching, total_matching)
+            for _, pattern in self.active_rules:
+                matching = _matcher(remaining, pattern)
+                total_matching = _matcher(data, pattern)
+                yield matching, total_matching
                 remaining = remaining[~matching]
                 if len(remaining) == 0:
                     break
 
-        def _discrete_counts(data):
+        def _discrete_counts():
             attr_vals = np.array(attr.values)
+            attr_vals = _lower_if_needed(attr_vals)
             bins = bincount(data, max_val=len(attr.values) - 1)[0]
             remaining = np.array(bins)
-            for labels, (_, pattern) in zip(self.counts, self.active_rules):
-                matching = np.char.find(attr_vals, pattern) != -1
-                _set_labels(labels, remaining[matching], bins[matching])
+            for _, pattern in self.active_rules:
+                matching = _matcher(attr_vals, pattern)
+                yield remaining[matching], bins[matching]
                 remaining[matching] = 0
                 if not np.any(remaining):
                     break
 
-        for labels in self.counts:
-            for label in labels:
-                label.setText("")
+        def _clear_labels():
+            for lab_matched, lab_total in self.counts:
+                lab_matched.setText("")
+                lab_total.setText("")
+
+        def _set_labels():
+            for (n_matched, n_total), (lab_matched, lab_total) in \
+                    zip(self.match_counts, self.counts):
+                n_before = n_total - n_matched
+                lab_matched.setText("{}".format(n_matched))
+                if n_before:
+                    lab_total.setText("+ {}".format(n_before))
+
+        _clear_labels()
         attr = self.attribute
         if attr is None:
             return
+        counters = {StringVariable: _string_counts,
+                    DiscreteVariable: _discrete_counts}
         data = self.data.get_column_view(attr)[0]
-        if isinstance(attr, StringVariable):
-            _string_counts(data)
-        else:
-            _discrete_counts(data)
+        self.match_counts = [[int(np.sum(x)) for x in matches]
+                             for matches in counters[type(attr)]()]
+        _set_labels()
 
     def apply(self):
         if not self.attribute or not self.active_rules:
             self.send("Data", None)
             return
         domain = self.data.domain
+        # Transposition + stripping
         names, patterns = \
             zip(*((name.strip(), pattern)
                   for name, pattern in self.active_rules if name.strip()))
         transformer = self.TRANSFORMERS[type(self.attribute)]
+        compute_value = transformer(
+            self.attribute, patterns, self.case_sensitive, self.match_beginning)
         new_class = DiscreteVariable(
-            "class", names, compute_value=transformer(self.attribute, patterns))
-        new_domain = Domain(domain.attributes, new_class,
-                            domain.metas + domain.class_vars)
+            "class", names, compute_value=compute_value)
+        new_domain = Domain(
+            domain.attributes, new_class, domain.metas + domain.class_vars)
         new_data = Table(new_domain, self.data)
         self.send("Data", new_data)
 

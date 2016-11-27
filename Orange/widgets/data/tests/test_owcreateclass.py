@@ -8,7 +8,7 @@ import numpy as np
 from Orange.data import Table, StringVariable, DiscreteVariable
 from Orange.widgets.data.owcreateclass import (
     OWCreateClass,
-    map_by_substring, ClassFromStringSubstring, ClassFromDiscreteSubstring)
+    map_by_substring, ValueFromStringSubstring, ValueFromDiscreteSubstring)
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -19,33 +19,107 @@ class TestHelpers(unittest.TestCase):
         cls.arr = np.array(["abcd", "aa", "bcd", "rabc", "x"])
 
     def test_map_by_substring(self):
-        np.testing.assert_equal(map_by_substring(self.arr, self.patterns),
-                                [0, 1, 2, 0, 3])
-        np.testing.assert_equal(map_by_substring(self.arr, ["", ""]), 0)
-        self.assertTrue(np.all(np.isnan(map_by_substring(self.arr, []))))
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                             ["abc", "a", "bc", ""],
+                             case_sensitive=True, at_beginning=False),
+            [0, 1, 2, 0, 3])
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                             ["abc", "a", "Bc", ""],
+                             case_sensitive=True, at_beginning=False),
+            [0, 1, 3, 0, 3])
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                             ["abc", "a", "Bc", ""],
+                             case_sensitive=False, at_beginning=False),
+            [0, 1, 2, 0, 3])
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                             ["abc", "a", "bc", ""],
+                             case_sensitive=False, at_beginning=True),
+            [0, 1, 2, 3, 3])
+        np.testing.assert_equal(
+            map_by_substring(self.arr, ["", ""], False, False),
+            0)
+        self.assertTrue(np.all(np.isnan(
+            map_by_substring(self.arr, [], False, False))))
 
-    def test_class_from_string_substring(self):
-        trans = ClassFromStringSubstring(StringVariable(), self.patterns)
+    def test_value_from_string_substring(self):
+        trans = ValueFromStringSubstring(StringVariable(), self.patterns)
         arr2 = np.hstack((self.arr.astype(object), [None]))
 
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
             trans.transform(self.arr)
-            arg1, arg2 = mbs.call_args[0]
-            np.testing.assert_equal(arg1, self.arr)
-            self.assertEqual(arg2, self.patterns)
+            a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
+            np.testing.assert_equal(a, self.arr)
+            self.assertEqual(patterns, self.patterns)
+            self.assertFalse(case_sensitive)
+            self.assertFalse(match_beginning)
 
             trans.transform(arr2)
-            arg1, arg2 = mbs.call_args[0]
-            np.testing.assert_equal(arg1,
+            a, patterns, *_ = mbs.call_args[0]
+            np.testing.assert_equal(a,
                                     np.hstack((self.arr.astype(str), "")))
 
         np.testing.assert_equal(trans.transform(arr2),
                                 [0, 1, 2, 0, 3, np.nan])
 
-    def test_class_from_discrete_substring(self):
-        trans = ClassFromDiscreteSubstring(
+    def test_value_string_substring_flags(self):
+        trans = ValueFromStringSubstring(StringVariable(), self.patterns)
+        with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
+            trans.case_sensitive = True
+            trans.transform(self.arr)
+            case_sensitive, match_beginning = mbs.call_args[0][-2:]
+            self.assertTrue(case_sensitive)
+            self.assertFalse(match_beginning)
+
+            trans.case_sensitive = False
+            trans.match_beginning = True
+            trans.transform(self.arr)
+            case_sensitive, match_beginning = mbs.call_args[0][-2:]
+            self.assertFalse(case_sensitive)
+            self.assertTrue(match_beginning)
+
+    def test_value_from_discrete_substring(self):
+        trans = ValueFromDiscreteSubstring(
             DiscreteVariable(values=self.arr), self.patterns)
         np.testing.assert_equal(trans.lookup_table, [0, 1, 2, 0, 3])
+
+    def test_value_from_discrete_substring_flags(self):
+        trans = ValueFromDiscreteSubstring(
+            DiscreteVariable(values=self.arr), self.patterns)
+        with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
+            trans.case_sensitive = True
+            a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
+            np.testing.assert_equal(a, self.arr)
+            self.assertEqual(patterns, self.patterns)
+            self.assertTrue(case_sensitive)
+            self.assertFalse(match_beginning)
+
+            trans.case_sensitive = False
+            trans.match_beginning = True
+            a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
+            np.testing.assert_equal(a, self.arr)
+            self.assertEqual(patterns, self.patterns)
+            self.assertFalse(case_sensitive)
+            self.assertTrue(match_beginning)
+
+            arr2 = self.arr[::-1]
+            trans.variable = DiscreteVariable(values=arr2)
+            a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
+            np.testing.assert_equal(a, arr2)
+            self.assertEqual(patterns, self.patterns)
+            self.assertFalse(case_sensitive)
+            self.assertTrue(match_beginning)
+
+            patt2 = self.patterns[::-1]
+            trans.patterns = patt2
+            a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
+            np.testing.assert_equal(a, arr2)
+            self.assertEqual(patterns, patt2)
+            self.assertFalse(case_sensitive)
+            self.assertTrue(match_beginning)
 
 
 class TestOWCreateClass(WidgetTest):
@@ -249,6 +323,21 @@ class TestOWCreateClass(WidgetTest):
         outdata = self.get_output("Data")
         self.assertIsNone(outdata)
 
+    def test_options(self):
+        def _transformer_flags():
+            widget.apply()
+            outdata = self.get_output("Data")
+            transformer = outdata.domain.class_var.compute_value
+            return transformer.case_sensitive, transformer.match_beginning
+
+        widget = self.widget
+        self.send_signal("Data", self.heart)
+        self.assertEqual(_transformer_flags(), (False, False))
+        widget.controls.case_sensitive.click()
+        self.assertEqual(_transformer_flags(), (True, False))
+        widget.controls.case_sensitive.click()
+        widget.controls.match_beginning.click()
+        self.assertEqual(_transformer_flags(), (False, True))
 
 if __name__ == "__main__":
     unittest.main()
