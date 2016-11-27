@@ -174,7 +174,7 @@ class OWCreateClass(widget.OWWidget):
         self.rules_box = rules_box = QGridLayout()
         patternbox.layout().addLayout(self.rules_box)
         self.add_button = gui.button(None, self, "+", flat=True,
-                                     callback=self.add_row,
+                                     callback=self.add_row, autoDefault=False,
                                      minimumSize=QSize(12, 20))
         self.rules_box.setColumnMinimumWidth(1, 80)
         self.rules_box.setColumnMinimumWidth(0, 10)
@@ -260,7 +260,7 @@ class OWCreateClass(widget.OWWidget):
                 None, self, label='×', flat=True, height=20,
                 styleSheet='* {font-size: 16pt; color: silver}'
                            '*:hover {color: black}',
-                callback=self.remove_row)
+                autoDefault=False, callback=self.remove_row)
             button.setMinimumSize(QSize(12, 20))
             self.remove_buttons.append(button)
             self.rules_box.addWidget(button, n_lines, 0)
@@ -322,7 +322,7 @@ class OWCreateClass(widget.OWWidget):
             are fixed on the fly."""
             if not self.case_sensitive:
                 pattern = pattern.lower()
-            indices = np.char.find(strings, pattern)
+            indices = np.char.find(strings, pattern.strip())
             return indices == 0 if self.match_beginning else indices != -1
 
         def _lower_if_needed(strings):
