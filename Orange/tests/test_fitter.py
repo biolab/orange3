@@ -19,9 +19,8 @@ class DummyRegressionLearner(LearnerRegression):
 
 class DummyFitter(Fitter):
     name = 'dummy'
-    __fits__ = LearnerTypes(
-        classification=DummyClassificationLearner,
-        regression=DummyRegressionLearner)
+    __fits__ = {'classification': DummyClassificationLearner,
+                'regression': DummyRegressionLearner}
 
 
 class DummyClassificationLearnerPPs(LearnerClassification):
@@ -34,9 +33,8 @@ class DummyRegressionLearnerPPs(LearnerRegression):
 
 class DummyFitterPPs(Fitter):
     name = 'dummy'
-    __fits__ = LearnerTypes(
-        classification=DummyClassificationLearnerPPs,
-        regression=DummyRegressionLearnerPPs)
+    __fits__ = {'classification': DummyClassificationLearnerPPs,
+                'regression': DummyRegressionLearnerPPs}
 
 
 class FitterTest(unittest.TestCase):
@@ -99,9 +97,8 @@ class FitterTest(unittest.TestCase):
 
         class DummyFitter(Fitter):
             name = 'dummy'
-            __fits__ = LearnerTypes(
-                classification=DummyClassificationLearner,
-                regression=DummyRegressionLearner)
+            __fits__ = {'classification': DummyClassificationLearner,
+                        'regression': DummyRegressionLearner}
 
         # Prevent fitting error from being thrown
         DummyClassificationLearner.fit = Mock()
@@ -182,21 +179,10 @@ class FitterTest(unittest.TestCase):
             'as well as an iterable object')
 
     def test_error_for_data_type_with_no_learner(self):
-        """If we attempt to use a fitter on data that the fitter does not
-        support, make sure to leave an informative error.
-
-        In practice this is pointless since the whole point of the fitter is to
-        handle multiple data types, but in case anybody does ever try to use it
-        like this.
-        """
-        class DummyFitter(Fitter):
-            name = 'dummy'
-            __fits__ = LearnerTypes(
-                classification=None, regression=DummyRegressionLearner)
-
-        fitter = DummyFitter()
-        # Should work, since we have a learner for regression
-        fitter(self.housing)
-
-        with self.assertRaises(AttributeError):
-            fitter(self.heart_disease)
+        """If we attempt to define a fitter which only handles one data type
+        it makes more sense to simply use a Learner."""
+        with self.assertRaises(AssertionError):
+            class DummyFitter(Fitter):
+                name = 'dummy'
+                __fits__ = {'classification': None,
+                            'regression': DummyRegressionLearner}
