@@ -20,7 +20,7 @@ class FitterMeta(type):
                 raise AssertionError(
                     'The `__fits__` property does not define a classification '
                     'or regression learner. Use a simple learner if you do '
-                    'need the functionality provided by Fitter')
+                    'not need the functionality provided by Fitter.')
         return super().__new__(mcs, name, bases, kwargs)
 
 
@@ -28,9 +28,9 @@ class Fitter(Learner, metaclass=FitterMeta):
     """Handle multiple types of target variable with one learner.
 
     Subclasses of this class serve as a sort of dispatcher. When subclassing,
-    we provide a `dict` which contain actual learner classes
-    that handle appropriate data types. The fitter can then be used on any
-    data and will delegate the work to the appropriate learner.
+    we provide a `dict` which contain actual learner classes that handle
+    appropriate data types. The fitter can then be used on any data and will
+    delegate the work to the appropriate learner.
 
     If the learners that handle each data type require different parameters,
     you should pass in all the possible parameters to the fitter. The fitter

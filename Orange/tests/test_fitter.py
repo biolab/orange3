@@ -115,7 +115,7 @@ class FitterTest(unittest.TestCase):
             self.assertEqual(fitter.get_learner(Fitter.CLASSIFICATION).param, 10)
             self.assertEqual(fitter.get_learner(Fitter.REGRESSION).param, 20)
         except AttributeError:
-            self.fail('Fitter did not properly distribute params to learners.')
+            self.fail('Fitter did not properly distribute params to learners')
 
     def test_uses_default_preprocessors_unless_custom_pps_specified(self):
         """Learners should use their default preprocessors unless custom
