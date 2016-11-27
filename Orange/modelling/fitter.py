@@ -15,7 +15,8 @@ class Fitter(Learner):
 
     If the learners that handle each data type require different parameters,
     you should pass in all the possible parameters to the fitter. The fitter
-    will then determine which parameters have to passed to individual learners.
+    will then determine which parameters have to be passed to individual
+    learners.
 
     """
     __fits__ = None
@@ -24,52 +25,33 @@ class Fitter(Learner):
     # Constants to indicate what kind of problem we're dealing with
     CLASSIFICATION, REGRESSION = range(2)
 
-    def __init__(self, *args, preprocessors=None, **kwargs):
+    def __init__(self, preprocessors=None, **kwargs):
         super().__init__(preprocessors=preprocessors)
-        self.args = args
         self.kwargs = kwargs
         # Make sure to pass preprocessor params to individual learners
         self.kwargs['preprocessors'] = preprocessors
-        self.problem_type = self.CLASSIFICATION
-        self.__regression_learner = self.__classification_learner = None
+        self.problem_type = None
+        self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
     def __call__(self, data):
         # Set the appropriate problem type from the data
         self.problem_type = self.CLASSIFICATION if \
             data.domain.has_discrete_class else self.REGRESSION
-        return self.learner(data)
+        return self.get_learner(self.problem_type)(data)
+
+    def get_learner(self, problem_type):
+        if problem_type not in self.__learners:
+            return None
+        if self.__learners[problem_type] is None:
+            learner = self.__fits__[problem_type](**self.__get_kwargs(
+                self.kwargs, problem_type))
+            learner.use_default_preprocessors = self.use_default_preprocessors
+            self.__learners[problem_type] = learner
+        return self.__learners[problem_type]
 
     def __get_kwargs(self, kwargs, problem_type):
-        if problem_type == self.CLASSIFICATION:
-            params = self._get_learner_kwargs(self.__fits__.classification)
-            kwarg_keys = params & set(kwargs.keys())
-            kwargs = {k: kwargs[k] for k in kwarg_keys}
-        elif problem_type == self.REGRESSION:
-            params = self._get_learner_kwargs(self.__fits__.regression)
-            kwarg_keys = params & set(kwargs.keys())
-            kwargs = {k: kwargs[k] for k in kwarg_keys}
-        return kwargs
-
-    @property
-    def classification_learner(self):
-        self.__check_dispatches(self.__fits__)
-        if self.__classification_learner is None:
-            self.__classification_learner = self.__fits__.classification(
-                *self.args,
-                **self.__get_kwargs(self.kwargs, self.CLASSIFICATION))
-        self.__classification_learner.use_default_preprocessors = \
-            self.use_default_preprocessors
-        return self.__classification_learner
-
-    @property
-    def regression_learner(self):
-        self.__check_dispatches(self.__fits__)
-        if self.__regression_learner is None:
-            self.__regression_learner = self.__fits__.regression(
-                *self.args, **self.__get_kwargs(self.kwargs, self.REGRESSION))
-        self.__regression_learner.use_default_preprocessors = \
-            self.use_default_preprocessors
-        return self.__regression_learner
+        params = self._get_learner_kwargs(self.__fits__[problem_type])
+        return {k: kwargs[k] for k in params & set(kwargs.keys())}
 
     @staticmethod
     def _get_learner_kwargs(learner):
@@ -77,18 +59,5 @@ class Fitter(Learner):
         # Get function params except `self`
         return set(learner.__init__.__code__.co_varnames[1:])
 
-    @staticmethod
-    def __check_dispatches(dispatches):
-        if not isinstance(dispatches, LearnerTypes):
-            raise AssertionError(
-                'The `__fits__` property must be an instance of '
-                '`Orange.base.LearnerTypes`.')
-
-    @property
-    def learner(self):
-        return self.classification_learner if \
-            self.problem_type == self.CLASSIFICATION else \
-            self.regression_learner
-
     def __getattr__(self, item):
-        return getattr(self.learner, item)
+        return getattr(self.get_learner(self.problem_type), item)

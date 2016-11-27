@@ -63,7 +63,7 @@ class Learner:
         model.name = self.name
         model.original_domain = origdomain
         return model
-    
+
     def preprocess(self, data):
         """
         Apply the `preprocessors` to the data.
@@ -83,7 +83,7 @@ class Learner:
             if self.use_default_preprocessors and type(self).preprocessors:
                 pps += list(type(self).preprocessors)
         else:
-            pps = type(self).preprocessors if type(self).preprocessors else ()
+            pps = type(self).preprocessors or ()
         return tuple(pps)
 
     def __repr__(self):

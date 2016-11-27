@@ -236,19 +236,18 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.add_learner_name_widget()
         self.add_main_layout()
         # Options specific to target variable type, if supported
-        if self.__handles_any_input_type():
+        if issubclass(self.LEARNER, Fitter):
             # Only add a classification section if the method is overridden
             if type(self).add_classification_layout is not \
                     OWBaseLearner.add_classification_layout:
-                self.classification_box = \
-                    gui.widgetBox(self.controlArea, 'Classification')
-                self.add_classification_layout(self.classification_box)
+                classification_box = gui.widgetBox(
+                    self.controlArea, 'Classification')
+                self.add_classification_layout(classification_box)
             # Only add a regression section if the method is overridden
             if type(self).add_regression_layout is not \
                     OWBaseLearner.add_regression_layout:
-                self.regression_box = \
-                    gui.widgetBox(self.controlArea, 'Regression')
-                self.add_regression_layout(self.regression_box)
+                regression_box = gui.widgetBox(self.controlArea, 'Regression')
+                self.add_regression_layout(regression_box)
         self.add_bottom_buttons()
 
     def add_main_layout(self):
@@ -289,6 +288,3 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         gui.separator(box, 15)
         self.apply_button = gui.auto_commit(box, self, 'auto_apply', '&Apply',
                                             box=False, commit=self.apply)
-
-    def __handles_any_input_type(self):
-        return issubclass(self.LEARNER, Fitter)
