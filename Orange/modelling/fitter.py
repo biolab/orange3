@@ -5,7 +5,18 @@ from Orange.base import Learner, Model
 LearnerTypes = namedtuple('LearnerTypes', ['classification', 'regression'])
 
 
-class Fitter(Learner):
+class FitterMeta(type):
+    def __new__(mcs, name, bases, kwargs):
+        # Check that a fitter implementation defines a valid `__fits__`
+        if kwargs.get('name', False) and \
+                not isinstance(kwargs.get('__fits__'), LearnerTypes):
+            raise AssertionError(
+                'The `__fits__` property must be an instance of '
+                '`Orange.base.LearnerTypes`.')
+        return super().__new__(mcs, name, bases, kwargs)
+
+
+class Fitter(Learner, metaclass=FitterMeta):
     """Handle multiple types of target variable with one learner.
 
     Subclasses of this class serve as a sort of dispatcher. When subclassing,
