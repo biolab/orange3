@@ -64,7 +64,7 @@ class Learner:
     def __init__(self, preprocessors=None):
         self.use_default_preprocessors = False
         if isinstance(preprocessors, Iterable):
-            self.preprocessors = preprocessors
+            self.preprocessors = tuple(preprocessors)
         elif preprocessors:
             self.preprocessors = (preprocessors,)
 

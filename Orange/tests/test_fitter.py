@@ -3,8 +3,7 @@ from unittest.mock import Mock
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
-from Orange.modelling import Fitter, LearnerTypes
-from Orange.preprocess import Discretize
+from Orange.modelling import Fitter
 from Orange.preprocess import Randomize
 from Orange.regression.base_regression import LearnerRegression
 
@@ -21,20 +20,6 @@ class DummyFitter(Fitter):
     name = 'dummy'
     __fits__ = {'classification': DummyClassificationLearner,
                 'regression': DummyRegressionLearner}
-
-
-class DummyClassificationLearnerPPs(LearnerClassification):
-    preprocessors = (Randomize(),)
-
-
-class DummyRegressionLearnerPPs(LearnerRegression):
-    preprocessors = (Randomize(),)
-
-
-class DummyFitterPPs(Fitter):
-    name = 'dummy'
-    __fits__ = {'classification': DummyClassificationLearnerPPs,
-                'regression': DummyRegressionLearnerPPs}
 
 
 class FitterTest(unittest.TestCase):
@@ -117,77 +102,6 @@ class FitterTest(unittest.TestCase):
         except AttributeError:
             self.fail('Fitter did not properly distribute params to learners')
 
-    def test_uses_default_preprocessors_unless_custom_pps_specified(self):
-        """Learners should use their default preprocessors unless custom
-        preprocessors were passed in to the constructor"""
-        fitter = DummyFitterPPs()
-        learner = fitter.get_learner(Fitter.CLASSIFICATION)
-        preprocessors = tuple(learner.active_preprocessors)
-        self.assertEqual(
-            type(fitter.get_learner(Fitter.CLASSIFICATION)).preprocessors,
-            preprocessors,
-            'Classification learner should use default preprocessors, unless '
-            'preprocessors were specified in init')
-
-        learner = fitter.get_learner(Fitter.REGRESSION)
-        preprocessors = tuple(learner.active_preprocessors)
-        self.assertEqual(
-            type(fitter.get_learner(Fitter.REGRESSION)).preprocessors,
-            preprocessors,
-            'Regression learner should use default preprocessors, unless '
-            'preprocessors were specified in init')
-
-    def test_overrides_custom_preprocessors(self):
-        """Passing preprocessors to the learner constructor should override the
-        default preprocessors defined on the learner"""
-        pp = Discretize()
-        fitter = DummyFitterPPs(preprocessors=(pp,))
-        learner = fitter.get_learner(Fitter.CLASSIFICATION)
-        preprocessors = tuple(learner.active_preprocessors)
-        self.assertEqual(
-            preprocessors, (pp,),
-            'Classification learner should override default preprocessors '
-            'when specified in constructor')
-
-        learner = fitter.get_learner(Fitter.REGRESSION)
-        preprocessors = tuple(learner.active_preprocessors)
-        self.assertEqual(
-            preprocessors, (pp,),
-            'Regression learner should override default preprocessors '
-            'when specified in constructor')
-
-    def test_use_default_preprocessors_property(self):
-        """We can specify that we want to use default preprocessors despite
-        passing our own ones in the constructor"""
-        fitter = DummyFitterPPs(preprocessors=(Discretize(),))
-        fitter.use_default_preprocessors = True
-
-        learner = fitter.get_learner(Fitter.CLASSIFICATION)
-        preprocessors = tuple(learner.active_preprocessors)
-        self.assertTrue(
-            learner.use_default_preprocessors,
-            'Use default preprocessors property was not passed down to actual '
-            'learner')
-        self.assertEqual(
-            len(preprocessors), 2,
-            'Learner did not properly insert custom preprocessor into '
-            'preprocessor list')
-        self.assertIsInstance(
-            preprocessors[0], Discretize,
-            'Custom preprocessor was inserted in incorrect order')
-        self.assertIsInstance(preprocessors[1], Randomize)
-
-    def test_preprocessors_can_be_passed_in_as_non_iterable(self):
-        """For convenience, we can pass a single preprocessor instance"""
-        pp = Discretize()
-        fitter = DummyFitterPPs(preprocessors=pp)
-        learner = fitter.get_learner(Fitter.CLASSIFICATION)
-        preprocessors = tuple(learner.active_preprocessors)
-        self.assertEqual(
-            preprocessors, (pp,),
-            'Preprocessors should be able to be passed in as single object '
-            'as well as an iterable object')
-
     def test_error_for_data_type_with_no_learner(self):
         """If we attempt to define a fitter which only handles one data type
         it makes more sense to simply use a Learner."""
@@ -196,3 +110,19 @@ class FitterTest(unittest.TestCase):
                 name = 'dummy'
                 __fits__ = {'classification': None,
                             'regression': DummyRegressionLearner}
+
+    def test_correctly_sets_preprocessors_on_learner(self):
+        """Fitters have to be able to pass the `use_default_preprocessors` and
+        preprocessors down to individual learners"""
+        pp = Randomize()
+        fitter = DummyFitter(preprocessors=pp)
+        fitter.use_default_preprocessors = True
+        learner = fitter.get_learner(Fitter.CLASSIFICATION)
+
+        self.assertEqual(
+            learner.use_default_preprocessors, True,
+            'Fitter did not properly pass the `use_default_preprocessors`'
+            'attribute to its learners')
+        self.assertEqual(
+            tuple(learner.active_preprocessors), (pp,),
+            'Fitter did not properly pass its preprocessors to its learners')
