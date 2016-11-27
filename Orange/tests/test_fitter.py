@@ -180,3 +180,23 @@ class FitterTest(unittest.TestCase):
             (pp,),
             'Preprocessors should be able to be passed in as single object '
             'as well as an iterable object')
+
+    def test_error_for_data_type_with_no_learner(self):
+        """If we attempt to use a fitter on data that the fitter does not
+        support, make sure to leave an informative error.
+
+        In practice this is pointless since the whole point of the fitter is to
+        handle multiple data types, but in case anybody does ever try to use it
+        like this.
+        """
+        class DummyFitter(Fitter):
+            name = 'dummy'
+            __fits__ = LearnerTypes(
+                classification=None, regression=DummyRegressionLearner)
+
+        fitter = DummyFitter()
+        # Should work, since we have a learner for regression
+        fitter(self.housing)
+
+        with self.assertRaises(AttributeError):
+            fitter(self.heart_disease)
