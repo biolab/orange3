@@ -45,6 +45,7 @@ class SimpleRandomForestLearner(Learner):
 
     def __init__(self, n_estimators=10, min_instances=2, max_depth=1024,
                  max_majority=1.0, skip_prob='sqrt', seed=42):
+        super().__init__()
         self.n_estimators = n_estimators
         self.skip_prob = skip_prob
         self.max_depth = max_depth
