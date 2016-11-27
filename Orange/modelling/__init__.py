@@ -1,3 +1,3 @@
-from .fitter import *
+from .base import *
 
 from .knn import *

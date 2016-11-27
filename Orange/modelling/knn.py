@@ -1,5 +1,5 @@
 from Orange.classification import KNNLearner as KNNClassification
-from Orange.modelling.fitter import Fitter, LearnerTypes
+from Orange.modelling import Fitter, LearnerTypes
 from Orange.regression import KNNRegressionLearner
 
 
