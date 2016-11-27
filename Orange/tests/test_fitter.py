@@ -121,14 +121,19 @@ class FitterTest(unittest.TestCase):
         """Learners should use their default preprocessors unless custom
         preprocessors were passed in to the constructor"""
         fitter = DummyFitterPPs()
+        learner = fitter.get_learner(Fitter.CLASSIFICATION)
+        preprocessors = tuple(learner.active_preprocessors)
         self.assertEqual(
             type(fitter.get_learner(Fitter.CLASSIFICATION)).preprocessors,
-            fitter.get_learner(Fitter.CLASSIFICATION).active_preprocessors,
+            preprocessors,
             'Classification learner should use default preprocessors, unless '
             'preprocessors were specified in init')
+
+        learner = fitter.get_learner(Fitter.REGRESSION)
+        preprocessors = tuple(learner.active_preprocessors)
         self.assertEqual(
             type(fitter.get_learner(Fitter.REGRESSION)).preprocessors,
-            fitter.get_learner(Fitter.REGRESSION).active_preprocessors,
+            preprocessors,
             'Regression learner should use default preprocessors, unless '
             'preprocessors were specified in init')
 
@@ -137,14 +142,17 @@ class FitterTest(unittest.TestCase):
         default preprocessors defined on the learner"""
         pp = Discretize()
         fitter = DummyFitterPPs(preprocessors=(pp,))
+        learner = fitter.get_learner(Fitter.CLASSIFICATION)
+        preprocessors = tuple(learner.active_preprocessors)
         self.assertEqual(
-            fitter.get_learner(Fitter.CLASSIFICATION).active_preprocessors,
-            (pp,),
+            preprocessors, (pp,),
             'Classification learner should override default preprocessors '
             'when specified in constructor')
+
+        learner = fitter.get_learner(Fitter.REGRESSION)
+        preprocessors = tuple(learner.active_preprocessors)
         self.assertEqual(
-            fitter.get_learner(Fitter.REGRESSION).active_preprocessors,
-            (pp,),
+            preprocessors, (pp,),
             'Regression learner should override default preprocessors '
             'when specified in constructor')
 
@@ -155,26 +163,28 @@ class FitterTest(unittest.TestCase):
         fitter.use_default_preprocessors = True
 
         learner = fitter.get_learner(Fitter.CLASSIFICATION)
+        preprocessors = tuple(learner.active_preprocessors)
         self.assertTrue(
             learner.use_default_preprocessors,
             'Use default preprocessors property was not passed down to actual '
             'learner')
         self.assertEqual(
-            len(learner.active_preprocessors), 2,
+            len(preprocessors), 2,
             'Learner did not properly insert custom preprocessor into '
             'preprocessor list')
         self.assertIsInstance(
-            learner.active_preprocessors[0], Discretize,
+            preprocessors[0], Discretize,
             'Custom preprocessor was inserted in incorrect order')
-        self.assertIsInstance(learner.active_preprocessors[1], Randomize)
+        self.assertIsInstance(preprocessors[1], Randomize)
 
     def test_preprocessors_can_be_passed_in_as_non_iterable(self):
         """For convenience, we can pass a single preprocessor instance"""
         pp = Discretize()
         fitter = DummyFitterPPs(preprocessors=pp)
+        learner = fitter.get_learner(Fitter.CLASSIFICATION)
+        preprocessors = tuple(learner.active_preprocessors)
         self.assertEqual(
-            fitter.get_learner(Fitter.CLASSIFICATION).active_preprocessors,
-            (pp,),
+            preprocessors, (pp,),
             'Preprocessors should be able to be passed in as single object '
             'as well as an iterable object')
 

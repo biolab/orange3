@@ -115,12 +115,11 @@ class Learner:
     def active_preprocessors(self):
         # Check if preprocessors were overriden
         if self.preprocessors is not type(self).preprocessors:
-            pps = self.preprocessors
+            yield from self.preprocessors
             if self.use_default_preprocessors:
-                pps += tuple(type(self).preprocessors)
+                yield from tuple(type(self).preprocessors)
         else:
-            pps = type(self).preprocessors or ()
-        return pps
+            yield from type(self).preprocessors or ()
 
     def __repr__(self):
         return self.name
