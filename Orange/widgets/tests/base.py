@@ -394,7 +394,7 @@ class WidgetLearnerTestMixin:
             'Preprocessor not added to widget preprocessors')
         self.widget.apply_button.button.click()
         self.assertEqual(
-            Randomize, self.widget.learner.preprocessors,
+            (Randomize,), self.widget.learner.preprocessors,
             'Preprocessors were not passed to the learner')
 
     def test_input_preprocessors(self):
@@ -403,7 +403,7 @@ class WidgetLearnerTestMixin:
         self.send_signal("Preprocessor", pp_list)
         self.widget.apply_button.button.click()
         self.assertEqual(
-            pp_list, self.widget.learner.preprocessors,
+            (pp_list,), self.widget.learner.preprocessors,
             '`PreprocessorList` was not added to preprocessors')
 
     def test_input_preprocessor_disconnect(self):

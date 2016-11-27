@@ -30,20 +30,20 @@ class Learner:
 
     Parameters
     ----------
-    preprocessors : Preprocessor or Iterable[Preprocessor], optional
+    preprocessors : Preprocessor or tuple[Preprocessor], optional
         User defined preprocessors. If the user specifies their own
         preprocessors, the default ones will not be used, unless the
         `use_default_preprocessors` flag is set.
 
     Attributes
     ----------
-    preprocessors : Preprocessor or Iterable[Preprocessor] (default None)
+    preprocessors : tuple[Preprocessor] (default None)
         The used defined preprocessors that will be used on any data.
     use_default_preprocessors : bool (default False)
         This flag indicates whether to use the default preprocessors that are
         defined on the Learner class. Since preprocessors can be applied in a
         number of ways
-    active_preprocessors : Iterable[Preprocessor]
+    active_preprocessors : tuple[Preprocessor]
         The processors that will be used when data is passed to the learner.
         This depends on whether the user has passed in their own preprocessors
         and whether the `use_default_preprocessors` flag is set.
@@ -58,12 +58,15 @@ class Learner:
     name = 'learner'
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
-    preprocessors = None
+    preprocessors = ()
     learner_adequacy_err_msg = ''
 
     def __init__(self, preprocessors=None):
         self.use_default_preprocessors = False
-        self.preprocessors = preprocessors
+        if isinstance(preprocessors, Iterable):
+            self.preprocessors = preprocessors
+        elif preprocessors:
+            self.preprocessors = (preprocessors,)
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
@@ -110,17 +113,14 @@ class Learner:
 
     @property
     def active_preprocessors(self):
-        if self.preprocessors is not None:
-            pps = []
-            if isinstance(self.preprocessors, Iterable):
-                pps += list(self.preprocessors)
-            else:
-                pps += [self.preprocessors]
-            if self.use_default_preprocessors and type(self).preprocessors:
-                pps += list(type(self).preprocessors)
+        # Check if preprocessors were overriden
+        if self.preprocessors is not type(self).preprocessors:
+            pps = self.preprocessors
+            if self.use_default_preprocessors:
+                pps += tuple(type(self).preprocessors)
         else:
             pps = type(self).preprocessors or ()
-        return tuple(pps)
+        return pps
 
     def __repr__(self):
         return self.name
