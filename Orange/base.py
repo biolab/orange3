@@ -14,6 +14,45 @@ __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
 class Learner:
+    """The base learner class.
+
+    Preprocessors can behave in a number of different ways, all of which are
+    described here.
+    If the user does not pass a preprocessor argument into the Learner
+    constructor, the default learner preprocessors are used. We assume the user
+    would simply like to get things done without having to worry about
+    preprocessors.
+    If the user chooses to pass in their own preprocessors, we assume they know
+    what they are doing. In this case, only the user preprocessors are used and
+    the default preprocessors are ignored.
+    In case the user would like to use the default preprocessors as well as
+    their own ones, the `use_default_preprocessors` flag should be set.
+
+    Parameters
+    ----------
+    preprocessors : Preprocessor or Iterable[Preprocessor], optional
+        User defined preprocessors. If the user specifies their own
+        preprocessors, the default ones will not be used, unless the
+        `use_default_preprocessors` flag is set.
+
+    Attributes
+    ----------
+    preprocessors : Preprocessor or Iterable[Preprocessor] (default None)
+        The used defined preprocessors that will be used on any data.
+    use_default_preprocessors : bool (default False)
+        This flag indicates whether to use the default preprocessors that are
+        defined on the Learner class. Since preprocessors can be applied in a
+        number of ways
+    active_preprocessors : Iterable[Preprocessor]
+        The processors that will be used when data is passed to the learner.
+        This depends on whether the user has passed in their own preprocessors
+        and whether the `use_default_preprocessors` flag is set.
+
+        This property is needed mainly because of the `Fitter` class, which can
+        not know in advance, which preprocessors it will need to use. Therefore
+        this resolves the active preprocessors using a lazy approach.
+
+    """
     supports_multiclass = False
     supports_weights = False
     name = 'learner'
@@ -28,8 +67,7 @@ class Learner:
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
-            "Descendants of Learner must overload method fit or "
-            "fit_storage")
+            "Descendants of Learner must overload method fit or fit_storage")
 
     def fit_storage(self, data):
         """Default implementation of fit_storage defaults to calling fit.
@@ -65,9 +103,7 @@ class Learner:
         return model
 
     def preprocess(self, data):
-        """
-        Apply the `preprocessors` to the data.
-        """
+        """Apply the `preprocessors` to the data"""
         for pp in self.active_preprocessors:
             data = pp(data)
         return data

@@ -6,6 +6,8 @@ LearnerTypes = namedtuple('LearnerTypes', ['classification', 'regression'])
 
 
 class FitterMeta(type):
+    """Ensure that each subclass of the `Fitter` class overrides the `__fits__`
+    attribute with a valid value."""
     def __new__(mcs, name, bases, kwargs):
         # Check that a fitter implementation defines a valid `__fits__`
         if kwargs.get('name', False) and \
