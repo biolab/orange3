@@ -1,8 +1,4 @@
-from collections import namedtuple
-
 from Orange.base import Learner, Model
-
-LearnerTypes = namedtuple('LearnerTypes', ['classification', 'regression'])
 
 
 class FitterMeta(type):
