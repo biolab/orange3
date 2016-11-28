@@ -125,6 +125,7 @@ class OWBoxPlot(widget.OWWidget):
     CompareNone, CompareMedians, CompareMeans = 0, 1, 2
 
     settingsHandler = DomainContextHandler()
+    conditions = ContextSetting([])
 
     attribute = ContextSetting(None)
     order_by_importance = Setting(False)
@@ -342,6 +343,13 @@ class OWBoxPlot(widget.OWWidget):
         self.apply_sorting()
         self.attr_changed()
 
+    def select_box_items(self):
+        temp_cond = self.conditions.copy()
+        for box in self.box_scene.items():
+            if isinstance(box, FilterGraphicsRectItem):
+                box.setSelected(box.filter.conditions in
+                                [c.conditions for c in temp_cond])
+
     def attr_changed(self):
         self.compute_box_data()
         self.update_display_box()
@@ -393,12 +401,15 @@ class OWBoxPlot(widget.OWWidget):
             self.display_box.hide()
 
     def clear_scene(self):
+        self.closeContext()
+        self.box_scene.clearSelection()
         self.box_scene.clear()
         self.attr_labels = []
         self.labels = []
         self.boxes = []
         self.mean_labels = []
         self.posthoc_lines = []
+        self.openContext(self.dataset)
 
     def layout_changed(self):
         attr = self.attribute
@@ -474,6 +485,7 @@ class OWBoxPlot(widget.OWWidget):
 
         self.compute_tests()
         self.show_posthoc()
+        self.select_box_items()
 
     def display_changed_disc(self):
         self.clear_scene()
@@ -529,6 +541,7 @@ class OWBoxPlot(widget.OWWidget):
                                     -30 - len(self.boxes) * 40,
                                     self.scene_width, len(self.boxes * 40) + 90)
         self.infot1.setText("")
+        self.select_box_items()
 
     # noinspection PyPep8Naming
     def compute_tests(self):
@@ -810,7 +823,10 @@ class OWBoxPlot(widget.OWWidget):
         ss = np.sum(dist)
         box = QGraphicsItemGroup()
         if ss < 1e-6:
-            FilterGraphicsRectItem(None, 0, -10, 1, 10, box)
+            cond = [FilterDiscrete(attr, None)]
+            if group_val_index is not None:
+                cond.append(FilterDiscrete(self.group_var, [group_val_index]))
+            FilterGraphicsRectItem(cond, 0, -10, 1, 10, box)
         cum = 0
         for i, v in enumerate(dist):
             if v < 1e-6:
@@ -836,11 +852,11 @@ class OWBoxPlot(widget.OWWidget):
         return box
 
     def commit(self):
-        conditions = [item.filter for item in self.box_scene.selectedItems()
-                      if item.filter]
+        self.conditions = [item.filter for item in
+                           self.box_scene.selectedItems() if item.filter]
         selected, selection = None, []
-        if conditions:
-            selected = Values(conditions, conjunction=False)(self.dataset)
+        if self.conditions:
+            selected = Values(self.conditions, conjunction=False)(self.dataset)
             selection = [i for i, inst in enumerate(self.dataset)
                          if inst in selected]
         self.send("Selected Data", selected)

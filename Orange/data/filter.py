@@ -286,6 +286,10 @@ class FilterDiscrete(ValueFilter):
         else:
             return value in self.values
 
+    def __eq__(self, other):
+        return isinstance(other, FilterDiscrete) and \
+               self.column == other.column and self.values == other.values
+
 
 class FilterContinuous(ValueFilter):
     """
@@ -357,6 +361,11 @@ class FilterContinuous(ValueFilter):
         if self.oper == self.IsDefined:
             return True
         raise ValueError("invalid operator")
+
+    def __eq__(self, other):
+        return isinstance(other, FilterContinuous) and \
+               self.column == other.column and self.oper == other.oper and \
+               self.oper == other.oper and self.oper == other.oper
 
     def __str__(self):
         if isinstance(self.column, str):
