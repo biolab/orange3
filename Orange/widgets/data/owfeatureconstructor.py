@@ -14,10 +14,12 @@ import math
 import random
 import logging
 import ast
+import types
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
+from typing import List, Dict, Any  # pylint: disable=unused-import
 
 import numpy as np
 
@@ -632,9 +634,6 @@ class OWFeatureConstructor(OWWidget):
             report.plural("Constructed feature{s}", len(items)), items)
 
 
-
-
-
 def freevars(exp, env):
     """
     Return names of all free variables in a parsed (expression) AST.
@@ -838,7 +837,7 @@ def bind_variable(descriptor, env):
         (descriptor, (instance -> value) | (table -> value list))
     """
     if not descriptor.expression.strip():
-        return (descriptor, lambda _: float("nan"))
+        return descriptor, FeatureFunc("nan", [], {"nan": float("nan")})
 
     exp_ast = ast.parse(descriptor.expression, mode="eval")
     freev = unique(freevars(exp_ast, []))
@@ -846,38 +845,68 @@ def bind_variable(descriptor, env):
     source_vars = [(name, variables[name]) for name in freev
                    if name in variables]
 
-    values = []
+    values = {}
     if isinstance(descriptor, DiscreteDescriptor):
         values = [sanitized_name(v) for v in descriptor.values]
+        values = {name: i for i, name in enumerate(values)}
     return descriptor, FeatureFunc(descriptor.expression, source_vars, values)
 
 
-def make_lambda(expression, args, values):
-    def make_arg(name):
-        if sys.version_info >= (3, 0):
-            return ast.arg(arg=name, annotation=None)
-        else:
-            return ast.Name(id=name, ctx=ast.Param(), lineno=1, col_offset=0)
+def make_lambda(expression, args, env={}):
+    # type: (ast.Expression, List[str], Dict[str, Any]) -> types.FunctionType
+    """
+    Create an lambda function from a expression AST.
 
+    Parameters
+    ----------
+    expression : ast.Expression
+        The body of the lambda.
+    args : List[str]
+        A list of positional argument names
+    env : Dict[str, Any]
+        Extra environment to capture in the lambda's closure.
+
+    Returns
+    -------
+    func : types.FunctionType
+    """
+    # lambda *{args}* : EXPRESSION
     lambda_ = ast.Lambda(
         args=ast.arguments(
-            args=[make_arg(arg) for arg in args + values],
+            args=[ast.arg(arg=arg, annotation=None) for arg in args],
             varargs=None,
             varargannotation=None,
             kwonlyargs=[],
             kwarg=None,
             kwargannotation=None,
-            defaults=[ast.Num(i) for i in range(len(values))],
+            defaults=[],
             kw_defaults=[]),
         body=expression.body,
     )
     lambda_ = ast.copy_location(lambda_, expression.body)
-    exp = ast.Expression(body=lambda_, lineno=1, col_offset=0)
-    ast.dump(exp)
+    # lambda **{env}** : lambda *{args}*: EXPRESSION
+    outer = ast.Lambda(
+        args=ast.arguments(
+            args=[ast.arg(arg=name, annotation=None) for name in env],
+            varargs=None,
+            varargannotation=None,
+            kwonlyargs=[],
+            kwarg=None,
+            kwargannotation=None,
+            defaults=[],
+            kw_defaults=[],
+        ),
+        body=lambda_,
+    )
+    exp = ast.Expression(body=outer, lineno=1, col_offset=0)
     ast.fix_missing_locations(exp)
     GLOBALS = __GLOBALS.copy()
     GLOBALS["__builtins__"] = {}
-    return eval(compile(exp, "<lambda>", "eval"), GLOBALS)
+    fouter = eval(compile(exp, "<lambda>", "eval"), GLOBALS)
+    assert isinstance(fouter, types.FunctionType)
+    finner = fouter(**env)
+    assert isinstance(finner, types.FunctionType)
+    return finner
 
 
 __ALLOWED = [
@@ -934,12 +963,26 @@ __GLOBALS.update({
 
 
 class FeatureFunc:
-    def __init__(self, expression, args, values):
+    """
+    Parameters
+    ----------
+    expression : str
+        An expression string
+    args : List[Tuple[str, Orange.data.Variable]]
+        A list of (`name`, `variable`) tuples where `name` is the name of
+        a variable as used in `expression`, and `variable` is the variable
+        instance used to extract the corresponding column/value from a
+        Table/Instance.
+    extra_env : Dict[str, Any]
+        Extra environment specifying constant values to be made available
+        in expression. It must not shadow names in `args`
+    """
+    def __init__(self, expression, args, extra_env={}):
         self.expression = expression
         self.args = args
-        self.values = values
+        self.extra_env = dict(extra_env)
         self.func = make_lambda(ast.parse(expression, mode="eval"),
-                                [name for name, _ in args], values)
+                                [name for name, _ in args], self.extra_env)
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
@@ -949,7 +992,7 @@ class FeatureFunc:
             return self.func(*args)
 
     def __reduce__(self):
-        return type(self), (self.expression, self.args, self.values)
+        return type(self), (self.expression, self.args, self.extra_env)
 
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())
@@ -965,7 +1008,7 @@ def unique(seq):
     return unique_el
 
 
-def main(argv=None):
+def main(argv=None):  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     if argv is None:
         argv = sys.argv
@@ -987,6 +1030,7 @@ def main(argv=None):
     w.handleNewSignals()
     w.saveSettings()
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
