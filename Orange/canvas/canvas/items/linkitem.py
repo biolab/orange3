@@ -5,6 +5,7 @@ Link Item
 
 """
 import math
+from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
@@ -318,7 +319,8 @@ class LinkItem(QGraphicsObject):
         self.sinkIndicator.hide()
 
         self.linkTextItem = QGraphicsTextItem(self)
-
+        self.linkTextItem.setAcceptedMouseButtons(Qt.NoButton)
+        self.linkTextItem.setAcceptHoverEvents(False)
         self.__sourceName = ""
         self.__sinkName = ""
 
@@ -522,20 +524,43 @@ class LinkItem(QGraphicsObject):
 
         if self.__sourceName or self.__sinkName:
             if self.__sourceName != self.__sinkName:
-                text = "{0} \u2192 {1}".format(self.__sourceName,
-                                                self.__sinkName)
+                text = ("<nobr>{0}</nobr> \u2192 <nobr>{1}</nobr>"
+                        .format(escape(self.__sourceName),
+                                escape(self.__sinkName)))
             else:
                 # If the names are the same show only one.
                 # Is this right? If the sink has two input channels of the
                 # same type having the name on the link help elucidate
                 # the scheme.
-                text = self.__sourceName
+                text = escape(self.__sourceName)
         else:
             text = ""
 
-        self.linkTextItem.setPlainText(text)
-
+        self.linkTextItem.setHtml('<div align="center">{0}</div>'
+                                  .format(text))
         path = self.curveItem.curvePath()
+
+        # Constrain the text width if it is too long to fit on a single line
+        # between the two ends
+        if not path.isEmpty():
+            # Use the distance between the start/end points as a measure of
+            # available space
+            diff = path.pointAtPercent(0.0) - path.pointAtPercent(1.0)
+            available_width = math.sqrt(diff.x() ** 2 + diff.y() ** 2)
+            # Get the ideal text width if it was unconstrained
+            doc = self.linkTextItem.document().clone(self)
+            doc.setTextWidth(-1)
+            idealwidth = doc.idealWidth()
+            doc.deleteLater()
+
+            # Constrain the text width but not below a certain min width
+            minwidth = 100
+            textwidth = max(minwidth, min(available_width, idealwidth))
+            self.linkTextItem.setTextWidth(textwidth)
+        else:
+            # Reset the fixed width
+            self.linkTextItem.setTextWidth(-1)
+
         if not path.isEmpty():
             center = path.pointAtPercent(0.5)
             angle = path.angleAtPercent(0.5)
