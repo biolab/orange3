@@ -33,7 +33,7 @@ class OWTranspose(OWWidget):
         # GUI
         box = gui.vBox(self.controlArea, "Feature names")
         self.feature_radio = gui.radioButtonsInBox(
-            box, self, "feature_type", callback=self.apply,
+            box, self, "feature_type", callback=lambda: self.apply(),
             btnLabels=["Generic", "From meta attribute:"])
 
         self.feature_model = DomainModel(
