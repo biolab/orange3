@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.4, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+	 id="Layer_1" sodipodi:docname="Transpose.svg" inkscape:version="0.91 r13725" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:svg="http://www.w3.org/2000/svg"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="48px" height="48px"
+	 viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
+<sodipodi:namedview  objecttolerance="10" inkscape:cy="24.267132" bordercolor="#666666" id="namedview33" guidetolerance="10" inkscape:cx="27.991538" borderopacity="1" gridtolerance="10" showgrid="false" inkscape:zoom="9.8333333" pagecolor="#ffffff" inkscape:current-layer="Layer_1" inkscape:window-height="824" inkscape:pageopacity="0" inkscape:pageshadow="2" inkscape:window-x="63" inkscape:window-y="0" inkscape:window-width="1273" inkscape:window-maximized="0">
+	</sodipodi:namedview>
+<g>
+	<path fill="#333333" d="M2.777,27.037l33.26,13.777l9.185-22.173L11.962,4.865L2.777,27.037z M25.979,12.834L25.979,12.834
+		l0.924,0.383l0,0l7.392,3.062l0,0l0.924,0.382l0,0l7.391,3.062l0,0l0.766-1.848l-0.383,0.924l-3.827,9.24l-0.382,0.924
+		l-3.827,9.238l0,0l-24.021-9.949l0,0l3.827-9.24l0.383-0.924l3.827-9.238l0.382-0.924l-0.765,1.848l0,0L25.979,12.834z"/>
+	<path fill="#666666" d="M27.668,11.37 M25.979,12.834l-3.444,8.315l-7.391-3.062l-0.383,0.924l7.392,3.062l-3.827,9.239
+		l-7.391-3.061l0,0l24.021,9.949l0,0l-7.391-3.062l3.826-9.238l7.392,3.062l0.382-0.924l-7.391-3.062l3.444-8.315l7.391,3.062
+		 M26.744,10.987 M30.467,25.518l-3.826,9.238l-7.392-3.061l3.827-9.239L30.467,25.518z M34.294,16.28l-3.444,8.314l-7.391-3.061
+		l3.444-8.315L34.294,16.28z"/>
+	
+		<rect x="28.174" y="28.05" transform="matrix(-0.3826 0.9239 -0.9239 -0.3826 75.4785 13.6662)" fill="#FFFFFF" width="9.999" height="8.001"/>
+	
+		<rect x="19.858" y="24.607" transform="matrix(-0.3827 0.9239 -0.9239 -0.3827 60.7999 16.589)" fill="#FFFFFF" width="10" height="7.999"/>
+	
+		<rect x="11.543" y="21.163" transform="matrix(-0.3826 0.9239 -0.9239 -0.3826 46.1212 19.5068)" fill="#FFFFFF" width="10.001" height="8.001"/>
+	
+		<rect x="32.691" y="18.35" transform="matrix(-0.3827 0.9239 -0.9239 -0.3827 72.0723 -3.4565)" fill="#FFFFFF" width="9" height="8"/>
+	
+		<rect x="24.376" y="14.906" transform="matrix(-0.3826 0.9239 -0.9239 -0.3826 57.3927 -0.5383)" fill="#FFFFFF" width="9" height="8.001"/>
+	
+		<rect x="16.061" y="11.462" transform="matrix(-0.3827 0.9239 -0.9239 -0.3827 42.7144 2.3832)" fill="#FFFFFF" width="9" height="7.999"/>
+	<rect x="38.913" y="14.193" fill="#FFFFFF" width="0" height="8"/>
+	<rect x="30.598" y="10.748" fill="#FFFFFF" width="0" height="8.001"/>
+	<rect x="22.283" y="7.305" fill="#FFFFFF" width="0" height="7.999"/>
+	<line fill="#FFFFFF" x1="26.744" y1="10.987" x2="19.353" y2="7.926"/>
+</g>
+<g>
+	<g>
+		<path d="M40.76,13.709l-2.772,1.147c-1.894-4.571-6.312-7.713-11.254-8l0.173-2.994C32.99,4.216,38.428,8.081,40.76,13.709z"/>
+		<g>
+			<polygon points="28.74,9.868 20.444,6.442 27.559,0.971 			"/>
+		</g>
+	</g>
+	<g>
+		<path d="M22.359,42.34c-6.084-0.354-11.522-4.219-13.853-9.846l2.771-1.148c1.894,4.572,6.312,7.711,11.256,7.998L22.359,42.34z"
+			/>
+		<g>
+			<polygon points="20.525,36.332 28.82,39.76 21.706,45.23 			"/>
+		</g>
+	</g>
+</g>
+</svg>
