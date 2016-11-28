@@ -42,6 +42,7 @@ class LeafletMap(WebviewWidget):
         self.lon_attr = None
         self.data = None
         self.model = None
+        self._domain = None
 
         self._jittering = None
         self._color_attr = None
@@ -72,9 +73,19 @@ class LeafletMap(WebviewWidget):
             self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
             return
 
-        self.lat_attr = data.domain[lat_attr]
-        self.lon_attr = data.domain[lon_attr]
-        self.fit_to_bounds(False)
+        lat_attr = data.domain[lat_attr]
+        lon_attr = data.domain[lon_attr]
+
+        fit_bounds = (self._domain is not data.domain or
+                      self.lat_attr is not lat_attr or
+                      self.lon_attr is not lon_attr)
+        self.lat_attr = lat_attr
+        self.lon_attr = lon_attr
+        self._domain = data.domain
+        if fit_bounds:
+            self.fit_to_bounds(True)
+        else:
+            self.redraw_markers_overlay_image(new_image=True)
 
     @pyqtSlot()
     def fit_to_bounds(self, fly=True):
