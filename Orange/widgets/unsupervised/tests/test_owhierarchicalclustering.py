@@ -56,3 +56,50 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
     def test_all_zero_inputs(self):
         d = Orange.misc.DistMatrix(numpy.zeros((10, 10)))
         self.widget.set_distances(d)
+
+    def test_annotation_settings_retrieval(self):
+        """Check whether widget retrieves correct settings for annotation"""
+        widget = self.widget
+
+        dist_names = Orange.misc.DistMatrix(
+            numpy.zeros((4, 4)), self.data, axis=0)
+        dist_no_names = Orange.misc.DistMatrix(numpy.zeros((10, 10)), axis=1)
+
+        self.send_signal("Distances", self.distances)
+        # Check that default is set (class variable)
+        self.assertEqual(widget.annotation, self.data.domain.class_var)
+
+        var2 = self.data.domain[2]
+        widget.annotation = var2
+        # Iris now has var2 as annotation
+
+        self.send_signal("Distances", dist_no_names)
+        self.assertEqual(widget.annotation, "Enumeration")  # Check default
+        widget.annotation = "None"
+        # Pure matrix with axis=1 now has None as annotation
+
+        self.send_signal("Distances", self.distances)
+        self.assertIs(widget.annotation, var2)
+        self.send_signal("Distances", dist_no_names)
+        self.assertEqual(widget.annotation, "None")
+
+        self.send_signal("Distances", dist_names)
+        self.assertEqual(widget.annotation, "Name")  # Check default
+        widget.annotation = "Enumeration"
+        # Pure matrix with axis=1 has Enumerate as annotation
+
+        self.send_signal("Distances", self.distances)
+        self.assertIs(widget.annotation, var2)
+        self.send_signal("Distances", dist_no_names)
+        self.assertEqual(widget.annotation, "None")
+        self.send_signal("Distances", dist_names)
+        self.assertEqual(widget.annotation, "Enumeration")
+        self.send_signal("Distances", dist_no_names)
+        self.assertEqual(widget.annotation, "None")
+
+    def test_domain_loses_class(self):
+        widget = self.widget
+        self.send_signal("Distances", self.distances)
+        data = self.data[:, :4]
+        distances = Euclidean(data)
+        self.send_signal("Distances", distances)
