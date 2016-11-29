@@ -106,6 +106,15 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                           'rest ECG', 'cholesterol',
                           'fasting blood sugar > 120', 'diameter narrowing'])
 
+    def test_saved_selection(self):
+        self.send_signal("Data", self.data)
+        selected_indices = self._select_data()
+        self.send_signal("Data", self.zoo)
+        self.assertIsNone(self.get_output("Selected Data"))
+        self.send_signal("Data", self.data)
+        np.testing.assert_array_equal(self.get_output("Selected Data").X,
+                                      self.data.X[selected_indices])
+
     def _select_data(self):
         items = [item for item in self.widget.box_scene.items()
                  if isinstance(item, FilterGraphicsRectItem)]
