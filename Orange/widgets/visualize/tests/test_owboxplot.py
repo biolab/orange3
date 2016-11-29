@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from Orange.data import Table, ContinuousVariable
+from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
@@ -122,3 +122,11 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         return [100, 103, 104, 108, 110, 111, 112, 115, 116,
                 120, 123, 124, 126, 128, 132, 133, 136, 137,
                 139, 140, 141, 143, 144, 145, 146, 147, 148]
+
+    def test_continuous_metas(self):
+        domain = self.iris.domain
+        metas = domain.attributes[:-1] + (StringVariable("str"),)
+        domain = Domain([], domain.class_var, metas)
+        data = Table.from_table(domain, self.iris)
+        self.send_signal("Data", data)
+        self.widget.controls.order_by_importance.setChecked(True)

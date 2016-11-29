@@ -289,7 +289,7 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col = data.get_column_view(attr)[0]
+                col = data.get_column_view(attr)[0].astype(float)
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group)]
@@ -320,9 +320,9 @@ class OWBoxPlot(widget.OWWidget):
         group_var = self.group_var
         if self.order_by_importance and group_var is not None:
             n_groups = len(group_var.values)
-            group_col = data.get_column_view(group_var)[0] \
-                if domain.has_continuous_attributes(include_class=True) \
-                else None
+            group_col = data.get_column_view(group_var)[0] if \
+                domain.has_continuous_attributes(
+                    include_class=True, include_metas=True) else None
             self.attrs.sort(key=compute_score)
         else:
             self.attrs[:] = chain(
