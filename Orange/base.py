@@ -365,7 +365,7 @@ class TreeModel(Tree, Model):
     pass
 
 
-class RandomForest:
+class RandomForestModel(Model):
     """Interface for random forest models
     """
 

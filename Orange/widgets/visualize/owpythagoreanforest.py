@@ -2,17 +2,14 @@
 from math import log, sqrt
 
 import numpy as np
-
-from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
-from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QPainter, QColor
+from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
 
-from Orange.base import RandomForest, TreeModel
+from Orange.base import RandomForestModel, TreeModel
 from Orange.classification.random_forest import RandomForestClassifier
-from Orange.classification.tree import SklTreeClassifier
 from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressor
-from Orange.regression.tree import SklTreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
@@ -33,7 +30,7 @@ class OWPythagoreanForest(OWWidget):
 
     priority = 1001
 
-    inputs = [('Random forest', RandomForest, 'set_rf')]
+    inputs = [('Random forest', RandomForestModel, 'set_rf')]
     outputs = [('Tree', TreeModel)]
 
     # Enable the save as feature
