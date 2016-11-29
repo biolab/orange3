@@ -1,25 +1,14 @@
-from Orange.regression.random_forest import RandomForestRegressionLearner
-from Orange.widgets.classify import owrandomforest
-
-from Orange.widgets import settings
-
-
-class OWRandomForestRegression(owrandomforest.OWRandomForest):
-    name = "Random Forest Regression"
-    description = "Predict using an ensemble of regression trees."
-    icon = "icons/RandomForest.svg"
-    priority = 40
-
-    LEARNER = RandomForestRegressionLearner
-
+from Orange.data import Table
+from Orange.widgets.model.owrandomforest import OWRandomForest
 
 if __name__ == "__main__":
+    import sys
     from AnyQt.QtWidgets import QApplication
-    from Orange.data import Table
 
-    app = QApplication([])
-
-    w = OWRandomForestRegression()
-    w.set_data(Table("housing"))
-    w.show()
-    app.exec_()
+    a = QApplication(sys.argv)
+    ow = OWRandomForest()
+    d = Table('housing')
+    ow.set_data(d)
+    ow.show()
+    a.exec_()
+    ow.saveSettings()
