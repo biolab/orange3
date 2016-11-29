@@ -1,4 +1,4 @@
-"""General tree learner base widget, and classification tree widget"""
+"""Tree learner widget"""
 
 from PyQt4.QtCore import Qt
 from collections import OrderedDict
@@ -11,6 +11,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
 class OWTreeLearner(OWBaseLearner):
+    """Tree algorithm with forward pruning."""
     name = "Tree"
     icon = "icons/Tree.svg"
     priority = 30
