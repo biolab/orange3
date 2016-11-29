@@ -274,6 +274,7 @@ class OWPythagoreanForest(OWWidget):
         selected_item = self.scene.selectedItems()[0]
         self.selected_tree_index = self.grid_items.index(selected_item)
         obj = self.model.trees[self.selected_tree_index]
+        obj.instances = self.dataset
         obj.meta_target_class_index = self.target_class_index
         obj.meta_size_calc_idx = self.size_calc_idx
         obj.meta_size_log_scale = self.size_log_scale
