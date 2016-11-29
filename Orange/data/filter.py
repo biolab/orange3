@@ -365,7 +365,7 @@ class FilterContinuous(ValueFilter):
     def __eq__(self, other):
         return isinstance(other, FilterContinuous) and \
                self.column == other.column and self.oper == other.oper and \
-               self.oper == other.oper and self.oper == other.oper
+               self.ref == other.ref and self.max == other.max
 
     def __str__(self):
         if isinstance(self.column, str):

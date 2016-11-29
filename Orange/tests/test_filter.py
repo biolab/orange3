@@ -249,14 +249,22 @@ class TestFilterContinuous(unittest.TestCase):
     def test_eq(self):
         flt1 = FilterContinuous(1, FilterContinuous.Between, 1, 2)
         flt2 = FilterContinuous(1, FilterContinuous.Between, 1, 2)
+        flt3 = FilterContinuous(1, FilterContinuous.Between, 1, 3)
         self.assertEqual(flt1, flt2)
+        self.assertNotEqual(flt1, flt3)
+        self.assertEqual(flt1.__dict__ == flt2.__dict__, flt1 == flt2)
+        self.assertEqual(flt1.__dict__ == flt3.__dict__, flt1 == flt3)
 
 
 class TestFilterDiscrete(unittest.TestCase):
     def test_eq(self):
         flt1 = FilterDiscrete(1, None)
         flt2 = FilterDiscrete(1, None)
+        flt3 = FilterDiscrete(2, None)
         self.assertEqual(flt1, flt2)
+        self.assertEqual(flt1.__dict__ == flt2.__dict__, flt1 == flt2)
+        self.assertNotEqual(flt1, flt3)
+        self.assertEqual(flt1.__dict__ == flt3.__dict__, flt1 == flt3)
 
 
 class TestFilterString(unittest.TestCase):
