@@ -7,7 +7,7 @@ from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
 from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtCore import Qt
 
-from Orange.base import RandomForest
+from Orange.base import RandomForest, TreeModel
 from Orange.classification.random_forest import RandomForestClassifier
 from Orange.classification.tree import SklTreeClassifier
 from Orange.data import Table
@@ -34,7 +34,7 @@ class OWPythagoreanForest(OWWidget):
     priority = 1001
 
     inputs = [('Random forest', RandomForest, 'set_rf')]
-    outputs = [('Tree', SklTreeClassifier)]
+    outputs = [('Tree', TreeModel)]
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -273,15 +273,7 @@ class OWPythagoreanForest(OWWidget):
 
         selected_item = self.scene.selectedItems()[0]
         self.selected_tree_index = self.grid_items.index(selected_item)
-        tree = self.model.skl_model.estimators_[self.selected_tree_index]
-
-        if self.forest_type == self.CLASSIFICATION:
-            obj = SklTreeClassifier(tree)
-        else:
-            obj = SklTreeRegressor(tree)
-        obj.domain = self.model.domain
-        obj.instances = self.model.instances
-
+        obj = self.model.trees[self.selected_tree_index]
         obj.meta_target_class_index = self.target_class_index
         obj.meta_size_calc_idx = self.size_calc_idx
         obj.meta_size_log_scale = self.size_log_scale
