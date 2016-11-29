@@ -210,17 +210,20 @@ class PyTableModel(QAbstractTableModel):
                 cols.pop(col, None)
         del self._headers.get(Qt.Horizontal, [])[column:column + count]
         self.endRemoveColumns()
+        return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
         self.endInsertRows()
+        return True
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
         self.endInsertColumns()
+        return True
 
     def __len__(self):
         return len(self._table)
