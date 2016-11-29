@@ -100,11 +100,19 @@ class NodeBodyItem(GraphicsPathObject):
             blurRadius=3,
             color=QColor(SHADOW_COLOR),
             offset=QPointF(0, 0),
-            )
-
-        self.setGraphicsEffect(self.shadow)
+        )
         self.shadow.setEnabled(True)
 
+        # An item with the same shape as this object, stacked behind this
+        # item as a source for QGraphicsDropShadowEffect. Cannot attach
+        # the effect to this item directly as QGraphicsEffect makes the item
+        # non devicePixelRatio aware.
+        shadowitem = GraphicsPathObject(self, objectName="shadow-shape-item")
+        shadowitem.setPen(Qt.NoPen)
+        shadowitem.setBrush(QBrush(QColor(SHADOW_COLOR).lighter()))
+        shadowitem.setGraphicsEffect(self.shadow)
+        shadowitem.setFlag(QGraphicsItem.ItemStacksBehindParent)
+        self.__shadow = shadowitem
         self.__blurAnimation = QPropertyAnimation(self.shadow, b"blurRadius",
                                                   self)
         self.__blurAnimation.setDuration(100)
@@ -125,6 +133,7 @@ class NodeBodyItem(GraphicsPathObject):
         path = QPainterPath()
         path.addEllipse(rect)
         self.setPath(path)
+        self.__shadow.setPath(path)
         self.__shapeRect = rect
 
     def setPalette(self, palette):
