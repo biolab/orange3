@@ -24,7 +24,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QSizePolicy
 from AnyQt.QtGui import QColor, QPainter
 
-from Orange.base import Tree, SklModel
+from Orange.base import TreeModel, SklModel
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
 from Orange.widgets.visualize.utils.tree.rules import Rule
@@ -64,7 +64,7 @@ class OWPythagorasTree(OWWidget):
 
     priority = 1000
 
-    inputs = [('Tree', Tree, 'set_tree')]
+    inputs = [('Tree', TreeModel, 'set_tree')]
     outputs = [('Selected Data', Table, widget.Default),
                (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
