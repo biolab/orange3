@@ -15,6 +15,8 @@ from Orange.widgets.data.owfeatureconstructor import (
     freevars, make_lambda, validate_exp
 )
 
+import dill as pickle  # Import dill after Orange because patched
+
 
 class FeatureConstructorTest(unittest.TestCase):
     def test_construct_variables_discrete(self):
@@ -69,6 +71,27 @@ class FeatureConstructorTest(unittest.TestCase):
         for i in range(3):
             self.assertEqual(data[i * 50, name],
                              str(data[i * 50, "iris"]) + "_name")
+
+
+GLOBAL_CONST = 2
+
+
+class PicklingTest(unittest.TestCase):
+    CLASS_CONST = 3
+
+    def test_lambdas_pickle(self):
+        NONLOCAL_CONST = 5
+
+        lambda_func = lambda x, LOCAL_CONST=7: \
+            x * LOCAL_CONST * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
+
+        def nested_func(x, LOCAL_CONST=7):
+            return x * LOCAL_CONST * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
+
+        self.assertEqual(lambda_func(11),
+                         pickle.loads(pickle.dumps(lambda_func))(11))
+        self.assertEqual(nested_func(11),
+                         pickle.loads(pickle.dumps(nested_func))(11))
 
 
 class TestTools(unittest.TestCase):
