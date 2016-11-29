@@ -263,3 +263,17 @@ class SklTreeAdapter(BaseTreeAdapter):
             indices = []
 
         return dataset[indices] if len(indices) else None
+
+    def get_indices(self, nodes):
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
+
+        node_leaves = [self.leaves(n) for n in nodes]
+        if len(node_leaves) > 0:
+            # get the leaves of the selected tree node
+            node_leaves = np.unique(np.hstack(node_leaves))
+
+            all_leaves = self.leaves(self.root)
+
+            return np.searchsorted(all_leaves, node_leaves)
+        return []
