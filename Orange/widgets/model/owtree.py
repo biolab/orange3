@@ -13,6 +13,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 class OWTreeLearner(OWBaseLearner):
     """Tree algorithm with forward pruning."""
     name = "Tree"
+    description = "A tree algorithm with forward pruning."
     icon = "icons/Tree.svg"
     priority = 30
 

@@ -1,7 +1,8 @@
 """Widget for induction of regression trees"""
 
-from Orange.regression.tree import TreeLearner
-from Orange.widgets.classify.owclassificationtree import OWTreeLearner
+from Orange.modelling.tree import TreeLearner
+from Orange.widgets.model.owtree import OWTreeLearner
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
 class OWRegressionTree(OWTreeLearner):
@@ -11,6 +12,10 @@ class OWRegressionTree(OWTreeLearner):
     priority = 30
 
     LEARNER = TreeLearner
+
+    # Disable the special classification layout to be used when widgets are
+    # fully merged
+    add_classification_layout = OWBaseLearner.add_classification_layout
 
 
 def _test():
