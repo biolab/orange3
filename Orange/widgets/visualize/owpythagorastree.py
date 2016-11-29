@@ -365,7 +365,7 @@ class OWPythagorasTree(OWWidget):
         data = self.tree_adapter.get_instances_in_nodes(
             self.clf_dataset, nodes)
         self.send('Selected Data', data)
-        selected_indices = self.model.get_indices(nodes)
+        selected_indices = self.tree_adapter.get_indices(nodes)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.instances, selected_indices))
 
