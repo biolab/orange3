@@ -246,6 +246,18 @@ class TestFilterContinuous(unittest.TestCase):
         flt.oper = -1
         self.assertEqual(str(flt), "invalid operator")
 
+    def test_eq(self):
+        flt1 = FilterContinuous(1, FilterContinuous.Between, 1, 2)
+        flt2 = FilterContinuous(1, FilterContinuous.Between, 1, 2)
+        self.assertEqual(flt1, flt2)
+
+
+class TestFilterDiscrete(unittest.TestCase):
+    def test_eq(self):
+        flt1 = FilterDiscrete(1, None)
+        flt2 = FilterDiscrete(1, None)
+        self.assertEqual(flt1, flt2)
+
 
 class TestFilterString(unittest.TestCase):
 
