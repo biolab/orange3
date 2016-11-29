@@ -24,6 +24,7 @@ class RandomForestRegressor(SklModel, RandomForest):
         def wrap(tree, i):
             t = SklTreeRegressor(tree)
             t.domain = self.domain
+            t.instances = self.instances
             t.supports_multiclass = self.supports_multiclass
             t.name = "{} - tree {}".format(self.name, i)
             t.original_domain = self.original_domain
