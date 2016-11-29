@@ -6,7 +6,7 @@ from Orange.widgets.model.owtree import OWTreeLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class OWClassificationTree(OWTreeLearner):
+class OWTreeLearner(OWTreeLearner):
     """Classification tree algorithm with forward pruning."""
 
     name = "Classification Tree"

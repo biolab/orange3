@@ -5,7 +5,7 @@ from Orange.widgets.model.owtree import OWTreeLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 
-class OWRegressionTree(OWTreeLearner):
+class OWTreeLearner(OWTreeLearner):
     name = "Regression Tree"
     description = "A regression tree algorithm with forward pruning."
     icon = "icons/RegressionTree.svg"
