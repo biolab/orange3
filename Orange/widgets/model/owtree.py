@@ -1,6 +1,6 @@
 """Tree learner widget"""
 
-from PyQt4.QtCore import Qt
+from AnyQt.QtCore import Qt
 from collections import OrderedDict
 
 from Orange.data import Table
@@ -93,7 +93,7 @@ class OWTreeLearner(OWBaseLearner):
 
 def _test():
     import sys
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWTreeLearner()
