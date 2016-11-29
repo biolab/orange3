@@ -1,3 +1,5 @@
+from AnyQt.QtCore import Qt
+
 from Orange.data import Table
 from Orange.modelling import RandomForestLearner
 from Orange.widgets import settings, gui
@@ -30,30 +32,31 @@ class OWRandomForest(OWBaseLearner):
     def add_main_layout(self):
         box = gui.vBox(self.controlArea, 'Basic Properties')
         self.n_estimators_spin = gui.spin(
-            box, self, "n_estimators", minv=1, maxv=10000, controlWidth=50,
-            label="Number of trees: ", callback=self.settings_changed)
+            box, self, "n_estimators", minv=1, maxv=10000, controlWidth=80,
+            alignment=Qt.AlignRight, label="Number of trees: ",
+            callback=self.settings_changed)
         self.max_features_spin = gui.spin(
-            box, self, "max_features", 2, 50, controlWidth=50,
+            box, self, "max_features", 2, 50, controlWidth=80,
             label="Number of attributes considered at each split: ",
             callback=self.settings_changed, checked="use_max_features",
-            checkCallback=self.settings_changed)
+            checkCallback=self.settings_changed, alignment=Qt.AlignRight,)
         self.random_state_spin = gui.spin(
-            box, self, "random_state", 0, 2 ** 31 - 1, controlWidth=50,
-            label="Fixed seed for random generator: ",
+            box, self, "random_state", 0, 2 ** 31 - 1, controlWidth=80,
+            label="Fixed seed for random generator: ", alignment=Qt.AlignRight,
             callback=self.settings_changed, checked="use_random_state",
             checkCallback=self.settings_changed)
 
         box = gui.vBox(self.controlArea, "Growth Control")
         self.max_depth_spin = gui.spin(
-            box, self, "max_depth", 1, 50, controlWidth=50,
-            label="Limit depth of individual trees: ",
+            box, self, "max_depth", 1, 50, controlWidth=80,
+            label="Limit depth of individual trees: ", alignment=Qt.AlignRight,
             callback=self.settings_changed, checked="use_max_depth",
             checkCallback=self.settings_changed)
         self.min_samples_split_spin = gui.spin(
-            box, self, "min_samples_split", 2, 1000, controlWidth=50,
+            box, self, "min_samples_split", 2, 1000, controlWidth=80,
             label="Do not split subsets smaller than: ",
             callback=self.settings_changed, checked="use_min_samples_split",
-            checkCallback=self.settings_changed)
+            checkCallback=self.settings_changed, alignment=Qt.AlignRight)
 
     def create_learner(self):
         common_args = {"n_estimators": self.n_estimators}
