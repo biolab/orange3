@@ -27,7 +27,8 @@ class OWRandomForest(OWBaseLearner):
     index_output = settings.Setting(0)
 
     class Error(OWBaseLearner.Error):
-        not_enough_features = Msg("Insufficient number of attributes ({})")
+        not_enough_features = Msg(
+            'Number of considered attributes is too high (max {})!')
 
     def add_main_layout(self):
         box = gui.vBox(self.controlArea, 'Basic Properties')
