@@ -297,6 +297,8 @@ class OWBoxPlot(widget.OWWidget):
             else:
                 # Chi-square with the given distribution into groups
                 # (see degrees of freedom in computation of the p-value)
+                if not attr.values or not group_var.values:
+                    return 2
                 observed = np.array(
                     contingency.get_contingency(data, group_var, attr))
                 observed = observed[observed.sum(axis=1) != 0, :]
@@ -368,10 +370,11 @@ class OWBoxPlot(widget.OWWidget):
         if not attr:
             return
         dataset = self.dataset
-        if dataset is None:
+        self.is_continuous = attr.is_continuous
+        if dataset is None or not self.is_continuous and not attr.values or \
+                        self.group_var and not self.group_var.values:
             self.stats = self.dist = self.conts = []
             return
-        self.is_continuous = attr.is_continuous
         if self.group_var:
             self.dist = []
             self.conts = contingency.get_contingency(
@@ -554,6 +557,8 @@ class OWBoxPlot(widget.OWWidget):
             df = pooled_var ** 2 / \
                 ((d1.var / d1.n) ** 2 / (d1.n - 1) +
                  (d2.var / d2.n) ** 2 / (d2.n - 1))
+            if pooled_var == 0:
+                return np.nan, np.nan
             t = abs(d1.mean - d2.mean) / math.sqrt(pooled_var)
             p = 2 * (1 - scipy.special.stdtr(df, t))
             return t, p
