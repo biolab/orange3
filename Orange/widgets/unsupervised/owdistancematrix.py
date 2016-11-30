@@ -172,7 +172,7 @@ class DistanceMatrixContextHandler(ContextHandler):
         context = super().new_context()
         context.dim = matrix.shape[0]
         context.annotations = self._var_names(annotations)
-        context.annotation_idx = 1
+        context.annotation = context.annotations[1]
         context.selection = []
         return context
 
