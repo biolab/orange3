@@ -20,16 +20,16 @@ class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
 
     def test_input_learner(self):
         """Check if base learner properly changes with learner on the input"""
-        max_depth = 2
         default_base_est = self.widget.base_estimator
+        new_learner = SklTreeLearner()
+        # Check that the default learner is indeed a SklTreeLearner
         self.assertIsInstance(default_base_est, SklTreeLearner)
-        self.assertIsNone(default_base_est.params.get("max_depth"))
-        self.send_signal("Learner", SklTreeLearner(max_depth=max_depth))
-        self.assertEqual(self.widget.base_estimator.params.get("max_depth"),
-                         max_depth)
-        self.widget.apply_button.button.click()
-        output_base_est = self.get_output("Learner").params.get("base_estimator")
-        self.assertEqual(output_base_est.max_depth, max_depth)
+        # Sending a new valid learner should change the learner
+        self.send_signal('Learner', new_learner)
+        self.assertEqual(self.widget.base_estimator, new_learner)
+        # Removing the new learner should change back to the default one
+        self.send_signal('Learner', None)
+        self.assertEqual(self.widget.base_estimator, default_base_est)
 
     def test_input_learner_disconnect(self):
         """Check base learner after disconnecting learner on the input"""
