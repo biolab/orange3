@@ -3,7 +3,7 @@ from AnyQt.QtCore import Qt
 from Orange.base import Learner
 from Orange.data import Table
 from Orange.ensembles import SklAdaBoostLearner
-from Orange.modelling import RandomForestLearner
+from Orange.modelling import SklTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -26,7 +26,7 @@ class OWAdaBoost(OWBaseLearner):
     learning_rate = Setting(1.)
     algorithm = Setting(0)
 
-    DEFAULT_BASE_ESTIMATOR = RandomForestLearner()
+    DEFAULT_BASE_ESTIMATOR = SklTreeLearner()
 
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Parameters")
