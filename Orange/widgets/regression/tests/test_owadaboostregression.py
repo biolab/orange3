@@ -1,9 +1,14 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.regression import SklTreeRegressionLearner, KNNRegressionLearner
+from Orange.regression import (
+    SklTreeRegressionLearner,
+    KNNRegressionLearner,
+    RandomForestRegressionLearner
+)
 from Orange.widgets.regression.owadaboostregression import OWAdaBoostRegression
-from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
-                                       ParameterMapping)
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetLearnerTestMixin, ParameterMapping
+)
 
 
 class TestOWAdaBoostRegression(WidgetTest, WidgetLearnerTestMixin):
@@ -31,10 +36,34 @@ class TestOWAdaBoostRegression(WidgetTest, WidgetLearnerTestMixin):
         output_base_est = self.get_output("Learner").params.get("base_estimator")
         self.assertEqual(output_base_est.max_depth, max_depth)
 
+    def test_input_learner_that_does_not_support_sample_weights(self):
+        self.send_signal("Learner", KNNRegressionLearner())
+        self.assertNotIsInstance(
+            self.widget.base_estimator, KNNRegressionLearner)
+        self.assertIsNone(self.widget.base_estimator)
+        self.assertTrue(self.widget.Error.no_weight_support.is_shown())
+
+    def test_error_message_cleared_when_valid_learner_on_input(self):
+        # Disconnecting an invalid learner should use the default one and hide
+        # the error
+        self.send_signal("Learner", KNNRegressionLearner())
+        self.send_signal('Learner', None)
+        self.assertFalse(
+            self.widget.Error.no_weight_support.is_shown(),
+            'Error message was not hidden on input disconnect')
+        # Connecting a valid learner should also reset the error message
+        self.send_signal("Learner", KNNRegressionLearner())
+        self.send_signal('Learner', RandomForestRegressionLearner())
+        self.assertFalse(
+            self.widget.Error.no_weight_support.is_shown(),
+            'Error message was not hidden when a valid learner appeared on '
+            'input')
+
     def test_input_learner_disconnect(self):
         """Check base learner after disconnecting learner on the input"""
-        self.send_signal("Learner", KNNRegressionLearner())
-        self.assertIsInstance(self.widget.base_estimator, KNNRegressionLearner)
+        self.send_signal("Learner", RandomForestRegressionLearner())
+        self.assertIsInstance(
+            self.widget.base_estimator, RandomForestRegressionLearner)
         self.send_signal("Learner", None)
         self.assertEqual(self.widget.base_estimator,
                          self.widget.DEFAULT_BASE_ESTIMATOR)

@@ -1,9 +1,9 @@
 from AnyQt.QtCore import Qt
 
-from Orange.regression.base_regression import LearnerRegression
-from Orange.regression import SklTreeRegressionLearner
 from Orange.data import Table
 from Orange.ensembles import SklAdaBoostRegressionLearner
+from Orange.regression import SklTreeRegressionLearner
+from Orange.regression.base_regression import LearnerRegression
 from Orange.widgets import gui
 from Orange.widgets.classify import owadaboost
 from Orange.widgets.settings import Setting
@@ -36,8 +36,7 @@ class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
             n_estimators=self.n_estimators,
             learning_rate=self.learning_rate,
             preprocessors=self.preprocessors,
-            loss=self.losses[self.loss].lower()
-        )
+            loss=self.losses[self.loss].lower())
 
     def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
@@ -51,7 +50,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWAdaBoostRegression()
-    ow.set_data(Table("housing"))
+    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'housing'))
     ow.show()
     a.exec_()
     ow.saveSettings()
