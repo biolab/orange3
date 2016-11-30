@@ -16,14 +16,13 @@ from os.path import join, dirname, abspath
 
 import numpy as np
 
-from AnyQt.QtCore import QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
+from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
     pyqtProperty, pyqtSlot, pyqtSignal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QSizePolicy, QWidget, qApp
 import sip
 
 from Orange.util import inherit_docstrings
-
 
 try:
     from AnyQt.QtWebKitWidgets import QWebView
@@ -43,8 +42,19 @@ _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')
 
 
+class _HidesParentWindow:
+    @pyqtSlot()
+    def hideWindow(self):  # Overriding hide() doesn't work on WebEngine??
+        """Hide the parent window/dialog. Mapped to Escape key in helpers.js."""
+        w = self.parent()
+        while isinstance(w, QWidget):
+            if w.windowFlags() & (Qt.Window | Qt.Dialog):
+                return w.hide()
+            w = w.parent()
+
+
 if HAVE_WEBENGINE:
-    class WebEngineView(QWebEngineView):
+    class WebEngineView(QWebEngineView, _HidesParentWindow):
         """
         A QWebEngineView initialized to support communication with JS code.
 
@@ -138,7 +148,7 @@ if HAVE_WEBENGINE:
 
 
 if HAVE_WEBKIT:
-    class WebKitView(QWebView):
+    class WebKitView(QWebView, _HidesParentWindow):
         """
         Construct a new QWebView widget that has no history and
         supports loading from local URLs.
