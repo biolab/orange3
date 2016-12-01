@@ -19,6 +19,10 @@ from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
+# For tests, let memory freeing entirely to Python / OS
+import sip
+sip.setdestroyonexit(False)
+
 app = None
 
 
@@ -76,24 +80,6 @@ class WidgetTest(GuiTest):
         report = OWReport()
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
-
-    @classmethod
-    def tearDownClass(cls):
-        """Cleanup after tests
-
-        Process any pending events and properly destroy created widgets by
-        calling their onDeleteWidget method which does the widget-specific
-        cleanup.
-
-        NOTE: sip.delete is mandatory. In some cases, widgets are deleted by
-        python while some references in QApplication remain
-        (QApplication::topLevelWidgets()), causing a segmentation fault when
-        QApplication is destroyed.
-        """
-        app.processEvents()
-        for w in cls.widgets:
-            w.onDeleteWidget()
-            sip.delete(w)
 
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
         """Create a widget instance.
