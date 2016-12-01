@@ -25,3 +25,13 @@ for mod_name in ['classification', 'clustering', 'distance', 'ensembles',
 datasets = _DatasetInfo()
 
 del mod_name
+
+# If Qt is available (GUI) and Qt5, install backport for PyQt4 imports
+try:
+    import AnyQt.importhooks
+except ImportError:
+    pass
+else:
+    if AnyQt.USED_API == "pyqt5":
+        AnyQt.importhooks.install_backport_hook('pyqt4')
+    del AnyQt
