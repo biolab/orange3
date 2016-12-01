@@ -1,4 +1,8 @@
 [run]
+parallel = 1
+concurrency =
+    multiprocessing
+    thread
 source =
     Orange
 omit =

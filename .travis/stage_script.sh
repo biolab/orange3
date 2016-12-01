@@ -20,3 +20,4 @@ catchsegv xvfb-run -a -s "$XVFBARGS" \
         Orange.tests \
         Orange.widgets.tests \
         Orange.canvas.report.tests
+coverage combine
