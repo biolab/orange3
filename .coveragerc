@@ -1,4 +1,6 @@
 [run]
+source =
+    Orange
 omit =
     Orange/canvas/*
     Orange/widgets/*
