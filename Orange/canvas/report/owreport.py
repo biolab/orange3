@@ -248,16 +248,16 @@ class OWReport(OWWidget):
         self.report_view.setHtml(html)
 
     def _scroll_to_item(self, item):
-        self.report_view.runJavaScript(
+        self.report_view.evalJS(
             "document.getElementById('{}').scrollIntoView();".format(item.id)
         )
 
     def _change_selected_item(self, item):
-        self.report_view.runJavaScript(
+        self.report_view.evalJS(
             "var sel_el = document.getElementsByClassName('selected')[0]; "
             "if (sel_el.id != {}) "
             "   sel_el.className = 'normal';".format(item.id))
-        self.report_view.runJavaScript(
+        self.report_view.evalJS(
             "document.getElementById('{}').className = 'selected';"
             .format(item.id))
         self.report_changed = True
