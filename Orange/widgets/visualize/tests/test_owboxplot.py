@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from Orange.data import Table, ContinuousVariable
+from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
@@ -56,15 +56,37 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_input_data_missings_disc_group_var(self):
         """Check widget with discrete data with missing values and group variable"""
         data = self.zoo
-        data.X[:, 0] = np.nan
+        data.X[:, 1] = np.nan
+        data.domain.attributes[1].values = []
         self.send_signal("Data", data)
+        self.widget.controls.order_by_importance.setChecked(True)
+        self._select_list_items(self.widget.controls.attribute)
+        self._select_list_items(self.widget.controls.group_var)
 
     def test_input_data_missings_disc_no_group_var(self):
         """Check widget discrete data with missing values and no group variable"""
         data = self.zoo
         data.domain.class_var = ContinuousVariable("cls")
-        data.X[:, 0] = np.nan
+        data.X[:, 1] = np.nan
+        data.domain.attributes[1].values = []
         self.send_signal("Data", data)
+        self.widget.controls.order_by_importance.setChecked(True)
+        self._select_list_items(self.widget.controls.attribute)
+        self._select_list_items(self.widget.controls.group_var)
+
+    def test_attribute_combinations(self):
+        data = Table("anneal")
+        self.send_signal("Data", data)
+        group_list = self.widget.controls.group_var
+        m = group_list.selectionModel()
+        for i in range(len(group_list.model())):
+            m.setCurrentIndex(group_list.model().index(i), m.ClearAndSelect)
+            self._select_list_items(self.widget.controls.attribute)
+
+    def _select_list_items(self, _list):
+        model = _list.selectionModel()
+        for i in range(len(_list.model())):
+            model.setCurrentIndex(_list.model().index(i), model.ClearAndSelect)
 
     def test_apply_sorting(self):
         controls = self.widget.controls
@@ -122,3 +144,11 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         return [100, 103, 104, 108, 110, 111, 112, 115, 116,
                 120, 123, 124, 126, 128, 132, 133, 136, 137,
                 139, 140, 141, 143, 144, 145, 146, 147, 148]
+
+    def test_continuous_metas(self):
+        domain = self.iris.domain
+        metas = domain.attributes[:-1] + (StringVariable("str"),)
+        domain = Domain([], domain.class_var, metas)
+        data = Table.from_table(domain, self.iris)
+        self.send_signal("Data", data)
+        self.widget.controls.order_by_importance.setChecked(True)

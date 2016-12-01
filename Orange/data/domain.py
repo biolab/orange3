@@ -283,25 +283,25 @@ class Domain:
         except KeyError:
             raise ValueError("'%s' is not in domain" % var)
 
-    def has_discrete_attributes(self, include_class=False):
+    def has_discrete_attributes(self, include_class=False, include_metas=False):
         """
-        Return `True` if domain has any discrete attributes. If `include_class`
-                is set, the check includes the class attribute(s).
+        Return `True` if domain has any discrete attributes. If
+        `include_class` is set, the check includes the class attribute(s). If
+        `include_metas` is set, the check includes the meta attributes.
         """
-        if not include_class:
-            return any(var.is_discrete for var in self.attributes)
-        else:
-            return any(var.is_discrete for var in self.variables)
+        vars = self.variables if include_class else self.attributes
+        vars += self.metas if include_metas else ()
+        return any(var.is_discrete for var in vars)
 
-    def has_continuous_attributes(self, include_class=False):
+    def has_continuous_attributes(self, include_class=False, include_metas=False):
         """
         Return `True` if domain has any continuous attributes. If
-        `include_class` is set, the check includes the class attribute(s).
+        `include_class` is set, the check includes the class attribute(s). If
+        `include_metas` is set, the check includes the meta attributes.
         """
-        if not include_class:
-            return any(var.is_continuous for var in self.attributes)
-        else:
-            return any(var.is_continuous for var in self.variables)
+        vars = self.variables if include_class else self.attributes
+        vars += self.metas if include_metas else ()
+        return any(var.is_continuous for var in vars)
 
     @property
     def has_continuous_class(self):
