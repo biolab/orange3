@@ -17,6 +17,7 @@ from Orange.widgets import gui, widget, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.webview import WebviewWidget
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, ContinuousPaletteGenerator
+from Orange.widgets.utils.annotated_data import create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 
 
 if QT_VERSION_STR <= '5.3':
@@ -490,7 +491,8 @@ class OWMap(widget.OWWidget):
               ("Data Subset", Table, "set_subset"),
               ("Learner", Learner, "set_learner")]
 
-    outputs = [("Selected Data", Table, widget.Default)]
+    outputs = [("Selected Data", Table, widget.Default),
+               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -548,6 +550,7 @@ class OWMap(widget.OWWidget):
 
         def selectionChanged(indices):
             self.selection = self.data[indices] if self.data is not None and indices else None
+            self._indices = indices
             self.commit()
 
         map.selectionChanged.connect(selectionChanged)
@@ -671,6 +674,8 @@ class OWMap(widget.OWWidget):
 
     def commit(self):
         self.send('Selected Data', self.selection)
+        self.send(ANNOTATED_DATA_SIGNAL_NAME,
+                  create_annotated_table(self.data, self._indices))
 
     def set_data(self, data):
         self.data = data
