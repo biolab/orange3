@@ -501,8 +501,6 @@ var _heatmap_canvas_ctx = document.getElementById('heatmap_canvas').getContext('
     _N_SHAPES = _N_SHAPES - (Math.random() > .05);
 _heatmap_canvas_ctx.fillStyle = 'red';
 _heatmap_canvas_ctx.fillRect(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE);
-var _canvas_imageData = _heatmap_canvas_ctx.getImageData(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE),
-    _heatmap_pixels = _canvas_imageData.data;
 
 // Workaround, results in better image upscaing interpolation,
 // but only in WebEngine (Chromium). Old Apple WebKit does just as pretty but
@@ -512,21 +510,43 @@ L.Browser.ie3d = _IS_WEBENGINE;
 
 function draw_heatmap() {
     var values = model_predictions.data;
-    for (var y = 0; y < _HEATMAP_GRID_SIZE; ++y) {
-        for (var x = 0; x < _HEATMAP_GRID_SIZE; ++x) {
-            var i = y * _HEATMAP_GRID_SIZE + x;
-            _heatmap_pixels[i * 4 + 3] = (values[i] * 200);  // alpha
+    if (values) {
+        if (model_predictions.extrema) {  // regression
+            _heatmap_canvas_ctx.fillRect(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE);
+            _heatmap_canvas_ctx.fillStyle = 'red';
+            var _canvas_imageData = _heatmap_canvas_ctx.getImageData(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE),
+                _heatmap_pixels = _canvas_imageData.data;
+            for (var y = 0; y < _HEATMAP_GRID_SIZE; ++y) {
+                for (var x = 0; x < _HEATMAP_GRID_SIZE; ++x) {
+                    var i = y * _HEATMAP_GRID_SIZE + x;
+                    _heatmap_pixels[i * 4 + 3] = (values[i] * 200);  // alpha
+                }
+            }
+        } else {  // classification
+            _heatmap_canvas_ctx.clearRect(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE);
+            var _canvas_imageData = _heatmap_canvas_ctx.getImageData(0, 0, _HEATMAP_GRID_SIZE, _HEATMAP_GRID_SIZE),
+                _heatmap_pixels = _canvas_imageData.data;
+            for (var y = 0; y < _HEATMAP_GRID_SIZE; ++y) {
+                for (var x = 0; x < _HEATMAP_GRID_SIZE; ++x) {
+                    var i = y * _HEATMAP_GRID_SIZE + x;
+                    for (var c = 0; c < 3; ++c) {
+                        _heatmap_pixels[i * 4 + c] = Math.round(values[i][c]);
+                    }
+                    _heatmap_pixels[i * 4 + 3] = 180;
+                }
+            }
         }
+        _heatmap_canvas_ctx.putImageData(_canvas_imageData, 0, 0);
+        heatmapLayer
+            .setUrl(_heatmap_canvas_ctx.canvas.toDataURL())
+            .setBounds(map.getBounds());
     }
-    _heatmap_canvas_ctx.putImageData(_canvas_imageData, 0, 0);
-    heatmapLayer
-        .setUrl(_heatmap_canvas_ctx.canvas.toDataURL())
-        .setBounds(map.getBounds());
     legendControl.remove().addTo(map);
 }
 
 function clear_heatmap() {
     heatmapLayer.setUrl(_TRANSPARENT_IMAGE);
+    legendControl.remove().addTo(map);
 }
 
 function clear_markers_overlay_image() {
@@ -563,7 +583,8 @@ legendControl.onAdd = function () {
     if (legend_colors.length == 0 &&
         legend_shapes.length == 0 &&
         legend_sizes.length == 0 &&
-        !model_predictions.extrema)
+        !model_predictions.extrema &&
+        !model_predictions.colors)
         return L.DomUtil.create('span');
 
     var div = L.DomUtil.create('div', 'legend');
@@ -641,6 +662,25 @@ legendControl.onAdd = function () {
                 maxval: model_predictions.extrema[1],
                 colors: 'transparent, ' + _heatmap_canvas_ctx.fillStyle
             });
+    } else if (model_predictions.colors) {
+        var labels = model_predictions.legend_labels,
+            colors = model_predictions.colors,
+            full_labels = model_predictions.full_labels,
+            box = L.DomUtil.create('div', 'legend-box', div);;
+        var str = '<h3>Heatmap</h3><hr/>';
+        for (var i=0; i<labels.length; ++i) {
+            if (i >= 9) {
+                str += L.Util.template('<div>&nbsp;&nbsp;+ {n_more} more ...</div>', {
+                    n_more: labels.length - i });
+                break;
+            }
+            str += L.Util.template(
+                '<div title="{full_value}"><div class="legend-icon" style="background:{color}">&nbsp;</div> {value}</div>', {
+                    color: colors[i],
+                    value: labels[i],
+                    full_value: full_labels[i]});
+        }
+        box.innerHTML += str;
     }
 
     return div;

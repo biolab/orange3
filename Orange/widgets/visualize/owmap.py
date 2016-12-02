@@ -248,6 +248,8 @@ class LeafletMap(WebviewWidget):
     @pyqtSlot('QVariantList')
     def recompute_heatmap(self, points):
         if self.model is None or not self.data or not self.lat_attr or not self.lon_attr:
+            self.exposeObject('model_predictions', {})
+            self.evalJS('draw_heatmap()')
             return
 
         latlons = np.array(points)
@@ -259,11 +261,23 @@ class LeafletMap(WebviewWidget):
             return
         else:
             self._owwidget.Error.model_error.clear()
-        extrema = self._legend_values(self.model.domain.class_var,
-                                      [np.nanmin(predictions),
-                                       np.nanmax(predictions)])
-        predictions = scale(np.round(predictions, 7))  # Avoid small errors
-        self.exposeObject('model_predictions', dict(data=predictions, extrema=extrema))
+
+        class_var = self.model.domain.class_var
+        is_regression = class_var.is_continuous
+        if is_regression:
+            predictions = scale(np.round(predictions, 7))  # Avoid small errors
+            kwargs = dict(
+                extrema=self._legend_values(class_var, [np.nanmin(predictions),
+                                                        np.nanmax(predictions)]))
+        else:
+            colorgen = ColorPaletteGenerator(len(class_var.values), class_var.colors)
+            predictions = colorgen.getRGB(predictions)
+            kwargs = dict(
+                legend_labels=self._legend_values(class_var, range(len(class_var.values))),
+                full_labels=list(class_var.values),
+                colors=[color_to_hex(colorgen.getRGB(i))
+                        for i in range(len(class_var.values))])
+        self.exposeObject('model_predictions', dict(data=predictions, **kwargs))
         self.evalJS('draw_heatmap()')
 
     def _update_js_markers(self, visible, in_subset):
@@ -671,7 +685,7 @@ class OWMap(widget.OWWidget):
         discrete_vars = [var for var in all_vars if var.is_discrete]
         primitive_vars = [var for var in all_vars if var.is_primitive()]
         self._latlon_model.wrap(continuous_vars)
-        self._class_model.wrap(['(None)'] + continuous_vars)
+        self._class_model.wrap(['(None)'] + primitive_vars)
         self._color_model.wrap(['(Same color)'] + primitive_vars)
         self._shape_model.wrap(['(Same shape)'] + discrete_vars)
         self._size_model.wrap(['(Same size)'] + continuous_vars)
@@ -768,7 +782,8 @@ class OWMap(widget.OWWidget):
 
 def test_main():
     from AnyQt.QtWidgets import QApplication
-    from Orange.regression import KNNRegressionLearner
+    from Orange.regression import KNNRegressionLearner as Learner
+    from Orange.classification import KNNLearner as Learner
     a = QApplication([])
 
     ow = OWMap()
@@ -777,7 +792,7 @@ def test_main():
     data = Table('philadelphia-crime')
     ow.set_data(data)
 
-    QTimer.singleShot(10, lambda: ow.set_learner(KNNRegressionLearner()))
+    QTimer.singleShot(10, lambda: ow.set_learner(Learner(20)))
 
     ow.handleNewSignals()
     a.exec()
