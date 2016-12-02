@@ -167,18 +167,19 @@ class AUC(Score):
         else:
             return weights / wsum
 
+    def single_class_auc(self, results, target):
+        y = np.array(results.actual == target, dtype=int)
+        return np.fromiter(
+            (skl_metrics.roc_auc_score(y, probabilities[:, int(target)])
+             for probabilities in results.probabilities),
+            dtype=np.float64, count=len(results.predicted))
+
+
     def multi_class_auc(self, results):
         classes = np.unique(results.actual)
         weights = self.calculate_weights(results)
-
-        auc_array = np.array([np.fromiter(
-            (skl_metrics.roc_auc_score(
-                results.actual == class_,
-                (predicted == class_).astype(float))
-             for predicted in results.predicted),
-            dtype=np.float64, count=len(results.predicted))
+        auc_array = np.array([self.single_class_auc(results, class_)
                               for class_ in classes])
-
         return np.sum(auc_array.T * weights, axis=1)
 
     def compute_score(self, results, target=None):
@@ -188,19 +189,12 @@ class AUC(Score):
         if n_classes < 2:
             raise ValueError("Class variable has less than two values")
         elif n_classes == 2:
-            return np.fromiter(
-                    (skl_metrics.roc_auc_score(results.actual, probabilities[:, 1])
-                     for probabilities in results.probabilities),
-                    dtype=np.float64, count=len(results.predicted))
+            return self.single_class_auc(results, 1)
         else:
             if target is None:
                 return self.multi_class_auc(results)
             else:
-                y = np.array(results.actual == target, dtype=int)
-                return np.fromiter(
-                    (skl_metrics.roc_auc_score(y, probabilities[:, target])
-                     for probabilities in results.probabilities),
-                    dtype=np.float64, count=len(results.predicted))
+                return self.single_class_auc(results, target)
 
 
 class LogLoss(Score):
