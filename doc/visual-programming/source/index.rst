@@ -33,6 +33,7 @@ Data
    widgets/data/discretize
    widgets/data/continuize
    widgets/data/concatenate
+   widgets/data/transpose
    widgets/data/paintdata
    widgets/data/pythonscript
    widgets/data/featureconstructor
