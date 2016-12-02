@@ -929,9 +929,6 @@ class _RuleLearner(Learner):
         self.cover_and_remove = self.exclusive_cover_and_remove
         self.rule_stopping = self.lrs_significance_rule_stopping
 
-    #def fit_storage(self, data):
-    #    raise NotImplementedError
-
     # base_rules and domain not accessed using self to avoid
     # possible crashes and to enable quick use of the algorithm
     def find_rules(self, X, Y, W, target_class, base_rules, domain):
