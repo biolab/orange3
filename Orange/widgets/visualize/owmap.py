@@ -589,7 +589,7 @@ class OWMap(widget.OWWidget):
             else:
                 self.train_model()
 
-        box = gui.vBox(self.controlArea, 'Heatmap')
+        box = gui.vBox(self.controlArea, 'Overlay')
         self._combo_class = combo = gui.comboBox(
             box, self, 'class_attr', orientation=Qt.Horizontal,
             label='Target:', sendSelectedValue=True, callback=_set_class_attr

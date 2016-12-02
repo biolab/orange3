@@ -653,7 +653,7 @@ legendControl.onAdd = function () {
     if (model_predictions.extrema) {
         var box = L.DomUtil.create('div', 'legend-box', div);
         box.innerHTML += L.Util.template(
-            '<h3>Heatmap</h3><hr/>' +
+            '<h3>Overlay</h3><hr/>' +
             '<table class="continuous">' +  // I'm sorry
             '<tr><td rowspan="2" style="width:2em; background:linear-gradient({colors})"></td><td> {minval}</td></tr>' +
             '<tr><td> {maxval}</td></tr>' +
@@ -667,7 +667,7 @@ legendControl.onAdd = function () {
             colors = model_predictions.colors,
             full_labels = model_predictions.full_labels,
             box = L.DomUtil.create('div', 'legend-box', div);;
-        var str = '<h3>Heatmap</h3><hr/>';
+        var str = '<h3>Overlay</h3><hr/>';
         for (var i=0; i<labels.length; ++i) {
             if (i >= 9) {
                 str += L.Util.template('<div>&nbsp;&nbsp;+ {n_more} more ...</div>', {
