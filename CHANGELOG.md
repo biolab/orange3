@@ -5,6 +5,69 @@ Change Log
 ------------
 * ...
 
+
+[3.3.9] - 2016-12-02
+--------------------
+##### Enhancements
+* OWTranspose: Add a new widget ([#1738](../../pull/1738))
+* Add appveyor configuration ([#1693](../../pull/1693))
+* Vizrank indicators and filters ([#1746](../../pull/1746))
+* OWManifoldLearning: MDS - enable PCA initialization ([#1702](../../pull/1702))
+* Add VizRank to Mosaic ([#1699](../../pull/1699))
+* Setting migration ([#1724](../../pull/1724))
+* widget: Allow subclasses to disable the default message bar widget ([#1543](../../pull/1543))
+* Manifold Learning ([#1624](../../pull/1624))
+* SQL Server support in SQL widget ([#1674](../../pull/1674))
+* Visualize widgets: Output Annotated data and Fixups ([#1677](../../pull/1677))
+* Add support for PyQt5 ([#1171](../../pull/1171))
+* Simple benchmarking suite. ([#1510](../../pull/1510))
+* Canvas: Always show the link dialog if the user holds Shift ([#1673](../../pull/1673))
+* Scatterplot, HeatMap, TreeGraph, ConfusionMatrix and Unsupervised widgets: Output Flagged Data  ([#1655](../../pull/1655))
+* CN2RuleViewer: Output sample of training data in absence of separate data ([#1667](../../pull/1667))
+* Metadata for data files ([#1603](../../pull/1603))
+
+##### Bugfixes
+* owrank: Add migrate_settings ([#1797](../../pull/1797))
+* owconfusionmatix: Add migrate_settings ([#1796](../../pull/1796))
+* Improve ada boost widget ([#1787](../../pull/1787))
+* OWBoxPlot: Fixups ([#1783](../../pull/1783))
+* Filter: Fix FilterContinuous eq operator ([#1784](../../pull/1784))
+* OWDistanceMatrix: attribute in context ([#1761](../../pull/1761))
+* Hierarchical clustering: Make annotation a context setting ([#1748](../../pull/1748))
+* Fix varius deprecation (and other) warnings ([#1774](../../pull/1774))
+* Fix transformation for non primitive variables ([#1770](../../pull/1770))
+* TimeVariable: don't crash Data Table when reloading and Visualize ... ([#1760](../../pull/1760))
+* OWDistances: Mahalanobis wrong dimensions notification. ([#1762](../../pull/1762))
+* Switch Sieve to DomainModel, which also fixes VizRank crash on meta attributes ([#1642](../../pull/1642))
+* Confusion matrix: Map annotated data through row_indices, add probabi… ([#1720](../../pull/1720))
+* OWLoadClassifier: Show message on unpickling error ([#1752](../../pull/1752))
+* Silhouette Plot: Fixes ([#1747](../../pull/1747))
+* canvas/toolgrid: Remove (unused) mouse press event tracking ([#1740](../../pull/1740))
+* Box plot: Handle situation when quantiles can't be computed ([#1742](../../pull/1742))
+* owfile: Hide apply button after resetting editor_model ([#1711](../../pull/1711))
+* oweditdomain: Initialize `var` attribute ([#1731](../../pull/1731))
+* FeatureConstructor: Fix crash when new variable is created without data ([#1733](../../pull/1733))
+* owpythonscript: Fix QFileDialog.get{Save,Open}FileName usage ([#1726](../../pull/1726))
+* DendrogramWidget: Prevent a zero division error ([#1725](../../pull/1725))
+* owfile: Skip add_origin if no filename ([#1717](../../pull/1717))
+* OWFile: Do not load large files automatically ([#1703](../../pull/1703))
+* Do not show messages when data is removed ([#1706](../../pull/1706))
+* Confusion Matrix: Show error on regression results ([#1709](../../pull/1709))
+* Fix tests ([#1698](../../pull/1698))
+* Scatter Plot: Fix a error when restoring from pre DomainModel workflows ([#1672](../../pull/1672))
+* Tree Scorers: Change 'int64_t' to 'intp_t' for platform independence ([#1687](../../pull/1687))
+* OWTable: Sort Continuous metas as floats; not strings ([#1678](../../pull/1678))
+* Error Reporting: Temporary last open/save directory ([#1676](../../pull/1676))
+* TableModel: Don't crash on empty sparse data ([#1675](../../pull/1675))
+* Statistics.util.stats: Fix negative #nans for sparse ([#1659](../../pull/1659))
+* MDS Widget: Fix zero length line, gray square bug ([#1670](../../pull/1670))
+* Fix an error when using latest pyqtgraph develop snapshot ([#1662](../../pull/1662))
+* OWHeatMap: Resend 'Selected Data' when settings change ([#1664](../../pull/1664))
+* Fix pythagoras tree tooltip for regression trees ([#1660](../../pull/1660))
+* OWConfusionMatrix: Output None when no data is selected ([#1653](../../pull/1653))
+* OWBoxPlot: Reset widget's appearance when data is removed ([#1654](../../pull/1654))
+
+
 [3.3.8] - 2016-10-11
 --------------------
 ##### Enhancements
@@ -251,7 +314,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.8...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.9...HEAD
+[3.3.9]: https://github.com/biolab/orange3/compare/3.3.8...3.3.9
 [3.3.8]: https://github.com/biolab/orange3/compare/3.3.7...3.3.8
 [3.3.7]: https://github.com/biolab/orange3/compare/3.3.6...3.3.7
 [3.3.6]: https://github.com/biolab/orange3/compare/3.3.5...3.3.6
