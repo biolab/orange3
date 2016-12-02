@@ -77,6 +77,7 @@ class OWRank(OWWidget):
     # Header state for discrete/continuous/no_class scores
     headerState = Setting([None, None, None])
 
+    settings_version = 1
     settingsHandler = DomainContextHandler()
     selected_rows = ContextSetting([])
 
@@ -687,6 +688,19 @@ class OWRank(OWWidget):
         new_table = Table(domain, scores, metas=feature_names)
         new_table.name = "Feature Scores"
         return new_table
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        super().migrate_settings(settings, version)
+        if not version:
+            # Before fc5caa1e1d716607f1f5c4e0b0be265c23280fa0
+            # headerState had length 2
+            headerState = settings.get("headerState", None)
+            if headerState is not None and \
+                    isinstance(headerState, tuple) and \
+                    len(headerState) < 3:
+                headerState = (list(headerState) + [None] * 3)[:3]
+                settings["headerState"] = headerState
 
 
 class ScoreValueItem(QStandardItem):
