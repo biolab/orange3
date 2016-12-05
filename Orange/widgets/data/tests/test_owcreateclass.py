@@ -130,9 +130,9 @@ class TestOWCreateClass(WidgetTest):
         self.no_attributes = Table("iris")[:, :4]
 
     def _test_default_rules(self):
-        self.assertEqual(self.widget.active_rules, [["C1", ""], ["C2", ""]])
+        self.assertEqual(self.widget.active_rules, [["", ""], ["", ""]])
         for i, (label, pattern) in enumerate(self.widget.line_edits):
-            self.assertEqual(label.text(), "C{}".format(i + 1))
+            self.assertEqual(label.text(), "".format(i + 1))
             self.assertEqual(pattern.text(), "")
 
     def _set_attr(self, attr):
@@ -181,7 +181,7 @@ class TestOWCreateClass(WidgetTest):
         self._set_attr(self.zoo.domain.metas[0])
         widget.line_edits[0][1].setText("a")
 
-        self._check_counts([["54", ""], ["47", "+ 54"]])
+        self._check_counts([["54", ""], ["47", ""]])
 
         widget.apply()
         outdata = self.get_output("Data")
@@ -229,7 +229,7 @@ class TestOWCreateClass(WidgetTest):
 
         widget.apply()
         outdata = self.get_output("Data")
-        self.assertEqual(outdata.domain.class_var.values, ["C1", "C2"])
+        self.assertEqual(outdata.domain.class_var.values, ["C1"])
         classes = outdata.get_column_view("class")[0]
         np.testing.assert_equal(classes, 0)
 
@@ -247,6 +247,8 @@ class TestOWCreateClass(WidgetTest):
         self._test_default_rules()
 
         widget.line_edits[0][1].setText("ema")
+        self._check_counts([["97", ""], ["206", ""]])
+        widget.line_edits[1][1].setText("ma")
         self._check_counts([["97", ""], ["206", "+ 97"]])
 
         widget.apply()
@@ -286,15 +288,15 @@ class TestOWCreateClass(WidgetTest):
         widget = self.widget
         self.send_signal("Data", self.heart)
         self._set_thal()
-        widget.add_button.click()
+        widget.add_row()
         self.assertEqual(len(widget.line_edits), 3)
         widget.line_edits[2][0].setText("Cls3")
         widget.line_edits[2][1].setText("a")
         # Observing counts suffices to deduct that rules are set correctly
         self._check_counts([["117", ""], ["18", "+ 117"], ["166", "+ 117"]])
 
-        widget.add_button.click()
-        widget.add_button.click()
+        widget.add_row()
+        widget.add_row()
         widget.line_edits[3][1].setText("c")
         widget.line_edits[4][1].setText("b")
         widget.apply()
@@ -321,7 +323,8 @@ class TestOWCreateClass(WidgetTest):
             widget.remove_buttons[0].click()
         widget.apply()
         outdata = self.get_output("Data")
-        self.assertIsNone(outdata)
+        np.testing.assert_equal(self.heart.X, outdata.X)
+        self.assertTrue(np.all(np.isnan(outdata.Y)))
 
     def test_options(self):
         def _transformer_flags():
@@ -338,6 +341,24 @@ class TestOWCreateClass(WidgetTest):
         widget.controls.case_sensitive.click()
         widget.controls.match_beginning.click()
         self.assertEqual(_transformer_flags(), (False, True))
+
+    def test_report(self):
+        """Report does not crash"""
+        widget = self.widget
+        widget.send_report()
+
+        self.send_signal("Data", self.heart)
+        thal = self.heart.domain["thal"]
+        self._set_attr(thal)
+        widget.line_edits[0][0].setText("Cls3")
+        widget.line_edits[0][1].setText("a")
+        widget.send_report()
+
+        widget.line_edits[1][1].setText("b")
+        widget.send_report()
+
+        widget.line_edits[1][1].setText("c")
+        widget.send_report()
 
 if __name__ == "__main__":
     unittest.main()
