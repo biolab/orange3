@@ -1,23 +1,23 @@
 import unittest
+import sip
 
 import numpy as np
-
-from Orange.base import SklLearner, SklModel
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
-import sip
 
-from Orange.data import Table
-from Orange.preprocess import RemoveNaNColumns, Randomize
-from Orange.preprocess.preprocess import PreprocessorList
+from Orange.base import SklModel, Model
+from Orange.canvas.report.owreport import OWReport
 from Orange.classification.base_classification import (LearnerClassification,
                                                        ModelClassification)
+from Orange.data import Table
+from Orange.modelling import Fitter
+from Orange.preprocess import RemoveNaNColumns, Randomize
+from Orange.preprocess.preprocess import PreprocessorList
 from Orange.regression.base_regression import LearnerRegression, ModelRegression
-from Orange.canvas.report.owreport import OWReport
-from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 app = None
 
@@ -331,20 +331,31 @@ class WidgetLearnerTestMixin:
     widget = None  # type: OWBaseLearner
 
     def init(self):
-        self.iris = Table("iris")
-        self.housing = Table("housing")
-        if issubclass(self.widget.LEARNER, LearnerClassification):
-            self.data = self.iris
-            self.inadequate_data = self.housing
+        self.iris = iris = Table("iris")
+        self.housing = housing = Table("housing")
+
+        if issubclass(self.widget.LEARNER, Fitter):
+            self.data = iris
+            self.valid_datasets = (iris, housing)
+            self.inadequate_dataset = ()
+            self.learner_class = Fitter
+            self.model_class = Model
+            self.model_name = 'Model'
+        elif issubclass(self.widget.LEARNER, LearnerClassification):
+            self.data = iris
+            self.valid_datasets = (iris,)
+            self.inadequate_dataset = (housing,)
             self.learner_class = LearnerClassification
-            self.model_name = "Classifier"
             self.model_class = ModelClassification
+            self.model_name = 'Classifier'
         else:
-            self.data = self.housing
-            self.inadequate_data = self.iris
+            self.data = housing
+            self.valid_datasets = (housing,)
+            self.inadequate_dataset = (iris,)
             self.learner_class = LearnerRegression
-            self.model_name = "Predictor"
             self.model_class = ModelRegression
+            self.model_name = 'Predictor'
+
         self.parameters = []
 
     def test_has_unconditional_apply(self):
@@ -367,36 +378,44 @@ class WidgetLearnerTestMixin:
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
-        self.send_signal("Data", self.inadequate_data)
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.data_error.is_shown())
-        self.send_signal("Data", self.data)
-        self.assertFalse(self.widget.Error.data_error.is_shown())
+        for inadequate in self.inadequate_dataset:
+            self.send_signal("Data", inadequate)
+            self.widget.apply_button.button.click()
+            self.assertTrue(self.widget.Error.data_error.is_shown())
+        for valid in self.valid_datasets:
+            self.send_signal("Data", valid)
+            self.assertFalse(self.widget.Error.data_error.is_shown())
 
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
-        self.assertIsNone(self.widget.preprocessors)
         self.send_signal("Preprocessor", Randomize)
-        pp = (Randomize,) + tuple(self.widget.LEARNER.preprocessors)
-        self.assertEqual(pp, self.widget.preprocessors)
+        self.assertEqual(
+            Randomize, self.widget.preprocessors,
+            'Preprocessor not added to widget preprocessors')
         self.widget.apply_button.button.click()
-        self.assertEqual(pp, tuple(self.widget.learner.preprocessors))
+        self.assertEqual(
+            (Randomize,), self.widget.learner.preprocessors,
+            'Preprocessors were not passed to the learner')
 
     def test_input_preprocessors(self):
         """Check multiple preprocessors on input"""
         pp_list = PreprocessorList([Randomize, RemoveNaNColumns])
         self.send_signal("Preprocessor", pp_list)
         self.widget.apply_button.button.click()
-        self.assertEqual([pp_list] + list(self.widget.LEARNER.preprocessors),
-                         self.widget.learner.preprocessors)
+        self.assertEqual(
+            (pp_list,), self.widget.learner.preprocessors,
+            '`PreprocessorList` was not added to preprocessors')
 
     def test_input_preprocessor_disconnect(self):
         """Check learner's preprocessors after disconnecting pp from input"""
         self.send_signal("Preprocessor", Randomize)
-        self.assertIsNotNone(self.widget.preprocessors)
+        self.widget.apply_button.button.click()
+        self.assertEqual(Randomize, self.widget.preprocessors)
+
         self.send_signal("Preprocessor", None)
-        self.assertEqual(self.widget.preprocessors,
-                         tuple(self.widget.LEARNER.preprocessors))
+        self.widget.apply_button.button.click()
+        self.assertIsNone(self.widget.preprocessors,
+                          'Preprocessors not removed on disconnect.')
 
     def test_output_learner(self):
         """Check if learner is on output after apply"""
@@ -414,7 +433,7 @@ class WidgetLearnerTestMixin:
         self.assertIsNone(self.get_output(self.model_name))
         self.widget.apply_button.button.click()
         self.assertIsNone(self.get_output(self.model_name))
-        self.send_signal("Data", self.data)
+        self.send_signal('Data', self.data)
         self.widget.apply_button.button.click()
         model = self.get_output(self.model_name)
         self.assertIsNotNone(model)
@@ -440,7 +459,8 @@ class WidgetLearnerTestMixin:
         self.assertEqual(self.get_output(self.model_name).name, new_name)
 
     def test_parameters_default(self):
-        """Check if learner's parameters are set to default (widget's) values"""
+        """Check if learner's parameters are set to default (widget's) values
+        """
         self.widget.apply_button.button.click()
         if hasattr(self.widget.learner, "params"):
             learner_params = self.widget.learner.params
@@ -449,6 +469,8 @@ class WidgetLearnerTestMixin:
                                  parameter.get_value())
 
     def test_parameters(self):
+        """Check learner and model for various values of all parameters"""
+
         def get_value(learner, name):
             # Handle SKL and skl-like learners, and non-SKL learners
             if hasattr(learner, "params"):
@@ -456,7 +478,6 @@ class WidgetLearnerTestMixin:
             else:
                 return getattr(learner, name)
 
-        """Check learner and model for various values of all parameters"""
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
             for value in parameter.values:

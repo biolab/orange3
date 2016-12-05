@@ -1,13 +1,13 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.widgets.regression.owknnregression import OWKNNRegression
+from Orange.widgets.regression.owknnregression import OWKNNLearner
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
 
 
 class TestOWKNNRegression(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(OWKNNRegression,
+        self.widget = self.create_widget(OWKNNLearner,
                                          stored_settings={"auto_apply": False})
         self.init()
         self.parameters = [

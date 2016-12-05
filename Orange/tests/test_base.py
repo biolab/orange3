@@ -2,12 +2,79 @@
 # pylint: disable=missing-docstring
 import unittest
 
-from Orange.base import SklLearner
+from Orange.base import SklLearner, Learner
+from Orange.preprocess import Discretize, Randomize
 from Orange.regression import LinearRegressionLearner
 
 
+class DummyLearner(Learner):
+    pass
+
+
+class DummyLearnerPP(Learner):
+    preprocessors = (Randomize(),)
+
+
+class TestLearner(unittest.TestCase):
+    def test_uses_default_preprocessors_unless_custom_pps_specified(self):
+        """Learners should use their default preprocessors unless custom
+        preprocessors were passed in to the constructor"""
+        learner = DummyLearner()
+        self.assertEqual(
+            type(learner).preprocessors, tuple(learner.active_preprocessors),
+            'Learner should use default preprocessors, unless preprocessors '
+            'were specified in init')
+
+    def test_overrides_custom_preprocessors(self):
+        """Passing preprocessors to the learner constructor should override the
+        default preprocessors defined on the learner"""
+        pp = Discretize()
+        learner = DummyLearnerPP(preprocessors=(pp,))
+        self.assertEqual(
+            tuple(learner.active_preprocessors), (pp,),
+            'Learner should override default preprocessors when specified in '
+            'constructor')
+
+    def test_use_default_preprocessors_property(self):
+        """We can specify that we want to use default preprocessors despite
+        passing our own ones in the constructor"""
+        learner = DummyLearnerPP(preprocessors=(Discretize(),))
+        learner.use_default_preprocessors = True
+
+        preprocessors = list(learner.active_preprocessors)
+        self.assertEqual(
+            len(preprocessors), 2,
+            'Learner did not properly insert custom preprocessor into '
+            'preprocessor list')
+        self.assertIsInstance(
+            preprocessors[0], Discretize,
+            'Custom preprocessor was inserted in incorrect order')
+        self.assertIsInstance(preprocessors[1], Randomize)
+
+    def test_preprocessors_can_be_passed_in_as_non_iterable(self):
+        """For convenience, we can pass a single preprocessor instance"""
+        pp = Discretize()
+        learner = DummyLearnerPP(preprocessors=pp)
+        self.assertEqual(
+            tuple(learner.active_preprocessors), (pp,),
+            'Preprocessors should be able to be passed in as single object '
+            'as well as an iterable object')
+
+    def test_preprocessors_can_be_passed_in_as_generator(self):
+        """Since we support iterables, we should support generators as well"""
+        pp = (Discretize(),)
+        learner = DummyLearnerPP(p for p in pp)
+        self.assertEqual(
+            tuple(learner.active_preprocessors), pp,
+            'Preprocessors should be able to be passed in as single object '
+            'as well as an iterable object')
+
+
 class TestSklLearner(unittest.TestCase):
-    def test_supports_weights(self):
+    def test_sklearn_supports_weights(self):
+        """Check that the SklLearner correctly infers whether or not the
+        learner supports weights"""
+
         class DummySklLearner:
             def fit(self, X, y, sample_weight=None):
                 pass
@@ -27,6 +94,7 @@ class TestSklLearner(unittest.TestCase):
         self.assertFalse(DummyLearner().supports_weights)
 
     def test_linreg(self):
-        self.assertTrue(LinearRegressionLearner().supports_weights,
-                        "Either LinearRegression no longer supports weighted tables "
-                        "or SklLearner.supports_weights is out-of-date.")
+        self.assertTrue(
+            LinearRegressionLearner().supports_weights,
+            "Either LinearRegression no longer supports weighted tables or "
+            "SklLearner.supports_weights is out-of-date.")
