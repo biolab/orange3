@@ -37,7 +37,7 @@ map.fitWorld();
 map.on('zoom', reposition_markers);
 
 L.easyButton('<img src="target.png" class="custom-button">', function () {
-    __self.fit_to_bounds();
+    pybridge.fit_to_bounds();
 }).addTo(map);
 
 map.on('mousedown', function (e) {
@@ -111,7 +111,7 @@ map.on("boxzoomend", function(e) {
                 marker.setSelected(true);
             }
         }
-        __self.selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
+        pybridge.selected_area(box.getNorth(), box.getEast(), box.getSouth(), box.getWest())
     }
 });
 map.on('click', function() {
@@ -119,7 +119,7 @@ map.on('click', function() {
         var marker = markers[i];
         marker.setSelected(false);
     }
-    __self.selected_area(0, 0, 0, 0);
+    pybridge.selected_area(0, 0, 0, 0);
 });
 
 
@@ -493,7 +493,7 @@ function reset_heatmap() {
             points.push([latlon.lat, latlon.lng]);
         }
     }
-    __self.recompute_heatmap(points);
+    pybridge.recompute_heatmap(points);
 }
 
 var _heatmap_canvas_ctx = document.getElementById('heatmap_canvas').getContext('2d'),
@@ -562,7 +562,7 @@ function redraw_markers_overlay_image() {
         size = map.getSize(),
         origin = map.getPixelOrigin(),
         pane_pos = map.getPane('mapPane')._leaflet_pos;
-    __self.redraw_markers_overlay_image(
+    pybridge.redraw_markers_overlay_image(
         bbox.getNorth(), bbox.getEast(), bbox.getSouth(), bbox.getWest(),
         size.x, size.y,
         map.getZoom(), [origin.x, origin.y], [pane_pos.x, pane_pos.y]);

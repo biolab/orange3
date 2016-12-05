@@ -5,7 +5,8 @@ from tempfile import mkstemp
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot, QTimer, QT_VERSION_STR
+from AnyQt.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot, QTimer, QT_VERSION_STR, \
+    QObject
 from AnyQt.QtGui import QImage, QPainter, QPen, QBrush, QColor
 
 
@@ -28,7 +29,26 @@ class LeafletMap(WebviewWidget):
     selectionChanged = pyqtSignal(list)
 
     def __init__(self, parent=None):
+
+        class Bridge(QObject):
+            @pyqtSlot()
+            def fit_to_bounds(_):
+                return self.fit_to_bounds()
+
+            @pyqtSlot(float, float, float, float)
+            def selected_area(_, *args):
+                return self.selected_area(*args)
+
+            @pyqtSlot('QVariantList')
+            def recompute_heatmap(_, *args):
+                return self.recompute_heatmap(*args)
+
+            @pyqtSlot(float, float, float, float, int, int, float, 'QVariantList', 'QVariantList')
+            def redraw_markers_overlay_image(_, *args):
+                return self.redraw_markers_overlay_image(*args)
+
         super().__init__(parent,
+                         bridge=Bridge(),
                          url=QUrl(self.toFileURL(
                              os.path.join(os.path.dirname(__file__), '_owmap', 'owmap.html'))),
                          debug=True,)
@@ -88,7 +108,6 @@ class LeafletMap(WebviewWidget):
         else:
             self.redraw_markers_overlay_image(new_image=True)
 
-    @pyqtSlot()
     def fit_to_bounds(self, fly=True):
         if self.data is None:
             return
@@ -99,7 +118,6 @@ class LeafletMap(WebviewWidget):
         self.evalJS('map.%sBounds([[%f, %f], [%f, %f]], {padding: [0,0], minZoom: 2, maxZoom: 13})'
                     % ('flyTo' if fly else 'fit', south, west, north, east))
 
-    @pyqtSlot(float, float, float, float)
     def selected_area(self, north, east, south, west):
         indices = np.array([])
         prev_selected_indices = self._selected_indices
@@ -246,7 +264,6 @@ class LeafletMap(WebviewWidget):
         self.model = model
         self.evalJS('clear_heatmap()' if model is None else 'reset_heatmap()')
 
-    @pyqtSlot('QVariantList')
     def recompute_heatmap(self, points):
         if self.model is None or not self.data or not self.lat_attr or not self.lon_attr:
             self.exposeObject('model_predictions', {})
@@ -352,7 +369,6 @@ class LeafletMap(WebviewWidget):
 
     N_POINTS_PER_ITER = 1000
 
-    @pyqtSlot(float, float, float, float, int, int, float, 'QVariantList', 'QVariantList')
     def redraw_markers_overlay_image(self, *args, new_image=False):
         if (not args and not self._drawing_args or
                 self.lat_attr is None or self.lon_attr is None):
