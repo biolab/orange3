@@ -1,3 +1,8 @@
+if [ "$QT_API" = 'pyqt5' ]; then
+    pip install pyqt5
+    return $?
+fi
+
 PYQT=$TRAVIS_BUILD_DIR/pyqt
 
 SIP_VERSION=4.16.9
@@ -31,5 +36,3 @@ make install
 
 cd $PYQT/PyQt
 make install
-
-pip install pyqtgraph
