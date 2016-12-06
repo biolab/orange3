@@ -15,6 +15,16 @@ discretization, continuization, imputation and transformation.
 Impute
 ======
 
+Imputation replaces missing values with new values (or omits such features).
+
+.. literalinclude:: code/imputation-default.py
+
+There are several imputation methods one can use.
+
+.. literalinclude:: code/imputation-average.py
+
+
+.. autoclass::Orange.preprocess.Impute
 
 .. index:: discretize data
    single: feature; discretize
