@@ -380,6 +380,7 @@ class Scheme(QObject):
         link : :class:`.SchemeLink`
 
         """
+        return False
         check_type(link, SchemeLink)
         source_node, sink_node = link.source_node, link.sink_node
         upstream = self.upstream_nodes(source_node)
@@ -407,6 +408,8 @@ class Scheme(QObject):
         Scheme.check_connect
 
         """
+        print('scheme, can connect')
+        return True
         check_type(link, SchemeLink)
         try:
             self.check_connect(link)
@@ -524,10 +527,10 @@ class Scheme(QObject):
         .. note:: This can depend on the links already in the scheme.
 
         """
-        if source_node is sink_node or \
-                self.is_ancestor(sink_node, source_node):
-            # Cyclic connections are not possible.
-            return []
+        # if source_node is sink_node or \
+        #         self.is_ancestor(sink_node, source_node):
+        #     # Cyclic connections are not possible.
+        #     return []
 
         outputs = source_node.output_channels()
         inputs = sink_node.input_channels()
