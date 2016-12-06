@@ -333,7 +333,7 @@ class SignalManager(QObject):
         signals_in = self.pending_input_signals(node)
         self.remove_pending_signals(node)
 
-        signals_in = self.compress_signals(signals_in)
+        # signals_in = self.compress_signals(signals_in)
 
         log.debug("Processing %r, sending %i signals.",
                   node.title, len(signals_in))
