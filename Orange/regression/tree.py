@@ -30,7 +30,7 @@ class TreeLearner(Learner):
             subsets for values of discrete attributes. If `False` (default),
             each value gets its branch.
         min_samples_leaf: the minimal number of data instances in a leaf
-        min_samples_split: the minimal nubmer of data instances that is split
+        min_samples_split: the minimal number of data instances that is split
             into subgroups
         max_depth: the maximal depth of the tree
 
