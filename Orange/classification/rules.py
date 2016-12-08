@@ -432,9 +432,10 @@ class TopDownSearchStrategy(SearchStrategy):
     instances is developed. The hypothesis space of possible rules is
     then searched repeatedly by specialising candidate rules.
     """
-    def __init__(self, constrain_continuous=True):
+    def __init__(self, constrain_continuous=True, evaluate=True):
         self.constrain_continuous = constrain_continuous
         self.storage = None
+        self.evaluate = evaluate
 
     def initialise_rule(self, X, Y, W, target_class, base_rules, domain,
                         initial_class_dist, prior_class_dist,
@@ -451,7 +452,8 @@ class TopDownSearchStrategy(SearchStrategy):
 
         default_rule.filter_and_store(X, Y, W, target_class)
         if not base_rules and default_rule.is_valid():
-            default_rule.do_evaluate()
+            if self.evaluate:
+                default_rule.do_evaluate()
             rules.append(default_rule)
 
         for base_rule in base_rules:
@@ -466,7 +468,8 @@ class TopDownSearchStrategy(SearchStrategy):
 
             temp_rule.filter_and_store(X, Y, W, target_class)
             if temp_rule.is_valid():
-                temp_rule.do_evaluate()
+                if self.evaluate:
+                    temp_rule.do_evaluate()
                 rules.append(temp_rule)
 
         # optimisation: store covered examples when a selector is found
@@ -513,7 +516,8 @@ class TopDownSearchStrategy(SearchStrategy):
             # the same size throughout the rule_finder iteration
             new_rule.filter_and_store(X, Y, W, target_class, predef_covered=pdc)
             if new_rule.is_valid():
-                new_rule.do_evaluate()
+                if self.evaluate:
+                    new_rule.do_evaluate()
                 new_rules.append(new_rule)
 
         return new_rules
