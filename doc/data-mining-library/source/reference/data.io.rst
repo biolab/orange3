@@ -59,9 +59,9 @@ A three-line header consists of:
    * ``<key>=<value>`` custom attributes.
 
 Example of iris dataset in Orange's three-line format
-(:download:`iris.tab <../../Orange/datasets/iris.tab>`).
+(:download:`iris.tab <../../../../Orange/datasets/iris.tab>`).
 
-.. literalinclude:: ../../Orange/datasets/iris.tab
+.. literalinclude:: ../../../../Orange/datasets/iris.tab
    :lines: 1-7
 
 
