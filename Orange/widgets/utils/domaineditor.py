@@ -10,6 +10,7 @@ from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable, Domain
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
+from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils.itemmodels import TableModel
 
 
@@ -39,44 +40,15 @@ class VarTableModel(QAbstractTableModel):
 
     def __init__(self, variables):
         super().__init__()
-        self.variables = self.original = variables
+        self.variables = variables
 
-    def set_domain(self, domain):
-        def may_be_numeric(var):
-            if var.is_continuous:
-                return True
-            if var.is_discrete:
-                try:
-                    sum(float(x) for x in var.values)
-                    return True
-                except ValueError:
-                    return False
-            return False
-
-        def discrete_value_display(value_list):
-            result = ", ".join(str(v) for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
-            if len(value_list) > VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT:
-                result += ", ..."
-            return result
-
+    def set_variables(self, variables):
         self.modelAboutToBeReset.emit()
-        if domain is None:
-            self.variables.clear()
-        else:
-            self.variables[:] = self.original = [
-                [var.name, type(var), place,
-                 discrete_value_display(var.values) if var.is_discrete else "",
-                 may_be_numeric(var)]
-                for place, vars in enumerate(
-                    (domain.attributes, domain.class_vars, domain.metas))
-                for var in vars
-            ]
+        self.variables = variables
         self.modelReset.emit()
 
     def reset(self):
-        self.modelAboutToBeReset.emit()
-        self.variables[:] = []
-        self.modelReset.emit()
+        self.set_variables([])
 
     def rowCount(self, parent):
         return 0 if parent.isValid() else len(self.variables)
@@ -186,6 +158,8 @@ class PlaceDelegate(ComboDelegate):
 
 
 class DomainEditor(QTableView):
+    variables = ContextSetting([])
+
     def __init__(self, variables):
         super().__init__()
         self.setModel(VarTableModel(variables))
@@ -209,10 +183,7 @@ class DomainEditor(QTableView):
 
     def get_domain(self, domain, data):
         variables = self.model().variables
-        attributes = []
-        class_vars = []
-        metas = []
-        places = [attributes, class_vars, metas]
+        places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
 
         def is_missing(x):
@@ -220,12 +191,12 @@ class DomainEditor(QTableView):
 
         for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
                 zip(count(), variables,
-                    chain([(at, 0) for at in domain.attributes],
-                          [(cl, 1) for cl in domain.class_vars],
-                          [(mt, 2) for mt in domain.metas])):
-            if place == 3:
+                    chain([(at, Place.feature) for at in domain.attributes],
+                          [(cl, Place.class_var) for cl in domain.class_vars],
+                          [(mt, Place.meta) for mt in domain.metas])):
+            if place == Place.skip:
                 continue
-            if orig_plc == 2:
+            if orig_plc == Place.meta:
                 col_data = list(chain(*data[:, orig_var].metas))
             else:
                 col_data = list(chain(*data[:, orig_var]))
@@ -244,5 +215,40 @@ class DomainEditor(QTableView):
                 var = tpe(name)
             places[place].append(var)
             cols[place].append(col_data)
-        domain = Domain(attributes, class_vars, metas)
+        domain = Domain(*places)
         return domain, cols
+
+    def set_domain(self, domain):
+        self.variables = self.parse_domain(domain)
+        self.model().set_variables(self.variables)
+
+    @staticmethod
+    def parse_domain(domain):
+        if domain is None:
+            return []
+
+        def may_be_numeric(var):
+            if var.is_continuous:
+                return True
+            if var.is_discrete:
+                try:
+                    sum(float(x) for x in var.values)
+                    return True
+                except ValueError:
+                    return False
+            return False
+
+        def discrete_value_display(value_list):
+            result = ", ".join(str(v) for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
+            if len(value_list) > VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT:
+                result += ", ..."
+            return result
+
+        return [
+            [var.name, type(var), place,
+             discrete_value_display(var.values) if var.is_discrete else "",
+             may_be_numeric(var)]
+            for place, vars in enumerate(
+                (domain.attributes, domain.class_vars, domain.metas))
+            for var in vars
+        ]
