@@ -163,6 +163,11 @@ class OWTreeGraph(OWTreeViewer2D):
     target_class_index = ContextSetting(0)
     regression_colors = Setting(0)
 
+    replaces = [
+        "Orange.widgets.classify.owclassificationtreegraph.OWClassificationTreeGraph",
+        "Orange.widgets.classify.owregressiontreegraph.OWRegressionTreeGraph"
+    ]
+
     COL_OPTIONS = ["Default", "Number of instances", "Mean value", "Variance"]
     COL_DEFAULT, COL_INSTANCE, COL_MEAN, COL_VARIANCE = range(4)
 
