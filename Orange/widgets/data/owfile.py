@@ -62,22 +62,6 @@ class NamedURLModel(PyListModel):
         self.modelReset.emit()
 
 
-class XlsContextHandler(ContextHandler):
-    def new_context(self, filename, sheet):
-        context = super().new_context()
-        context.filename = filename
-        return context
-
-    # noinspection PyMethodOverriding
-    def match(self, context, filename, sheets):
-        context_sheet = context.values.get("xls_sheet")
-        if context.filename == filename and context_sheet in sheets:
-            return ContextHandler.PERFECT_MATCH
-        if context_sheet in sheets:
-            return 1
-        return ContextHandler.NO_MATCH
-
-
 class LineEditSelectOnFocus(QLineEdit):
     def focusInEvent(self, event):
         super().focusInEvent(event)
