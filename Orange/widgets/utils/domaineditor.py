@@ -1,9 +1,13 @@
+from itertools import chain, count
+
+import numpy as np
+
 from AnyQt.QtCore import Qt, QAbstractTableModel
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
-    TimeVariable
+    TimeVariable, Domain
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils.itemmodels import TableModel
@@ -202,3 +206,43 @@ class DomainEditor(QTableView):
         self.setItemDelegateForColumn(Column.tpe, self.vartype_delegate)
         self.place_delegate = PlaceDelegate(self, VarTableModel.places)
         self.setItemDelegateForColumn(Column.place, self.place_delegate)
+
+    def get_domain(self, domain, data):
+        variables = self.model().variables
+        attributes = []
+        class_vars = []
+        metas = []
+        places = [attributes, class_vars, metas]
+        cols = [[], [], []]  # Xcols, Ycols, Mcols
+
+        def is_missing(x):
+            return str(x) in ("nan", "")
+
+        for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
+                zip(count(), variables,
+                    chain([(at, 0) for at in domain.attributes],
+                          [(cl, 1) for cl in domain.class_vars],
+                          [(mt, 2) for mt in domain.metas])):
+            if place == 3:
+                continue
+            if orig_plc == 2:
+                col_data = list(chain(*data[:, orig_var].metas))
+            else:
+                col_data = list(chain(*data[:, orig_var]))
+            if name == orig_var.name and tpe == type(orig_var):
+                var = orig_var
+            elif tpe == DiscreteVariable:
+                values = list(str(i) for i in set(col_data) if not is_missing(i))
+                var = tpe(name, values)
+                col_data = [np.nan if is_missing(x) else values.index(str(x))
+                            for x in col_data]
+            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
+                var = tpe(name)
+                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
+                            for x in col_data]
+            else:
+                var = tpe(name)
+            places[place].append(var)
+            cols[place].append(col_data)
+        domain = Domain(attributes, class_vars, metas)
+        return domain, cols

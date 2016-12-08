@@ -191,9 +191,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.warnings = gui.widgetLabel(box, '')
 
         box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
-        domain_editor = DomainEditor(self.variables)
-        self.editor_model = domain_editor.model()
-        box.layout().addWidget(domain_editor)
+        self.domain_editor = DomainEditor(self.variables)
+        self.editor_model = self.domain_editor.model()
+        box.layout().addWidget(self.domain_editor)
 
         box = gui.hBox(self.controlArea)
         gui.button(
@@ -387,43 +387,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.variables[:] = self.current_context.modified_variables
 
     def apply_domain_edit(self):
-        attributes = []
-        class_vars = []
-        metas = []
-        places = [attributes, class_vars, metas]
-        X, y, m = [], [], []
-        cols = [X, y, m]  # Xcols, Ycols, Mcols
-
-        def is_missing(x):
-            return str(x) in ("nan", "")
-
-        for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
-            zip(count(), self.editor_model.variables,
-                chain([(at, 0) for at in self.data.domain.attributes],
-                      [(cl, 1) for cl in self.data.domain.class_vars],
-                      [(mt, 2) for mt in self.data.domain.metas])):
-            if place == 3:
-                continue
-            if orig_plc == 2:
-                col_data = list(chain(*self.data[:, orig_var].metas))
-            else:
-                col_data = list(chain(*self.data[:, orig_var]))
-            if name == orig_var.name and tpe == type(orig_var):
-                var = orig_var
-            elif tpe == DiscreteVariable:
-                values = list(str(i) for i in set(col_data) if not is_missing(i))
-                var = tpe(name, values)
-                col_data = [np.nan if is_missing(x) else values.index(str(x))
-                            for x in col_data]
-            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
-                var = tpe(name)
-                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
-                            for x in col_data]
-            else:
-                var = tpe(name)
-            places[place].append(var)
-            cols[place].append(col_data)
-        domain = Domain(attributes, class_vars, metas)
+        domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+        X, y, m = cols
         X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
         y = np.array(y).T if len(y) else None
         dtpe = object if any(isinstance(m, StringVariable)
