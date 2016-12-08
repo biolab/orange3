@@ -160,9 +160,13 @@ class PlaceDelegate(ComboDelegate):
 class DomainEditor(QTableView):
     variables = ContextSetting([])
 
-    def __init__(self, variables):
+    def __init__(self, widget):
         super().__init__()
-        self.setModel(VarTableModel(variables))
+        widget.settingsHandler.initialize(self)
+        self.openContext = widget.openContext
+        self.closeContext = widget.closeContext
+
+        self.setModel(VarTableModel(self.variables))
         self.setSelectionMode(QTableView.NoSelection)
         self.horizontalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
@@ -219,7 +223,9 @@ class DomainEditor(QTableView):
         return domain, cols
 
     def set_domain(self, domain):
+        self.closeContext()
         self.variables = self.parse_domain(domain)
+        self.openContext(domain)
         self.model().set_variables(self.variables)
 
     @staticmethod
