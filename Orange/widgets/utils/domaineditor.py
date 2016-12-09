@@ -47,9 +47,6 @@ class VarTableModel(QAbstractTableModel):
         self.variables = variables
         self.modelReset.emit()
 
-    def reset(self):
-        self.set_variables([])
-
     def rowCount(self, parent):
         return 0 if parent.isValid() else len(self.variables)
 

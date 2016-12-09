@@ -299,7 +299,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.data = None
             self.send("Data", None)
             self.info.setText("An error occurred:\n{}".format(error))
-            self.editor_model.reset()
             self.sheet_box.hide()
             return
 
