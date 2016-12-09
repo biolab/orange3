@@ -1,4 +1,4 @@
-from itertools import chain, count
+from itertools import chain
 
 import numpy as np
 
@@ -209,8 +209,8 @@ class DomainEditor(QTableView):
         def is_missing(x):
             return str(x) in ("nan", "")
 
-        for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
-                zip(count(), variables,
+        for (name, tpe, place, _, _), (orig_var, orig_plc) in \
+                zip(variables,
                     chain([(at, Place.feature) for at in domain.attributes],
                           [(cl, Place.class_var) for cl in domain.class_vars],
                           [(mt, Place.meta) for mt in domain.metas])):

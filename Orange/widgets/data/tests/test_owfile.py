@@ -7,10 +7,9 @@ from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 
 import Orange
-from Orange.data import Table, FileFormat, dataset_dirs, StringVariable
+from Orange.data import FileFormat, dataset_dirs, StringVariable
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.domaineditor import VarTableModel
 
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
 

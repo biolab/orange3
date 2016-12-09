@@ -1,6 +1,5 @@
 import os
 import logging
-from itertools import chain, count
 from warnings import catch_warnings
 
 import numpy as np
@@ -11,11 +10,11 @@ from AnyQt.QtWidgets import QSizePolicy as Policy
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import Domain, DiscreteVariable, StringVariable
+from Orange.data import StringVariable
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
+from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
@@ -157,7 +156,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
                                         callback=self.select_sheet,
-                                        sendSelectedValue=True)
+                                        sendSelectedValue=True,)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_label = QLabel()
