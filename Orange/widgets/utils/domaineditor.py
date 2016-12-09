@@ -155,6 +155,13 @@ class PlaceDelegate(ComboDelegate):
 
 
 class DomainEditor(QTableView):
+    """Component for editing of variable types.
+
+    Parameters
+    ----------
+    widget : parent widget
+    """
+
     variables = ContextSetting([])
 
     def __init__(self, widget):
@@ -183,6 +190,17 @@ class DomainEditor(QTableView):
         self.setItemDelegateForColumn(Column.place, self.place_delegate)
 
     def get_domain(self, domain, data):
+        """Create domain (and dataset) from changes made in the widget.
+
+        Parameters
+        ----------
+        domain : old domain
+        data : source data
+
+        Returns
+        -------
+        (new_domain, [attribute_columns, class_var_columns, meta_columns])
+        """
         variables = self.model().variables
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
@@ -220,6 +238,15 @@ class DomainEditor(QTableView):
         return domain, cols
 
     def set_domain(self, domain):
+        """Update the widget with information about given domain.
+
+        If domain has been seen before (saved context settings),
+        the existing edits will be shown.
+
+        Parameters
+        ----------
+        domain : of the new data file.
+        """
         self.closeContext()
         self.variables = self.parse_domain(domain)
         self.openContext(domain)
@@ -227,6 +254,18 @@ class DomainEditor(QTableView):
 
     @staticmethod
     def parse_domain(domain):
+        """Convert domain into variable representation used by
+        the VarTableModel.
+
+        Parameters
+        ----------
+        domain : the domain to convert
+
+        Returns
+        -------
+        list of [variable_name, var_type, place, values, can_be_numeric] lists.
+
+        """
         if domain is None:
             return []
 
