@@ -1,11 +1,16 @@
+from itertools import chain
+
+import numpy as np
+
 from AnyQt.QtCore import Qt, QAbstractTableModel
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
-    TimeVariable
+    TimeVariable, Domain
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
+from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils.itemmodels import TableModel
 
 
@@ -35,43 +40,11 @@ class VarTableModel(QAbstractTableModel):
 
     def __init__(self, variables):
         super().__init__()
-        self.variables = self.original = variables
+        self.variables = variables
 
-    def set_domain(self, domain):
-        def may_be_numeric(var):
-            if var.is_continuous:
-                return True
-            if var.is_discrete:
-                try:
-                    sum(float(x) for x in var.values)
-                    return True
-                except ValueError:
-                    return False
-            return False
-
-        def discrete_value_display(value_list):
-            result = ", ".join(str(v) for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
-            if len(value_list) > VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT:
-                result += ", ..."
-            return result
-
+    def set_variables(self, variables):
         self.modelAboutToBeReset.emit()
-        if domain is None:
-            self.variables.clear()
-        else:
-            self.variables[:] = self.original = [
-                [var.name, type(var), place,
-                 discrete_value_display(var.values) if var.is_discrete else "",
-                 may_be_numeric(var)]
-                for place, vars in enumerate(
-                    (domain.attributes, domain.class_vars, domain.metas))
-                for var in vars
-            ]
-        self.modelReset.emit()
-
-    def reset(self):
-        self.modelAboutToBeReset.emit()
-        self.variables[:] = []
+        self.variables = variables
         self.modelReset.emit()
 
     def rowCount(self, parent):
@@ -182,9 +155,23 @@ class PlaceDelegate(ComboDelegate):
 
 
 class DomainEditor(QTableView):
-    def __init__(self, variables):
+    """Component for editing of variable types.
+
+    Parameters
+    ----------
+    widget : parent widget
+    """
+
+    variables = ContextSetting([])
+
+    def __init__(self, widget):
         super().__init__()
-        self.setModel(VarTableModel(variables))
+        widget.settingsHandler.initialize(self)
+        widget.contextAboutToBeOpened.connect(lambda args: self.set_domain(args[0]))
+        widget.contextOpened.connect(lambda: self.model().set_variables(self.variables))
+        widget.contextClosed.connect(lambda: self.model().set_variables([]))
+
+        self.setModel(VarTableModel(self.variables))
         self.setSelectionMode(QTableView.NoSelection)
         self.horizontalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
@@ -202,3 +189,97 @@ class DomainEditor(QTableView):
         self.setItemDelegateForColumn(Column.tpe, self.vartype_delegate)
         self.place_delegate = PlaceDelegate(self, VarTableModel.places)
         self.setItemDelegateForColumn(Column.place, self.place_delegate)
+
+    def get_domain(self, domain, data):
+        """Create domain (and dataset) from changes made in the widget.
+
+        Parameters
+        ----------
+        domain : old domain
+        data : source data
+
+        Returns
+        -------
+        (new_domain, [attribute_columns, class_var_columns, meta_columns])
+        """
+        variables = self.model().variables
+        places = [[], [], []]  # attributes, class_vars, metas
+        cols = [[], [], []]  # Xcols, Ycols, Mcols
+
+        def is_missing(x):
+            return str(x) in ("nan", "")
+
+        for (name, tpe, place, _, _), (orig_var, orig_plc) in \
+                zip(variables,
+                    chain([(at, Place.feature) for at in domain.attributes],
+                          [(cl, Place.class_var) for cl in domain.class_vars],
+                          [(mt, Place.meta) for mt in domain.metas])):
+            if place == Place.skip:
+                continue
+            if orig_plc == Place.meta:
+                col_data = list(chain(*data[:, orig_var].metas))
+            else:
+                col_data = list(chain(*data[:, orig_var]))
+            if name == orig_var.name and tpe == type(orig_var):
+                var = orig_var
+            elif tpe == DiscreteVariable:
+                values = list(str(i) for i in set(col_data) if not is_missing(i))
+                var = tpe(name, values)
+                col_data = [np.nan if is_missing(x) else values.index(str(x))
+                            for x in col_data]
+            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
+                var = tpe(name)
+                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
+                            for x in col_data]
+            else:
+                var = tpe(name)
+            places[place].append(var)
+            cols[place].append(col_data)
+        domain = Domain(*places)
+        return domain, cols
+
+    def set_domain(self, domain):
+        self.variables = self.parse_domain(domain)
+
+    @staticmethod
+    def parse_domain(domain):
+        """Convert domain into variable representation used by
+        the VarTableModel.
+
+        Parameters
+        ----------
+        domain : the domain to convert
+
+        Returns
+        -------
+        list of [variable_name, var_type, place, values, can_be_numeric] lists.
+
+        """
+        if domain is None:
+            return []
+
+        def may_be_numeric(var):
+            if var.is_continuous:
+                return True
+            if var.is_discrete:
+                try:
+                    sum(float(x) for x in var.values)
+                    return True
+                except ValueError:
+                    return False
+            return False
+
+        def discrete_value_display(value_list):
+            result = ", ".join(str(v) for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
+            if len(value_list) > VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT:
+                result += ", ..."
+            return result
+
+        return [
+            [var.name, type(var), place,
+             discrete_value_display(var.values) if var.is_discrete else "",
+             may_be_numeric(var)]
+            for place, vars in enumerate(
+                (domain.attributes, domain.class_vars, domain.metas))
+            for var in vars
+        ]

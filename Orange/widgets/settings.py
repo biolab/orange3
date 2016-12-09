@@ -967,7 +967,13 @@ class DomainContextHandler(ContextHandler):
                 setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
-                excluded |= set(value)
+                try:
+                    excluded |= set(value)
+                except Exception:
+                    # Some values in the list were not hashable so they will
+                    # be included in the reservoir. Since no one uses
+                    # reservoirs anyway, pretend nothing happened.
+                    pass
             else:
                 if setting.not_attribute:
                     excluded.add(value)
