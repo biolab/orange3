@@ -69,15 +69,17 @@ class InputSignal(object):
         A unique id of the input signal.
     doc : str, optional
         A docstring documenting the channel.
-
+    replaces : List[str]
+        A list of names this input replaces.
     """
     def __init__(self, name, type, handler, flags=Single + NonDefault,
-                 id=None, doc=None):
+                 id=None, doc=None, replaces=[]):
         self.name = name
         self.type = type
         self.handler = handler
         self.id = id
         self.doc = doc
+        self.replaces = list(replaces)
 
         if isinstance(flags, str):
             # flags are stored as strings
@@ -130,14 +132,16 @@ class OutputSignal(object):
         A unique id of the output signal.
     doc : str, optional
         A docstring documenting the channel.
-
+    replaces : List[str]
+        A list of names this output replaces.
     """
     def __init__(self, name, type, flags=Single + NonDefault,
-                 id=None, doc=None):
+                 id=None, doc=None, replaces=[]):
         self.name = name
         self.type = type
         self.id = id
         self.doc = doc
+        self.replaces = list(replaces)
 
         if isinstance(flags, str):
             # flags are stored as strings
