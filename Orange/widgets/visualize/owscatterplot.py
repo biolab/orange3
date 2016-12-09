@@ -198,7 +198,7 @@ class OWScatterPlot(OWWidget):
             callback=self.update_colors,
             model=self.color_model, **common_options)
         self.label_model = DomainModel(
-            placeholder="(No labels)", valid_types=dmod.PRIMITIVE)
+            placeholder="(No labels)")
         self.cb_attr_label = gui.comboBox(
             box, self, "graph.attr_label", label="Label:",
             callback=self.graph.update_labels,
