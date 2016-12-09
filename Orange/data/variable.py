@@ -568,14 +568,11 @@ class DiscreteVariable(Variable):
     @property
     def colors(self):
         if self._colors is None:
-            if "colors" in self.attributes:
-                self._colors = np.array(
-                    [hex_to_color(col) for col in self.attributes["colors"]],
-                    dtype=np.uint8)
-            else:
-                from Orange.widgets.utils.colorpalette import \
-                    ColorPaletteGenerator
-                self._colors = ColorPaletteGenerator.palette(self)
+            from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
+            self._colors = ColorPaletteGenerator.palette(self)
+            colors = self.attributes.get('colors')
+            if colors:
+                self._colors[:len(colors)] = [hex_to_color(color) for color in colors]
             self._colors.flags.writeable = False
         return self._colors
 
@@ -636,6 +633,7 @@ class DiscreteVariable(Variable):
         """ Add a value `s` to the list of values.
         """
         self.values.append(s)
+        self._colors = None
 
     def val_from_str_add(self, s):
         """
