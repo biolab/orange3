@@ -432,9 +432,8 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
-        copy = QAction("Copy", self, shortcut=QKeySequence.Copy,
-                             triggered=self.copy)
-        self.addAction(copy)
+    def copy_to_clipboard(self):
+        self.copy()
 
     def sizeHint(self):
         return QSize(800, 500)
