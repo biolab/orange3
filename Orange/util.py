@@ -1,4 +1,5 @@
 """Various small utilities that might be useful everywhere"""
+import os
 import inspect
 from enum import Enum as _Enum
 from functools import wraps
@@ -23,6 +24,9 @@ class OrangeDeprecationWarning(OrangeWarning, DeprecationWarning):
 
 
 warnings.simplefilter('default', OrangeWarning)
+
+if os.environ.get('ORANGE_DEPRECATIONS_ERROR'):
+    warnings.simplefilter('error', OrangeDeprecationWarning)
 
 
 def deprecated(obj):

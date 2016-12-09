@@ -15,6 +15,12 @@ export PYTHONPATH="$ORANGE_DIR" PYTHONUNBUFFERED=x
 # Screen must be 24bpp lest pyqt5 crashes, see pytest-dev/pytest-qt/35
 XVFBARGS="-screen 0 1280x1024x24"
 
+# Raise deprecations as errors in our tests
+export ORANGE_DEPRECATIONS_ERROR=y
+# Need this otherwise unittest installs a warning filter that overrides
+# our desire to have OrangeDeprecationWarnings raised
+export PYTHONWARNINGS=module
+
 catchsegv xvfb-run -a -s "$XVFBARGS" \
     coverage run -m unittest -v \
         Orange.tests \

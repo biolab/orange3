@@ -1,9 +1,10 @@
 import unittest
+import warnings
 
 import numpy as np
 
-from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr
-
+from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, \
+    OrangeDeprecationWarning
 
 SOMETHING = 0xf00babe
 
@@ -37,3 +38,7 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(deepgetattr(a, 'l.__len__.__call__'), a.l.__len__.__call__)
         self.assertTrue(deepgetattr(a, 'l.__nx__.__x__', 42), 42)
         self.assertRaises(AttributeError, lambda: deepgetattr(a, 'l.__nx__.__x__'))
+
+    def test_raise_deprecations(self):
+        with self.assertRaises(OrangeDeprecationWarning):
+            warnings.warn('foo', OrangeDeprecationWarning)

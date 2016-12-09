@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import os
 import unittest
 from unittest.mock import Mock, MagicMock, patch
 import numpy as np
@@ -43,7 +44,9 @@ class TestPreprocess(unittest.TestCase):
         self.assertEqual(MockPreprocessor.__call__.call_count, 0)
 
     def test_refuse_data_in_constructor(self):
-        with self.assertWarns(OrangeDeprecationWarning):
+        # We force deprecations as exceptions as part of CI
+        self.assertTrue(os.environ.get('ORANGE_DEPRECATIONS_ERROR'))
+        with self.assertRaises(OrangeDeprecationWarning):
             Orange.preprocess.preprocess.Preprocess(Table('iris'))
 
 
