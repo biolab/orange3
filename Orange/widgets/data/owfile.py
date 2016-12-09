@@ -269,6 +269,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # We need to catch any exception type since anything can happen in
         # file readers
         # pylint: disable=broad-except
+        self.closeContext()
         self.domain_editor.set_domain(None)
         self.apply_button.setEnabled(False)
         self.Warning.file_too_big.clear()
@@ -306,7 +307,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         add_origin(data, self.loaded_file or self.last_path())
         self.data = data
-        self.domain_editor.set_domain(data.domain)
+        self.openContext(data.domain)
         self.apply_domain_edit()  # sends data
 
     def _get_reader(self):

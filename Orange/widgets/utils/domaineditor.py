@@ -167,8 +167,9 @@ class DomainEditor(QTableView):
     def __init__(self, widget):
         super().__init__()
         widget.settingsHandler.initialize(self)
-        self.openContext = widget.openContext
-        self.closeContext = widget.closeContext
+        widget.contextAboutToBeOpened.connect(lambda args: self.set_domain(args[0]))
+        widget.contextOpened.connect(lambda: self.model().set_variables(self.variables))
+        widget.contextClosed.connect(lambda: self.model().set_variables([]))
 
         self.setModel(VarTableModel(self.variables))
         self.setSelectionMode(QTableView.NoSelection)
@@ -238,19 +239,7 @@ class DomainEditor(QTableView):
         return domain, cols
 
     def set_domain(self, domain):
-        """Update the widget with information about given domain.
-
-        If domain has been seen before (saved context settings),
-        the existing edits will be shown.
-
-        Parameters
-        ----------
-        domain : of the new data file.
-        """
-        self.closeContext()
         self.variables = self.parse_domain(domain)
-        self.openContext(domain)
-        self.model().set_variables(self.variables)
 
     @staticmethod
     def parse_domain(domain):
