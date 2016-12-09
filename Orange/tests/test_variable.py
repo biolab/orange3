@@ -215,7 +215,7 @@ class TestDiscreteVariable(VariableTest):
             repr(var),
             "DiscreteVariable('a', values=['1', '2', '3', '4', '5', ...])")
 
-    @unittest.skipUnless(is_on_path("PyQt4"), "PyQt4 is not importable")
+    @unittest.skipUnless(is_on_path("PyQt4") or is_on_path("PyQt5"), "PyQt is not importable")
     def test_colors(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertIsNone(var._colors)
@@ -235,6 +235,17 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("x", values=["A", "B"])
         var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
         np.testing.assert_almost_equal(var.colors, [[10, 11, 12], [13, 14, 15]])
+
+        # Test ncolors adapts to nvalues
+        var = DiscreteVariable.make('foo', values=['d', 'r'])
+        self.assertEqual(len(var.colors), 2)
+        var.add_value('e')
+        self.assertEqual(len(var.colors), 3)
+        user_defined = (0, 0, 0)
+        var.set_color(2, user_defined)
+        var.add_value('k')
+        self.assertEqual(len(var.colors), 4)
+        np.testing.assert_array_equal(var.colors[2], user_defined)
 
 
 @variabletest(ContinuousVariable)
