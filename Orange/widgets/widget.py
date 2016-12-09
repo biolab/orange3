@@ -7,8 +7,7 @@ from AnyQt.QtWidgets import (
     QShortcut, QSplitter, QSplitterHandle, QPushButton
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
-)
+    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
@@ -171,6 +170,10 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #:
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
+
+    contextAboutToBeOpened = Signal(object)
+    contextOpened = Signal()
+    contextClosed = Signal()
 
     def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
@@ -488,7 +491,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         `DomainContextHandler` expects `Orange.data.Table` or
         `Orange.data.Domain`.
         """
+        self.contextAboutToBeOpened.emit(a)
         self.settingsHandler.open_context(self, *a)
+        self.contextOpened.emit()
 
     def closeContext(self):
         """Save the current settings and close the current context.
@@ -498,6 +503,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         data.
         """
         self.settingsHandler.close_context(self)
+        self.contextClosed.emit()
 
     def retrieveSpecificSettings(self):
         """

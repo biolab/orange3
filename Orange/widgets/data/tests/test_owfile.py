@@ -7,6 +7,7 @@ from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 
 import Orange
+from Orange.data import FileFormat, dataset_dirs, StringVariable
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.tests.base import WidgetTest
 
@@ -69,3 +70,26 @@ class TestOWFile(WidgetTest):
         self.widget.SIZE_LIMIT = 4000
         self.widget.__init__()
         self.assertTrue(self.widget.Warning.file_too_big.is_shown())
+
+    def test_domain_changes_are_stored(self):
+        assert isinstance(self.widget, OWFile)
+
+        self.open_dataset("iris")
+        idx = self.widget.domain_editor.model().createIndex(4, 1)
+        self.widget.domain_editor.model().setData(idx, "string", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output("Data")
+        self.assertIsInstance(data.domain["iris"], StringVariable)
+
+        self.open_dataset("zoo")
+        data = self.get_output("Data")
+        self.assertEqual(data.name, "zoo")
+
+        self.open_dataset("iris")
+        data = self.get_output("Data")
+        self.assertIsInstance(data.domain["iris"], StringVariable)
+
+    def open_dataset(self, name):
+        filename = FileFormat.locate(name, dataset_dirs)
+        self.widget.add_path(filename)
+        self.widget.load_data()

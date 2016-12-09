@@ -1,6 +1,5 @@
 import os
 import logging
-from itertools import chain, count
 from warnings import catch_warnings
 
 import numpy as np
@@ -11,12 +10,12 @@ from AnyQt.QtWidgets import QSizePolicy as Policy
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import Domain, DiscreteVariable, StringVariable
+from Orange.data import StringVariable
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting, ContextHandler, ContextSetting, \
-    PerfectDomainContextHandler
+from Orange.widgets.settings import Setting, ContextSetting, \
+    PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
@@ -60,22 +59,6 @@ class NamedURLModel(PyListModel):
     def add_name(self, url, name):
         self.mapping[url] = name
         self.modelReset.emit()
-
-
-class XlsContextHandler(ContextHandler):
-    def new_context(self, filename, sheet):
-        context = super().new_context()
-        context.filename = filename
-        return context
-
-    # noinspection PyMethodOverriding
-    def match(self, context, filename, sheets):
-        context_sheet = context.values.get("xls_sheet")
-        if context.filename == filename and context_sheet in sheets:
-            return ContextHandler.PERFECT_MATCH
-        if context_sheet in sheets:
-            return 1
-        return ContextHandler.NO_MATCH
 
 
 class LineEditSelectOnFocus(QLineEdit):
@@ -128,6 +111,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                   for f in sorted(set(FileFormat.readers.values()),
                                   key=list(FileFormat.readers.values()).index)))
 
+    domain_editor = SettingProvider(DomainEditor)
+
     class Warning(widget.OWWidget.Warning):
         file_too_big = widget.Msg("The file is too large to load automatically."
                                   " Press Reload to load.")
@@ -171,7 +156,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
                                         callback=self.select_sheet,
-                                        sendSelectedValue=True)
+                                        sendSelectedValue=True,)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_label = QLabel()
@@ -207,9 +192,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.warnings = gui.widgetLabel(box, '')
 
         box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
-        domain_editor = DomainEditor(self.variables)
-        self.editor_model = domain_editor.model()
-        box.layout().addWidget(domain_editor)
+        self.domain_editor = DomainEditor(self)
+        self.editor_model = self.domain_editor.model()
+        box.layout().addWidget(self.domain_editor)
 
         box = gui.hBox(self.controlArea)
         gui.button(
@@ -283,7 +268,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         # We need to catch any exception type since anything can happen in
         # file readers
         # pylint: disable=broad-except
-        self.editor_model.set_domain(None)
+        self.closeContext()
+        self.domain_editor.set_domain(None)
         self.apply_button.setEnabled(False)
         self.Warning.file_too_big.clear()
 
@@ -313,16 +299,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.data = None
             self.send("Data", None)
             self.info.setText("An error occurred:\n{}".format(error))
-            self.editor_model.reset()
             self.sheet_box.hide()
             return
 
         self.info.setText(self._describe(data))
 
         add_origin(data, self.loaded_file or self.last_path())
-        self.send("Data", data)
-        self.editor_model.set_domain(data.domain)
         self.data = data
+        self.openContext(data.domain)
+        self.apply_domain_edit()  # sends data
 
     def _get_reader(self):
         """
@@ -403,49 +388,21 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.variables[:] = self.current_context.modified_variables
 
     def apply_domain_edit(self):
-        attributes = []
-        class_vars = []
-        metas = []
-        places = [attributes, class_vars, metas]
-        X, y, m = [], [], []
-        cols = [X, y, m]  # Xcols, Ycols, Mcols
+        if self.data is not None:
+            domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+            X, y, m = cols
+            X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
+            y = np.array(y).T if len(y) else None
+            dtpe = object if any(isinstance(m, StringVariable)
+                                 for m in domain.metas) else float
+            m = np.array(m, dtype=dtpe).T if len(m) else None
+            table = Table.from_numpy(domain, X, y, m, self.data.W)
+            table.name = self.data.name
+            table.ids = np.array(self.data.ids)
+            table.attributes = getattr(self.data, 'attributes', {})
+        else:
+            table = self.data
 
-        def is_missing(x):
-            return str(x) in ("nan", "")
-
-        for column, (name, tpe, place, vals, is_con), (orig_var, orig_plc) in \
-            zip(count(), self.editor_model.variables,
-                chain([(at, 0) for at in self.data.domain.attributes],
-                      [(cl, 1) for cl in self.data.domain.class_vars],
-                      [(mt, 2) for mt in self.data.domain.metas])):
-            if place == 3:
-                continue
-            if orig_plc == 2:
-                col_data = list(chain(*self.data[:, orig_var].metas))
-            else:
-                col_data = list(chain(*self.data[:, orig_var]))
-            if name == orig_var.name and tpe == type(orig_var):
-                var = orig_var
-            elif tpe == DiscreteVariable:
-                values = list(str(i) for i in set(col_data) if not is_missing(i))
-                var = tpe(name, values)
-                col_data = [np.nan if is_missing(x) else values.index(str(x))
-                            for x in col_data]
-            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
-                var = tpe(name)
-                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
-                            for x in col_data]
-            else:
-                var = tpe(name)
-            places[place].append(var)
-            cols[place].append(col_data)
-        domain = Domain(attributes, class_vars, metas)
-        X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
-        y = np.array(y).T if len(y) else None
-        dtpe = object if any(isinstance(m, StringVariable)
-                             for m in domain.metas) else float
-        m = np.array(m, dtype=dtpe).T if len(m) else None
-        table = Table.from_numpy(domain, X, y, m, self.data.W)
         self.send("Data", table)
         self.apply_button.setEnabled(False)
 
