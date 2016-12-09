@@ -397,6 +397,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                                  for m in domain.metas) else float
             m = np.array(m, dtype=dtpe).T if len(m) else None
             table = Table.from_numpy(domain, X, y, m, self.data.W)
+            table.name = self.data.name
+            table.ids = np.array(self.data.ids)
+            table.attributes = getattr(self.data, 'attributes', {})
         else:
             table = self.data
 
