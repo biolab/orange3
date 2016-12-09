@@ -25,6 +25,7 @@ from .annotations import SchemeTextAnnotation, SchemeArrowAnnotation
 from .errors import IncompatibleChannelTypeError
 
 from ..registry import global_registry
+from ..registry import WidgetDescription, InputSignal, OutputSignal
 
 log = logging.getLogger(__name__)
 
@@ -607,12 +608,26 @@ def resolve_1_0(scheme_desc, registry):
 
 def resolve_replaced(scheme_desc, registry):
     widgets = registry.widgets()
+    nodes_by_id = {}  # type: Dict[str, _node]
     replacements = {}
-    for desc in widgets:
+    replacements_channels = {}  # type: Dict[str, Tuple[dict, dict]]
+    # collect all the replacement mappings
+    for desc in widgets:  # type: WidgetDescription
         if desc.replaces:
             for repl_qname in desc.replaces:
                 replacements[repl_qname] = desc.qualified_name
 
+        input_repl = {}
+        for idesc in desc.inputs or []:  # type: InputSignal
+            for repl_qname in idesc.replaces or []:  # type: str
+                input_repl[repl_qname] = idesc.name
+        output_repl = {}
+        for odesc in desc.outputs:  # type: OutputSignal
+            for repl_qname in odesc.replaces or []:  # type: str
+                output_repl[repl_qname] = odesc.name
+        replacements_channels[desc.qualified_name] = (input_repl, output_repl)
+
+    # replace the nodes
     nodes = scheme_desc.nodes
     for i, node in list(enumerate(nodes)):
         if not registry.has_widget(node.qualified_name) and \
@@ -621,8 +636,28 @@ def resolve_replaced(scheme_desc, registry):
             desc = registry.widget(qname)
             nodes[i] = node._replace(qualified_name=desc.qualified_name,
                                      project_name=desc.project_name)
+        nodes_by_id[node.id] = nodes[i]
 
-    return scheme_desc._replace(nodes=nodes)
+    # replace links
+    links = scheme_desc.links
+    for i, link in list(enumerate(links)):  # type: _link
+        nsource = nodes_by_id[link.source_node_id]
+        nsink = nodes_by_id[link.sink_node_id]
+
+        _, source_rep = replacements_channels.get(
+            nsource.qualified_name, ({}, {}))
+        sink_rep, _ = replacements_channels.get(
+            nsink.qualified_name, ({}, {}))
+
+        if link.source_channel in source_rep:
+            link = link._replace(
+                source_channel=source_rep[link.source_channel])
+        if link.sink_channel in sink_rep:
+            link = link._replace(
+                sink_channel=sink_rep[link.sink_channel])
+        links[i] = link
+
+    return scheme_desc._replace(nodes=nodes, links=links)
 
 
 def scheme_load(scheme, stream, registry=None, error_handler=None):

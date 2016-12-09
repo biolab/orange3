@@ -155,9 +155,21 @@ class OWTreeGraph(OWTreeViewer2D):
     name = "Tree Viewer"
     icon = "icons/TreeViewer.svg"
     priority = 35
-    inputs = [("Tree", TreeModel, "ctree")]
-    outputs = [("Selected Data", Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    inputs = [
+        widget.InputSignal(
+            "Tree", TreeModel, "ctree",
+            # Had different input names before merging from
+            # Classification/Regression tree variants
+            replaces=["Classification Tree", "Regression Tree"])
+    ]
+    outputs = [
+        widget.OutputSignal(
+            "Selected Data", Table, widget.Default, id="selected-data",
+        ),
+        widget.OutputSignal(
+            ANNOTATED_DATA_SIGNAL_NAME, Table, id="annotated-data")
+    ]
+
 
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
