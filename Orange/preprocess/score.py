@@ -8,6 +8,7 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
+from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.util import Reprable
 
 __all__ = ["Chi2",
@@ -21,22 +22,13 @@ __all__ = ["Chi2",
            "FCBF"]
 
 
-class Scorer(Reprable):
+class Scorer(_RefuseDataInConstructor, Reprable):
     feature_type = None
     class_type = None
     supports_sparse_data = None
     preprocessors = [
         RemoveNaNClasses()
     ]
-
-    def __new__(cls, *args, **kwargs):
-        self = super().__new__(cls)
-        self.preprocessors = list(self.preprocessors)
-        if args:
-            self.__init__(**kwargs)
-            return self(*args)
-        else:
-            return self
 
     def __call__(self, data, feature=None):
         if not data.domain.class_var:

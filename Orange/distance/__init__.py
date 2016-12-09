@@ -20,7 +20,7 @@ def _preprocess(table):
         table.domain.class_vars,
         table.domain.metas)
     new_data = data.Table(new_domain, table)
-    new_data = SklImpute(new_data)
+    new_data = SklImpute()(new_data)
     return new_data
 
 

@@ -167,7 +167,7 @@ class TestDiscretizer(TestCase):
 
     def test_transform(self):
         table = data.Table('iris')
-        table2 = Discretize(table)
+        table2 = Discretize()(table)
         ins = data.Instance(table2.domain, table[0])
         table3 = data.Table(table2.domain, table[:10])
         self.assertEqual(ins, table3[0])
@@ -243,42 +243,42 @@ class TestDiscretizeTable(TestCase):
         cls.table_class = data.Table(X, X1)
 
     def test_discretize_exclude_constant(self):
-        dom = discretize.DomainDiscretizer(self.table_no_class)
+        dom = discretize.DomainDiscretizer()(self.table_no_class)
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
 
-        dom = discretize.DomainDiscretizer(self.table_no_class, clean=False)
+        dom = discretize.DomainDiscretizer(clean=False)(self.table_no_class)
         self.assertEqual(len(dom.attributes), 3)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertEqual(dom[2].compute_value.points, [])
 
-        dom = discretize.DomainDiscretizer(self.table_class)
+        dom = discretize.DomainDiscretizer()(self.table_class)
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
 
     def test_discretize_class(self):
-        dom = discretize.DomainDiscretizer(self.table_class)
+        dom = discretize.DomainDiscretizer()(self.table_class)
         self.assertIs(dom.class_var, self.table_class.domain.class_var)
 
-        dom = discretize.DomainDiscretizer(self.table_class,
-                                           discretize_class=True)
+        dom = discretize.DomainDiscretizer(discretize_class=True)
+        dom = dom(self.table_class)
         self.assertIs(dom.class_var, self.table_class.domain.class_var)
 
     def test_method(self):
-        dom = discretize.DomainDiscretizer(self.table_class)
+        dom = discretize.DomainDiscretizer()(self.table_class)
         self.assertEqual(len(dom[1].values), 4)
 
-        dom = discretize.DomainDiscretizer(self.table_class,
-                                           method=discretize.EqualWidth(n=2))
+        dom = discretize.DomainDiscretizer(method=discretize.EqualWidth(n=2))
+        dom = dom(self.table_class)
         self.assertEqual(len(dom[1].values), 2)
 
     def test_fixed(self):
-        dom = discretize.DomainDiscretizer(self.table_no_class,
-                                           method=discretize.EqualWidth(n=2),
+        dom = discretize.DomainDiscretizer(method=discretize.EqualWidth(n=2),
                                            fixed={"Feature 2": [1, 11]})
+        dom = dom(self.table_no_class)
         self.assertEqual(len(dom.attributes), 2)
         self.assertEqual(dom[0].compute_value.points, [0.5])
         self.assertEqual(dom[1].compute_value.points, [6])
@@ -294,7 +294,7 @@ class TestDiscretizeTable(TestCase):
                               data.DiscreteVariable("c", values="AB")],
                              data.ContinuousVariable("d"))
         table = data.Table(domain, X, X1)
-        dom = discretize.DomainDiscretizer(table)
+        dom = discretize.DomainDiscretizer()(table)
         self.assertIs(dom[0], table.domain[0])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertIs(dom[2], table.domain[2])
@@ -305,7 +305,7 @@ class TestDiscretizeTable(TestCase):
                               data.DiscreteVariable("c", values="AB")],
                              data.DiscreteVariable("d"))
         table = data.Table(domain, X, X1)
-        dom = discretize.DomainDiscretizer(table)
+        dom = discretize.DomainDiscretizer()(table)
         self.assertIs(dom[0], table.domain[0])
         self.assertEqual(dom[1].compute_value.points, [24.5, 49.5, 74.5])
         self.assertIs(dom[2], table.domain[2])
@@ -316,5 +316,5 @@ class TestInstanceConversion(TestCase):
     def test_single_instance(self):
         iris = Table("iris")
         inst = Instance(iris.domain, [5.2, 3.8, 1.4, 0.5, "Iris-virginica"])
-        d_iris = Discretize(iris)
+        d_iris = Discretize()(iris)
         Instance(d_iris.domain, inst)

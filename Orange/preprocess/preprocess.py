@@ -9,38 +9,25 @@ import bottleneck as bn
 
 import Orange.data
 from Orange.data import Table
+from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution
 from Orange.util import Reprable, Enum
 from . import impute, discretize, transformation
-
 
 __all__ = ["Continuize", "Discretize", "Impute",
            "SklImpute", "Normalize", "Randomize",
            "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scale"]
 
 
-class Preprocess(Reprable):
+class Preprocess(_RefuseDataInConstructor, Reprable):
     """
-    A generic preprocessor class. All preprocessors need to inherit this
-    class. Preprocessors can be instantiated without the data set to return
-    data preprocessor, or can be given a data set to return the preprocessed
-    data.
+    A generic preprocessor base class.
 
-    Parameters
-    ----------
-    data : a data table (default=None)
-        An optional data set to be preprocessed.
+    Methods
+    -------
+    __call__(data: Table) -> Table
+        Return preprocessed data.
     """
-
-    def __new__(cls, data=None, *args, **kwargs):
-        self = super().__new__(cls)
-        self.data = data
-        if isinstance(data, Orange.data.Storage):
-            self.__init__(*args, **kwargs)
-            return self(data)
-        else:
-            return self
-
     def __call__(self, data):
         raise NotImplementedError("Subclasses need to implement __call__")
 

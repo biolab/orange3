@@ -127,9 +127,8 @@ class TestRemover(unittest.TestCase):
     def test_remove_unused_values_metas(self):
         data = Table(test_filename("test9.tab"))
         subset = data[:4]
-        res = Remove(subset,
-                     attr_flags=Remove.RemoveUnusedValues,
-                     meta_flags=Remove.RemoveUnusedValues)
+        res = Remove(attr_flags=Remove.RemoveUnusedValues,
+                     meta_flags=Remove.RemoveUnusedValues)(subset)
 
         self.assertEqual(res.domain["b"].values, res.domain["c"].values)
         self.assertEqual(res.domain["d"].values, ["1", "2"])

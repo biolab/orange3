@@ -295,5 +295,5 @@ class TestRandom(unittest.TestCase):
 class TestImputer(unittest.TestCase):
     def test_imputer(self):
         auto = data.Table('auto-mpg')
-        auto2 = preprocess.Impute(auto)
+        auto2 = preprocess.Impute()(auto)
         self.assertFalse(np.isnan(auto2.X).any())

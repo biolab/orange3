@@ -1,8 +1,9 @@
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.data import DiscreteVariable, Domain
+from Orange.data import DiscreteVariable, Domain, Table
 from Orange.data.sql.table import SqlTable
+from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution, contingency
 from Orange.statistics.basic_stats import BasicStats
 from Orange.util import Reprable
@@ -374,7 +375,7 @@ class EntropyMDL(Discretization):
             return []
 
 
-class DomainDiscretizer:
+class DomainDiscretizer(_RefuseDataInConstructor, Reprable):
     """Discretizes all continuous features in the data.
 
     .. attribute:: method
@@ -396,16 +397,12 @@ class DomainDiscretizer:
         Determines whether a target is also discretized if it is continuous.
         (default: `False`)
     """
-    def __new__(cls, data=None,
-                discretize_class=False, method=None, clean=True, fixed=None):
-        self = super().__new__(cls)
+    def __init__(self, discretize_class=False, method=None, clean=True,
+                 fixed=None):
         self.discretize_class = discretize_class
         self.method = method
         self.clean = clean
-        if data is None:
-            return self
-        else:
-            return self(data, fixed)
+        self.fixed = fixed
 
     def __call__(self, data, fixed=None):
         """
@@ -432,7 +429,7 @@ class DomainDiscretizer:
         else:
             method = self.method
         domain = data.domain
-        new_attrs = transform_list(domain.attributes, fixed)
+        new_attrs = transform_list(domain.attributes, fixed or self.fixed)
         if self.discretize_class:
             new_classes = transform_list(domain.class_vars)
         else:

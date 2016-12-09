@@ -53,10 +53,10 @@ class FeatureScoringTest(unittest.TestCase):
                 scorer(self.housing, 0)
 
         with self.assertRaises(ValueError):
-            Chi2(self.housing, 0)
+            Chi2()(self.housing, 0)
         with self.assertRaises(ValueError):
-            ANOVA(self.housing, 2)
-        UnivariateLinearRegression(self.housing, 2)
+            ANOVA()(self.housing, 2)
+        UnivariateLinearRegression()(self.housing, 2)
 
     def test_chi2(self):
         nrows, ncols = 500, 5

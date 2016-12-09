@@ -18,7 +18,7 @@ class _FeatureScorerMixin(LearnerScorer):
     class_type = DiscreteVariable
 
     def score(self, data):
-        data = Normalize(data)
+        data = Normalize()(data)
         model = self(data)
         return np.abs(model.coefficients)
 

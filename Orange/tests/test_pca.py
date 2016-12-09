@@ -106,7 +106,7 @@ class TestPCA(unittest.TestCase):
         self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)
 
     def test_chain(self):
-        zoo_c = Continuize(self.zoo)
+        zoo_c = Continuize()(self.zoo)
         pca = PCA(n_components=3)(zoo_c)(self.zoo)
         pca2 = PCA(n_components=3)(zoo_c)(zoo_c)
         pp = [Continuize()]

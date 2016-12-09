@@ -3,23 +3,18 @@ from Orange.statistics import distribution
 from Orange.util import Reprable
 from .transformation import Identity, Indicator, Indicator1, Normalizer
 from .preprocess import Continuize
+from Orange.preprocess.util import _RefuseDataInConstructor
 
 __all__ = ["DomainContinuizer"]
 
 
-class DomainContinuizer(Reprable):
+class DomainContinuizer(_RefuseDataInConstructor, Reprable):
     def __init__(self, zero_based=True,
                  multinomial_treatment=Continuize.Indicators,
-                 transform_class=False, **kwargs):
+                 transform_class=False):
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
         self.transform_class = transform_class
-
-        # Backward-compat polite notice
-        if isinstance(zero_based, (Table, Domain)) or 'data' in kwargs:
-            raise TypeError('DomainContinuizer no longer accepts data in the '
-                            'constructor. Instead, first make a continuizer '
-                            'instance, then call it with data.')
 
     def __call__(self, data):
         def transform_discrete(var):
