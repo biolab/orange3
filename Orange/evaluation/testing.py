@@ -303,6 +303,8 @@ class Results:
         predictions.name = data.name
         return predictions
 
+    _MIN_NJOBS_X_SIZE = 20e3
+
     def fit(self, train_data, test_data=None):
         """Fits `self.learners` using folds sampled from the provided data.
 
@@ -343,7 +345,8 @@ class Results:
         mp_ctx = mp.get_context(
             'forkserver' if sys.platform.startswith(('darwin', 'linux')) and n_jobs > 1 else None)
 
-        if n_jobs > 1 and mp_ctx.get_start_method() != 'fork' and train_data.X.size < 20e3:
+        if (n_jobs > 1 and mp_ctx.get_start_method() != 'fork' and
+                train_data.X.size < self._MIN_NJOBS_X_SIZE):
             n_jobs = 1
             warnings.warn("Working with small-enough data; single-threaded "
                           "sequential excecution will (probably) be faster. "
