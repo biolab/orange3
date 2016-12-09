@@ -544,7 +544,6 @@ class OWMap(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         model_error = widget.Msg("Error predicting: {}")
-        missing_learner = widget.Msg('No input learner to model with')
         learner_error = widget.Msg("Error modelling: {}")
 
     UserAdviceMessages = [
@@ -602,18 +601,13 @@ class OWMap(widget.OWWidget):
             label='Longitude:', sendSelectedValue=True, callback=_set_lat_long)
         combo.setModel(self._latlon_model)
 
-        def _set_class_attr():
-            if not self.learner and self.class_attr != '(None)':
-                self.Error.missing_learner()
-            else:
-                self.train_model()
-
         box = gui.vBox(self.controlArea, 'Overlay')
         self._combo_class = combo = gui.comboBox(
             box, self, 'class_attr', orientation=Qt.Horizontal,
-            label='Target:', sendSelectedValue=True, callback=_set_class_attr
+            label='Target:', sendSelectedValue=True, callback=self.train_model
         )
-        combo.setModel(self._class_model)
+        self.controls.class_attr.setModel(self._class_model)
+        self.set_learner(self.learner)
 
         box = gui.vBox(self.controlArea, 'Points')
         self._combo_color = combo = gui.comboBox(
@@ -755,27 +749,23 @@ class OWMap(widget.OWWidget):
 
     def set_learner(self, learner):
         self.learner = learner
+        self.controls.class_attr.setEnabled(learner is not None)
+        self.controls.class_attr.setToolTip(
+            'Needs a Learner input for modelling.' if learner is None else '')
 
     def train_model(self):
         model = None
         self.Error.clear()
-        if self.data is not None and self.class_attr and self.class_attr != '(None)':
-            if self.learner is None:
-                self.Error.missing_learner()
-            else:
-                self.Error.missing_learner.clear()
-
-                domain = self.data.domain
-                if self.lat_attr and self.lon_attr and self.class_attr in domain:
-                    domain = Domain([domain[self.lat_attr], domain[self.lon_attr]],
-                                    [domain[self.class_attr]])  # I am retarded
-                    train = Table.from_table(domain, self.data)
-                    try:
-                        model = self.learner(train)
-                    except Exception as e:
-                        self.Error.learner_error(e)
-                    else:
-                        self.Error.learner_error.clear()
+        if self.data and self.learner and self.class_attr != '(None)':
+            domain = self.data.domain
+            if self.lat_attr and self.lon_attr and self.class_attr in domain:
+                domain = Domain([domain[self.lat_attr], domain[self.lon_attr]],
+                                [domain[self.class_attr]])  # I am retarded
+                train = Table.from_table(domain, self.data)
+                try:
+                    model = self.learner(train)
+                except Exception as e:
+                    self.Error.learner_error(e)
         self.map.set_model(model)
 
     def disable_some_controls(self, disabled):
