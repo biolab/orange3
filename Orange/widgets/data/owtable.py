@@ -320,8 +320,8 @@ def table_selection_to_mime_data(table):
     """
     lines = table_selection_to_list(table)
 
-    csv = lines_to_csv_string(lines, dialect="excel")
-    tsv = lines_to_csv_string(lines, dialect="excel-tab")
+    csv = lines_to_csv_string(lines, dialect="excel").encode("utf-8")
+    tsv = lines_to_csv_string(lines, dialect="excel-tab").encode("utf-8")
 
     mime = QMimeData()
     mime.setData("text/csv", QByteArray(csv))
