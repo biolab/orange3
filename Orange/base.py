@@ -16,7 +16,25 @@ from Orange.util import Reprable, patch
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
-class Learner(Reprable):
+class _ReprableWithPreprocessors(Reprable):
+    def __repr__(self):
+        preprocessors = self.preprocessors
+        # TODO: Implement __eq__ on preprocessors to avoid comparing reprs
+        if repr(preprocessors) == repr(list(self.__class__.preprocessors)):
+            # If they are default, set to None temporarily to avoid printing
+            preprocessors = None
+        with patch.object(self, 'preprocessors', preprocessors):
+            return super().__repr__()
+
+
+class _ReprableWithParams(Reprable):
+    def __repr__(self):
+        # In addition to saving values onto self, SklLearners save into params
+        with patch.object(self, '__dict__', dict(self.__dict__, **self.params)):
+            return super().__repr__()
+
+
+class Learner(_ReprableWithPreprocessors):
     """The base learner class.
 
     Preprocessors can behave in a number of different ways, all of which are
@@ -149,15 +167,6 @@ class Learner(Reprable):
     def __str__(self):
         return self.name
 
-    def __repr__(self):
-        preprocessors = self.preprocessors
-        # TODO: Implement __eq__ on preprocessors to avoid comparing reprs
-        if repr(preprocessors) == repr(list(self.__class__.preprocessors)):
-            # If they are default, set to None temporarily to avoid printing
-            preprocessors = None
-        with patch.object(self, 'preprocessors', preprocessors):
-            return super().__repr__()
-
 
 class Model(Reprable):
     supports_multiclass = False
@@ -278,7 +287,7 @@ class SklModel(Model, metaclass=WrapperMeta):
         return super().__repr__() + '  # params=' + repr(self.params)
 
 
-class SklLearner(Learner, metaclass=WrapperMeta):
+class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
     """
     ${skldoc}
     Additional Orange parameters
@@ -339,11 +348,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
-
-    def __repr__(self):
-        # In addition to saving values onto self, SklLearners save into params
-        with patch.object(self, '__dict__', dict(self.__dict__, **self.params)):
-            return super().__repr__()
 
     @property
     def supports_weights(self):
