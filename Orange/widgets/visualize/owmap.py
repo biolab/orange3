@@ -367,7 +367,7 @@ class LeafletMap(WebviewWidget):
             y = (zoom_scale * (-PROJ_SCALE * y + .5)).round() + (map_pane_pos[1] - pixel_origin[1])
             return x, y
 
-    N_POINTS_PER_ITER = 1000
+    N_POINTS_PER_ITER = 666
 
     def redraw_markers_overlay_image(self, *args, new_image=False):
         if (not args and not self._drawing_args or
@@ -386,7 +386,7 @@ class LeafletMap(WebviewWidget):
                      if self._subset_ids.size else
                      np.tile(True, len(lon)))
 
-        is_js_path = len(visible) <= 500
+        is_js_path = len(visible) < self.N_POINTS_PER_ITER
 
         self.evalJS('''
             window.legend_colors = %s;
@@ -770,8 +770,8 @@ class OWMap(widget.OWWidget):
 
     def disable_some_controls(self, disabled):
         tooltip = (
-            "These controls are only available when the zoom is close enough to"
-            " have only {} points in the viewport.".format(self.map.N_POINTS_PER_ITER)
+            "Available when the zoom is close enough to have "
+            "<{} points in the viewport.".format(self.map.N_POINTS_PER_ITER)
             if disabled else '')
         for widget in (self._combo_label,
                        self._combo_shape,
