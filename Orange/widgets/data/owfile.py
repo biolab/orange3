@@ -305,9 +305,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.info.setText(self._describe(data))
 
         add_origin(data, self.loaded_file or self.last_path())
-        self.send("Data", data)
-        self.domain_editor.set_domain(data.domain)
         self.data = data
+        self.domain_editor.set_domain(data.domain)
+        self.apply_domain_edit()  # sends data
 
     def _get_reader(self):
         """
@@ -388,14 +388,18 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.variables[:] = self.current_context.modified_variables
 
     def apply_domain_edit(self):
-        domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
-        X, y, m = cols
-        X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
-        y = np.array(y).T if len(y) else None
-        dtpe = object if any(isinstance(m, StringVariable)
-                             for m in domain.metas) else float
-        m = np.array(m, dtype=dtpe).T if len(m) else None
-        table = Table.from_numpy(domain, X, y, m, self.data.W)
+        if self.data is not None:
+            domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+            X, y, m = cols
+            X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
+            y = np.array(y).T if len(y) else None
+            dtpe = object if any(isinstance(m, StringVariable)
+                                 for m in domain.metas) else float
+            m = np.array(m, dtype=dtpe).T if len(m) else None
+            table = Table.from_numpy(domain, X, y, m, self.data.W)
+        else:
+            table = self.data
+
         self.send("Data", table)
         self.apply_button.setEnabled(False)
 
