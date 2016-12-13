@@ -41,7 +41,7 @@ class Fitter(Learner, metaclass=FitterMeta):
         self.kwargs = kwargs
         # Make sure to pass preprocessor params to individual learners
         self.kwargs['preprocessors'] = preprocessors
-        self.problem_type = None
+        self.problem_type = self.CLASSIFICATION
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
     def __call__(self, data):

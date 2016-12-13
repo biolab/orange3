@@ -467,7 +467,6 @@ class WidgetLearnerTestMixin:
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
             for value in parameter.values:
-                self.send_signal("Data", self.data)
                 parameter.set_value(value)
                 self.widget.apply_button.button.click()
                 param = get_value(self.widget.learner, parameter.name)
