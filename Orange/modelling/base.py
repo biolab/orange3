@@ -68,5 +68,12 @@ class Fitter(Learner, metaclass=FitterMeta):
             self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
         return {k: v for k, v in self.kwargs.items() if k in learner_kwargs}
 
+    @property
+    def supports_weights(self):
+        """The fitter supports weights if both the classification and
+        regression learners support weights."""
+        return self.get_learner(self.CLASSIFICATION).supports_weights and \
+            self.get_learner(self.REGRESSION).supports_weights
+
     def __getattr__(self, item):
         return getattr(self.get_learner(self.problem_type), item)
