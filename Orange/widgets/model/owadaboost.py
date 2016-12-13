@@ -21,11 +21,17 @@ class OWAdaBoost(OWBaseLearner):
 
     inputs = [("Learner", Learner, "set_base_learner")]
 
-    losses = ["SAMME", "SAMME.R"]
+    #: Algorithms for classification problems
+    algorithms = ["SAMME", "SAMME.R"]
+    #: Losses for regression problems
+    losses = ["Linear", "Square", "Exponential"]
 
     n_estimators = Setting(50)
     learning_rate = Setting(1.)
-    algorithm = Setting(0)
+    algorithm_index = Setting(0)
+    loss_index = Setting(0)
+    use_random_seed = Setting(False)
+    random_seed = Setting(0)
 
     DEFAULT_BASE_ESTIMATOR = SklTreeLearner()
 
@@ -42,15 +48,25 @@ class OWAdaBoost(OWBaseLearner):
             box, self, "n_estimators", 1, 100, label="Number of estimators:",
             alignment=Qt.AlignRight, controlWidth=80,
             callback=self.settings_changed)
+        self.random_seed_spin = gui.spin(
+            box, self, "random_seed", 0, 2 ** 31 - 1, controlWidth=80,
+            label="Fixed seed for random generator:", alignment=Qt.AlignRight,
+            callback=self.settings_changed, checked="use_random_seed",
+            checkCallback=self.settings_changed)
         self.learning_rate_spin = gui.doubleSpin(
-            box, self, "learning_rate", 1e-5, 1.0, 1e-5, label="Learning rate:",
-            decimals=5, alignment=Qt.AlignRight, controlWidth=80,
-            callback=self.settings_changed)
-        self.add_specific_parameters(box)
+            box, self, "learning_rate", 1e-5, 1.0, 1e-5,
+            label="Learning rate:", decimals=5, alignment=Qt.AlignRight,
+            controlWidth=80, callback=self.settings_changed)
 
-    def add_specific_parameters(self, box):
-        self.algorithm_combo = gui.comboBox(
-            box, self, "algorithm", label="Algorithm:", items=self.losses,
+        # Algorithms
+        box = gui.widgetBox(self.controlArea, "Boosting method")
+        self.cls_algorithm_combo = gui.comboBox(
+            box, self, "algorithm_index", label="Classification algorithm:",
+            items=self.algorithms,
+            orientation=Qt.Horizontal, callback=self.settings_changed)
+        self.reg_algorithm_combo = gui.comboBox(
+            box, self, "loss_index", label="Regression loss:",
+            items=self.losses,
             orientation=Qt.Horizontal, callback=self.settings_changed)
 
     def create_learner(self):
@@ -60,8 +76,10 @@ class OWAdaBoost(OWBaseLearner):
             base_estimator=self.base_estimator,
             n_estimators=self.n_estimators,
             learning_rate=self.learning_rate,
+            random_state=self.random_seed,
             preprocessors=self.preprocessors,
-            algorithm=self.losses[self.algorithm])
+            algorithm=self.algorithms[self.algorithm_index],
+            loss=self.losses[self.loss_index].lower())
 
     def set_base_learner(self, learner):
         self.Error.no_weight_support.clear()
@@ -72,15 +90,18 @@ class OWAdaBoost(OWBaseLearner):
             self.base_label.setText("Base estimator: INVALID")
         else:
             self.base_estimator = learner or self.DEFAULT_BASE_ESTIMATOR
-            self.base_label.setText("Base estimator: %s" %
-                                    self.base_estimator.name.title())
+            self.base_label.setText(
+                "Base estimator: %s" % self.base_estimator.name.title())
         if self.auto_apply:
             self.apply()
 
     def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
                 ("Number of estimators", self.n_estimators),
-                ("Algorithm", self.losses[self.algorithm].capitalize()))
+                ("Algorithm (classification)", self.algorithms[
+                    self.algorithm_index].capitalize()),
+                ("Loss (regression)", self.losses[
+                    self.loss_index].capitalize()))
 
 
 if __name__ == "__main__":
