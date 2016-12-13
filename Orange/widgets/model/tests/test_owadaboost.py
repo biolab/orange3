@@ -14,10 +14,13 @@ class TestOWAdaBoost(WidgetTest, WidgetLearnerTestMixin):
             OWAdaBoost, stored_settings={"auto_apply": False})
         self.init()
         self.parameters = [
-            ParameterMapping('algorithm', self.widget.cls_algorithm_combo,
-                             self.widget.algorithms),
-            ParameterMapping('loss', self.widget.reg_algorithm_combo,
-                             self.widget.losses),
+            # TODO Due to the way params are tested on the learner and the fact
+            # that learners only receive a subset of these parameters, this
+            # method of testing these parameters is not viable
+            # ParameterMapping('algorithm', self.widget.cls_algorithm_combo,
+            #                  self.widget.algorithms),
+            # ParameterMapping('loss', self.widget.reg_algorithm_combo,
+            #                  self.widget.losses),
             ParameterMapping('learning_rate', self.widget.learning_rate_spin),
             ParameterMapping('n_estimators', self.widget.n_estimators_spin),
             ParameterMapping.from_attribute(
@@ -46,14 +49,6 @@ class TestOWAdaBoost(WidgetTest, WidgetLearnerTestMixin):
             self.widget.base_estimator, type(default_base_estimator_cls),
             "The base estimator was not reset to default when None on input")
 
-    def test_input_learner_disconnect(self):
-        """Check base learner after disconnecting learner on the input"""
-        self.send_signal("Learner", KNNLearner())
-        self.assertIsInstance(self.widget.base_estimator, KNNLearner)
-        self.send_signal("Learner", None)
-        self.assertEqual(
-            self.widget.base_estimator, self.widget.DEFAULT_BASE_ESTIMATOR)
-
     def test_input_learner_that_does_not_support_sample_weights(self):
         self.send_signal("Learner", KNNLearner())
         self.assertNotIsInstance(self.widget.base_estimator, KNNLearner)
@@ -75,3 +70,11 @@ class TestOWAdaBoost(WidgetTest, WidgetLearnerTestMixin):
             self.widget.Error.no_weight_support.is_shown(),
             'Error message was not hidden when a valid learner appeared on '
             'input')
+
+    def test_input_learner_disconnect(self):
+        """Check base learner after disconnecting learner on the input"""
+        self.send_signal("Learner", RandomForestLearner())
+        self.assertIsInstance(self.widget.base_estimator, RandomForestLearner)
+        self.send_signal("Learner", None)
+        self.assertEqual(self.widget.base_estimator,
+                         self.widget.DEFAULT_BASE_ESTIMATOR)

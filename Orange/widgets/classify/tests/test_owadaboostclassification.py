@@ -52,17 +52,17 @@ class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
         # Disconnecting an invalid learner should use the default one and hide
         # the error
         self.send_signal("Learner", KNNLearner())
-        self.send_signal('Learner', None)
+        self.send_signal("Learner", None)
         self.assertFalse(
             self.widget.Error.no_weight_support.is_shown(),
-            'Error message was not hidden on input disconnect')
+            "Error message was not hidden on input disconnect")
         # Connecting a valid learner should also reset the error message
         self.send_signal("Learner", KNNLearner())
-        self.send_signal('Learner', RandomForestLearner())
+        self.send_signal("Learner", RandomForestLearner())
         self.assertFalse(
             self.widget.Error.no_weight_support.is_shown(),
-            'Error message was not hidden when a valid learner appeared on '
-            'input')
+            "Error message was not hidden when a valid learner appeared on "
+            "input")
 
     def test_input_learner_disconnect(self):
         """Check base learner after disconnecting learner on the input"""
