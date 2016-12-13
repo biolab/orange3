@@ -7,6 +7,7 @@ from Orange.modelling import SklTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.widget import Msg
 
 
 class OWAdaBoost(OWBaseLearner):
@@ -28,6 +29,9 @@ class OWAdaBoost(OWBaseLearner):
 
     DEFAULT_BASE_ESTIMATOR = SklTreeLearner()
 
+    class Error(OWBaseLearner.Error):
+        no_weight_support = Msg('The base learner does not support weights.')
+
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Parameters")
         self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
@@ -36,10 +40,11 @@ class OWAdaBoost(OWBaseLearner):
 
         self.n_estimators_spin = gui.spin(
             box, self, "n_estimators", 1, 100, label="Number of estimators:",
-            alignment=Qt.AlignRight, callback=self.settings_changed)
+            alignment=Qt.AlignRight, controlWidth=80,
+            callback=self.settings_changed)
         self.learning_rate_spin = gui.doubleSpin(
             box, self, "learning_rate", 1e-5, 1.0, 1e-5, label="Learning rate:",
-            decimals=5, alignment=Qt.AlignRight, controlWidth=90,
+            decimals=5, alignment=Qt.AlignRight, controlWidth=80,
             callback=self.settings_changed)
         self.add_specific_parameters(box)
 
@@ -49,18 +54,25 @@ class OWAdaBoost(OWBaseLearner):
             orientation=Qt.Horizontal, callback=self.settings_changed)
 
     def create_learner(self):
+        if self.base_estimator is None:
+            return None
         return self.LEARNER(
             base_estimator=self.base_estimator,
             n_estimators=self.n_estimators,
             learning_rate=self.learning_rate,
             preprocessors=self.preprocessors,
-            algorithm=self.losses[self.algorithm]
-        )
+            algorithm=self.losses[self.algorithm])
 
     def set_base_learner(self, learner):
-        self.base_estimator = learner if learner \
-            else self.DEFAULT_BASE_ESTIMATOR
-        self.base_label.setText("Base estimator: " + self.base_estimator.name)
+        self.Error.no_weight_support.clear()
+        if learner and not learner.supports_weights:
+            # Clear the error and reset to default base learner
+            self.Error.no_weight_support()
+            self.base_estimator = None
+            self.base_label.setText("Base estimator: INVALID")
+        else:
+            self.base_estimator = learner or self.DEFAULT_BASE_ESTIMATOR
+            self.base_label.setText("Base estimator: " + self.base_estimator.name)
         if self.auto_apply:
             self.apply()
 

@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from Orange.classification import RandomForestLearner
 from Orange.modelling import SklTreeLearner, KNNLearner
 from Orange.widgets.model.owadaboost import OWAdaBoost
 from Orange.widgets.tests.base import (
@@ -38,3 +39,25 @@ class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal("Learner", None)
         self.assertEqual(
             self.widget.base_estimator, self.widget.DEFAULT_BASE_ESTIMATOR)
+
+    def test_input_learner_that_does_not_support_sample_weights(self):
+        self.send_signal("Learner", KNNLearner())
+        self.assertNotIsInstance(self.widget.base_estimator, KNNLearner)
+        self.assertIsNone(self.widget.base_estimator)
+        self.assertTrue(self.widget.Error.no_weight_support.is_shown())
+
+    def test_error_message_cleared_when_valid_learner_on_input(self):
+        # Disconnecting an invalid learner should use the default one and hide
+        # the error
+        self.send_signal("Learner", KNNLearner())
+        self.send_signal('Learner', None)
+        self.assertFalse(
+            self.widget.Error.no_weight_support.is_shown(),
+            'Error message was not hidden on input disconnect')
+        # Connecting a valid learner should also reset the error message
+        self.send_signal("Learner", KNNLearner())
+        self.send_signal('Learner', RandomForestLearner())
+        self.assertFalse(
+            self.widget.Error.no_weight_support.is_shown(),
+            'Error message was not hidden when a valid learner appeared on '
+            'input')
