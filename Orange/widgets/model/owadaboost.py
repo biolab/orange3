@@ -65,7 +65,7 @@ class OWAdaBoost(OWBaseLearner):
             items=self.algorithms,
             orientation=Qt.Horizontal, callback=self.settings_changed)
         self.reg_algorithm_combo = gui.comboBox(
-            box, self, "loss_index", label="Regression loss:",
+            box, self, "loss_index", label="Regression loss function:",
             items=self.losses,
             orientation=Qt.Horizontal, callback=self.settings_changed)
 
