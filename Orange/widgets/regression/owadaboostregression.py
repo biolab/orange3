@@ -1,5 +1,6 @@
 from AnyQt.QtCore import Qt
 
+from Orange.base import Learner
 from Orange.data import Table
 from Orange.ensembles import SklAdaBoostLearner
 from Orange.widgets import gui
@@ -10,6 +11,8 @@ class OWAdaBoost(OWAdaBoost):
     name = "AdaBoost Regression"
 
     LEARNER = SklAdaBoostLearner
+
+    inputs = [("Learner", Learner, "set_base_learner")]
 
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, "Parameters")
