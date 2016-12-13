@@ -8,7 +8,7 @@ from Orange.widgets.tests.base import (
 )
 
 
-class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
+class TestOWAdaBoost(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
         self.widget = self.create_widget(
             OWAdaBoost, stored_settings={"auto_apply": False})
