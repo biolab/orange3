@@ -13,6 +13,9 @@ class TestOWAdaBoostRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(
             OWAdaBoost, stored_settings={"auto_apply": False})
         self.init()
+        # Needed because the fitter type needs to be set to regression in order
+        # to be tested properly
+        self.data = self.housing[:10]
         losses = [loss.lower() for loss in self.widget.losses]
         self.parameters = [
             ParameterMapping('loss', self.widget.reg_algorithm_combo, losses),

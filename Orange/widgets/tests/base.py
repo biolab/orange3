@@ -447,6 +447,7 @@ class WidgetLearnerTestMixin:
     def test_parameters_default(self):
         """Check if learner's parameters are set to default (widget's) values
         """
+        self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
         if hasattr(self.widget.learner, "params"):
             learner_params = self.widget.learner.params
