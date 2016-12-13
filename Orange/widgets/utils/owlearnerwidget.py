@@ -173,11 +173,10 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def update_learner(self):
         self.learner = self.create_learner()
-        if issubclass(self.LEARNER, Fitter):
+        if self.learner and issubclass(self.LEARNER, Fitter):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.learner_name
-        self.learner.use_default_preprocessors = True
         self.send("Learner", self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
