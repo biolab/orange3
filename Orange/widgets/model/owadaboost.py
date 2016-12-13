@@ -36,7 +36,7 @@ class OWAdaBoost(OWBaseLearner):
         box = gui.widgetBox(self.controlArea, "Parameters")
         self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
         self.base_label = gui.label(
-            box, self, "Base estimator: " + self.base_estimator.name)
+            box, self, "Base estimator: " + self.base_estimator.name.title())
 
         self.n_estimators_spin = gui.spin(
             box, self, "n_estimators", 1, 100, label="Number of estimators:",
@@ -72,7 +72,8 @@ class OWAdaBoost(OWBaseLearner):
             self.base_label.setText("Base estimator: INVALID")
         else:
             self.base_estimator = learner or self.DEFAULT_BASE_ESTIMATOR
-            self.base_label.setText("Base estimator: " + self.base_estimator.name)
+            self.base_label.setText("Base estimator: %s" %
+                                    self.base_estimator.name.title())
         if self.auto_apply:
             self.apply()
 
