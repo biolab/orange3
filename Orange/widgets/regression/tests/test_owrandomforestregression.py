@@ -1,15 +1,14 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.widgets.regression.owrandomforestregression import \
-    OWRandomForestRegression
+from Orange.widgets.regression.owrandomforestregression import OWRandomForest
 from Orange.widgets.tests.base import (WidgetTest, DefaultParameterMapping,
                                        ParameterMapping, WidgetLearnerTestMixin)
 
 
 class TestOWRandomForestRegression(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(OWRandomForestRegression,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(
+            OWRandomForest, stored_settings={"auto_apply": False})
         self.init()
         nest_spin = self.widget.n_estimators_spin
         nest_min_max = [nest_spin.minimum() * 10, nest_spin.minimum()]
