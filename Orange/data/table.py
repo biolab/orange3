@@ -299,6 +299,7 @@ class Table(MutableSequence, Storage):
                 if is_sparse == sp.issparse(x):
                     return x
                 elif is_sparse:
+                    x = np.asarray(x)
                     return sp.csc_matrix(x.reshape(-1, 1).astype(np.float))
                 else:
                     return np.ravel(x.toarray())
