@@ -8,3 +8,10 @@ class SGDLearner(Fitter):
 
     __fits__ = {'classification': SGDClassificationLearner,
                 'regression': SGDRegressionLearner}
+
+    def _change_kwargs(self, kwargs, problem_type):
+        if problem_type is self.CLASSIFICATION:
+            kwargs['loss'] = kwargs['classification_loss']
+        elif problem_type is self.REGRESSION:
+            kwargs['loss'] = kwargs['regression_loss']
+        return kwargs
