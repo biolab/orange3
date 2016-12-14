@@ -57,7 +57,7 @@ class OWSGD(OWBaseLearner):
         box = gui.widgetBox(self.controlArea, 'Algorithm')
         self.loss_function_combo = gui.comboBox(
             box, self, 'loss_function_index', orientation=Qt.Horizontal,
-            label='Loss function: ', items=self.losses,
+            label='Loss function: ', items=list(zip(*self.losses))[0],
             callback=self._on_loss_change)
         param_box = gui.hBox(box)
         gui.rubber(param_box)
@@ -69,7 +69,7 @@ class OWSGD(OWBaseLearner):
         box = gui.widgetBox(self.controlArea, 'Regularization')
         self.penalty_combo = gui.comboBox(
             box, self, 'penalty_index', label='Regularization method: ',
-            items=self.penalties, orientation=Qt.Horizontal,
+            items=list(zip(*self.penalties))[0], orientation=Qt.Horizontal,
             callback=self._on_regularization_change)
         self.alpha_spin = gui.spin(
             box, self, 'alpha', 0, 10., .1e-4, spinType=float, controlWidth=80,
@@ -83,8 +83,8 @@ class OWSGD(OWBaseLearner):
         box = gui.widgetBox(self.controlArea, 'Learning parameters')
         self.learning_rate_combo = gui.comboBox(
             box, self, 'learning_rate_index', label='Learning rate: ',
-            items=self.learning_rates, orientation=Qt.Horizontal,
-            callback=self._on_learning_rate_change)
+            items=list(zip(*self.learning_rates))[0],
+            orientation=Qt.Horizontal, callback=self._on_learning_rate_change)
         # The learning rate settings are aligned right
         param_box = gui.hBox(box)
         gui.rubber(param_box)
@@ -176,7 +176,8 @@ class OWSGD(OWBaseLearner):
             eta0=self.eta0,
             power_t=self.power_t,
             n_iter=self.n_iter,
-            **params)
+            **params,
+            preprocessors=self.preprocessors)
 
 
 if __name__ == '__main__':
