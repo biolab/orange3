@@ -108,10 +108,10 @@ class OWSGD(OWBaseLearner):
             callback=self.settings_changed)
         self.shuffle_cbx = gui.checkBox(
             box, self, 'shuffle', 'Shuffle data after each iteration',
-            callback=self.settings_changed)
+            callback=self._on_shuffle_change)
         self.random_seed_spin = gui.spin(
             box, self, 'random_state', 0, MAXINT,
-            label='Fixed seed for random generator: ', controlWidth=80,
+            label='Fixed seed for random shuffling: ', controlWidth=80,
             alignment=Qt.AlignRight, callback=self.settings_changed,
             checked='use_random_state', checkCallback=self.settings_changed)
 
@@ -119,6 +119,7 @@ class OWSGD(OWBaseLearner):
         self._on_loss_change()
         self._on_regularization_change()
         self._on_learning_rate_change()
+        self._on_shuffle_change()
 
     def _on_loss_change(self):
         # Epsilon parameter
@@ -157,6 +158,15 @@ class OWSGD(OWBaseLearner):
             self.power_t_spin.setEnabled(True)
         else:
             self.power_t_spin.setEnabled(False)
+
+        self.settings_changed()
+
+    def _on_shuffle_change(self):
+        if self.shuffle:
+            self.random_seed_spin[0].setEnabled(True)
+        else:
+            self.use_random_state = False
+            self.random_seed_spin[0].setEnabled(False)
 
         self.settings_changed()
 
