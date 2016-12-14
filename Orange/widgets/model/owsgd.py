@@ -85,22 +85,17 @@ class OWSGD(OWBaseLearner):
             box, self, 'learning_rate_index', label='Learning rate: ',
             items=list(zip(*self.learning_rates))[0],
             orientation=Qt.Horizontal, callback=self._on_learning_rate_change)
-        # The learning rate settings are aligned right
-        param_box = gui.hBox(box)
-        gui.rubber(param_box)
         self.eta0_spin = gui.spin(
-            param_box, self, 'eta0', 1e-4, 1., 1e-4, spinType=float,
+            box, self, 'eta0', 1e-4, 1., 1e-4, spinType=float,
             label='Initial learning rate (η<sub>0</sub>): ',
             alignment=Qt.AlignRight, controlWidth=80,
             callback=self.settings_changed)
-        param_box = gui.hBox(box)
-        gui.rubber(param_box)
-        gui.separator(box, height=12)
         self.power_t_spin = gui.spin(
-            param_box, self, 'power_t', 0, 1., 1e-4, spinType=float,
+            box, self, 'power_t', 0, 1., 1e-4, spinType=float,
             label='Inverse scaling exponent (t): ',
             alignment=Qt.AlignRight, controlWidth=80,
             callback=self.settings_changed)
+        gui.separator(box, height=12)
 
         self.n_iter_spin = gui.spin(
             box, self, 'n_iter', 1, MAXINT - 1, label='Number of iterations: ',
