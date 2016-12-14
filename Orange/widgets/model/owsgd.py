@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
 
+from Orange.canvas.report import bool_str
 from Orange.modelling.linear import SGDLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -189,27 +190,31 @@ class OWSGD(OWBaseLearner):
     def get_learner_parameters(self):
         params = OrderedDict(
             {'Loss function': self.losses[self.loss_function_index][0]})
-        # Epsilon parameter
+        # Epsilon
         if self.losses[self.loss_function_index][1] in (
                 'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'):
             params['Epsilon (ε)'] = self.epsilon
 
         params['Regularization'] = self.penalties[self.penalty_index][0]
+        # Regularization strength
         if self.penalties[self.penalty_index][1] in ('l1', 'l2', 'elasticnet'):
             params['Regularization strength (α)'] = self.alpha
+        # Elastic Net mixing
         if self.penalties[self.penalty_index][1] in ('elasticnet',):
             params['Elastic Net mixing parameter (L1 ratio)'] = self.l1_ratio
 
         params['Learning rate'] = self.learning_rates[
             self.learning_rate_index][0]
+        # Eta
         if self.learning_rates[self.learning_rate_index][1] in \
                 ('constant', 'invscaling'):
             params['Initial learning rate (η<sub>0</sub>)'] = self.eta0
+        # t
         if self.learning_rates[self.learning_rate_index][1] in \
                 ('invscaling',):
             params['Inverse scaling exponent (t)'] = self.power_t
 
-        params['Shuffle data after each iteration'] = self.shuffle
+        params['Shuffle data after each iteration'] = bool_str(self.shuffle)
         if self.use_random_state:
             params['Random seed for shuffling'] = self.random_state
 
