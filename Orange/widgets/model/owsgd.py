@@ -14,19 +14,14 @@ class OWSGD(OWBaseLearner):
                   'approximation of gradient descent.'
     icon = "icons/SGD.svg"
     priority = 90
+
     LEARNER = SGDLearner
 
-    regression_losses = (
+    losses = (
         ('Squared Loss', 'squared_loss'),
         ('Huber', 'huber'),
         ('ε insensitive', 'epsilon_insensitive'),
         ('Squared ε insensitive', 'squared_epsilon_insensitive'))
-    classification_losses = (
-        ('Hinge', 'hinge'),
-        ('Logarithmic', 'log'),
-        ('Modified Huber', 'modified_huber'),
-        ('Squared hinge', 'squared_hinge'),
-        ('Perceptron', 'perceptron')) + regression_losses
 
     #: Regularization methods
     penalties = (
@@ -41,8 +36,7 @@ class OWSGD(OWBaseLearner):
         ('Inverse scaling', 'invscaling'))
 
     learner_name = Setting('SGD')
-    cls_loss_function_index = Setting(0)
-    reg_loss_function_index = Setting(0)
+    loss_function_index = Setting(0)
     epsilon = Setting(.15)
 
     penalty_index = Setting(2)
@@ -61,19 +55,15 @@ class OWSGD(OWBaseLearner):
 
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, 'Algorithm')
-        self.cls_loss_function_combo = gui.comboBox(
-            box, self, 'cls_loss_function_index', orientation=Qt.Horizontal,
-            label='Classification loss function: ',
-            items=self.classification_losses, callback=self.settings_changed)
-        self.reg_loss_function_combo = gui.comboBox(
-            box, self, 'reg_loss_function_index', orientation=Qt.Horizontal,
-            label='Regression loss function: ', items=self.regression_losses,
-            callback=self.settings_changed)
+        self.loss_function_combo = gui.comboBox(
+            box, self, 'loss_function_index', orientation=Qt.Horizontal,
+            label='Loss function: ', items=self.losses,
+            callback=self._on_loss_change)
         param_box = gui.hBox(box)
         gui.rubber(param_box)
         self.epsilon_spin = gui.spin(
-            param_box, self, 'epsilon', 0, 1., 1e-2, spinType=float, label='ε: ',
-            controlWidth=80, alignment=Qt.AlignRight,
+            param_box, self, 'epsilon', 0, 1., 1e-2, spinType=float,
+            label='ε: ', controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
 
         box = gui.widgetBox(self.controlArea, 'Regularization')
@@ -126,8 +116,19 @@ class OWSGD(OWBaseLearner):
             checked='use_random_state', checkCallback=self.settings_changed)
 
         # Enable/disable appropriate controls
+        self._on_loss_change()
         self._on_regularization_change()
         self._on_learning_rate_change()
+
+    def _on_loss_change(self):
+        # Epsilon parameter
+        if self.losses[self.loss_function_index][1] in (
+                'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'):
+            self.epsilon_spin.setEnabled(True)
+        else:
+            self.epsilon_spin.setEnabled(False)
+
+        self.settings_changed()
 
     def _on_regularization_change(self):
         # Alpha parameter
@@ -165,9 +166,7 @@ class OWSGD(OWBaseLearner):
             params['random_state'] = self.random_state
 
         return self.LEARNER(
-            cls_loss=self.classification_losses[
-                self.cls_loss_function_index][1],
-            reg_loss=self.regression_losses[self.reg_loss_function_index][1],
+            loss=self.losses[self.loss_function_index][1],
             epsilon=self.epsilon,
             penalty=self.penalties[self.penalty_index][1],
             alpha=self.alpha,
