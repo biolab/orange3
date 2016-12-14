@@ -98,9 +98,16 @@ e.g.:
     orange-canvas
 
 
-Windows dev setup
------------------
+Compiling on Windows
+--------------------
 
-Windows + GCC:
+Get appropriate wheels for missing libraries. You will need `numpy+mkl <http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_ 
+and `scipy <http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy>`_.
 
-    python setup.py build_ext --inplace --compile=mingw32
+Install them with
+
+    pip install some-wheel.whl
+
+Install `Visual Studio compiler <http://landinghub.visualstudio.com/visual-cpp-build-tools>`_. Then go to Orange3 folder and run:
+
+    python setup.py build_ext -i --compiler=msvc install
