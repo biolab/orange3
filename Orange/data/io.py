@@ -29,6 +29,9 @@ from Orange.data import (
 from Orange.util import Registry, flatten, namegen
 
 
+__all__ = ["Flags", "FileFormat"]
+
+
 _IDENTITY = lambda i: i
 
 
