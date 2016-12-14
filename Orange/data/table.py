@@ -946,6 +946,12 @@ class Table(MutableSequence, Storage):
                 (self.metas.base is None) and
                 (self.W.base is None))
 
+    def is_sparse(self):
+        """
+        Return `True` if the table stores data in sparse format
+        """
+        return any(sp.issparse(i) for i in [self.X, self.Y, self.metas])
+
     def ensure_copy(self):
         """
         Ensure that the table owns its data; copy arrays when necessary.
