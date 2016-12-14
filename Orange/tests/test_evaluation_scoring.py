@@ -65,7 +65,7 @@ class TestCA(unittest.TestCase):
 
     def test_bayes(self):
         x = np.random.randint(2, size=(100, 5))
-       col = np.random.randint(5)
+        col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
         t = Table(x, y)
         t = Discretize(
