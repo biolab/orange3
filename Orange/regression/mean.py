@@ -11,9 +11,6 @@ class MeanLearner(Learner):
     """
     Fit a regression model that returns the average response (class) value.
     """
-
-    name = 'mean'
-
     def fit_storage(self, data):
         """
         Construct a :obj:`MeanModel` by computing the mean value of the given

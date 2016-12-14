@@ -36,8 +36,9 @@ Some variables are derived from others. For instance, discretizing a continuous
 variable gives a new, discrete variable. The new variable can compute its
 values from the original one.
 
-    >>> from Orange.data import discretization
-    >>> d_iris = discretization.DomainDiscretizer(iris)
+    >>> from Orange.preprocess import DomainDiscretizer
+    >>> discretizer = DomainDiscretizer()
+    >>> d_iris = discretizer(iris)
     >>> d_iris[0]
     DiscreteVariable('D_sepal length')
     >>> d_iris[0].values
@@ -96,7 +97,8 @@ Base class
 
         >>> iris = Table("iris")
         >>> iris_1 = iris[::2]
-        >>> d_iris_1 = DomainDiscretizer(iris_1)
+        >>> discretizer = DomainDiscretizer()
+        >>> d_iris_1 = discretizer(iris_1)
 
         >>> d_iris_1[0]
         DiscreteVariable('D_sepal length')

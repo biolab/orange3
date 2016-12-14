@@ -1,21 +1,20 @@
-from Orange.data import ContinuousVariable, Domain
+from Orange.data import ContinuousVariable, Domain, Table
 from Orange.statistics import distribution
+from Orange.util import Reprable
 from .transformation import Identity, Indicator, Indicator1, Normalizer
 from .preprocess import Continuize
+from Orange.preprocess.util import _RefuseDataInConstructor
 
-__all__ = ["DomainContinuizer", "MultinomialTreatment"]
+__all__ = ["DomainContinuizer"]
 
 
-class DomainContinuizer:
-    def __new__(cls, data=None, zero_based=True,
-                multinomial_treatment=Continuize.Indicators,
-                transform_class=False):
-        self = super().__new__(cls)
+class DomainContinuizer(_RefuseDataInConstructor, Reprable):
+    def __init__(self, zero_based=True,
+                 multinomial_treatment=Continuize.Indicators,
+                 transform_class=False):
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
         self.transform_class = transform_class
-
-        return self if data is None else self(data)
 
     def __call__(self, data):
         def transform_discrete(var):
@@ -91,6 +90,3 @@ class DomainContinuizer:
         else:
             new_classes = domain.class_vars
         return Domain(new_attrs, new_classes, domain.metas)
-
-
-MultinomialTreatment = Continuize.MultinomialTreatment

@@ -2,6 +2,7 @@ from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
 import Orange.data
+from Orange.util import Reprable
 from Orange.statistics import distribution
 from Orange.preprocess import Continuize, Normalize
 from Orange.data.table import Table
@@ -346,17 +347,15 @@ def normalize_by_sd(var, data_or_dist):
     return normalized_var(var, mean, 1 / sd)
 
 
-class DomainContinuizer:
-    def __new__(cls, data=None, zero_based=True,
-                multinomial_treatment=Continuize.Indicators,
-                continuous_treatment=Continuize.Leave,
-                class_treatment=Continuize.Leave):
-        self = super().__new__(cls)
+class DomainContinuizer(Reprable):
+    def __init__(self, zero_based=True,
+                 multinomial_treatment=Continuize.Indicators,
+                 continuous_treatment=Continuize.Leave,
+                 class_treatment=Continuize.Leave):
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
         self.continuous_treatment = continuous_treatment
         self.class_treatment = class_treatment
-        return self if data is None else self(data)
 
     def __call__(self, data):
         treat = self.multinomial_treatment

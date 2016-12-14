@@ -18,7 +18,7 @@ class _FeatureScorerMixin(LearnerScorer):
     class_type = DiscreteVariable
 
     def score(self, data):
-        data = Normalize(data)
+        data = Normalize()(data)
         model = self(data)
         return np.abs(model.coefficients)
 
@@ -36,7 +36,6 @@ class LogisticRegressionClassifier(SklModel):
 class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LogisticRegression
     __returns__ = LogisticRegressionClassifier
-    name = 'logreg'
     preprocessors = SklLearner.preprocessors
 
     def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,

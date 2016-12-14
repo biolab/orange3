@@ -1,6 +1,7 @@
 import inspect
 
 import Orange.data
+from Orange.base import _ReprableWithPreprocessors, _ReprableWithParams
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.misc.cache import single_cache
 import Orange.preprocess
@@ -8,7 +9,7 @@ import Orange.preprocess
 __all__ = ["Projector", "Projection", "SklProjector"]
 
 
-class Projector:
+class Projector(_ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to projecting
     name = 'projection'
     preprocessors = ()
@@ -52,7 +53,7 @@ class Projection:
         return self.name
 
 
-class SklProjector(Projector, metaclass=WrapperMeta):
+class SklProjector(_ReprableWithParams, Projector, metaclass=WrapperMeta):
     __wraps__ = None
     _params = {}
     name = 'skl projection'
@@ -90,6 +91,3 @@ class SklProjector(Projector, metaclass=WrapperMeta):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         return proj.fit(X, Y)
-
-    def __repr__(self):
-        return '{} {}'.format(self.name, self.params)

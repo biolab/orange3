@@ -1,9 +1,10 @@
 import scipy.sparse as sp
 
 from Orange.data import Instance, Table, Domain
+from Orange.util import Reprable
 
 
-class Transformation:
+class Transformation(Reprable):
     """
     Base class for simple transformations of individual variables. Derived
     classes are used in continuization, imputation, discretization...

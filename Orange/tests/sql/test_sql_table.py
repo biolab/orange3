@@ -520,7 +520,7 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-        filters = filter.Values([filter.FilterString(-1, 0, 'foo')])
+        filters = filter.Values([filter.FilterString(-1, filter.FilterString.Equal, 'foo')])
         self.assertEqual(len(filters(sql_table)), 0)
 
     def test_recovers_connection_after_sql_error(self):

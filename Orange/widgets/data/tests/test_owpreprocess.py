@@ -4,6 +4,7 @@
 import numpy as np
 
 from Orange.data import Table
+from Orange.preprocess import Randomize
 from Orange.widgets.data.owpreprocess import OWPreprocess
 from Orange.widgets.tests.base import WidgetTest
 
@@ -15,7 +16,8 @@ class TestOWPreprocess(WidgetTest):
 
     def test_randomize(self):
         saved = {"preprocessors": [("orange.preprocess.randomize",
-                                    {"rand_type": 0, "rand_seed": 1})]}
+                                    {"rand_type": Randomize.RandomizeClasses,
+                                     "rand_seed": 1})]}
         model = self.widget.load(saved)
         self.widget.set_model(model)
         self.send_signal("Data", self.zoo)

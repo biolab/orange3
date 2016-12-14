@@ -81,7 +81,6 @@ class FitterTest(unittest.TestCase):
                 self.param = regression_param
 
         class DummyFitter(Fitter):
-            name = 'dummy'
             __fits__ = {'classification': DummyClassificationLearner,
                         'regression': DummyRegressionLearner}
 
@@ -93,6 +92,7 @@ class FitterTest(unittest.TestCase):
         fitter = DummyFitter()
         self.assertEqual(fitter.get_learner(Fitter.CLASSIFICATION).param, 1)
         self.assertEqual(fitter.get_learner(Fitter.REGRESSION).param, 2)
+        self.assertEqual(fitter.name, 'dummy')
 
         # Pass specific params
         try:

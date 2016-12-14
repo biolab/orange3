@@ -54,6 +54,14 @@ In addition, we add the following guidelines:
 * Each Orange widget module, or better still, each Python module (within
   reason) should have a `__name__ == '__main__'`-fenced code block that
   shows/tests the gist of that module in a user-friendly way.
+* Core library objects should represent (`__repr__`) themselves in accordance
+  with the following statement from [Python data model documentation]:
+
+  > If at all possible, \[the string returned by `__repr__`\] should look like
+  > a valid Python expression that could be used to recreate an object with
+  > the same value (given an appropriate environment).
+
+  To that end, use [`Orange.util.Reprable`] when possible.
 
 Please ensure your commits pass code quality assurance by executing:
 
@@ -64,6 +72,8 @@ Please ensure your commits pass code quality assurance by executing:
 [Google Python Style Guide]: https://google.github.io/styleguide/pyguide.html
 [Napoleon]: http://www.sphinx-doc.org/en/stable/ext/napoleon.html
 [keyword args to the constructor]: http://pyqt.sourceforge.net/Docs/PyQt5/qt_properties.html
+[Python data model documentation]: https://docs.python.org/3/reference/datamodel.html#object.__repr__
+[`Orange.util.Reprable`]: https://github.com/biolab/orange3/search?q="class+Reprable"&type=Code
 
 
 Human Interface Guidelines

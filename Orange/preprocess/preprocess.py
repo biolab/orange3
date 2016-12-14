@@ -9,50 +9,39 @@ import bottleneck as bn
 
 import Orange.data
 from Orange.data import Table
-from . import impute, discretize
-from ..misc.enum import Enum
+from Orange.preprocess.util import _RefuseDataInConstructor
+from Orange.statistics import distribution
+from Orange.util import Reprable, Enum
+from . import impute, discretize, transformation
 
-__all__ = ["Continuize", "Discretize", "Impute", "SklImpute",
-           "Normalize", "Randomize", "RemoveNaNClasses",
-           "ProjectPCA", "ProjectCUR"]
+__all__ = ["Continuize", "Discretize", "Impute",
+           "SklImpute", "Normalize", "Randomize",
+           "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scale"]
 
 
-class Preprocess:
+class Preprocess(_RefuseDataInConstructor, Reprable):
     """
-    A generic preprocessor class. All preprocessors need to inherit this
-    class. Preprocessors can be instantiated without the data set to return
-    data preprocessor, or can be given a data set to return the preprocessed
-    data.
+    A generic preprocessor base class.
 
-    Parameters
-    ----------
-    data : a data table (default=None)
-        An optional data set to be preprocessed.
+    Methods
+    -------
+    __call__(data: Table) -> Table
+        Return preprocessed data.
     """
-
-    def __new__(cls, data=None, *args, **kwargs):
-        self = super().__new__(cls)
-        if isinstance(data, Orange.data.Storage):
-            self.__init__(*args, **kwargs)
-            return self(data)
-        else:
-            return self
-
     def __call__(self, data):
         raise NotImplementedError("Subclasses need to implement __call__")
 
 
 class Continuize(Preprocess):
-    MultinomialTreatment = Enum(
-        "Indicators", "FirstAsBase", "FrequentAsBase",
-        "Remove", "RemoveMultinomial", "ReportError", "AsOrdinal",
-        "AsNormalizedOrdinal", "Leave"
-    )
+    (Indicators, FirstAsBase, FrequentAsBase,Remove, RemoveMultinomial,
+     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = Enum(
+        "Continuize",
+        "Indicators, FirstAsBase, FrequentAsBase,"
+        "Remove, RemoveMultinomial, ReportError, AsOrdinal,"
+        "AsNormalizedOrdinal, Leave")
 
-    (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
-     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = MultinomialTreatment
-
-    def __init__(self, zero_based=True, multinomial_treatment=Indicators):
+    def __init__(self, zero_based=True,
+                 multinomial_treatment=Indicators):
         self.zero_based = zero_based
         self.multinomial_treatment = multinomial_treatment
 
@@ -266,9 +255,9 @@ class Normalize(Preprocess):
     >>> normalizer = Normalize(norm_type=Normalize.NormalizeBySpan)
     >>> normalized_data = normalizer(data)
     """
-
-    NormTypes = Enum("NormalizeBySpan", "NormalizeBySD")
-    (NormalizeBySpan, NormalizeBySD) = NormTypes
+    Type = Enum("Normalize",
+                "NormalizeBySpan, NormalizeBySD")
+    NormalizeBySpan, NormalizeBySD = Type
 
     def __init__(self,
                  zero_based=True,
@@ -337,10 +326,9 @@ class Randomize(Preprocess):
     >>> randomizer = Randomize(Randomize.RandomizeClasses)
     >>> randomized_data = randomizer(data)
     """
-
-    RandTypes = Enum("RandomizeClasses", "RandomizeAttributes",
-                     "RandomizeMetas")
-    (RandomizeClasses, RandomizeAttributes, RandomizeMetas) = RandTypes
+    Type = Enum("Randomize",
+                "RandomizeClasses, RandomizeAttributes, RandomizeMetas")
+    RandomizeClasses, RandomizeAttributes, RandomizeMetas = Type
 
     def __init__(self, rand_type=RandomizeClasses, rand_seed=None):
         self.rand_type = rand_type
@@ -409,7 +397,82 @@ class ProjectCUR(Preprocess):
         return cur(data)
 
 
-class PreprocessorList:
+class Scale(Preprocess):
+    """
+    Scale data preprocessor.  Scales data so that its distribution remains
+    the same but its location on the axis changes.
+    """
+    class _MethodEnum(Enum):
+        def __call__(self, *args, **kwargs):
+            return getattr(Scale, '_' + self.name)(*args, **kwargs)
+
+    CenteringType = _MethodEnum('Scale', 'Mean, Median', type=int)
+    ScalingType = _MethodEnum('Scale', 'Std, Span', type=int)
+    Mean, Median = CenteringType
+    Std, Span = ScalingType
+
+    @staticmethod
+    def _Mean(dist):
+        values, counts = np.array(dist)
+        return np.average(values, weights=counts)
+
+    @staticmethod
+    def _Median(dist):
+        values, counts = np.array(dist)
+        cumdist = np.cumsum(counts)
+        if cumdist[-1] > 0:
+            cumdist /= cumdist[-1]
+        return np.interp(.5, cumdist, values)
+
+    @staticmethod
+    def _Std(dist):
+        values, counts = np.array(dist)
+        mean = np.average(values, weights=counts)
+        diff = values - mean
+        return np.sqrt(np.average(diff ** 2, weights=counts))
+
+    @staticmethod
+    def _Span(dist):
+        values = np.array(dist[0])
+        return np.max(values) - np.min(values)
+
+    def __init__(self, center=Mean, scale=Std):
+        self.center = center
+        self.scale = scale
+
+    def __call__(self, data):
+        if self.center is None and self.scale is None:
+            return data
+
+        def transform(var):
+            dist = distribution.get_distribution(data, var)
+            if self.center:
+                c = self.center(dist)
+                dist[0, :] -= c
+            else:
+                c = 0
+
+            if self.scale:
+                s = self.scale(dist)
+                if s < 1e-15:
+                    s = 1
+            else:
+                s = 1
+            factor = 1 / s
+            return var.copy(compute_value=transformation.Normalizer(var, c, factor))
+
+        newvars = []
+        for var in data.domain.attributes:
+            if var.is_continuous:
+                newvars.append(transform(var))
+            else:
+                newvars.append(var)
+        domain = Orange.data.Domain(newvars, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.from_table(domain, data)
+
+
+class PreprocessorList(Reprable):
     """
     Store a list of preprocessors and on call apply them to the data set.
 
@@ -419,7 +482,7 @@ class PreprocessorList:
         A list of preprocessors.
     """
 
-    def __init__(self, preprocessors):
+    def __init__(self, preprocessors=()):
         self.preprocessors = list(preprocessors)
 
     def __call__(self, data):
@@ -434,4 +497,3 @@ class PreprocessorList:
         for pp in self.preprocessors:
             data = pp(data)
         return data
-

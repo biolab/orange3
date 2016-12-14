@@ -284,13 +284,6 @@ Continuization
     a new domain. When given only the domain, use the most frequent value as
     the base value.
 
-    The class can also behave like a function: if the constructor is given the
-    data or a domain, the constructed continuizer is immediately applied and
-    the constructor returns a transformed domain instead of the continuizer
-    instance::
-
-        domain1 = Orange.preprocess.DomainContinuizer(titanic)
-
     By default, the class does not change continuous and class attributes,
     discrete attributes are replaced with N attributes (``Indicators``) with
     values 0 and 1.

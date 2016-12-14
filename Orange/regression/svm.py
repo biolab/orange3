@@ -10,7 +10,6 @@ svm_pps = SklLearner.preprocessors + [Normalize()]
 
 class SVRLearner(SklLearner):
     __wraps__ = skl_svm.SVR
-    name = 'svr'
     preprocessors = svm_pps
 
     def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
@@ -22,7 +21,6 @@ class SVRLearner(SklLearner):
 
 class NuSVRLearner(SklLearner):
     __wraps__ = skl_svm.NuSVR
-    name = 'nu svr'
     preprocessors = svm_pps
 
     def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma="auto",

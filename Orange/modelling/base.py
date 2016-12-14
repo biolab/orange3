@@ -4,20 +4,16 @@ from Orange.base import Learner, Model
 class FitterMeta(type):
     """Ensure that each subclass of the `Fitter` class overrides the `__fits__`
     attribute with a valid value."""
-    def __new__(mcs, name, bases, kwargs):
+    def __new__(mcs, name, bases, attrs):
         # Check that a fitter implementation defines a valid `__fits__`
-        if kwargs.get('name', False):
-            fits = kwargs.get('__fits__')
-            if not isinstance(fits, dict):
-                raise AssertionError(
-                    'The `__fits__` property must be an instance of `dict`.')
-            elif not fits.get('classification', None) \
-                    or not fits.get('regression', None):
-                raise AssertionError(
-                    'The `__fits__` property does not define a classification '
-                    'or regression learner. Use a simple learner if you do '
-                    'not need the functionality provided by Fitter.')
-        return super().__new__(mcs, name, bases, kwargs)
+        if any(cls.__name__ == 'Fitter' for cls in bases):
+            fits = attrs.get('__fits__')
+            assert isinstance(fits, dict), '__fits__ must be dick instance'
+            assert fits.get('classification') and fits.get('regression'), \
+                ('`__fits__` property does not define classification '
+                 'or regression learner. Use a simple learner if you don\'t '
+                 'need the functionality provided by Fitter.')
+        return super().__new__(mcs, name, bases, attrs)
 
 
 class Fitter(Learner, metaclass=FitterMeta):
@@ -58,24 +54,19 @@ class Fitter(Learner, metaclass=FitterMeta):
         """Get the learner for a given problem type."""
         # Prevent trying to access the learner when problem type is None
         if problem_type not in self.__fits__:
-            raise AttributeError(
-                'There is no learner defined that handles that type of data')
+            # We're mostly called from __getattr__ via getattr, so we should
+            # raise AttributeError instead of TypeError
+            raise AttributeError("No learner to handle '{}'".format(problem_type))
         if self.__learners[problem_type] is None:
-            learner = self.__fits__[problem_type](**self.__get_kwargs(
-                self.kwargs, problem_type))
+            learner = self.__fits__[problem_type](**self.__kwargs(problem_type))
             learner.use_default_preprocessors = self.use_default_preprocessors
             self.__learners[problem_type] = learner
         return self.__learners[problem_type]
 
-    def __get_kwargs(self, kwargs, problem_type):
-        params = self._get_learner_kwargs(self.__fits__[problem_type])
-        return {k: kwargs[k] for k in params & set(kwargs.keys())}
-
-    @staticmethod
-    def _get_learner_kwargs(learner):
-        """Get a `set` of kwarg names that belong to the given learner."""
-        # Get function params except `self`
-        return set(learner.__init__.__code__.co_varnames[1:])
+    def __kwargs(self, problem_type):
+        learner_kwargs = set(
+            self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
+        return {k: v for k, v in self.kwargs.items() if k in learner_kwargs}
 
     def __getattr__(self, item):
         return getattr(self.get_learner(self.problem_type), item)
