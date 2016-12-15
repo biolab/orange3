@@ -1206,6 +1206,13 @@ class TableTestCase(unittest.TestCase):
 
     # TODO Test conjunctions and disjunctions of conditions
 
+    def test_is_sparse(self):
+        table = data.Table("iris")
+        self.assertFalse(table.is_sparse())
+
+        table.X = sp.csr_matrix(table.X)
+        self.assertTrue(table.is_sparse())
+
 
 def column_sizes(table):
     return (len(table.domain.attributes),
