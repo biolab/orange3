@@ -1069,8 +1069,11 @@ class OWImageViewer(widget.OWWidget):
         if base.strip() and not base.endswith("/"):
             origin.setPath(base + "/")
 
-        name = QUrl(str(value))
-        url = origin.resolved(name)
+        if os.path.exists(str(value)):
+            url = QUrl.fromLocalFile(str(value))
+        else:
+            name = QUrl(str(value))
+            url = origin.resolved(name)
         if not url.scheme():
             url.setScheme("file")
         return url
