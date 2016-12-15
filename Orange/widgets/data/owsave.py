@@ -1,5 +1,4 @@
 import os.path
-from operator import attrgetter
 
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
@@ -24,10 +23,9 @@ class OWSave(widget.OWWidget):
     last_filter = Setting("")
     auto_save = Setting(False)
 
-    formats = [(f.DESCRIPTION, f.EXTENSIONS)
-               for f in sorted(set(FileFormat.writers.values()),
-                               key=attrgetter("PRIORITY"))]
-    filters = ['{} (*{})'.format(x[0], ' *'.join(x[1])) for x in formats]
+    writers = FileFormat.writers
+    sparse_writers = {ext: w for ext, w in FileFormat.writers.items()
+                      if w.SUPPORT_SPARSE_DATA}
 
     def __init__(self):
         super().__init__()
@@ -63,7 +61,8 @@ class OWSave(widget.OWWidget):
             os.path.join(self.last_dir or os.path.expanduser("~"),
                          getattr(self.data, 'name', ''))
         filename, writer, filter = filedialogs.get_file_name(
-                file_name, self.last_filter, FileFormat.writers)
+            file_name, self.last_filter,
+            self.sparse_writers if self.data.is_sparse() else self.writers)
         if not filename:
             return
         self.filename = filename
