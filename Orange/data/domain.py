@@ -1,7 +1,7 @@
 import weakref
 
 from math import log
-from collections import Iterable
+from collections import Iterable, Sequence
 from itertools import chain
 from numbers import Integral
 
@@ -74,7 +74,7 @@ def filter_visible(feats):
     return (f for f in feats if not f.attributes.get('hidden', False))
 
 
-class Domain:
+class Domain(Sequence):
     def __init__(self, attributes, class_vars=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and

@@ -2050,6 +2050,9 @@ class InterfaceTest(unittest.TestCase):
         t = self.table[1:]
         self.assertEqual(len(t), self.nrows - 1)
 
+    def test_ellipsis(self):
+        self.assertRaises(AssertionError, self.table.iloc.__getitem__, Ellipsis)
+
     def test_value_indexing(self):
         for i in range(self.nrows):
             for j in range(len(self.table[i])):

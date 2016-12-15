@@ -1,15 +1,77 @@
 from itertools import chain
 from math import isnan
 from numbers import Real, Integral
+from warnings import warn
 
 import numpy as np
 
-from Orange.data import Value, Unknown
+from Orange.data import Value, Unknown, Variable
+from Orange.util import OrangeDeprecationWarning
 
 __all__ = ["Instance"]
 
 
-class Instance:
+class _PandasSeriesCompat:
+    @property
+    def X(self):
+        return self.x
+
+    @property
+    def Y(self):
+        return self.y
+
+    def __getitem__(self, key):
+        if (key == slice(None) or
+                isinstance(key, (str, Variable)) or
+                isinstance(key, (list, tuple)) and key and isinstance(key[0], (str, Variable))):
+            return self.__getitem_old__(key)
+        warn('Instance indexing is changing to pandas-compatible. To be '
+             'safe, use pandas indexing: .loc, .iloc, .ix',
+             OrangeDeprecationWarning, stacklevel=2)
+        return self.__getitem_old__(key)
+
+    def __setitem__(self, key, value):
+        if (key == slice(None) or
+                isinstance(key, (str, Variable)) or
+                isinstance(key, (list, tuple)) and key and isinstance(key[0], (str, Variable))):
+            return self.__setitem_old__(key, value)
+        warn('Instance indexing is changing to pandas-compatible. To be '
+             'safe, use pandas indexing: .loc, .iloc, .ix',
+             OrangeDeprecationWarning, stacklevel=2)
+        return self.__setitem_old__(key, value)
+
+    @property
+    def loc(self):
+        class _indexer:
+            def __getitem__(self, key):
+                nonlocal instance
+                return instance.__getitem_old__(key)
+
+            def __setitem__(self, key, value):
+                nonlocal instance
+                return instance.__setitem_old__(key, value)
+
+        instance = self
+        return _indexer()
+
+    @property
+    def iloc(self):
+        class _indexer:
+            def __getitem__(self, key):
+                assert isinstance(key, Integral)
+                nonlocal instance
+                return instance.__getitem_old__(key)
+
+            def __setitem__(self, key, value):
+                assert isinstance(key, Integral)
+                nonlocal instance
+                return instance.__setitem_old__(key, value)
+
+        instance = self
+        return _indexer()
+
+
+class Instance(_PandasSeriesCompat):
     def __init__(self, domain, data=None, id=None):
         """
         Construct a new data instance.
@@ -96,7 +158,7 @@ class Instance:
     def weight(self, weight):
         self._weight = weight
 
-    def __setitem__(self, key, value):
+    def __setitem_old__(self, key, value):
         if not isinstance(key, Integral):
             key = self._domain.index(key)
         value = self._domain[key].to_val(value)
@@ -111,7 +173,7 @@ class Instance:
         else:
             self._metas[-1 - key] = value
 
-    def __getitem__(self, key):
+    def __getitem_old__(self, key):
         if not isinstance(key, Integral):
             key = self._domain.index(key)
         if 0 <= key < len(self._domain.attributes):
