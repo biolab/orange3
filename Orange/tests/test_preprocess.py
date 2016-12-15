@@ -86,7 +86,7 @@ class TestRemoveNanClass(unittest.TestCase):
                                [1, 0, 1],
                                [1, np.nan, np.nan]])
         table = RemoveNaNClasses()(table)
-        self.assertTrue(not np.isnan(table).any())
+        self.assertTrue(not np.isnan(table.Y).any())
         self.assertEqual(table.domain, domain)
         self.assertEqual(len(table), 1)
 
@@ -101,12 +101,12 @@ class TestScaling(unittest.TestCase):
 
     def test_scaling_mean_span(self):
         table = Scale(center=Scale.Mean, scale=Scale.Span)(self.table)
-        np.testing.assert_almost_equal(np.mean(table, 0), 0)
-        np.testing.assert_almost_equal(np.ptp(table, 0), 1)
+        np.testing.assert_almost_equal(np.mean(table.X, 0), 0)
+        np.testing.assert_almost_equal(np.ptp(table.X, 0), 1)
 
     def test_scaling_median_stddev(self):
         table = Scale(center=Scale.Median, scale=Scale.Std)(self.table)
-        np.testing.assert_almost_equal(np.std(table, 0), 1)
+        np.testing.assert_almost_equal(np.std(table.X, 0), 1)
         # NB: This test just covers. The following fails. You figure it out.
         # np.testing.assert_almost_equal(np.median(table, 0), 0)
 

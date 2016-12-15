@@ -17,7 +17,7 @@ class TestManifold(unittest.TestCase):
         cls.iris = Table('iris')
 
     def test_mds(self):
-        data = self.ionosphere[:50]
+        data = self.ionosphere.iloc[:50]
         for i in range(1, 4):
             self.__mds_test_helper(data, n_com=i)
 
@@ -65,7 +65,7 @@ class TestManifold(unittest.TestCase):
         projector = MDS(
             n_components=6, dissimilarity='euclidean', init_type='PCA',
             n_init=1)
-        X = projector(self.iris[:5]).embedding_
+        X = projector(self.iris.iloc[:5]).embedding_
         result = np.array([-0.31871, -0.064644, 0.015653, -1.5e-08, -4.3e-11, 0])
         np.testing.assert_array_almost_equal(X[0], result)
 
@@ -117,7 +117,7 @@ class TestManifold(unittest.TestCase):
         self.assertEqual((data.X.shape[0], n_com), se.embedding_.shape)
 
     def test_tsne(self):
-        data = self.ionosphere[:50]
+        data = self.ionosphere.iloc[:50]
         for i in range(1, 4):
             self.__tsne_test_helper(data, n_com=i)
 

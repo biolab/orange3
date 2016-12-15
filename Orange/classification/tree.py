@@ -174,7 +174,7 @@ class TreeLearner(Learner):
 
         Returns:
             root node (Node)"""
-        node_insts = data[active_inst]
+        node_insts = data.iloc[active_inst]
         distr = distribution.Discrete(node_insts, data.domain.class_var)
         if len(node_insts) < self.min_samples_leaf:
             return None

@@ -226,7 +226,7 @@ class TestEuclidean(TestCase):
                                        np.array([[0., 4.12310563, 3.31662479],
                                                  [4.12310563, 0., 6.164414],
                                                  [3.31662479, 6.164414, 0.]]))
-        np.testing.assert_almost_equal(self.dist(self.sparse[:2]),
+        np.testing.assert_almost_equal(self.dist(self.sparse.iloc[:2]),
                                        np.array([[0., 3.74165739],
                                                  [3.74165739, 0.]]))
 
@@ -293,7 +293,7 @@ class TestManhattan(TestCase):
                                        np.array([[0., 5., 5.],
                                                  [5., 0., 10.],
                                                  [5., 10., 0.]]))
-        np.testing.assert_almost_equal(self.dist(self.sparse[:2]),
+        np.testing.assert_almost_equal(self.dist(self.sparse.iloc[:2]),
                                        np.array([[0., 6.],
                                                  [6., 0.]]))
 
@@ -359,7 +359,7 @@ class TestCosine(TestCase):
                                        np.array([[0.0, 7.57464375e-01, 1.68109669e-01],
                                                  [7.57464375e-01, 0.0, 1.00000000e+00],
                                                  [1.68109669e-01, 1.00000000e+00, 0.0]]))
-        np.testing.assert_almost_equal(self.dist(self.sparse[:2]),
+        np.testing.assert_almost_equal(self.dist(self.sparse.iloc[:2]),
                                        np.array([[0.0, 1.00000000e+00],
                                                  [1.00000000e+00, 0.0]]))
 
@@ -381,7 +381,7 @@ class TestCosine(TestCase):
 class TestJaccard(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.titanic = Table('titanic')[173:177]
+        cls.titanic = Table('titanic').iloc[173:177]
         cls.dist = Jaccard
 
     def test_jaccard_distance_one_example(self):
@@ -814,5 +814,5 @@ class TestDistances(TestCase):
 
     def test_distance_to_instance(self):
         iris = Table('iris')
-        inst = Instance(iris.domain, np.concatenate((iris[1].x, iris[1].y)))
-        self.assertEqual(Euclidean(iris[1], inst), 0)
+        inst = Instance(iris.domain, np.concatenate((iris.iloc[1].x, iris.iloc[1].y)))
+        self.assertEqual(Euclidean(iris.iloc[1], inst), 0)

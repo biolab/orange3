@@ -615,7 +615,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.commit()
 
     def send_report(self):
-        if not self.data or not self.output_data:
+        if self.data is None or self.output_data is None:
             return
         in_domain, out_domain = self.data.domain, self.output_data.domain
         self.report_domain("Input data", self.data.domain)

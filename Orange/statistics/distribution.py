@@ -69,14 +69,14 @@ class Discrete(np.ndarray):
             self[:] = np.zeros(len(variable.values))
             self.unknowns = 0
             if data.has_weights():
-                for inst, w in zip(data, data.W):
+                for (_, inst), w in zip(data.iterrows(), data.W):
                     val = inst[variable]
                     if not np.isnan(val):
                         self[int(val)] += w
                     else:
                         self.unknowns += w
             else:
-                for inst in data:
+                for _, inst in data.iterrows():
                     val = inst[variable]
                     if val == val:
                         self[int(val)] += 1

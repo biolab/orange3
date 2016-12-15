@@ -104,8 +104,8 @@ class TestAUC(unittest.TestCase):
         self.assertGreater(AUC(res)[1], 0.4)
 
     def test_auc_on_multiclass_data_returns_1d_array(self):
-        titanic = Table('titanic')[:100]
-        lenses = Table('lenses')[:100]
+        titanic = Table('titanic').iloc[:100]
+        lenses = Table('lenses').iloc[:100]
         majority = MajorityLearner()
 
         results = TestOnTrainingData(lenses, [majority])

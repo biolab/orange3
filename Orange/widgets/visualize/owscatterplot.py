@@ -428,7 +428,7 @@ class OWScatterPlot(OWWidget):
         return self.attr_x, self.attr_y
 
     def init_attr_values(self):
-        domain = self.data and self.data.domain
+        domain = self.data.domain if self.data is not None else None
         for model in self.models:
             model.set_domain(domain)
         self.attr_x = self.xy_model[0] if self.xy_model else None

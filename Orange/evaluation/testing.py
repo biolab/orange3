@@ -144,7 +144,7 @@ class Results:
         if nmethods is not None:
             self.failed = [False] * nmethods
 
-        if data:
+        if data is not None:
             self.data = data if self.store_data else None
             self.domain = data.domain
             self.dtype = getattr(data.Y, 'dtype', self.dtype)
@@ -254,7 +254,7 @@ class Results:
         """
         assert self.predicted.shape[0] == len(model_names)
 
-        data = self.data[self.row_indices]
+        data = self.data.iloc[self.row_indices]
         class_var = data.domain.class_var
         classification = class_var and class_var.is_discrete
 
@@ -314,7 +314,7 @@ class Results:
                 of None then `train_data` will be used
 
         """
-        test_data = test_data or train_data
+        test_data = test_data if test_data is not None else train_data
         self.setup_indices(train_data, test_data)
         self.prepare_arrays(test_data)
         self._prepare_arrays(test_data)
@@ -381,7 +381,7 @@ class Results:
             '''.format(self.__class__.__name__), OrangeWarning)
 
         data_splits = (
-            (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
+            (fold_i, self.preprocessor(train_data.iloc[train_i]), test_data.iloc[test_i])
             for fold_i, (train_i, test_i) in enumerate(self.indices))
 
         args_iter = (
@@ -452,7 +452,7 @@ class Results:
             ptr += len(test)
 
         self.row_indices = np.concatenate(row_indices, axis=0)
-        self.actual = test_data[self.row_indices].Y.ravel()
+        self.actual = test_data.iloc[self.row_indices].Y.ravel()
 
     def setup_indices(self, train_data, test_data):
         """Initializes `self.indices` with iterable objects with slices
@@ -659,7 +659,7 @@ def sample(table, n=0.7, stratified=False, replace=False,
         o = np.ones(len(table))
         o[sample] = 0
         others = np.nonzero(o)[0]
-        return table[sample], table[others]
+        return table.iloc[sample], table.iloc[others]
 
     n = len(table) - n
     if stratified and table.domain.has_discrete_class:
@@ -673,4 +673,4 @@ def sample(table, n=0.7, stratified=False, replace=False,
             len(table), n_iter=1,
             test_size=n, random_state=random_state)
     ind = next(iter(ind))
-    return table[ind[0]], table[ind[1]]
+    return table.iloc[ind[0]], table.iloc[ind[1]]

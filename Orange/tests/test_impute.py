@@ -228,7 +228,7 @@ class TestModel(unittest.TestCase):
         self.assertEqual(col.shape, (len(table),))
         self.assertTrue(np.all(np.isfinite(col)))
 
-        v = Aimp(table[-1])
+        v = Aimp(table.iloc[-1])
         self.assertEqual(v.shape, (1,))
         self.assertTrue(np.all(np.isfinite(v)))
 

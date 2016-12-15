@@ -56,8 +56,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
 
     def test_probability(self):
         learn = LogisticRegressionLearner(penalty='l1')
-        clf = learn(self.iris[:100])
-        p = clf(self.iris[100:], ret=Model.Probs)
+        clf = learn(self.iris.iloc[:100])
+        p = clf(self.iris.iloc[100:], ret=Model.Probs)
         self.assertLess(abs(p.sum(axis=1) - 1).all(), 1e-6)
 
     def test_learner_scorer(self):
@@ -109,7 +109,7 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         np.testing.assert_almost_equal(probs, probs2)
 
     def test_single_class(self):
-        t = self.iris[60:90]
+        t = self.iris.iloc[60:90]
         self.assertEqual(len(np.unique(t.Y)), 1)
         learn = LogisticRegressionLearner()
         model = learn(t)
@@ -118,7 +118,7 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         self.assertTrue(np.all(model(t) == 1))
 
     def test_sklearn_single_class(self):
-        t = self.iris[60:90]
+        t = self.iris.iloc[60:90]
         self.assertEqual(len(np.unique(t.Y)), 1)
         lr = sklearn.linear_model.LogisticRegression()
         self.assertRaises(ValueError, lr.fit, t.X, t.Y)

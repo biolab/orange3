@@ -14,7 +14,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         data = Table('titanic')
         cls.learner = NaiveBayesLearner()
         cls.model = cls.learner(data)
-        cls.table = data[::20]
+        cls.table = data.iloc[::20]
 
     def test_NaiveBayes(self):
         results = CrossValidation(self.table, [self.learner], k=10)

@@ -493,7 +493,7 @@ class OWSelectRows(widget.OWWidget):
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
     def send_report(self):
-        if not self.data:
+        if self.data is None:
             self.report_paragraph("No data.")
             return
 

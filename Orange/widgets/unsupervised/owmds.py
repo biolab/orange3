@@ -392,7 +392,7 @@ class OWMDS(OWWidget):
             self.Error.matrix_too_small.clear()
 
         self.matrix = matrix
-        if matrix is not None and matrix.row_items:
+        if matrix is not None and matrix.row_items is not None:
             self.matrix_data = matrix.row_items
         if matrix is None:
             self.matrix_data = None

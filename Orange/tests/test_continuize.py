@@ -30,9 +30,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2    d3       cl1
-            self.assertEqual(dat2[0], [1, -2, 1, 0, 1, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 0, 1, 0, 1, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 0, 1, 0, 0, 1, "c"])
+            self.assertEqual(dat2.iloc[0], [1, -2, 1, 0, 1, 0, 0, "a"])
+            self.assertEqual(dat2.iloc[1], [0, 0, 0, 1, 0, 1, 0, "b"])
+            self.assertEqual(dat2.iloc[2], [2, 2, 0, 1, 0, 0, 1, "c"])
 
     def test_continuous_transform_class(self):
         for inp in (self.data, self.data.domain):
@@ -49,9 +49,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1   c2  d2    d3       cl1
-            self.assertEqual(dat2[0], [1, -2, 1, 0, 1, 0, 0, 1, 0, 0])
-            self.assertEqual(dat2[1], [0, 0, 0, 1, 0, 1, 0, 0, 1, 0])
-            self.assertEqual(dat2[2], [2, 2, 0, 1, 0, 0, 1, 0, 0, 1])
+            self.assertEqual(dat2.iloc[0], [1, -2, 1, 0, 1, 0, 0, 1, 0, 0])
+            self.assertEqual(dat2.iloc[1], [0, 0, 0, 1, 0, 1, 0, 0, 1, 0])
+            self.assertEqual(dat2.iloc[2], [2, 2, 0, 1, 0, 0, 1, 0, 0, 1])
 
     def test_multi_indicators(self):
         for inp in (self.data, self.data.domain):
@@ -70,9 +70,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2    d3       cl1
-            self.assertEqual(dat2[0], [1, -2, 1, 0, 1, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 0, 1, 0, 1, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 0, 1, 0, 0, 1, "c"])
+            self.assertEqual(dat2.iloc[0], [1, -2, 1, 0, 1, 0, 0, "a"])
+            self.assertEqual(dat2.iloc[1], [0, 0, 0, 1, 0, 1, 0, "b"])
+            self.assertEqual(dat2.iloc[2], [2, 2, 0, 1, 0, 0, 1, "c"])
 
     def test_multi_lowest_base(self):
         for inp in (self.data, self.data.domain):
@@ -90,9 +90,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2 d3     cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 1, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 0, 1, "c"])
+            self.assertEqual(dat2.iloc[0], [1, -2, 0, 0, 0, "a"])
+            self.assertEqual(dat2.iloc[1], [0, 0, 1, 1, 0, "b"])
+            self.assertEqual(dat2.iloc[2], [2, 2, 1, 0, 1, "c"])
 
     def test_multi_lowest_base_base(self):
         self.data.domain[4].base_value = 1
@@ -111,9 +111,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2 d3    cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 1, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 0, 0, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 0, 1, "c"])
+            self.assertEqual(dat2.iloc[0], [1, -2, 0, 1, 0, "a"])
+            self.assertEqual(dat2.iloc[1], [0, 0, 1, 0, 0, "b"])
+            self.assertEqual(dat2.iloc[2], [2, 2, 1, 0, 1, "c"])
 
     def test_multi_ignore(self):
         dom = DomainContinuizer(multinomial_treatment=Continuize.Remove)
@@ -175,9 +175,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2 d3  cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 1, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 2, "c"])
+            self.assertEqual(dat2.iloc[0], [1, -2, 0, 0, "a"])
+            self.assertEqual(dat2.iloc[1], [0, 0, 1, 1, "b"])
+            self.assertEqual(dat2.iloc[2], [2, 2, 1, 2, "c"])
 
     def test_as_ordinal_class(self):
         for inp in (self.data, self.data.domain):
@@ -194,9 +194,9 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2 d3  cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, 0])
-            self.assertEqual(dat2[1], [0, 0, 1, 1, 1])
-            self.assertEqual(dat2[2], [2, 2, 1, 2, 2])
+            self.assertEqual(dat2.iloc[0], [1, -2, 0, 0, 0])
+            self.assertEqual(dat2.iloc[1], [0, 0, 1, 1, 1])
+            self.assertEqual(dat2.iloc[2], [2, 2, 1, 2, 2])
 
     def test_as_normalized_ordinal(self):
         for inp in (self.data, self.data.domain):
@@ -212,6 +212,6 @@ class TestDomainContinuizer(unittest.TestCase):
 
             dat2 = Table(dom, self.data)
             # c1 c2  d2 d3  cl1
-            self.assertEqual(dat2[0], [1, -2, 0, 0, "a"])
-            self.assertEqual(dat2[1], [0, 0, 1, 0.5, "b"])
-            self.assertEqual(dat2[2], [2, 2, 1, 1, "c"])
+            self.assertEqual(dat2.iloc[0], [1, -2, 0, 0, "a"])
+            self.assertEqual(dat2.iloc[1], [0, 0, 1, 0.5, "b"])
+            self.assertEqual(dat2.iloc[2], [2, 2, 1, 1, "c"])

@@ -43,7 +43,7 @@ class TestSharedComputeValue(unittest.TestCase):
         obj = DummyPlus(lambda data: 1.)
         data = Orange.data.Table("iris")
         domain = Orange.data.Domain([Orange.data.ContinuousVariable("cv", compute_value=obj)])
-        data1 = Orange.data.Table.from_table(domain, data)[:10]
+        data1 = Orange.data.Table.from_table(domain, data).iloc[:10]
         data2 = Orange.data.Table.from_table(domain, data, range(10))
         np.testing.assert_equal(data1.X, data2.X)
 

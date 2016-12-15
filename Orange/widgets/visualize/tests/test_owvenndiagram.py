@@ -108,7 +108,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         WidgetOutputsTestMixin.init(cls)
 
         cls.signal_name = "Data"
-        cls.signal_data = cls.data[:25]
+        cls.signal_data = cls.data.iloc[:25]
 
     def setUp(self):
         self.widget = self.create_widget(OWVennDiagram)
@@ -118,8 +118,8 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         return list(range(len(self.signal_data)))
 
     def test_multiple_input(self):
-        self.send_signal(self.signal_name, self.data[:100], 1)
-        self.send_signal(self.signal_name, self.data[50:], 2)
+        self.send_signal(self.signal_name, self.data.iloc[:100], 1)
+        self.send_signal(self.signal_name, self.data.iloc[50:], 2)
 
         # check selected data output
         self.assertIsNone(self.get_output("Selected Data"))
@@ -127,7 +127,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         # check annotated data output
         feature_name = ANNOTATED_DATA_FEATURE_NAME
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(0, np.sum([i[feature_name] for _, i in annotated.iterrows()]))
 
         # select data instances
         self.widget.vennwidget.vennareas()[3].setSelected(True)
@@ -144,7 +144,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(n_sel, np.sum([i[feature_name] for _, i in annotated.iterrows()]))
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)

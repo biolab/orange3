@@ -30,21 +30,21 @@ class TestAnnotatedData(unittest.TestCase):
         np.testing.assert_array_equal(annotated.metas[:, 0].ravel(),
                                       self.zoo.metas.ravel())
         self.assertEqual(
-            10, np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for i in annotated]))
+            10, np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for _, i in annotated.iterrows()]))
 
     def test_create_annotated_table_selected(self):
         # check annotated column for no selected indices
         annotated = create_annotated_table(self.zoo, [])
         self.assertEqual(len(annotated), len(self.zoo))
         self.assertEqual(
-            0, np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for i in annotated]))
+            0, np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for _, i in annotated.iterrows()]))
 
         # check annotated column fol all selectes indices
         annotated = create_annotated_table(self.zoo, list(range(len(self.zoo))))
         self.assertEqual(len(annotated), len(self.zoo))
         self.assertEqual(
             len(self.zoo),
-            np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for i in annotated]))
+            np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for _, i in annotated.iterrows()]))
 
     def test_create_annotated_table_none_data(self):
         self.assertIsNone(create_annotated_table(None, None))
@@ -53,7 +53,7 @@ class TestAnnotatedData(unittest.TestCase):
         annotated = create_annotated_table(self.zoo, None)
         self.assertEqual(len(annotated), len(self.zoo))
         self.assertEqual(
-            0, np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for i in annotated]))
+            0, np.sum([i[ANNOTATED_DATA_FEATURE_NAME] for _, i in annotated.iterrows()]))
 
     def test_cascade_annotated_tables(self):
         # check cascade of annotated tables

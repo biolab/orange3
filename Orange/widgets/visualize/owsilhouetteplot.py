@@ -391,8 +391,8 @@ class OWSilhouettePlot(widget.OWWidget):
 
             if self.add_scores:
                 if selected is not None:
-                    selected[:, silhouette_var] = numpy.c_[scores[selectedmask]]
-                data[:, silhouette_var] = numpy.c_[scores]
+                    selected[silhouette_var] = numpy.c_[scores[selectedmask]]
+                data[silhouette_var] = numpy.c_[scores]
 
         self.send("Selected Data", selected)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,

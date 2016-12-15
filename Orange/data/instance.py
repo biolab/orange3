@@ -21,7 +21,7 @@ class _PandasSeriesCompat:
         return self.y
 
     def __getitem__(self, key):
-        if (key == slice(None) or
+        if (not isinstance(key, np.ndarray) and key == slice(None) or
                 isinstance(key, (str, Variable)) or
                 isinstance(key, (list, tuple)) and key and isinstance(key[0], (str, Variable))):
             return self.__getitem_old__(key)
@@ -31,7 +31,7 @@ class _PandasSeriesCompat:
         return self.__getitem_old__(key)
 
     def __setitem__(self, key, value):
-        if (key == slice(None) or
+        if (not isinstance(key, np.ndarray) and key == slice(None) or
                 isinstance(key, (str, Variable)) or
                 isinstance(key, (list, tuple)) and key and isinstance(key[0], (str, Variable))):
             return self.__setitem_old__(key, value)
@@ -146,7 +146,7 @@ class Instance(_PandasSeriesCompat):
         + len(self.domain.class_vars) + len(self.domain.metas)`.
         """
         n_self, n_metas = len(self), len(self._metas)
-        return [self[i].value if i < n_self else self[n_self - i - 1].value
+        return [self.iloc[i].value if i < n_self else self.iloc[n_self - i - 1].value
                 for i in range(n_self + n_metas)]
 
     @property

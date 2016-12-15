@@ -861,8 +861,7 @@ class OWBoxPlot(widget.OWWidget):
         selected, selection = None, []
         if self.conditions:
             selected = Values(self.conditions, conjunction=False)(self.dataset)
-            selection = [i for i, inst in enumerate(self.dataset)
-                         if inst in selected]
+            selection = np.in1d(self.dataset.ids, selected.ids).nonzero()[0]
         self.send("Selected Data", selected)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.dataset, selection))

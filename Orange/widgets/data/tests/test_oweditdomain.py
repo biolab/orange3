@@ -85,16 +85,16 @@ class TestOWEditDomain(WidgetTest):
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.data, self.iris)
+        self.assertTrue(self.widget.data.equals(self.iris))
 
     def test_input_data_disconnect(self):
         """Check widget's data after disconnecting data on the input"""
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.data, self.iris)
+        self.assertTrue(self.widget.data.equals(self.iris))
         self.send_signal("Data", None)
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
 
     def test_output_data(self):
         """Check data on the output after apply"""
@@ -114,7 +114,7 @@ class TestOWEditDomain(WidgetTest):
             ColorRole)
         owcolor_output = self.get_output("Data", owcolor)
         self.send_signal("Data", owcolor_output)
-        self.assertEqual(self.widget.data, owcolor_output)
+        self.assertTrue(self.widget.data.equals(owcolor_output))
         self.assertIsNotNone(self.widget.data.domain.class_vars[-1].colors)
 
     def test_list_attributes_remain_lists(self):

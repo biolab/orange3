@@ -178,9 +178,9 @@ class TestCrossValidation(TestSampling):
     def test_10_fold_probs(self):
         learners = [MajorityLearner(), MajorityLearner()]
 
-        results = CrossValidation(self.iris[30:130], learners, k=10)
+        results = CrossValidation(self.iris.iloc[30:130], learners, k=10)
 
-        self.assertEqual(results.predicted.shape, (2, len(self.iris[30:130])))
+        self.assertEqual(results.predicted.shape, (2, len(self.iris.iloc[30:130])))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
         probs = results.probabilities
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
@@ -323,7 +323,7 @@ class TestLeaveOneOut(TestSampling):
         self.check_models(res, learners, self.nrows)
 
     def test_probs(self):
-        data = Table('iris')[30:130]
+        data = Table('iris').iloc[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
 
         results = LeaveOneOut(data, learners)
@@ -394,7 +394,7 @@ class TestTestOnTrainingData(TestSampling):
         self.check_models(res, learners, 1)
 
     def test_probs(self):
-        data = self.iris[30:130]
+        data = self.iris.iloc[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
 
         results = TestOnTrainingData(data, learners)
@@ -466,8 +466,8 @@ class TestTestOnTestData(TestSampling):
 
     def test_store_data(self):
         data = self.random_table
-        train = data[:int(self.nrows*.75)]
-        test = data[int(self.nrows*.75):]
+        train = data.iloc[:int(self.nrows*.75)]
+        test = data.iloc[int(self.nrows*.75):]
         learners = [MajorityLearner()]
 
         res = TestOnTestData(train, test, learners)
@@ -478,8 +478,8 @@ class TestTestOnTestData(TestSampling):
 
     def test_store_models(self):
         data = self.random_table
-        train = data[:int(self.nrows*.75)]
-        test = data[int(self.nrows*.75):]
+        train = data.iloc[:int(self.nrows*.75)]
+        test = data.iloc[int(self.nrows*.75):]
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
         res = TestOnTestData(train, test, learners)
@@ -546,7 +546,7 @@ class TestTestOnTestData(TestSampling):
 
         data_sizes = []
         data = random_data(50, 5)
-        TestOnTestData(data[:30], data[-20:],
+        TestOnTestData(data.iloc[:30], data.iloc[-20:],
                        [MajorityLearner(), MajorityLearner()],
                        preprocessor=preprocessor)
         self.assertEqual(data_sizes, [30])

@@ -297,7 +297,7 @@ class OWTestLearners(OWWidget):
             data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
-            if data:
+            if data is not None:
                 data = RemoveNaNClasses(data)
         else:
             self.Warning.missing_data.clear()
@@ -333,7 +333,7 @@ class OWTestLearners(OWWidget):
             data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
-            if data:
+            if data is not None:
                 data = RemoveNaNClasses(data)
         else:
             self.Warning.missing_data.clear()
@@ -630,7 +630,7 @@ class OWTestLearners(OWWidget):
 
     def send_report(self):
         """Report on the testing schema and results"""
-        if not self.data or not self.learners:
+        if self.data is None or not self.learners:
             return
         if self.resampling == self.KFold:
             stratified = 'Stratified ' if self.cv_stratified else ''

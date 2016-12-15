@@ -100,6 +100,6 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
     def test_domain_loses_class(self):
         widget = self.widget
         self.send_signal("Distances", self.distances)
-        data = self.data[:, :4]
+        data = self.data.iloc[:, :4]
         distances = Euclidean(data)
         self.send_signal("Distances", distances)

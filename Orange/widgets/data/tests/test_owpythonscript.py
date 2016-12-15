@@ -19,11 +19,14 @@ class TestOWPythonScript(WidgetTest):
                              ("in_learner", self.learner),
                              ("in_classifier", self.model),
                              ("in_object", "object")):
-            self.assertEqual(getattr(self.widget, _input), None)
+            self.assertIsNone(getattr(self.widget, _input))
             self.send_signal(_input, data)
-            self.assertEqual(getattr(self.widget, _input), data)
+            if isinstance(data, Table):
+                self.assertTrue(getattr(self.widget, _input).equals(data))
+            else:
+                self.assertEqual(getattr(self.widget, _input), data)
             self.send_signal(_input, None)
-            self.assertEqual(getattr(self.widget, _input), None)
+            self.assertIsNone(getattr(self.widget, _input))
 
     def test_outputs(self):
         """Check widget's outputs"""
@@ -34,11 +37,14 @@ class TestOWPythonScript(WidgetTest):
                 ("in_object", "out_object", "object")):
             self.widget.text.setPlainText("{} = {}".format(_output, _input))
             self.send_signal(_input, data)
-            self.assertEqual(self.get_output(_output), data)
+            if isinstance(data, Table):
+                self.assertTrue(self.get_output(_output).equals(data))
+            else:
+                self.assertEqual(self.get_output(_output), data)
             self.send_signal(_input, None)
             self.widget.text.setPlainText("print({})".format(_output))
             self.widget.execute_button.button.click()
-            self.assertEqual(self.get_output(_output), None)
+            self.assertIsNone(self.get_output(_output))
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""

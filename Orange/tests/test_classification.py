@@ -64,7 +64,7 @@ class ModelTest(unittest.TestCase):
         learn = NaiveBayesLearner()
         clf = learn(table)
         pred = []
-        for row in table:
+        for _, row in table.iterrows():
             pred.append(clf(row))
 
     def test_learner_adequacy(self):

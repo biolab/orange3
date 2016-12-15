@@ -14,11 +14,11 @@ from Orange.tests import test_filename
 class TestNormalizer(unittest.TestCase):
     def compare_tables(self, dataNorm, solution):
         for i in range(len(dataNorm)):
-            for j in range(len(dataNorm[i])):
+            for j in range(len(dataNorm.iloc[i])):
                 if type(solution[i][j]) == float:
-                    self.assertAlmostEqual(dataNorm[i, j], solution[i][j], places=3)
+                    self.assertAlmostEqual(dataNorm.iloc[i, j], solution[i][j], places=3)
                 else:
-                    self.assertEqual(dataNorm[i, j], solution[i][j])
+                    self.assertEqual(dataNorm.iloc[i, j], solution[i][j])
         self.assertEqual([attr.name for attr in dataNorm.domain.attributes],
                          ["c1", "c2", "d1", "d2", "n1", "n2", "c3", "d3"])
         self.assertEqual([attr.name for attr in dataNorm.domain.class_vars],

@@ -550,7 +550,7 @@ class OWVennDiagram(widget.OWWidget):
                 _map = {item: str(i) for i, item in enumerate(selected_items)}
                 _map_all = {
                     ComparableInstance(i):  hash(ComparableInstance(i))
-                    for i in input.table
+                    for _, i in input.table.iterrows()
                 }
 
                 def instance_key(inst):
@@ -564,7 +564,7 @@ class OWVennDiagram(widget.OWWidget):
 
             annotated_subset = input.table
             id_column = np.array(
-                [[instance_key_all(inst)] for inst in annotated_subset])
+                [[instance_key_all(inst)] for _, inst in annotated_subset.iterrows()])
             source_names = np.array([[names[i]]] * len(annotated_subset))
             annotated_subset = append_column(
                 annotated_subset, "M", source_var, source_names)
@@ -888,9 +888,9 @@ def varying_between(table, idvarlist):
     values = {}
     varying = set()
     for indices in idmap.values():
-        subset = table[indices]
+        subset = table.iloc[indices]
         for var in list(candidate_set):
-            values = subset[:, var]
+            values = subset[var]
             values, _ = subset.get_column_view(var)
 
             if var.is_string:

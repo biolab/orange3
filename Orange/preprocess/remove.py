@@ -39,7 +39,7 @@ class Remove(Preprocess):
     --------
     >>> from Orange.data import Table
     >>> from Orange.preprocess import Remove
-    >>> data = Table("zoo")[:10]
+    >>> data = Table("zoo").iloc[:10]
     >>> flags = sum([Remove.SortValues, Remove.RemoveConstant, Remove.RemoveUnusedValues])
     >>> remover = Remove(attr_flags=flags, class_flags=flags)
     >>> new_data = remover(data)

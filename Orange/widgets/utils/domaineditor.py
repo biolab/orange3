@@ -217,9 +217,11 @@ class DomainEditor(QTableView):
             if place == Place.skip:
                 continue
             if orig_plc == Place.meta:
-                col_data = list(chain(*data[:, orig_var].metas))
+                col_data = data[orig_var].metas.ravel()
+            elif orig_plc == Place.feature:
+                col_data = data[orig_var].X.ravel()
             else:
-                col_data = list(chain(*data[:, orig_var]))
+                col_data = data[orig_var].Y.ravel()
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == DiscreteVariable:

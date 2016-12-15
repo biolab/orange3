@@ -58,8 +58,8 @@ class TestIsDefinedFilter(unittest.TestCase):
         self.assertTrue(just_missing.has_missing())
 
     def test_is_defined_filter_instance(self):
-        instance_with_missing = self.table[0]
-        instance_without_missing = self.table[3]
+        instance_with_missing = self.table.iloc[0]
+        instance_without_missing = self.table.iloc[3]
 
         filter_ = IsDefined()
         self.assertFalse(filter_(instance_with_missing))
@@ -93,8 +93,8 @@ class TestHasClassFilter(unittest.TestCase):
         self.assertTrue(without_class.has_missing_class())
 
     def test_has_class_filter_instance(self):
-        class_missing = self.table[9]
-        class_present = self.table[0]
+        class_missing = self.table.iloc[9]
+        class_present = self.table.iloc[0]
 
         filter_ = HasClass()
         self.assertFalse(filter_(class_missing))
@@ -112,7 +112,7 @@ class TestHasClassFilter(unittest.TestCase):
 class TestFilterContinuous(unittest.TestCase):
     def setUp(self):
         self.domain = Domain([ContinuousVariable(x) for x in "abcd"])
-        self.inst = Table(self.domain, np.array([[0.1, 0.2, 0.3, np.nan]]))[0]
+        self.inst = Table(self.domain, np.array([[0.1, 0.2, 0.3, np.nan]])).iloc[0]
 
     def test_min(self):
         flt = FilterContinuous(1, FilterContinuous.Between, 1, 2)
@@ -272,7 +272,7 @@ class TestFilterString(unittest.TestCase):
 
     def setUp(self):
         self.data = Table("zoo")
-        self.inst = self.data[0]  # aardvark
+        self.inst = self.data.iloc[0]  # aardvark
 
     def test_case_sensitive(self):
         flt = FilterString("name", FilterString.Equal, "Aardvark", case_sensitive=True)
@@ -371,10 +371,10 @@ class TestSameValueFilter(unittest.TestCase):
 
         for var_index, value, num_value in test_pairs:
             filter_ = SameValue(var_index, value)(self.table)
-            self.assertTrue(all(inst[var_index] == num_value for inst in filter_))
+            self.assertTrue(all(inst[var_index] == num_value for _, inst in filter_.iterrows()))
 
             filter_inverse = SameValue(var_index, value, negate=True)(self.table)
-            self.assertTrue(all(inst[var_index] != num_value for inst in filter_inverse))
+            self.assertTrue(all(inst[var_index] != num_value for _, inst in filter_inverse.iterrows()))
 
             self.assertEqual(len(filter_) + len(filter_inverse), len(self.table))
 
@@ -396,15 +396,15 @@ class TestSameValueFilter(unittest.TestCase):
 
             self.assertTrue(all(inst[pos1] == r1 and
                                 inst[pos2] == r2 and
-                                inst in filter_21
-                                for inst in filter_12))
+                                any(inst2 == inst for _, inst2 in filter_21.iterrows())
+                                for _, inst in filter_12.iterrows()))
             self.assertTrue(all(inst[pos1] == r1 and
                                 inst[pos2] == r2 and
-                                inst in filter_12
-                                for inst in filter_21))
+                                any(inst2 == inst for _, inst2 in filter_12.iterrows())
+                                for _, inst in filter_21.iterrows()))
 
     def test_same_value_filter_instance(self):
-        inst = self.table[0]
+        inst = self.table.iloc[0]
 
         filter_ = SameValue(self.attr_disc, self.value_disc)(inst)
         self.assertEqual(filter_, inst[self.attr_disc] == self.value_disc)
@@ -425,7 +425,7 @@ class TestFilterReprs(unittest.TestCase):
         self.vs = self.table.domain.variables
 
         self.table2 = Table("zoo")
-        self.inst = self.table2[0]  # aardvark
+        self.inst = self.table2.iloc[0]  # aardvark
 
     def test_reprs(self):
         flid = IsDefined(negate=True)

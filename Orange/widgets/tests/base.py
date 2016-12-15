@@ -526,7 +526,7 @@ class WidgetOutputsTestMixin:
         # check annotated data output
         feature_name = ANNOTATED_DATA_FEATURE_NAME
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(0, np.sum([i[feature_name] for _, i in annotated.iterrows()]))
 
         # select data instances
         selected_indices = self._select_data()
@@ -542,7 +542,7 @@ class WidgetOutputsTestMixin:
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(n_sel, np.sum([i[feature_name] for _, i in annotated.iterrows()]))
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)

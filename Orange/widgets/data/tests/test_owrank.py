@@ -18,16 +18,16 @@ class TestOWRank(WidgetTest):
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.data, self.iris)
+        self.assertTrue(self.widget.data.equals(self.iris))
 
     def test_input_data_disconnect(self):
         """Check widget's data after disconnecting data on the input"""
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.data, self.iris)
+        self.assertTrue(self.widget.data.equals(self.iris))
         self.send_signal("Data", None)
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
 
     def test_input_scorer(self):
         """Check widget's scorer with scorer on the input"""

@@ -48,7 +48,7 @@ class TestMajorityLearner(unittest.TestCase):
     def test_missing(self):
         iris = Table('iris')
         learn = MajorityLearner()
-        for _, e in iris[: len(iris) // 2: 2].iterrows():
+        for _, e in iris.iloc[: len(iris) // 2: 2].iterrows():
             e[e.domain.class_var] = np.nan
         clf = learn(iris)
         y = clf(iris)
@@ -69,13 +69,13 @@ class TestMajorityLearner(unittest.TestCase):
         iris = self.iris
         train = np.ones((150,), dtype='bool')
         train[0] = False
-        majority = MajorityLearner()(iris[train])
+        majority = MajorityLearner()(iris.iloc[train])
         pred1 = majority(iris.iloc[0])
         self.assertIn(pred1, [1, 2])
 
         for i in range(1, 50):
             train[i] = train[50 + i] = train[100 + i] = False
-            majority = MajorityLearner()(iris[train])
+            majority = MajorityLearner()(iris.iloc[train])
             pred2 = majority(iris.iloc[0])
             self.assertIn(pred2, [1, 2])
             if pred1 != pred2:

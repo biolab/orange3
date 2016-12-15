@@ -189,7 +189,7 @@ class _PandasDataFrameCompat:
         return any(inst == key for _, inst in self.iterrows())
 
     def __getitem__(self, key):
-        if (key == slice(None) or
+        if (not isinstance(key, np.ndarray) and key == slice(None) or
                 isinstance(key, (str, Variable)) or
                 isinstance(key, Sequence) and len(key) and isinstance(key[0], (str, Variable))):
             return self.__getitem_old__((slice(None), key))
@@ -201,7 +201,7 @@ class _PandasDataFrameCompat:
         return self.__getitem_old__(key)
 
     def __setitem__(self, key, value):
-        if (key == slice(None) or
+        if (not isinstance(key, np.ndarray) and key == slice(None) or
                 isinstance(key, (str, Variable)) or
                 isinstance(key, Sequence) and len(key) and isinstance(key[0], (str, Variable))):
             return self.__setitem_old__((slice(None), key), value)
@@ -482,13 +482,14 @@ class Table(_PandasDataFrameCompat, MutableSequence, Storage):
             if domain == source.domain:
                 return cls.from_table_rows(source, row_indices)
 
-            if isinstance(row_indices, slice):
+            if row_indices is Ellipsis or \
+                    isinstance(row_indices, slice) and row_indices == slice(None):
+                n_rows = len(source)
+            elif isinstance(row_indices, slice):
                 start, stop, stride = row_indices.indices(source.X.shape[0])
                 n_rows = (stop - start) // stride
                 if n_rows < 0:
                     n_rows = 0
-            elif row_indices is ...:
-                n_rows = len(source)
             else:
                 n_rows = len(row_indices)
 
@@ -937,10 +938,10 @@ class Table(_PandasDataFrameCompat, MutableSequence, Storage):
         return self.X.shape[0]
 
     def __str__(self):
-        return "[" + ",\n ".join(str(ex) for ex in self)
+        return "[" + ",\n ".join(str(ex) for _, ex in self.iterrows())
 
     def __repr__(self):
-        s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
+        s = "[" + ",\n ".join(repr(ex) for _, ex in self.iloc[:5].iterrows())
         if len(self) > 5:
             s += ",\n ..."
         s += "\n]"
@@ -1021,8 +1022,10 @@ class Table(_PandasDataFrameCompat, MutableSequence, Storage):
                         self.W[old_length:] = 1
                 self.ids[old_length:] = instances.ids
             else:
+                if isinstance(instances, Table):
+                    instances = (inst for _, inst in instances.iterrows())
                 for i, example in enumerate(instances):
-                    self[old_length + i] = example
+                    self.iloc[old_length + i] = example
                     try:
                         self.ids[old_length + i] = example.id
                     except AttributeError:
@@ -1601,7 +1604,7 @@ class Table(_PandasDataFrameCompat, MutableSequence, Storage):
         # - arbitrary meta column to feature names
         self.X = table.X.T
         attributes = [ContinuousVariable(str(row[feature_names_column]))
-                      for row in table] if feature_names_column else \
+                      for _, row in table.iterrows()] if feature_names_column else \
             [ContinuousVariable("Feature " + str(i + 1).zfill(
                 int(np.ceil(np.log10(n_cols))))) for i in range(n_cols)]
         if old_domain and feature_names_column:

@@ -19,11 +19,11 @@ class TestOWManifoldLearning(WidgetTest):
 
     def test_input_data(self):
         """Check widget's data"""
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
         self.send_signal("Data", self.iris)
-        self.assertEqual(self.widget.data, self.iris)
+        self.assertTrue(self.widget.data.equals(self.iris))
         self.send_signal("Data", None)
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
 
     def test_output_data(self):
         """Check if data is on output after apply"""
@@ -40,7 +40,7 @@ class TestOWManifoldLearning(WidgetTest):
         self.send_signal("Data", self.iris)
         for i in range(self.widget.n_components_spin.minimum(),
                        self.widget.n_components_spin.maximum()):
-            self.assertEqual(self.widget.data, self.iris)
+            self.assertTrue(self.widget.data.equals(self.iris))
             self.widget.n_components_spin.setValue(i)
             self.widget.n_components_spin.onEnter()
             self.widget.apply_button.button.click()
@@ -51,7 +51,7 @@ class TestOWManifoldLearning(WidgetTest):
         self.send_signal("Data", self.iris)
         n_comp = self.widget.n_components
         for i in range(len(self.widget.MANIFOLD_METHODS)):
-            self.assertEqual(self.widget.data, self.iris)
+            self.assertTrue(self.widget.data.equals(self.iris))
             self.widget.manifold_methods_combo.activated.emit(i)
             self.widget.apply_button.button.click()
             self._compare_tables(self.get_output("Transformed data"), n_comp)

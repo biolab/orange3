@@ -76,7 +76,7 @@ def create_iris():
                 "iris" varchar(15)
             )
         """)
-        for row in iris:
+        for _, row in iris.iterrows():
             values = []
             for i, val in enumerate(row):
                 if i != 4:

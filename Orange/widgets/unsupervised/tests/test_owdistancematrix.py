@@ -10,7 +10,7 @@ class TestOWDistanceMatrix(WidgetTest):
     def test_set_distances(self):
         assert isinstance(self.widget, OWDistanceMatrix)
 
-        iris = Table("iris")[:5]
+        iris = Table("iris").iloc[:5]
         distances = Euclidean(iris)
 
         # Distances with row data

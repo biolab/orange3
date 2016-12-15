@@ -1013,7 +1013,7 @@ class OWPaintData(OWWidget):
             y = np.zeros(len(data))
         else:
             self.input_classes = y.values
-            y = data[:, y].Y
+            y = data[y].Y
 
         self.input_has_attr2 = len(data.domain.attributes) >= 2
         if not self.input_has_attr2:

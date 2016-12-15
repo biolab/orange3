@@ -115,7 +115,7 @@ class TreeLearner(Learner):
         best_res = [Node(None, 0, None), ] + best_res[1:]
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
-            col_x = data[:, attr_no].X.reshape((len(data),))
+            col_x = data.iloc[:, attr_no].X.reshape((len(data),))
             sc, *res = disc_scorer() if attr.is_discrete else _score_cont()
             if res[0] is not None and sc > best_score:
                 best_score, best_res = sc, res
@@ -126,7 +126,7 @@ class TreeLearner(Learner):
 
         Returns:
             root node (Node)"""
-        node_insts = data[active_inst]
+        node_insts = data.iloc[active_inst]
         if len(node_insts) < self.min_samples_leaf:
             return None
         if len(node_insts) < self.min_samples_split or \

@@ -44,8 +44,8 @@ class TestCUR(unittest.TestCase):
         self.assertLess(err_cur, (3 + cur_model.max_error) * err_svd)
 
     def test_cur_axis(self):
-        data1 = self.ionosphere[:100]
-        data2 = self.ionosphere[100:]
+        data1 = self.ionosphere.iloc[:100]
+        data2 = self.ionosphere.iloc[100:]
         cur = CUR(rank=5, max_error=1)
         cur_model = cur(data1)
 

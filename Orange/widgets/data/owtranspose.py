@@ -66,7 +66,7 @@ class OWTranspose(OWWidget):
 
     def update_controls(self):
         self.feature_model.set_domain(None)
-        if self.data:
+        if self.data is not None:
             self.feature_model.set_domain(self.data.domain)
             if self.feature_model:
                 self.feature_names_column = self.feature_model[0]
@@ -78,7 +78,7 @@ class OWTranspose(OWWidget):
     def apply(self):
         self.clear_messages()
         transposed = None
-        if self.data:
+        if self.data is not None:
             try:
                 transposed = Table.transpose(
                     self.data, self.feature_type and self.feature_names_column)
@@ -90,7 +90,7 @@ class OWTranspose(OWWidget):
         text = "from meta attribute: {}".format(self.feature_names_column) \
             if self.feature_type else "generic"
         self.report_items("", [("Feature names", text)])
-        if self.data:
+        if self.data is not None:
             self.report_data("Data", self.data)
 
 

@@ -39,8 +39,8 @@ class TestRemover(unittest.TestCase):
         new_data = remover(data)
         attr_res, class_res = remover.attr_results, remover.class_results
 
-        np.testing.assert_equal(new_data.X, np.hstack((data[:, 1],
-                                                       data[:, 3])))
+        np.testing.assert_equal(new_data.X, np.hstack((data.iloc[:, 1].X,
+                                                       data.iloc[:, 3].X)))
         np.testing.assert_equal(new_data.Y, data.Y)
         self.assertEqual([a.name for a in new_data.domain.attributes],
                          ["c0", "d0"])
@@ -62,8 +62,8 @@ class TestRemover(unittest.TestCase):
         attr_res, class_res = remover.attr_results, remover.class_results
 
         np.testing.assert_equal(new_data.X, data.X)
-        np.testing.assert_equal(new_data.Y, np.hstack((data[:, 4],
-                                                       data[:, 5])))
+        np.testing.assert_equal(new_data.Y, np.c_[data.iloc[:, 4].Y,
+                                                  data.iloc[:, 5].Y])
         self.assertEqual([a.name for a in new_data.domain.attributes],
                          ["c1", "c0", "d1", "d0"])
         self.assertEqual([c.name for c in new_data.domain.class_vars],

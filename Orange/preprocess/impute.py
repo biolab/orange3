@@ -81,8 +81,7 @@ class DropInstances(BaseImputeMethod):
     description = ""
 
     def __call__(self, data, variable):
-        index = data.domain.index(variable)
-        return numpy.isnan(data[:, index]).reshape(-1)
+        return numpy.isnan(data.get_column_view(variable)[0])
 
 
 class Average(BaseImputeMethod):
@@ -165,7 +164,7 @@ class ReplaceUnknownsModel(Reprable):
         if isinstance(data, Orange.data.Instance):
             predicted = self.model(data)
         else:
-            predicted = self.model(data[mask])
+            predicted = self.model(data.iloc[mask])
         column[mask] = predicted
         return column
 

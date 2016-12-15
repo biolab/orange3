@@ -285,7 +285,7 @@ class OWSieveDiagram(OWWidget):
         idset = set(selection.ids)
         sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
         if self.discrete_data is not self.data:
-            selection = self.data[sel_idx]
+            selection = self.data.iloc[sel_idx]
         self.send("Selected Data", selection)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.data, sel_idx))
