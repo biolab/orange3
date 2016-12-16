@@ -342,10 +342,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         saveplot.save_plot(graph_obj, self.graph_writers)
 
     def copy_to_clipboard(self):
-        graph_obj = getdeepattr(self, self.graph_name, None)
-        if graph_obj is None:
-            return
-        ClipboardFormat.write_image(None, graph_obj)
+        if self.graph_name:
+            graph_obj = getdeepattr(self, self.graph_name, None)
+            if graph_obj is None:
+                return
+            ClipboardFormat.write_image(None, graph_obj)
 
     def __restoreWidgetGeometry(self):
 
