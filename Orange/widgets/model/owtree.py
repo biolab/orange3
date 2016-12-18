@@ -87,6 +87,10 @@ class OWTreeLearner(OWBaseLearner):
                       self.min_internal), self.limit_min_internal),
             ("maximum depth {}".format(self.max_depth), self.limit_depth)
         ) if c) or "None"
+        if self.limit_majority:
+            items["Splitting"] = "Stop splitting when majority reaches %d%% " \
+                                 "(classification only)" % \
+                                 self.sufficient_majority
         items["Binary trees"] = ("No", "Yes")[self.binary_trees]
         return items
 
