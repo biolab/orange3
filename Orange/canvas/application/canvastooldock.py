@@ -414,6 +414,7 @@ class CategoryPopupMenu(FramelessWindow):
     def popup(self, pos=None):
         if pos is None:
             pos = self.pos()
+        self.adjustSize()
         geom = widget_popup_geometry(pos, self)
         self.setGeometry(geom)
         self.show()
