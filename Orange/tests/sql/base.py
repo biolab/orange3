@@ -7,6 +7,7 @@ import uuid
 
 import Orange
 from Orange.data.sql.table import SqlTable
+from Orange.data.table import Table
 
 
 def sql_test(f):
@@ -177,7 +178,7 @@ class PostgresTest(unittest.TestCase):
         self.drop_sql_table(table_name)
 
     def _create_sql_table(self, data, sql_column_types=None):
-        data = list(data)
+        data = [row for _, row in data.iterrows()] if isinstance(data, Table) else list(data)
         if sql_column_types is None:
             column_size = self._get_column_types(data)
             sql_column_types = [

@@ -1,15 +1,28 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-import unittest
+import warnings
 from Orange.data.sql.table import SqlTable, SqlRowInstance
 from Orange.data import filter, domain
 
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+from Orange.util import OrangeDeprecationWarning
+
+
+class _FilterTest(PostgresTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        warnings.simplefilter('ignore', OrangeDeprecationWarning)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        warnings.simplefilter('error', OrangeDeprecationWarning)
 
 
 @sql_test
-class TestIsDefinedSql(PostgresTest):
+class TestIsDefinedSql(_FilterTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, None, 'm'],
@@ -62,7 +75,7 @@ class TestIsDefinedSql(PostgresTest):
 
 
 @sql_test
-class TestHasClass(PostgresTest):
+class TestHasClass(_FilterTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, None, 'm'],
@@ -96,7 +109,7 @@ class TestHasClass(PostgresTest):
 
 
 @sql_test
-class TestSameValueSql(PostgresTest):
+class TestSameValueSql(_FilterTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, 'a', 'm'],
@@ -184,7 +197,7 @@ class TestSameValueSql(PostgresTest):
 
 
 @sql_test
-class TestValuesSql(PostgresTest):
+class TestValuesSql(_FilterTest):
     def setUp(self):
         self.data = [
             [1, 2, 3, 'a', 'm'],
@@ -318,7 +331,7 @@ class TestValuesSql(PostgresTest):
 
 
 @sql_test
-class TestFilterStringSql(PostgresTest):
+class TestFilterStringSql(_FilterTest):
     def setUp(self):
         self.data = [
             [w] for w in "Lorem ipsum dolor sit amet, consectetur adipiscing"
