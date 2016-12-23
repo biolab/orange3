@@ -165,17 +165,18 @@ class OWTestLearners(OWWidget):
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
     class Error(OWWidget.Error):
-        class_required = Msg("Train data input requires a class variable")
-        class_required_test = Msg("Test data input requires a class variable")
+        class_required = Msg("Train data input requires a target variable.")
+        too_many_classes = Msg("Too many target variables.")
+        class_required_test = Msg("Test data input requires a target variable.")
         too_many_folds = Msg("Number of folds exceeds the data size")
         class_inconsistent = Msg("Test and train data sets "
-                                 "have different classes")
+                                 "have different target variables.")
 
     class Warning(OWWidget.Warning):
         missing_data = \
-            Msg("Instances with unknown target values were removed from{}data")
-        test_data_missing = Msg("Missing separate test data input")
-        scores_not_computed = Msg("Some scores could not be computed")
+            Msg("Instances with unknown target values were removed from{}data.")
+        test_data_missing = Msg("Missing separate test data input.")
+        scores_not_computed = Msg("Some scores could not be computed.")
         test_data_unused = Msg("Test data is present but unused. "
                                "Select 'Test on test data' to use it.")
 
@@ -273,11 +274,15 @@ class OWTestLearners(OWWidget):
         Set the input training dataset.
         """
         self.Information.data_sampled.clear()
-        if data and not data.domain.class_var:
+        if data and not data.domain.class_vars:
             self.Error.class_required()
+            data = None
+        elif data and len(data.domain.class_vars) > 1:
+            self.Error.too_many_classes()
             data = None
         else:
             self.Error.class_required.clear()
+            self.Error.too_many_classes.clear()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
