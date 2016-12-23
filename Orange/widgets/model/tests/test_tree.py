@@ -1,9 +1,11 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
 from Orange.base import Model
-from Orange.widgets.classify.owclassificationtree import OWTreeLearner
-from Orange.widgets.tests.base import (WidgetTest, DefaultParameterMapping,
-                                       ParameterMapping, WidgetLearnerTestMixin)
+from Orange.widgets.model.owtree import OWTreeLearner
+from Orange.widgets.tests.base import (
+    DefaultParameterMapping,
+    ParameterMapping,
+    WidgetLearnerTestMixin,
+    WidgetTest,
+)
 
 
 class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
@@ -19,8 +21,8 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
                 self.widget, 'min_internal', 'min_samples_split'),
             ParameterMapping.from_attribute(
                 self.widget, 'min_leaf', 'min_samples_leaf')]
-        # NB. sufficient_majority is divided by 100, so it cannot be tested like
-        # this
+        # NB. sufficient_majority is divided by 100, so it cannot be tested
+        # like this
 
         self.checks = [sb.gui_element.cbox for sb in self.parameters]
 
@@ -33,4 +35,3 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         self.parameters = [DefaultParameterMapping(par.name, val)
                            for par, val in zip(self.parameters, (None, 2, 1))]
         self.test_parameters()
-
