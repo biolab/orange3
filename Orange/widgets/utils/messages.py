@@ -335,7 +335,7 @@ class WidgetMessagesMixin(MessagesMixin):
         elif self.message_bar is not None:
             font_size = self.message_bar.fontInfo().pixelSize()
             group = messages[0].group
-            text = str(messages[0]) if len(messages) == 1 \
+            text = str(messages[0]).split("\n")[0] if len(messages) == 1 \
                 else "{} problems during execution".format(len(messages))
             # TODO: fix tooltip background color - it is not white
             tooltip = ''.join(
@@ -346,7 +346,8 @@ class WidgetMessagesMixin(MessagesMixin):
                 &nbsp;&nbsp;&nbsp;</nobr>
                 <span style="font-size:9pt"><br></span>
                 </p>'''.
-                format(msg.group.bar_background, font_size, str(msg))
+                format(msg.group.bar_background, font_size,
+                       str(msg).replace("\n", "<br/>&nbsp;&nbsp;&nbsp; "))
                 for msg in messages)
             self._set_message_bar(group, text, tooltip)
 
