@@ -465,6 +465,8 @@ class WidgetLearnerTestMixin:
             else:
                 return getattr(learner, name)
 
+        self.send_signal("Data", self.data)
+
         for parameter in self.parameters:
             assert isinstance(parameter, BaseParameterMapping)
             for value in parameter.values:

@@ -41,7 +41,7 @@ class Fitter(Learner, metaclass=FitterMeta):
         self.kwargs = kwargs
         # Make sure to pass preprocessor params to individual learners
         self.kwargs['preprocessors'] = preprocessors
-        self.problem_type = self.CLASSIFICATION
+        self.problem_type = None
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
     def __call__(self, data):
@@ -76,4 +76,7 @@ class Fitter(Learner, metaclass=FitterMeta):
             self.get_learner(self.REGRESSION).supports_weights
 
     def __getattr__(self, item):
+        # Make parameters accessible on the learner for simpler testing
+        if item in self.kwargs:
+            return self.kwargs[item]
         return getattr(self.get_learner(self.problem_type), item)
