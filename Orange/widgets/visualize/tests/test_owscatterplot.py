@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import MagicMock
+
 import numpy as np
 
 from AnyQt.QtCore import QRectF
@@ -91,3 +93,12 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Warning.missing_coords.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Warning.missing_coords.is_shown())
+
+    def test_report_on_empty(self):
+        self.widget.report_plot = MagicMock()
+        self.widget.report_caption = MagicMock()
+        self.widget.report_items = MagicMock()
+        self.widget.send_report()  # Essentially, don't crash
+        self.widget.report_plot.assert_not_called()
+        self.widget.report_caption.assert_not_called()
+        self.widget.report_items.assert_not_called()

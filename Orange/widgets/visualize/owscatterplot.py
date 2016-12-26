@@ -494,6 +494,8 @@ class OWScatterPlot(OWWidget):
             return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
 
     def send_report(self):
+        if self.data is None:
+            return
         def name(var):
             return var and var.name
         caption = report.render_items_vert((
