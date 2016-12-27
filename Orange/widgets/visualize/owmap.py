@@ -505,7 +505,7 @@ class LeafletMap(WebviewWidget):
 
 
 class OWMap(widget.OWWidget):
-    name = 'Map'
+    name = 'Geo Map'
     description = 'Show data points on a world map.'
     icon = "icons/Map.svg"
 

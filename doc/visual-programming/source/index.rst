@@ -68,7 +68,7 @@ Visualize
    widgets/visualize/mosaicdisplay
    widgets/visualize/silhouetteplot
    widgets/visualize/treeviewer
-   widgets/visualize/map
+   widgets/visualize/geomap
 
 
 Classify
