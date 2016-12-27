@@ -578,7 +578,8 @@ $(document).ready(function() {
 var legendControl = L.control({position: 'topright'}),
     legend_colors = [],
     legend_shapes = [],
-    legend_sizes = [];
+    legend_sizes = [],
+    legend_hidden = '';
 legendControl.onAdd = function () {
     if (legend_colors.length == 0 &&
         legend_shapes.length == 0 &&
@@ -587,7 +588,7 @@ legendControl.onAdd = function () {
         !model_predictions.colors)
         return L.DomUtil.create('span');
 
-    var div = L.DomUtil.create('div', 'legend');
+    var div = L.DomUtil.create('div', 'legend ' + legend_hidden);
 
     if (legend_colors.length) {
         var box = L.DomUtil.create('div', 'legend-box', div);

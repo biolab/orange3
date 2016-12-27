@@ -497,6 +497,12 @@ class LeafletMap(WebviewWidget):
         self._subset_ids = ids
         self.redraw_markers_overlay_image(new_image=True)
 
+    def toggle_legend(self, visible):
+        self.evalJS('''
+            $(".legend").{0}();
+            window.legend_hidden = "{0}";
+        '''.format('show' if visible else 'hide'))
+
 
 class OWMap(widget.OWWidget):
     name = 'Map'
@@ -527,6 +533,7 @@ class OWMap(widget.OWWidget):
     zoom = settings.Setting(100)
     jittering = settings.Setting(0)
     cluster_points = settings.Setting(False)
+    show_legend = settings.Setting(True)
 
     TILE_PROVIDERS = OrderedDict((
         ('Black and white', 'OpenStreetMap.BlackAndWhite'),
@@ -601,6 +608,12 @@ class OWMap(widget.OWWidget):
             label='Longitude:', sendSelectedValue=True, callback=_set_lat_long)
         combo.setModel(self._latlon_model)
 
+        def _toggle_legend():
+            self.map.toggle_legend(self.show_legend)
+
+        gui.checkBox(box, self, 'show_legend', label='Show legend',
+                     callback=_toggle_legend)
+
         box = gui.vBox(self.controlArea, 'Overlay')
         self._combo_class = combo = gui.comboBox(
             box, self, 'class_attr', orientation=Qt.Horizontal,
@@ -671,6 +684,7 @@ class OWMap(widget.OWWidget):
         gui.auto_commit(self.controlArea, self, 'autocommit', 'Send Selection')
 
         QTimer.singleShot(0, _set_map_provider)
+        QTimer.singleShot(0, _toggle_legend)
         QTimer.singleShot(0, _set_opacity)
         QTimer.singleShot(0, _set_zoom)
         QTimer.singleShot(0, _set_jittering)
