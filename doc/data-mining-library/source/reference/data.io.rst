@@ -42,7 +42,7 @@ A three-line header consists of:
    * ``continuous`` (or ``c``) — imported as :obj:`Orange.data.ContinuousVariable`,
    * ``string`` (or ``s``, or ``text``) — imported as :obj:`Orange.data.StringVariable`,
    * ``time`` (or ``t``) — imported as :obj:`Orange.data.TimeVariable`, if the
-     values parse as ISO 8601 date/time formats,
+     values parse as `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ date/time formats,
    * ``basket`` — used for storing sparse data. More on basket formats in a
      dedicated section.
 

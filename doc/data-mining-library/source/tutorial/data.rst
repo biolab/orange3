@@ -11,7 +11,9 @@ Data Input
 ..  index:: 
     single: data; input
 
-Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file type, like CSV and Excel. Native format starts with a header row with feature (column) names. Second header row gives the attribute type, which can be continuous, discrete, string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta). Here are the first few lines from a data set :download:`lenses.tab <code/lenses.tab>`::
+Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file type, like CSV and Excel. Native format starts with a header row with feature (column) names. Second header row gives the attribute type, which can be continuous, discrete, time, or string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta).
+More detailed specification is available in :doc:`../reference/data.io`.
+Here are the first few lines from a data set :download:`lenses.tab <code/lenses.tab>`::
 
     age       prescription  astigmatic    tear_rate     lenses
     discrete  discrete      discrete      discrete      discrete 
