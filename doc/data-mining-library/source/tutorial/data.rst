@@ -15,7 +15,7 @@ Orange can read files in native tab-delimited format, or can load data from any 
 
     age       prescription  astigmatic    tear_rate     lenses
     discrete  discrete      discrete      discrete      discrete 
-                                                       class
+                                                        class
     young     myope         no            reduced       none
     young     myope         no            normal        soft
     young     myope         yes           reduced       none
@@ -27,7 +27,7 @@ Values are tab-limited. This data set has four attributes (age of the patient, s
 
     age       prescription  astigmatic    tear_rate     lenses
     d         d             d             d             d 
-                                                       c
+                                                        c
 
 The rest of the table gives the data. Note that there are 5 instances in our table above. For the full data set, check out or download :download:`lenses.tab <code/lenses.tab>`) to a target directory. You can also skip this step as Orange comes preloaded with several demo data sets, lenses being one of them. Now, open a python shell, import Orange and load the data:
 
