@@ -171,6 +171,8 @@ class LeafletMap(WebviewWidget):
     def set_marker_color(self, attr, update=True):
         try:
             self._color_attr = variable = self.data.domain[attr]
+            if len(self.data) == 0:
+                raise Exception
         except Exception:
             self._color_attr = None
             self._legend_colors = []
@@ -202,6 +204,8 @@ class LeafletMap(WebviewWidget):
     def set_marker_label(self, attr, update=True):
         try:
             self._label_attr = variable = self.data.domain[attr]
+            if len(self.data) == 0:
+                raise Exception
         except Exception:
             self._label_attr = None
         else:
@@ -218,6 +222,8 @@ class LeafletMap(WebviewWidget):
     def set_marker_shape(self, attr, update=True):
         try:
             self._shape_attr = variable = self.data.domain[attr]
+            if len(self.data) == 0:
+                raise Exception
         except Exception:
             self._shape_attr = None
             self._legend_shapes = []
@@ -235,6 +241,8 @@ class LeafletMap(WebviewWidget):
     def set_marker_size(self, attr, update=True):
         try:
             self._size_attr = variable = self.data.domain[attr]
+            if len(self.data) == 0:
+                raise Exception
         except Exception:
             self._size_attr = None
             self._legend_sizes = []
