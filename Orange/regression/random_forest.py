@@ -22,7 +22,7 @@ class RandomForestRegressor(SklModel, RandomForestModel):
     @property
     def trees(self):
         def wrap(tree, i):
-            t = SklTreeRegressor(tree)
+            t = SklTreeRegressor(self.data, tree)
             t.domain = self.domain
             t.supports_multiclass = self.supports_multiclass
             t.name = "{} - tree {}".format(self.name, i)

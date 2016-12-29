@@ -53,7 +53,7 @@ class Learner:
 
         self.domain = data.domain
 
-        if type(self).fit is Learner.fit:
+        if type(self).fit_storage is not Learner.fit_storage:
             model = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
@@ -278,7 +278,23 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
 
 class TreeModel(Model):
-    pass
+    def node_count(self):
+        pass
+
+    def depth(self):
+        pass
+
+    def leaf_count(self):
+        pass
+
+    def get_instances(self, nodes):
+        pass
+
+    def get_indices(self, nodes):
+        pass
+
+    def rule(self, node):
+        pass
 
 
 class RandomForestModel(Model):

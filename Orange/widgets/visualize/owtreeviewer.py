@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
-from Orange.tree import TreeModel
+from Orange.base import TreeModel
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
@@ -415,8 +415,11 @@ def test():
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
     # data = Table("iris")
-    data = Table("housing")
-    clf = TreeLearner()(data)
+    # data = Table("housing")
+    # clf = TreeLearner()(data)
+    from Orange.classification.tree import SklTreeLearner
+    data = Table("iris")
+    clf = SklTreeLearner()(data)
     clf.instances = data
 
     ow.ctree(clf)
