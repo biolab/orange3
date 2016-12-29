@@ -13,6 +13,7 @@ import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
 
+import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
@@ -1453,6 +1454,7 @@ class Table(MutableSequence, Storage):
             feature names are mapped
         :return: Table - transposed table
         """
+
         self = cls()
         n_cols, self.n_rows = table.X.shape
         old_domain = table.attributes.get("old_domain")
@@ -1521,10 +1523,22 @@ class Table(MutableSequence, Storage):
         names = chain.from_iterable(list(attr.attributes)
                                     for attr in table.domain.attributes)
         names = sorted(set(names) - {var.name for var in class_vars})
+
+        def guessed_var(i, var_name):
+            orig_vals = M[:, i]
+            val_map, vals, var_type = Orange.data.io.guess_data_type(orig_vals)
+            values, variable = Orange.data.io.sanitize_variable(
+                val_map, vals, orig_vals, var_type,
+                {}, _metas, None, var_name)
+            M[:, i] = values
+            return variable
+
         _metas = [StringVariable(n) for n in names]
         if old_domain:
             _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
         M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
+        if not old_domain:
+            _metas = [guessed_var(i, m.name) for i, m in enumerate(_metas)]
         if _metas:
             self.metas = np.hstack((self.metas, M))
             metas.extend(_metas)
