@@ -233,6 +233,7 @@ class OWPythagoreanForest(OWWidget):
         )
 
     def _draw_trees(self):
+        self.ui_size_calc_combo.setEnabled(False)
         self.grid_items, self.ptrees = [], []
 
         with self.progressBar(len(self.forest_adapter.get_trees())) as prg:
@@ -253,6 +254,7 @@ class OWPythagoreanForest(OWWidget):
                      self.view.verticalScrollBar().width())
             self.grid.reflow(width)
             self.grid.setPreferredWidth(width)
+        self.ui_size_calc_combo.setEnabled(True)
 
     @staticmethod
     def _calculate_zoom(zoom_level):
