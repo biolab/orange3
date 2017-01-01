@@ -2,7 +2,6 @@
 import numpy as np
 import sklearn.tree as skl_tree
 
-from Orange.base import TreeModel as TreeModelInterface
 from Orange.classification import SklLearner, SklModel, Learner
 from Orange.classification import _tree_scorers
 from Orange.statistics import distribution, contingency
@@ -214,11 +213,10 @@ class TreeLearner(Learner):
         return model
 
 
-class SklTreeClassifier(SklModel, TreeModelInterface):
+class SklTreeClassifier(SklModel, TreeModel):
     """Wrapper for SKL's tree classifier with the interface API for
     visualizations"""
     def __init__(self, data, *args, **kwargs):
-        print(data)
         SklModel.__init__(self, *args, **kwargs)
         self.data = data
         self._cached_sample_assignments = None

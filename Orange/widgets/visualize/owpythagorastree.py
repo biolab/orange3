@@ -24,7 +24,8 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QSizePolicy
 from AnyQt.QtGui import QColor, QPainter
 
-from Orange.base import TreeModel, SklModel
+from Orange.base import SklModel
+from Orange.tree import TreeModel
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
 from Orange.widgets.visualize.utils.tree.rules import Rule

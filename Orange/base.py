@@ -277,26 +277,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
 
 
-class TreeModel(Model):
-    def node_count(self):
-        pass
-
-    def depth(self):
-        pass
-
-    def leaf_count(self):
-        pass
-
-    def get_instances(self, nodes):
-        pass
-
-    def get_indices(self, nodes):
-        pass
-
-    def rule(self, node):
-        pass
-
-
 class RandomForestModel(Model):
     """Interface for random forest models
     """

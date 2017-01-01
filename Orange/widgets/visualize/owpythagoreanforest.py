@@ -6,7 +6,8 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
 
-from Orange.base import RandomForestModel, TreeModel
+from Orange.base import RandomForestModel
+from Orange.tree import TreeModel
 from Orange.classification.random_forest import RandomForestClassifier
 from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressor
