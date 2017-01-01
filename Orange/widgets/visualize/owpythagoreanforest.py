@@ -428,3 +428,26 @@ class SklRandomForestAdapter:
     def domain(self):
         """Get the domain."""
         return self._domain
+
+
+if __name__ == '__main__':
+    from AnyQt.QtWidgets import QApplication
+    import sys
+
+    app = QApplication(sys.argv)
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
+
+    if data.domain.has_discrete_class:
+        from Orange.classification.random_forest import RandomForestLearner
+    else:
+        from Orange.regression.random_forest import \
+            RandomForestRegressionLearner as RandomForestLearner
+    rf = RandomForestLearner()(data)
+    rf.instances = data
+
+    ow = OWPythagoreanForest()
+    ow.set_rf(rf)
+
+    ow.show()
+    ow.handleNewSignals()
+    app.exec_()
