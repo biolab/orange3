@@ -226,15 +226,30 @@ class SklTreeClassifier(SklModel, TreeModel):
         return ['foo']
 
     def _build_tree(self, node):
-        node_obj = DiscreteNode(
-            self.data.domain.attributes[self._attribute(node)], 1, [1,2])
-        node_obj.children = [self._build_tree(child)
-                             for child in self._children(node)]
+        attribute_idx = self._attribute(node)
+        attribute = self.data.domain.attributes[attribute_idx]
+        assert attribute.is_continuous is True
+        # Since sklearn only supports numeric data, and all data passed to
+        # sklearn learners is continuized first, we can saftely assume numeric
+        # data
+        node_obj = NumericNode(
+            attribute, attr_idx=attribute_idx,
+            threshold=self._threshold(attribute_idx),
+            value=self._value(attribute_idx))
+        node_obj.children = [
+            self._build_tree(child) for child in self._children(node)]
         node_obj.subset = [1]
         return node_obj
 
     def _attribute(self, node):
         return self.skl_model.tree_.feature[node]
+
+    def _threshold(self, node):
+        return self.skl_model.tree_.threshold[node]
+
+    def _value(self, node):
+        # Return 0th since the distribution is store inside a 2d array
+        return self.skl_model.tree_.value[node][0]
 
     def _root(self):
         return 0
