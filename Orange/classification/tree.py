@@ -226,15 +226,30 @@ class SklTreeClassifier(SklModel, TreeModel):
         return ['foo']
 
     def _build_tree(self, node):
-        node_obj = DiscreteNode(
-            self.data.domain.attributes[self._attribute(node)], 1, [1,2])
-        node_obj.children = [self._build_tree(child)
-                             for child in self._children(node)]
+        attribute_idx = self._attribute(node)
+        attribute = self.data.domain.attributes[attribute_idx]
+        assert attribute.is_continuous is True
+        # Since sklearn only supports numeric data, and all data passed to
+        # sklearn learners is continuized first, we can saftely assume numeric
+        # data
+        node_obj = NumericNode(
+            attribute, attr_idx=attribute_idx,
+            threshold=self._threshold(attribute_idx),
+            value=self._value(attribute_idx))
+        node_obj.children = [
+            self._build_tree(child) for child in self._children(node)]
         node_obj.subset = [1]
         return node_obj
 
     def _attribute(self, node):
         return self.skl_model.tree_.feature[node]
+
+    def _threshold(self, node):
+        return self.skl_model.tree_.threshold[node]
+
+    def _value(self, node):
+        # Return 0th since the distribution is store inside a 2d array
+        return self.skl_model.tree_.value[node][0]
 
     def _root(self):
         return 0
@@ -251,6 +266,56 @@ class SklTreeClassifier(SklModel, TreeModel):
 
     def _has_children(self, node):
         return len(self._children(node)) > 0
+
+    def _get_samples_in_leaves(self, data):
+        """Get an array of instance indices that belong to each leaf.
+
+        For a given dataset X, separate the instances out into an array, so
+        they are grouped together based on what leaf they belong to.
+
+        Examples
+        --------
+        Given a tree with two leaf nodes ( A <- R -> B ) and the dataset X =
+        [ 10, 20, 30, 40, 50, 60 ], where 10, 20 and 40 belong to leaf A, and
+        the rest to leaf B, the following structure will be returned (where
+        array is the numpy array):
+        [array([ 0, 1, 3 ]), array([ 2, 4, 5 ])]
+
+        The first array represents the indices of the values that belong to the
+        first leaft, so calling X[ 0, 1, 3 ] = [ 10, 20, 40 ]
+
+        Parameters
+        ----------
+        data
+            A matrix containing the data instances.
+
+        Returns
+        -------
+        np.array
+            The indices of instances belonging to a given leaf.
+
+        """
+
+        def assign(node_id, indices):
+            if self.skl_model.tree_.children_left[node_id] == -1:
+                return [indices]
+            else:
+                feature_idx = self.skl_model.tree_.feature[node_id]
+                thresh = self.skl_model.tree_.threshold[node_id]
+
+                column = data[indices, feature_idx]
+                leftmask = column <= thresh
+                leftind = assign(self.skl_model.tree_.children_left[node_id],
+                                 indices[leftmask])
+                rightind = assign(self.skl_model.tree_.children_right[node_id],
+                                  indices[~leftmask])
+                return list.__iadd__(leftind, rightind)
+
+        n, _ = data.shape
+
+        items = np.arange(n, dtype=int)
+        leaf_indices = assign(0, items)
+        return leaf_indices
 
 
 class SklTreeLearner(SklLearner):
