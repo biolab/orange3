@@ -20,11 +20,18 @@ class OWSGD(OWBaseLearner):
 
     LEARNER = SGDLearner
 
-    losses = (
+    reg_losses = (
         ('Squared Loss', 'squared_loss'),
         ('Huber', 'huber'),
         ('ε insensitive', 'epsilon_insensitive'),
         ('Squared ε insensitive', 'squared_epsilon_insensitive'))
+
+    cls_losses = (
+        ('Hinge', 'hinge'),
+        ('Logistic regression', 'log'),
+        ('Modified Huber', 'modified_huber'),
+        ('Squared Hinge', 'squared_hinge'),
+        ('Perceptron', 'perceptron')) + reg_losses
 
     #: Regularization methods
     penalties = (
@@ -39,8 +46,14 @@ class OWSGD(OWBaseLearner):
         ('Inverse scaling', 'invscaling'))
 
     learner_name = Setting('SGD')
-    loss_function_index = Setting(0)
-    epsilon = Setting(.15)
+    #: Loss function index for classification problems
+    cls_loss_function_index = Setting(2)
+    #: Epsilon loss function parameter for classification problems
+    cls_epsilon = Setting(.15)
+    #: Loss function index for regression problems
+    reg_loss_function_index = Setting(0)
+    #: Epsilon loss function parameter for regression problems
+    reg_epsilon = Setting(.15)
 
     penalty_index = Setting(2)
     #: Regularization strength
@@ -58,14 +71,28 @@ class OWSGD(OWBaseLearner):
 
     def add_main_layout(self):
         box = gui.widgetBox(self.controlArea, 'Algorithm')
-        self.loss_function_combo = gui.comboBox(
-            box, self, 'loss_function_index', orientation=Qt.Horizontal,
-            label='Loss function: ', items=list(zip(*self.losses))[0],
-            callback=self._on_loss_change)
+        # Classfication loss function
+        self.cls_loss_function_combo = gui.comboBox(
+            box, self, 'cls_loss_function_index', orientation=Qt.Horizontal,
+            label='Classificaton loss function: ',
+            items=list(zip(*self.cls_losses))[0],
+            callback=self._on_cls_loss_change)
         param_box = gui.hBox(box)
         gui.rubber(param_box)
-        self.epsilon_spin = gui.spin(
-            param_box, self, 'epsilon', 0, 1., 1e-2, spinType=float,
+        self.cls_epsilon_spin = gui.spin(
+            param_box, self, 'cls_epsilon', 0, 1., 1e-2, spinType=float,
+            label='ε: ', controlWidth=80, alignment=Qt.AlignRight,
+            callback=self.settings_changed)
+        # Regression loss function
+        self.reg_loss_function_combo = gui.comboBox(
+            box, self, 'reg_loss_function_index', orientation=Qt.Horizontal,
+            label='Regression loss function: ',
+            items=list(zip(*self.reg_losses))[0],
+            callback=self._on_reg_loss_change)
+        param_box = gui.hBox(box)
+        gui.rubber(param_box)
+        self.reg_epsilon_spin = gui.spin(
+            param_box, self, 'reg_epsilon', 0, 1., 1e-2, spinType=float,
             label='ε: ', controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
 
@@ -114,18 +141,29 @@ class OWSGD(OWBaseLearner):
             checked='use_random_state', checkCallback=self.settings_changed)
 
         # Enable/disable appropriate controls
-        self._on_loss_change()
+        self._on_cls_loss_change()
+        self._on_reg_loss_change()
         self._on_regularization_change()
         self._on_learning_rate_change()
         self._on_shuffle_change()
 
-    def _on_loss_change(self):
-        # Epsilon parameter
-        if self.losses[self.loss_function_index][1] in (
+    def _on_cls_loss_change(self):
+        # Epsilon parameter for classification loss
+        if self.cls_losses[self.cls_loss_function_index][1] in (
                 'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'):
-            self.epsilon_spin.setEnabled(True)
+            self.cls_epsilon_spin.setEnabled(True)
         else:
-            self.epsilon_spin.setEnabled(False)
+            self.cls_epsilon_spin.setEnabled(False)
+
+        self.settings_changed()
+
+    def _on_reg_loss_change(self):
+        # Epsilon parameter for regression loss
+        if self.reg_losses[self.reg_loss_function_index][1] in (
+                'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'):
+            self.reg_epsilon_spin.setEnabled(True)
+        else:
+            self.reg_epsilon_spin.setEnabled(False)
 
         self.settings_changed()
 
@@ -174,8 +212,10 @@ class OWSGD(OWBaseLearner):
             params['random_state'] = self.random_state
 
         return self.LEARNER(
-            loss=self.losses[self.loss_function_index][1],
-            epsilon=self.epsilon,
+            classification_loss=self.cls_losses[self.cls_loss_function_index][1],
+            classification_epsilon=self.cls_epsilon,
+            regression_loss=self.reg_losses[self.reg_loss_function_index][1],
+            regression_epsilon=self.reg_epsilon,
             penalty=self.penalties[self.penalty_index][1],
             alpha=self.alpha,
             l1_ratio=self.l1_ratio,
@@ -188,12 +228,19 @@ class OWSGD(OWBaseLearner):
             preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
-        params = OrderedDict(
-            {'Loss function': self.losses[self.loss_function_index][0]})
-        # Epsilon
-        if self.losses[self.loss_function_index][1] in (
+        params = OrderedDict({})
+        # Classification loss function
+        params['Classification loss function'] = self.cls_losses[
+            self.cls_loss_function_index][0]
+        if self.cls_losses[self.cls_loss_function_index][1] in (
                 'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'):
-            params['Epsilon (ε)'] = self.epsilon
+            params['Epsilon (ε) for classification'] = self.cls_epsilon
+        # Regression loss function
+        params['Regression loss function'] = self.reg_losses[
+            self.reg_loss_function_index][0]
+        if self.reg_losses[self.reg_loss_function_index][1] in (
+                'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'):
+            params['Epsilon (ε) for regression'] = self.reg_epsilon
 
         params['Regularization'] = self.penalties[self.penalty_index][0]
         # Regularization strength

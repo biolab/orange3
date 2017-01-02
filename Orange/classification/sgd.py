@@ -1,4 +1,4 @@
-from sklearn.linear_model import SGDRegressor
+from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -8,7 +8,7 @@ from Orange.regression.linear import LinearModel
 
 class SGDClassificationLearner(SklLearner):
     name = 'sgd'
-    __wraps__ = SGDRegressor
+    __wraps__ = SGDClassifier
 
     def __init__(self, loss='squared_loss',penalty='l2', alpha=0.0001,
                  l1_ratio=0.15,fit_intercept=True, n_iter=5, shuffle=True,
