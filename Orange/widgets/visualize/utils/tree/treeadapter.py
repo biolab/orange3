@@ -223,6 +223,10 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def get_indices(self, nodes):
+        pass
+
     @property
     @abstractmethod
     def max_depth(self):
@@ -321,6 +325,9 @@ class TreeAdapter(BaseTreeAdapter):
         if isinstance(nodes, tree.Node):
             nodes = [nodes]
         return self.model.get_instances(nodes)
+
+    def get_indices(self, nodes):
+        return self.model.get_indices(nodes)
 
     @property
     def max_depth(self):

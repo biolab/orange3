@@ -162,10 +162,8 @@ class TreeLearner(Learner):
         return model
 
 
-class SklTreeRegressor(SklModel):
-    @property
-    def tree(self):
-        return self.skl_model.tree_
+class SklTreeRegressor(SklModel, TreeModel):
+    pass
 
 
 class SklTreeRegressionLearner(SklLearner):

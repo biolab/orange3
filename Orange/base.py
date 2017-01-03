@@ -114,7 +114,7 @@ class Learner(_ReprableWithPreprocessors):
 
         self.domain = data.domain
 
-        if type(self).fit is Learner.fit:
+        if type(self).fit_storage is not Learner.fit_storage:
             model = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
@@ -356,7 +356,7 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
 
 
-class RandomForest:
+class RandomForestModel(Model):
     """Interface for random forest models
     """
 

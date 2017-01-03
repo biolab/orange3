@@ -2,17 +2,15 @@
 from math import log, sqrt
 
 import numpy as np
-
-from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
-from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QPainter, QColor
+from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView
 
-from Orange.base import RandomForest
+from Orange.base import RandomForestModel
+from Orange.tree import TreeModel
 from Orange.classification.random_forest import RandomForestClassifier
-from Orange.classification.tree import SklTreeClassifier
 from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressor
-from Orange.regression.tree import SklTreeRegressor
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
@@ -33,8 +31,8 @@ class OWPythagoreanForest(OWWidget):
 
     priority = 1001
 
-    inputs = [('Random forest', RandomForest, 'set_rf')]
-    outputs = [('Tree', SklTreeClassifier)]
+    inputs = [('Random forest', RandomForestModel, 'set_rf')]
+    outputs = [('Tree', TreeModel)]
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -226,11 +224,7 @@ class OWPythagoreanForest(OWWidget):
         return max([tree.tree_adapter.max_depth for tree in self.ptrees])
 
     def _get_forest_adapter(self, model):
-        return SklRandomForestAdapter(
-            model,
-            model.domain,
-            adjust_weight=self.SIZE_CALCULATION[self.size_calc_idx][1],
-        )
+        return SklRandomForestAdapter(model)
 
     def _draw_trees(self):
         self.grid_items, self.ptrees = [], []
@@ -275,15 +269,8 @@ class OWPythagoreanForest(OWWidget):
 
         selected_item = self.scene.selectedItems()[0]
         self.selected_tree_index = self.grid_items.index(selected_item)
-        tree = self.model.skl_model.estimators_[self.selected_tree_index]
-
-        if self.forest_type == self.CLASSIFICATION:
-            obj = SklTreeClassifier(tree)
-        else:
-            obj = SklTreeRegressor(tree)
-        obj.domain = self.model.domain
-        obj.instances = self.model.instances
-
+        obj = self.model.trees[self.selected_tree_index]
+        obj.instances = self.dataset
         obj.meta_target_class_index = self.target_class_index
         obj.meta_size_calc_idx = self.size_calc_idx
         obj.meta_size_log_scale = self.size_log_scale
@@ -402,14 +389,10 @@ class GridItem(SelectableGridItem, ZoomableGridItem):
 class SklRandomForestAdapter:
     """Take a `RandomForest` and wrap all the trees into the `SklTreeAdapter`
     instances that Pythagorean trees use."""
-    def __init__(self, model, domain, adjust_weight=lambda x: x):
+    def __init__(self, model):
         self._adapters = []
-
-        self._domain = domain
-
-        self._trees = model.skl_model.estimators_
         self._domain = model.domain
-        self._adjust_weight = adjust_weight
+        self._trees = model.trees
 
     def get_trees(self):
         """Get the tree adapters in the random forest."""
@@ -418,13 +401,34 @@ class SklRandomForestAdapter:
         if len(self._trees) < 1:
             return self._adapters
 
-        self._adapters = [
-            SklTreeAdapter(tree.tree_, self._domain, self._adjust_weight)
-            for tree in self._trees
-        ]
+        self._adapters = list(map(SklTreeAdapter, self._trees))
         return self._adapters
 
     @property
     def domain(self):
         """Get the domain."""
         return self._domain
+
+
+if __name__ == '__main__':
+    from AnyQt.QtWidgets import QApplication
+    import sys
+
+    app = QApplication(sys.argv)
+    ow = OWPythagoreanForest()
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
+
+    if data.domain.has_discrete_class:
+        from Orange.classification.random_forest import \
+            RandomForestLearner as RFLearner
+    else:
+        from Orange.regression.random_forest import \
+            RandomForestRegressionLearner as RFLearner
+    rf = RFLearner(n_estimators=10, max_depth=1000)(data)
+    rf.instances = data
+    ow.set_rf(rf)
+
+    ow.show()
+    ow.raise_()
+    ow.handleNewSignals()
+    app.exec_()

@@ -1,6 +1,6 @@
 import sklearn.ensemble as skl_ensemble
 
-from Orange.base import RandomForest
+from Orange.base import RandomForestModel
 from Orange.classification import SklLearner, SklModel
 from Orange.classification.tree import SklTreeClassifier
 from Orange.data import Variable, DiscreteVariable
@@ -18,11 +18,15 @@ class _FeatureScorerMixin(LearnerScorer):
         return model.skl_model.feature_importances_
 
 
-class RandomForestClassifier(SklModel, RandomForest):
+class RandomForestClassifier(SklModel, RandomForestModel):
+    def __init__(self, data, *args, **kwargs):
+        SklModel.__init__(self, *args, **kwargs)
+        self.data = data
+
     @property
     def trees(self):
         def wrap(tree, i):
-            t = SklTreeClassifier(tree)
+            t = SklTreeClassifier(self.data, tree)
             t.domain = self.domain
             t.supports_multiclass = self.supports_multiclass
             t.name = "{} - tree {}".format(self.name, i)
@@ -55,3 +59,12 @@ class RandomForestLearner(SklLearner, _FeatureScorerMixin):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+    def fit_storage(self, data):
+        clf = self.__wraps__(**self.params)
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+        Y = Y.reshape(-1)
+        if W is None or not self.supports_weights:
+            return self.__returns__(data, clf.fit(X, Y))
+        return self.__returns__(
+            data, clf.fit(X, Y, sample_weight=W.reshape(-1)))

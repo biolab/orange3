@@ -432,8 +432,11 @@ def test():
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
     # data = Table("iris")
-    data = Table("housing")
-    clf = TreeLearner()(data)
+    # data = Table("housing")
+    # clf = TreeLearner()(data)
+    from Orange.classification.tree import SklTreeLearner
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else "iris")
+    clf = SklTreeLearner()(data)
     clf.instances = data
 
     ow.ctree(clf)

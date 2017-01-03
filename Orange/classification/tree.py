@@ -213,12 +213,59 @@ class TreeLearner(Learner):
         return model
 
 
-class SklTreeClassifier(SklModel):
+class SklTreeClassifier(SklModel, TreeModel):
     """Wrapper for SKL's tree classifier with the interface API for
     visualizations"""
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data, *args, **kwargs):
         SklModel.__init__(self, *args, **kwargs)
+        self.data = data
         self._cached_sample_assignments = None
+        self.root = self._build_tree(self._root())
+
+    def rule(self, node):
+        return ['foo']
+
+    def _build_tree(self, node):
+        attribute_idx = self._attribute(node)
+        attribute = self.data.domain.attributes[attribute_idx]
+        assert attribute.is_continuous is True
+        # Since sklearn only supports numeric data, and all data passed to
+        # sklearn learners is continuized first, we can saftely assume numeric
+        # data
+        node_obj = NumericNode(
+            attribute, attr_idx=attribute_idx,
+            threshold=self._threshold(attribute_idx),
+            value=self._value(attribute_idx))
+        node_obj.children = [
+            self._build_tree(child) for child in self._children(node)]
+        node_obj.subset = [1]
+        return node_obj
+
+    def _attribute(self, node):
+        return self.skl_model.tree_.feature[node]
+
+    def _threshold(self, node):
+        return self.skl_model.tree_.threshold[node]
+
+    def _value(self, node):
+        # Return 0th since the distribution is store inside a 2d array
+        return self.skl_model.tree_.value[node][0]
+
+    def _root(self):
+        return 0
+
+    def _children(self, node):
+        left_child = self.skl_model.tree_.children_left[node]
+        right_child = self.skl_model.tree_.children_right[node]
+        children = []
+        if left_child > -1:
+            children.append(left_child)
+        if right_child > -1:
+            children.append(right_child)
+        return children
+
+    def _has_children(self, node):
+        return len(self._children(node)) > 0
 
 
 class SklTreeLearner(SklLearner):
@@ -234,3 +281,12 @@ class SklTreeLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+    def fit_storage(self, data):
+        clf = self.__wraps__(**self.params)
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+        Y = Y.reshape(-1)
+        if W is None or not self.supports_weights:
+            return self.__returns__(data, clf.fit(X, Y))
+        return self.__returns__(
+            data, clf.fit(X, Y, sample_weight=W.reshape(-1)))
