@@ -2049,7 +2049,10 @@ class ControlledList(list):
 
     def __setitem__(self, index, item):
         def unselect(i):
-            item = self.listBox.item(i)
+            try:
+                item = self.listBox.item(i)
+            except RuntimeError:  # Underlying C/C++ object has been deleted
+                item = None
             if item is None:
                 # Labels changed before clearing the selection: clear everything
                 self.listBox.selectionModel().clear()
