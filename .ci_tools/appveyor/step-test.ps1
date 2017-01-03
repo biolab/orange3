@@ -57,7 +57,7 @@ try {
 
     # Widget tests
     python -m pip install `
-        --extra-index-url "$Env:STAGING_INDEX" `
+        --index-url "$Env:STAGING_INDEX" `
         PyQt5
 
     echo "Running widget tests with PyQt5"
