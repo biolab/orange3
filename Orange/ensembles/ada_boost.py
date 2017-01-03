@@ -11,7 +11,7 @@ from Orange.regression.base_regression import (
 
 __all__ = [
     'SklAdaBoostLearner',
-    'SklAdaBoosClassificationLearner',
+    'SklAdaBoostClassificationLearner',
     'SklAdaBoostRegressionLearner',
 ]
 
@@ -20,7 +20,7 @@ class SklAdaBoostClassifier(SklModelClassification):
     pass
 
 
-class SklAdaBoosClassificationLearner(SklLearnerClassification):
+class SklAdaBoostClassificationLearner(SklLearnerClassification):
     __wraps__ = skl_ensemble.AdaBoostClassifier
     __returns__ = SklAdaBoostClassifier
     name = 'skl adaBoost classification'
@@ -63,7 +63,7 @@ class SklAdaBoostRegressionLearner(SklLearnerRegression):
 class SklAdaBoostLearner(Fitter):
     name = 'skl adaboost'
 
-    __fits__ = {'classification': SklAdaBoosClassificationLearner,
+    __fits__ = {'classification': SklAdaBoostClassificationLearner,
                 'regression': SklAdaBoostRegressionLearner}
 
     __returns__ = SklModel
