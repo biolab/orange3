@@ -10,12 +10,14 @@ from AnyQt.QtCore import (
     QItemSelection, QItemSelectionModel
 )
 
+from Orange.util import deprecated
 from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import *
 from Orange.data.table import Table
-from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils import vartype
+from Orange.widgets.utils.itemmodels import VariableListModel, PyListModel
 import Orange
 
 
@@ -57,7 +59,7 @@ def source_indexes(indexes, view):
 def delslice(model, start, end):
     """ Delete the start, end slice (rows) from the model.
     """
-    if isinstance(model, itemmodels.PyListModel):
+    if isinstance(model, PyListModel):
         del model[start:end]
     elif isinstance(model, QAbstractItemModel):
         model.removeRows(start, end - start)
@@ -65,78 +67,22 @@ def delslice(model, start, end):
         raise TypeError(type(model))
 
 
-class VariablesListItemModel(itemmodels.VariableListModel):
-    """ An Qt item model for for list of orange.Variable objects.
-    Supports drag operations
-    """
-    def flags(self, index):
-        flags = super().flags(index)
-        if index.isValid():
-            flags |= Qt.ItemIsDragEnabled
-        else:
-            flags |= Qt.ItemIsDropEnabled
-        return flags
-
-    ###########
-    # Drag/Drop
-    ###########
-
-    MIME_TYPE = "application/x-Orange-VariableListModelData"
-
-    def supportedDropActions(self):
-        return Qt.MoveAction
-
-    def supportedDragActions(self):
-        return Qt.MoveAction
-
-    def mimeTypes(self):
-        return [self.MIME_TYPE]
-
-    def mimeData(self, indexlist):
-        descriptors = []
-        vars = []
-        for index in indexlist:
-            var = self[index.row()]
-            descriptors.append((var.name, vartype(var)))
-            vars.append(var)
-        mime = QMimeData()
-        mime.setData(self.MIME_TYPE,
-                     QByteArray(str(descriptors).encode("utf-8")))
-        mime._vars = vars
-        return mime
-
-    def dropMimeData(self, mime, action, row, column, parent):
-        if action == Qt.IgnoreAction:
-            return True
-        vars = self.items_from_mime_data(mime)
-        if vars is None:
-            return False
-        if row == -1:
-            row = len(self)
-        self[row:row] = vars
-        return True
-
-    def items_from_mime_data(self, mime):
-        if not mime.hasFormat(self.MIME_TYPE):
-            return None, None
-        if hasattr(mime, "_vars"):
-            vars = mime._vars
-            return vars
-        else:
-            #TODO: get vars from orange.Variable.getExisting
-            return None, None
+# owloadcorpus in orange3-text used this
+@deprecated('Orange.widgets.utils.itemmodels.VariableListModel')
+def VariablesListItemModel(*args, **kwargs):
+    return VariableListModel(*args, enable_dnd=True, **kwargs)
 
 
-class ClassVarListItemModel(VariablesListItemModel):
+class ClassVarListItemModel(VariableListModel):
     def dropMimeData(self, mime, action, row, column, parent):
         """ Ensure only one variable can be dropped onto the view.
         """
-        vars = self.items_from_mime_data(mime)
+        vars = mime.property('_items')
         if vars is None or len(self) + len(vars) > 1:
             return False
         if action == Qt.IgnoreAction:
             return True
-        return VariablesListItemModel.dropMimeData(
+        return VariableListModel.dropMimeData(
             self, mime, action, row, column, parent)
 
 
@@ -206,7 +152,7 @@ class VariablesListItemView(QListView):
             return False
 
         mime = event.mimeData()
-        vars = source_model(self).items_from_mime_data(mime)
+        vars = mime.property('_items')
         if vars is None:
             return False
 
@@ -230,7 +176,7 @@ class ClassVariableItemView(VariablesListItemView):
         """
         accepts = super().acceptsDropEvent(event)
         mime = event.mimeData()
-        vars = source_model(self).items_from_mime_data(mime)
+        vars = mime.property('_items')
         if vars is None:
             return False
 
@@ -263,7 +209,7 @@ class VariableFilterProxyModel(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row, source_parent):
         model = self.sourceModel()
-        if isinstance(model, itemmodels.VariableListModel):
+        if isinstance(model, VariableListModel):
             var = model[source_row]
             return self.filter_accepts_variable(var)
         else:
@@ -336,7 +282,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.completer_navigator = CompleterNavigator(self)
         self.filter_edit.installEventFilter(self.completer_navigator)
 
-        self.available_attrs = VariablesListItemModel()
+        self.available_attrs = VariableListModel(enable_dnd=True)
         self.available_attrs.rowsRemoved.connect(self.update_completer_model)
 
         self.available_attrs_proxy = VariableFilterProxyModel()
@@ -356,7 +302,7 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 0, 0, 3, 1)
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
-        self.used_attrs = VariablesListItemModel()
+        self.used_attrs = VariableListModel(enable_dnd=True)
         self.used_attrs.rowsRemoved.connect(self.update_completer_model)
         self.used_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
@@ -369,7 +315,7 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 0, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
-        self.class_attrs = ClassVarListItemModel()
+        self.class_attrs = ClassVarListItemModel(enable_dnd=True)
         self.class_attrs.rowsRemoved.connect(self.update_completer_model)
         self.class_attrs_view = ClassVariableItemView(
             acceptedType=(Orange.data.DiscreteVariable,
@@ -382,7 +328,7 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 1, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
-        self.meta_attrs = VariablesListItemModel()
+        self.meta_attrs = VariableListModel(enable_dnd=True)
         self.meta_attrs.rowsRemoved.connect(self.update_completer_model)
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)

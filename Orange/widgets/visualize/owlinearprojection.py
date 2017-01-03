@@ -30,69 +30,14 @@ import pyqtgraph as pg
 from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import colorpalette
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 )
+from Orange.widgets.utils.itemmodels import VariableListModel
 from .owscatterplotgraph import LegendItem, legend_anchor_pos
 from Orange.widgets.utils import classdensity
 from Orange.canvas import report
-
-
-class DnDVariableListModel(itemmodels.VariableListModel):
-
-    MimeType = "application/x-orange-variable-list"
-
-    def supportedDropActions(self):
-        return Qt.MoveAction
-
-    def supportedDragActions(self):
-        return Qt.MoveAction
-
-    def mimeTypes(self):
-        return [DnDVariableListModel.MimeType]
-
-    def mimeData(self, indexlist):
-        variables = []
-        itemdata = []
-        for index in indexlist:
-            variables.append(self[index.row()])
-            itemdata.append(self.itemData(index))
-
-        mime = QMimeData()
-        mime.setData(self.MimeType, b"see properties")
-        mime.setProperty("variables", variables)
-        mime.setProperty("itemdata", itemdata)
-        return mime
-
-    def dropMimeData(self, mime, action, row, column, parent):
-        if action == Qt.IgnoreAction:
-            return True
-        elif not mime.hasFormat(self.MimeType):
-            return False
-
-        variables = mime.property("variables")
-        itemdata = mime.property("itemdata")
-
-        if variables is None:
-            return False
-
-        if row == -1:
-            row = len(self)
-
-        # Insert variables at row and restore other item data
-        self[row:row] = variables
-        for i, data in enumerate(itemdata):
-            self.setItemData(self.index(row + i), data)
-        return True
-
-    def flags(self, index):
-        flags = super().flags(index)
-        if index.isValid():
-            flags |= Qt.ItemIsDragEnabled
-        else:
-            flags |= Qt.ItemIsDropEnabled
-        return flags
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -304,8 +249,8 @@ class OWLinearProjection(widget.OWWidget):
         )
         view.addAction(movedown)
 
-        self.varmodel_selected = model = DnDVariableListModel(
-            parent=self)
+        self.varmodel_selected = model = VariableListModel(
+            parent=self, enable_dnd=True)
 
         model.rowsInserted.connect(self._invalidate_plot)
         model.rowsRemoved.connect(self._invalidate_plot)
@@ -335,7 +280,7 @@ class OWLinearProjection(widget.OWWidget):
         )
         view.addAction(moveup)
 
-        self.varmodel_other = model = DnDVariableListModel(parent=self)
+        self.varmodel_other = model = VariableListModel(parent=self, enable_dnd=True)
         view.setModel(model)
 
         box1.layout().addWidget(view)
@@ -343,9 +288,9 @@ class OWLinearProjection(widget.OWWidget):
         box = gui.vBox(self.controlArea, box=True)
         box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
-        self.colorvar_model = itemmodels.VariableListModel(parent=self)
-        self.shapevar_model = itemmodels.VariableListModel(parent=self)
-        self.sizevar_model = itemmodels.VariableListModel(parent=self)
+        self.colorvar_model = VariableListModel(parent=self, enable_dnd=True)
+        self.shapevar_model = VariableListModel(parent=self, enable_dnd=True)
+        self.sizevar_model = VariableListModel(parent=self, enable_dnd=True)
 
         form = QFormLayout(
             formAlignment=Qt.AlignLeft,
