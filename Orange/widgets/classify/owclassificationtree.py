@@ -2,8 +2,10 @@
 
 from Orange.data import Table
 from Orange.modelling.tree import TreeLearner
+from Orange.classification.tree import TreeLearner as ClassificationTreeLearner
 from Orange.widgets.model.owtree import OWTreeLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.widget import Msg
 
 
 class OWTreeLearner(OWTreeLearner):
@@ -20,6 +22,29 @@ class OWTreeLearner(OWTreeLearner):
         (("Stop when majority reaches [%]: ",
           "limit_majority", "sufficient_majority", 51, 100),) + \
         OWTreeLearner.spin_boxes[-1:]
+
+    class Error(OWTreeLearner.Error):
+        cannot_binarize = Msg("Binarization cannot handle '{}'\n"
+                              "because it has {} values. "
+                              "Binarization can handle up to {}.\n"
+                              "Disable 'Induce binary tree' to proceed.")
+
+    def check_data(self):
+        self.Error.cannot_binarize.clear()
+        if not super().check_data():
+            return False
+        if not self.binary_trees:
+            return True
+        max_values, max_attr = max(
+            ((len(attr.values), attr)
+             for attr in self.data.domain.attributes if attr.is_discrete),
+            default=(0, None))
+        MAX_BINARIZATION = ClassificationTreeLearner.MAX_BINARIZATION
+        if max_values > MAX_BINARIZATION:
+            self.Error.cannot_binarize(
+                max_attr.name, max_values, MAX_BINARIZATION)
+            return False
+        return True
 
     def learner_kwargs(self):
         opts = super().learner_kwargs()
