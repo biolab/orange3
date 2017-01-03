@@ -23,7 +23,6 @@ class SklAdaBoostClassifier(SklModelClassification):
 class SklAdaBoostClassificationLearner(SklLearnerClassification):
     __wraps__ = skl_ensemble.AdaBoostClassifier
     __returns__ = SklAdaBoostClassifier
-    name = 'skl adaBoost classification'
 
     def __init__(self, base_estimator=None, n_estimators=50, learning_rate=1.,
                  algorithm='SAMME.R', random_state=None, preprocessors=None):
@@ -45,7 +44,6 @@ class SklAdaBoostRegressor(SklModelRegression):
 class SklAdaBoostRegressionLearner(SklLearnerRegression):
     __wraps__ = skl_ensemble.AdaBoostRegressor
     __returns__ = SklAdaBoostRegressor
-    name = 'skl adaBoost regression'
 
     def __init__(self, base_estimator=None, n_estimators=50, learning_rate=1.,
                  loss='linear', random_state=None, preprocessors=None):
@@ -61,8 +59,6 @@ class SklAdaBoostRegressionLearner(SklLearnerRegression):
 
 
 class SklAdaBoostLearner(Fitter):
-    name = 'skl adaboost'
-
     __fits__ = {'classification': SklAdaBoostClassificationLearner,
                 'regression': SklAdaBoostRegressionLearner}
 
