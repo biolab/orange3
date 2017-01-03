@@ -13,7 +13,7 @@ import numpy as np
 
 from AnyQt.QtCore import QObject, pyqtSlot
 
-from Orange.widgets.gui import WebviewWidget
+from Orange.widgets.utils.webview import WebviewWidget
 
 
 def _Autotree():

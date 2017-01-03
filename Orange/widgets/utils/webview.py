@@ -16,13 +16,13 @@ from os.path import join, dirname, abspath
 
 import numpy as np
 
-from AnyQt.QtCore import QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
+from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
     pyqtProperty, pyqtSlot, pyqtSignal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QSizePolicy, QWidget, qApp
+import sip
 
-from Orange.util import inherit_docstrings
-
+from Orange.util import inherit_docstrings, OrangeDeprecationWarning
 
 try:
     from AnyQt.QtWebKitWidgets import QWebView
@@ -42,8 +42,29 @@ _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')
 
 
+class _HidesParentWindow:
+    @pyqtSlot()
+    def hideWindow(self):  # Overriding hide() doesn't work on WebEngine??
+        """Hide the parent window/dialog. Mapped to Escape key in helpers.js."""
+        w = self.parent()
+        while isinstance(w, QWidget):
+            if w.windowFlags() & (Qt.Window | Qt.Dialog):
+                return w.hide()
+            w = w.parent()
+
+
+class _LoadFinishedSignaller(QObject):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.__parent = parent
+
+    @pyqtSlot()
+    def load_really_finished(self):
+        self.__parent._load_really_finished()
+
+
 if HAVE_WEBENGINE:
-    class WebEngineView(QWebEngineView):
+    class WebEngineView(QWebEngineView, _HidesParentWindow):
         """
         A QWebEngineView initialized to support communication with JS code.
 
@@ -106,8 +127,15 @@ if HAVE_WEBENGINE:
 
             channel = QWebChannel(self)
             if bridge is not None:
+                if isinstance(bridge, QWidget):
+                    warnings.warn(
+                        "Don't expose QWidgets in WebView. Construct minimal "
+                        "QObjects instead.", OrangeDeprecationWarning,
+                        stacklevel=2)
                 channel.registerObject("pybridge", bridge)
-            channel.registerObject('__self', self)  # Subclasses rely in this
+
+            channel.registerObject('__bridge', _LoadFinishedSignaller(self))
+
             self.page().setWebChannel(channel)
 
         def _onloadJS(self, code, name='', injection_point=QWebEngineScript.DocumentReady):
@@ -137,7 +165,7 @@ if HAVE_WEBENGINE:
 
 
 if HAVE_WEBKIT:
-    class WebKitView(QWebView):
+    class WebKitView(QWebView, _HidesParentWindow):
         """
         Construct a new QWebView widget that has no history and
         supports loading from local URLs.
@@ -169,6 +197,12 @@ if HAVE_WEBKIT:
             self.bridge = bridge
             self.frame = None
             self.debug = debug
+
+            if isinstance(bridge, QWidget):
+                warnings.warn(
+                    "Don't expose QWidgets in WebView. Construct minimal "
+                    "QObjects instead.", OrangeDeprecationWarning,
+                    stacklevel=2)
 
             def _onload(_ok):
                 if _ok:
@@ -204,6 +238,9 @@ if HAVE_WEBKIT:
 
 def _to_primitive_types(d):
     # pylint: disable=too-many-return-statements
+    if isinstance(d, QWidget):
+        warnings.warn("Don't expose QWidgets in WebView. Construct minimal "
+                      "QObjects instead.", OrangeDeprecationWarning, stacklevel=3)
     if isinstance(d, Integral):
         return int(d)
     if isinstance(d, Real):
@@ -369,8 +406,10 @@ if HAVE_WEBKIT:
             _WebViewBase.__init__(self)
 
             def load_finished():
-                self.frame.addToJavaScriptWindowObject('__self', self)
-                self._evalJS('setTimeout(function(){ __self._load_really_finished(); }, 100);')
+                if not sip.isdeleted(self):
+                    self.frame.addToJavaScriptWindowObject('__bridge', _LoadFinishedSignaller(self))
+                    self._evalJS('setTimeout(function(){ __bridge.load_really_finished(); }, 100);')
+
             self.loadFinished.connect(load_finished)
 
         @pyqtSlot()
