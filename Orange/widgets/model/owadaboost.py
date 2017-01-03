@@ -48,15 +48,15 @@ class OWAdaBoost(OWBaseLearner):
             box, self, "n_estimators", 1, 100, label="Number of estimators:",
             alignment=Qt.AlignRight, controlWidth=80,
             callback=self.settings_changed)
+        self.learning_rate_spin = gui.doubleSpin(
+            box, self, "learning_rate", 1e-5, 1.0, 1e-5,
+            label="Learning rate:", decimals=5, alignment=Qt.AlignRight,
+            controlWidth=80, callback=self.settings_changed)
         self.random_seed_spin = gui.spin(
             box, self, "random_seed", 0, 2 ** 31 - 1, controlWidth=80,
             label="Fixed seed for random generator:", alignment=Qt.AlignRight,
             callback=self.settings_changed, checked="use_random_seed",
             checkCallback=self.settings_changed)
-        self.learning_rate_spin = gui.doubleSpin(
-            box, self, "learning_rate", 1e-5, 1.0, 1e-5,
-            label="Learning rate:", decimals=5, alignment=Qt.AlignRight,
-            controlWidth=80, callback=self.settings_changed)
 
         # Algorithms
         box = gui.widgetBox(self.controlArea, "Boosting method")
