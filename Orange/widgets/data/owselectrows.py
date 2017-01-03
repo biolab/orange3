@@ -371,14 +371,17 @@ class OWSelectRows(widget.OWWidget):
         except Exception:
             pass
 
-        if not self.conditions and len(data.domain.variables):
+        variables = list(filter_visible(chain(data.domain.variables,
+                                              data.domain.metas)))
+        varnames = [v.name for v in variables]
+        if self.conditions:
+            for attr, cond_type, cond_value in self.conditions:
+                if attr in varnames:
+                    self.add_row(varnames.index(attr), cond_type, cond_value)
+        elif variables:
             self.add_row()
+
         self.update_info(data, self.data_in_variables, "In: ")
-        for attr, cond_type, cond_value in self.conditions:
-            attrs = [a.name for a in
-                     filter_visible(chain(data.domain.variables, data.domain.metas))]
-            if attr in attrs:
-                self.add_row(attrs.index(attr), cond_type, cond_value)
         self.unconditional_commit()
 
     def conditions_changed(self):
