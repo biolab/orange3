@@ -2,5 +2,5 @@
 Values (``value``)
 ##################
 
-.. automodule:: Orange.data.Value
-    :members:
+.. automodule:: Orange.data.variable
+    :members: Value

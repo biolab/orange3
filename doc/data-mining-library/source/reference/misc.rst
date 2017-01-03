@@ -7,5 +7,4 @@ Miscellaneous (``misc``)
 .. toctree::
    :maxdepth: 2
 
-   misc.enum
    misc.distmatrix
