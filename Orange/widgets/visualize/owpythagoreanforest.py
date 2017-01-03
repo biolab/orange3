@@ -233,6 +233,7 @@ class OWPythagoreanForest(OWWidget):
         )
 
     def _draw_trees(self):
+        self.ui_size_calc_combo.setEnabled(False)
         self.grid_items, self.ptrees = [], []
 
         with self.progressBar(len(self.forest_adapter.get_trees())) as prg:
@@ -253,6 +254,7 @@ class OWPythagoreanForest(OWWidget):
                      self.view.verticalScrollBar().width())
             self.grid.reflow(width)
             self.grid.setPreferredWidth(width)
+        self.ui_size_calc_combo.setEnabled(True)
 
     @staticmethod
     def _calculate_zoom(zoom_level):
@@ -428,3 +430,26 @@ class SklRandomForestAdapter:
     def domain(self):
         """Get the domain."""
         return self._domain
+
+
+if __name__ == '__main__':
+    from AnyQt.QtWidgets import QApplication
+    import sys
+
+    app = QApplication(sys.argv)
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
+
+    if data.domain.has_discrete_class:
+        from Orange.classification.random_forest import RandomForestLearner
+    else:
+        from Orange.regression.random_forest import \
+            RandomForestRegressionLearner as RandomForestLearner
+    rf = RandomForestLearner()(data)
+    rf.instances = data
+
+    ow = OWPythagoreanForest()
+    ow.set_rf(rf)
+
+    ow.show()
+    ow.handleNewSignals()
+    app.exec_()
