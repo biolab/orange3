@@ -23,17 +23,17 @@ Data
    :maxdepth: 1
 
    widgets/data/file
-   widgets/data/sql
+   widgets/data/sqltable
    widgets/data/save
    widgets/data/datainfo
    widgets/data/datatable
    widgets/data/selectcolumns
    widgets/data/selectrows
    widgets/data/datasampler
+   widgets/data/transpose
    widgets/data/discretize
    widgets/data/continuize
    widgets/data/concatenate
-   widgets/data/transpose
    widgets/data/paintdata
    widgets/data/pythonscript
    widgets/data/featureconstructor
@@ -67,6 +67,8 @@ Visualize
    widgets/visualize/cn2ruleviewer
    widgets/visualize/mosaicdisplay
    widgets/visualize/silhouetteplot
+   widgets/visualize/treeviewer
+   widgets/visualize/map
 
 
 Classify
@@ -78,7 +80,6 @@ Classify
    widgets/classify/naivebayes
    widgets/classify/logisticregression
    widgets/classify/classificationtree
-   widgets/classify/classificationtreeviewer
    widgets/classify/knearestneighbours
    widgets/classify/loadclassifier
    widgets/classify/majority
@@ -121,8 +122,8 @@ Unsupervised
    widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeansclustering
-   widgets/unsupervised/manifoldlearning
    widgets/unsupervised/mds
+   widgets/unsupervised/manifoldlearning
    
 
 Evaluation

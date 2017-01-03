@@ -34,31 +34,21 @@ Signals
 Description
 -----------
 
-.. figure:: images/ClassificationTree-stamped.png
+**Classification Tree** is a simple classification algorithm that splits the data into nodes by class purity. It is a precursor to :doc:`Random Forest <randomforest>`. Classification Tree in Orange is designed in-house and can handle both discrete and continuous data sets.  
+
+.. figure:: images/Classification-Tree-stamped.png
 
 1. The learner can be given a name under which it will appear in other
    widgets. The default name is "Classification Tree".
 
-2. In *Feature selection*, you can choose a measure for split selection:
+2. Tree parameters:
+   - **Induce binary tree**: build a binary tree (split into two child nodes)
+   - **Min. number of instances in leaves**: if checked, the algorithm will never construct a split which would put less than the specified number of training examples into any of the branches.
+   - **Do not split subsets smaller than**: forbids the algorithm to split the nodes with less than the given number of instances.
+   - **Stop when majority reaches [%]**: stop splitting the nodes after a specified majority threshold is reached
+   - **Limit the maximal tree depth**: limits the depth of the classification tree to the specified number of node levels.
 
-   -  `Entropy <http://www.saedsayad.com/decision_tree.htm>`_
-      (measure of homogeneity)
-   -  `Gini index <https://en.wikipedia.org/wiki/Gini_coefficient>`_
-      (measure of dispersion)
-
-3. *Pruning* criteria:
-
-   -  **Minimal instances in leaves**; if checked, the algorithm will
-      never construct a split which would put less than the specified
-      number of training examples into any of the branches.
-   -  **Stop splitting nodes with less instances than** forbids the
-      algorithm to split the nodes with less than the given number of
-      instances.
-   -  **Limit the depth** of the classification tree.
-
-4. Produce a report. 
-
-5. After changing the settings, you need to click *Apply*, which will
+3. Produce a report. After changing the settings, you need to click *Apply*, which will
    put the new learner in the output and, if the training examples are
    given, construct a new classifier and output it as well. Alternatively, tick the box on the left and changes will be communicated automatically. 
 
@@ -68,12 +58,12 @@ Examples
 There are two typical uses for this widget. First, you may want to
 induce a model and check what it looks like. You do it with the schema
 below; to learn more about it, see the documentation on
-:doc:`Classification Tree Viewer <classificationtreeviewer>`.
+:doc:`Tree Viewer <../visualize/treeviewer>`.
 
-.. figure:: images/ClassificationTreeViewer-SimpleSchema.png
+.. figure:: images/Classification-Tree-SimpleSchema.png
 
-The second schema checks the accuracy of the algorithm.
+The second schema checks the nodes of the built tree.
 
-.. figure:: images/ClassificationTreeViewer-Interaction.png
+.. figure:: images/Classification-Tree-Subset.png
 
 We used the *Iris* data set in both examples. 
