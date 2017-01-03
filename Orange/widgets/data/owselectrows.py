@@ -1,3 +1,5 @@
+import enum
+
 from collections import OrderedDict
 from itertools import chain
 
@@ -14,6 +16,7 @@ from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
 import Orange.data.filter as data_filter
+from Orange.data.filter import FilterContinuous, FilterString
 from Orange.data.domain import filter_visible
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
@@ -30,6 +33,13 @@ class SelectRowsContextHandler(DomainContextHandler):
         """Return True if condition applies to a variable in given domain."""
         varname, *_ = condition
         return varname in attrs or varname in metas
+
+
+class FilterDiscreteType(enum.Enum):
+    Equal = "Equal"
+    NotEqual = "NotEqual"
+    In = "In"
+    IsDefined = "IsDefined"
 
 
 class OWSelectRows(widget.OWWidget):
@@ -51,20 +61,43 @@ class OWSelectRows(widget.OWWidget):
     purge_classes = Setting(True)
     auto_commit = Setting(True)
 
-    operator_names = {
-        ContinuousVariable: ["equals", "is not",
-                             "is below", "is at most",
-                             "is greater than", "is at least",
-                             "is between", "is outside",
-                             "is defined"],
-        DiscreteVariable: ["is", "is not", "is one of", "is defined"],
-        StringVariable: ["equals", "is not",
-                         "is before", "is equal or before",
-                         "is after", "is equal or after",
-                         "is between", "is outside", "contains",
-                         "begins with", "ends with",
-                         "is defined"]}
-    operator_names[TimeVariable] = operator_names[ContinuousVariable]
+    Operators = {
+        ContinuousVariable: [
+            (FilterContinuous.Equal, "equals"),
+            (FilterContinuous.NotEqual, "is not"),
+            (FilterContinuous.Less, "is below"),
+            (FilterContinuous.LessEqual, "is at most"),
+            (FilterContinuous.Greater,"is greater than"),
+            (FilterContinuous.GreaterEqual, "is at least"),
+            (FilterContinuous.Between, "is between"),
+            (FilterContinuous.Outside, "is outside"),
+            (FilterContinuous.IsDefined, "is defined"),
+        ],
+        DiscreteVariable: [
+            (FilterDiscreteType.Equal, "is"),
+            (FilterDiscreteType.NotEqual, "is not"),
+            (FilterDiscreteType.In, "is one of"),
+            (FilterDiscreteType.IsDefined, "is defined")
+        ],
+        StringVariable: [
+            (FilterString.Equal, "equals"),
+            (FilterString.NotEqual, "is not"),
+            (FilterString.Less, "is before"),
+            (FilterString.LessEqual, "is equal or before"),
+            (FilterString.Greater, "is after"),
+            (FilterString.GreaterEqual, "is equal or after"),
+            (FilterString.Between, "is between"),
+            (FilterString.Outside, "is outside"),
+            (FilterString.Contains, "contains"),
+            (FilterString.StartsWith, "begins with"),
+            (FilterString.EndsWith, "ends with"),
+            (FilterString.IsDefined, "is defined"),
+        ]
+    }
+    Operators[TimeVariable] = Operators[ContinuousVariable]
+
+    operator_names = {vtype: [name for _, name in filters]
+                      for vtype, filters in Operators.items()}
 
     def __init__(self):
         super().__init__()
@@ -372,10 +405,11 @@ class OWSelectRows(widget.OWWidget):
         if self.data:
             domain = self.data.domain
             conditions = []
-            for attr_name, oper, values in self.conditions:
+            for attr_name, oper_idx, values in self.conditions:
                 attr_index = domain.index(attr_name)
                 attr = domain[attr_index]
-
+                operators = self.Operators[type(attr)]
+                opertype, _ = operators[oper_idx]
                 if attr.is_continuous:
                     if any(not v for v in values):
                         continue
@@ -389,23 +423,23 @@ class OWSelectRows(widget.OWWidget):
                             return
 
                     filter = data_filter.FilterContinuous(
-                        attr_index, oper, *[float(v) for v in values])
+                        attr_index, opertype, *[float(v) for v in values])
                 elif attr.is_string:
                     filter = data_filter.FilterString(
-                        attr_index, oper, *[str(v) for v in values])
+                        attr_index, opertype, *[str(v) for v in values])
                 else:
-                    if oper == 3:
+                    if opertype == FilterDiscreteType.IsDefined:
                         f_values = None
                     else:
                         if not values or not values[0]:
                             continue
                         values = [attr.values[i-1] for i in values]
-                        if oper == 0:
+                        if opertype == FilterDiscreteType.Equal:
                             f_values = {values[0]}
-                        elif oper == 1:
+                        elif opertype == FilterDiscreteType.NotEqual:
                             f_values = set(attr.values)
                             f_values.remove(values[0])
-                        elif oper == 2:
+                        elif opertype == FilterDiscreteType.In:
                             f_values = set(values)
                         else:
                             raise ValueError("invalid operand")
