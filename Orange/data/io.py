@@ -101,6 +101,80 @@ def detect_encoding(filename):
         return _from_file(filename)
 
 
+def guess_data_type(orig_values):
+    """
+    Use heuristics to guess data type.
+    """
+    valuemap, values = [], orig_values
+    is_discrete = is_discrete_values(orig_values)
+    if is_discrete:
+        valuemap = sorted(is_discrete)
+        coltype = DiscreteVariable
+    else:
+        try:
+            values = [float(i) for i in orig_values]
+        except ValueError:
+            tvar = TimeVariable('_')
+            try:
+                values = [tvar.parse(i) for i in orig_values]
+            except ValueError:
+                coltype = StringVariable
+            else:
+                coltype = TimeVariable
+        else:
+            coltype = ContinuousVariable
+    return valuemap, values, coltype
+
+
+def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
+                      domain_vars, existing_var, new_var_name, data=None):
+    if valuemap:
+        # Map discrete data to ints
+        def valuemap_index(val):
+            try:
+                return valuemap.index(val)
+            except ValueError:
+                return np.nan
+
+        values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
+        coltype_kwargs.update(values=valuemap)
+
+    if coltype is StringVariable:
+        values = ['' if i is np.nan else i for i in orig_values]
+
+    var = None
+    if domain_vars is not None:
+        if existing_var:
+            # Use existing variable if available
+            var = coltype.make(existing_var.strip(), **coltype_kwargs)
+        else:
+            # Never use existing for un-named variables
+            var = coltype(new_var_name, **coltype_kwargs)
+
+        # Reorder discrete values to match existing variable
+        if var.is_discrete and not var.ordered:
+            new_order, old_order = var.values, coltype_kwargs.get('values',
+                                                                  var.values)
+            if new_order != old_order:
+                offset = len(new_order)
+                column = values if data.ndim > 1 else data
+                column += offset
+                for i, val in enumerate(var.values):
+                    try:
+                        oldval = old_order.index(val)
+                    except ValueError:
+                        continue
+                    bn.replace(column, offset + oldval, new_order.index(val))
+
+    if isinstance(var, TimeVariable) or coltype is TimeVariable:
+        # Re-parse the values because only now after coltype.make call
+        # above, variable var is the correct one
+        _var = var if isinstance(var, TimeVariable) else TimeVariable('_')
+        values = [_var.parse(i) for i in orig_values]
+
+    return values, var
+
+
 class Flags:
     """Parser for column flags (i.e. third header row)"""
     DELIMITER = ' '
@@ -522,6 +596,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
             elif (type_flag in DiscreteVariable.TYPE_HEADERS or
                   _RE_DISCRETE_LIST.match(type_flag)):
+                coltype = DiscreteVariable
                 if _RE_DISCRETE_LIST.match(type_flag):
                     valuemap = Flags.split(type_flag)
                     coltype_kwargs.update(ordered=True)
@@ -530,38 +605,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
             else:
                 # No known type specified, use heuristics
-                is_discrete = is_discrete_values(orig_values)
-                if is_discrete:
-                    valuemap = sorted(is_discrete)
-                else:
-                    try:
-                        values = [float(i) for i in orig_values]
-                    except ValueError:
-                        tvar = TimeVariable('_')
-                        try:
-                            values = [tvar.parse(i) for i in orig_values]
-                        except ValueError:
-                            coltype = StringVariable
-                        else:
-                            coltype = TimeVariable
-                    else:
-                        coltype = ContinuousVariable
-
-            if valuemap:
-                # Map discrete data to ints
-                def valuemap_index(val):
-                    try:
-                        return valuemap.index(val)
-                    except ValueError:
-                        return np.nan
-
-                values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
-                coltype = DiscreteVariable
-                coltype_kwargs.update(values=valuemap)
-
-            if coltype is StringVariable:
-                values = ['' if i is np.nan else i
-                          for i in orig_values]
+                valuemap, values, coltype = guess_data_type(orig_values)
 
             if flag.m or coltype is StringVariable:
                 append_to = (Mcols, metas)
@@ -574,36 +618,19 @@ class FileFormat(metaclass=FileFormatMeta):
 
             cols, domain_vars = append_to
             cols.append(col)
-            var = None
+
+            existing_var, new_var_name, column = None, None, None
             if domain_vars is not None:
-                if names and names[col]:
-                    # Use existing variable if available
-                    var = coltype.make(names[col].strip(), **coltype_kwargs)
-                else:
-                    # Never use existing for un-named variables
-                    var = coltype(next(NAMEGEN), **coltype_kwargs)
+                existing_var = names and names[col]
+                if not existing_var:
+                    new_var_name = next(NAMEGEN)
+
+            values, var = sanitize_variable(
+                valuemap, values, orig_values, coltype, coltype_kwargs,
+                domain_vars, existing_var, new_var_name, data)
+            if domain_vars is not None:
                 var.attributes.update(flag.attributes)
                 domain_vars.append(var)
-
-                # Reorder discrete values to match existing variable
-                if var.is_discrete and not var.ordered:
-                    new_order, old_order = var.values, coltype_kwargs.get('values', var.values)
-                    if new_order != old_order:
-                        offset = len(new_order)
-                        column = values if data.ndim > 1 else data
-                        column += offset
-                        for i, val in enumerate(var.values):
-                            try:
-                                oldval = old_order.index(val)
-                            except ValueError:
-                                continue
-                            bn.replace(column, offset + oldval, new_order.index(val))
-
-            if isinstance(var, TimeVariable) or coltype is TimeVariable:
-                # Re-parse the values because only now after coltype.make call
-                # above, variable var is the correct one
-                _var = var if isinstance(var, TimeVariable) else TimeVariable('_')
-                values = [_var.parse(i) for i in orig_values]
 
             # Write back the changed data. This is needeed to pass the
             # correct, converted values into Table.from_numpy below

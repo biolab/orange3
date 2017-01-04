@@ -2342,7 +2342,7 @@ class TestTableTranspose(unittest.TestCase):
         metas = [ContinuousVariable("m1")]
         domain = Domain(attrs, metas=metas)
         X = np.arange(8).reshape((4, 2))
-        M = np.array([0, 1, 0, 1])[:, None]
+        M = np.array([0.0, 1.0, 0.0, 1.0])[:, None]
         data = Table(domain, X, metas=M)
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
@@ -2449,7 +2449,7 @@ class TestTableTranspose(unittest.TestCase):
         # original should not change
         self.assertDictEqual(data.domain.attributes[0].attributes, {})
 
-    def test_transpose_attributes_of_attributes(self):
+    def test_transpose_attributes_of_attributes_discrete(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
         attrs[0].attributes = {"attr1": "a", "attr2": "aa"}
         attrs[1].attributes = {"attr1": "b", "attr2": "bb"}
@@ -2458,11 +2458,12 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        metas = [StringVariable("Feature name"), StringVariable("attr1"),
-                 StringVariable("attr2")]
+        metas = [StringVariable("Feature name"),
+                 DiscreteVariable("attr1", values=("a", "b")),
+                 DiscreteVariable("attr2", values=("aa", "bb"))]
         domain = Domain(att, metas=metas)
-        result = Table(domain, np.arange(8).reshape((4, 2)).T,
-                       metas=np.array([["c1", "a", "aa"], ["c2", "b", "bb"]]))
+        M = np.array([["c1", 0.0, 0.0], ["c2", 1.0, 1.0]], dtype=object)
+        result = Table(domain, np.arange(8).reshape((4, 2)).T, metas=M)
 
         # transpose and compare
         self._compare_tables(result, Table.transpose(data))
@@ -2475,6 +2476,33 @@ class TestTableTranspose(unittest.TestCase):
         self.assertDictEqual(data.domain.attributes[0].attributes,
                              {"attr1": "a", "attr2": "aa"})
 
+    def test_transpose_attributes_of_attributes_continuous(self):
+        attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
+        attrs[0].attributes = {"attr1": "1.100", "attr2": "1.300"}
+        attrs[1].attributes = {"attr1": "2.200", "attr2": "2.300"}
+        domain = Domain(attrs)
+        data = Table(domain, np.arange(8).reshape((4, 2)))
+
+        att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
+               ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
+        metas = [StringVariable("Feature name"), ContinuousVariable("attr1"),
+                 ContinuousVariable("attr2")]
+        domain = Domain(att, metas=metas)
+        result = Table(domain, np.arange(8).reshape((4, 2)).T,
+                       metas=np.array([["c1", 1.1, 1.3],
+                                       ["c2", 2.2, 2.3]], dtype=object))
+
+        # transpose and compare
+        self._compare_tables(result, Table.transpose(data))
+
+        # transpose of transpose
+        t = Table.transpose(Table.transpose(data), "Feature name")
+        self._compare_tables(data, t)
+
+        # original should not change
+        self.assertDictEqual(data.domain.attributes[0].attributes,
+                             {"attr1": "1.100", "attr2": "1.300"})
+
     def test_transpose_attributes_of_attributes_missings(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
         attrs[0].attributes = {"attr1": "a", "attr2": "aa"}
@@ -2484,11 +2512,12 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        metas = [StringVariable("Feature name"), StringVariable("attr1"),
-                 StringVariable("attr2")]
+        metas = [StringVariable("Feature name"),
+                 DiscreteVariable("attr1", values=("a", "b")),
+                 DiscreteVariable("attr2", values=("aa",))]
         domain = Domain(att, metas=metas)
-        result = Table(domain, np.arange(8).reshape((4, 2)).T,
-                       metas=np.array([["c1", "a", "aa"], ["c2", "b", ""]]))
+        M = np.array([["c1", 0.0, 0.0], ["c2", 1.0, np.nan]], dtype=object)
+        result = Table(domain, np.arange(8).reshape((4, 2)).T, metas=M)
 
         # transpose and compare
         self._compare_tables(result, Table.transpose(data))
@@ -2517,10 +2546,11 @@ class TestTableTranspose(unittest.TestCase):
         att[1].attributes = {"cls": "2.000", "m1": "bb", "m2": "bbb"}
         att[2].attributes = {"cls": "3.000", "m1": "cc", "m2": "ccc"}
         att[3].attributes = {"cls": "4.000", "m1": "dd", "m2": "ddd"}
-        metas = [StringVariable("Feature name"), StringVariable("attr1"),
-                 StringVariable("attr2")]
+        metas = [StringVariable("Feature name"),
+                 DiscreteVariable("attr1", values=("a1", "b1")),
+                 DiscreteVariable("attr2", values=("aa1", "bb1"))]
         domain = Domain(att, metas=metas)
-        M = np.array([["c1", "a1", "aa1"], ["c2", "b1", "bb1"]])
+        M = np.array([["c1", 0.0, 0.0], ["c2", 1.0, 1.0]], dtype=object)
         result = Table(domain, np.arange(8).reshape((4, 2)).T, metas=M)
 
         # transpose and compare
@@ -2546,7 +2576,8 @@ class TestTableTranspose(unittest.TestCase):
         self.assertEqual(table1.n_rows, table2.n_rows)
         np.testing.assert_array_equal(table1.X, table2.X)
         np.testing.assert_array_equal(table1.Y, table2.Y)
-        np.testing.assert_array_equal(table1.metas, table2.metas)
+        np.testing.assert_array_equal(table1.metas.astype(str),
+                                      table2.metas.astype(str))
         np.testing.assert_array_equal(table1.W, table2.W)
 
         self.assertEqual([(type(x), x.name, x.attributes)
