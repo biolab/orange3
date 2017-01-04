@@ -302,7 +302,7 @@ class Normalize(Preprocess):
 class Randomize(Preprocess):
     """
     Construct a preprocessor for randomization of classes,
-    attributes or metas.
+    attributes and/or metas.
     Given a data table, preprocessor returns a new table in
     which the data is shuffled.
 
@@ -326,8 +326,8 @@ class Randomize(Preprocess):
     >>> randomizer = Randomize(Randomize.RandomizeClasses)
     >>> randomized_data = randomizer(data)
     """
-    Type = Enum("Randomize",
-                "RandomizeClasses, RandomizeAttributes, RandomizeMetas")
+    Type = Enum("Randomize", dict(RandomizeClasses=1, RandomizeAttributes=2,
+                                  RandomizeMetas=4), type=int)
     RandomizeClasses, RandomizeAttributes, RandomizeMetas = Type
 
     def __init__(self, rand_type=RandomizeClasses, rand_seed=None):
@@ -352,15 +352,12 @@ class Randomize(Preprocess):
         new_data = Table(data)
         new_data.ensure_copy()
 
-        if self.rand_type == Randomize.RandomizeClasses:
+        if self.rand_type & Randomize.RandomizeClasses:
             self.randomize(new_data.Y)
-        elif self.rand_type == Randomize.RandomizeAttributes:
+        if self.rand_type & Randomize.RandomizeAttributes:
             self.randomize(new_data.X)
-        elif self.rand_type == Randomize.RandomizeMetas:
+        if self.rand_type & Randomize.RandomizeMetas:
             self.randomize(new_data.metas)
-        else:
-            raise TypeError('Unsupported type')
-
         return new_data
 
     def randomize(self, table):
