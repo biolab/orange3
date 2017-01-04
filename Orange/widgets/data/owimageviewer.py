@@ -991,12 +991,12 @@ class OWImageViewer(widget.OWWidget):
         if self.data:
             attr = self.stringAttrs[self.imageAttr]
             titleAttr = self.allAttrs[self.titleAttr]
-            instances = [inst for inst in self.data
-                         if numpy.isfinite(inst[attr])]
             assert self.thumbnailView.count() == 0
             size = QSizeF(self.imageSize, self.imageSize)
 
-            for i, inst in enumerate(instances):
+            for i, inst in enumerate(self.data):
+                if not numpy.isfinite(inst[attr]):  # skip missing
+                    continue
                 url = self.urlFromValue(inst[attr])
                 title = str(inst[titleAttr])
 
