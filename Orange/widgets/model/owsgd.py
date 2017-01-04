@@ -47,13 +47,13 @@ class OWSGD(OWBaseLearner):
 
     learner_name = Setting('SGD')
     #: Loss function index for classification problems
-    cls_loss_function_index = Setting(2)
+    cls_loss_function_index = Setting(0)
     #: Epsilon loss function parameter for classification problems
-    cls_epsilon = Setting(.15)
+    cls_epsilon = Setting(.1)
     #: Loss function index for regression problems
     reg_loss_function_index = Setting(0)
     #: Epsilon loss function parameter for regression problems
-    reg_epsilon = Setting(.15)
+    reg_epsilon = Setting(.1)
 
     penalty_index = Setting(2)
     #: Regularization strength
@@ -70,6 +70,11 @@ class OWSGD(OWBaseLearner):
     n_iter = Setting(5)
 
     def add_main_layout(self):
+        self._add_algorithm_to_layout()
+        self._add_regularization_to_layout()
+        self._add_learning_params_to_layout()
+
+    def _add_algorithm_to_layout(self):
         box = gui.widgetBox(self.controlArea, 'Algorithm')
         # Classfication loss function
         self.cls_loss_function_combo = gui.comboBox(
@@ -96,6 +101,11 @@ class OWSGD(OWBaseLearner):
             label='ε: ', controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
 
+        # Enable/disable appropriate controls
+        self._on_cls_loss_change()
+        self._on_reg_loss_change()
+
+    def _add_regularization_to_layout(self):
         box = gui.widgetBox(self.controlArea, 'Regularization')
         self.penalty_combo = gui.comboBox(
             box, self, 'penalty_index', label='Regularization method: ',
@@ -110,6 +120,10 @@ class OWSGD(OWBaseLearner):
             label='Mixing parameter: ', controlWidth=80,
             alignment=Qt.AlignRight, callback=self.settings_changed)
 
+        # Enable/disable appropriate controls
+        self._on_regularization_change()
+
+    def _add_learning_params_to_layout(self):
         box = gui.widgetBox(self.controlArea, 'Learning parameters')
         self.learning_rate_combo = gui.comboBox(
             box, self, 'learning_rate_index', label='Learning rate: ',
@@ -141,9 +155,6 @@ class OWSGD(OWBaseLearner):
             checked='use_random_state', checkCallback=self.settings_changed)
 
         # Enable/disable appropriate controls
-        self._on_cls_loss_change()
-        self._on_reg_loss_change()
-        self._on_regularization_change()
         self._on_learning_rate_change()
         self._on_shuffle_change()
 
