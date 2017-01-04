@@ -25,7 +25,7 @@ class OWSave(widget.OWWidget):
 
     writers = FileFormat.writers
     sparse_writers = {ext: w for ext, w in FileFormat.writers.items()
-                      if w.SUPPORT_SPARSE_DATA}
+                      if getattr(w, 'SUPPORT_SPARSE_DATA', False)}
 
     def __init__(self):
         super().__init__()
