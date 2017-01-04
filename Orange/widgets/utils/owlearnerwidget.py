@@ -138,7 +138,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         """Creates a learner with current configuration.
 
         Returns:
-            Leaner: an instance of Orange.base.learner subclass.
+            Learner: an instance of Orange.base.learner subclass.
         """
         return self.LEARNER(preprocessors=self.preprocessors)
 
@@ -167,7 +167,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.update_model()
 
     def apply(self):
-        """Applies leaner and sends new model."""
+        """Applies learner and sends new model."""
         self.update_learner()
         self.update_model()
 
