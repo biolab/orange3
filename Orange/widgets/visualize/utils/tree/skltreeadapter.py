@@ -28,6 +28,7 @@ class SklTreeAdapter(BaseTreeAdapter):
     FEATURE_UNDEFINED = -2
 
     def __init__(self, model):
+        self.model = model
         self._tree = model.skl_model.tree_
         self._domain = model.domain
 

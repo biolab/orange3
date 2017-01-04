@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
-from Orange.tree import TreeModel
+from Orange.base import TreeModel, SklModel
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
@@ -20,6 +20,8 @@ from Orange.widgets import gui, widget
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
+from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 
 
 class PieChart(QGraphicsRectItem):
@@ -66,20 +68,21 @@ class TreeNode(GraphicsNode):
     # Methods are documented in PyQt documentation
     # pylint: disable=missing-docstring
 
-    def __init__(self, model, node_inst, parent=None):
+    def __init__(self, tree_adapter, node_inst, parent=None):
         super().__init__(parent)
-        self.model = model
+        self.tree_adapter = tree_adapter
+        self.model = self.tree_adapter.model
         self.node_inst = node_inst
 
         fm = QFontMetrics(self.document().defaultFont())
-        attr = node_inst.attr
+        attr = self.tree_adapter.attribute(node_inst)
         self.attr_text_w = fm.width(attr.name if attr else "")
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
         self._rect = None
 
-        if model.domain.class_var.is_discrete:
-            self.pie = PieChart(node_inst.value, 8, self)
+        if self.model.domain.class_var.is_discrete:
+            self.pie = PieChart(self.tree_adapter.get_distribution(node_inst)[0], 8, self)
         else:
             self.pie = None
 
@@ -90,7 +93,7 @@ class TreeNode(GraphicsNode):
         self.droplet.setPos(self.rect().center().x(), self.rect().height())
         self.droplet.setVisible(bool(self.branches))
         fm = QFontMetrics(self.document().defaultFont())
-        attr = self.node_inst.attr
+        attr = self.tree_adapter.attribute(self.node_inst)
         self.attr_text_w = fm.width(attr.name if attr else "")
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
@@ -129,7 +132,8 @@ class TreeNode(GraphicsNode):
         font = self.document().defaultFont()
         painter.setFont(font)
         if self.parent:
-            draw_text = self.node_inst.description
+            # TODO This is not yet good, description is  >3 for each node
+            draw_text = str(self.tree_adapter.rules(self.node_inst)[0])
             if self.parent.x() > self.x():  # node is to the left
                 fm = QFontMetrics(font)
                 x = rect.width() / 2 - fm.width(draw_text) - 4
@@ -140,7 +144,7 @@ class TreeNode(GraphicsNode):
         painter.setBrush(self.backgroundBrush)
         painter.setPen(QPen(Qt.black, 3 if self.isSelected() else 0))
         adjrect = rect.adjusted(-3, 0, 0, 0)
-        if not self.node_inst.children:
+        if not self.tree_adapter.has_children(self.node_inst):
             painter.drawRoundedRect(adjrect, 4, 4)
         else:
             painter.drawRect(adjrect)
@@ -188,6 +192,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.domain = None
         self.dataset = None
         self.clf_dataset = None
+        self.tree_adapter = None
 
         self.color_label = QLabel("Target class: ")
         combo = self.color_combo = gui.OrangeComboBox()
@@ -211,9 +216,8 @@ class OWTreeGraph(OWTreeViewer2D):
             node.set_rect(QRectF(rect.x(), rect.y(), w, rect.height()))
         self.scene.fix_pos(self.root_node, 10, 10)
 
-    @staticmethod
-    def _update_node_info_attr_name(node, text):
-        attr = node.node_inst.attr
+    def _update_node_info_attr_name(self, node, text):
+        attr = self.tree_adapter.attribute(node.node_inst)
         if attr is not None:
             text += "<hr/>{}".format(attr.name)
         return text
@@ -263,7 +267,9 @@ class OWTreeGraph(OWTreeViewer2D):
             self.info.setText('No tree.')
             self.root_node = None
             self.dataset = None
+            self.tree_adapter = None
         else:
+            self.tree_adapter = self._get_tree_adapter(model)
             self.domain = model.domain
             self.dataset = model.instances
             if self.dataset is not None and self.dataset.domain != self.domain:
@@ -284,41 +290,43 @@ class OWTreeGraph(OWTreeViewer2D):
                 self.color_combo.addItems(self.COL_OPTIONS)
                 self.color_combo.setCurrentIndex(self.regression_colors)
             self.openContext(self.domain.class_var)
-            self.root_node = self.walkcreate(model.root, None)
-            self.info.setText('{} nodes, {} leaves'.
-                              format(model.node_count(), model.leaf_count()))
+            # self.root_node = self.walkcreate(model.root, None)
+            self.root_node = self.walkcreate(self.tree_adapter.root)
+            self.info.setText('{} nodes, {} leaves'.format(
+                self.tree_adapter.num_nodes,
+                len(self.tree_adapter.leaves(self.tree_adapter.root))))
         self.setup_scene()
         self.send("Selected Data", None)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.dataset, []))
 
-    def walkcreate(self, node_inst, parent=None):
+    def walkcreate(self, node, parent=None):
         """Create a structure of tree nodes from the given model"""
-        node = TreeNode(self.model, node_inst, parent)
-        self.scene.addItem(node)
+        node_obj = TreeNode(self.tree_adapter, node, parent)
+        self.scene.addItem(node_obj)
         if parent:
-            edge = GraphicsEdge(node1=parent, node2=node)
+            edge = GraphicsEdge(node1=parent, node2=node_obj)
             self.scene.addItem(edge)
             parent.graph_add_edge(edge)
-        for child_inst in node_inst.children:
+        for child_inst in self.tree_adapter.children(node):
             if child_inst is not None:
-                self.walkcreate(child_inst, node)
-        return node
+                self.walkcreate(child_inst, node_obj)
+        return node_obj
 
     def node_tooltip(self, node):
-        return "<br>".join(to_html(rule)
-                           for rule in self.model.rule(node.node_inst))
+        return "<br>".join(to_html(str(rule))
+                           for rule in self.tree_adapter.rules(node.node_inst))
 
     def update_selection(self):
         if self.model is None:
             return
         nodes = [item.node_inst for item in self.scene.selectedItems()
                  if isinstance(item, TreeNode)]
-        data = self.model.get_instances(nodes)
+        data = self.tree_adapter.get_instances_in_nodes(self.dataset, nodes)
         self.send("Selected Data", data)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.dataset,
-                                         self.model.get_indices(nodes)))
+        self.send(ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table(
+            self.dataset,
+            self.tree_adapter.get_indices(nodes)))
 
     def send_report(self):
         if not self.model:
@@ -344,8 +352,8 @@ class OWTreeGraph(OWTreeViewer2D):
     def update_node_info_cls(self, node):
         """Update the printed contents of the node for classification trees"""
         node_inst = node.node_inst
-        distr = node_inst.value
-        total = len(node_inst.subset)
+        distr = self.tree_adapter.get_distribution(node_inst)[0]
+        total = len(self.tree_adapter.get_instances_in_nodes(self.dataset, [node_inst]))
         distr = distr / np.sum(distr)
         if self.target_class_index:
             tabs = distr[self.target_class_index - 1]
@@ -368,6 +376,7 @@ class OWTreeGraph(OWTreeViewer2D):
     def update_node_info_reg(self, node):
         """Update the printed contents of the node for regression trees"""
         node_inst = node.node_inst
+        print(self.tree_adapter.get_distribution(node_inst)[0])
         mean, var = node_inst.value
         insts = len(node_inst.subset)
         text = "{:.1f} ± {:.1f}<br/>".format(mean, var)
@@ -380,7 +389,7 @@ class OWTreeGraph(OWTreeViewer2D):
         """Update the node color for classification trees"""
         colors = self.scene.colors
         for node in self.scene.nodes():
-            distr = node.node_inst.value
+            distr = node.tree_adapter.get_distribution(node.node_inst)[0]
             total = sum(distr)
             if self.target_class_index:
                 p = distr[self.target_class_index - 1] / total
@@ -422,18 +431,23 @@ class OWTreeGraph(OWTreeViewer2D):
                     120 - 20 * var / max_var))
         self.scene.update()
 
+    def _get_tree_adapter(self, model):
+        if isinstance(model, SklModel):
+            return SklTreeAdapter(model)
+        return TreeAdapter(model)
+
 
 def test():
     """Standalone test"""
     import sys
     from AnyQt.QtWidgets import QApplication
-#    from Orange.classification.tree import TreeLearner
-    from Orange.regression.tree import TreeLearner
+    from Orange.classification.tree import TreeLearner, SklTreeLearner
+    from Orange.regression.tree import TreeLearner, SklTreeRegressionLearner
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
-    # data = Table("iris")
-    data = Table("housing")
-    clf = TreeLearner()(data)
+    data = Table("iris")
+    # data = Table("housing")
+    clf = SklTreeLearner()(data)
     clf.instances = data
 
     ow.ctree(clf)

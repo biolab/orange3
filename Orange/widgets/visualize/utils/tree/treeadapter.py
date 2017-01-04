@@ -301,7 +301,7 @@ class TreeAdapter(BaseTreeAdapter):
         return not any(node.children)
 
     def children(self, node):
-        return [child for child in node.children if child is not None]
+        return node.children
 
     def get_distribution(self, node):
         return [node.value]
