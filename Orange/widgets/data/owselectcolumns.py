@@ -9,6 +9,7 @@ from AnyQt.QtCore import (
     QAbstractItemModel, QSortFilterProxyModel, QStringListModel,
     QItemSelection, QItemSelectionModel
 )
+from AnyQt.QtCore import pyqtSignal as Signal
 
 from Orange.util import deprecated
 from Orange.widgets import gui, widget
@@ -90,6 +91,10 @@ class VariablesListItemView(QListView):
     """ A Simple QListView subclass initialized for displaying
     variables.
     """
+    #: Emitted with a Qt.DropAction when a drag/drop (originating from this
+    #: view) completed successfully
+    dragDropActionDidComplete = Signal(int)
+
     def __init__(self, parent=None, acceptedType=Orange.data.Variable):
         super().__init__(parent)
         self.setSelectionMode(self.ExtendedSelection)
@@ -97,10 +102,7 @@ class VariablesListItemView(QListView):
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
         self.setDragDropMode(self.DragDrop)
-        if hasattr(self, "setDefaultDropAction"):
-            # TODO do we still need this?
-            # For compatibility with Qt version < 4.6
-            self.setDefaultDropAction(Qt.MoveAction)
+        self.setDefaultDropAction(Qt.MoveAction)
         self.setDragDropOverwriteMode(False)
         self.viewport().setAcceptDrops(True)
 
@@ -119,8 +121,7 @@ class VariablesListItemView(QListView):
             drag.setMimeData(data)
 
             default_action = Qt.IgnoreAction
-            if hasattr(self, "defaultDropAction") and \
-                    self.defaultDropAction() != Qt.IgnoreAction and \
+            if self.defaultDropAction() != Qt.IgnoreAction and \
                     supported_actions & self.defaultDropAction():
                 default_action = self.defaultDropAction()
             elif (supported_actions & Qt.CopyAction and
@@ -132,6 +133,7 @@ class VariablesListItemView(QListView):
                 rows = list(map(QModelIndex.row, selected))
                 for s1, s2 in reversed(list(slices(rows))):
                     delslice(self.model(), s1, s2)
+            self.dragDropActionDidComplete.emit(res)
 
     def dragEnterEvent(self, event):
         """
@@ -282,18 +284,25 @@ class OWSelectAttributes(widget.OWWidget):
         self.completer_navigator = CompleterNavigator(self)
         self.filter_edit.installEventFilter(self.completer_navigator)
 
-        self.available_attrs = VariableListModel(enable_dnd=True)
-        self.available_attrs.rowsRemoved.connect(self.update_completer_model)
+        def dropcompleted(action):
+            if action == Qt.MoveAction:
+                self.commit()
 
+        self.available_attrs = VariableListModel(enable_dnd=True)
         self.available_attrs_proxy = VariableFilterProxyModel()
         self.available_attrs_proxy.setSourceModel(self.available_attrs)
         self.available_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
         self.available_attrs_view.setModel(self.available_attrs_proxy)
 
+        aa = self.available_attrs
+        aa.dataChanged.connect(self.update_completer_model)
+        aa.rowsInserted.connect(self.update_completer_model)
+        aa.rowsRemoved.connect(self.update_completer_model)
 
         self.available_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.available_attrs_view))
+        self.available_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         self.filter_edit.textChanged.connect(self.update_completer_prefix)
         self.filter_edit.textChanged.connect(
             self.available_attrs_proxy.set_filter_string)
@@ -303,7 +312,6 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariableListModel(enable_dnd=True)
-        self.used_attrs.rowsRemoved.connect(self.update_completer_model)
         self.used_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
@@ -311,30 +319,31 @@ class OWSelectAttributes(widget.OWWidget):
         self.used_attrs_view.setModel(self.used_attrs)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.used_attrs_view))
+        self.used_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
         self.class_attrs = ClassVarListItemModel(enable_dnd=True)
-        self.class_attrs.rowsRemoved.connect(self.update_completer_model)
         self.class_attrs_view = ClassVariableItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.class_attrs_view))
+        self.class_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         self.class_attrs_view.setMaximumHeight(24)
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
         self.meta_attrs = VariableListModel(enable_dnd=True)
-        self.meta_attrs.rowsRemoved.connect(self.update_completer_model)
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
         self.meta_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.meta_attrs_view))
+        self.meta_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
 
@@ -472,6 +481,8 @@ class OWSelectAttributes(widget.OWWidget):
         view.selectionModel().select(
             selection, QItemSelectionModel.ClearAndSelect)
 
+        self.commit()
+
     def move_up(self, view):
         selected = self.selected_rows(view)
         self.move_rows(view, selected, -1)
@@ -506,6 +517,8 @@ class OWSelectAttributes(widget.OWWidget):
             del dst_model[0]
 
         dst_model.extend(attrs)
+
+        self.commit()
 
     def update_interface_state(self, focus=None, selected=None, deselected=None):
         for view in [self.available_attrs_view, self.used_attrs_view,
@@ -553,7 +566,6 @@ class OWSelectAttributes(widget.OWWidget):
         vars = list(self.available_attrs)
         items = [var.name for var in vars]
         items += ["%s=%s" % item for v in vars for item in v.attributes.items()]
-        self.commit()
 
         new = sorted(set(items))
         if new != self.original_completer_items:
@@ -600,6 +612,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.class_attrs[:] = self.data.domain.class_vars
             self.meta_attrs[:] = self.data.domain.metas
             self.update_domain_role_hints()
+            self.commit()
 
     def send_report(self):
         if not self.data or not self.output_data:
