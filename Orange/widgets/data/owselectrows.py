@@ -47,8 +47,8 @@ class OWSelectRows(widget.OWWidget):
     settingsHandler = SelectRowsContextHandler()
     conditions = ContextSetting([])
     update_on_change = Setting(True)
-    purge_attributes = Setting(True)
-    purge_classes = Setting(True)
+    purge_attributes = Setting(False)
+    purge_classes = Setting(False)
     auto_commit = Setting(True)
 
     operator_names = {
