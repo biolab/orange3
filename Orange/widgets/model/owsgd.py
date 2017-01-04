@@ -235,8 +235,8 @@ class OWSGD(OWBaseLearner):
             eta0=self.eta0,
             power_t=self.power_t,
             n_iter=self.n_iter,
-            **params,
-            preprocessors=self.preprocessors)
+            preprocessors=self.preprocessors,
+            **params)
 
     def get_learner_parameters(self):
         params = OrderedDict({})
