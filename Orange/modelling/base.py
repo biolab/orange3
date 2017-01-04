@@ -8,7 +8,7 @@ class FitterMeta(type):
         # Check that a fitter implementation defines a valid `__fits__`
         if any(cls.__name__ == 'Fitter' for cls in bases):
             fits = attrs.get('__fits__')
-            assert isinstance(fits, dict), '__fits__ must be dick instance'
+            assert isinstance(fits, dict), '__fits__ must be dict instance'
             assert fits.get('classification') and fits.get('regression'), \
                 ('`__fits__` property does not define classification '
                  'or regression learner. Use a simple learner if you don\'t '
