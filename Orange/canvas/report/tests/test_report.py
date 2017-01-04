@@ -1,5 +1,6 @@
 from importlib import import_module
 import os
+import sys
 import warnings
 
 from AnyQt.QtGui import QFont, QBrush
@@ -126,7 +127,9 @@ class TestReportWidgets(WidgetTest):
     spec_widgets = [OWTestLearners, OWTreeGraph]
 
     def _create_report(self, widgets, rep, data):
+        print(file=sys.stderr)
         for widget in widgets:
+            print('   ', widget.__module__ + '.' + widget.__name__, file=sys.stderr)
             w = self.create_widget(widget)
             if w.inputs and isinstance(data, w.inputs[0].type):
                 handler = getattr(w, w.inputs[0].handler)
