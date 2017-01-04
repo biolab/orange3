@@ -1513,7 +1513,8 @@ class Table(MutableSequence, Storage):
         # metas
         # - feature names and attributes of attributes to metas
         self.metas, metas = np.empty((self.n_rows, 0), dtype=object), []
-        if meta_attr_name not in [m.name for m in table.domain.metas]:
+        if meta_attr_name not in [m.name for m in table.domain.metas] and \
+                table.domain.attributes:
             self.metas = np.array([[a.name] for a in table.domain.attributes],
                                   dtype=object)
             metas.append(StringVariable(meta_attr_name))
