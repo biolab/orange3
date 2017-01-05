@@ -454,7 +454,6 @@ class OWTreeViewer2D(OWWidget):
         if self.root_node is None:
             return
 
-        model = self.model
         tree_adapter = self.root_node.tree_adapter
         root_instances = len(tree_adapter.get_instances_in_nodes(
             self.dataset, [self.root_node.node_inst]))

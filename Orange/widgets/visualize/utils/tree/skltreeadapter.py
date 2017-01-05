@@ -66,7 +66,15 @@ class SklTreeAdapter(BaseTreeAdapter):
         return self._tree.children_right[node]
 
     def get_distribution(self, node):
-        return self._tree.value[node]
+        value = self._tree.value[node]
+        # If regression tree, we have to compute variance by hand, we can
+        # detect this because you can't have classification trees when there's
+        # only one class
+        if value.shape[1] == 1:
+            var = np.var(self.get_instances_in_nodes(self.model.instances, node).Y)
+            variances = np.array([(var * np.ones(value.shape[0]))]).T
+            value = np.hstack((value, variances))
+        return value
 
     def get_impurity(self, node):
         return self._tree.impurity[node]

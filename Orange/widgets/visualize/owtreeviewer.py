@@ -376,8 +376,7 @@ class OWTreeGraph(OWTreeViewer2D):
     def update_node_info_reg(self, node):
         """Update the printed contents of the node for regression trees"""
         node_inst = node.node_inst
-        # TODO calculate variance in tree adapter
-        mean, var = self.tree_adapter.get_distribution(node_inst)[0][0], 0.
+        mean, var = self.tree_adapter.get_distribution(node_inst)[0]
         insts = len(self.tree_adapter.get_instances_in_nodes(self.dataset, [node_inst]))
         text = "{:.1f} ± {:.1f}<br/>".format(mean, var)
         text += "{} instances".format(insts)
@@ -427,8 +426,8 @@ class OWTreeGraph(OWTreeViewer2D):
                 node.backgroundBrush = QBrush(colors[fact * (node_mean - minv)])
         else:
             nodes = list(self.scene.nodes())
-            # TODO Get variance from tree adapter
-            variances = [node.node_inst.value[1] for node in nodes]
+            variances = [self.tree_adapter.get_distribution(node.node_inst)[0][1]
+                         for node in nodes]
             max_var = max(variances)
             for node, var in zip(nodes, variances):
                 node.backgroundBrush = QBrush(def_color.lighter(
@@ -450,7 +449,7 @@ def test():
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
     # data = Table("iris")
-    data = Table("housing")
+    data = Table("housing")[:30]
     clf = SklTreeRegressionLearner()(data)
     # clf = TreeLearner()(data)
     clf.instances = data
