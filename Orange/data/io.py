@@ -86,7 +86,9 @@ def detect_encoding(filename):
     def _from_file(f):
         detector.feed(f.read(MAX_BYTES))
         detector.close()
-        return detector.result.get('encoding')
+        return (detector.result.get('encoding')
+                if detector.result.get('confidence', 0) >= .85 else
+                'utf-8')
 
     if isinstance(filename, str):
         with open_compressed(filename, 'rb') as f:
