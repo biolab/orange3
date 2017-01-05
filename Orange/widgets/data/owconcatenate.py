@@ -141,9 +141,10 @@ class OWConcatenate(widget.OWWidget):
         tables = []
         if self.primary_data is not None:
             tables = [self.primary_data] + list(self.more_data.values())
-            domain = self.primary_data.domain
         elif self.more_data:
             tables = self.more_data.values()
+
+        if tables:
             if self.merge_type == OWConcatenate.MergeUnion:
                 domain = reduce(domain_union,
                                 (table.domain for table in tables))
@@ -151,10 +152,9 @@ class OWConcatenate(widget.OWWidget):
                 domain = reduce(domain_intersection,
                                 (table.domain for table in tables))
 
-        tables = [Orange.data.Table.from_table(domain, table)
-                  for table in tables]
+            tables = [Orange.data.Table.from_table(domain, table)
+                      for table in tables]
 
-        if tables:
             data = concat(tables)
             if self.append_source_column:
                 source_var = Orange.data.DiscreteVariable(
