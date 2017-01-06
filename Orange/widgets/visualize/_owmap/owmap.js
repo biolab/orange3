@@ -30,11 +30,11 @@ var color_attr = {},
 var map = L.map('map', {
     preferCanvas: true,
     minZoom: 2,
+    maxZoom: 17,
     layers: [tileLayer, markersLayer],
     worldCopyJump: true
 });
 map.fitWorld();
-map.on('zoom', reposition_markers);
 
 L.easyButton('<img src="target.png" class="custom-button">', function () {
     pybridge.fit_to_bounds();
@@ -200,7 +200,15 @@ function add_markers(latlon_data) {
     };
 
     for (var i = 0; i < latlon_data.length; ++i) {
-        var marker = L.ourMarker(latlon_data[i], markerOptions);
+
+        var latlon = latlon_data[i];
+        if (jittering_offsets.length) {
+            var offset = jittering_offsets[i],
+                old_px = map.latLngToContainerPoint(latlon);
+            latlon = map.containerPointToLatLng([old_px.x + offset[0],
+                                                 old_px.y + offset[1]]);
+        }
+        var marker = L.ourMarker(latlon, markerOptions);
         if (selected_markers[i])
             marker.setSelected(true);
         marker._orange_id = i;  // Used in popup_callback() and the like
@@ -210,7 +218,6 @@ function add_markers(latlon_data) {
     }
     _update_markers();
     set_cluster_points();
-    set_jittering();
 }
 
 
@@ -356,47 +363,6 @@ function lightenColor(hexcolor, percent) {
 function clear_markers_js() {
     markersLayer.clearLayers();
     markers.length = 0;
-}
-
-function reposition_markers() {
-    if (!markers.length)
-        return;
-    if (jittering_offsets.length) {
-        if (markers.length != jittering_offsets.length || markers.length != latlon_data.length)
-            return console.error('markers.length != jittering_offsets.length || markers.length != latlon_data.length ???');
-        var data = latlon_data,
-            div = map.getContainer(),
-            w = div.clientWidth,
-            h = div.clientHeight;
-        for (var i = 0; i < markers.length; ++i) {
-            var offset = jittering_offsets[i],
-                old_px = map.latLngToContainerPoint(data[i]),
-                new_pt = map.containerPointToLatLng([old_px.x + h * offset[0],
-                                                     old_px.y + w * offset[1]]);
-            markers[i].setLatLng(new_pt);
-        }
-    }
-}
-
-var jittering_percent = 0;
-
-function set_jittering() {
-    percent = jittering_percent / 100;
-    jittering_offsets.length = 0;
-    if (percent == 0)
-        return;
-    for (var i = 0; i < latlon_data.length; ++i) {
-        jittering_offsets.push([(Math.random() - .5) * percent,
-                                (Math.random() - .5) * percent]);
-    }
-    reposition_markers();
-}
-
-function clear_jittering() {
-    jittering_offsets.length = 0;
-    for (var i = 0; i < markers.length; ++i) {
-        markers[i].setLatLng(latlon_data[i]);
-    }
 }
 
 

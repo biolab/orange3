@@ -8,6 +8,7 @@ import numpy as np
 from AnyQt.QtCore import Qt, QUrl, pyqtSignal, pyqtSlot, QTimer, QT_VERSION_STR, \
     QObject
 from AnyQt.QtGui import QImage, QPainter, QPen, QBrush, QColor
+from AnyQt.QtWidgets import qApp
 
 
 from Orange.util import color_to_hex
@@ -53,6 +54,7 @@ class LeafletMap(WebviewWidget):
                              os.path.join(os.path.dirname(__file__), '_owmap', 'owmap.html'))),
                          debug=True,)
         self.jittering = 0
+        self._jittering_offsets = None
         self._owwidget = parent
         self._opacity = 255
         self._sizes = None
@@ -106,6 +108,9 @@ class LeafletMap(WebviewWidget):
         self.lat_attr = lat_attr
         self.lon_attr = lon_attr
         self._domain = data.domain
+
+        self._recompute_jittering_offsets()
+
         if fit_bounds:
             self.fit_to_bounds(True)
         else:
@@ -147,15 +152,24 @@ class LeafletMap(WebviewWidget):
             set_cluster_points();
         '''.format(int(cluster_points)))
 
+    def _recompute_jittering_offsets(self):
+        if not self._jittering:
+            self._jittering_offsets = None
+        elif self.data:
+            # Calculate offsets randomly distributed within a circle
+            screen_size = max(100, min(qApp.desktop().screenGeometry().width(),
+                                       qApp.desktop().screenGeometry().height()))
+            n = len(self.data)
+            r = np.random.random(n)
+            theta = np.random.uniform(0, 2*np.pi, n)
+            xy_offsets = screen_size * self._jittering * np.c_[r * np.cos(theta),
+                                                               r * np.sin(theta)]
+            self._jittering_offsets = xy_offsets
+
     def set_jittering(self, jittering):
         """ In percent, i.e. jittering=3 means 3% of screen height and width """
         self._jittering = jittering / 100
-        self.evalJS('''
-            window.jittering_percent = {};
-            set_jittering();
-            if (window.jittering_percent == 0)
-                clear_jittering();
-        '''.format(jittering))
+        self._recompute_jittering_offsets()
         self.redraw_markers_overlay_image(new_image=True)
 
     @staticmethod
@@ -314,6 +328,8 @@ class LeafletMap(WebviewWidget):
         latlon = np.c_[self.data.get_column_view(self.lat_attr)[0],
                        self.data.get_column_view(self.lon_attr)[0]]
         self.exposeObject('latlon_data', dict(data=latlon[visible]))
+        self.exposeObject('jittering_offsets',
+                          self._jittering_offsets[visible] if self._jittering_offsets is not None else [])
         self.exposeObject('selected_markers', dict(data=(self._selected_indices[visible]
                                                          if self._selected_indices is not None else 0)))
         self.exposeObject('in_subset', in_subset.astype(np.int8))
@@ -456,8 +472,8 @@ class LeafletMap(WebviewWidget):
             x, y = self.Projection.easting_northing_to_pixel(x, y, zoom, origin, map_pane_pos)
 
             if self._jittering:
-                x += (np.random.random(len(x)) - .5) * (self._jittering * width)
-                y += (np.random.random(len(x)) - .5) * (self._jittering * height)
+                dx, dy = self._jittering_offsets[batch].T
+                x, y = x + dx, y + dy
 
             colors = (self._colorgen.getRGB(self._scaled_color_values[batch]).tolist()
                       if self._color_attr else
