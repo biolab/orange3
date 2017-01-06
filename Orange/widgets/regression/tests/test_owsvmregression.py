@@ -1,17 +1,19 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.widgets.regression.owsvmregression import OWSVMRegression
-from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
-                                       ParameterMapping)
+from Orange.widgets.regression.owsvmregression import OWSVM
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetLearnerTestMixin, ParameterMapping
+)
 
 
 class TestOWSVMRegression(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(OWSVMRegression,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(
+            OWSVM, stored_settings={"auto_apply": False})
         self.init()
         gamma_spin = self.widget._kernel_params[0]
         values = [self.widget._default_gamma, gamma_spin.maximum()]
+        self.data = self.housing[:30]
 
         def getter():
             value = gamma_spin.value()
@@ -25,7 +27,7 @@ class TestOWSVMRegression(WidgetTest, WidgetLearnerTestMixin):
                 gamma_spin.setValue(value)
 
         self.parameters = [
-            ParameterMapping("C", self.widget.epsilon_C_spin),
+            ParameterMapping("C", self.widget.C_spin),
             ParameterMapping("epsilon", self.widget.epsilon_spin),
             ParameterMapping("gamma", self.widget._kernel_params[0],
                              values=values, setter=setter, getter=getter),
@@ -37,10 +39,10 @@ class TestOWSVMRegression(WidgetTest, WidgetLearnerTestMixin):
         """Check learner and model for various values of all parameters
         when NuSVR is chosen
         """
-        self.assertEqual(self.widget.svrtype, OWSVMRegression.Epsilon_SVR)
+        self.assertEqual(self.widget.svm_type, OWSVM.SVM)
         # setChecked(True) does not trigger callback event
         self.widget.nu_radio.click()
-        self.assertEqual(self.widget.svrtype, OWSVMRegression.Nu_SVR)
+        self.assertEqual(self.widget.svm_type, OWSVM.Nu_SVM)
         self.parameters[0] = ParameterMapping("C", self.widget.nu_C_spin)
         self.parameters[1] = ParameterMapping("nu", self.widget.nu_spin)
         self.test_parameters()

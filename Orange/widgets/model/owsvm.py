@@ -178,9 +178,8 @@ class OWSVM(OWBaseLearner):
 
     def update_model(self):
         super().update_model()
-
         sv = None
-        if self.valid_data:
+        if self.model is not None:
             sv = self.data[self.model.skl_model.support_]
         self.send("Support vectors", sv)
 

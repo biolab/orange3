@@ -1,14 +1,18 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.widgets.classify.owsvmclassification import OWSVMClassification
-from Orange.widgets.tests.base import (WidgetTest, DefaultParameterMapping,
-                                       ParameterMapping, WidgetLearnerTestMixin)
+from Orange.widgets.classify.owsvmclassification import OWSVM
+from Orange.widgets.tests.base import (
+    WidgetTest,
+    DefaultParameterMapping,
+    ParameterMapping,
+    WidgetLearnerTestMixin
+)
 
 
 class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
-        self.widget = self.create_widget(OWSVMClassification,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(
+            OWSVM, stored_settings={"auto_apply": False})
         self.init()
         gamma_spin = self.widget._kernel_params[0]
         values = [self.widget._default_gamma, gamma_spin.maximum()]
@@ -45,10 +49,10 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         """Check learner and model for various values of all parameters
         when NuSVM is chosen
         """
-        self.assertEqual(self.widget.svmtype, OWSVMClassification.C_SVC)
+        self.assertEqual(self.widget.svm_type, OWSVM.SVM)
         # setChecked(True) does not trigger callback event
         self.widget.nu_radio.click()
-        self.assertEqual(self.widget.svmtype, OWSVMClassification.Nu_SVC)
+        self.assertEqual(self.widget.svm_type, OWSVM.Nu_SVM)
         self.parameters[0] = ParameterMapping("nu", self.widget.nu_spin)
         self.test_parameters()
 
