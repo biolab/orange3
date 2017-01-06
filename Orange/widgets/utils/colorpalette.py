@@ -17,7 +17,7 @@ from AnyQt.QtWidgets import (
     QListWidgetItem, QFrame, QGraphicsView, QGraphicsScene, QComboBox,
     QItemDelegate
 )
-from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal
+from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal, PYQT_VERSION
 
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
@@ -53,11 +53,15 @@ class ColorPixmap(QIcon):
 
 
 # a widget for selecting the colors to be used
-class ColorPaletteDlg(QDialog):
+class ColorPaletteDlg(QDialog, gui.OWComponent):
     shemaChanged = pyqtSignal()
 
     def __init__(self, parent, windowTitle="Color Palette"):
         super().__init__(parent, windowTitle=windowTitle)
+
+        if PYQT_VERSION < 0x50000:
+            gui.OWComponent.__init__(self, None)
+
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(4, 4, 4, 4)
 
