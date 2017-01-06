@@ -181,6 +181,7 @@ PACKAGE_DATA = {
                             "icons/paintdata/*.png",
                             "icons/paintdata/*.svg"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
+    "Orange.widgets.model": ["icons/*.svg"],
     "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.regression": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
