@@ -478,6 +478,9 @@ class OWHeatMap(widget.OWWidget):
         no_continuous = Msg("No continuous feature columns")
         not_enough_memory = Msg("Not enough memory to show this data")
 
+    class Warning(widget.OWWidget.Warning):
+        threshold_error = Msg("Low slider should be less than High")
+
     def __init__(self):
         super().__init__()
 
@@ -692,6 +695,7 @@ class OWHeatMap(widget.OWWidget):
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
 
+
         if data is not None and sp.issparse(data.X):
             try:
                 data = data.copy()
@@ -703,6 +707,13 @@ class OWHeatMap(widget.OWWidget):
                 self.Information.sparse_densified()
 
         input_data = data
+
+        # Data contains no attributes or meta attributes only
+        if data is not None and len(data.domain.attributes) == 0:
+            self.Error.no_continuous()
+            input_data = data = None
+
+        # Data contains some discrete attributes which must be filtered
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
             ndisc = sum(var.is_discrete for var in data.domain.attributes)
@@ -1393,7 +1404,15 @@ class OWHeatMap(widget.OWWidget):
             layout.setSpacing(self.SpaceX)
             self.__fixup_grid_layout()
 
+    def check_threshold_consistency(self):
+        return self.threshold_low < self.threshold_high
+
     def update_color_schema(self):
+        if not self.check_threshold_consistency():
+            self.Warning.threshold_error()
+            return
+        else:
+            self.Warning.clear()
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
             heatmap.set_color_table(palette)
