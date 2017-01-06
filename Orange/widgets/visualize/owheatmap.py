@@ -481,7 +481,6 @@ class OWHeatMap(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         threshold_error = Msg("Low slider should be less than High")
 
-
     def __init__(self):
         super().__init__()
 
@@ -534,23 +533,23 @@ class OWHeatMap(widget.OWWidget):
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
         )
 
-        self.lowslider = gui.hSlider(
+        lowslider = gui.hSlider(
             colorbox, self, "threshold_low", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema)
-        self.highslider = gui.hSlider(
+        highslider = gui.hSlider(
             colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema)
-        self.gammaslider = gui.hSlider(
+        gammaslider = gui.hSlider(
             colorbox, self, "gamma", minValue=0.0, maxValue=20.0,
             step=1.0, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema
         )
 
-        form.addRow("Low:", self.lowslider)
-        form.addRow("High:", self.highslider)
-        form.addRow("Gamma:", self.gammaslider)
+        form.addRow("Low:", lowslider)
+        form.addRow("High:", highslider)
+        form.addRow("Gamma:", gammaslider)
 
         colorbox.layout().addLayout(form)
 
@@ -1406,8 +1405,6 @@ class OWHeatMap(widget.OWWidget):
             self.__fixup_grid_layout()
 
     def check_threshold_consistency(self):
-        """ Ensure low_threshold is never greater than high_threshold.
-        """
         return self.threshold_low < self.threshold_high
 
     def update_color_schema(self):
