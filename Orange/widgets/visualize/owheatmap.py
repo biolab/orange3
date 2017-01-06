@@ -478,6 +478,10 @@ class OWHeatMap(widget.OWWidget):
         no_continuous = Msg("No continuous feature columns")
         not_enough_memory = Msg("Not enough memory to show this data")
 
+    class Warning(widget.OWWidget.Warning):
+        threshold_error = Msg("Low slider should be less than High")
+
+
     def __init__(self):
         super().__init__()
 
@@ -530,23 +534,23 @@ class OWHeatMap(widget.OWWidget):
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
         )
 
-        lowslider = gui.hSlider(
+        self.lowslider = gui.hSlider(
             colorbox, self, "threshold_low", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema)
-        highslider = gui.hSlider(
+        self.highslider = gui.hSlider(
             colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema)
-        gammaslider = gui.hSlider(
+        self.gammaslider = gui.hSlider(
             colorbox, self, "gamma", minValue=0.0, maxValue=20.0,
             step=1.0, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_color_schema
         )
 
-        form.addRow("Low:", lowslider)
-        form.addRow("High:", highslider)
-        form.addRow("Gamma:", gammaslider)
+        form.addRow("Low:", self.lowslider)
+        form.addRow("High:", self.highslider)
+        form.addRow("Gamma:", self.gammaslider)
 
         colorbox.layout().addLayout(form)
 
@@ -691,6 +695,7 @@ class OWHeatMap(widget.OWWidget):
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
+
 
         if data is not None and sp.issparse(data.X):
             try:
@@ -1393,7 +1398,17 @@ class OWHeatMap(widget.OWWidget):
             layout.setSpacing(self.SpaceX)
             self.__fixup_grid_layout()
 
+    def check_threshold_consistency(self):
+        """ Ensure low_threshold is never greater than high_threshold.
+        """
+        return self.threshold_low < self.threshold_high
+
     def update_color_schema(self):
+        if not self.check_threshold_consistency():
+            self.Warning.threshold_error()
+            return
+        else:
+            self.Warning.clear()
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
             heatmap.set_color_table(palette)
