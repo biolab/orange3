@@ -84,3 +84,8 @@ class TestOWConcatenate(WidgetTest):
             data = Table(Domain([source]), output)
             np.testing.assert_equal(data[:len(self.iris)].X, 0)
             np.testing.assert_equal(data[len(self.iris):].X, 1)
+
+    def test_singleclass_source_class(self):
+        self.send_signal("Primary Data", self.iris)
+        # add source into a class variable
+        self.widget.controls.append_source_column.toggle()

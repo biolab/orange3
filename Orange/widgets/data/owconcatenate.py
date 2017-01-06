@@ -266,7 +266,7 @@ def append_columns(data, attributes=(), class_vars=(), metas=()):
     metas = [ascolumn(col) for _, col in metas]
 
     X = numpy.hstack((data.X,) + tuple(attr_cols))
-    Y = numpy.hstack((data.Y,) + tuple(class_cols))
+    Y = numpy.hstack((data._Y,) + tuple(class_cols))
     metas = numpy.hstack((data.metas,) + tuple(metas))
 
     new_data = Orange.data.Table.from_numpy(new_domain, X, Y, metas)
