@@ -35,6 +35,15 @@ class TestOWMap(WidgetTest):
         self.widget.handleNewSignals()
         self.assertEqual(self.widget.map.lat_attr, self.data.domain[0])
 
+    def test_latlon_detection_heuristic(self):
+        xy = np.c_[np.random.uniform(-180, 180, 100),
+                   np.random.uniform(-90, 90, 100)]
+        data = Table.from_numpy(Domain.from_numpy(xy), xy)
+        self.widget.set_data(data)
+
+        self.assertIn(self.widget.lat_attr, data.domain)
+        self.assertIn(self.widget.lon_attr, data.domain)
+
     def test_projection(self):
         lat = np.r_[-89, 0, 89]
         lon = np.r_[-180, 0, 180]

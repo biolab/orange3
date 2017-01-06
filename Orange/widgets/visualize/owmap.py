@@ -740,6 +740,23 @@ class OWMap(widget.OWWidget):
                 (attr for attr in data.domain
                  if attr.is_continuous and
                     attr.name.lower().startswith(('longitude', 'lng', 'long', 'lon'))), None)
+
+            def _is_between(vals, min, max):
+                return np.all((min <= vals) & (vals <= max))
+
+            if not lat_attr:
+                for attr in data.domain:
+                    if attr.is_continuous:
+                        values = np.nan_to_num(data.get_column_view(attr)[0])
+                        if _is_between(values, -90, 90):
+                            lat_attr = attr
+            if not lon_attr:
+                for attr in data.domain:
+                    if attr.is_continuous:
+                        values = np.nan_to_num(data.get_column_view(attr)[0])
+                        if _is_between(values, -180, 180):
+                            lon_attr = attr
+
             return lat_attr, lon_attr
 
         lat, lon = _find_lat_lon()
