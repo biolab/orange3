@@ -14,6 +14,7 @@ class TestOWDistributions(WidgetTest):
         super().setUpClass()
         dataset_dirs.append(test_dirname())
         cls.data = Table("test9.tab")
+        cls.iris = Table("iris")
 
     def setUp(self):
         self.widget = self.create_widget(OWDistributions)
@@ -33,3 +34,12 @@ class TestOWDistributions(WidgetTest):
         self.widget.cb_disc_cont.setChecked(True)
         self.widget.variable_idx = 2
         self.widget._setup()
+
+    def test_remove_data(self):
+        """Check widget when data is removed"""
+        self.send_signal("Data", self.iris)
+        self.assertEqual(self.widget.cb_prob.count(), 5)
+        self.assertEqual(self.widget.groupvarview.count(), 2)
+        self.send_signal("Data", None)
+        self.assertEqual(self.widget.cb_prob.count(), 0)
+        self.assertEqual(self.widget.groupvarview.count(), 0)
