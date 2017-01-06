@@ -2,7 +2,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QGridLayout
 from Orange.data import Table
 from Orange.modelling import SVMFitter
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.model.owsvm import OWSVM
 
 
@@ -10,6 +10,8 @@ class OWSVM(OWSVM):
     name = "SVM Classification"
     description = "Support Vector Machines map inputs to higher-dimensional " \
                   "feature spaces that best separate different classes. "
+
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
     LEARNER = SVMFitter
 

@@ -2,7 +2,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QGridLayout
 from Orange.data import Table
 from Orange.modelling import SVMFitter
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
 from Orange.widgets.model.owsvm import OWSVM
 
 
@@ -13,6 +13,8 @@ class OWSVM(OWSVM):
     icon = "icons/SVMRegression.svg"
 
     LEARNER = SVMFitter
+
+    outputs = [("Support vectors", Table, widget.Explicit)]
 
     def _add_type_box(self):
         form = QGridLayout()
