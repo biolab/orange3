@@ -279,7 +279,8 @@ class OWPCA(widget.OWWidget):
         self._set_horline_pos()
 
         if self._pca is not None:
-            self.variance_covered = self._cumulative[components - 1] * 100
+            # convert to int as we had bug reports with QSpin.setValue on some matchines
+            self.variance_covered = int(self._cumulative[components - 1] * 100)
 
         if current != self._nselected_components():
             self._invalidate_selection()
@@ -295,7 +296,8 @@ class OWPCA(widget.OWWidget):
             cut = len(self._variance_ratio)
         else:
             cut = self.ncomponents
-        self.variance_covered = self._cumulative[cut - 1] * 100
+        # convert to int as we had bug reports with QSpin.setValue on some matchines
+        self.variance_covered = int(self._cumulative[cut - 1] * 100)
 
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
@@ -335,11 +337,11 @@ class OWPCA(widget.OWWidget):
             max_comp = len(self._variance_ratio)
         else:
             max_comp = self.ncomponents
-
         var_max = self._cumulative[max_comp - 1]
         if var_max != numpy.floor(self.variance_covered / 100.0):
             cut = max_comp
-            self.variance_covered = var_max * 100
+            # convert to int as we had bug reports with QSpin.setValue on some matchines
+            self.variance_covered = int(var_max * 100)
         else:
             self.ncomponents = cut = numpy.searchsorted(
                 self._cumulative, self.variance_covered / 100.0) + 1
