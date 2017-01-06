@@ -26,7 +26,7 @@ from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 from Orange.widgets.io import FileFormat
 
-from .owscatterplotgraph import HelpEventDelegate
+from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
 
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
@@ -250,6 +250,8 @@ class OWDistributions(widget.OWWidget):
         self.groupvar_idx = 0
         self._legend.clear()
         self._legend.hide()
+        self.groupvarview.clear()
+        self.cb_prob.clear()
 
     def _setup_smoothing(self):
         if not self.disc_cont and self.var and self.var.is_continuous:
