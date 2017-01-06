@@ -1,7 +1,9 @@
+import unittest
 from importlib import import_module
 import os
 import warnings
 
+import AnyQt
 from AnyQt.QtGui import QFont, QBrush
 from AnyQt.QtCore import Qt
 
@@ -209,6 +211,7 @@ class TestReportWidgets(WidgetTest):
         widgets = self.visu_widgets
         self._create_report(widgets, rep, data)
 
+    @unittest.skipIf(AnyQt.USED_API == "pyqt5", "Segfaults on PyQt5")
     def test_report_widgets_all(self):
         rep = OWReport.get_instance()
         widgets = self.clas_widgets + self.data_widgets + self.eval_widgets + \
