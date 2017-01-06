@@ -708,6 +708,13 @@ class OWHeatMap(widget.OWWidget):
                 self.Information.sparse_densified()
 
         input_data = data
+
+        # Data contains no attributes or meta attributes only
+        if data is not None and len(data.domain.attributes) == 0:
+            self.Error.no_continuous()
+            input_data = data = None
+
+        # Data contains some discrete attributes which must be filtered
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
             ndisc = sum(var.is_discrete for var in data.domain.attributes)
