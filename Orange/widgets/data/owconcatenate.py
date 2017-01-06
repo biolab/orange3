@@ -28,9 +28,9 @@ class OWConcatenate(widget.OWWidget):
     icon = "icons/Concatenate.svg"
 
     inputs = [("Primary Data", Orange.data.Table,
-               "set_primary_data", widget.Default),
+               "set_primary_data"),
               ("Additional Data", Orange.data.Table,
-               "set_more_data", widget.Multiple)]
+               "set_more_data", widget.Multiple | widget.Default)]
     outputs = [("Data", Orange.data.Table)]
 
     #: Domain merging operations
