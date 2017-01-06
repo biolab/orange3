@@ -91,7 +91,8 @@ class OWConcatenate(widget.OWWidget):
 
         cb = gui.checkBox(
             box, self, "append_source_column",
-            self.tr("Append data source IDs"))
+            self.tr("Append data source IDs"),
+            callback=self._source_changed)
 
         ibox = gui.indentedBox(box, sep=gui.checkButtonOffsetHint(cb))
 
@@ -104,12 +105,13 @@ class OWConcatenate(widget.OWWidget):
 
         form.addRow(
             self.tr("Feature name:"),
-            gui.lineEdit(ibox, self, "source_attr_name", valueType=str))
+            gui.lineEdit(ibox, self, "source_attr_name", valueType=str,
+                         callback=self._source_changed))
 
         form.addRow(
             self.tr("Place:"),
-            gui.comboBox(ibox, self, "source_column_role", items=self.id_roles)
-        )
+            gui.comboBox(ibox, self, "source_column_role", items=self.id_roles,
+                         callback=self._source_changed))
 
         ibox.layout().addLayout(form)
         mleft, mtop, mright, _ = ibox.layout().getContentsMargins()
@@ -179,6 +181,9 @@ class OWConcatenate(widget.OWWidget):
     def _merge_type_changed(self, ):
         if self.primary_data is None and self.more_data:
             self.apply()
+
+    def _source_changed(self):
+        self.apply()
 
     def send_report(self):
         items = OrderedDict()

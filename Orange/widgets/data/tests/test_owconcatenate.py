@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.widgets.data.owconcatenate import OWConcatenate
 from Orange.widgets.tests.base import WidgetTest
 
@@ -54,3 +54,33 @@ class TestOWConcatenate(WidgetTest):
         # no common variables
         outvars = output.domain.variables
         self.assertEqual(0, len(outvars))
+
+    def test_source(self):
+        self.send_signal("Additional Data", self.iris, 0)
+        self.send_signal("Additional Data", self.titanic, 1)
+        outputb = self.get_output("Data")
+        outvarsb = outputb.domain.variables
+        def get_source():
+            output = self.get_output("Data")
+            outvars = output.domain.variables + output.domain.metas
+            return (set(outvars) - set(outvarsb)).pop()
+        # test adding source
+        self.widget.controls.append_source_column.toggle()
+        source = get_source()
+        self.assertEquals(source.name, "Source ID")
+        # test name changing
+        self.widget.controls.source_attr_name.setText("Source")
+        self.widget.controls.source_attr_name.callback()
+        source = get_source()
+        self.assertEquals(source.name, "Source")
+        # test source_column role
+        places = ["class_vars", "attributes", "metas"]
+        for i, place in enumerate(places):
+            self.widget.source_column_role = i
+            self.widget.apply()
+            source = get_source()
+            output = self.get_output("Data")
+            self.assertTrue(source in getattr(output.domain, place))
+            data = Table(Domain([source]), output)
+            np.testing.assert_equal(data[:len(self.iris)].X, 0)
+            np.testing.assert_equal(data[len(self.iris):].X, 1)
