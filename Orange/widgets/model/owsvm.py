@@ -24,7 +24,7 @@ class OWSVM(OWBaseLearner):
     #: Different types of SVMs
     SVM, Nu_SVM = range(2)
     #: SVM type
-    svmtype = Setting(0)
+    svm_type = Setting(SVM)
 
     C = Setting(1.)
     epsilon = Setting(.1)
@@ -64,8 +64,8 @@ class OWSVM(OWBaseLearner):
     def _add_type_box(self):
         form = QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
-                self.controlArea, self, "svmtype", [], box="SVM Type",
-                orientation=form, callback=self._update_type)
+            self.controlArea, self, "svm_type", [], box="SVM Type",
+            orientation=form, callback=self._update_type)
 
         self.epsilon_radio = gui.appendRadioButton(
             box, "SVM", addToLayout=False)
@@ -86,8 +86,9 @@ class OWSVM(OWBaseLearner):
 
         self.nu_radio = gui.appendRadioButton(box, "ν-SVM", addToLayout=False)
         self.nu_C_spin = gui.doubleSpin(
-            box, self, "nu_C", 0.1, 512.0, 0.1, decimals=2, alignment=Qt.AlignRight,
-            addToLayout=False, callback=self.settings_changed)
+            box, self, "nu_C", 0.1, 512.0, 0.1, decimals=2,
+            alignment=Qt.AlignRight, addToLayout=False,
+            callback=self.settings_changed)
         self.nu_spin = gui.doubleSpin(
             box, self, "nu", 0.05, 1.0, 0.05, decimals=2,
             alignment=Qt.AlignRight, addToLayout=False,
@@ -103,7 +104,7 @@ class OWSVM(OWBaseLearner):
 
     def _update_type(self):
         # Enable/disable SVM type parameters depending on selected SVM type
-        if self.svmtype == self.SVM:
+        if self.svm_type == self.SVM:
             self.C_spin.setEnabled(True)
             self.epsilon_spin.setEnabled(True)
             self.nu_C_spin.setEnabled(False)
@@ -198,14 +199,14 @@ class OWSVM(OWBaseLearner):
             'max_iter': self.max_iter if self.limit_iter else -1,
             'preprocessors': self.preprocessors
         }
-        if self.svmtype == self.SVM:
+        if self.svm_type == self.SVM:
             return SVMFitter(C=self.C, epsilon=self.epsilon, **common_args)
         else:
             return NuSVMFitter(nu=self.nu, C=self.nu_C, **common_args)
 
     def get_learner_parameters(self):
         items = OrderedDict()
-        if self.svmtype == self.SVM:
+        if self.svm_type == self.SVM:
             items["SVM type"] = "SVM, C={}, ε={}".format(self.C, self.epsilon)
         else:
             items["SVM type"] = "ν-SVM, ν={}, C={}".format(self.nu, self.nu_C)

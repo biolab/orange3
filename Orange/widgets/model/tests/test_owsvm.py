@@ -52,10 +52,10 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         """Check learner and model for various values of all parameters
         when NuSVM is chosen
         """
-        self.assertEqual(self.widget.svmtype, OWSVM.SVM)
+        self.assertEqual(self.widget.svm_type, OWSVM.SVM)
         # setChecked(True) does not trigger callback event
         self.widget.nu_radio.click()
-        self.assertEqual(self.widget.svmtype, OWSVM.Nu_SVM)
+        self.assertEqual(self.widget.svm_type, OWSVM.Nu_SVM)
         self.parameters[0] = ParameterMapping("nu", self.widget.nu_spin)
         self.test_parameters()
 
