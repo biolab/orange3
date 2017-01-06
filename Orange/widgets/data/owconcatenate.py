@@ -64,9 +64,9 @@ class OWConcatenate(widget.OWWidget):
         self.primary_data = None
         self.more_data = OrderedDict()
 
-        mergebox = gui.vBox(self.controlArea, "Domain Merging")
+        self.mergebox = gui.vBox(self.controlArea, "Domain Merging")
         box = gui.radioButtons(
-            mergebox, self, "merge_type",
+            self.mergebox, self, "merge_type",
             callback=self._merge_type_changed)
 
         gui.widgetLabel(
@@ -137,6 +137,7 @@ class OWConcatenate(widget.OWWidget):
             del self.more_data[id]
 
     def handleNewSignals(self):
+        self.mergebox.setDisabled(self.primary_data is not None)
         self.apply()
 
     def apply(self):

@@ -89,3 +89,10 @@ class TestOWConcatenate(WidgetTest):
         self.send_signal("Primary Data", self.iris)
         # add source into a class variable
         self.widget.controls.append_source_column.toggle()
+
+    def test_disable_merging_on_primary(self):
+        self.assertTrue(self.widget.mergebox.isEnabled())
+        self.send_signal("Primary Data", self.iris)
+        self.assertFalse(self.widget.mergebox.isEnabled())
+        self.send_signal("Primary Data", None)
+        self.assertTrue(self.widget.mergebox.isEnabled())
