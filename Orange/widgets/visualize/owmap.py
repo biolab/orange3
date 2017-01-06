@@ -90,7 +90,10 @@ class LeafletMap(WebviewWidget):
         self.lon_attr = None
         self._image_token = np.nan  # Stop drawing previous image
 
-        if data is None or not (len(data) and lat_attr and lon_attr):
+        if (data is None or
+                not (len(data) and lat_attr and lon_attr) or
+                lat_attr not in data.domain or
+                lon_attr not in data.domain):
             self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
             return
 
