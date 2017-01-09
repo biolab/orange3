@@ -41,5 +41,7 @@ def create_annotated_table(data, selected_indices):
     annotated = np.zeros((len(data), 1))
     if selected_indices is not None:
         annotated[selected_indices] = 1
-    return Table(domain, data.X, data.Y,
-                 metas=np.hstack((data.metas, annotated)))
+    table = Table(domain, data.X, data.Y,
+                  metas=np.hstack((data.metas, annotated)))
+    table.attributes = data.attributes
+    return table
