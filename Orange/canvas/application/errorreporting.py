@@ -100,8 +100,6 @@ class ErrorReporting(QDialog):
             for k, v in data.items():
                 if k.startswith('_'):
                     continue
-                if isinstance(v, list):
-                    v = ', '.join(v)
                 _v, v = v, escape(v)
                 if k == F.WIDGET_SCHEME:
                     if not add_scheme:
@@ -187,8 +185,8 @@ class ErrorReporting(QDialog):
             widget = frame.tb_frame.f_locals['self'].__class__
             widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
 
-        packages = sorted(["%s==%s" % (i.project_name, i.version)
-                           for i in pip.get_installed_distributions()])
+        packages = ', '.join(sorted("%s==%s" % (i.project_name, i.version)
+                                    for i in pip.get_installed_distributions()))
 
         # If this exact error was already reported in this session,
         # just warn about it
