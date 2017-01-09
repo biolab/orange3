@@ -691,7 +691,6 @@ class OWRank(OWWidget):
 
     @classmethod
     def migrate_settings(cls, settings, version):
-        super().migrate_settings(settings, version)
         if not version:
             # Before fc5caa1e1d716607f1f5c4e0b0be265c23280fa0
             # headerState had length 2
