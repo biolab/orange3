@@ -504,7 +504,7 @@ class OWPredictions(widget.OWWidget):
             text = self.infolabel.text().replace('\n', '<br>')
             if self.show_probabilities and self.selected_classes:
                 text += '<br>Showing probabilities for: '
-                text += ', '. join([self.data.domain.class_var.values[i]
+                text += ', '. join([self.class_values[i]
                                     for i in self.selected_classes])
             self.report_paragraph('Info', text)
             self.report_table("Data & Predictions", merge_data_with_predictions(),
