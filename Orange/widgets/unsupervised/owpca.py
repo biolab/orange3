@@ -1,3 +1,5 @@
+import numbers
+
 from AnyQt.QtWidgets import QFormLayout, QLineEdit
 from AnyQt.QtGui import QColor
 from AnyQt.QtCore import Qt, QTimer
@@ -408,6 +410,20 @@ class OWPCA(widget.OWWidget):
             ("Explained variance", "{:.3f} %".format(self.variance_covered))
         ))
         self.report_plot()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if "variance_covered" in settings:
+            # Due to the error in gh-1896 the variance_covered was persisted
+            # as a NaN value, causing a TypeError in the widgets `__init__`.
+            vc = settings["variance_covered"]
+            if isinstance(vc, numbers.Real):
+                if numpy.isfinite(vc):
+                    vc = int(vc)
+                else:
+                    vc = 100
+                settings["variance_covered"] = vc
+
 
 def main():
     import gc
