@@ -539,10 +539,12 @@ class WidgetOutputsTestMixin:
                          self.same_input_output_domain)
         np.testing.assert_array_equal(selected.X[:, :n_attr],
                                       self.data.X[selected_indices])
+        self.assertEqual(selected.attributes, self.data.attributes)
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(annotated.attributes, self.data.attributes)
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)
