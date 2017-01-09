@@ -16,7 +16,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import *
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel, PyListModel
 import Orange
@@ -615,7 +615,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.commit()
 
     def send_report(self):
-        if not self.data or not self.output_data:
+        if self.data is None or self.output_data is None:
             return
         in_domain, out_domain = self.data.domain, self.output_data.domain
         self.report_domain("Input data", self.data.domain)

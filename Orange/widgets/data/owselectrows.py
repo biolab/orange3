@@ -324,7 +324,7 @@ class OWSelectRows(widget.OWWidget):
                 combo = QComboBox()
                 combo.addItems([""] + var.values)
                 if lc[0]:
-                    combo.setCurrentIndex(int(lc[0]))
+                    combo.setCurrentIndex(int(var.to_val(lc[0])))
                 else:
                     combo.setCurrentIndex(0)
                 combo.var_type = vartype(var)
@@ -360,7 +360,7 @@ class OWSelectRows(widget.OWWidget):
         self.add_all_button.setDisabled(
             data is None or
             len(data.domain.variables) + len(data.domain.metas) > 100)
-        if not data:
+        if data is None:
             self.data_desc = None
             self.commit()
             return
@@ -405,7 +405,7 @@ class OWSelectRows(widget.OWWidget):
         matching_output = self.data
         non_matching_output = None
         self.error()
-        if self.data:
+        if self.data is not None:
             domain = self.data.domain
             conditions = []
             for attr_name, oper_idx, values in self.conditions:
@@ -493,7 +493,7 @@ class OWSelectRows(widget.OWWidget):
             sp(len(data.domain.variables) + len(data.domain.metas))))
 
     def send_report(self):
-        if not self.data:
+        if self.data is None:
             self.report_paragraph("No data.")
             return
 

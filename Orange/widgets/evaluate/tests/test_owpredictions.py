@@ -12,5 +12,5 @@ class TestOWPredictions(WidgetTest):
 
     def test_rowCount_from_model(self):
         """Don't crash if the bottom row is visible"""
-        self.send_signal("Data", self.iris[:5])
+        self.send_signal("Data", self.iris.iloc[:5])
         self.widget.dataview.sizeHintForColumn(0)

@@ -1,7 +1,7 @@
 import weakref
 
 from math import log
-from collections import Iterable
+from collections import Iterable, Sequence
 from itertools import chain
 from numbers import Integral
 
@@ -10,6 +10,7 @@ import numpy as np
 from Orange.data import (
     Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
 )
+from Orange.util import deprecated
 
 __all__ = ["DomainConversion", "Domain"]
 
@@ -73,7 +74,7 @@ def filter_visible(feats):
     return (f for f in feats if not f.attributes.get('hidden', False))
 
 
-class Domain:
+class Domain(Sequence):
     def __init__(self, attributes, class_vars=None, metas=None, source=None):
         """
         Initialize a new domain descriptor. Arguments give the features and
@@ -419,6 +420,7 @@ class Domain:
             col_idx = self.index(attr)
         return [attr], np.array([col_idx])
 
+    @deprecated('hash(domain)')
     def checksum(self):
         return hash(self)
 

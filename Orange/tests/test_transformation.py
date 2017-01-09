@@ -28,14 +28,14 @@ class TestTransformation(unittest.TestCase):
         np.testing.assert_almost_equal(trans(data), np.arange(len(data)))
         np.testing.assert_array_equal(trans.called_with, data.X[:, 2])
 
-        np.testing.assert_almost_equal(trans(data[0]), np.array([0]))
+        np.testing.assert_almost_equal(trans(data.iloc[0]), np.array([0]))
         np.testing.assert_array_equal(trans.called_with, data.X[0, 2])
 
         trans = self.TransformationMock(data.domain.metas[0])
         np.testing.assert_almost_equal(trans(data), np.arange(len(data)))
         np.testing.assert_array_equal(trans.called_with, data.metas.flatten())
 
-        np.testing.assert_almost_equal(trans(data[0]), np.array([0]))
+        np.testing.assert_almost_equal(trans(data.iloc[0]), np.array([0]))
         np.testing.assert_array_equal(trans.called_with, data.metas[0, 0])
 
     def test_transform_fails(self):

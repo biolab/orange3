@@ -457,7 +457,7 @@ class OWFeatureConstructor(OWWidget):
             desc = self.featuremodel[min(index, len(self.featuremodel) - 1)]
             editor = self.editors[type(desc)]
             self.editorstack.setCurrentWidget(editor)
-            editor.setEditorData(desc, self.data.domain if self.data else None)
+            editor.setEditorData(desc, self.data.domain if self.data is not None else None)
         self.editorstack.setEnabled(index >= 0)
         self.duplicateaction.setEnabled(index >= 0)
         self.removebutton.setEnabled(index >= 0)
@@ -544,8 +544,7 @@ class OWFeatureConstructor(OWWidget):
     def check_attrs_values(self, attr, data):
         for i in range(len(data)):
             for var in attr:
-                if not math.isnan(data[i, var]) \
-                        and int(data[i, var]) >= len(var.values):
+                if data[var].iloc[data.index[i]] not in range(var.values):
                     return var.name
         return None
 
@@ -826,10 +825,7 @@ def bind_variable(descriptor, env):
 
 def make_lambda(expression, args, values):
     def make_arg(name):
-        if sys.version_info >= (3, 0):
-            return ast.arg(arg=name, annotation=None)
-        else:
-            return ast.Name(id=arg, ctx=ast.Param(), lineno=1, col_offset=0)
+        return ast.arg(arg=name, annotation=None)
 
     lambda_ = ast.Lambda(
         args=ast.arguments(
@@ -893,7 +889,7 @@ class FeatureFunc:
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
-            return [self(inst) for inst in instance]
+            return [self(inst) for _, inst in instance.iterrows()]
         else:
             args = [instance[var] for _, var in self.args]
             return self.func(*args)

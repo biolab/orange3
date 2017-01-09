@@ -5,7 +5,7 @@ from AnyQt import QtWidgets
 from AnyQt import QtCore
 
 from Orange.widgets import widget, gui
-from Orange.data.table import Table
+from Orange.data import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 from Orange.canvas import report
 try:

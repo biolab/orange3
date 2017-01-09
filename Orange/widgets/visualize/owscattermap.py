@@ -685,7 +685,7 @@ class OWScatterMap(widget.OWWidget):
         self.plot.clear()
         self.x_var_index = min(self.x_var_index, len(self.x_var_model) - 1)
         self.y_var_index = min(self.y_var_index, len(self.y_var_model) - 1)
-        if not self.dataset or self.x_var_index == -1 or self.y_var_index == -1:
+        if self.dataset is None or self.x_var_index == -1 or self.y_var_index == -1:
             return
 
         data = self.dataset

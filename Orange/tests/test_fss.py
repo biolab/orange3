@@ -93,7 +93,7 @@ class TestRemoveNaNColumns(unittest.TestCase):
         data.X = csr_matrix(data.X)
 
         new_data = RemoveNaNColumns()(data)
-        self.assertEqual(data, new_data)
+        self.assertTrue(data.equals(new_data))
 
 
 class TestSelectRandomFeatures(unittest.TestCase):

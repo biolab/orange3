@@ -1,10 +1,9 @@
 import operator
 import os
-import zlib
 
 from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
-from numbers import Real, Integral
+from numbers import Real, Integral, Number
 from functools import reduce
 from warnings import warn
 from threading import Lock
@@ -21,9 +20,10 @@ from Orange.data import (
 )
 from Orange.data.util import SharedComputeValue
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
-from Orange.util import flatten
+from Orange.util import flatten, deprecated, OrangeDeprecationWarning
 
-__all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
+__all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance",
+           "TableSeries", "Table"]
 
 
 def get_sample_datasets_dir():
@@ -143,6 +143,8 @@ class RowInstance(Instance):
     def __repr__(self):
         return self._str(True)
 
+TableSeries = Instance
+
 
 class Columns:
     def __init__(self, domain):
@@ -150,8 +152,128 @@ class Columns:
             setattr(self, v.name.replace(" ", "_"), v)
 
 
+class _PandasDataFrameCompat:
+    @property
+    def empty(self):
+        return not (self.X.size or self.Y.size or self.metas.size)
+
+    # http://pandas.pydata.org/pandas-docs/stable/gotchas.html#using-if-truth-statements-with-pandas
+    @deprecated('if table is None or table.empty')
+    def __bool__(self):
+        return not self.empty
+
+    @property
+    def index(self):
+        return self.ids
+
+    def equals(self, other):
+        return type(self) == type(other) and hash(self) == hash(other)
+
+    @deprecated('table.equals()')
+    def __eq__(self, other):
+        return self.equals(other)
+
+    def iterrows(self):
+        return zip(self.index, (self.iloc[i] for i in range(len(self))))
+
+    @deprecated('table.iterrows()')
+    def __iter__(self):
+        return (self.iloc[i] for i in range(len(self)))
+
+    def __contains__(self, key):
+        if isinstance(key, (str, Variable)):
+            return key in self.domain or key in self.domain.metas
+        warn('`instance in table` check is deprecated in favor of '
+             'pandas-compatible `attribute in table`',
+             OrangeDeprecationWarning, stacklevel=2)
+        return any(inst == key for _, inst in self.iterrows())
+
+    def __getitem__(self, key):
+        if (not isinstance(key, np.ndarray) and key == slice(None) or
+                isinstance(key, (str, Variable)) or
+                isinstance(key, Sequence) and len(key) and isinstance(key[0], (str, Variable))):
+            return self.__getitem_old__((slice(None), key))
+        if isinstance(key, np.ndarray) and np.issubdtype(key.dtype, bool):
+            return self.__getitem_old__(key)
+        warn('Table indexing is changing to pandas-compatible. To be '
+             'safe, use pandas indexing: .loc, .iloc, .ix',
+             OrangeDeprecationWarning, stacklevel=2)
+        return self.__getitem_old__(key)
+
+    def __setitem__(self, key, value):
+        if (not isinstance(key, np.ndarray) and key == slice(None) or
+                isinstance(key, (str, Variable)) or
+                isinstance(key, Sequence) and len(key) and isinstance(key[0], (str, Variable))):
+            return self.__setitem_old__((slice(None), key), value)
+        if isinstance(key, np.ndarray) and np.issubdtype(key.dtype, bool):
+            return self.__setitem_old__(key, value)
+        warn('Table indexing is changing to pandas-compatible. To be '
+             'safe, use pandas indexing: .loc, .iloc, .ix',
+             OrangeDeprecationWarning, stacklevel=2)
+        return self.__setitem_old__(key, value)
+
+    @property
+    def loc(self):
+        class _indexer:
+            def _key(self, key):
+                nonlocal table
+                rows, cols = key, None
+                if isinstance(key, tuple) and len(key) == 2:
+                    rows, cols = key
+                if isinstance(rows, slice):
+                    start = None if rows.start is None else np.argmax(table.index == rows.start)
+                    stop = None if rows.stop is None else np.argmax(table.index == rows.stop)
+                    if start is not None and stop is not None and abs(stop - start) == 1:
+                        rows = start
+                    else:
+                        rows = slice(start, stop, rows.step)
+                if isinstance(rows, Iterable):
+                    index = table.index.tolist().index
+                    rows = [index(i) for i in rows]
+                if isinstance(rows, Number):
+                    rows = np.argmax(table.index == rows)
+                if cols is None:
+                    return rows
+                return rows, cols
+
+            def __getitem__(self, key):
+                nonlocal table
+                return table.__getitem_old__(self._key(key))
+
+            def __setitem__(self, key, value):
+                nonlocal table
+                return table.__setitem_old__(self._key(key), value)
+
+        table = self
+        return _indexer()
+
+    @property
+    def iloc(self):
+        class _indexer:
+            def __getitem__(self, key):
+                nonlocal table
+                return table.__getitem_old__(key)
+
+            def __setitem__(self, key, value):
+                nonlocal table
+                return table.__setitem_old__(key, value)
+
+        table = self
+        return _indexer()
+
+    @property
+    def ix(self):
+        class _indexer:
+            def __getitem__(self, key):
+                nonlocal table
+                return table.__getitem_old__(key)
+
+        table = self
+        return _indexer()
+
+
 # noinspection PyPep8Naming
-class Table(MutableSequence, Storage):
+class Table(_PandasDataFrameCompat, MutableSequence, Storage):
     __file__ = None
     name = "untitled"
 
@@ -215,6 +337,14 @@ class Table(MutableSequence, Storage):
         # So subclasses can expect to call super without breakage; noop
         pass
 
+    @property
+    def weights(self):
+        return self.W.ravel()
+
+    @property
+    def has_weights(self):
+        return self.weights is not None and self.weights.size
+
     @classmethod
     def from_domain(cls, domain, n_rows=0, weights=False):
         """
@@ -245,7 +375,7 @@ class Table(MutableSequence, Storage):
         return self
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=...):
+    def from_table(cls, domain, source, row_indices=slice(None)):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -263,7 +393,10 @@ class Table(MutableSequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
-
+        assert row_indices is not Ellipsis, ('Ellipsis (...) not supported; '
+                                             'use all-inclusive slices (: or '
+                                             'slice(None)) instead. See '
+                                             'pandas issue GH-10956.')
         global _conversion_cache
 
         def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
@@ -349,13 +482,14 @@ class Table(MutableSequence, Storage):
             if domain == source.domain:
                 return cls.from_table_rows(source, row_indices)
 
-            if isinstance(row_indices, slice):
+            if row_indices is Ellipsis or \
+                    isinstance(row_indices, slice) and row_indices == slice(None):
+                n_rows = len(source)
+            elif isinstance(row_indices, slice):
                 start, stop, stride = row_indices.indices(source.X.shape[0])
                 n_rows = (stop - start) // stride
                 if n_rows < 0:
                     n_rows = 0
-            elif row_indices is ...:
-                n_rows = len(source)
             else:
                 n_rows = len(row_indices)
 
@@ -405,6 +539,10 @@ class Table(MutableSequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        assert row_indices is not Ellipsis, ('Ellipsis (...) not supported; '
+                                             'use all-inclusive slices (: or '
+                                             'slice(None)) instead. See '
+                                             'pandas issue GH-10956.')
         self = cls()
         self.domain = source.domain
         self.X = source.X[row_indices]
@@ -654,7 +792,7 @@ class Table(MutableSequence, Storage):
                 self.ids.resize(old_length)
             raise
 
-    def __getitem__(self, key):
+    def __getitem_old__(self, key):
         if isinstance(key, Integral):
             return RowInstance(self, key)
         if not isinstance(key, tuple):
@@ -698,7 +836,7 @@ class Table(MutableSequence, Storage):
             domain = self.domain
         return self.from_table(domain, self, row_idx)
 
-    def __setitem__(self, key, value):
+    def __setitem_old__(self, key, value):
         if not self._check_all_dense():
             raise ValueError(
                 "Assignment to rows of sparse data is not supported")
@@ -800,10 +938,10 @@ class Table(MutableSequence, Storage):
         return self.X.shape[0]
 
     def __str__(self):
-        return "[" + ",\n ".join(str(ex) for ex in self)
+        return "[" + ",\n ".join(str(ex) for _, ex in self.iterrows())
 
     def __repr__(self):
-        s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
+        s = "[" + ",\n ".join(repr(ex) for _, ex in self.iloc[:5].iterrows())
         if len(self) > 5:
             s += ",\n ..."
         s += "\n]"
@@ -884,8 +1022,10 @@ class Table(MutableSequence, Storage):
                         self.W[old_length:] = 1
                 self.ids[old_length:] = instances.ids
             else:
+                if isinstance(instances, Table):
+                    instances = (inst for _, inst in instances.iterrows())
                 for i, example in enumerate(instances):
-                    self[old_length + i] = example
+                    self.iloc[old_length + i] = example
                     try:
                         self.ids[old_length + i] = example.id
                     except AttributeError:
@@ -895,7 +1035,7 @@ class Table(MutableSequence, Storage):
             raise
 
     @staticmethod
-    def concatenate(tables, axis=1):
+    def concatenate(tables, axis=1, **kwargs):
         """Return concatenation of `tables` by `axis`."""
         if not tables:
             raise ValueError('need at least one table to concatenate')
@@ -1033,17 +1173,17 @@ class Table(MutableSequence, Storage):
         """Return `True` if there are any missing class values."""
         return bn.anynan(self._Y)
 
+    @deprecated('hash(table)')
     def checksum(self, include_metas=True):
-        # TODO: zlib.adler32 does not work for numpy arrays with dtype object
-        # (after pickling and unpickling such arrays, checksum changes)
-        # Why, and should we fix it or remove it?
-        """Return a checksum over X, Y, metas and W."""
-        cs = zlib.adler32(np.ascontiguousarray(self.X))
-        cs = zlib.adler32(np.ascontiguousarray(self._Y), cs)
-        if include_metas:
-            cs = zlib.adler32(np.ascontiguousarray(self.metas), cs)
-        cs = zlib.adler32(np.ascontiguousarray(self.W), cs)
-        return cs
+        return hash(self)
+
+    def __hash__(self):
+        # NOTE: doesn't work well with dtype=object
+        return (hash(self.domain) ^
+                hash(self.X.data.tobytes()) ^
+                hash(self.Y.data.tobytes()) ^
+                hash(tuple(self.metas.flat if not sp.issparse(self.metas) else
+                           self.metas.data)))
 
     def shuffle(self):
         """Randomly shuffle the rows of the table."""
@@ -1464,7 +1604,7 @@ class Table(MutableSequence, Storage):
         # - arbitrary meta column to feature names
         self.X = table.X.T
         attributes = [ContinuousVariable(str(row[feature_names_column]))
-                      for row in table] if feature_names_column else \
+                      for _, row in table.iterrows()] if feature_names_column else \
             [ContinuousVariable("Feature " + str(i + 1).zfill(
                 int(np.ceil(np.log10(n_cols))))) for i in range(n_cols)]
         if old_domain and feature_names_column:

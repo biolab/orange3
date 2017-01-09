@@ -36,7 +36,7 @@ class FeatureConstructorTest(unittest.TestCase):
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
         self.assertEqual(data.domain[name].values, list(values))
         for i in range(3):
-            self.assertEqual(data[i * 50, name], values[i])
+            self.assertEqual(data.loc[data.index[i * 50], name], values[i])
 
     def test_construct_variables_continuous(self):
         data = Table("iris")
@@ -52,8 +52,9 @@ class FeatureConstructorTest(unittest.TestCase):
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
         for i in range(3):
-            self.assertEqual(data[i * 50, name],
-                             pow(data[i * 50, 0] + data[i * 50, 1], 2))
+            self.assertEqual(data.loc[data.index[i * 50], name],
+                             pow(data.loc[data.index[i * 50], data.domain[0]] +
+                                 data.loc[data.index[i * 50], data.domain[1]], 2))
 
     def test_construct_variables_string(self):
         data = Table("iris")
@@ -69,8 +70,8 @@ class FeatureConstructorTest(unittest.TestCase):
                      data)
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
-            self.assertEqual(data[i * 50, name],
-                             str(data[i * 50, "iris"]) + "_name")
+            self.assertEqual(data.loc[data.index[i * 50], name],
+                             str(data.loc[data.index[i * 50], "iris"]) + "_name")
 
 
 GLOBAL_CONST = 2

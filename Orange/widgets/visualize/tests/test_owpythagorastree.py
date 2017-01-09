@@ -101,11 +101,11 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         cls.signal_data = cls.model
 
         # Set up for widget tests
-        titanic_data = Table('titanic')[::50]
+        titanic_data = Table('titanic').iloc[::50]
         cls.titanic = TreeClassificationLearner(max_depth=1)(titanic_data)
         cls.titanic.instances = titanic_data
 
-        housing_data = Table('housing')[:10]
+        housing_data = Table('housing').iloc[:10]
         cls.housing = TreeRegressionLearner(max_depth=1)(housing_data)
         cls.housing.instances = housing_data
 

@@ -20,7 +20,7 @@ class TestOWDataSampler(WidgetTest):
         self.widget.controls.sampling_type.buttons[2].click()
         self.send_signal("Data", self.iris)
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
-        self.send_signal("Data", self.iris[:5])
+        self.send_signal("Data", self.iris.iloc[:5])
         self.assertTrue(self.widget.Error.too_many_folds.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())

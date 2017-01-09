@@ -18,6 +18,7 @@ from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
 from Orange.statistics.contingency import Continuous, Discrete, get_contingencies
 from Orange.statistics.distribution import get_distributions
 from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+from Orange.util import OrangeDeprecationWarning
 
 
 @sql_test
@@ -593,7 +594,8 @@ class TestSqlTable(PostgresTest):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)
         iris2 = pickle.loads(pickle.dumps(iris))
 
-        self.assertEqual(iris[0], iris2[0])
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertEqual(iris[0], iris2[0])
 
     def test_list_tables_with_schema(self):
         with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE") as cur:

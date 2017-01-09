@@ -41,7 +41,7 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
 
         # assign data
         self.send_signal("Data", self.titanic)
-        self.assertEqual(self.titanic, self.widget.data)
+        self.assertTrue(self.titanic.equals(self.widget.data))
 
         # output signal should not be sent without a classifier
         self.assertIsNone(self.get_output(self.widget.data_output_identifier))

@@ -24,9 +24,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSlot as Slot
 
-import Orange.data
-from Orange.data.storage import Storage
-from Orange.data.table import Table
+from Orange.data import Table, Storage, Variable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
@@ -74,7 +72,7 @@ class RichTableDecorator(QIdentityProxyModel):
             self._continuous = [var.is_continuous for var in source.vars]
             labels = []
             for var in source.vars:
-                if isinstance(var, Orange.data.Variable):
+                if isinstance(var, Variable):
                     labels.extend(var.attributes.keys())
             self._labels = list(sorted(
                 {label for label in labels if not label.startswith("_")}))
@@ -838,7 +836,7 @@ class OWDataTable(widget.OWWidget):
                     attrs = table.domain.attributes
                 class_vars = select_vars(TableModel.ClassVar)
                 metas = select_vars(TableModel.Meta)
-                domain = Orange.data.Domain(attrs, class_vars, metas)
+                domain = Domain(attrs, class_vars, metas)
 
             # Avoid a copy if all/none rows are selected.
             if not rowsel:
@@ -1005,7 +1003,7 @@ def format_summary(summary):
 def is_sortable(table):
     if isinstance(table, SqlTable):
         return False
-    elif isinstance(table, Orange.data.Table):
+    elif isinstance(table, Table):
         return True
     else:
         return False
@@ -1035,7 +1033,7 @@ def test_model():
     view = QTableView(
         sortingEnabled=True
     )
-    data = Orange.data.Table("lenses")
+    data = Table("lenses")
     model = TableModel(data)
 
     view.setModel(model)

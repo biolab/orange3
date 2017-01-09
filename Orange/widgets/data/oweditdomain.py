@@ -517,7 +517,6 @@ class OWEditDomain(widget.OWWidget):
         new_var = editor.get_data().copy(compute_value=Orange.preprocess.transformation.Identity(old_var))
         self.domain_model[self.selected_index] = new_var
 
-
         # Store the transformation hint.
         old_var_desc = variable_description(old_var, skip_attributes=True)
         self.domain_change_hints[old_var_desc] = variable_description(new_var)

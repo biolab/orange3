@@ -15,16 +15,16 @@ class TestOWTranspose(WidgetTest):
 
     def test_data(self):
         """Check widget's data and the output with data on the input"""
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
         self.send_signal("Data", self.zoo)
-        self.assertEqual(self.widget.data, self.zoo)
+        self.assertTrue(self.widget.data.equals(self.zoo))
         output = self.get_output("Data")
         transpose = Table.transpose(self.zoo)
         np.testing.assert_array_equal(output.X, transpose.X)
         np.testing.assert_array_equal(output.Y, transpose.Y)
         np.testing.assert_array_equal(output.metas, transpose.metas)
         self.send_signal("Data", None)
-        self.assertEqual(self.widget.data, None)
+        self.assertIsNone(self.widget.data)
         self.assertIsNone(self.get_output("Data"))
 
     def test_parameters(self):

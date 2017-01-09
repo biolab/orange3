@@ -385,9 +385,9 @@ time,continuous
 
         table = CSVReader(input_csv).read()
         self.assertIsInstance(table.domain['Date'], TimeVariable)
-        self.assertEqual(table[0, 'Date'], '1920-12-12')
+        self.assertEqual(table.iloc[0]['Date'], '1920-12-12')
         # Dates before 1970 are negative
-        self.assertTrue(all(inst['Date'] < 0 for inst in table))
+        self.assertTrue(all(inst['Date'] < 0 for _, inst in table.iterrows()))
 
         CSVReader.write_file(output_csv, table)
         self.assertEqual(input_csv.getvalue().splitlines(),

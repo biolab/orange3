@@ -14,7 +14,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         data = Table('titanic')
         cls.learner = NaiveBayesLearner()
         cls.model = cls.learner(data)
-        cls.table = data[::20]
+        cls.table = data.iloc[::20]
 
     def test_NaiveBayes(self):
         results = CrossValidation(self.table, [self.learner], k=10)
@@ -23,7 +23,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self.assertLess(ca, 0.9)
 
     def test_predict_single_instance(self):
-        for ins in self.table:
+        for _, ins in self.table.iterrows():
             self.model(ins)
             val, prob = self.model(ins, self.model.ValueProbs)
 
@@ -39,9 +39,9 @@ class TestNaiveBayesLearner(unittest.TestCase):
     def test_degenerate(self):
         d = Domain((ContinuousVariable(name="A"), ContinuousVariable(name="B"), ContinuousVariable(name="C")),
                     DiscreteVariable(name="CLASS", values=["M", "F"]))
-        t = Table(d, [[0,1,0,0], [0,1,0,1], [0,1,0,1]])
+        t = Table(d, [[0,1,0,"M"], [0,1,0,"F"], [0,1,0,"F"]])
         nb = NaiveBayesLearner()
         model = nb(t)
         self.assertEqual(model.domain.attributes, ())
-        self.assertEqual(model(t[0]), 1)
+        self.assertEqual(model(t.iloc[0]), 1)
         self.assertTrue(all(model(t) == 1))

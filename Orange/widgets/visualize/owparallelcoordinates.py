@@ -145,7 +145,7 @@ class OWParallelCoordinates(OWVisWidget):
 
         self.__ignore_updates = True
         self.closeContext()
-        same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
+        same_domain = self.data and data and hash(data.domain) == hash(self.data.domain) # preserve attribute choice if the domain is the same
         self.data = data
 
         if not same_domain:

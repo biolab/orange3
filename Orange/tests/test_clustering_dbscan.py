@@ -21,7 +21,7 @@ class TestDBSCAN(unittest.TestCase):
     def test_predict_table(self):
         dbscan = DBSCAN()
         c = dbscan(self.iris)
-        table = self.iris[:20]
+        table = self.iris.iloc[:20]
         p = c(table)
 
     def test_predict_numpy(self):

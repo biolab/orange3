@@ -60,11 +60,11 @@ class IsDefined(Filter):
             except NotImplementedError:
                 pass
 
-        r = np.fromiter((not bn.anynan(inst._x) for inst in data),
+        r = np.fromiter((not bn.anynan(inst._x) for _, inst in data.iterrows()),
                         dtype=bool, count=len(data))
         if self.negate:
             r = np.logical_not(r)
-        return data[r]
+        return data.iloc[r]
 
 
 class HasClass(Filter):
@@ -85,10 +85,10 @@ class HasClass(Filter):
             except NotImplementedError:
                 pass
 
-        r = np.fromiter((not bn.anynan(inst._y) for inst in data), bool, len(data))
+        r = np.fromiter((not bn.anynan(inst._y) for _, inst in data.iterrows()), bool, len(data))
         if self.negate:
             r = np.logical_not(r)
-        return data[r]
+        return data.iloc[r]
 
 
 class Random(Filter):
@@ -121,7 +121,7 @@ class Random(Filter):
         else:
             retain[:n] = True
         np.random.shuffle(retain)
-        return data[retain]
+        return data.iloc[retain]
 
 
 class SameValue(Filter):
@@ -162,23 +162,23 @@ class SameValue(Filter):
         if column >= 0:
             if self.negate:
                 retain = np.fromiter(
-                    (inst[column] != value for inst in data),
+                    (inst.iloc[column] != value for _, inst in data.iterrows()),
                      bool, len(data))
             else:
                 retain = np.fromiter(
-                    (inst[column] == value for inst in data),
+                    (inst.iloc[column] == value for _, inst in data.iterrows()),
                      bool, len(data))
         else:
             column = -1 - column
             if self.negate:
                 retain = np.fromiter(
-                    (inst._metas[column] != value for inst in data),
+                    (inst._metas[column] != value for _, inst in data.iterrows()),
                      bool, len(data))
             else:
                 retain = np.fromiter(
-                    (inst._metas[column] == value for inst in data),
+                    (inst._metas[column] == value for _, inst in data.iterrows()),
                      bool, len(data))
-        return data[retain]
+        return data.iloc[retain]
 
 
 class Values(Filter):
@@ -222,10 +222,10 @@ class Values(Filter):
         else:
             sel, agg = np.zeros(N, bool), np.logical_or
         for cond in self.conditions:
-            sel = agg(sel, np.fromiter((cond(inst) for inst in data), bool, count=N))
+            sel = agg(sel, np.fromiter((cond(inst) for _, inst in data.iterrows()), bool, count=N))
         if self.negate:
             sel = np.logical_not(sel)
-        return data[sel]
+        return data.iloc[sel]
 
 
 class ValueFilter(Filter):
@@ -281,7 +281,7 @@ class FilterDiscrete(ValueFilter):
     def __call__(self, inst):
         if inst.domain is not self.last_domain:
             self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        value = inst.iloc[self.pos_cache]
         if self.values is None:
             return not isnan(value)
         else:
@@ -340,7 +340,7 @@ class FilterContinuous(ValueFilter):
     def __call__(self, inst):
         if inst.domain is not self.last_domain:
             self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        value = inst.iloc[self.pos_cache]
         if isnan(value):
             return self.oper == self.Equal and isnan(self.ref)
         if self.oper == self.Equal:
@@ -451,7 +451,7 @@ class FilterString(ValueFilter):
     def __call__(self, inst):
         if inst.domain is not self.last_domain:
             self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        value = inst.iloc[self.pos_cache]
         if self.oper == self.IsDefined:
             return not np.isnan(value)
         if self.case_sensitive:

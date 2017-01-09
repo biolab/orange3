@@ -145,7 +145,7 @@ class OWRuleViewer(widget.OWWidget):
         self._save_selected(actual=True)
         selected_indices = []
 
-        data = self.data or self.classifier and self.classifier.instances
+        data = self.data if self.data is not None else (self.classifier and self.classifier.instances)
         if (self.selected is not None and
                 data is not None and
                 self.classifier is not None and

@@ -249,7 +249,7 @@ class OWKMeans(widget.OWWidget):
 
     def run(self):
         self.clear_messages()
-        if not self.data:
+        if self.data is None:
             return
         if self.optimize_k:
             self.run_optimization()
@@ -323,7 +323,7 @@ class OWKMeans(widget.OWWidget):
             km = self.optimization_runs[row][1]
         else:
             km = self.km
-        if not self.data or not km:
+        if self.data is None or not km:
             self.send("Annotated Data", None)
             self.send("Centroids", None)
             return
@@ -380,7 +380,7 @@ class OWKMeans(widget.OWWidget):
                  self.output_name,
                  self.OUTPUT_METHODS[self.place_cluster_ids].lower()))
         ))
-        if self.data:
+        if self.data is not None:
             self.report_data("Data", self.data)
             if self.optimize_k:
                 self.report_table(

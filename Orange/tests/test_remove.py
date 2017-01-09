@@ -8,14 +8,13 @@ from Orange.data import Table
 from Orange.preprocess import Remove
 from Orange.tests import test_filename
 
-class TestRemover(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.test8 = Table(test_filename('test8.tab'))
+class TestRemover(unittest.TestCase):
+    def setUp(self):
+        self.test8 = Table(test_filename('test8.tab'))
 
     def test_remove(self):
-        data = Table("iris")[:5]
+        data = Table("iris").iloc[:5]
         attr_flags = sum([Remove.SortValues,
                           Remove.RemoveConstant,
                           Remove.RemoveUnusedValues])
@@ -40,8 +39,8 @@ class TestRemover(unittest.TestCase):
         new_data = remover(data)
         attr_res, class_res = remover.attr_results, remover.class_results
 
-        np.testing.assert_equal(new_data.X, np.hstack((data[:, 1],
-                                                       data[:, 3])))
+        np.testing.assert_equal(new_data.X, np.hstack((data.iloc[:, 1].X,
+                                                       data.iloc[:, 3].X)))
         np.testing.assert_equal(new_data.Y, data.Y)
         self.assertEqual([a.name for a in new_data.domain.attributes],
                          ["c0", "d0"])
@@ -63,8 +62,8 @@ class TestRemover(unittest.TestCase):
         attr_res, class_res = remover.attr_results, remover.class_results
 
         np.testing.assert_equal(new_data.X, data.X)
-        np.testing.assert_equal(new_data.Y, np.hstack((data[:, 4],
-                                                       data[:, 5])))
+        np.testing.assert_equal(new_data.Y, np.c_[data.iloc[:, 4].Y,
+                                                  data.iloc[:, 5].Y])
         self.assertEqual([a.name for a in new_data.domain.attributes],
                          ["c1", "c0", "d1", "d0"])
         self.assertEqual([c.name for c in new_data.domain.class_vars],
@@ -80,7 +79,7 @@ class TestRemover(unittest.TestCase):
 
     def test_remove_unused_values_attr(self):
         data = self.test8
-        data = data[1:]
+        data = data.iloc[1:]
         remover = Remove(Remove.RemoveUnusedValues)
         new_data = remover(data)
         attr_res, class_res = remover.attr_results, remover.class_results
@@ -102,14 +101,14 @@ class TestRemover(unittest.TestCase):
 
     def test_remove_unused_values_class(self):
         data = self.test8
-        data = data[:2]
+        data = data.iloc[:2]
         remover = Remove(class_flags=Remove.RemoveUnusedValues)
         new_data = remover(data)
         attr_res, class_res = remover.attr_results, remover.class_results
 
         for i in range(len(data)):
-            for j in range(len(data[i])):
-                self.assertEqual(new_data[i, j], data[i, j])
+            for j in range(len(data.iloc[i])):
+                self.assertEqual(new_data.iloc[i, j], data.iloc[i, j])
 
         self.assertEqual([a.name for a in new_data.domain.attributes],
                          ["c1", "c0", "d1", "d0"])
@@ -126,7 +125,7 @@ class TestRemover(unittest.TestCase):
 
     def test_remove_unused_values_metas(self):
         data = Table(test_filename("test9.tab"))
-        subset = data[:4]
+        subset = data.iloc[:4]
         res = Remove(attr_flags=Remove.RemoveUnusedValues,
                      meta_flags=Remove.RemoveUnusedValues)(subset)
 

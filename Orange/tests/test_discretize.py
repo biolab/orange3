@@ -168,13 +168,13 @@ class TestDiscretizer(TestCase):
     def test_transform(self):
         table = data.Table('iris')
         table2 = Discretize()(table)
-        ins = data.Instance(table2.domain, table[0])
-        table3 = data.Table(table2.domain, table[:10])
-        self.assertEqual(ins, table3[0])
+        ins = data.Instance(table2.domain, table.iloc[0])
+        table3 = data.Table(table2.domain, table.iloc[:10])
+        self.assertEqual(ins, table3.iloc[0])
 
     def test_remove_constant(self):
         table = data.Table('iris')
-        table[:, 0] = 1
+        table.iloc[:, 0] = 1
         discretize = Discretize(remove_const=True)
         new_table = discretize(table)
         self.assertNotEqual(len(table.domain.attributes),
@@ -182,7 +182,7 @@ class TestDiscretizer(TestCase):
 
     def test_keep_constant(self):
         table = data.Table('iris')
-        table[:, 0] = 1
+        table.iloc[:, 0] = 1
         discretize = Discretize(remove_const=False)
         new_table = discretize(table)
         self.assertEqual(len(table.domain.attributes),

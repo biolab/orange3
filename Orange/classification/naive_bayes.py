@@ -55,7 +55,7 @@ class NaiveBayesModel(Model):
                                             for attr_val, attr_prob
                                             in zip(ins, log_cont_prob)
                                             if not np.isnan(attr_val))
-                                     for ins in data]) + np.log(class_prob))
+                                     for _, ins in data.iterrows()]) + np.log(class_prob))
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs

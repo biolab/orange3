@@ -26,9 +26,9 @@ class TestKNNLearner(unittest.TestCase):
     def test_predict_single_instance(self):
         lrn = KNNLearner()
         clf = lrn(self.iris)
-        for ins in self.iris[::20]:
+        for _, ins in self.iris.iloc[::20].iterrows():
             clf(ins)
-            val, prob = clf(ins, clf.ValueProbs)
+            clf(ins, clf.ValueProbs)
 
     def test_random(self):
         nrows, ncols = 1000, 5

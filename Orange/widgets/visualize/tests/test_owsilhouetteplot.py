@@ -43,11 +43,11 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_insufficient_clusters(self):
         iris = self.data
-        data_one_cluster = iris[:3]  # three instances Iris-setosa only
+        data_one_cluster = iris.iloc[:3]  # three instances Iris-setosa only
         self.send_signal("Data", data_one_cluster)
         self.assertTrue(self.widget.Error.need_two_clusters.is_shown())
 
-        data_singletons = iris[[0, 50, 100]]
+        data_singletons = iris.iloc[[0, 50, 100]]
         assert len(np.unique(data_singletons.Y)) == 3  # 3 instances 3 labels
         self.send_signal("Data", data_singletons)
         self.assertTrue(self.widget.Error.singleton_clusters_all.is_shown())
@@ -55,12 +55,12 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
     def test_unknowns_in_labels(self):
         self.widget.controls.add_scores.setChecked(1)
         scorename = "Silhouette (iris)"
-        data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
+        data = self.data.iloc[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
         data.Y[::3] = np.nan
         valid = ~np.isnan(data.Y.flatten())
         self.send_signal("Data", data)
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        scores = output[:, scorename].metas.flatten()
+        scores = output[scorename].metas.flatten()
         self.assertTrue(np.all(np.isnan(scores[::3])))
         self.assertTrue(np.all(np.isfinite(scores[valid])))
 
@@ -68,7 +68,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         data_1 = data[np.flatnonzero(valid)]
         self.send_signal("Data", data_1)
         output_1 = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        scores_1 = output_1[:, scorename].metas.flatten()
+        scores_1 = output_1[scorename].metas.flatten()
         self.assertTrue(np.all(np.isfinite(scores_1)))
         # the scores must match
         np.testing.assert_almost_equal(scores_1, scores[valid], decimal=12)

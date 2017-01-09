@@ -34,7 +34,7 @@ class TestPCA(unittest.TestCase):
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
     def test_sparse_pca(self):
-        data = self.ionosphere[:100]
+        data = self.ionosphere.iloc[:100]
         self.__sparse_pca_test_helper(data, n_com=3, max_err=1500)
         self.__sparse_pca_test_helper(data, n_com=10, max_err=1000)
         self.__sparse_pca_test_helper(data, n_com=32, max_err=500)
@@ -69,7 +69,7 @@ class TestPCA(unittest.TestCase):
 
     def __ipca_test_helper(self, data, n_com, min_xpl_var):
         pca = IncrementalPCA(n_components=n_com)
-        pca_model = pca(data[::2])
+        pca_model = pca(data.iloc[::2])
         pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
         self.assertGreaterEqual(pca_xpl_var + 1e-6, min_xpl_var)
         self.assertEqual(n_com, pca_model.n_components)
@@ -81,7 +81,7 @@ class TestPCA(unittest.TestCase):
         pc1_pca = PCA(n_components=n_com)(data).components_[0]
         self.assertAlmostEqual(np.linalg.norm(pc1_pca), 1)
         self.assertNotAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 2)
-        pc1_ipca = pca_model.partial_fit(data[1::2]).components_[0]
+        pc1_ipca = pca_model.partial_fit(data.iloc[1::2]).components_[0]
         self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 4)
 
     def test_compute_value(self):

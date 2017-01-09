@@ -179,9 +179,9 @@ class TestInstance(unittest.TestCase):
                                                   (1, "g", domain[1], "M"),
                                                   (2, "y", domain.class_var, "B"),
                                                   (-2, "Meta 2", self.metas[1], 43)):
-            val = inst[idx_int]
+            val = inst.iloc[idx_int]
             self.assertIsInstance(val, Value)
-            self.assertEqual(inst[idx_int], value)
+            self.assertEqual(inst.iloc[idx_int], value)
             self.assertEqual(inst[idx_name], value)
             self.assertEqual(inst[idx_var], value)
 
@@ -220,11 +220,11 @@ class TestInstance(unittest.TestCase):
                                 (-1, -1, "Y"),
                                 ("Meta 1", -1, "Z"),
                                 (domain.metas[0], -1, "X")):
-            inst[idx1] = val
-            self.assertEqual(inst[idx2], val)
+            (inst.iloc if isinstance(idx1, int) else inst)[idx1] = val
+            self.assertEqual(inst.iloc[idx2], val)
 
         with self.assertRaises(ValueError):
-            inst[1] = "N"
+            inst.iloc[1] = "N"
         with self.assertRaises(ValueError):
             inst["asdf"] = 42
 
@@ -289,15 +289,15 @@ class TestInstance(unittest.TestCase):
         self.assertEqual(inst, inst2)
         self.assertEqual(inst2, inst)
 
-        inst2[0] = 43
+        inst2.iloc[0] = 43
         self.assertNotEqual(inst, inst2)
 
-        inst2[0] = Unknown
+        inst2.iloc[0] = Unknown
         self.assertNotEqual(inst, inst2)
 
         for index, val in ((2, "C"), (-1, "Y"), (-2, "33"), (-3, "Bar")):
             inst2 = Instance(domain, vals)
-            inst2[index] = val
+            inst2.iloc[index] = val
             self.assertNotEqual(inst, inst2)
 
     def test_instance_id(self):

@@ -255,15 +255,14 @@ class OWBoxPlot(widget.OWWidget):
 
     # noinspection PyTypeChecker
     def set_data(self, dataset):
-        if dataset is not None and (
-                not bool(dataset) or not len(dataset.domain)):
+        if dataset is not None and (not len(dataset) or not len(dataset.domain)):
             dataset = None
         self.closeContext()
         self.dataset = dataset
         self.dist = self.stats = self.conts = []
         self.group_var = None
         self.attribute = None
-        if dataset:
+        if dataset is not None:
             domain = dataset.domain
             self.group_vars[:] = \
                 [None] + \
@@ -862,8 +861,7 @@ class OWBoxPlot(widget.OWWidget):
         selected, selection = None, []
         if self.conditions:
             selected = Values(self.conditions, conjunction=False)(self.dataset)
-            selection = [i for i, inst in enumerate(self.dataset)
-                         if inst in selected]
+            selection = np.in1d(self.dataset.ids, selected.ids).nonzero()[0]
         self.send("Selected Data", selected)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.dataset, selection))

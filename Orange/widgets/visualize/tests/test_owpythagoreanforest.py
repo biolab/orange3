@@ -15,11 +15,11 @@ class TestOWPythagoreanForest(WidgetTest):
         super().setUpClass()
 
         # Set up for widget tests
-        titanic_data = Table('titanic')[::50]
+        titanic_data = Table('titanic').iloc[::50]
         cls.titanic = RandomForestLearner(n_estimators=3)(titanic_data)
         cls.titanic.instances = titanic_data
 
-        housing_data = Table('housing')[:10]
+        housing_data = Table('housing').iloc[:10]
         cls.housing = RandomForestRegressionLearner(
             n_estimators=3)(housing_data)
         cls.housing.instances = housing_data

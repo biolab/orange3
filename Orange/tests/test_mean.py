@@ -43,8 +43,8 @@ class TestMeanLearner(unittest.TestCase):
 
     def test_empty(self):
         autompg = Table('auto-mpg')
-        clf = self.learn(autompg[:0])
-        y = clf(autompg[0])
+        clf = self.learn(autompg.iloc[:0])
+        y = clf(autompg.iloc[0])
         self.assertEqual(y, 0)
 
     def test_discrete(self):

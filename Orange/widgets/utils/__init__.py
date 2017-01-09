@@ -36,7 +36,7 @@ def checksum(x):
     if x is None:
         return None
     try:
-        return x.checksum()
+        return hash(x)
     except:
         return float('nan')
 

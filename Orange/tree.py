@@ -226,7 +226,7 @@ class TreeModel(Model):
     def get_instances(self, nodes):
         indices = self.get_indices(nodes)
         if indices is not None:
-            return self.instances[indices]
+            return self.instances.iloc[indices]
 
     def get_indices(self, nodes):
         subsets = [node.subset for node in nodes]

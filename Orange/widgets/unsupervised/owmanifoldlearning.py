@@ -228,13 +228,13 @@ class OWManifoldLearning(OWWidget):
     def set_data(self, data):
         self.data = data
         self.n_components_spin.setMaximum(len(self.data.domain.attributes)
-                                          if self.data else 10)
+                                          if self.data is not None else 10)
         self.apply()
 
     def apply(self):
         data = None
         self.clear_messages()
-        if self.data:
+        if self.data is not None:
             with self.progressBar():
                 self.progressBarSet(10)
                 domain = Domain([ContinuousVariable("C{}".format(i))
@@ -268,7 +268,7 @@ class OWManifoldLearning(OWWidget):
         self.report_items((("Method", method_name),))
         parameters = self.get_method_parameters()
         self.report_items("Method parameters", tuple(parameters.items()))
-        if self.data:
+        if self.data is not None:
             self.report_data("Data", self.data)
 
 

@@ -274,7 +274,7 @@ class OWTestLearners(OWWidget):
         Set the input training dataset.
         """
         self.Information.data_sampled.clear()
-        if data and not data.domain.class_vars:
+        if data is not None and not data.domain.class_vars:
             self.Error.class_required()
             data = None
         elif data and len(data.domain.class_vars) > 1:
@@ -297,7 +297,7 @@ class OWTestLearners(OWWidget):
             data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
-            if data:
+            if data is not None:
                 data = RemoveNaNClasses(data)
         else:
             self.Warning.missing_data.clear()
@@ -314,7 +314,7 @@ class OWTestLearners(OWWidget):
         Set the input separate testing dataset.
         """
         self.Information.test_data_sampled.clear()
-        if data and not data.domain.class_var:
+        if data is not None and not data.domain.class_var:
             self.Error.class_required()
             data = None
         else:
@@ -333,7 +333,7 @@ class OWTestLearners(OWWidget):
             data is not None and np.isnan(data.Y).any()
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
-            if data:
+            if data is not None:
                 data = RemoveNaNClasses(data)
         else:
             self.Warning.missing_data.clear()
@@ -560,7 +560,7 @@ class OWTestLearners(OWWidget):
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
         self.class_selection_combo.clear()
-        if not self.data:
+        if self.data is None:
             return
 
         if self.data.domain.has_discrete_class:
@@ -630,7 +630,7 @@ class OWTestLearners(OWWidget):
 
     def send_report(self):
         """Report on the testing schema and results"""
-        if not self.data or not self.learners:
+        if self.data is None or not self.learners:
             return
         if self.resampling == self.KFold:
             stratified = 'Stratified ' if self.cv_stratified else ''

@@ -351,12 +351,12 @@ class WidgetLearnerTestMixin:
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
         self.send_signal("Data", self.data)
-        self.assertEqual(self.widget.data, self.data)
+        self.assertIs(self.widget.data, self.data)
 
     def test_input_data_disconnect(self):
         """Check widget's data and model after disconnecting data from input"""
         self.send_signal("Data", self.data)
-        self.assertEqual(self.widget.data, self.data)
+        self.assertIs(self.widget.data, self.data)
         self.widget.apply_button.button.click()
         self.send_signal("Data", None)
         self.assertEqual(self.widget.data, None)
@@ -526,7 +526,7 @@ class WidgetOutputsTestMixin:
         # check annotated data output
         feature_name = ANNOTATED_DATA_FEATURE_NAME
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(0, np.sum([i[feature_name] for _, i in annotated.iterrows()]))
 
         # select data instances
         selected_indices = self._select_data()
@@ -542,7 +542,7 @@ class WidgetOutputsTestMixin:
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(n_sel, np.sum([i[feature_name] for _, i in annotated.iterrows()]))
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)

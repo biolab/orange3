@@ -91,7 +91,6 @@ Inspection
 .. automethod:: Table.ensure_copy
 .. automethod:: Table.has_missing
 .. automethod:: Table.has_missing_class
-.. automethod:: Table.checksum
 
 Row manipulation
 ----------------

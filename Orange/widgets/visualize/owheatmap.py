@@ -63,15 +63,10 @@ def split_domain(domain, split_label):
 
 
 def vstack_by_subdomain(data, sub_domains):
-    domain = sub_domains[0]
-    newtable = Table(domain)
-
+    table_list = []
     for sub_dom in sub_domains:
-        sub_data = data.from_table(sub_dom, data)
-        # TODO: improve O(N ** 2)
-        newtable.extend(sub_data)
-
-    return newtable
+        table_list.append(data.from_table(sub_dom, data))
+    return Table.concatenate(table_list, axis=0, reindex=False)
 
 
 def select_by_class(data, class_):
@@ -1079,7 +1074,7 @@ class OWHeatMap(widget.OWWidget):
                 row_ix = parts.rows[i].indices
                 col_ix = parts.columns[j].indices
                 hw = GraphicsHeatmapWidget(parent=widget)
-                X_part = data[row_ix, col_ix].X
+                X_part = data.iloc[row_ix, col_ix].X
 
                 if sort_i[i] is not None:
                     X_part = X_part[sort_i[i]]
