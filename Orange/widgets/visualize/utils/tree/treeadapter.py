@@ -165,6 +165,10 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def short_rule(self, node):
+        pass
+
+    @abstractmethod
     def attribute(self, node):
         """Get the attribute that splits the given tree.
 
@@ -311,6 +315,9 @@ class TreeAdapter(BaseTreeAdapter):
 
     def rules(self, node):
         return self.model.rule(node)
+
+    def short_rule(self, node):
+        return node.description
 
     def attribute(self, node):
         return node.attr

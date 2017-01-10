@@ -141,6 +141,9 @@ class SklTreeAdapter(BaseTreeAdapter):
         else:
             return []
 
+    def short_rule(self, node):
+        return self.rules(node)[0].description
+
     def attribute(self, node):
         feature_idx = self.splitting_attribute(node)
         if feature_idx != self.FEATURE_UNDEFINED:

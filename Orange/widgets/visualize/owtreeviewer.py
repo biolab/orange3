@@ -132,8 +132,7 @@ class TreeNode(GraphicsNode):
         font = self.document().defaultFont()
         painter.setFont(font)
         if self.parent:
-            # TODO This is not yet good, description is  >3 for each node
-            draw_text = str(self.tree_adapter.rules(self.node_inst)[0])
+            draw_text = str(self.tree_adapter.short_rule(self.node_inst))
             if self.parent.x() > self.x():  # node is to the left
                 fm = QFontMetrics(font)
                 x = rect.width() / 2 - fm.width(draw_text) - 4
@@ -448,9 +447,9 @@ def test():
     from Orange.regression.tree import TreeLearner, SklTreeRegressionLearner
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
-    # data = Table("iris")
-    data = Table("housing")[:30]
-    clf = SklTreeRegressionLearner()(data)
+    data = Table("iris")
+    # data = Table("housing")[:30]
+    clf = SklTreeLearner()(data)
     # clf = TreeLearner()(data)
     clf.instances = data
 
