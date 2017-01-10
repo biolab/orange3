@@ -321,7 +321,8 @@ class OWTreeGraph(OWTreeViewer2D):
             return
         nodes = [item.node_inst for item in self.scene.selectedItems()
                  if isinstance(item, TreeNode)]
-        data = self.tree_adapter.get_instances_in_nodes(self.dataset, nodes)
+        data = self.tree_adapter.get_instances_in_nodes(
+            self.clf_dataset, nodes)
         self.send("Selected Data", data)
         self.send(ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table(
             self.dataset,
@@ -450,7 +451,6 @@ def test():
     data = Table("titanic")
     # data = Table("housing")[:30]
     clf = SklTreeLearner()(data)
-    print(clf.skl_model.tree_.feature)
     # clf = TreeLearner()(data)
     clf.instances = data
 
