@@ -28,9 +28,9 @@ class OWConcatenate(widget.OWWidget):
     icon = "icons/Concatenate.svg"
 
     inputs = [("Primary Data", Orange.data.Table,
-               "set_primary_data", widget.Default),
+               "set_primary_data"),
               ("Additional Data", Orange.data.Table,
-               "set_more_data", widget.Multiple)]
+               "set_more_data", widget.Multiple | widget.Default)]
     outputs = [("Data", Orange.data.Table)]
 
     #: Domain merging operations
@@ -64,9 +64,9 @@ class OWConcatenate(widget.OWWidget):
         self.primary_data = None
         self.more_data = OrderedDict()
 
-        mergebox = gui.vBox(self.controlArea, "Domain Merging")
+        self.mergebox = gui.vBox(self.controlArea, "Domain Merging")
         box = gui.radioButtons(
-            mergebox, self, "merge_type",
+            self.mergebox, self, "merge_type",
             callback=self._merge_type_changed)
 
         gui.widgetLabel(
@@ -91,7 +91,8 @@ class OWConcatenate(widget.OWWidget):
 
         cb = gui.checkBox(
             box, self, "append_source_column",
-            self.tr("Append data source IDs"))
+            self.tr("Append data source IDs"),
+            callback=self._source_changed)
 
         ibox = gui.indentedBox(box, sep=gui.checkButtonOffsetHint(cb))
 
@@ -104,12 +105,13 @@ class OWConcatenate(widget.OWWidget):
 
         form.addRow(
             self.tr("Feature name:"),
-            gui.lineEdit(ibox, self, "source_attr_name", valueType=str))
+            gui.lineEdit(ibox, self, "source_attr_name", valueType=str,
+                         callback=self._source_changed))
 
         form.addRow(
             self.tr("Place:"),
-            gui.comboBox(ibox, self, "source_column_role", items=self.id_roles)
-        )
+            gui.comboBox(ibox, self, "source_column_role", items=self.id_roles,
+                         callback=self._source_changed))
 
         ibox.layout().addLayout(form)
         mleft, mtop, mright, _ = ibox.layout().getContentsMargins()
@@ -135,6 +137,7 @@ class OWConcatenate(widget.OWWidget):
             del self.more_data[id]
 
     def handleNewSignals(self):
+        self.mergebox.setDisabled(self.primary_data is not None)
         self.apply()
 
     def apply(self):
@@ -179,6 +182,9 @@ class OWConcatenate(widget.OWWidget):
     def _merge_type_changed(self, ):
         if self.primary_data is None and self.more_data:
             self.apply()
+
+    def _source_changed(self):
+        self.apply()
 
     def send_report(self):
         items = OrderedDict()
@@ -261,7 +267,7 @@ def append_columns(data, attributes=(), class_vars=(), metas=()):
     metas = [ascolumn(col) for _, col in metas]
 
     X = numpy.hstack((data.X,) + tuple(attr_cols))
-    Y = numpy.hstack((data.Y,) + tuple(class_cols))
+    Y = numpy.hstack((data._Y,) + tuple(class_cols))
     metas = numpy.hstack((data.metas,) + tuple(metas))
 
     new_data = Orange.data.Table.from_numpy(new_domain, X, Y, metas)
