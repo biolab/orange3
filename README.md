@@ -101,13 +101,17 @@ e.g.:
 Compiling on Windows
 --------------------
 
-Get appropriate wheels for missing libraries. You will need `numpy+mkl <http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy>`_ 
-and `scipy <http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy>`_.
+Get appropriate wheels for missing libraries. You will need [numpy+mkl] and [scipy].
+
+[numpy+mkl]: http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
+[scipy]: http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy
 
 Install them with
 
     pip install some-wheel.whl
 
-Install `Visual Studio compiler <http://landinghub.visualstudio.com/visual-cpp-build-tools>`_. Then go to Orange3 folder and run:
+Install [Visual Studio compiler]. Then go to Orange3 folder and run:
+
+[Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
 
     python setup.py build_ext -i --compiler=msvc install
