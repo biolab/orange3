@@ -8,6 +8,7 @@ from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.widget import Msg
 from Orange.widgets.utils.sql import check_sql_input
 
 
@@ -35,6 +36,9 @@ class OWOutliers(widget.OWWidget):
 
     data_info_default = 'No data on input.'
     in_out_info_default = ' '
+
+    class Error(widget.OWWidget.Error):
+        singular_cov = Msg("Singular covariance matrix.")
 
     def __init__(self):
         super().__init__()
@@ -133,14 +137,14 @@ class OWOutliers(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        self.error()
+        self.clear_messages()
         inliers = outliers = None
         self.n_inliers = self.n_outliers = None
         if self.data is not None and len(self.data) > 0:
             try:
                 y_pred = self.detect_outliers()
             except ValueError:
-                self.error("Singular covariance matrix.")
+                self.Error.singular_cov()
                 self.in_out_info_label.setText(self.in_out_info_default)
             else:
                 inliers_ind = np.where(y_pred == 1)[0]
