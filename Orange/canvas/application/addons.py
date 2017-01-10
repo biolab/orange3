@@ -189,7 +189,7 @@ class AddonManagerWidget(QWidget):
 
     def __init__(self, parent=None, **kwargs):
         super(AddonManagerWidget, self).__init__(parent, **kwargs)
-
+        self.__items = []
         self.setLayout(QVBoxLayout())
 
         self.__header = QLabel(
