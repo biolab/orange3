@@ -352,7 +352,7 @@ class OWTreeGraph(OWTreeViewer2D):
         """Update the printed contents of the node for classification trees"""
         node_inst = node.node_inst
         distr = self.tree_adapter.get_distribution(node_inst)[0]
-        total = len(self.tree_adapter.get_instances_in_nodes(self.dataset, [node_inst]))
+        total = self.tree_adapter.num_samples(node_inst)
         distr = distr / np.sum(distr)
         if self.target_class_index:
             tabs = distr[self.target_class_index - 1]
@@ -376,7 +376,7 @@ class OWTreeGraph(OWTreeViewer2D):
         """Update the printed contents of the node for regression trees"""
         node_inst = node.node_inst
         mean, var = self.tree_adapter.get_distribution(node_inst)[0]
-        insts = len(self.tree_adapter.get_instances_in_nodes(self.dataset, [node_inst]))
+        insts = self.tree_adapter.num_samples(node_inst)
         text = "{:.1f} ± {:.1f}<br/>".format(mean, var)
         text += "{} instances".format(insts)
         text = self._update_node_info_attr_name(node, text)
@@ -447,9 +447,10 @@ def test():
     from Orange.regression.tree import TreeLearner, SklTreeRegressionLearner
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
-    data = Table("iris")
+    data = Table("titanic")
     # data = Table("housing")[:30]
     clf = SklTreeLearner()(data)
+    print(clf.skl_model.tree_.feature)
     # clf = TreeLearner()(data)
     clf.instances = data
 
