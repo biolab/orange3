@@ -1,6 +1,6 @@
 import sklearn.ensemble as skl_ensemble
 
-from Orange.base import RandomForest
+from Orange.base import RandomForestModel
 from Orange.regression import SklLearner, SklModel
 from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess.score import LearnerScorer
@@ -18,7 +18,7 @@ class _FeatureScorerMixin(LearnerScorer):
         return model.skl_model.feature_importances_
 
 
-class RandomForestRegressor(SklModel, RandomForest):
+class RandomForestRegressor(SklModel, RandomForestModel):
     @property
     def trees(self):
         def wrap(tree, i):

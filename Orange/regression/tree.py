@@ -3,6 +3,7 @@
 import numpy as np
 import sklearn.tree as skl_tree
 
+from Orange.base import TreeModel as TreeModelInterface
 from Orange.tree import Node, DiscreteNode, MappedDiscreteNode, \
     NumericNode, TreeModel
 from Orange.regression import SklLearner, SklModel, Learner
@@ -162,10 +163,8 @@ class TreeLearner(Learner):
         return model
 
 
-class SklTreeRegressor(SklModel):
-    @property
-    def tree(self):
-        return self.skl_model.tree_
+class SklTreeRegressor(SklModel, TreeModelInterface):
+    pass
 
 
 class SklTreeRegressionLearner(SklLearner):

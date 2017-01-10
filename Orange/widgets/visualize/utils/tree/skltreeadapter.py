@@ -19,55 +19,23 @@ class SklTreeAdapter(BaseTreeAdapter):
 
     Parameters
     ----------
-    tree : sklearn.tree._tree.Tree
-        The raw sklearn classification tree.
-    domain : Orange.base.domain
-        The Orange domain that comes with the model.
-    adjust_weight : Callable, optional
-        If you want finer control over the weights of individual nodes you can
-        pass in a function that takes the existsing weight and modifies it.
-        The given function must have signture :: Number -> Number
+    model : SklModel
+        An sklearn tree model instance.
 
     """
 
     NO_CHILD = -1
     FEATURE_UNDEFINED = -2
 
-    def __init__(self, tree, domain, adjust_weight=lambda x: x):
-        self._tree = tree
-        self._domain = domain
-        self._adjust_weight = adjust_weight
+    def __init__(self, model):
+        self._tree = model.skl_model.tree_
+        self._domain = model.domain
 
         self._all_leaves = None
 
     @memoize_method(maxsize=1024)
     def weight(self, node):
-        return self._adjust_weight(self.num_samples(node)) / \
-               self._adjusted_child_weight(self.parent(node))
-
-    @memoize_method(maxsize=1024)
-    def _adjusted_child_weight(self, node):
-        """Helps when dealing with adjusted weights.
-
-        It is needed when dealing with non linear weights e.g. when calculating
-        the log weight, the sum of logs of all the children will not be equal
-        to the log of all the data instances.
-        A simple example: log(2) + log(2) != log(4)
-
-        Parameters
-        ----------
-        node : int
-            The label of the node.
-
-        Returns
-        -------
-        float
-            The sum of all of the weights of the children of a given node.
-
-        """
-        return sum(self._adjust_weight(self.num_samples(c))
-                   for c in self.children(node)) \
-            if self.has_children(node) else 0
+        return self.num_samples(node) / self.num_samples(self.parent(node))
 
     def num_samples(self, node):
         return self._tree.n_node_samples[node]
@@ -295,3 +263,17 @@ class SklTreeAdapter(BaseTreeAdapter):
             indices = []
 
         return dataset[indices] if len(indices) else None
+
+    def get_indices(self, nodes):
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
+
+        node_leaves = [self.leaves(n) for n in nodes]
+        if len(node_leaves) > 0:
+            # get the leaves of the selected tree node
+            node_leaves = np.unique(np.hstack(node_leaves))
+
+            all_leaves = self.leaves(self.root)
+
+            return np.searchsorted(all_leaves, node_leaves)
+        return []

@@ -356,7 +356,11 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
 
 
-class RandomForest:
+class TreeModel(Model):
+    pass
+
+
+class RandomForestModel(Model):
     """Interface for random forest models
     """
 

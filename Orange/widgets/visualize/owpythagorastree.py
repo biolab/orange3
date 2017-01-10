@@ -16,7 +16,6 @@ to be used, and the methods need to be implemented, then it should work for any
 kind of trees.
 
 """
-import sys
 from math import sqrt, log
 
 import numpy as np
@@ -25,10 +24,11 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QSizePolicy
 from AnyQt.QtGui import QColor, QPainter
 
-from Orange.tree import TreeModel
+from Orange.base import TreeModel, SklModel
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
 from Orange.widgets.visualize.utils.tree.rules import Rule
+from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
 from Orange.widgets.visualize.utils.view import (
     PannableGraphicsView,
     ZoomableGraphicsView,
@@ -345,6 +345,8 @@ class OWPythagorasTree(OWWidget):
         self.view.update_anchored_items()
 
     def _get_tree_adapter(self, model):
+        if isinstance(model, SklModel):
+            return SklTreeAdapter(model)
         return TreeAdapter(model)
 
     def onDeleteWidget(self):
@@ -363,7 +365,7 @@ class OWPythagorasTree(OWWidget):
         data = self.tree_adapter.get_instances_in_nodes(
             self.clf_dataset, nodes)
         self.send('Selected Data', data)
-        selected_indices = self.model.get_indices(nodes)
+        selected_indices = self.tree_adapter.get_indices(nodes)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.instances, selected_indices))
 
@@ -607,37 +609,27 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     pass
 
 
-def main(argv=sys.argv):
+def main():
     from AnyQt.QtWidgets import QApplication
-    import Orange
+    import sys
 
-    app = QApplication(list(argv))
-    argv = app.arguments()
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = 'iris'
+    app = QApplication(sys.argv)
 
     ow = OWPythagorasTree()
-    data = Orange.data.Table(filename)
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
 
     if data.domain.has_discrete_class:
-        from Orange.classification.tree import TreeLearner
+        from Orange.classification.tree import SklTreeLearner as TreeLearner
     else:
-        from Orange.regression.tree import TreeLearner
+        from Orange.regression.tree import SklTreeRegressionLearner as TreeLearner
     model = TreeLearner(max_depth=1000)(data)
-
     model.instances = data
-
     ow.set_tree(model)
 
     ow.show()
     ow.raise_()
     ow.handleNewSignals()
     app.exec_()
-
-    sys.exit(0)
 
 if __name__ == '__main__':
     main()
