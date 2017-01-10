@@ -260,6 +260,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
+        labels = numpy.asarray(labels, dtype=float)
         mask = numpy.isnan(labels)
         labels = labels.astype(int)
         labels = labels[~mask]
