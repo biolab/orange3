@@ -133,6 +133,8 @@ class ErrorReporting(QDialog):
 
         if QSettings().value('error-reporting/add-scheme', True, type=bool):
             data[F.WIDGET_SCHEME] = data['_' + F.WIDGET_SCHEME]
+        else:
+            data.pop(F.WIDGET_SCHEME, None)
         del data['_' + F.WIDGET_SCHEME]
 
         def _post_report(data):
