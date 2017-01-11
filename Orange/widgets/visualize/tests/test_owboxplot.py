@@ -128,6 +128,11 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                           'rest ECG', 'cholesterol',
                           'fasting blood sugar > 120', 'diameter narrowing'])
 
+    def test_box_order_when_missing_stats(self):
+        self.widget.compare = 1
+        # The widget can't do anything smart here, but shouldn't crash
+        self.send_signal("Data", self.iris[49:51])
+
     def test_saved_selection(self):
         self.send_signal("Data", self.data)
         selected_indices = self._select_data()
