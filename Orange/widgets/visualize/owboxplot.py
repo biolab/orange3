@@ -447,8 +447,11 @@ class OWBoxPlot(widget.OWWidget):
         self.order = list(range(len(self.stats)))
         criterion = self._sorting_criteria_attrs[self.compare]
         if criterion:
-            self.order = sorted(
-                self.order, key=lambda i: getattr(self.stats[i], criterion))
+            vals = [getattr(stat, criterion) for stat in self.stats]
+            overmax = max((val for val in vals if val is not None), default=0) \
+                      + 1
+            vals = [val if val is not None else overmax for val in vals]
+            self.order = sorted(self.order, key=vals.__getitem__)
 
         heights = 90 if self.show_annotations else 60
 
@@ -553,6 +556,8 @@ class OWBoxPlot(widget.OWWidget):
         # The non-parametric tests can't do this, so we use statistics.tests
         def stat_ttest():
             d1, d2 = self.stats
+            if d1.n == 0 or d2.n == 0:
+                return np.nan, np.nan
             pooled_var = d1.var / d1.n + d2.var / d2.n
             df = pooled_var ** 2 / \
                 ((d1.var / d1.n) ** 2 / (d1.n - 1) +
@@ -566,6 +571,8 @@ class OWBoxPlot(widget.OWWidget):
         # TODO: Check this function
         # noinspection PyPep8Naming
         def stat_ANOVA():
+            if any(stat.n == 0 for stat in self.stats):
+                return np.nan, np.nan
             n = sum(stat.n for stat in self.stats)
             grand_avg = sum(stat.n * stat.mean for stat in self.stats) / n
             var_between = sum(stat.n * (stat.mean - grand_avg) ** 2
@@ -892,8 +899,11 @@ class OWBoxPlot(widget.OWWidget):
         y_up = -len(self.stats) * height + 10
         for pos, box_index in enumerate(self.order):
             stat = self.stats[box_index]
-            x = getattr(stat, crit_line) * self.scale_x
-            xs.append(x)
+            x = getattr(stat, crit_line)
+            if x is None:
+                continue
+            x *= self.scale_x
+            xs.append(x * self.scale_x)
             by = y_up + pos * height
             line(by + 12, 3)
             line(by - 12, by - 25)
