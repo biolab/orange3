@@ -119,7 +119,6 @@ class TestAUC(unittest.TestCase):
 
     def test_auc_scores(self):
         actual = np.array([0., 0., 0., 1., 1., 1.])
-
         for predicted, auc in (([1., 1., 1., 0., 0., 0.], 0.),      # All wrong
                                ([0., 0., 0., 0., 0., 0.], 0.5),     # All with same probability
                                ([0., 0., 0., 1., 1., 1.], 1.),      # All correct
@@ -130,9 +129,13 @@ class TestAUC(unittest.TestCase):
 
     def compute_auc(self, actual, predicted):
         predicted = np.array(predicted).reshape(1, -1)
+        probabilities = np.zeros((1, predicted.shape[1], 2))
+        probabilities[0,:,1] = predicted[0]
+        probabilities[0,:,0] = 1 - predicted[0]
         results = Results(
             nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
             actual=actual, predicted=predicted)
+        results.probabilities = probabilities
         return AUC(results)[0]
 
 
@@ -216,3 +219,6 @@ class TestF1(unittest.TestCase):
         res_target = F1(results, target=0)
         self.assertEqual(res_target[0], 1.)
         self.assertAlmostEqual(res_target[1], 3 / 4)
+
+if __name__ == '__main__':
+    unittest.main()
