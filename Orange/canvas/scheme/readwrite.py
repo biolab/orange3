@@ -1004,7 +1004,7 @@ def literal_dumps(obj, prettyprint=False, indent=4):
     NoneType = type(None)
 
     def check(obj):
-        if type(obj) in [int, int, float, bool, NoneType, str, str]:
+        if type(obj) in [int, float, bool, NoneType, str, bytes]:
             return True
 
         if id(obj) in memo:
