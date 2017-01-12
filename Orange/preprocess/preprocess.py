@@ -459,7 +459,11 @@ class Scale(Preprocess):
             else:
                 s = 1
             factor = 1 / s
-            return var.copy(compute_value=transformation.Normalizer(var, c, factor))
+            transformed_var = var.copy(
+                compute_value=transformation.Normalizer(var, c, factor))
+            if s != 1:
+                transformed_var.number_of_decimals = 3
+            return transformed_var
 
         newvars = []
         for var in data.domain.attributes:
