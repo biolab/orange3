@@ -1,9 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
+
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
 
-from Orange.data import Table, DiscreteVariable, Domain
+from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay, MosaicVizRank
 
@@ -25,6 +27,14 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
             QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
             Qt.LeftButton, Qt.KeyboardModifiers()))
         return [2, 3, 9, 23, 29, 30, 34, 35, 37, 42, 47, 49]
+
+    def test_continuous_metas(self):
+        """Check widget for dataset with continuous metas"""
+        domain = Domain([ContinuousVariable("c1")],
+                        metas=[ContinuousVariable("m")])
+        data = Table(domain, np.arange(6).reshape(6, 1),
+                     metas=np.arange(6).reshape(6, 1))
+        self.send_signal("Data", data)
 
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
