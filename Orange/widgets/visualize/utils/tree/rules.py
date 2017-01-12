@@ -31,6 +31,10 @@ class Rule:
         """
         raise NotImplementedError()
 
+    @property
+    def description(self):
+        return str(self)
+
 
 class DiscreteRule(Rule):
     """Discrete rule class for handling Indicator rules.
@@ -67,6 +71,10 @@ class DiscreteRule(Rule):
         # be eq or not eq.
         warnings.warn('Merged two discrete rules `%s` and `%s`' % (self, rule))
         return rule
+
+    @property
+    def description(self):
+        return '{} {}'.format('=' if self.equals else '≠', self.value)
 
     def __str__(self):
         return '{} {} {}'.format(
@@ -129,6 +137,10 @@ class ContinuousRule(Rule):
         else:
             lt_rule, gt_rule = (rule, self) if self.greater else (self, rule)
             return IntervalRule(self.attr_name, gt_rule, lt_rule)
+
+    @property
+    def description(self):
+        return '%s %.3f' % ('>' if self.greater else '≤', self.value)
 
     def __str__(self):
         return '%s %s %.3f' % (
@@ -196,6 +208,15 @@ class IntervalRule(Rule):
                 self.attr_name,
                 self.left_rule.merge_with(rule.left_rule),
                 self.right_rule.merge_with(rule.right_rule))
+
+    @property
+    def description(self):
+        return '∈ %s%.3f, %.3f%s' % (
+            '[' if self.left_rule.inclusive else '(',
+            self.left_rule.value,
+            self.right_rule.value,
+            ']' if self.right_rule.inclusive else ')'
+        )
 
     def __str__(self):
         return '%s ∈ %s%.3f, %.3f%s' % (
