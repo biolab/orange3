@@ -406,10 +406,10 @@ class Scale(Preprocess):
         def __call__(self, *args, **kwargs):
             return getattr(Scale, '_' + self.name)(*args, **kwargs)
 
-    CenteringType = _MethodEnum('Scale', 'Mean, Median', type=int)
-    ScalingType = _MethodEnum('Scale', 'Std, Span', type=int)
-    Mean, Median = CenteringType
-    Std, Span = ScalingType
+    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median', type=int)
+    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span', type=int)
+    NoCentering, Mean, Median = CenteringType
+    NoScaling, Std, Span = ScalingType
 
     @staticmethod
     def _Mean(dist):
@@ -446,13 +446,13 @@ class Scale(Preprocess):
 
         def transform(var):
             dist = distribution.get_distribution(data, var)
-            if self.center:
+            if self.center != self.NoCentering:
                 c = self.center(dist)
                 dist[0, :] -= c
             else:
                 c = 0
 
-            if self.scale:
+            if self.scale != self.NoScaling:
                 s = self.scale(dist)
                 if s < 1e-15:
                     s = 1

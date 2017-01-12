@@ -30,7 +30,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, \
-    ProjectCUR, Scale, Randomize as _Randomize
+    ProjectCUR, Scale as _Scale, Randomize as _Randomize
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
@@ -666,41 +666,22 @@ class Scale(BaseEditor):
         self.__scalecb.activated.connect(self.edited)
 
     def setParameters(self, params):
-        center = params.get("center", Scale.CenterMean)
-        scale = params.get("scale", Scale.ScaleBySD)
-        self.__centercb.setCurrentIndex(_enum_to_index(Scale.CenteringType, center))
-        self.__scalecb.setCurrentIndex(_enum_to_index(Scale.ScalingType, scale))
+        center = params.get("center", _Scale.CenteringType.Mean)
+        scale = params.get("scale", _Scale.ScalingType.Std)
+        self.__centercb.setCurrentIndex(_enum_to_index(_Scale.CenteringType, center))
+        self.__scalecb.setCurrentIndex(_enum_to_index(_Scale.ScalingType, scale))
 
     def parameters(self):
-        return {"center": _index_to_enum(Scale.CenteringType,
+        return {"center": _index_to_enum(_Scale.CenteringType,
                                          self.__centercb.currentIndex()),
-                "scale": _index_to_enum(Scale.ScalingType,
+                "scale": _index_to_enum(_Scale.ScalingType,
                                         self.__scalecb.currentIndex())}
 
     @staticmethod
     def createinstance(params):
-        center = params.get("center", Scale.CenterMean)
-        scale = params.get("scale", Scale.ScaleBySD)
-
-        if center == Scale.NoCentering:
-            center = None
-        elif center == Scale.CenterMean:
-            center = Scale.Mean
-        elif center == Scale.CenterMedian:
-            center = Scale.Median
-        else:
-            assert False
-
-        if scale == Scale.NoScaling:
-            scale = None
-        elif scale == Scale.ScaleBySD:
-            scale = Scale.Std
-        elif scale == Scale.ScaleBySpan:
-            scale = Scale.Span
-        else:
-            assert False
-
-        return Scale(center=center, scale=scale)
+        center = params.get("center", _Scale.CenteringType.Mean)
+        scale = params.get("scale", _Scale.ScalingType.Std)
+        return _Scale(center=center, scale=scale)
 
     def __repr__(self):
         return "{}, {}".format(self.__centercb.currentText(),

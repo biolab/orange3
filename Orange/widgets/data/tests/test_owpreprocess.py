@@ -4,7 +4,7 @@
 import numpy as np
 
 from Orange.data import Table
-from Orange.preprocess import Randomize
+from Orange.preprocess import Randomize, Scale
 from Orange.widgets.data.owpreprocess import OWPreprocess
 from Orange.widgets.tests.base import WidgetTest
 
@@ -27,3 +27,16 @@ class TestOWPreprocess(WidgetTest):
         np.testing.assert_array_equal(self.zoo.X, output.X)
         np.testing.assert_array_equal(self.zoo.Y, output.Y)
         np.testing.assert_array_equal(self.zoo.metas, output.metas)
+
+    def test_normalize(self):
+        data = Table("iris")
+        saved = {"preprocessors": [("orange.preprocess.scale",
+                                    {"center": Scale.CenteringType.Mean,
+                                     "scale": Scale.ScalingType.Std})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal("Data", data)
+        output = self.get_output("Preprocessed Data")
+
+        np.testing.assert_allclose(output.X.mean(0), 0, atol=1e-7)
+        np.testing.assert_allclose(output.X.std(0), 1, atol=1e-7)
