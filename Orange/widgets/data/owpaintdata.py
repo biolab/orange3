@@ -990,7 +990,7 @@ class OWPaintData(OWWidget):
         """Set the input_data and call reset_to_input"""
         def _check_and_set_data(data):
             self.clear_messages()
-            if data is not None:
+            if data is not None and len(data):
                 if not data.domain.attributes:
                     self.Warning.no_input_variables()
                     data = None
@@ -998,7 +998,7 @@ class OWPaintData(OWWidget):
                     self.Information.use_first_two()
             self.input_data = data
             self.btResetToInput.setDisabled(data is None)
-            return data is not None
+            return data is not None and len(data)
 
         if not _check_and_set_data(data):
             return
