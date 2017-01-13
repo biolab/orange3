@@ -212,7 +212,7 @@ class OWBoxPlot(widget.OWWidget):
         self.compare_rb = gui.radioButtonsInBox(
             self.display_box, self, 'compare',
             btnLabels=["No comparison", "Compare medians", "Compare means"],
-            callback=self.display_changed)
+            callback=self.layout_changed)
 
         # The vertical size policy is needed to let only the list views expand
         self.stretching_box = gui.checkBox(
@@ -457,7 +457,7 @@ class OWBoxPlot(widget.OWWidget):
 
         for row, box_index in enumerate(self.order):
             y = (-len(self.stats) + row) * heights + 10
-            for item in self.boxes[box_index].childItems():
+            for item in self.boxes[box_index]:
                 self.box_scene.addItem(item)
                 item.setY(y)
             labels = self.labels[box_index]
@@ -531,16 +531,15 @@ class OWBoxPlot(widget.OWWidget):
                 self.box_scene.addItem(label)
 
             if self.attribute is not self.group_var:
-                for text_item, bar_part in zip(box.childItems()[1::2],
-                                               box.childItems()[::2]):
+                for text_item, bar_part in zip(box[1::2], box[::2]):
                     label = QGraphicsSimpleTextItem(
                         text_item.toPlainText())
                     label.setPos(bar_part.boundingRect().x(),
                                  y - label.boundingRect().height() - 8)
                     self.box_scene.addItem(label)
-            for text_item in box.childItems()[1::2]:
-                box.removeFromGroup(text_item)
-            for item in box.childItems():
+            for item in box:
+                if isinstance(item, QGraphicsTextItem):
+                    continue
                 self.box_scene.addItem(item)
                 item.setPos(0, y)
         self.box_scene.setSceneRect(-self.label_width - 5,
@@ -803,42 +802,44 @@ class OWBoxPlot(widget.OWWidget):
             return QGraphicsLineItem(x0 * scale_x, y0, x1 * scale_x, y1, *args)
 
         scale_x = self.scale_x
-        box = QGraphicsItemGroup()
-        whisker1 = line(stat.a_min, -1.5, stat.a_min, 1.5, box)
-        whisker2 = line(stat.a_max, -1.5, stat.a_max, 1.5, box)
-        vert_line = line(stat.a_min, 0, stat.a_max, 0, box)
-        mean_line = line(stat.mean, -height / 3, stat.mean, height / 3, box)
+        box = []
+        whisker1 = line(stat.a_min, -1.5, stat.a_min, 1.5)
+        whisker2 = line(stat.a_max, -1.5, stat.a_max, 1.5)
+        vert_line = line(stat.a_min, 0, stat.a_max, 0)
+        mean_line = line(stat.mean, -height / 3, stat.mean, height / 3)
         for it in (whisker1, whisker2, mean_line):
             it.setPen(self._pen_paramet)
         vert_line.setPen(self._pen_dotted)
-        var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0, box)
+        var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0)
         var_line.setPen(self._pen_paramet)
-
+        box.extend([whisker1, whisker2, vert_line, mean_line, var_line])
         if stat.q25 is not None and stat.q75 is not None:
             mbox = FilterGraphicsRectItem(
                 stat.conditions, stat.q25 * scale_x, -height / 2,
-                (stat.q75 - stat.q25) * scale_x, height, box)
+                (stat.q75 - stat.q25) * scale_x, height)
             mbox.setBrush(self._box_brush)
             mbox.setPen(QPen(Qt.NoPen))
             mbox.setZValue(-200)
+            box.append(mbox)
 
         if stat.median is not None:
             median_line = line(stat.median, -height / 2,
-                               stat.median, height / 2, box)
+                               stat.median, height / 2)
             median_line.setPen(self._pen_median)
             median_line.setZValue(-150)
+            box.append(median_line)
 
         return box
 
     def strudel(self, dist, group_val_index=None):
         attr = self.attribute
         ss = np.sum(dist)
-        box = QGraphicsItemGroup()
+        box = []
         if ss < 1e-6:
             cond = [FilterDiscrete(attr, None)]
             if group_val_index is not None:
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
-            FilterGraphicsRectItem(cond, 0, -10, 1, 10, box)
+            box.append(FilterGraphicsRectItem(cond, 0, -10, 1, 10))
         cum = 0
         for i, v in enumerate(dist):
             if v < 1e-6:
@@ -849,7 +850,7 @@ class OWBoxPlot(widget.OWWidget):
             cond = [FilterDiscrete(attr, [i])]
             if group_val_index is not None:
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
-            rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12, box)
+            rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
             rect.setBrush(QBrush(QColor(*attr.colors[i])))
             rect.setPen(QPen(Qt.NoPen))
             if self.stretched:
@@ -859,7 +860,8 @@ class OWBoxPlot(widget.OWWidget):
                 tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
             rect.setToolTip(tooltip)
             text = QGraphicsTextItem(attr.values[i])
-            box.addToGroup(text)
+            box.append(rect)
+            box.append(text)
             cum += v
         return box
 
