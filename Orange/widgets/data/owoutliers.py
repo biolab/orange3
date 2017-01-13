@@ -8,6 +8,7 @@ from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.widget import Msg
 from Orange.widgets.utils.sql import check_sql_input
 
 
@@ -35,6 +36,10 @@ class OWOutliers(widget.OWWidget):
 
     data_info_default = 'No data on input.'
     in_out_info_default = ' '
+
+    class Error(widget.OWWidget.Error):
+        singular_cov = Msg("Singular covariance matrix.")
+        multiclass_error = Msg("Multiple class data is not supported")
 
     def __init__(self):
         super().__init__()
@@ -133,25 +138,29 @@ class OWOutliers(widget.OWWidget):
         self.commit()
 
     def commit(self):
-        self.error()
+        self.clear_messages()
         inliers = outliers = None
         self.n_inliers = self.n_outliers = None
         if self.data is not None and len(self.data) > 0:
-            try:
-                y_pred = self.detect_outliers()
-            except ValueError:
-                self.error("Singular covariance matrix.")
-                self.in_out_info_label.setText(self.in_out_info_default)
+            if self.data.Y.ndim > 1:
+                self.Error.multiclass_error()
             else:
-                inliers_ind = np.where(y_pred == 1)[0]
-                outliers_ind = np.where(y_pred == -1)[0]
-                inliers = Table(self.new_domain, self.new_data, inliers_ind)
-                outliers = Table(self.new_domain,
-                                 self.new_data, outliers_ind)
-                self.in_out_info_label.setText('%d inliers, %d outliers' %
-                                               (len(inliers), len(outliers)))
-                self.n_inliers = len(inliers)
-                self.n_outliers = len(outliers)
+                try:
+                    y_pred = self.detect_outliers()
+                except ValueError:
+                    self.Error.singular_cov()
+                    self.in_out_info_label.setText(self.in_out_info_default)
+                else:
+                    inliers_ind = np.where(y_pred == 1)[0]
+                    outliers_ind = np.where(y_pred == -1)[0]
+                    inliers = Table(self.new_domain, self.new_data, inliers_ind)
+                    outliers = Table(self.new_domain,
+                                     self.new_data, outliers_ind)
+                    self.in_out_info_label.setText(
+                        "{} inliers, {} outliers".format(len(inliers),
+                                                         len(outliers)))
+                    self.n_inliers = len(inliers)
+                    self.n_outliers = len(outliers)
 
         self.send("Inliers", inliers)
         self.send("Outliers", outliers)
