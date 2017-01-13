@@ -374,6 +374,7 @@ class OWConfusionMatrix(widget.OWWidget):
             data = Orange.data.Table.from_numpy(domain, X, Y, M)
             data.ids = row_ids
             data.name = learner_name
+            data.attributes = self.data.attributes
 
             if selected:
                 annotated_data = create_annotated_table(data, selected)
