@@ -56,6 +56,9 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
     graph_name = "plot.plotItem"
 
+    class Error(widget.OWWidget.Error):
+        empty_data = widget.Msg("Empty data set")
+
     def __init__(self):
         super().__init__()
 
@@ -95,8 +98,14 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.clear()
-        self.data = data
 
+        if data is not None and not len(data):
+            self.Error.empty_data()
+            data = None
+        else:
+            self.Error.empty_data.clear()
+
+        self.data = data
         if data is not None:
             self.varlist[:] = [var for var in data.domain.variables
                                if var.is_discrete]
