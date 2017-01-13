@@ -48,6 +48,10 @@ class OWPCA(widget.OWWidget):
             "All components of the PCA are trivial (explain 0 variance). "
             "Input data is constant (or near constant).")
 
+    class Error(widget.OWWidget.Error):
+        no_features = widget.Msg("At least 1 feature is required")
+        no_instances = widget.Msg("At least 1 data instance is required")
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -178,6 +182,7 @@ class OWPCA(widget.OWWidget):
         self.fit()
 
     def fit(self):
+        self.clear_messages()
         self.clear()
         self.start_button.setEnabled(False)
         if self.data is None:
@@ -190,6 +195,19 @@ class OWPCA(widget.OWWidget):
             self.start_button.setEnabled(True)
         else:
             self.sampling_box.setVisible(False)
+            if len(data.domain.attributes) == 0:
+                self.Error.no_features()
+                self.send("Transformed data", None)
+                self.send("Components", None)
+                self.send("PCA", None)
+                return
+            if len(data) == 0:
+                self.Error.no_instances()
+                self.send("Transformed data", None)
+                self.send("Components", None)
+                self.send("PCA", None)
+                return
+
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
             cumulative = numpy.cumsum(variance_ratio)
