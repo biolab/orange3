@@ -749,11 +749,11 @@ class OWMap(widget.OWWidget):
 
         def _find_lat_lon():
             lat_attr = next(
-                (attr for attr in data.domain
+                (attr for attr in data.domain.variables + data.domain.metas
                  if attr.is_continuous and
                     attr.name.lower().startswith(('latitude', 'lat'))), None)
             lon_attr = next(
-                (attr for attr in data.domain
+                (attr for attr in data.domain.variables + data.domain.metas
                  if attr.is_continuous and
                     attr.name.lower().startswith(('longitude', 'lng', 'long', 'lon'))), None)
 
