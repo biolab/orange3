@@ -717,6 +717,7 @@ def table_concat(tables):
 
     for table in tables:
         new_table.extend(Orange.data.Table.from_table(domain, table))
+        new_table.attributes.update(table.attributes)
 
     return new_table
 
@@ -1637,6 +1638,7 @@ def append_column(data, where, variable, column):
     domain = Orange.data.Domain(attr, class_vars, metas)
     table = Orange.data.Table.from_numpy(domain, X, Y, M, W if W.size else None)
     table.ids = data.ids
+    table.attributes = data.attributes
     return table
 
 
