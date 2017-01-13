@@ -12,6 +12,9 @@ import functools
 import builtins
 import math
 import random
+import logging
+
+from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
 
@@ -581,7 +584,9 @@ class OWFeatureConstructor(OWWidget):
         try:
             data = Orange.data.Table(new_domain, self.data)
         except Exception as err:
-            self.error(err.args[0])
+            log = logging.getLogger(__name__)
+            log.error("", exc_info=True)
+            self.error("".join(format_exception_only(type(err), err)).rstrip())
             return
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
