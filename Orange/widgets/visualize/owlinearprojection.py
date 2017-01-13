@@ -526,7 +526,7 @@ class OWLinearProjection(widget.OWWidget):
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
         self.data = data
-        if data is not None:
+        if data is not None and len(data):
             self._initialize(data)
             # get the default encoded state, replacing the position with Inf
             state = self._encode_var_state(
