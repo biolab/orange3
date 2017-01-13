@@ -24,3 +24,5 @@ class TestOWDataSampler(WidgetTest):
         self.assertTrue(self.widget.Error.too_many_folds.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
+        self.send_signal("Data", Table(self.iris.domain))
+        self.assertTrue(self.widget.Error.no_data.is_shown())
