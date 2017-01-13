@@ -533,6 +533,8 @@ class OWVennDiagram(widget.OWWidget):
         names = uniquify(names)
 
         for i, (key, input) in enumerate(self.data.items()):
+            if not len(input.table):
+                continue
             if self.useidentifiers:
                 attr = self.itemsetAttr(key)
                 if attr is not None:
