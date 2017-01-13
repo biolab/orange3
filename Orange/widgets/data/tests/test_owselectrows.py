@@ -54,7 +54,7 @@ class TestOWSelectRows(WidgetTest):
 
         for i, (op, _) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
             self.widget.remove_all()
-            self.widget.add_row(0, i, CFValues[op])
+            self.widget.add_row(1, i, CFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
 
@@ -62,10 +62,9 @@ class TestOWSelectRows(WidgetTest):
         zoo = Table("zoo")[::5]
         self.widget.auto_commit = False
         self.widget.set_data(zoo)
-        var_idx = len(zoo.domain)
         for i, (op, _) in enumerate(OWSelectRows.Operators[StringVariable]):
             self.widget.remove_all()
-            self.widget.add_row(var_idx, i, SFValues[op])
+            self.widget.add_row(1, i, SFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
 
