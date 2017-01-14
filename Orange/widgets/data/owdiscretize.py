@@ -309,6 +309,9 @@ class OWDiscretize(widget.OWWidget):
         """
         Update the induced cut points.
         """
+        if self.data is None or not len(self.data):
+            return
+
         def induce_cuts(method, data, var):
             dvar = _dispatch[type(method)](method, data, var)
             if dvar is None:
@@ -327,7 +330,6 @@ class OWDiscretize(widget.OWWidget):
                 points, dvar = induce_cuts(state.method, self.data, var)
                 new_state = state._replace(points=points, disc_var=dvar)
                 self._set_var_state(i, new_state)
-        self.commit()
 
     def _method_index(self, method):
         return METHODS.index((type(method), ))
@@ -389,6 +391,7 @@ class OWDiscretize(widget.OWWidget):
             if isinstance(self.var_state[i].method, Default):
                 self._set_var_state(i, state)
         self._update_points()
+        self.commit()
 
     def _disc_method_changed(self):
         self._update_spin_positions()
@@ -398,6 +401,7 @@ class OWDiscretize(widget.OWWidget):
         for idx in indices:
             self._set_var_state(idx, state)
         self._update_points()
+        self.commit()
 
     def _var_selection_changed(self, *args):
         indices = self.selected_indices()
@@ -461,7 +465,7 @@ class OWDiscretize(widget.OWWidget):
 
     def commit(self):
         output = None
-        if self.data is not None:
+        if self.data is not None and len(self.data):
             domain = self.discretized_domain()
             output = self.data.from_table(domain, self.data)
         self.send("Data", output)
