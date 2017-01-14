@@ -173,7 +173,9 @@ class OWSelectRows(widget.OWWidget):
             minimumContentsLength=12,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row
-        for var in filter_visible(chain(self.data.domain.variables, self.data.domain.metas)):
+        for var in filter_visible(chain(self.data.domain.class_vars,
+                                        self.data.domain.metas,
+                                        self.data.domain.attributes)):
             attr_combo.addItem(*gui.attributeItem(var))
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
