@@ -1,7 +1,7 @@
-Map
-===
+Geo Map
+=======
 
-.. figure:: icons/map.png
+.. figure:: icons/geomap.png
 
 Show data points on a world map.
 
@@ -35,7 +35,7 @@ Signals
 Description
 -----------
 
-**Map** widget maps geo-spatial data on a world map. It only works on data sets containing latitude and longitude variables. It also enables class predictions when a learner is provided on the input.
+**Geo Map** widget maps geo-spatial data on a world map. It only works on data sets containing latitude and longitude variables. It also enables class predictions when a learner is provided on the input.
 
 .. figure:: images/map-stamped.png
 

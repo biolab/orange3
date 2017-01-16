@@ -43,7 +43,7 @@ def get_owwidgets(top_module_name):
                 module_name = top_module_name + '.' + os.path.join(root, file).replace(os.path.sep, '.')[:-len('.py')]
                 try:
                     module = import_module(module_name, top_module_name[:top_module_name.index('.')])
-                except ImportError:
+                except (ImportError, RuntimeError):
                     warnings.warn('Failed to import module: ' + module_name)
                     continue
                 for name, value in module.__dict__.items():

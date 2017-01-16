@@ -1,0 +1,68 @@
+html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; user-select: none !important;}
+.leaflet-control-attribution { pointer-events: none; }
+.leaflet-popup-pane { cursor: default; }
+.leaflet-popup-close-button { display: none; }
+
+.custom-button { width:16px;vertical-align: text-bottom; }
+.custom-button-toggle { background: #ccf !important;}
+canvas#heatmap_canvas,
+canvas#icons_canvas {display: none}
+
+.orange-marker {
+    /* Make points at low zoom (<100%) haligned. */
+    line-height: 0;
+}
+.orange-marker span {
+    font-size: 10pt;
+    overflow: visible;
+    white-space: nowrap;
+    color: black;
+    background: #ddd;
+    border-radius: 5px;
+    float: right;
+    position: absolute;
+    bottom: 0px;
+    margin-left: 0px;
+    z-index: inherit;
+}
+.orange-marker-selected img {
+    -webkit-filter: drop-shadow(0px 0px 1.5px lime) drop-shadow(0px 0px 1.5px lime) !important;
+    filter: drop-shadow(0px 0px 1.5px lime) drop-shadow(0px 0px 1.5px lime) !important;
+}
+
+.legend {
+    background: rgba(240, 230, 230, .85);
+    padding: 1em;
+    border: 1px solid gray;
+    cursor: default;
+}
+.hide {
+    display: none;
+}
+.legend h3 {
+    margin-top: 1em;
+    margin-bottom: 0;
+    font-size: 1.1em;
+}
+.legend .legend-box:first-child h3 {
+    margin: 0;
+}
+.legend hr { margin: .1em; }
+
+.legend-box {
+    max-height: 30%;
+}
+.legend-box table.continuous {
+    height: 8em;
+}
+.legend-box table.colors img {
+    height: 100%;
+}
+.legend-box table tr:first-child td:last-child {vertical-align: top}
+.legend-box table tr:last-child td:last-child {vertical-align: bottom}
+.legend-box table.sizes tr:last-child td:last-child {position:relative; bottom: 3px}
+
+.legend-icon {
+    width: 2em;
+    display: inline-block;
+}

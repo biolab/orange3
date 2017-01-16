@@ -495,6 +495,8 @@ elif HAVE_WEBENGINE:
         def _evalJS(self, code):
             while not self._jsobject_channel.is_all_exposed():
                 qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            if sip.isdeleted(self):
+                return
             self.runJavaScript(code,
                                lambda result: setattr(self, '_result', result))
             while self._result is _NOTSET:
@@ -507,7 +509,7 @@ elif HAVE_WEBENGINE:
 
         def html(self):
             self.page().toHtml(lambda html: setattr(self, '_html', html))
-            while self._html is _NOTSET:
+            while self._html is _NOTSET and not sip.isdeleted(self):
                 qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
             html, self._html = self._html, _NOTSET
             return html
