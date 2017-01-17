@@ -118,7 +118,7 @@ class LeafletMap(WebviewWidget):
         self._recompute_jittering_offsets()
 
         if fit_bounds:
-            self.fit_to_bounds(True)
+            QTimer.singleShot(1, self.fit_to_bounds)
         else:
             self.redraw_markers_overlay_image(new_image=True)
 
@@ -128,8 +128,12 @@ class LeafletMap(WebviewWidget):
         lat_data, lon_data = self._latlon_data.T
         north, south = np.nanmax(lat_data), np.nanmin(lat_data)
         east, west = np.nanmin(lon_data), np.nanmax(lon_data)
-        self.evalJS('map.%sBounds([[%f, %f], [%f, %f]], {padding: [0,0], minZoom: 2, maxZoom: 13})'
-                    % ('flyTo' if fly else 'fit', south, west, north, east))
+        script = ('map.%sBounds([[%f, %f], [%f, %f]], {padding: [0,0], minZoom: 2, maxZoom: 13})' %
+                  ('flyTo' if fly else 'fit', south, west, north, east))
+        self.evalJS(script)
+        # Sometimes on first data, it doesn't zoom in enough. So let do it
+        # once more for good measure!
+        self.evalJS(script)
 
     def selected_area(self, north, east, south, west):
         indices = np.array([])
