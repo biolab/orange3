@@ -4,7 +4,11 @@ import random
 
 import numpy as np
 
-from AnyQt.QtCore import QEvent
+from AnyQt.QtCore import QEvent, Qt
+from AnyQt.QtWidgets import QComboBox
+from AnyQt.QtTest import QTest
+
+import Orange.data
 
 from Orange.distance import Euclidean
 from Orange.widgets.unsupervised.owmds import OWMDS
@@ -45,3 +49,41 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
             output.X[2, 4:], np.array([-2.90231621, -0.13535431]))
         np.testing.assert_array_almost_equal(
             output.X[3, 4:], np.array([-2.75269913, -0.33885988]))
+
+    def test_nan_plot(self):
+        nan = np.nan
+        domain = Orange.data.Domain(
+            [Orange.data.ContinuousVariable("X{}".format(i))
+             for i in range(5)],
+            Orange.data.DiscreteVariable("D", values=["a", "b", "c"]),
+            [Orange.data.StringVariable("S"),
+             Orange.data.ContinuousVariable("XM")]
+        )
+        data = Orange.data.Table.from_numpy(
+            domain,
+            np.array(
+                [[nan, 2, 3, 2, nan],
+                 [2, nan, 1, nan, 2],
+                 [3, 1, nan, 1, 3],
+                 [2, nan, 1, nan, 2],
+                 [nan, 2, 3, 2, nan]]
+            ),
+            np.array([[1], [nan], [1], [nan], [1]]),
+            np.array([["a", nan], ["", 1], ["b", 1], ["", 1], ["c", nan]],
+                     dtype=object)
+        )
+        self.send_signal("Data", data)
+
+        def run_combo(cbox):
+            # type: (QComboBox) -> None
+            assert cbox.focusPolicy() & Qt.TabFocus
+            cbox.setFocus(Qt.TabFocusReason)
+            cbox.setCurrentIndex(-1)
+            for i in range(cbox.count()):
+                QTest.keyClick(cbox, Qt.Key_Down)
+
+        run_combo(self.widget.cb_color_value)
+        run_combo(self.widget.cb_shape_value)
+        run_combo(self.widget.cb_size_value)
+        run_combo(self.widget.cb_label_value)
+
