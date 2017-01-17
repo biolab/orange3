@@ -52,10 +52,14 @@ class WebviewWidgetTest(WidgetTest):
         self.assertRaises(ValueError, w.exposeObject, 'obj', QDialog())
 
     def test_escape_hides(self):
+        # NOTE: This test doesn't work as it is supposed to.
         window = QDialog()
         w = WebviewWidget(window)
         window.show()
         w.setFocus(Qt.OtherFocusReason)
         self.assertFalse(window.isHidden())
+        # This event is sent to the wrong widget. Should be sent to the
+        # inner HTML view as focused, but no amount of clicking/ focusing
+        # helped, neither did invoking JS handler directly. I'll live with it.
         QTest.keyClick(w, Qt.Key_Escape)
         self.assertTrue(window.isHidden())
