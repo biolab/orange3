@@ -4,6 +4,7 @@ into Qt. WebviewWidget provides a somewhat uniform interface (_WebViewBase)
 around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
+import os
 import warnings
 from random import random
 from collections.abc import Mapping, Set, Sequence, Iterable
@@ -40,6 +41,8 @@ except ImportError:
 
 _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')
+
+_ORANGE_DEBUG = os.environ.get('ORANGE_DEBUG')
 
 
 class _QWidgetJavaScriptWrapper(QObject):
@@ -83,8 +86,8 @@ if HAVE_WEBENGINE:
         _EXPOSED_OBJ_PREFIX = '__ORANGE_'
 
         def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
+            debug = debug or _ORANGE_DEBUG
             if debug:
-                import os
                 port = os.environ.setdefault('QTWEBENGINE_REMOTE_DEBUGGING', '12088')
                 warnings.warn(
                     'To debug QWebEngineView, set environment variable '
@@ -193,6 +196,7 @@ if HAVE_WEBKIT:
 
             self.bridge = bridge
             self.frame = None
+            debug = debug or _ORANGE_DEBUG
             self.debug = debug
 
             if isinstance(bridge, QWidget):

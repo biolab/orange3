@@ -111,6 +111,16 @@ implicitly.
 [doctests]: https://en.wikipedia.org/wiki/Doctest
 
 
+Environment variables
+---------------------
+Set these environment variables for value-added behavior:
+
+* `ORANGE_DEBUG=1` - general developing and debugging. Influences stuff like
+  DOM Inspector in QWebView right-click menu, etc.
+* `ORANGE_DEPRECATIONS_ERROR=1` - whether warnings of type
+  `OrangeDeprecationWarning` should be raised as exceptions.
+
+
 Commit messages
 ---------------
 Make a separate commit for each logical change you introduce. We prefer
