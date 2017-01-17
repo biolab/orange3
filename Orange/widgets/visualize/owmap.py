@@ -65,6 +65,7 @@ class LeafletMap(WebviewWidget):
         self.data = None
         self.model = None
         self._domain = None
+        self._latlon_data = None
 
         self._jittering = None
         self._color_attr = None
@@ -91,9 +92,9 @@ class LeafletMap(WebviewWidget):
         self.lat_attr = None
         self.lon_attr = None
         self._image_token = np.nan  # Stop drawing previous image
+        self._owwidget.progressBarFinished(None)
 
-        if (data is None or
-                not (len(data) and lat_attr and lon_attr) or
+        if (data is None or not len(data) or
                 lat_attr not in data.domain or
                 lon_attr not in data.domain):
             self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
@@ -102,12 +103,17 @@ class LeafletMap(WebviewWidget):
         lat_attr = data.domain[lat_attr]
         lon_attr = data.domain[lon_attr]
 
-        fit_bounds = (self._domain is not data.domain or
+        fit_bounds = (self._domain != data.domain or
                       self.lat_attr is not lat_attr or
                       self.lon_attr is not lon_attr)
         self.lat_attr = lat_attr
         self.lon_attr = lon_attr
         self._domain = data.domain
+
+        self._latlon_data = np.array([
+            self.data.get_column_view(self.lat_attr)[0],
+            self.data.get_column_view(self.lon_attr)[0]],
+            dtype=float, order='F').T
 
         self._recompute_jittering_offsets()
 
@@ -119,8 +125,7 @@ class LeafletMap(WebviewWidget):
     def fit_to_bounds(self, fly=True):
         if self.data is None:
             return
-        lat_data = self.data.get_column_view(self.lat_attr)[0]
-        lon_data = self.data.get_column_view(self.lon_attr)[0]
+        lat_data, lon_data = self._latlon_data.T
         north, south = np.nanmax(lat_data), np.nanmin(lat_data)
         east, west = np.nanmin(lon_data), np.nanmax(lon_data)
         self.evalJS('map.%sBounds([[%f, %f], [%f, %f]], {padding: [0,0], minZoom: 2, maxZoom: 13})'
@@ -130,8 +135,7 @@ class LeafletMap(WebviewWidget):
         indices = np.array([])
         prev_selected_indices = self._selected_indices
         if self.data is not None and (north != south and east != west):
-            lat = self.data.get_column_view(self.lat_attr)[0]
-            lon = self.data.get_column_view(self.lon_attr)[0]
+            lat, lon = self._latlon_data.T
             indices = ((lat <= north) & (lat >= south) &
                        (lon <= east) & (lon >= west))
             if self._selected_indices is not None:
@@ -195,7 +199,7 @@ class LeafletMap(WebviewWidget):
             self._legend_colors = []
         else:
             if variable.is_continuous:
-                self._raw_color_values = values = self.data.get_column_view(variable)[0]
+                self._raw_color_values = values = self.data.get_column_view(variable)[0].astype(float)
                 self._scaled_color_values = scale(values)
                 self._colorgen = ContinuousPaletteGenerator(*variable.colors)
                 min = np.nanmin(values)
@@ -265,7 +269,7 @@ class LeafletMap(WebviewWidget):
             self._legend_sizes = []
         else:
             assert variable.is_continuous
-            self._raw_sizes = values = self.data.get_column_view(variable)[0]
+            self._raw_sizes = values = self.data.get_column_view(variable)[0].astype(float)
             # Note, [5, 60] is also hardcoded in legend-size-indicator.svg
             self._sizes = scale(values, 5, 60).astype(np.uint8)
             min = np.nanmin(values)
@@ -325,8 +329,7 @@ class LeafletMap(WebviewWidget):
 
     def _update_js_markers(self, visible, in_subset):
         self._visible = visible
-        latlon = np.c_[self.data.get_column_view(self.lat_attr)[0],
-                       self.data.get_column_view(self.lon_attr)[0]]
+        latlon = self._latlon_data
         self.exposeObject('latlon_data', dict(data=latlon[visible]))
         self.exposeObject('jittering_offsets',
                           self._jittering_offsets[visible] if self._jittering_offsets is not None else [])
@@ -405,8 +408,7 @@ class LeafletMap(WebviewWidget):
             self._drawing_args = args
         north, east, south, west, width, height, zoom, origin, map_pane_pos = self._drawing_args
 
-        lat = self.data.get_column_view(self.lat_attr)[0]
-        lon = self.data.get_column_view(self.lon_attr)[0]
+        lat, lon = self._latlon_data.T
         visible = ((lat <= north) & (lat >= south) &
                    (lon <= east) & (lon >= west)).nonzero()[0]
         in_subset = (np.in1d(self.data.ids, self._subset_ids)
@@ -565,14 +567,11 @@ class OWMap(widget.OWWidget):
     TILE_PROVIDERS = OrderedDict((
         ('Black and white', 'OpenStreetMap.BlackAndWhite'),
         ('OpenStreetMap', 'OpenStreetMap.Mapnik'),
-        ('Topographic', 'OpenTopoMap'),
-        ('Topographic 2', 'Thunderforest.OpenCycleMap'),
-        ('Topographic 3', 'Thunderforest.Outdoors'),
+        ('Topographic', 'Thunderforest.OpenCycleMap'),
+        ('Topographic 2', 'Thunderforest.Outdoors'),
         ('Satellite', 'Esri.WorldImagery'),
         ('Print', 'Stamen.TonerLite'),
-        ('Light', 'CartoDB.Positron'),
         ('Dark', 'CartoDB.DarkMatter'),
-        ('Railways', 'Thunderforest.Transport'),
         ('Watercolor', 'Stamen.Watercolor'),
     ))
 
@@ -736,7 +735,7 @@ class OWMap(widget.OWWidget):
         if data is None:
             return self.clear()
 
-        all_vars = list(chain(self.data.domain, self.data.domain.metas))
+        all_vars = list(chain(self.data.domain.variables, self.data.domain.metas))
         continuous_vars = [var for var in all_vars if var.is_continuous]
         discrete_vars = [var for var in all_vars if var.is_discrete]
         primitive_vars = [var for var in all_vars if var.is_primitive()]
@@ -749,29 +748,31 @@ class OWMap(widget.OWWidget):
 
         def _find_lat_lon():
             lat_attr = next(
-                (attr for attr in data.domain.variables + data.domain.metas
+                (attr for attr in all_vars
                  if attr.is_continuous and
                     attr.name.lower().startswith(('latitude', 'lat'))), None)
             lon_attr = next(
-                (attr for attr in data.domain.variables + data.domain.metas
+                (attr for attr in all_vars
                  if attr.is_continuous and
                     attr.name.lower().startswith(('longitude', 'lng', 'long', 'lon'))), None)
 
-            def _is_between(vals, min, max):
+            def _all_between(vals, min, max):
                 return np.all((min <= vals) & (vals <= max))
 
             if not lat_attr:
-                for attr in data.domain:
+                for attr in all_vars:
                     if attr.is_continuous:
-                        values = np.nan_to_num(data.get_column_view(attr)[0])
-                        if _is_between(values, -90, 90):
+                        values = np.nan_to_num(data.get_column_view(attr)[0].astype(float))
+                        if _all_between(values, -90, 90):
                             lat_attr = attr
+                            break
             if not lon_attr:
-                for attr in data.domain:
+                for attr in all_vars:
                     if attr.is_continuous:
-                        values = np.nan_to_num(data.get_column_view(attr)[0])
-                        if _is_between(values, -180, 180):
+                        values = np.nan_to_num(data.get_column_view(attr)[0].astype(float))
+                        if _all_between(values, -180, 180):
                             lon_attr = attr
+                            break
 
             return lat_attr, lon_attr
 
@@ -782,17 +783,22 @@ class OWMap(widget.OWWidget):
             self.lat_attr = lat.name
             self.lon_attr = lon.name
 
-        self._combo_color.setCurrentIndex(0)
-        self._combo_shape.setCurrentIndex(0)
-        self._combo_size.setCurrentIndex(0)
-        self._combo_label.setCurrentIndex(0)
-        self._combo_class.setCurrentIndex(0)
+        if data.domain.class_var:
+            self.color_attr = data.domain.class_var.name
+        elif len(self._color_model):
+            self._combo_color.setCurrentIndex(0)
+        if len(self._shape_model):
+            self._combo_shape.setCurrentIndex(0)
+        if len(self._size_model):
+            self._combo_size.setCurrentIndex(0)
+        if len(self._label_model):
+            self._combo_label.setCurrentIndex(0)
+        if len(self._class_model):
+            self._combo_class.setCurrentIndex(0)
 
         self.openContext(data)
 
-        if self.lat_attr in self.data.domain and self.lon_attr in self.data.domain:
-            self.map.set_data(self.data, self.lat_attr, self.lon_attr)
-
+        self.map.set_data(self.data, self.lat_attr, self.lon_attr)
         self.map.set_marker_color(self.color_attr, update=False)
         self.map.set_marker_label(self.label_attr, update=False)
         self.map.set_marker_shape(self.shape_attr, update=False)
