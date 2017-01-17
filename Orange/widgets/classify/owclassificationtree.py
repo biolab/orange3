@@ -99,13 +99,13 @@ class OWClassificationTree(OWTreeLearner):
         if not self.binary_trees:
             return True
         max_values, max_attr = max(
-            ((len(attr.values), attr)
+            ((len(attr.values), attr.name)
              for attr in self.data.domain.attributes if attr.is_discrete),
             default=(0, None))
         MAX_BINARIZATION = TreeLearner.MAX_BINARIZATION
         if max_values > MAX_BINARIZATION:
             self.Error.cannot_binarize(
-                max_attr.name, max_values, MAX_BINARIZATION)
+                max_attr, max_values, MAX_BINARIZATION)
             return False
         return True
 
