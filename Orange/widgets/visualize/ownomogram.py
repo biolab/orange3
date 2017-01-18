@@ -103,6 +103,8 @@ class DotItem(BaseDotItem):
             return
         total = sum(item.value for item in self.movable_dot_items)
         self.move_to_val(total)
+        if self.get_probabilities:
+            self.parentItem().rescale()
 
     def get_tooltip_text(self):
         value = self.value
@@ -319,11 +321,13 @@ class RulerItem(QGraphicsWidget):
                     return True
             return False
 
+        self.text_items_with_values = []
         shown_items = []
         w = QGraphicsSimpleTextItem(labels[0]).boundingRect().width()
         text_finish = values[0] * scale - w + offset - 10
         for i, (label, value) in enumerate(zip(labels, values)):
             text = QGraphicsSimpleTextItem(label)
+            self.text_items_with_values.append((values[i], text))
             x_text = value * scale - text.boundingRect().width() / 2 + offset
             if text_finish > x_text - 10:
                 y_text, y_tick = self.dot_r * 0.7, -self.tick_height
@@ -348,6 +352,11 @@ class RulerItem(QGraphicsWidget):
                 half_tick = QGraphicsLineItem(x, 0, x, self.half_tick_height)
                 half_tick.setParentItem(self)
             old_x_tick = x_tick
+
+    def rescale(self):
+        func = self.dot.get_probabilities
+        for value, item in self.text_items_with_values:
+            item.setText(str(np.round(func(value), 2)))
 
 
 class DiscreteFeatureItem(RulerItem):
@@ -528,6 +537,7 @@ class OWNomogram(OWWidget):
     ACCEPTABLE = (NaiveBayesModel, LogisticRegressionClassifier)
     settingsHandler = DomainContextHandler()
     target_class_index = ContextSetting(0)
+    normalize_probabilities = Setting(False)
     align = Setting(1)
     scale = Setting(1)
     display_index = Setting(0)
@@ -563,11 +573,18 @@ class OWNomogram(OWWidget):
         self.vertical_line = None
         self.hidden_vertical_line = None
         self.old_target_class_index = self.target_class_index
+        self.markers_set = False
 
         # GUI
+        box = gui.vBox(self.controlArea, "Target class")
         self.class_combo = gui.comboBox(
-            self.controlArea, self, "target_class_index", "Target class",
-            callback=self._class_combo_changed, contentsLength=12)
+            box, self, "target_class_index", callback=self._class_combo_changed,
+            contentsLength=12)
+        self.norm_check = gui.checkBox(
+            box, self, "normalize_probabilities", "Normalize probabilities",
+            callback=self._norm_check_changed,
+            tooltip="For multiclass data 1 vs. all probabilities do not"
+                    " sum to 1 and therefore could be normalized.")
 
         self.scale_radio = gui.radioButtons(
             self.controlArea, self, "scale", ["Point scale", "Log odds ratios"],
@@ -623,6 +640,11 @@ class OWNomogram(OWWidget):
         self.update_scene()
         self.old_target_class_index = self.target_class_index
 
+    def _norm_check_changed(self):
+        values = [item.dot.value for item in self.feature_items]
+        self.feature_marker_values = self.scale_back(values)
+        self.update_scene()
+
     def _radio_button_changed(self):
         values = [item.dot.value for item in self.feature_items]
         self.feature_marker_values = self.scale_back(values)
@@ -666,11 +688,14 @@ class OWNomogram(OWWidget):
 
     def update_controls(self):
         self.class_combo.clear()
+        self.norm_check.setHidden(True)
         self.cont_feature_dim_combo.setEnabled(True)
         if self.domain:
             self.class_combo.addItems(self.domain.class_vars[0].values)
             if len(self.domain.attributes) > self.MAX_N_ATTRS:
                 self.display_index = 1
+            if len(self.domain.class_vars[0].values) > 2:
+                self.norm_check.setHidden(False)
             if not self.domain.has_continuous_attributes():
                 self.cont_feature_dim_combo.setEnabled(False)
                 self.cont_feature_dim_index = 0
@@ -894,12 +919,46 @@ class OWNomogram(OWWidget):
         nomogram_footer = NomogramItem()
         total_item = RulerItem(total_text, values, scale_x, name_offset,
                                - scale_x * min_sum, title="Total")
+
+        def get_normalized_probabilities(val):
+            if not self.normalize_probabilities:
+                return 1 / (1 + np.exp(k[cls_index] - val / d_))
+            totals = self.__get_totals_for_class_values(minimums)
+            p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
+            return 1 / (1 + np.exp(k[cls_index] - val / d_)) / p_sum
+
+        self.markers_set = False
         probs_item = RulerItem(
             probs_text, values, scale_x, name_offset, - scale_x * min_sum,
             title="P({}='{}')".format(cls_var.name, cls_var.values[cls_index]),
-            get_probabilities=lambda f: 1 / (1 + np.exp(k[cls_index] - f / d_)))
+            get_probabilities=get_normalized_probabilities)
+        self.markers_set = True
         nomogram_footer.add_items([total_item, probs_item])
         return total_item, probs_item, nomogram_footer
+
+    def __get_totals_for_class_values(self, minimums):
+        cls_index = self.target_class_index
+        marker_values = [item.dot.value for item in self.feature_items]
+        if not self.markers_set:
+            marker_values = self.scale_forth(marker_values)
+        totals = np.empty(len(self.domain.class_var.values))
+        totals[cls_index] = sum(marker_values)
+        marker_values = self.scale_back(marker_values)
+        for i in range(len(self.domain.class_var.values)):
+            if i == cls_index:
+                continue
+            coeffs = [np.nan_to_num(p[i] / p[cls_index]) for p in self.points]
+            points = [p[cls_index] for p in self.points]
+            total = sum([self.get_points_from_coeffs(v, c, p) for (v, c, p)
+                         in zip(marker_values, coeffs, points)])
+            if self.align == OWNomogram.ALIGN_LEFT:
+                points = [p - m for m, p in zip(minimums, points)]
+                total -= sum([min(p) for p in [p[i] for p in self.points]])
+            d = 100 / max(max(abs(p)) for p in points)
+            if self.scale == OWNomogram.POINT_SCALE:
+                total *= d
+            totals[i] = total
+        return totals
 
     def set_feature_marker_values(self):
         if not (len(self.points) and len(self.feature_items)):
