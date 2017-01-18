@@ -22,6 +22,10 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
     def setUp(self):
         self.widget = self.create_widget(OWMosaicDisplay)
 
+    def test_no_data(self):
+        """Check that the widget doesn't crash on empty data"""
+        self.send_signal("Data", self.data[:0])
+
     def _select_data(self):
         self.widget.select_area(1, QMouseEvent(
             QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,

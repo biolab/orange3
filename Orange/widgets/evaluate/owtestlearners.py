@@ -165,6 +165,8 @@ class OWTestLearners(OWWidget):
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
     class Error(OWWidget.Error):
+        train_data_empty = Msg("Train data set is empty.")
+        test_data_empty = Msg("Test data set is empty.")
         class_required = Msg("Train data input requires a target variable.")
         too_many_classes = Msg("Too many target variables.")
         class_required_test = Msg("Test data input requires a target variable.")
@@ -274,6 +276,10 @@ class OWTestLearners(OWWidget):
         Set the input training dataset.
         """
         self.Information.data_sampled.clear()
+        self.Error.train_data_empty.clear()
+        if data is not None and not len(data):
+            self.Error.train_data_empty()
+            data = None
         if data and not data.domain.class_vars:
             self.Error.class_required()
             data = None
@@ -314,6 +320,10 @@ class OWTestLearners(OWWidget):
         Set the input separate testing dataset.
         """
         self.Information.test_data_sampled.clear()
+        self.Error.test_data_empty.clear()
+        if data is not None and not len(data):
+            self.Error.test_data_empty()
+            data = None
         if data and not data.domain.class_var:
             self.Error.class_required()
             data = None
@@ -388,7 +398,8 @@ class OWTestLearners(OWWidget):
 
         if self.resampling == OWTestLearners.TestOnTest:
             if self.test_data is None:
-                self.Warning.test_data_missing()
+                if not self.Error.test_data_empty.is_shown():
+                    self.Warning.test_data_missing()
                 return
             elif self.test_data.domain.class_var != class_var:
                 self.Error.class_inconsistent()

@@ -120,12 +120,12 @@ class OWContinuize(widget.OWWidget):
 
     def commit(self):
         continuizer = self.constructContinuizer()
-        if self.data is not None:
+        if self.data is not None and len(self.data):
             domain = continuizer(self.data)
             data = Table.from_table(domain, self.data)
             self.send("Data", data)
         else:
-            self.send("Data", None)
+            self.send("Data", self.data)  # None or empty data
 
     def send_report(self):
         self.report_items(

@@ -695,6 +695,8 @@ class OWHeatMap(widget.OWWidget):
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
 
+        if data is not None and not len(data):
+            data = None
 
         if data is not None and sp.issparse(data.X):
             try:

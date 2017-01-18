@@ -202,6 +202,12 @@ class OWPredictions(widget.OWWidget):
 
     def handleNewSignals(self):
         self.clear_messages()
+        if self.data is not None and not len(self.data):
+            # The logic of this widget is complicated, so let us just pretend
+            # that we have not data. (Even issuing an error message here doesn't
+            # work since the next signal would clear it.). If the widget
+            # shows nothing, the user will check the data table anyway.
+            self.data = None
         if self.data is not None:
             for inputid, pred in list(self.predictors.items()):
                 if pred.results is None or numpy.isnan(pred.results[0]).all():
