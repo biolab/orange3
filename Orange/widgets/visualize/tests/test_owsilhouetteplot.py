@@ -24,6 +24,10 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
                                          stored_settings={"auto_commit": True})
         self.widget = self.widget  # type: OWSilhouettePlot
 
+    def test_no_data(self):
+        """Check that the widget doesn't crash on empty data"""
+        self.send_signal("Data", self.data[:0])
+
     def test_outputs_add_scores(self):
         # check output when appending scores
         self.send_signal("Data", self.data)

@@ -246,7 +246,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _update(self):
         # Update/recompute the distances/scores as required
-        if self.data is None:
+        if self.data is None or not len(self.data):
             self._mask = None
             self._silhouette = None
             self._labels = None

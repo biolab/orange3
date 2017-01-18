@@ -41,7 +41,7 @@ class OWDistances(OWWidget):
     class Error(OWWidget.Error):
         no_continuous_features = Msg("No continuous features")
         dense_metric_sparse_data = Msg("Selected metric does not support sparse data")
-        empty_data = Msg("Empty data (shape = {})")
+        empty_data = Msg("Empty data set")
         too_few_observations = Msg("Too few observations for the number of dimensions")
 
     class Warning(OWWidget.Warning):
@@ -127,7 +127,7 @@ class OWDistances(OWWidget):
             data = distance._preprocess(data)
 
         if not data.X.size:
-            self.Error.empty_data(data.X.shape)
+            self.Error.empty_data()
             return
 
         if isinstance(metric, distance.MahalanobisDistance):

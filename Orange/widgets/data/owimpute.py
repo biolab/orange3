@@ -240,6 +240,11 @@ class OWImpute(OWWidget):
         data = self.data
 
         if self.data is not None:
+            if not len(self.data):
+                self.send("Data", self.data)
+                self.modified = False
+                return
+
             drop_mask = np.zeros(len(self.data), bool)
 
             attributes = []

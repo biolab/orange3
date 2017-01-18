@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 import random
 
+from Orange.data import Table
 from Orange.widgets.visualize.owlinearprojection import OWLinearProjection
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
@@ -23,3 +24,7 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
         points = random.sample(range(0, len(self.data)), 20)
         self.widget.select_indices(points)
         return sorted(points)
+
+    def test_no_data(self):
+        """Check that the widget doesn't crash on empty data"""
+        self.send_signal("Data", Table(Table("iris").domain))

@@ -154,3 +154,23 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, None, 2)
         self.assertIsNone(self.get_output("Selected Data"))
         self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
+
+    def test_no_data(self):
+        """Check that the widget doesn't crash on empty data"""
+        self.send_signal(self.signal_name, self.data[:0], 1)
+        self.send_signal(self.signal_name, self.data[:100], 2)
+        self.send_signal(self.signal_name, self.data[50:], 3)
+
+        for i in range(1, 4):
+            self.send_signal(self.signal_name, None, i)
+
+        self.send_signal(self.signal_name, self.data[:100], 1)
+        self.send_signal(self.signal_name, self.data[:0], 1)
+        self.send_signal(self.signal_name, self.data[50:], 3)
+
+        for i in range(1, 4):
+            self.send_signal(self.signal_name, None, i)
+
+        self.send_signal(self.signal_name, self.data[:100], 1)
+        self.send_signal(self.signal_name, self.data[50:], 2)
+        self.send_signal(self.signal_name, self.data[:0], 3)

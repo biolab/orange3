@@ -32,6 +32,8 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
             self.assertFalse(self.widget.Information.active)
             self.send_signal("Data", None)
 
+        self.send_signal("Data", self.data[:0])
+
     def test_error_message(self):
         self.send_signal("Data", self.titanic)
         self.assertTrue(self.widget.Error.active)

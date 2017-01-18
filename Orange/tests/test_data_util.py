@@ -11,6 +11,7 @@ class TestDataUtil(unittest.TestCase):
         np.testing.assert_equal(scale([0, 1, 2], -1, 1), [-1, 0, 1])
         np.testing.assert_equal(scale([3, 3, 3]), [1, 1, 1])
         np.testing.assert_equal(scale([.1, .5, np.nan]), [0, 1, np.nan])
+        np.testing.assert_equal(scale(np.array([])), np.array([]))
 
     def test_one_hot(self):
         np.testing.assert_equal(
@@ -18,6 +19,7 @@ class TestDataUtil(unittest.TestCase):
                                          [0, 1, 0],
                                          [0, 0, 1],
                                          [0, 1, 0]])
+        np.testing.assert_equal(one_hot([], int), np.zeros((0, 0), dtype=int))
 
 
 class DummyPlus(SharedComputeValue):
