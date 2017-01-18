@@ -6,6 +6,39 @@ Change Log
 * ...
 
 
+[3.3.10] - 2017-01-18
+--------------------
+##### Enhancements
+* Input/output signal replacement declarations ([#1810](../../pull/1810))
+
+##### Bugfixes
+* MDS Widget: Handle NaN values for plot point styling ([#1931](../../pull/1931))
+* OWPCA: Fix crash for dataset with no rows or no attributes ([#1915](../../pull/1915))
+* OWMosaic: Discretize metas as well ([#1912](../../pull/1912))
+* owfeaturecontructor: Fix an IndexError accessing exception's args ([#1905](../../pull/1905))
+* owrank: Remove `super()` call from `migrate_settings` ([#1902](../../pull/1902))
+* OWBoxPlot: Fix ordering of boxes ([#1900](../../pull/1900))
+* canvas/readwrite: Fix byte literal serialization ([#1898](../../pull/1898))
+* owpca: Handle the case of 0 total variance in the PCA solution ([#1897](../../pull/1897))
+* Copy data attributes for annotated data set ([#1895](../../pull/1895))
+* colorpalette: Fix AttributeError ([#1889](../../pull/1889))
+* OWDistributions: Reset combos when data is removed ([#1887](../../pull/1887))
+* Concatenate bugfix ([#1886](../../pull/1886))
+* OWPredictions: Fix crash when opening report ([#1884](../../pull/1884))
+* owsilhouetteplot: Fix TypeError when cluster column is an object array ([#1876](../../pull/1876))
+* OWSave: Safer Check if Writer Support Sparse ([#1864](../../pull/1864))
+* OWImageViewer: Fix selection with missing values ([#1861](../../pull/1861))
+* owselectcolumns: Fix auto commit on any change ([#1859](../../pull/1859))
+* Table.transpose: Keep metas array two dimensional when no attributes in domain ([#1855](../../pull/1855))
+* Select Rows filter enum ([#1854](../../pull/1854))
+* Scatter plot: don't crash on report without data ([#1840](../../pull/1840))
+* Crash on ctrl-c/cmd-c in widgets without graphs ([#1827](../../pull/1827))
+* Fix crash in listview if labels are changed before calling __setitem__ ([#1825](../../pull/1825))
+* Scatterplot: Allow labelling by string attributes ([#1812](../../pull/1812))
+* Fix copy to clipboard in "Data Table" widget ([#1808](../../pull/1808))
+* TreeGraph: Compatibility with old schemas ([#1804](../../pull/1804))
+
+
 [3.3.9] - 2016-12-02
 --------------------
 ##### Enhancements
@@ -314,7 +347,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.9...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.10...HEAD
+[3.3.10]: https://github.com/biolab/orange3/compare/3.3.9...3.3.10
 [3.3.9]: https://github.com/biolab/orange3/compare/3.3.8...3.3.9
 [3.3.8]: https://github.com/biolab/orange3/compare/3.3.7...3.3.8
 [3.3.7]: https://github.com/biolab/orange3/compare/3.3.6...3.3.7
