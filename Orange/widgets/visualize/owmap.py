@@ -14,9 +14,9 @@ from AnyQt.QtWidgets import qApp
 from Orange.util import color_to_hex
 from Orange.base import Learner
 from Orange.data.util import scale
-from Orange.data import Table, Domain, TimeVariable
+from Orange.data import Table, Domain, TimeVariable, DiscreteVariable, ContinuousVariable
 from Orange.widgets import gui, widget, settings
-from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.webview import WebviewWidget
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, ContinuousPaletteGenerator
 from Orange.widgets.utils.annotated_data import create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
@@ -618,12 +618,18 @@ class OWMap(widget.OWWidget):
                      sendSelectedValue=True,
                      callback=_set_map_provider)
 
-        self._latlon_model = VariableListModel(parent=self)
-        self._class_model = VariableListModel(parent=self)
-        self._color_model = VariableListModel(parent=self)
-        self._shape_model = VariableListModel(parent=self)
-        self._size_model = VariableListModel(parent=self)
-        self._label_model = VariableListModel(parent=self)
+        self._latlon_model = DomainModel(
+            parent=self, valid_types=ContinuousVariable)
+        self._class_model = DomainModel(
+            parent=self, placeholder='(None)', valid_types=DomainModel.PRIMITIVE)
+        self._color_model = DomainModel(
+            parent=self, placeholder='(Same color)', valid_types=DomainModel.PRIMITIVE)
+        self._shape_model = DomainModel(
+            parent=self, placeholder='(Same shape)', valid_types=DiscreteVariable)
+        self._size_model = DomainModel(
+            parent=self, placeholder='(Same size)', valid_types=ContinuousVariable)
+        self._label_model = DomainModel(
+            parent=self, placeholder='(No labels)')
 
         def _set_lat_long():
             self.map.set_data(self.data, self.lat_attr, self.lon_attr)
@@ -740,15 +746,15 @@ class OWMap(widget.OWWidget):
             return self.clear()
 
         all_vars = list(chain(self.data.domain.variables, self.data.domain.metas))
-        continuous_vars = [var for var in all_vars if var.is_continuous]
-        discrete_vars = [var for var in all_vars if var.is_discrete]
-        primitive_vars = [var for var in all_vars if var.is_primitive()]
-        self._latlon_model.wrap(continuous_vars)
-        self._class_model.wrap(['(None)'] + primitive_vars)
-        self._color_model.wrap(['(Same color)'] + primitive_vars)
-        self._shape_model.wrap(['(Same shape)'] + discrete_vars)
-        self._size_model.wrap(['(Same size)'] + continuous_vars)
-        self._label_model.wrap(['(No labels)'] + all_vars)
+
+        domain = data is not None and data.domain
+        for model in (self._latlon_model,
+                      self._class_model,
+                      self._color_model,
+                      self._shape_model,
+                      self._size_model,
+                      self._label_model):
+            model.set_domain(domain)
 
         def _find_lat_lon():
             lat_attr = next(
@@ -782,8 +788,8 @@ class OWMap(widget.OWWidget):
 
         lat, lon = _find_lat_lon()
         if lat or lon:
-            self._combo_lat.setCurrentIndex(-1 if lat is None else continuous_vars.index(lat))
-            self._combo_lon.setCurrentIndex(-1 if lat is None else continuous_vars.index(lon))
+            self._combo_lat.setCurrentIndex(-1 if lat is None else self._latlon_model.indexOf(lat))
+            self._combo_lon.setCurrentIndex(-1 if lat is None else self._latlon_model.indexOf(lon))
             self.lat_attr = lat.name
             self.lon_attr = lon.name
 
@@ -849,14 +855,15 @@ class OWMap(widget.OWWidget):
 
     def clear(self):
         self.map.set_data(None, '', '')
-        self._latlon_model.wrap([])
-        self._class_model.wrap(['(None)'])
-        self._color_model.wrap(['(Same color)'])
-        self._shape_model.wrap(['(Same shape)'])
-        self._size_model.wrap(['(Same size)'])
-        self._label_model.wrap(['(No labels)'])
+        for model in (self._latlon_model,
+                      self._class_model,
+                      self._color_model,
+                      self._shape_model,
+                      self._size_model,
+                      self._label_model):
+            model.set_domain(None)
         self.lat_attr = self.lon_attr = self.class_attr = self.color_attr = \
-        self.label_attr = self.shape_attr = self.size_attr = ''
+        self.label_attr = self.shape_attr = self.size_attr = None
 
 
 def test_main():

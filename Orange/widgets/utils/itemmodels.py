@@ -678,8 +678,8 @@ class DomainModel(VariableListModel):
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
     def __init__(self, order=SEPARATED, placeholder=None,
-                 valid_types=None, alphabetical=False):
-        super().__init__(placeholder=placeholder)
+                 valid_types=None, alphabetical=False, **kwargs):
+        super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
             order = (order,)
         if placeholder is not None and None not in order:
