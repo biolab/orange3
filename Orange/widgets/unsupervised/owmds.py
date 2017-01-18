@@ -742,8 +742,10 @@ class OWMDS(OWWidget):
 
         size = self._effective_matrix.shape[0]
 
-        def column(data, variable):
+        def column(data, variable, dtype=None):
             a, _ = data.get_column_view(variable)
+            if dtype is not None:
+                a = a.astype(dtype)
             return a.ravel()
 
         def attributes(matrix):
@@ -835,7 +837,7 @@ class OWMDS(OWWidget):
                 symbols = numpy.array(list(Symbols.keys()))
 
                 shape_var = self.shapevar_model[shape_index]
-                data = column(self.data, shape_var).astype(numpy.float)
+                data = column(self.data, shape_var, dtype=numpy.float)
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
@@ -861,9 +863,10 @@ class OWMDS(OWWidget):
                 size_data = MinPointSize + size_data * point_size
             elif have_data and size_index > 0:
                 size_var = self.sizevar_model[size_index]
-                size_data = column(self.data, size_var)
+                size_data = column(self.data, size_var, dtype=float)
                 size_data = scale(size_data)
                 size_data = MinPointSize + size_data * point_size
+                size_data[numpy.isnan(size_data)] = 1  # maybe 0?
             else:
                 size_data = point_size
             self._size_data = size_data
