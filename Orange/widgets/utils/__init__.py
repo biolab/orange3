@@ -1,3 +1,7 @@
+import sys
+
+from PyQt4.QtCore import QObject
+
 from Orange.data.variable import TimeVariable
 from Orange.util import deepgetattr
 
@@ -52,3 +56,17 @@ def get_variable_values_sorted(variable):
         return sorted(variable.values, key=int)
     except ValueError:
         return variable.values
+
+
+def dumpObjectTree(obj, _indent=0):
+    """
+    Dumps Qt QObject tree. Aids in debugging internals.
+    See also: QObject.dumpObjectTree()
+    """
+    assert isinstance(obj, QObject)
+    print('{indent}{type} "{name}"'.format(indent=' ' * (_indent * 4),
+                                           type=type(obj).__name__,
+                                           name=obj.objectName()),
+          file=sys.stderr)
+    for child in obj.children():
+        dumpObjectTree(child, _indent + 1)
