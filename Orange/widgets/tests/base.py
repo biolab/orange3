@@ -1,5 +1,6 @@
+import os
 import unittest
-import sip
+
 
 import numpy as np
 from AnyQt.QtWidgets import (
@@ -561,3 +562,55 @@ class WidgetOutputsTestMixin:
         selected_vars = selected.domain.variables + selected.domain.metas
         annotated_vars = annotated.domain.variables + annotated.domain.metas
         self.assertLess(set(selected_vars), set(annotated_vars))
+
+
+class datasets:
+    @staticmethod
+    def path(filename):
+        dirname = os.path.join(os.path.dirname(__file__), "datasets")
+        return os.path.join(dirname, filename)
+
+    @classmethod
+    def missing_data_1(cls):
+        """
+        Data set with 3 continuous features (X{1,2,3}) where all the columns
+        and rows contain at least one NaN value.
+
+        One discrete class D with NaN values
+        Mixed continuous/discrete/string metas ({X,D,S}M)
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return Table(cls.path("missing_data_1.tab"))
+
+    @classmethod
+    def missing_data_2(cls):
+        """
+        Data set with 3 continuous features (X{1,2,3}) where all the columns
+        and rows contain at least one NaN value and X1, X2 are constant.
+
+        One discrete constant class D with NaN values.
+        Mixed continuous/discrete/string class metas ({X,D,S}M)
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return Table(cls.path("missing_data_2.tab"))
+
+    @classmethod
+    def missing_data_3(cls):
+        """
+        Data set with 3 discrete features D{1,2,3} where all the columns and
+        rows contain at least one NaN value
+
+        One discrete class D with NaN values
+        Mixes continuous/discrete/string metas ({X,D,S}M)
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return Table(cls.path("missing_data_3.tab"))
