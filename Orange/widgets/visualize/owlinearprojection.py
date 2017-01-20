@@ -695,10 +695,12 @@ class OWLinearProjection(widget.OWWidget):
 
         self.varmodel_other.extend(variables)
 
-    def _get_data(self, var):
-        """Return the column data for variable `var`."""
+    def _get_data(self, var, dtype):
+        """
+        Return the column data and mask for variable `var`
+        """
         X, _ = self.data.get_column_view(var)
-        return X.ravel()
+        return column_data(self.data, var, dtype)
 
     def _setup_plot(self, reset_view=True):
         self.__replot_requested = False
@@ -708,7 +710,7 @@ class OWLinearProjection(widget.OWWidget):
         if not variables:
             return
 
-        coords = [self._get_data(var) for var in variables]
+        coords = [self._get_data(var, dtype=float)[0] for var in variables]
         coords = numpy.vstack(coords)
         p, N = coords.shape
         assert N == len(self.data), p == len(variables)
@@ -721,8 +723,9 @@ class OWLinearProjection(widget.OWWidget):
         coords = coords[:, mask]
 
         X, Y = numpy.dot(axes, coords)
-        X = plotutils.normalized(X)
-        Y = plotutils.normalized(Y)
+        if X.size and Y.size:
+            X = plotutils.normalized(X)
+            Y = plotutils.normalized(Y)
 
         pen_data, brush_data = self._color_data(mask)
         size_data = self._size_data(mask)
@@ -773,7 +776,7 @@ class OWLinearProjection(widget.OWWidget):
     def _color_data(self, mask=None):
         color_var = self.color_var()
         if color_var is not None:
-            color_data = self._get_data(color_var)
+            color_data, _ = self._get_data(color_var, dtype=float)
             if color_var.is_continuous:
                 color_data = plotutils.continuous_colors(
                     color_data, None, *color_var.colors)
@@ -866,14 +869,12 @@ class OWLinearProjection(widget.OWWidget):
             shape_data = numpy.array(["o"] * len(self.data))
         else:
             assert shape_var.is_discrete
-            max_symbol = len(ScatterPlotItem.Symbols) - 1
-            shape = self._get_data(shape_var)
-            shape_mask = numpy.isnan(shape)
-            shape %= max_symbol - 1
-            shape[shape_mask] = max_symbol
-
             symbols = numpy.array(list(ScatterPlotItem.Symbols))
-            shape_data = symbols[numpy.asarray(shape, dtype=int)]
+            max_symbol = symbols.size - 1
+            shapeidx, shape_mask = column_data(self.data, shape_var, dtype=int)
+            shapeidx[shape_mask] = max_symbol
+            shapeidx[~shape_mask] %= max_symbol -1
+            shape_data = symbols[shapeidx]
         if mask is None:
             return shape_data
         else:
@@ -892,12 +893,20 @@ class OWLinearProjection(widget.OWWidget):
             size_data = numpy.full((len(self.data),), self.point_size,
                                    dtype=float)
         else:
-            size_data = plotutils.normalized(self._get_data(size_var))
-            size_data -= numpy.nanmin(size_data)
-            size_mask = numpy.isnan(size_data)
+            nan_size = OWLinearProjection.MinPointSize - 2
+            size_data, size_mask = self._get_data(size_var, dtype=float)
+            size_data_valid = size_data[~size_mask]
+            if size_data_valid.size:
+                smin, smax = numpy.min(size_data_valid), numpy.max(size_data_valid)
+                sspan = smax - smin
+            else:
+                sspan = smax = smin = 0
+            size_data[~size_mask] -= smin
+            if sspan > 0:
+                size_data[~size_mask] /= sspan
             size_data = \
                 size_data * self.point_size + OWLinearProjection.MinPointSize
-            size_data[size_mask] = OWLinearProjection.MinPointSize - 2
+            size_data[size_mask] = nan_size
         if mask is None:
             return size_data
         else:
@@ -1541,8 +1550,25 @@ class PlotPinchZoomTool(PlotTool):
             return False
 
 
+def column_data(table, var, dtype):
+    dtype = numpy.dtype(dtype)
+    col, copy = table.get_column_view(var)
+    if var.is_primitive() and not isinstance(col.dtype.type, numpy.inexact):
+        # from mixes metas domain
+        col = col.astype(float)
+        copy = True
+    mask = numpy.isnan(col)
+    if dtype != col.dtype:
+        col = col.astype(dtype)
+        copy = True
+
+    if not copy:
+        col = col.copy()
+    return col, mask
+
+
 class plotutils:
-    @ staticmethod
+    @staticmethod
     def continuous_colors(data, palette=None,
                           low=(220, 220, 220), high=(0,0,0),
                           through_black=False):
@@ -1552,14 +1578,7 @@ class plotutils:
         amin, amax = numpy.nanmin(data), numpy.nanmax(data)
         span = amax - amin
         data = (data - amin) / (span or 1)
-
-        mask = numpy.isnan(data)
-        # Unknown values as gray
-        # TODO: This should already be a part of palette
-        colors = numpy.empty((len(data), 3))
-        colors[mask] = (128, 128, 128)
-        colors[~mask] = [palette.getRGB(v) for v in data[~mask]]
-        return colors
+        return palette.getRGB(data)
 
     @staticmethod
     def discrete_colors(data, nvalues, palette=None, color_index=None):
@@ -1577,7 +1596,11 @@ class plotutils:
 
     @staticmethod
     def normalized(a):
+        if not a.size:
+            return a.copy()
         amin, amax = numpy.nanmin(a), numpy.nanmax(a)
+        if numpy.isnan(amin):
+            return a.copy()
         span = amax - amin
         mean = numpy.nanmean(a)
         return (a - mean) / (span or 1)
