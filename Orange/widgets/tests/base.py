@@ -164,6 +164,9 @@ class WidgetTest(GuiTest):
             if input_signal.name == input_name:
                 getattr(widget, input_signal.handler)(value, *args)
                 break
+        else:
+            raise ValueError("'{}' is not an input name for widget {}"
+                             .format(input_name, type(widget).__name__))
         widget.handleNewSignals()
 
     def get_output(self, output_name, widget=None):
