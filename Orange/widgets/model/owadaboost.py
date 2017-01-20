@@ -28,7 +28,7 @@ class OWAdaBoost(OWBaseLearner):
 
     n_estimators = Setting(50)
     learning_rate = Setting(1.)
-    algorithm_index = Setting(0)
+    algorithm_index = Setting(1)
     loss_index = Setting(0)
     use_random_seed = Setting(False)
     random_seed = Setting(0)
@@ -110,6 +110,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWAdaBoost()
+    ow.resetSettings()
     ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
     ow.show()
     a.exec_()
