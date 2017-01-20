@@ -1,8 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
+
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
 
+from Orange.data import DiscreteVariable, Domain, Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
 
@@ -26,3 +29,11 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
             QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
             Qt.LeftButton, Qt.KeyboardModifiers()))
         return [0, 4, 6, 7, 11, 17, 19, 21, 22, 24, 26, 39, 40, 43, 44, 46]
+
+    def test_missing_values(self):
+        """Check widget for dataset with missing values"""
+        attrs = [DiscreteVariable("c1", ["a", "b", "c"])]
+        class_var = DiscreteVariable("cls", [])
+        X = np.array([1, 2, 0, 1, 0, 2])[:, None]
+        data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
+        self.send_signal("Data", data)
