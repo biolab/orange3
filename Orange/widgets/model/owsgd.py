@@ -145,8 +145,11 @@ class OWSGD(OWBaseLearner):
             box, self, 'n_iter', 1, MAXINT - 1, label='Number of iterations: ',
             controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
+        # Wrap shuffle_cbx inside another hbox to align it with the random_seed
+        # spin box on OSX
         self.shuffle_cbx = gui.checkBox(
-            box, self, 'shuffle', 'Shuffle data after each iteration',
+            gui.hBox(box), self, 'shuffle',
+            'Shuffle data after each iteration',
             callback=self._on_shuffle_change)
         self.random_seed_spin = gui.spin(
             box, self, 'random_state', 0, MAXINT,
