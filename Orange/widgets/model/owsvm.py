@@ -114,6 +114,7 @@ class OWSVM(OWBaseLearner):
             self.epsilon_spin.setEnabled(False)
             self.nu_C_spin.setEnabled(True)
             self.nu_spin.setEnabled(True)
+        self.settings_changed()
 
     def _add_kernel_box(self):
         # Initialize with the widest label to measure max width
