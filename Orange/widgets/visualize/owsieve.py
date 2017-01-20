@@ -413,7 +413,7 @@ class OWSieveDiagram(OWWidget):
         max_ylabel_w = min(max_ylabel_w, 200)
         x_off = width(attr_x.name) + max_ylabel_w
         y_off = 15
-        square_size = min(view.width() - x_off - 35, view.height() - y_off - 50)
+        square_size = min(view.width() - x_off - 35, view.height() - y_off - 80)
         square_size = max(square_size, 10)
         self.canvasView.setSceneRect(0, 0, view.width(), view.height())
         if not disc_x.values or not disc_y.values:
@@ -465,6 +465,7 @@ class OWSieveDiagram(OWWidget):
              Qt.AlignLeft | Qt.AlignVCenter, bold=True, vertical=True)
         text(attr_x.name, x_off + square_size / 2, bottom,
              Qt.AlignHCenter | Qt.AlignTop, bold=True)
+        bottom += 30
         xl = text("χ²={:.2f}, p={:.3f}".format(chi.chisq, chi.p),
                   0, bottom)
         # Assume similar height for both lines
