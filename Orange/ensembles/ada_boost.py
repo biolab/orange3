@@ -1,6 +1,6 @@
 import sklearn.ensemble as skl_ensemble
 
-from Orange.base import SklLearner, SklModel
+from Orange.base import SklLearner
 from Orange.classification.base_classification import (
     SklLearnerClassification, SklModelClassification
 )
@@ -9,11 +9,7 @@ from Orange.regression.base_regression import (
     SklLearnerRegression, SklModelRegression
 )
 
-__all__ = [
-    'SklAdaBoostLearner',
-    'SklAdaBoostClassificationLearner',
-    'SklAdaBoostRegressionLearner',
-]
+__all__ = ['SklAdaBoostClassificationLearner', 'SklAdaBoostRegressionLearner']
 
 
 class SklAdaBoostClassifier(SklModelClassification):
@@ -56,10 +52,3 @@ class SklAdaBoostRegressionLearner(SklLearnerRegression):
             base_estimator = base_estimator.__wraps__(**base_estimator.params)
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-
-class SklAdaBoostLearner(Fitter):
-    __fits__ = {'classification': SklAdaBoostClassificationLearner,
-                'regression': SklAdaBoostRegressionLearner}
-
-    __returns__ = SklModel
