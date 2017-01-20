@@ -190,6 +190,8 @@ class ErrorReporting(QDialog):
         packages = ', '.join(sorted("%s==%s" % (i.project_name, i.version)
                                     for i in pip.get_installed_distributions()))
 
+        machine_id = QSettings().value('error-reporting/machine-id', '', type=str)
+
         # If this exact error was already reported in this session,
         # just warn about it
         if (err_module, widget_module) in cls._cache:
@@ -227,7 +229,7 @@ class ErrorReporting(QDialog):
             platform.python_version(), platform.system(), platform.release(),
             platform.version(), platform.machine())
         data[F.INSTALLED_PACKAGES] = packages
-        data[F.MACHINE_ID] = str(uuid.getnode())
+        data[F.MACHINE_ID] = machine_id or str(uuid.getnode())
         data[F.STACK_TRACE] = stacktrace
         if err_locals:
             data[F.LOCALS] = err_locals

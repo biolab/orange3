@@ -16,7 +16,7 @@ from ..utils.propertybindings import (
 from AnyQt.QtWidgets import (
     QWidget, QMainWindow, QComboBox, QCheckBox, QListView, QTabWidget,
     QToolBar, QAction, QStackedWidget, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QSizePolicy
+    QFormLayout, QSizePolicy, QLineEdit,
 )
 
 from AnyQt.QtCore import (
@@ -357,6 +357,17 @@ class UserSettingsDialog(QMainWindow):
         box.setLayout(layout)
         form.addRow(self.tr("Help window"), box)
 
+        tab.setLayout(form)
+
+        # Error Reporting Tab
+        tab = QWidget()
+        self.addTab(tab, self.tr("Error Reporting"),
+                    toolTip="Settings related to error reporting")
+
+        form = QFormLayout()
+        line_edit_mid = QLineEdit()
+        self.bind(line_edit_mid, "text", "error-reporting/machine-id")
+        form.addRow("Machine ID:", line_edit_mid)
         tab.setLayout(form)
 
         if self.__macUnified:
