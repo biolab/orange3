@@ -70,6 +70,7 @@ Visualize
    widgets/visualize/silhouetteplot
    widgets/visualize/treeviewer
    widgets/visualize/geomap
+   widgets/visualize/nomogram
 
 
 Classify
