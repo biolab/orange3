@@ -20,15 +20,16 @@ class OWSVM(OWSVM):
         form = QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
             self.controlArea, self, "svm_type", [], box="SVR Type",
-            orientation=form)
+            orientation=form, callback=self.settings_changed)
 
         self.epsilon_radio = gui.appendRadioButton(
             box, "ε-SVR", addToLayout=False)
         self.C_spin = gui.doubleSpin(
-            box, self, "C", 0.1, 512.0, 0.1, decimals=2, addToLayout=False)
+            box, self, "C", 0.1, 512.0, 0.1, decimals=2, addToLayout=False,
+            callback=self.settings_changed)
         self.epsilon_spin = gui.doubleSpin(
             box, self, "epsilon", 0.1, 512.0, 0.1, decimals=2,
-            addToLayout=False)
+            addToLayout=False, callback=self.settings_changed)
         form.addWidget(self.epsilon_radio, 0, 0, Qt.AlignLeft)
         form.addWidget(QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
         form.addWidget(self.C_spin, 0, 2)
@@ -37,9 +38,11 @@ class OWSVM(OWSVM):
 
         self.nu_radio = gui.appendRadioButton(box, "ν-SVR", addToLayout=False)
         self.nu_C_spin = gui.doubleSpin(
-            box, self, "nu_C", 0.1, 512.0, 0.1, decimals=2, addToLayout=False)
+            box, self, "nu_C", 0.1, 512.0, 0.1, decimals=2, addToLayout=False,
+            callback=self.settings_changed)
         self.nu_spin = gui.doubleSpin(
-            box, self, "nu", 0.05, 1.0, 0.05, decimals=2, addToLayout=False)
+            box, self, "nu", 0.05, 1.0, 0.05, decimals=2, addToLayout=False,
+            callback=self.settings_changed)
         form.addWidget(self.nu_radio, 2, 0, Qt.AlignLeft)
         form.addWidget(QLabel("Cost (C):"), 2, 1, Qt.AlignRight)
         form.addWidget(self.nu_C_spin, 2, 2)
