@@ -29,6 +29,12 @@ class ChiSqStats:
     pair of attributes. The class is also used for ranking.
     """
     def __init__(self, data, attr1, attr2):
+        attr1 = data.domain[attr1]
+        attr2 = data.domain[attr2]
+        if attr1.is_discrete and not attr1.values or \
+                attr2.is_discrete and not attr2.values:
+            self.p = np.nan
+            return
         self.observed = get_contingency(data, attr1, attr2)
         self.n = np.sum(self.observed)
         self.probs_x = self.observed.sum(axis=0) / self.n
@@ -403,7 +409,6 @@ class OWSieveDiagram(OWWidget):
         view = self.canvasView
 
         chi = ChiSqStats(self.discrete_data, disc_x, disc_y)
-        n = chi.n
         max_ylabel_w = max((width(val) for val in disc_y.values), default=0)
         max_ylabel_w = min(max_ylabel_w, 200)
         x_off = width(attr_x.name) + max_ylabel_w
@@ -411,7 +416,15 @@ class OWSieveDiagram(OWWidget):
         square_size = min(view.width() - x_off - 35, view.height() - y_off - 50)
         square_size = max(square_size, 10)
         self.canvasView.setSceneRect(0, 0, view.width(), view.height())
-
+        if not disc_x.values or not disc_y.values:
+            text_ = "Features {} and {} have no values".format(disc_x, disc_y) \
+                if not disc_x.values and not disc_y.values and \
+                   disc_x != disc_y else "Feature {} has no values".format(
+                disc_x if not disc_x.values else disc_y)
+            text(text_, view.width() / 2 + 70, view.height() / 2,
+                 Qt.AlignRight | Qt.AlignVCenter)
+            return
+        n = chi.n
         curr_x = x_off
         max_xlabel_h = 0
         self.areas = []
