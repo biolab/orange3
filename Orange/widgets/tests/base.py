@@ -55,9 +55,8 @@ class WidgetTest(GuiTest):
 
     Contains helper methods widget creation and working with signals.
 
-    All widgets should be created by the create_widget method, as it
-    remembers created widgets and properly destroys them in tearDownClass
-    to avoid segmentation faults when QApplication gets destroyed.
+    All widgets should be created by the create_widget method, as this
+    will ensure they are created correctly.
     """
 
     #: list[OwWidget]
@@ -67,9 +66,8 @@ class WidgetTest(GuiTest):
     def setUpClass(cls):
         """Prepare environment for test execution
 
-        Prepare a list for tracking created widgets and construct a
-        dummy signal manager. Monkey patch OWReport.get_instance to
-        return a manually_created instance.
+        Construct a dummy signal manager and monkey patch
+        OWReport.get_instance to return a manually created instance.
         """
         super().setUpClass()
 
@@ -82,7 +80,13 @@ class WidgetTest(GuiTest):
         OWReport.get_instance = lambda: report
 
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
-        """Create a widget instance.
+        """Create a widget instance using mock signal_manager.
+
+        When used with default parameters, it also overrides settings stored
+        on disk with default defined in class.
+
+        After widget is created, QApplication.process_events is called to
+        allow any singleShot timers defined in __init__ to execute.
 
         Parameters
         ----------
