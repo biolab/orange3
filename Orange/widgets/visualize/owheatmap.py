@@ -476,6 +476,10 @@ class OWHeatMap(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         no_continuous = Msg("No continuous feature columns")
+        not_enough_features = Msg("Not enough features for column clustering")
+        not_enough_instances = Msg("Not enough instances")
+        not_enough_instances_k_means = Msg(
+            "Not enough instances for k-means merging")
         not_enough_memory = Msg("Not enough memory to show this data")
 
     class Warning(widget.OWWidget.Warning):
@@ -753,10 +757,22 @@ class OWHeatMap(widget.OWWidget):
     def update_heatmaps(self):
         if self.data is not None:
             self.clear_scene()
-            self.construct_heatmaps(self.data)
-            self.construct_heatmaps_scene(
-                self.heatmapparts, self.effective_data)
-            self.selected_rows = []
+            self.clear_messages()
+            if self.sort_columns not in (OWHeatMap.NoSorting,) and \
+                    len(self.data.domain.attributes) < 2:
+                self.Error.not_enough_features()
+            elif (self.sort_columns not in (OWHeatMap.NoSorting,) or
+                    self.sort_rows not in (OWHeatMap.NoSorting,
+                                           OWHeatMap.SortBarycenter)) and \
+                    len(self.data) < 2:
+                self.Error.not_enough_instances()
+            elif self.merge_kmeans and len(self.data) < 3:
+                self.Error.not_enough_instances_k_means()
+            else:
+                self.construct_heatmaps(self.data)
+                self.construct_heatmaps_scene(
+                    self.heatmapparts, self.effective_data)
+                self.selected_rows = []
         else:
             self.clear()
         self.commit()
@@ -1423,12 +1439,10 @@ class OWHeatMap(widget.OWWidget):
             legend.set_color_table(palette)
 
     def update_sorting_examples(self):
-        if self.effective_data is not None:
-            self.update_heatmaps()
+        self.update_heatmaps()
 
     def update_sorting_attributes(self):
-        if self.effective_data is not None:
-            self.update_heatmaps()
+        self.update_heatmaps()
 
     def update_legend(self):
         for item in self.heatmap_scene.items():
@@ -1538,7 +1552,6 @@ class OWHeatMap(widget.OWWidget):
         data = None
         indices = None
         if self.merge_kmeans:
-            assert self.merge_indices is not None
             merge_indices = self.merge_indices
         else:
             merge_indices = None
