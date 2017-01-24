@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.data import Table
+import numpy as np
+
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.preprocess import Continuize
 from Orange.widgets.visualize.owheatmap import OWHeatMap
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -74,3 +76,33 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.widget.selection_manager.select_rows(selected_indices)
         self.widget.on_selection_finished()
         return selected_indices
+
+    def test_not_enough_data_settings_changed(self):
+        """Check widget for dataset with one feature or for one instance"""
+        self._test_helper()
+        self.widget.controls.merge_kmeans.setChecked(True)
+        self._test_helper(True)
+
+    def _test_helper(self, checked=False):
+        iris = Table("iris")
+        msg = self.widget.Error
+        for i in range(0, self.widget.colsortcb.count()):
+            self.widget.colsortcb.activated.emit(i)
+            self.widget.colsortcb.setCurrentIndex(i)
+            self.send_signal("Data", None)
+            self.send_signal("Data", iris[:, 0])
+            if i > 0:
+                self.assertTrue(msg.not_enough_features.is_shown())
+            for j in range(0, self.widget.rowsortcb.count()):
+                self.widget.rowsortcb.activated.emit(j)
+                self.widget.rowsortcb.setCurrentIndex(j)
+                self.send_signal("Data", None)
+                self.send_signal("Data", iris[0:1])
+                if j > 1:
+                    self.assertTrue(msg.not_enough_instances.is_shown())
+                elif checked and j > 1:
+                    self.assertTrue(msg.not_enough_instances_k_means.is_shown())
+        self.send_signal("Data", None)
+        self.assertFalse(msg.not_enough_features.is_shown())
+        self.assertFalse(msg.not_enough_instances.is_shown())
+        self.assertFalse(msg.not_enough_instances_k_means.is_shown())
