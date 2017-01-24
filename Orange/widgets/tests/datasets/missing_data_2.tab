@@ -1,0 +1,8 @@
+X1	X2	X3	D	XM	DM	SM
+c	c	c	d	c	d	string
+			class	meta	meta	meta
+?	1	3	a	1	a	a
+1	?	1	a	2	b	
+1	1	?	?	?	b	b
+1	?	1	a	?	?	
+?	1	3	a	5	b	c
