@@ -16,6 +16,7 @@ import numpy
 import sklearn.metrics as skl_metrics
 
 import Orange
+import Orange.evaluation
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -114,6 +115,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         no_regression = Msg("Confusion Matrix cannot show regression results.")
+        invalid_values = Msg("Evaluation Results input contains invalid values")
 
     def __init__(self):
         super().__init__()
@@ -242,6 +244,21 @@ class OWConfusionMatrix(widget.OWWidget):
             data = results = None
         else:
             self.Error.no_regression.clear()
+
+        nan_values = False
+        if results is not None:
+            assert isinstance(results, Orange.evaluation.Results)
+            if numpy.any(numpy.isnan(results.actual)) or \
+                    numpy.any(numpy.isnan(results.predicted)):
+                # Error out here (could filter them out with a warning
+                # instead).
+                nan_values = True
+                results = data = None
+
+        if nan_values:
+            self.Error.invalid_values()
+        else:
+            self.Error.invalid_values.clear()
 
         self.results = results
         self.data = data

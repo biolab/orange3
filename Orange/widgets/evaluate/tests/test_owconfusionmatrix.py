@@ -93,3 +93,16 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal("Evaluation Results", res)
         self.widget.select_correct()
         self.widget.select_wrong()
+
+    def test_nan_results(self):
+        """Test on results with nan values in actual/predicted"""
+        res = Results(data=self.iris, nmethods=2, store_data=True)
+        res.row_indices = np.array([0, 50, 100], dtype=int)
+        res.actual = np.array([0., np.nan, 2.])
+        res.predicted = np.array([[np.nan, 1, 2],
+                                  [np.nan, np.nan, np.nan]])
+        res.probabilities = np.zeros((1, 3, 3))
+        self.send_signal("Evaluation Results", res)
+        self.assertTrue(self.widget.Error.invalid_values.is_shown())
+        self.send_signal("Evaluation Results", None)
+        self.assertFalse(self.widget.Error.invalid_values.is_shown())
