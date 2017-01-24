@@ -28,3 +28,18 @@ class TestOWImpute(WidgetTest):
         widget.unconditional_commit()
         imp_data = self.get_output("Data")
         self.assertEqual(len(imp_data), 0)
+
+    def test_no_features(self):
+        widget = self.widget
+        widget.default_method_index = widget.MODEL_BASED_IMPUTER
+        widget.default_method = widget.METHODS[widget.default_method_index]
+
+        self.send_signal("Data", Table("iris"))
+
+        self.send_signal("Learner", lambda *_: 1/0)  # Learner fails
+        widget.unconditional_commit()
+        self.assertTrue(widget.Error.imputation_failed.is_shown())
+
+        self.send_signal("Learner", lambda *_: (lambda *_: 1/0))  # Model fails
+        widget.unconditional_commit()
+        self.assertTrue(widget.Error.imputation_failed.is_shown())

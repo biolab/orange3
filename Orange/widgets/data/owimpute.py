@@ -14,7 +14,7 @@ from Orange.base import Learner
 from Orange.widgets import gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget
+from Orange.widgets.widget import OWWidget, Msg
 from Orange.classification import SimpleTreeLearner
 
 
@@ -60,6 +60,9 @@ class OWImpute(OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data"),
               ("Learner", Learner, "set_learner")]
     outputs = [("Data", Orange.data.Table)]
+
+    class Error(OWWidget.Error):
+        imputation_failed = Msg("Imputation failed for '{}'")
 
     DEFAULT_LEARNER = SimpleTreeLearner()
     METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),
@@ -251,17 +254,23 @@ class OWImpute(OWWidget):
             class_vars = []
 
             self.warning()
+            self.Error.imputation_failed.clear()
             with self.progressBar(len(self.varmodel)) as progress:
                 for i, var in enumerate(self.varmodel):
                     method = self.variable_methods.get(i, self.default_method)
 
-                    if not method.supports_variable(var):
-                        self.warning("Default method can not handle '{}'".
-                                     format(var.name))
-                    elif isinstance(method, impute.DropInstances):
-                        drop_mask |= method(self.data, var)
-                    else:
-                        var = method(self.data, var)
+                    try:
+                        if not method.supports_variable(var):
+                            self.warning("Default method can not handle '{}'".
+                                         format(var.name))
+                        elif isinstance(method, impute.DropInstances):
+                                drop_mask |= method(self.data, var)
+                        else:
+                            var = method(self.data, var)
+                    except:
+                        self.Error.imputation_failed(var.name)
+                        attributes = class_vars = None
+                        break
 
                     if isinstance(var, Orange.data.Variable):
                         var = [var]
@@ -273,9 +282,12 @@ class OWImpute(OWWidget):
 
                     progress.advance()
 
-            domain = Orange.data.Domain(attributes, class_vars,
-                                        self.data.domain.metas)
-            data = self.data.from_table(domain, self.data[~drop_mask])
+            if attributes is None:
+                data = None
+            else:
+                domain = Orange.data.Domain(attributes, class_vars,
+                                            self.data.domain.metas)
+                data = self.data.from_table(domain, self.data[~drop_mask])
 
         self.send("Data", data)
         self.modified = False
