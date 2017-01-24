@@ -100,7 +100,7 @@ class ErrorReporting(QDialog):
             for k, v in data.items():
                 if k.startswith('_'):
                     continue
-                _v, v = v, escape(v)
+                _v, v = v, escape(str(v))
                 if k == F.WIDGET_SCHEME:
                     if not add_scheme:
                         continue
