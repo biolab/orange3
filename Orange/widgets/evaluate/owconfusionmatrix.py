@@ -509,7 +509,6 @@ class OWConfusionMatrix(widget.OWWidget):
 
     @classmethod
     def migrate_settings(cls, settings, version):
-        super().migrate_settings(settings, version)
         if not version:
             # For some period of time the 'selected_learner' property was
             # changed from List[int] -> int
