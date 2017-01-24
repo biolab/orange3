@@ -37,6 +37,10 @@ class OWCalibrationPlot(widget.OWWidget):
     priority = 1030
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
 
+    class Warning(widget.OWWidget.Warning):
+        empty_input = widget.Msg(
+            "Empty result on input. Nothing to display.")
+
     target_index = settings.Setting(0)
     selected_classifiers = settings.Setting([])
     display_rug = settings.Setting(True)
@@ -84,7 +88,12 @@ class OWCalibrationPlot(widget.OWWidget):
 
     def set_results(self, results):
         self.clear()
-        self.results = check_results_adequacy(results, self.Error)
+        results = check_results_adequacy(results, self.Error)
+        if results is not None and not results.actual.size:
+            self.Warning.empty_input()
+        else:
+            self.Warning.empty_input.clear()
+        self.results = results
         if self.results is not None:
             self._initialize(results)
             self._replot()
@@ -125,11 +134,15 @@ class OWCalibrationPlot(widget.OWWidget):
         sortind = numpy.argsort(probs)
         probs = probs[sortind]
         ytrue = ytrue[sortind]
-#         x = numpy.unique(probs)
-        xmin, xmax = probs.min(), probs.max()
-        x = numpy.linspace(xmin, xmax, 100)
-        f = gaussian_smoother(probs, ytrue, sigma=0.15 * (xmax - xmin))
-        observed = f(x)
+        if probs.size:
+            xmin, xmax = probs.min(), probs.max()
+            x = numpy.linspace(xmin, xmax, 100)
+            f = gaussian_smoother(probs, ytrue, sigma=0.15 * (xmax - xmin))
+            observed = f(x)
+        else:
+            x = numpy.array([])
+            observed = numpy.array([])
+
         curve = Curve(x, observed)
         curve_item = pg.PlotDataItem(
             x, observed, pen=pg.mkPen(self.colors[clf_idx], width=1),
