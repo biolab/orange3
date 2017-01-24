@@ -5,7 +5,7 @@ from Orange.data import Table
 from Orange.classification import NaiveBayesLearner, TreeLearner
 from Orange.regression import MeanLearner
 from Orange.evaluation.testing import CrossValidation, TestOnTrainingData, \
-    ShuffleSplit
+    ShuffleSplit, Results
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
@@ -82,3 +82,14 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         correct_indices = results.row_indices[correct]
         self.assertSetEqual(set(self.iris[correct_indices].ids),
                             set(selected.ids))
+
+    def test_empty_results(self):
+        """Test on empty results."""
+        res = Results(data=self.iris[:0], store_data=True)
+        res.row_indices = np.array([], dtype=int)
+        res.actual = np.array([])
+        res.predicted = np.array([[]])
+        res.probabilities = np.zeros((1, 0, 3))
+        self.send_signal("Evaluation Results", res)
+        self.widget.select_correct()
+        self.widget.select_wrong()

@@ -32,8 +32,13 @@ def confusion_matrix(res, index):
 
     Returns: Confusion matrix
     """
-    return skl_metrics.confusion_matrix(
-        res.actual, res.predicted[index])
+    labels = numpy.arange(len(res.domain.class_var.values))
+    if not res.actual.size:
+        # scikit-learn will not return an zero matrix
+        return numpy.zeros((len(labels), len(labels)))
+    else:
+        return skl_metrics.confusion_matrix(
+            res.actual, res.predicted[index], labels=labels)
 
 
 BorderRole = next(gui.OrangeUserRole)
