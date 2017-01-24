@@ -1,4 +1,5 @@
 import unittest
+import copy
 import numpy
 
 import Orange.data
@@ -135,3 +136,18 @@ class TestOWROCAnalysis(WidgetTest):
         self.widget._replot()
         self.widget.roc_averaging = OWROCAnalysis.NoAveraging
         self.widget._replot()
+
+    def test_nan_input(self):
+        res = copy.copy(self.res)
+        res.actual = res.actual.copy()
+        res.predicted = res.predicted.copy()
+        res.probabilities = res.probabilities.copy()
+
+        res.actual[0] = numpy.nan
+        res.predicted[:, 1] = numpy.nan
+        res.probabilities[0, 1, :] = numpy.nan
+
+        self.send_signal("Evaluation Results", res)
+        self.assertTrue(self.widget.Error.invalid_results.is_shown())
+        self.send_signal("Evaluation Results", None)
+        self.assertFalse(self.widget.Error.invalid_results.is_shown())

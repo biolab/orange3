@@ -422,7 +422,7 @@ class OWROCAnalysis(widget.OWWidget):
         self.clear()
         self.results = check_results_adequacy(results, self.Error)
         if self.results is not None:
-            self._initialize(results)
+            self._initialize(self.results)
             self._setup_plot()
         else:
             self.warning()
