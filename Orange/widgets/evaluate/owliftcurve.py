@@ -200,6 +200,15 @@ class OWLiftCurve(widget.OWWidget):
         pen.setCosmetic(True)
         self.plot.plot([0, 1], [0, 1], pen=pen, antialias=True)
 
+        warning = ""
+        if not all(c.curve.is_valid for c in curves):
+            if any(c.curve.is_valid for c in curves):
+                warning = "Some lift curves are undefined"
+            else:
+                warning = "All lift curves are undefined"
+
+        self.warning(warning)
+
     def _replot(self):
         self.plot.clear()
         if self.results is not None:
@@ -231,6 +240,11 @@ def lift_curve_from_results(results, target, clf_idx, subset=slice(0, -1)):
 def lift_curve(ytrue, ypred, target=1):
     P = numpy.sum(ytrue == target)
     N = ytrue.size - P
+
+    if P == 0 or N == 0:
+        # Undefined TP and FP rate
+        return numpy.array([]), numpy.array([]), numpy.array([])
+
     fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, target)
     rpp = fpr * (N / (P + N)) + tpr * (P / (P + N))
     return rpp, tpr, thresholds
