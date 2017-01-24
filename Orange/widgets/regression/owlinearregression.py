@@ -124,7 +124,7 @@ class OWLinearRegression(OWBaseLearner):
     def update_model(self):
         super().update_model()
         coef_table = None
-        if self.valid_data:
+        if self.model is not None:
             domain = Domain(
                     [ContinuousVariable("coef", number_of_decimals=7)],
                     metas=[StringVariable("name")])
