@@ -176,6 +176,7 @@ PACKAGE_DATA = {
     "Orange.widgets": ["icons/*.png",
                        "icons/*.svg",
                        "_highcharts/*"],
+    "Orange.widgets.tests": ["datasets/*.tab"],
     "Orange.widgets.classify": ["icons/*.svg"],
     "Orange.widgets.data": ["icons/*.svg",
                             "icons/paintdata/*.png",
