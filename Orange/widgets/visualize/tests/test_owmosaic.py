@@ -40,6 +40,19 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
                      metas=np.arange(6).reshape(6, 1))
         self.send_signal("Data", data)
 
+    def test_missing_values(self):
+        """Check widget for dataset with missing values"""
+        data = Table(Domain([DiscreteVariable("c1", [])]),
+                     np.array([np.nan] * 6)[:, None])
+        self.send_signal("Data", data)
+
+        # missings in class variable
+        attrs = [DiscreteVariable("c1", ["a", "b", "c"])]
+        class_var = DiscreteVariable("cls", [])
+        X = np.array([1, 2, 0, 1, 0, 2])[:, None]
+        data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
+        self.send_signal("Data", data)
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget

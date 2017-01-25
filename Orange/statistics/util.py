@@ -47,10 +47,10 @@ def bincount(X, max_val=None, weights=None, minlength=None):
         nans = 0. if X.ndim == 1 else np.zeros(X.shape[1], dtype=float)
     if minlength is None and max_val is not None:
         minlength = max_val + 1
-    return (np.bincount(X.astype(np.int32, copy=False),
-                        weights=weights,
-                        minlength=minlength).astype(float),
-            nans)
+    bc = np.array([]) if minlength is not None and minlength <= 0 else \
+        np.bincount(X.astype(np.int32, copy=False),
+                    weights=weights, minlength=minlength).astype(float)
+    return bc, nans
 
 
 def countnans(X, weights=None, axis=None, dtype=None, keepdims=False):
