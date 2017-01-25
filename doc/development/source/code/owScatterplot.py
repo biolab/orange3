@@ -72,6 +72,15 @@ class OWScatterPlot(widget.OWWidget):
                                    yAxis_gridLineWidth=0,
                                    title_text='Scatterplot example',
                                    tooltip_shared=False,
+                                   # If you pass a string that starts with
+                                   # these four characters: '/**/'; the string
+                                   # will be evaluated as a JavaScript
+                                   # expression and the property will be set
+                                   # to the evaluation result.
+                                   tooltip_formatter="""/**/
+                                       (function() {
+                                           return this.x + ', ' + this.y;
+                                       })""",
                                    # In development, we can enable debug mode
                                    # and get right-click-inspect and related
                                    # console utils available:
