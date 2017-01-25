@@ -132,7 +132,14 @@ class Highchart(WebviewWidget):
                 mapNavigation_enableMouseWheelZoom=True,
                 mapNavigation_enableButtons=False)))
         if enable_select:
-            self._selection_callback = selection_callback
+
+            class _Bridge(QObject):
+                @pyqtSlot('QVariantList')
+                def on_selected_points(self, points):
+                    selection_callback([np.sort(selected).astype(int)
+                                        for selected in points])
+
+            self.exposeObject('_highcharts_bridge', _Bridge())
             _merge_dicts(options, _kwargs_options(dict(
                 chart_events_click='/**/unselectAllPoints/**/')))
         if enable_point_select:
@@ -210,11 +217,6 @@ class Highchart(WebviewWidget):
                 chart.redraw();
             }; 0;
         ''')
-
-    @pyqtSlot('QVariantList')
-    def _on_selected_points(self, points):
-        self._selection_callback([np.sort(selected).astype(int)
-                                  for selected in points])
 
     def svg(self):
         """

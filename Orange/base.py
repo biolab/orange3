@@ -178,7 +178,7 @@ class Model(Reprable):
     def __init__(self, domain=None):
         if isinstance(self, Learner):
             domain = None
-        elif not domain:
+        elif domain is None:
             raise ValueError("unspecified domain")
         self.domain = domain
 

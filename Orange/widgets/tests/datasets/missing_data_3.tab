@@ -1,0 +1,8 @@
+D1	D2	D3	D	XM	DM	SM
+d	d	d	d	c	d	s
+			class	meta	meta	meta
+?	b	c	a	1	a	a
+b	?	a	b	1	b	a
+c	a	?	?	2	?	
+b	?	a	b	?	?	b
+?	b	c	a	3	b	c

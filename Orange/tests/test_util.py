@@ -1,3 +1,4 @@
+import os
 import unittest
 import warnings
 
@@ -39,6 +40,8 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(deepgetattr(a, 'l.__nx__.__x__', 42), 42)
         self.assertRaises(AttributeError, lambda: deepgetattr(a, 'l.__nx__.__x__'))
 
+    @unittest.skipUnless(os.environ.get('ORANGE_DEPRECATIONS_ERROR'),
+                         'ORANGE_DEPRECATIONS_ERROR not set')
     def test_raise_deprecations(self):
         with self.assertRaises(OrangeDeprecationWarning):
             warnings.warn('foo', OrangeDeprecationWarning)

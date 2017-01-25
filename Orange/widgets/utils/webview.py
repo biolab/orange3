@@ -4,6 +4,7 @@ into Qt. WebviewWidget provides a somewhat uniform interface (_WebViewBase)
 around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
+import os
 import warnings
 from random import random
 from collections.abc import Mapping, Set, Sequence, Iterable
@@ -41,19 +42,10 @@ except ImportError:
 _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')
 
-
-class _HidesParentWindow:
-    @pyqtSlot()
-    def hideWindow(self):  # Overriding hide() doesn't work on WebEngine??
-        """Hide the parent window/dialog. Mapped to Escape key in helpers.js."""
-        w = self.parent()
-        while isinstance(w, QWidget):
-            if w.windowFlags() & (Qt.Window | Qt.Dialog):
-                return w.hide()
-            w = w.parent()
+_ORANGE_DEBUG = os.environ.get('ORANGE_DEBUG')
 
 
-class _LoadFinishedSignaller(QObject):
+class _QWidgetJavaScriptWrapper(QObject):
     def __init__(self, parent):
         super().__init__(parent)
         self.__parent = parent
@@ -62,9 +54,17 @@ class _LoadFinishedSignaller(QObject):
     def load_really_finished(self):
         self.__parent._load_really_finished()
 
+    @pyqtSlot()
+    def hideWindow(self):
+        w = self.__parent
+        while isinstance(w, QWidget):
+            if w.windowFlags() & (Qt.Window | Qt.Dialog):
+                return w.hide()
+            w = w.parent()
+
 
 if HAVE_WEBENGINE:
-    class WebEngineView(QWebEngineView, _HidesParentWindow):
+    class WebEngineView(QWebEngineView):
         """
         A QWebEngineView initialized to support communication with JS code.
 
@@ -86,8 +86,8 @@ if HAVE_WEBENGINE:
         _EXPOSED_OBJ_PREFIX = '__ORANGE_'
 
         def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
+            debug = debug or _ORANGE_DEBUG
             if debug:
-                import os
                 port = os.environ.setdefault('QTWEBENGINE_REMOTE_DEBUGGING', '12088')
                 warnings.warn(
                     'To debug QWebEngineView, set environment variable '
@@ -134,7 +134,7 @@ if HAVE_WEBENGINE:
                         stacklevel=2)
                 channel.registerObject("pybridge", bridge)
 
-            channel.registerObject('__bridge', _LoadFinishedSignaller(self))
+            channel.registerObject('__bridge', _QWidgetJavaScriptWrapper(self))
 
             self.page().setWebChannel(channel)
 
@@ -165,7 +165,7 @@ if HAVE_WEBENGINE:
 
 
 if HAVE_WEBKIT:
-    class WebKitView(QWebView, _HidesParentWindow):
+    class WebKitView(QWebView):
         """
         Construct a new QWebView widget that has no history and
         supports loading from local URLs.
@@ -196,6 +196,7 @@ if HAVE_WEBKIT:
 
             self.bridge = bridge
             self.frame = None
+            debug = debug or _ORANGE_DEBUG
             self.debug = debug
 
             if isinstance(bridge, QWidget):
@@ -407,7 +408,7 @@ if HAVE_WEBKIT:
 
             def load_finished():
                 if not sip.isdeleted(self):
-                    self.frame.addToJavaScriptWindowObject('__bridge', _LoadFinishedSignaller(self))
+                    self.frame.addToJavaScriptWindowObject('__bridge', _QWidgetJavaScriptWrapper(self))
                     self._evalJS('setTimeout(function(){ __bridge.load_really_finished(); }, 100);')
 
             self.loadFinished.connect(load_finished)
