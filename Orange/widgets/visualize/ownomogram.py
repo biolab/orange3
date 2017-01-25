@@ -8,8 +8,8 @@ from AnyQt.QtWidgets import (
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame
 )
-from AnyQt.QtGui import QColor, QPainter, QFont, QPen
-from AnyQt.QtCore import Qt, QEvent, QRectF
+from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
+from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
 
 from Orange.data import Table, Domain
 from Orange.classification import Model
@@ -17,9 +17,16 @@ from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.classification.logistic_regression import \
     LogisticRegressionClassifier
 from Orange.widgets.settings import Setting, ContextSetting, \
-    DomainContextHandler
+    ClassValuesContextHandler
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets import gui
+
+
+def collides(item, shown_items):
+    for it in shown_items:
+        if item.collidesWithItem(it):
+            return True
+    return False
 
 
 class SortBy(IntEnum):
@@ -45,7 +52,7 @@ class MovableToolTip(QLabel):
         super().show()
 
 
-class BaseDotItem(QGraphicsEllipseItem):
+class DotItem(QGraphicsEllipseItem):
     TOOLTIP_STYLE = """ul {margin-top: 1px; margin-bottom: 1px;}"""
     TOOLTIP_TEMPLATE = """<html><head><style type="text/css">{}</style>
     </head><body><b>{}</b><hr/>{}</body></html>
@@ -60,7 +67,8 @@ class BaseDotItem(QGraphicsEllipseItem):
         self._offset = offset
         self.setPos(0, - r / 2)
         self.setFlag(QGraphicsItem.ItemIsMovable)
-        self.setBrush(QColor(70, 190, 250, 255))
+        self.setBrush(QColor(170, 220, 255, 255))
+        self.setPen(QPen(QBrush(QColor(20, 130, 250, 255)), 2))
         self.setZValue(100)
         self.tool_tip = MovableToolTip()
         self.setAcceptHoverEvents(True)
@@ -86,36 +94,34 @@ class BaseDotItem(QGraphicsEllipseItem):
     def hoverLeaveEvent(self, event):
         self.tool_tip.hide()
 
+    def mouseMoveEvent(self, _):
+        return
 
-class DotItem(BaseDotItem):
-    def __init__(self, r, scale, offset, min_x, max_x, title=None,
-                 get_probabilities=None):
+
+class ProbabilitiesDotItem(DotItem):
+    def __init__(self, r, scale, offset, min_x, max_x, title,
+                 get_probabilities):
         self.title = title
         self.get_probabilities = get_probabilities
         self.movable_dot_items = []
         super().__init__(r, scale, offset, min_x, max_x)
-
-    def mouseMoveEvent(self, _):
-        return
+        self.setBrush(QColor(150, 150, 150, 255))
+        self.setPen(QPen(QBrush(QColor(75, 75, 75, 255)), 2))
 
     def move_to_sum(self):
-        if not self.movable_dot_items:
-            return
         total = sum(item.value for item in self.movable_dot_items)
         self.move_to_val(total)
-        if self.get_probabilities:
-            self.parentItem().rescale()
+        self.parentItem().rescale()
 
     def get_tooltip_text(self):
-        value = self.value
-        if self.get_probabilities is not None:
-            value = self.get_probabilities(value)
+        text = "Total: {} <br/>Probability: {:.0%}".format(
+            np.round(self.value, 2),
+            np.round(self.get_probabilities(self.value), 2))
         return self.TOOLTIP_TEMPLATE.format(
-            self.TOOLTIP_STYLE, self.title,
-            "Value: {}".format(np.round(value, 2)))
+            self.TOOLTIP_STYLE, self.title, text)
 
 
-class MovableDotItem(BaseDotItem):
+class MovableDotItem(DotItem):
     def __init__(self, r, scale, offset, min_x, max_x):
         self.tooltip_labels = []
         self.tooltip_values = []
@@ -165,7 +171,7 @@ class MovableDotItem(BaseDotItem):
     def mousePressEvent(self, event):
         self.tool_tip.show(event.screenPos(), self.get_tooltip_text(), False)
         self._x = event.pos().x()
-        self.setBrush(QColor(50, 150, 200, 255))
+        self.setBrush(QColor(50, 180, 250, 255))
         self._show_vertical_line_and_point_dot()
         return super().mousePressEvent(event)
 
@@ -179,18 +185,17 @@ class MovableDotItem(BaseDotItem):
                 index = np.where(np.round(mod_tooltip_values, 1) ==
                                  np.round(self.value, 1))
                 time.sleep(0.05)
-                self.move_to_val((mod_tooltip_values)[index[0][0]])
+                self.move_to_val(mod_tooltip_values[index[0][0]])
         elif self.x() + delta_x < self._min_x:
             self.move(self._min_x)
         elif self.x() + delta_x > self._max_x:
             self.move(self._max_x)
         self._show_vertical_line_and_point_dot()
-        self.total_dot.move_to_sum()
         self.probs_dot.move_to_sum()
 
     def mouseReleaseEvent(self, event):
         self.tool_tip.hide()
-        self.setBrush(QColor(70, 190, 250, 255))
+        self.setBrush(QColor(170, 220, 255, 255))
         self.point_dot.setVisible(False)
         self.vertical_line.setVisible(False)
         return super().mousePressEvent(event)
@@ -207,7 +212,7 @@ class DiscreteMovableDotItem(MovableDotItem):
         labels = self._get_tooltip_labels_with_percentages()
         return self.TOOLTIP_TEMPLATE.format(
             self.TOOLTIP_STYLE, "Points: {}".format(np.round(self.value, 2)),
-            "".join("{}: {:.2%}<br/>".format(l, v) for l, v in labels)[:-5])
+            "".join("{}: {:.0%}<br/>".format(l, v) for l, v in labels)[:-5])
 
     def _get_tooltip_labels_with_percentages(self):
         if not len(self.tooltip_labels):
@@ -282,13 +287,12 @@ class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
 class RulerItem(QGraphicsWidget):
     tick_height = 6
     tick_width = 0
-    dot_r = 10
+    dot_r = 12
     half_tick_height = 3
     bold_label = True
     DOT_ITEM_CLS = DotItem
 
-    def __init__(self, name, values, scale, name_offset, offset, labels=None,
-                 **dot_kwargs):
+    def __init__(self, name, values, scale, name_offset, offset, labels=None):
         super().__init__()
 
         # leading label
@@ -300,8 +304,8 @@ class RulerItem(QGraphicsWidget):
         name.setParentItem(self)
 
         # prediction marker
-        self.dot = self.DOT_ITEM_CLS(
-            self.dot_r, scale, offset, values[0], values[-1], **dot_kwargs)
+        self.dot = self.DOT_ITEM_CLS(self.dot_r, scale, offset, values[0],
+                                     values[-1])
         self.dot.setParentItem(self)
 
         # line
@@ -309,35 +313,25 @@ class RulerItem(QGraphicsWidget):
                                  max(values) * scale + offset, 0)
         line.setParentItem(self)
 
-        old_x_tick = None
-        func = len(dot_kwargs) > 1 and dot_kwargs["get_probabilities"]
         if labels is None:
-            labels = [str(np.round(func(v), 2)) for v in values] if func \
-                else [str(abs(v) if v == -0 else v) for v in values]
+            labels = [str(abs(v) if v == -0 else v) for v in values]
 
-        def collides(_item):
-            for _it in shown_items:
-                if _item.collidesWithItem(_it):
-                    return True
-            return False
-
-        self.text_items_with_values = []
+        old_x_tick = None
         shown_items = []
         w = QGraphicsSimpleTextItem(labels[0]).boundingRect().width()
         text_finish = values[0] * scale - w + offset - 10
         for i, (label, value) in enumerate(zip(labels, values)):
             text = QGraphicsSimpleTextItem(label)
-            self.text_items_with_values.append((values[i], text))
             x_text = value * scale - text.boundingRect().width() / 2 + offset
             if text_finish > x_text - 10:
-                y_text, y_tick = self.dot_r * 0.7, -self.tick_height
+                y_text, y_tick = self.dot_r * 0.7, 0
                 text_finish = values[0] * scale + offset
             else:
                 y_text = - text.boundingRect().height() - self.dot_r * 0.7
-                y_tick = 0
+                y_tick = - self.tick_height
                 text_finish = x_text + text.boundingRect().width()
             text.setPos(x_text, y_text)
-            if not collides(text):
+            if not collides(text, shown_items):
                 text.setParentItem(self)
                 shown_items.append(text)
 
@@ -347,23 +341,101 @@ class RulerItem(QGraphicsWidget):
             tick.setBrush(QColor(Qt.black))
             tick.setParentItem(self)
 
-            if self.half_tick_height and i and not func:
+            if self.half_tick_height and i:
                 x = x_tick - (x_tick - old_x_tick) / 2
-                half_tick = QGraphicsLineItem(x, 0, x, self.half_tick_height)
+                half_tick = QGraphicsLineItem(x, - self.half_tick_height, x, 0)
                 half_tick.setParentItem(self)
             old_x_tick = x_tick
 
+
+class ProbabilitiesRulerItem(QGraphicsWidget):
+    tick_height = 6
+    dot_r = 14
+    y_diff = 4
+
+    def __init__(self, name, values, scale, name_offset, offset, get_points,
+                 title, get_probabilities):
+        super().__init__()
+        self.scale = scale
+        self.offset = offset
+        self.get_points = get_points
+        self.min_val = min(values)
+        self.max_val = max(values)
+
+        # leading labels
+        font = name.document().defaultFont()
+        font.setWeight(QFont.Bold)
+        name_total = QGraphicsTextItem("Total")
+        name_total.setFont(font)
+        name_total.setPos(name_offset, -25)
+        name_total.setParentItem(self)
+        name.setFont(font)
+        name.setPos(name_offset, 10)
+        name.setParentItem(self)
+
+        # prediction marker
+        self.dot = ProbabilitiesDotItem(
+            self.dot_r, scale, offset, values[0], values[-1],
+            title, get_probabilities)
+        self.dot.setPos(0, (- self.dot_r + self.y_diff) / 2)
+        self.dot.setParentItem(self)
+
+        # two lines
+        t_line = QGraphicsLineItem(self.min_val * scale + offset, 0,
+                                   self.max_val * scale + offset, 0)
+        p_line = QGraphicsLineItem(self.min_val * scale + offset, self.y_diff,
+                                   self.max_val * scale + offset, self.y_diff)
+        t_line.setParentItem(self)
+        p_line.setParentItem(self)
+
+        # ticks and labels
+        old_x_tick = values[0] * scale + offset
+        for i, value in enumerate(values[1:]):
+            x_tick = value * scale + offset
+            x = x_tick - (x_tick - old_x_tick) / 2
+            half_tick = QGraphicsLineItem(x, - self.tick_height / 2, x, 0)
+            half_tick.setParentItem(self)
+            old_x_tick = x_tick
+            if i == len(values) - 2:
+                break
+            text = QGraphicsTextItem(str(abs(value) if value == -0 else value))
+            x_text = value * scale - text.boundingRect().width() / 2 + offset
+            y_text = - text.boundingRect().height() - self.dot_r * 0.7
+            text.setPos(x_text, y_text)
+            text.setParentItem(self)
+            tick = QGraphicsLineItem(x_tick, -self.tick_height, x_tick, 0)
+            tick.setParentItem(self)
+
+        self.prob_items = [
+            (i / 10, QGraphicsTextItem(" " + str(i * 10) + " "),
+             QGraphicsLineItem(0, 0, 0, 0)) for i in range(1, 10)]
+
     def rescale(self):
-        func = self.dot.get_probabilities
-        for value, item in self.text_items_with_values:
-            item.setText(str(np.round(func(value), 2)))
+        shown_items = []
+        for prob, text, tick in self.prob_items:
+            pts = self.get_points(prob)
+            x = pts * self.scale - text.boundingRect().width() / 2 + self.offset
+            text.setPos(x, 10 + self.y_diff)
+            x = pts * self.scale + self.offset
+            tick.setLine(x, 0 + self.y_diff, x, self.tick_height + self.y_diff)
+            text.setParentItem(None)
+            tick.setParentItem(None)
+            text.setVisible(False)
+            tick.setVisible(False)
+            if self.min_val < pts < self.max_val:
+                tick.setParentItem(self)
+                tick.setVisible(True)
+                text.setParentItem(self)
+                if not collides(text, shown_items):
+                    text.setVisible(True)
+                    shown_items.append(text)
 
 
 class DiscreteFeatureItem(RulerItem):
     tick_height = 6
     tick_width = 2
     half_tick_height = 0
-    dot_r = 14
+    dot_r = 12
     bold_label = False
     DOT_ITEM_CLS = DiscreteMovableDotItem
 
@@ -383,7 +455,7 @@ class ContinuousFeatureItem(RulerItem):
     tick_height = 6
     tick_width = 2
     half_tick_height = 0
-    dot_r = 14
+    dot_r = 12
     bold_label = False
     DOT_ITEM_CLS = ContinuousMovableDotItem
 
@@ -401,7 +473,7 @@ class ContinuousFeatureItem(RulerItem):
 class ContinuousFeature2DItem(QGraphicsWidget):
     tick_height = 6
     tick_width = 2
-    dot_r = 14
+    dot_r = 12
     y_diff = 80
     n_tck = 4
 
@@ -531,18 +603,18 @@ class OWNomogram(OWWidget):
     inputs = [("Classifier", Model, "set_classifier"),
               ("Data", Table, "set_instance")]
 
-    MAX_N_ATTRS = 50
+    MAX_N_ATTRS = 1000
     POINT_SCALE = 0
     ALIGN_LEFT = 0
+    ALIGN_ZERO = 1
     ACCEPTABLE = (NaiveBayesModel, LogisticRegressionClassifier)
-    settingsHandler = DomainContextHandler()
+    settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
     normalize_probabilities = Setting(False)
-    align = Setting(1)
     scale = Setting(1)
-    display_index = Setting(0)
-    n_attributes = Setting(5)
-    sort_index = Setting(0)
+    display_index = Setting(1)
+    n_attributes = Setting(10)
+    sort_index = Setting(SortBy.ABSOLUTE)
     cont_feature_dim_index = Setting(0)
 
     graph_name = "scene"
@@ -557,6 +629,7 @@ class OWNomogram(OWWidget):
         self.domain = None
         self.data = None
         self.classifier = None
+        self.align = OWNomogram.ALIGN_ZERO
         self.log_odds_ratios = []
         self.log_reg_coeffs = []
         self.log_reg_coeffs_orig = []
@@ -582,7 +655,7 @@ class OWNomogram(OWWidget):
             contentsLength=12)
         self.norm_check = gui.checkBox(
             box, self, "normalize_probabilities", "Normalize probabilities",
-            callback=self._norm_check_changed,
+            hidden=True, callback=self._norm_check_changed,
             tooltip="For multiclass data 1 vs. all probabilities do not"
                     " sum to 1 and therefore could be normalized.")
 
@@ -601,7 +674,7 @@ class OWNomogram(OWWidget):
             self.display_radio, "Best ranked:", addToLayout=False)
         spin_box = gui.hBox(None, margin=0)
         self.n_spin = gui.spin(
-            spin_box, self, "n_attributes", 1, 20, label=" ",
+            spin_box, self, "n_attributes", 1, self.MAX_N_ATTRS, label=" ",
             controlWidth=60, callback=self._n_spin_changed)
         grid.addWidget(radio_all, 1, 1)
         grid.addWidget(radio_best, 2, 1)
@@ -625,6 +698,7 @@ class OWNomogram(OWWidget):
                         QPainter.SmoothPixmapTransform, alignment=Qt.AlignLeft)
         self.view.viewport().installEventFilter(self)
         self.view.viewport().setMinimumWidth(300)
+        self.view.sizeHint = lambda: QSize(600, 500)
         self.mainArea.layout().addWidget(self.view)
 
     def _class_combo_changed(self):
@@ -658,6 +732,8 @@ class OWNomogram(OWWidget):
         self.__hide_attrs(self.n_attributes)
 
     def __hide_attrs(self, n_show):
+        if self.nomogram_main is None:
+            return
         self.nomogram_main.hide(n_show)
         if self.vertical_line:
             x = self.vertical_line.line().x1()
@@ -670,6 +746,8 @@ class OWNomogram(OWWidget):
                                        self.nomogram.preferredSize().height()))
 
     def _sort_combo_changed(self):
+        if self.nomogram_main is None:
+            return
         self.nomogram_main.hide(None)
         self.nomogram_main.sort(self.sort_index)
         self.__hide_attrs(self.n_attributes if self.display_index else None)
@@ -704,9 +782,10 @@ class OWNomogram(OWWidget):
         item.setFlags(item.flags() | Qt.ItemIsEnabled)
         item = model.item(SortBy.NEGATIVE)
         item.setFlags(item.flags() | Qt.ItemIsEnabled)
+        self.align = OWNomogram.ALIGN_ZERO
         if self.classifier and isinstance(self.classifier,
                                           LogisticRegressionClassifier):
-            self.align = 0
+            self.align = OWNomogram.ALIGN_LEFT
             item = model.item(SortBy.POSITIVE)
             item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
             item = model.item(SortBy.NEGATIVE)
@@ -727,10 +806,12 @@ class OWNomogram(OWWidget):
             self.Error.invalid_classifier()
             self.classifier = None
         self.domain = self.classifier.domain if self.classifier else None
-        self.update_controls()
-        self.openContext(self.domain)
+        self.data = None
         self.calculate_log_odds_ratios()
         self.calculate_log_reg_coefficients()
+        self.update_controls()
+        self.target_class_index = 0
+        self.openContext(self.domain and self.domain.class_var)
         self.points = self.log_odds_ratios or self.log_reg_coeffs
         self.feature_marker_values = []
         self.old_target_class_index = self.target_class_index
@@ -791,14 +872,13 @@ class OWNomogram(OWWidget):
 
     def update_scene(self):
         self.clear_scene()
-        if self.domain is None:
+        if self.domain is None or not len(self.points[0]):
             return
 
         name_items = [QGraphicsTextItem(a.name) for a in self.domain.attributes]
         point_text = QGraphicsTextItem("Points")
-        total_text = QGraphicsTextItem("Total")
-        probs_text = QGraphicsTextItem("Probabilities")
-        all_items = name_items + [point_text, total_text, probs_text]
+        probs_text = QGraphicsTextItem("Probabilities (%)")
+        all_items = name_items + [point_text, probs_text]
         name_offset = -max(t.boundingRect().width() for t in all_items) - 50
         w = self.view.viewport().rect().width()
         max_width = w + name_offset - 100
@@ -831,11 +911,10 @@ class OWNomogram(OWWidget):
 
         point_item, nomogram_head = self.create_main_nomogram(
             name_items, points, max_width, point_text, name_offset)
-        total_item, probs_item, nomogram_foot = self.create_footer_nomogram(
-            total_text, probs_text, d, minimums, max_width, name_offset)
+        probs_item, nomogram_foot = self.create_footer_nomogram(
+            probs_text, d, minimums, max_width, name_offset)
         for item in self.feature_items:
             item.dot.point_dot = point_item.dot
-            item.dot.total_dot = total_item.dot
             item.dot.probs_dot = probs_item.dot
             item.dot.vertical_line = self.hidden_vertical_line
 
@@ -859,7 +938,7 @@ class OWNomogram(OWWidget):
 
         nomogram_header = NomogramItem()
         point_item = RulerItem(point_text, values, scale_x, name_offset,
-                               - scale_x * min_p, title="Points")
+                               - scale_x * min_p)
         point_item.setPreferredSize(point_item.preferredWidth(), 35)
         nomogram_header.add_items([point_item])
 
@@ -896,7 +975,7 @@ class OWNomogram(OWWidget):
 
         return point_item, nomogram_header
 
-    def create_footer_nomogram(self, total_text, probs_text, d, minimums,
+    def create_footer_nomogram(self, probs_text, d, minimums,
                                max_width, name_offset):
         eps, d_ = 0.05, 1
         k = - np.log(self.p / (1 - self.p)) if self.p is not None else - self.b0
@@ -917,8 +996,6 @@ class OWNomogram(OWWidget):
         scale_x = max_width / (max_sum - min_sum)
         cls_var, cls_index = self.domain.class_var, self.target_class_index
         nomogram_footer = NomogramItem()
-        total_item = RulerItem(total_text, values, scale_x, name_offset,
-                               - scale_x * min_sum, title="Total")
 
         def get_normalized_probabilities(val):
             if not self.normalize_probabilities:
@@ -927,14 +1004,22 @@ class OWNomogram(OWWidget):
             p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
             return 1 / (1 + np.exp(k[cls_index] - val / d_)) / p_sum
 
+        def get_points(prob):
+            if not self.normalize_probabilities:
+                return (k[cls_index] - np.log(1 / prob - 1)) * d_
+            totals = self.__get_totals_for_class_values(minimums)
+            p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
+            return (k[cls_index] - np.log(1 / (prob * p_sum) - 1)) * d_
+
         self.markers_set = False
-        probs_item = RulerItem(
+        probs_item = ProbabilitiesRulerItem(
             probs_text, values, scale_x, name_offset, - scale_x * min_sum,
-            title="P({}='{}')".format(cls_var.name, cls_var.values[cls_index]),
+            get_points=get_points,
+            title="{}='{}'".format(cls_var.name, cls_var.values[cls_index]),
             get_probabilities=get_normalized_probabilities)
         self.markers_set = True
-        nomogram_footer.add_items([total_item, probs_item])
-        return total_item, probs_item, nomogram_footer
+        nomogram_footer.add_items([probs_item])
+        return probs_item, nomogram_footer
 
     def __get_totals_for_class_values(self, minimums):
         cls_index = self.target_class_index
@@ -970,7 +1055,6 @@ class OWNomogram(OWWidget):
         item = self.feature_items[0]
         for i, item in enumerate(self.feature_items):
             item.dot.move_to_val(self.feature_marker_values[i])
-        item.dot.total_dot.move_to_sum()
         item.dot.probs_dot.move_to_sum()
 
     def _init_feature_marker_values(self):
@@ -994,6 +1078,13 @@ class OWNomogram(OWWidget):
             self.feature_marker_values.append(value)
 
     def clear_scene(self):
+        self.feature_items = []
+        self.scale_back = lambda x: x
+        self.scale_forth = lambda x: x
+        self.nomogram = None
+        self.nomogram_main = None
+        self.vertical_line = None
+        self.hidden_vertical_line = None
         self.scene.clear()
 
     def send_report(self):
@@ -1012,15 +1103,17 @@ class OWNomogram(OWWidget):
 
     @staticmethod
     def get_ruler_values(start, stop, max_width, round_to_nearest=True):
+        if max_width == 0:
+            return [0]
         diff = (stop - start) / max_width
         if diff <= 0:
             return [0]
         decimals = int(np.floor(np.log10(diff)))
-        if diff > 8 * pow(10, decimals):
+        if diff > 4 * pow(10, decimals):
             step = 5 * pow(10, decimals + 2)
-        elif diff > 4 * pow(10, decimals):
-            step = 2 * pow(10, decimals + 2)
         elif diff > 2 * pow(10, decimals):
+            step = 2 * pow(10, decimals + 2)
+        elif diff > 1 * pow(10, decimals):
             step = 1 * pow(10, decimals + 2)
         else:
             step = 5 * pow(10, decimals + 1)
