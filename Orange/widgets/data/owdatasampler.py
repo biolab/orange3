@@ -385,7 +385,14 @@ class SampleBootstrap(Reprable):
         self.size = size
         self.random_state = random_state
 
-    def __call__(self):
+    def __call__(self, table=None):
+        """Bootstrap indices
+
+        Args:
+            table: Not used (but part of the signature)
+        Returns:
+            tuple (out_of_sample, sample) indices
+        """
         rgen = np.random.RandomState(self.random_state)
         sample = rgen.randint(0, self.size, self.size)
         sample.sort()  # not needed for the code below, just for the user
