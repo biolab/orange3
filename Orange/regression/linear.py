@@ -83,9 +83,11 @@ class ElasticNetCVLearner(LinearRegressionLearner):
 class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
 
-    def __init__(self, loss='squared_loss', alpha=0.0001, epsilon=0.1,
-                 eta0=0.01, l1_ratio=0.15, penalty='l2', power_t=0.25,
-                 learning_rate='invscaling', n_iter=5, fit_intercept=True,
+    def __init__(self, loss='squared_loss',penalty='l2', alpha=0.0001,
+                 l1_ratio=0.15, fit_intercept=True, n_iter=5, shuffle=True,
+                 epsilon=0.1, n_jobs=1, random_state=None,
+                 learning_rate='invscaling', eta0=0.01, power_t=0.25,
+                 class_weight=None, warm_start=False, average=False,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()

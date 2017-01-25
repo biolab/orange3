@@ -1,20 +1,23 @@
-# Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.widgets.regression.owsgdregression import OWSGD
-from Orange.widgets.tests.base import WidgetTest, WidgetLearnerTestMixin, \
+from Orange.widgets.model.owsgd import OWSGD
+from Orange.widgets.tests.base import (
+    WidgetTest,
+    WidgetLearnerTestMixin,
     ParameterMapping
+)
 
 
-class TestOWSGDRegression(WidgetTest, WidgetLearnerTestMixin):
+class TestOWSGD(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
         self.widget = self.create_widget(
             OWSGD, stored_settings={"auto_apply": False})
         self.init()
-        self.data = self.housing
         self.parameters = [
-            ParameterMapping('loss', self.widget.reg_loss_function_combo,
-                             list(zip(*self.widget.reg_losses))[1]),
-            ParameterMapping.from_attribute(self.widget, 'reg_epsilon', 'epsilon'),
+            # TODO Fix the base tests to support parameter delegation with
+            # different problem types
+            # ParameterMapping('loss', self.widget.loss_function_combo,
+            #                  list(zip(*self.widget.losses))[1]),
+            # ParameterMapping.from_attribute(self.widget, 'epsilon'),
             ParameterMapping('penalty', self.widget.penalty_combo,
                              list(zip(*self.widget.penalties))[1]),
             ParameterMapping.from_attribute(self.widget, 'alpha'),

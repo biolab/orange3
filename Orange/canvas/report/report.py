@@ -442,6 +442,11 @@ def plural_w(s, number, suffix="s", capitalize=False):
     return s.format(number=number_str, s=suffix if number % 100 != 1 else "")
 
 
+def bool_str(v):
+    """Convert a boolean to a string."""
+    return "Yes" if v else "No"
+
+
 def clip_string(s, limit=1000, sep=None):
     """
     Clip a string at a given character and add "..." if the string was clipped.
