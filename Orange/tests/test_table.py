@@ -1213,6 +1213,11 @@ class TableTestCase(unittest.TestCase):
         table.X = sp.csr_matrix(table.X)
         self.assertTrue(table.is_sparse())
 
+    def test_repr_sparse_with_one_row(self):
+        table = data.Table("iris")[:1]
+        table.X = sp.csr_matrix(table.X)
+        repr(table)     # make sure repr does not crash
+
 
 def column_sizes(table):
     return (len(table.domain.attributes),

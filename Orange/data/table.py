@@ -803,8 +803,11 @@ class Table(MutableSequence, Storage):
         return "[" + ",\n ".join(str(ex) for ex in self)
 
     def __repr__(self):
-        s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
-        if len(self) > 5:
+        head = 5
+        if self.is_sparse():
+            head = min(self.X.shape[0], head)
+        s = "[" + ",\n ".join(repr(ex) for ex in self[:head])
+        if len(self) > head:
             s += ",\n ..."
         s += "\n]"
         return s
