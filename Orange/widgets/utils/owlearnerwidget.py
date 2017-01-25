@@ -110,6 +110,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     class Error(OWWidget.Error):
         data_error = Msg("{}")
+        fitting_failed = Msg("Fitting failed.\n{}")
 
     class Warning(OWWidget.Warning):
         outdated_learner = Msg("Press Apply to submit changes.")
@@ -171,14 +172,22 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
 
+    def show_fitting_failed(self, exc):
+        """Show error when fitting fails.
+            Derived widgets can override this to show more specific messages."""
+        self.Error.fitting_failed(str(exc), shown=exc is not None)
+
     def update_model(self):
+        self.show_fitting_failed(None)
+        self.model = None
         if self.check_data():
-            self.model = self.learner(self.data)
-            self.model.name = self.learner_name
-            self.model.instances = self.data
-            self.valid_data = True
-        else:
-            self.model = None
+            try:
+                self.model = self.learner(self.data)
+            except BaseException as exc:
+                self.show_fitting_failed(exc)
+            else:
+                self.model.name = self.learner_name
+                self.model.instances = self.data
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def check_data(self):
