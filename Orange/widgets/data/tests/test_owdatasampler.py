@@ -26,3 +26,10 @@ class TestOWDataSampler(WidgetTest):
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
         self.send_signal("Data", Table(self.iris.domain))
         self.assertTrue(self.widget.Error.no_data.is_shown())
+
+    def test_stratified_on_unbalanced_data(self):
+        unbalanced_data = self.iris[:51]
+
+        self.widget.controls.stratify.setChecked(True)
+        self.send_signal("Data", unbalanced_data)
+        self.assertTrue(self.widget.Warning.could_not_stratify.is_shown())
