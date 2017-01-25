@@ -1027,6 +1027,7 @@ class OWPaintData(OWWidget):
         else:
             self.input_data = np.column_stack((X, y))
         self.reset_to_input()
+        self.unconditional_commit()
 
     def reset_to_input(self):
         """Reset the painting to input data if present."""
