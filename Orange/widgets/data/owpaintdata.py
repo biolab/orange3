@@ -583,6 +583,7 @@ class ClearTool(DataTool):
     only2d = False
 
     def activate(self):
+        self.editingStarted.emit()
         self.issueCommand.emit(SelectRegion(self._plot.rect()))
         self.issueCommand.emit(DeleteSelection())
         self.editingFinished.emit()
