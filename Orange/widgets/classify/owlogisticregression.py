@@ -77,7 +77,7 @@ class OWLogisticRegression(OWBaseLearner):
     def update_model(self):
         super().update_model()
         coef_table = None
-        if self.valid_data:
+        if self.model is not None:
             coef_table = create_coef_table(self.model)
         self.send("Coefficients", coef_table)
 
