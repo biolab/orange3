@@ -651,7 +651,7 @@ def list_pypi_addons():
 
     pypi = xmlrpc.client.ServerProxy(
         "https://pypi.python.org/pypi/",
-        transport=xmlrpc.client.SafeTransport()
+        transport=SafeUrllibTransport()
     )
     addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
 
