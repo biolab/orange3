@@ -33,7 +33,8 @@ class MajorityLearner(Learner):
         probs = np.array(dist)
         ties = np.flatnonzero(probs == probs.max())
         if len(ties) > 1:
-            random_idx = int(sha1(bytes(dat.Y)).hexdigest(), 16) % len(ties)
+            random_idx = int(sha1(np.ascontiguousarray(dat.Y).data)
+                             .hexdigest(), 16) % len(ties)
             unif_maj = ties[random_idx]
         else:
             unif_maj = None
