@@ -59,8 +59,10 @@ class Highchart(WebviewWidget):
     bridge: QObject
         Exposed as ``window.pybridge`` in JavaScript.
     options: dict
-        Default options for this chart. See Highcharts docs. Some
-        options are already set in the default theme.
+        Default options for this chart. If any option's value is a string
+        that starts with an empty block comment ('/**/'), the expression
+        following is evaluated in JS. See Highcharts docs. Some options are
+        already set in the default theme.
     highchart: str
         One of `Chart`, `StockChart`, or `Map` Highcharts JS types.
     enable_zoom: bool
