@@ -83,6 +83,16 @@ class Fitter(Learner, metaclass=FitterMeta):
         """
         return kwargs
 
+    @property
+    def supports_weights(self):
+        """The fitter supports weights if both the classification and
+        regression learners support weights."""
+        return (
+            hasattr(self.get_learner(self.CLASSIFICATION), 'supports_weights')
+            and self.get_learner(self.CLASSIFICATION).supports_weights) and (
+            hasattr(self.get_learner(self.REGRESSION), 'supports_weights')
+            and self.get_learner(self.REGRESSION).supports_weights)
+
     def __getattr__(self, item):
         # Make parameters accessible on the learner for simpler testing
         if item in self.kwargs:

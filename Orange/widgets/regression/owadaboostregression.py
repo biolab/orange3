@@ -1,47 +1,42 @@
 from AnyQt.QtCore import Qt
 
+from Orange.base import Learner
 from Orange.data import Table
-from Orange.ensembles import SklAdaBoostRegressionLearner
-from Orange.regression import SklTreeRegressionLearner
-from Orange.regression.base_regression import LearnerRegression
+from Orange.modelling import SklAdaBoostLearner
 from Orange.widgets import gui
-from Orange.widgets.classify import owadaboost
-from Orange.widgets.settings import Setting
+from Orange.widgets.model.owadaboost import OWAdaBoost
 
 
-class OWAdaBoostRegression(owadaboost.OWAdaBoostClassification):
-    name = "AdaBoost"
-    description = "An ensemble meta-algorithm that combines weak learners " \
-                  "and adapts to the 'hardness' of each training sample. "
-    icon = "icons/AdaBoost.svg"
-    priority = 80
+class OWAdaBoost(OWAdaBoost):
+    name = "AdaBoost Regression"
 
-    LEARNER = SklAdaBoostRegressionLearner
+    LEARNER = SklAdaBoostLearner
 
-    inputs = [("Learner", LearnerRegression, "set_base_learner")]
+    inputs = [("Learner", Learner, "set_base_learner")]
 
-    losses = ["Linear", "Square", "Exponential"]
-    loss = Setting(0)
+    def add_main_layout(self):
+        box = gui.widgetBox(self.controlArea, "Parameters")
+        self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
+        self.base_label = gui.label(
+            box, self, "Base estimator: " + self.base_estimator.name.title())
 
-    DEFAULT_BASE_ESTIMATOR = SklTreeRegressionLearner()
-
-    def add_specific_parameters(self, box):
-        self.loss_combo = gui.comboBox(
-            box, self, "loss", label="Loss:", orientation=Qt.Horizontal,
-            items=self.losses, callback=self.settings_changed)
-
-    def create_learner(self):
-        return self.LEARNER(
-            base_estimator=self.base_estimator,
-            n_estimators=self.n_estimators,
-            learning_rate=self.learning_rate,
-            preprocessors=self.preprocessors,
-            loss=self.losses[self.loss].lower())
-
-    def get_learner_parameters(self):
-        return (("Base estimator", self.base_estimator),
-                ("Number of estimators", self.n_estimators),
-                ("Loss", self.losses[self.loss].capitalize()))
+        self.n_estimators_spin = gui.spin(
+            box, self, "n_estimators", 1, 100, label="Number of estimators:",
+            alignment=Qt.AlignRight, controlWidth=80,
+            callback=self.settings_changed)
+        self.learning_rate_spin = gui.doubleSpin(
+            box, self, "learning_rate", 1e-5, 1.0, 1e-5,
+            label="Learning rate:", decimals=5, alignment=Qt.AlignRight,
+            controlWidth=80, callback=self.settings_changed)
+        self.reg_algorithm_combo = gui.comboBox(
+            box, self, "loss_index", label="Loss function:",
+            items=self.losses,
+            orientation=Qt.Horizontal, callback=self.settings_changed)
+        self.random_seed_spin = gui.spin(
+            box, self, "random_seed", 0, 2 ** 31 - 1, controlWidth=80,
+            label="Fixed seed for random generator:", alignment=Qt.AlignRight,
+            callback=self.settings_changed, checked="use_random_seed",
+            checkCallback=self.settings_changed)
 
 
 if __name__ == "__main__":
@@ -49,7 +44,7 @@ if __name__ == "__main__":
     from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
-    ow = OWAdaBoostRegression()
+    ow = OWAdaBoost()
     ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'housing'))
     ow.show()
     a.exec_()

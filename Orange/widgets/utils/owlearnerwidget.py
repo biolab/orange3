@@ -174,7 +174,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def update_learner(self):
         self.learner = self.create_learner()
-        if issubclass(self.LEARNER, Fitter):
+        if self.learner and issubclass(self.LEARNER, Fitter):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.learner_name
