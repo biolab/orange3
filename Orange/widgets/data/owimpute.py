@@ -352,7 +352,7 @@ class OWImpute(OWWidget):
     def set_method_for_indexes(self, indexes, method_index):
         if method_index == self.DEFAULT:
             for index in indexes:
-                self.variable_methods.pop(index, None)
+                self.variable_methods.pop(index.row(), None)
         else:
             method = self.METHODS[method_index].copy()
             for index in indexes:
@@ -386,7 +386,7 @@ class OWImpute(OWWidget):
             self.set_method_for_current_selection(index)
 
     def reset_variable_methods(self):
-        indexes = map(self.varmodel.index, range(len(self.varmodel)))
+        indexes = list(map(self.varmodel.index, range(len(self.varmodel))))
         self.set_method_for_indexes(indexes, self.DEFAULT)
         self.variable_button_group.button(self.DEFAULT).setChecked(True)
 
