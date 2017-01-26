@@ -46,6 +46,9 @@ class OWDataSampler(OWWidget):
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
 
+    class Warning(OWWidget.Warning):
+        could_not_stratify = Msg("Stratification failed\n{}")
+
     class Error(OWWidget.Error):
         too_many_folds = Msg("Number of folds exceeds data size")
         sample_larger_than_data = Msg("Sample must be smaller than data")
@@ -252,10 +255,17 @@ class OWDataSampler(OWWidget):
             self.indices = None
             return
 
-        rnd = self.RandomSeed if self.use_seed else None
         stratified = (self.stratify and
                       type(self.data) == Table and
                       self.data.domain.has_discrete_class)
+        try:
+            self.indices = self.sample(data_length, size, stratified)
+        except ValueError as ex:
+            self.Warning.could_not_stratify(str(ex))
+            self.indices = self.sample(data_length, size, stratified=False)
+
+    def sample(self, data_length, size, stratified):
+        rnd = self.RandomSeed if self.use_seed else None
         if self.sampling_type == self.FixedSize:
             self.indice_gen = SampleRandomN(
                 size, stratified=stratified, replace=self.replacement,
@@ -268,7 +278,7 @@ class OWDataSampler(OWWidget):
         else:
             self.indice_gen = SampleFoldIndices(
                 self.number_of_folds, stratified=stratified, random_state=rnd)
-        self.indices = self.indice_gen(self.data)
+        return self.indice_gen(self.data)
 
     def send_report(self):
         if self.sampling_type == self.FixedProportion:
@@ -375,7 +385,14 @@ class SampleBootstrap(Reprable):
         self.size = size
         self.random_state = random_state
 
-    def __call__(self):
+    def __call__(self, table=None):
+        """Bootstrap indices
+
+        Args:
+            table: Not used (but part of the signature)
+        Returns:
+            tuple (out_of_sample, sample) indices
+        """
         rgen = np.random.RandomState(self.random_state)
         sample = rgen.randint(0, self.size, self.size)
         sample.sort()  # not needed for the code below, just for the user
