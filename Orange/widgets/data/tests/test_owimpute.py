@@ -8,6 +8,7 @@ from Orange.widgets.data.owimpute import OWImpute, AsDefault
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.itemmodels import select_row
 
+
 class TestOWImpute(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWImpute)  # type: OWImpute
@@ -17,7 +18,7 @@ class TestOWImpute(WidgetTest):
         data = Table("iris")
         widget = self.widget
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
-        widget.default_method = widget.METHODS[widget.default_method_index]
+        widget.default_method = widget.methods[widget.default_method_index]
 
         self.send_signal("Data", data)
         widget.unconditional_commit()
@@ -33,7 +34,7 @@ class TestOWImpute(WidgetTest):
     def test_no_features(self):
         widget = self.widget
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
-        widget.default_method = widget.METHODS[widget.default_method_index]
+        widget.default_method = widget.methods[widget.default_method_index]
 
         self.send_signal("Data", Table("iris"))
 

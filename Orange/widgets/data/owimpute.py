@@ -1,4 +1,6 @@
 import sys
+import copy
+
 import numpy as np
 
 from AnyQt.QtWidgets import (
@@ -82,6 +84,9 @@ class OWImpute(OWWidget):
 
     def __init__(self):
         super().__init__()
+        # copy METHODS (some are modified by the widget)
+        self.methods = copy.deepcopy(OWImpute.METHODS)
+
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(10, 10, 10, 10)
         self.controlArea.layout().addLayout(main_layout)
@@ -92,7 +97,7 @@ class OWImpute(OWWidget):
 
         button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
-        for i, method in enumerate(self.METHODS):
+        for i, method in enumerate(self.methods):
             if not method.columns_only:
                 button = QRadioButton(method.name)
                 button.setChecked(i == self.default_method_index)
@@ -125,7 +130,7 @@ class OWImpute(OWWidget):
         horizontal_layout.addLayout(method_layout)
 
         button_group = QButtonGroup()
-        for i, method in enumerate(self.METHODS):
+        for i, method in enumerate(self.methods):
             button = QRadioButton(text=method.name)
             button_group.addButton(button, i)
             method_layout.addWidget(button)
@@ -168,7 +173,7 @@ class OWImpute(OWWidget):
 
         self.data = None
         self.modified = False
-        self.default_method = self.METHODS[self.default_method_index]
+        self.default_method = self.methods[self.default_method_index]
         self.update_varview()
 
     @property
@@ -180,14 +185,14 @@ class OWImpute(OWWidget):
         if self._default_method_index != index:
             self._default_method_index = index
             self.default_button_group.button(index).setChecked(True)
-            self.default_method = self.METHODS[self.default_method_index]
-            self.METHODS[self.DEFAULT].method = self.default_method
+            self.default_method = self.methods[self.default_method_index]
+            self.methods[self.DEFAULT].method = self.default_method
 
             # update variable view
             for index in map(self.varmodel.index, range(len(self.varmodel))):
-                self.varmodel.setData(index,
-                                      self.variable_methods.get(index.row(), self.METHODS[self.DEFAULT]),
-                                      Qt.UserRole)
+                method = self.variable_methods.get(
+                    index.row(), self.methods[self.DEFAULT])
+                self.varmodel.setData(index, method, Qt.UserRole)
             self._invalidate()
 
     def set_default_method(self, index):
@@ -212,7 +217,7 @@ class OWImpute(OWWidget):
 
     def set_learner(self, learner):
         self.learner = learner or self.DEFAULT_LEARNER
-        imputer = self.METHODS[self.MODEL_BASED_IMPUTER]
+        imputer = self.methods[self.MODEL_BASED_IMPUTER]
         imputer.learner = self.learner
 
         button = self.default_button_group.button(self.MODEL_BASED_IMPUTER)
@@ -233,7 +238,7 @@ class OWImpute(OWWidget):
             column_index = column_index.row()
 
         return self.variable_methods.get(column_index,
-                                         self.METHODS[self.DEFAULT])
+                                         self.methods[self.DEFAULT])
 
     def _invalidate(self):
         self.modified = True
@@ -317,7 +322,7 @@ class OWImpute(OWWidget):
 
         if len(methods) == 1:
             method = methods.pop()
-            for i, m in enumerate(self.METHODS):
+            for i, m in enumerate(self.methods):
                 if method == m.name:
                     self.variable_button_group.button(i).setChecked(True)
         elif self.variable_button_group.checkedButton() is not None:
@@ -325,7 +330,7 @@ class OWImpute(OWWidget):
             self.variable_button_group.checkedButton().setChecked(False)
             self.variable_button_group.setExclusive(True)
 
-        for method, button in zip(self.METHODS,
+        for method, button in zip(self.methods,
                                   self.variable_button_group.buttons()):
             enabled = all(method.supports_variable(var) for var in
                           selected_vars)
@@ -354,7 +359,7 @@ class OWImpute(OWWidget):
             for index in indexes:
                 self.variable_methods.pop(index.row(), None)
         else:
-            method = self.METHODS[method_index].copy()
+            method = self.methods[method_index].copy()
             for index in indexes:
                 self.variable_methods[index.row()] = method
 
@@ -380,7 +385,7 @@ class OWImpute(OWWidget):
             value = self.value_double.value()
             self.default_value = value
 
-        self.METHODS[self.AS_INPUT].default = value
+        self.methods[self.AS_INPUT].default = value
         index = self.variable_button_group.checkedId()
         if index == self.AS_INPUT:
             self.set_method_for_current_selection(index)
