@@ -45,6 +45,9 @@ class OWDataSampler(OWWidget):
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
 
+    class Warning(OWWidget.Warning):
+        could_not_stratify = Msg("Stratification failed\n{}")
+
     class Error(OWWidget.Error):
         too_many_folds = Msg("Number of folds exceeds data size")
         sample_larger_than_data = Msg("Sample must be smaller than data")
@@ -251,10 +254,17 @@ class OWDataSampler(OWWidget):
             self.indices = None
             return
 
-        rnd = self.RandomSeed if self.use_seed else None
         stratified = (self.stratify and
                       type(self.data) == Table and
                       self.data.domain.has_discrete_class)
+        try:
+            self.sample(data_length, size, stratified)
+        except ValueError as ex:
+            self.Warning.could_not_stratify(str(ex))
+            self.sample(data_length, size, stratified=False)
+
+    def sample(self, data_length, size, stratified):
+        rnd = self.RandomSeed if self.use_seed else None
         if self.sampling_type == self.FixedSize:
             self.indices = sample_random_n(
                 self.data, size,

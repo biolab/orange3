@@ -12,7 +12,7 @@ class TestOWDataSampler(WidgetTest):
         cls.iris = Table("iris")
 
     def setUp(self):
-        self.widget = self.create_widget(OWDataSampler)
+        self.widget = self.create_widget(OWDataSampler)  # type: OWDataSampler
 
     def test_error_message(self):
         """ Check if error message appears and then disappears when
@@ -26,3 +26,36 @@ class TestOWDataSampler(WidgetTest):
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
         self.send_signal("Data", Table(self.iris.domain))
         self.assertTrue(self.widget.Error.no_data.is_shown())
+
+    def test_stratified_on_unbalanced_data(self):
+        unbalanced_data = self.iris[:51]
+
+        self.widget.controls.stratify.setChecked(True)
+        self.send_signal("Data", unbalanced_data)
+        self.assertTrue(self.widget.Warning.could_not_stratify.is_shown())
+
+    def test_bootstrap(self):
+        self.select_sampling_type(self.widget.Bootstrap)
+
+        self.send_signal("Data", self.iris)
+
+        in_input = set(self.iris.ids)
+        sample = self.get_output("Data Sample")
+        in_sample = set(sample.ids)
+        in_remaining = set(self.get_output("Remaining Data").ids)
+
+        # Bootstrap should sample len(input) instances
+        self.assertEqual(len(sample), len(self.iris))
+        # Sample and remaining should cover all instances, while none
+        # should be present in both
+        self.assertEqual(len(in_sample | in_remaining), len(in_input))
+        self.assertEqual(len(in_sample & in_remaining), 0)
+        # Sampling with replacement will always produce at least one distinct
+        # instance in sample, and at least one instance in remaining with
+        # high probability (1-(1/150*2/150*...*150/150) ~= 1-2e-64)
+        self.assertGreater(len(in_sample), 0)
+        self.assertGreater(len(in_remaining), 0)
+
+    def select_sampling_type(self, sampling_type):
+        buttons = self.widget.controls.sampling_type.group.buttons()
+        buttons[sampling_type].click()
