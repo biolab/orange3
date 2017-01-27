@@ -7,7 +7,7 @@ from AnyQt.QtCore import QRectF, QPointF
 from Orange.data import Table
 from Orange.widgets.data import owpaintdata
 from Orange.widgets.data.owpaintdata import OWPaintData
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, datasets
 
 
 class TestOWPaintData(WidgetTest):
@@ -24,6 +24,10 @@ class TestOWPaintData(WidgetTest):
         data = Table("iris")
         self.send_signal("Data", data)
         self.send_signal("Data", Table(data.domain))
+
+    def test_nan_data(self):
+        data = datasets.missing_data_2()
+        self.send_signal("Data", data)
 
     def test_output_shares_internal_buffer(self):
         data = Table("iris")[::5]
