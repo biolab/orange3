@@ -4,8 +4,10 @@ from Orange.data import Table, Domain, DiscreteVariable
 from Orange.classification.tree import TreeLearner as ClassificationTreeLearner
 from Orange.base import Model
 from Orange.widgets.classify.owclassificationtree import OWTreeLearner
-from Orange.widgets.tests.base import (WidgetTest, DefaultParameterMapping,
-                                       ParameterMapping, WidgetLearnerTestMixin)
+from Orange.widgets.tests.base import (
+    WidgetTest, DefaultParameterMapping, ParameterMapping,
+    WidgetLearnerTestMixin
+)
 
 
 class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
@@ -27,8 +29,8 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
                 self.widget, 'min_internal', 'min_samples_split'),
             ParameterMapping.from_attribute(
                 self.widget, 'min_leaf', 'min_samples_leaf')]
-        # NB. sufficient_majority is divided by 100, so it cannot be tested like
-        # this
+        # NB. sufficient_majority is divided by 100, so it cannot be tested
+        # like this
 
         self.checks = [sb.gui_element.cbox for sb in self.parameters]
 
@@ -62,7 +64,7 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         domain = Domain([
             DiscreteVariable(
                 values=[str(x) for x in range(max_binarization + 1)])],
-            DiscreteVariable(values="01"))
+                DiscreteVariable(values="01"))
         self.send_signal("Data", Table(domain, [[0, 0], [1, 1]]))
         self.assertTrue(error_shown())
         # No more error on Iris
@@ -86,6 +88,6 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         domain = Domain([
             DiscreteVariable(
                 values=[str(x) for x in range(max_binarization + 1)])],
-            DiscreteVariable(values="01"))
+                DiscreteVariable(values="01"))
         self.send_signal("Data", Table(domain))
         self.assertFalse(error_shown())

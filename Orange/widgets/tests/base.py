@@ -1,4 +1,5 @@
 import os
+import sip
 import unittest
 from unittest.mock import Mock
 
@@ -9,19 +10,21 @@ from AnyQt.QtWidgets import (
 
 from Orange.base import SklModel, Model
 from Orange.canvas.report.owreport import OWReport
-from Orange.classification.base_classification import (LearnerClassification,
-                                                       ModelClassification)
+from Orange.classification.base_classification import (
+    LearnerClassification, ModelClassification
+)
 from Orange.data import Table
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize
 from Orange.preprocess.preprocess import PreprocessorList
-from Orange.regression.base_regression import LearnerRegression, ModelRegression
-from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.regression.base_regression import (
+    LearnerRegression, ModelRegression
+)
+from Orange.widgets.utils.annotated_data import (
+    ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
+)
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
-# For tests, let memory freeing entirely to Python / OS
-import sip
 sip.setdestroyonexit(False)
 
 app = None
