@@ -1,4 +1,4 @@
-from Orange.widgets.regression.owlinearregression import OWLinearRegression
+from Orange.widgets.model.owlinearregression import OWLinearRegression
 from Orange.widgets.tests.base import WidgetTest, WidgetLearnerTestMixin
 
 

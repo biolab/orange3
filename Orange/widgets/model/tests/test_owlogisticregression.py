@@ -2,11 +2,11 @@
 # pylint: disable=missing-docstring
 import unittest
 
+from Orange.classification import LogisticRegressionLearner
 from Orange.data import Table
 from Orange.statistics.util import stats
-from Orange.classification import LogisticRegressionLearner
-from Orange.widgets.classify.owlogisticregression import (create_coef_table,
-                                                          OWLogisticRegression)
+from Orange.widgets.model.owlogisticregression import (create_coef_table,
+                                                       OWLogisticRegression)
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
 

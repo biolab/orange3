@@ -4,7 +4,7 @@ from AnyQt.QtWidgets import (
     QButtonGroup, QRadioButton, QSpinBox, QDoubleSpinBox, QComboBox
 )
 
-from Orange.widgets.classify.owrules import OWRuleLearner
+from Orange.widgets.model.owrules import OWRuleLearner
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
 
