@@ -10,6 +10,7 @@ class TestOWSGD(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(
             OWSGD, stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.iris,)
         self.parameters = [
             ParameterMapping('loss', self.widget.cls_loss_function_combo,
                              list(zip(*self.widget.cls_losses))[1]),

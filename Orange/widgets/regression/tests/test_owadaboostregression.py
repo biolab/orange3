@@ -16,6 +16,7 @@ class TestOWAdaBoostRegression(WidgetTest, WidgetLearnerTestMixin):
         # Needed because the fitter type needs to be set to regression in order
         # to be tested properly
         self.data = self.housing[:10]
+        self.valid_datasets = (self.data,)
         losses = [loss.lower() for loss in self.widget.losses]
         self.parameters = [
             ParameterMapping('loss', self.widget.reg_algorithm_combo, losses),

@@ -10,6 +10,7 @@ class TestOWSVMRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWSVMRegression,
                                          stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.housing,)
         gamma_spin = self.widget._kernel_params[0]
         values = [self.widget._default_gamma, gamma_spin.maximum()]
 

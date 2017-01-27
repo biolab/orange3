@@ -1,6 +1,6 @@
 import os
 import unittest
-
+from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtWidgets import (
@@ -472,7 +472,7 @@ class WidgetLearnerTestMixin:
                 learner_params = self.widget.learner.params
                 for parameter in self.parameters:
                     # Skip if the param isn't used for the given data type
-                    if self._should_check(parameter, dataset):
+                    if self._should_check_parameter(parameter, dataset):
                         self.assertEqual(learner_params.get(parameter.name),
                                          parameter.get_value())
 
@@ -493,7 +493,7 @@ class WidgetLearnerTestMixin:
 
             for parameter in self.parameters:
                 # Skip if the param isn't used for the given data type
-                if not self._should_check(parameter, dataset):
+                if not self._should_check_parameter(parameter, dataset):
                     continue
 
                 assert isinstance(parameter, BaseParameterMapping)
@@ -523,8 +523,33 @@ class WidgetLearnerTestMixin:
                         else:
                             self.assertTrue(self.widget.Error.active)
 
+    def test_params_trigger_settings_changed(self):
+        """Check that the learner gets updated whenever a param is changed."""
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
+
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if not self._should_check_parameter(parameter, dataset):
+                    continue
+
+                assert isinstance(parameter, BaseParameterMapping)
+                # Set the mock here so we can include the param name in the
+                # error message, so if any test fails, we see where
+                # We mock `apply` and not `settings_changed` since that's
+                # sometimes connected with Qt signals, which are not directly
+                # called
+                self.widget.apply = Mock(name="apply(%s)" % parameter)
+                # Since the settings only get updated when the value actually
+                # changes, find a value that isn't the same as the current
+                # value and try with that
+                new_value = [x for x in parameter.values
+                             if x != parameter.get_value()][0]
+                parameter.set_value(new_value)
+                self.widget.apply.assert_called_once_with()
+
     @staticmethod
-    def _should_check(parameter, data):
+    def _should_check_parameter(parameter, data):
         """Should the param be passed into the learner given the data"""
         return ((parameter.problem_type == "classification" and
                  data.domain.has_discrete_class) or

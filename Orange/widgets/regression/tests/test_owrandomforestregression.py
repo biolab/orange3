@@ -10,6 +10,7 @@ class TestOWRandomForestRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(
             OWRandomForest, stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.housing,)
         nest_spin = self.widget.n_estimators_spin
         nest_min_max = [nest_spin.minimum() * 10, nest_spin.minimum()]
         self.parameters = [

@@ -13,6 +13,7 @@ class TestOWAdaBoostClassification(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(
             OWAdaBoost, stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.iris,)
         self.parameters = [
             ParameterMapping('algorithm', self.widget.cls_algorithm_combo,
                              self.widget.algorithms),
