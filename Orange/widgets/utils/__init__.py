@@ -1,6 +1,6 @@
 import sys
 
-from PyQt4.QtCore import QObject
+from AnyQt.QtCore import QObject
 
 from Orange.data.variable import TimeVariable
 from Orange.util import deepgetattr

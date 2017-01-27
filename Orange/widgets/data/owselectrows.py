@@ -51,7 +51,7 @@ class SelectRowsContextHandler(DomainContextHandler):
                 var = attr in domain and domain[attr]
                 if var and var.is_continuous and not isinstance(var, TimeVariable):
                     value[i] = (attr, op,
-                                list([QLocale().toString(i, 'f')
+                                list([QLocale().toString(float(i), 'f')
                                       for i in values]))
         return value
 
@@ -88,7 +88,7 @@ class OWSelectRows(widget.OWWidget):
             (FilterContinuous.NotEqual, "is not"),
             (FilterContinuous.Less, "is below"),
             (FilterContinuous.LessEqual, "is at most"),
-            (FilterContinuous.Greater,"is greater than"),
+            (FilterContinuous.Greater, "is greater than"),
             (FilterContinuous.GreaterEqual, "is at least"),
             (FilterContinuous.Between, "is between"),
             (FilterContinuous.Outside, "is outside"),
