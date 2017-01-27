@@ -232,7 +232,7 @@ def domain_union(A, B):
 def domain_intersection(A, B):
     def tuple_intersection(t1, t2):
         inters = set(t1) & set(t2)
-        return tuple(el for el in t1 + t2 if el in inters)
+        return tuple(unique(el for el in t1 + t2 if el in inters))
 
     intersection = Orange.data.Domain(
         tuple_intersection(A.attributes, B.attributes),

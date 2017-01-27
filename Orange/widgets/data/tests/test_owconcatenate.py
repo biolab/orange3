@@ -1,10 +1,16 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain
-from Orange.widgets.data.owconcatenate import OWConcatenate
+from Orange.data import (
+    Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
+)
+from Orange.widgets.data.owconcatenate import (
+    OWConcatenate, domain_intersection, domain_union
+)
+
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -96,3 +102,53 @@ class TestOWConcatenate(WidgetTest):
         self.assertFalse(self.widget.mergebox.isEnabled())
         self.send_signal("Primary Data", None)
         self.assertTrue(self.widget.mergebox.isEnabled())
+
+
+class TestTools(unittest.TestCase):
+    def test_domain_intersect(self):
+        X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
+        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+                         ["D1", "D2", "D3"])
+        S1, S2 = map(StringVariable, ["S1", "S2"])
+        domain1 = Domain([X1, X2], [D1], [S1])
+        domain2 = Domain([X3], [D2], [S2])
+        res = domain_intersection(domain1, domain2)
+
+        self.assertSequenceEqual(res.attributes, [])
+        self.assertSequenceEqual(res.class_vars, [])
+        self.assertSequenceEqual(res.metas, [])
+
+        domain2 = Domain([X2, X3], [D1, D2, D3], [S1, S2])
+        res = domain_intersection(domain1, domain2)
+        self.assertSequenceEqual(res.attributes, [X2])
+        self.assertSequenceEqual(res.class_vars, [D1])
+        self.assertSequenceEqual(res.metas, [S1])
+
+        res = domain_intersection(domain1, domain1)
+        self.assertSequenceEqual(res.attributes, domain1.attributes)
+        self.assertSequenceEqual(res.class_vars, domain1.class_vars)
+        self.assertSequenceEqual(res.metas, domain1.metas)
+
+    def test_domain_union(self):
+        X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
+        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+                         ["D1", "D2", "D3"])
+        S1, S2 = map(StringVariable, ["S1", "S2"])
+        domain1 = Domain([X1, X2], [D1], [S1])
+        domain2 = Domain([X3], [D2], [S2])
+        res = domain_union(domain1, domain2)
+
+        self.assertSequenceEqual(res.attributes, [X1, X2, X3])
+        self.assertSequenceEqual(res.class_vars, [D1, D2])
+        self.assertSequenceEqual(res.metas, [S1, S2])
+
+        domain2 = Domain([X3, X2], [D2, D1, D3], [S2, S1])
+        res = domain_union(domain1, domain2)
+        self.assertSequenceEqual(res.attributes, [X1, X2, X3])
+        self.assertSequenceEqual(res.class_vars, [D1, D2, D3])
+        self.assertSequenceEqual(res.metas, [S1, S2])
+
+        res = domain_union(domain1, domain1)
+        self.assertSequenceEqual(res.attributes, domain1.attributes)
+        self.assertSequenceEqual(res.class_vars, domain1.class_vars)
+        self.assertSequenceEqual(res.metas, domain1.metas)
