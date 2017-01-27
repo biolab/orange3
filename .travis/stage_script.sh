@@ -24,6 +24,5 @@ export PYTHONWARNINGS=module
 catchsegv xvfb-run -a -s "$XVFBARGS" \
     coverage run -m unittest -v \
         Orange.tests \
-        Orange.widgets.tests \
-        Orange.canvas.report.tests
+        Orange.widgets.tests
 coverage combine
