@@ -213,12 +213,20 @@ class BaseParameterMapping:
         It sets component's value.
     """
 
-    def __init__(self, name, gui_element, values, getter, setter):
+    def __init__(self, name, gui_element, values, getter, setter,
+                 problem_type="both"):
         self.name = name
         self.gui_element = gui_element
         self.values = values
         self.get_value = getter
         self.set_value = setter
+        self.problem_type = problem_type
+
+    def __str__(self):
+        if self.problem_type == "both":
+            return self.name
+        else:
+            return "%s (%s)" % (self.name, self.problem_type)
 
 
 class DefaultParameterMapping(BaseParameterMapping):
@@ -266,11 +274,13 @@ class ParameterMapping(BaseParameterMapping):
     """
 
     def __init__(self, name, gui_element, values=None,
-                 getter=None, setter=None):
-        super().__init__(name, gui_element,
-                         values or self._default_values(gui_element),
-                         getter or self._default_get_value(gui_element, values),
-                         setter or self._default_set_value(gui_element, values))
+                 getter=None, setter=None, **kwargs):
+        super().__init__(
+            name, gui_element,
+            values or self._default_values(gui_element),
+            getter or self._default_get_value(gui_element, values),
+            setter or self._default_set_value(gui_element, values),
+            **kwargs)
 
     @staticmethod
     def get_gui_element(widget, attribute):
@@ -455,13 +465,16 @@ class WidgetLearnerTestMixin:
     def test_parameters_default(self):
         """Check if learner's parameters are set to default (widget's) values
         """
-        self.send_signal("Data", self.data)
-        self.widget.apply_button.button.click()
-        if hasattr(self.widget.learner, "params"):
-            learner_params = self.widget.learner.params
-            for parameter in self.parameters:
-                self.assertEqual(learner_params.get(parameter.name),
-                                 parameter.get_value())
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
+            self.widget.apply_button.button.click()
+            if hasattr(self.widget.learner, "params"):
+                learner_params = self.widget.learner.params
+                for parameter in self.parameters:
+                    # Skip if the param isn't used for the given data type
+                    if self._should_check(parameter, dataset):
+                        self.assertEqual(learner_params.get(parameter.name),
+                                         parameter.get_value())
 
     def test_parameters(self):
         """Check learner and model for various values of all parameters"""
@@ -473,31 +486,51 @@ class WidgetLearnerTestMixin:
             else:
                 return getattr(learner, name)
 
-        self.send_signal("Data", self.data)
+        # Test params on every valid dataset, since some attributes may apply
+        # to only certain problem types
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
 
-        for parameter in self.parameters:
-            assert isinstance(parameter, BaseParameterMapping)
-            for value in parameter.values:
-                parameter.set_value(value)
-                self.widget.apply_button.button.click()
-                param = get_value(self.widget.learner, parameter.name)
-                self.assertEqual(param, parameter.get_value(),
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                self.assertEqual(param, value,
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                param = get_value(self.get_output("Learner"), parameter.name)
-                self.assertEqual(param, value,
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                if issubclass(self.widget.LEARNER, SklModel):
-                    model = self.get_output(self.model_name)
-                    if model is not None:
-                        self.assertEqual(get_value(model, parameter.name), value)
-                        self.assertFalse(self.widget.Error.active)
-                    else:
-                        self.assertTrue(self.widget.Error.active)
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if not self._should_check(parameter, dataset):
+                    continue
+
+                assert isinstance(parameter, BaseParameterMapping)
+
+                for value in parameter.values:
+                    parameter.set_value(value)
+                    self.widget.apply_button.button.click()
+                    param = get_value(self.widget.learner, parameter.name)
+                    self.assertEqual(
+                        param, parameter.get_value(),
+                        "Mismatching setting for parameter '%s'" % parameter)
+                    self.assertEqual(
+                        param, value,
+                        "Mismatching setting for parameter '%s'" % parameter)
+                    param = get_value(self.get_output("Learner"),
+                                      parameter.name)
+                    self.assertEqual(
+                        param, value,
+                        "Mismatching setting for parameter '%s'" % parameter)
+
+                    if issubclass(self.widget.LEARNER, SklModel):
+                        model = self.get_output(self.model_name)
+                        if model is not None:
+                            self.assertEqual(get_value(model, parameter.name),
+                                             value)
+                            self.assertFalse(self.widget.Error.active)
+                        else:
+                            self.assertTrue(self.widget.Error.active)
+
+    @staticmethod
+    def _should_check(parameter, data):
+        """Should the param be passed into the learner given the data"""
+        return ((parameter.problem_type == "classification" and
+                 data.domain.has_discrete_class) or
+                (parameter.problem_type == "regression" and
+                 data.domain.has_continuous_class) or
+                (parameter.problem_type == "both"))
 
 
 class WidgetOutputsTestMixin:
