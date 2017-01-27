@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# Test internal methods
+# pylint: disable=missing-docstring, protected-access
 
 import unittest
 from unittest.mock import Mock
@@ -430,7 +431,13 @@ class TestDomainDistribution(unittest.TestCase):
         variable = d.domain[-2]
         dist, _ = d._compute_distributions([variable])[0]
         np.testing.assert_almost_equal(dist, [3, 3, 2])
-
+        # repeat with nan values
+        assert d.metas.dtype.kind == "O"
+        assert d.metas[0, 1] == 0
+        d.metas[0, 1] = np.nan
+        dist, nanc = d._compute_distributions([variable])[0]
+        np.testing.assert_almost_equal(dist, [2, 3, 2])
+        self.assertEqual(nanc, 1)
 
 if __name__ == "__main__":
     unittest.main()
