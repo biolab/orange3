@@ -898,6 +898,13 @@ class OWMosaicDisplay(OWWidget):
         else:
             self.Warning.no_valid_data.clear()
 
+        attrs = [attr for attr in attr_list if not data.domain[attr].values]
+        if attrs:
+            CanvasText(self.canvas,
+                       "Feature {} has no values".format(attrs[0]),
+                       (self.canvas_view.width() - 120) / 2,
+                       self.canvas_view.height() / 2)
+            return
         if self.interior_coloring == self.PEARSON:
             apriori_dists = [get_distribution(data, attr) for attr in attr_list]
         else:
