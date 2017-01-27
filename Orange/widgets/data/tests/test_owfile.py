@@ -93,3 +93,9 @@ class TestOWFile(WidgetTest):
         filename = FileFormat.locate(name, dataset_dirs)
         self.widget.add_path(filename)
         self.widget.load_data()
+
+    def test_no_last_path(self):
+        self.widget =\
+            self.create_widget(OWFile, stored_settings={"recent_paths": []})
+        # Doesn't crash and contains a single item, (none).
+        self.assertEqual(self.widget.file_combo.count(), 1)

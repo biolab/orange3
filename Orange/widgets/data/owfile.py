@@ -217,10 +217,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.setAcceptDrops(True)
 
-        if self.source == self.LOCAL_FILE and \
-                        os.path.getsize(self.last_path()) > self.SIZE_LIMIT:
-            self.Warning.file_too_big()
-            return
+        if self.source == self.LOCAL_FILE:
+            last_path = self.last_path()
+            if last_path and os.path.getsize(last_path) > self.SIZE_LIMIT:
+                self.Warning.file_too_big()
+                return
 
         QTimer.singleShot(0, self.load_data)
 
