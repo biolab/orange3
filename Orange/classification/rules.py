@@ -149,7 +149,8 @@ def hash_dist(x):
     hash : int
         Hash function result.
     """
-    return int(sha1(bytes(x)).hexdigest(), base=16) & 0xffffffff
+    return int(sha1(np.ascontiguousarray(x).data)
+               .hexdigest(), base=16) & 0xffffffff
 
 
 class Evaluator:

@@ -50,7 +50,11 @@ class TestPreprocess(unittest.TestCase):
             self.assertTrue(os.environ.get('ORANGE_DEPRECATIONS_ERROR'))
         expected = self.assertRaises if is_CI else self.assertWarns
         with expected(OrangeDeprecationWarning):
-            Orange.preprocess.preprocess.Preprocess(Table('iris'))
+            try:
+                Orange.preprocess.preprocess.Preprocess(Table('iris'))
+            except NotImplementedError:
+                # Expected from default Preprocess.__call__
+                pass
 
 
 class RemoveConstant(unittest.TestCase):
