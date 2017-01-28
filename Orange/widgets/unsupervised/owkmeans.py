@@ -277,6 +277,8 @@ class OWKMeans(widget.OWWidget):
     def run_optimization(self):
         # Disabling is needed since this function is not reentrant
         # Fast clicking on, say, "To: " causes multiple calls
+        # False positives (Setting is not recognized as int)
+        # pylint: disable=invalid-sequence-index
         try:
             self.controlArea.setDisabled(True)
             self.optimization_runs = []
@@ -311,6 +313,8 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def cluster(self):
+        # False positives (Setting is not recognized as int)
+        # pylint: disable=invalid-sequence-index
         if not self.check_data_size(self.k, self.Error):
             return
         try:
@@ -353,6 +357,8 @@ class OWKMeans(widget.OWWidget):
             self.table_view.setFocus(Qt.OtherFocusReason)
 
     def update_results(self):
+        # False positives (Setting is not recognized as int)
+        # pylint: disable=invalid-sequence-index
         _, scoring_method, minimize, normal = self.SCORING_METHODS[self.scoring]
         scores = [scoring_method(run) if not isinstance(run, str) else run
                   for _, run in self.optimization_runs]
@@ -423,6 +429,8 @@ class OWKMeans(widget.OWWidget):
             self.run()
 
     def send_report(self):
+        # False positives (Setting is not recognized as int)
+        # pylint: disable=invalid-sequence-index
         k_clusters = self.k
         if self.optimize_k and self.optimization_runs and self.selected_row() is not None:
             k_clusters = self.optimization_runs[self.selected_row()][1].k
@@ -443,12 +451,12 @@ class OWKMeans(widget.OWWidget):
             self.report_data("Data", self.data)
             if self.optimize_k:
                 self.report_table(
-                    "Scoring by {}".format(self.SCORING_METHODS[self.scoring][0]
-                                           ),
+                    "Scoring by {}".format(
+                        self.SCORING_METHODS[self.scoring][0]),
                     self.table_view)
 
 
-if __name__ == "__main__":
+def main():
     import sys
     from AnyQt.QtWidgets import QApplication
 
@@ -459,3 +467,6 @@ if __name__ == "__main__":
     ow.show()
     a.exec()
     ow.saveSettings()
+
+if __name__ == "__main__":
+    main()
