@@ -18,6 +18,9 @@ class OWSGD(OWBaseLearner):
     description = 'Minimize an objective function using a stochastic ' \
                   'approximation of gradient descent.'
     icon = "icons/SGD.svg"
+    replaces = [
+        "Orange.widgets.regression.owsgdregression.OWSGDRegression",
+    ]
     priority = 90
 
     LEARNER = SGDLearner

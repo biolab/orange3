@@ -15,6 +15,10 @@ class OWTreeLearner(OWBaseLearner):
     name = "Tree"
     description = "A tree algorithm with forward pruning."
     icon = "icons/Tree.svg"
+    replaces = [
+        "Orange.widgets.classify.owclassificationtree.OWClassificationTree",
+        "Orange.widgets.regression.owregressiontree.OWRegressionTree",
+    ]
     priority = 30
 
     LEARNER = TreeLearner

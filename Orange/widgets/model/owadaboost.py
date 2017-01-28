@@ -15,6 +15,10 @@ class OWAdaBoost(OWBaseLearner):
     description = "An ensemble meta-algorithm that combines weak learners " \
                   "and adapts to the 'hardness' of each training sample. "
     icon = "icons/AdaBoost.svg"
+    replaces = [
+        "Orange.widgets.classify.owadaboost.OWAdaBoostClassification",
+        "Orange.widgets.regression.owadaboostregression.OWAdaBoostRegression",
+    ]
     priority = 80
 
     LEARNER = SklAdaBoostLearner

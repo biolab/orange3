@@ -22,6 +22,9 @@ class OWUnivariateRegression(OWBaseLearner):
     name = "Univariate Polynomial Regression"
     description = "Univariate regression with polynomial expansion."
     icon = "icons/UnivariateRegression.svg"
+    replaces = [
+        "Orange.widgets.regression.owunivariateregression.OWUnivariateRegression",
+    ]
 
     inputs = [("Learner", Learner, "set_learner")]
 

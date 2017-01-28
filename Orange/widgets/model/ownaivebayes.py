@@ -9,8 +9,11 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 class OWNaiveBayes(OWBaseLearner):
     name = "Naive Bayes"
     description = "A fast and simple probabilistic classifier based on " \
-                  "Bayes' theorem with the assumption of feature independence. "
+                  "Bayes' theorem with the assumption of feature independence."
     icon = "icons/NaiveBayes.svg"
+    replaces = [
+        "Orange.widgets.classify.ownaivebayes.OWNaiveBayes",
+    ]
     priority = 70
 
     LEARNER = NaiveBayesLearner

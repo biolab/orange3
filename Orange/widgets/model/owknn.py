@@ -11,6 +11,10 @@ class OWKNNLearner(OWBaseLearner):
     name = "kNN"
     description = "Predict according to the nearest training instances."
     icon = "icons/KNN.svg"
+    replaces = [
+        "Orange.widgets.classify.owknn.OWKNNLearner",
+        "Orange.widgets.regression.owknnregression.OWKNNRegression",
+    ]
     priority = 20
 
     LEARNER = KNNLearner

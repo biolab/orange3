@@ -14,6 +14,9 @@ class OWLogisticRegression(OWBaseLearner):
     description = "The logistic regression classification algorithm with " \
                   "LASSO (L1) or ridge (L2) regularization."
     icon = "icons/LogisticRegression.svg"
+    replaces = [
+        "Orange.widgets.classify.owlogisticregression.OWLogisticRegression",
+    ]
     priority = 60
 
     LEARNER = LogisticRegressionLearner

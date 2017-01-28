@@ -207,6 +207,9 @@ class OWRuleLearner(OWBaseLearner):
     name = "CN2 Rule Induction"
     description = "Induce rules from data using CN2 algorithm."
     icon = "icons/CN2RuleInduction.svg"
+    replaces = [
+        "Orange.widgets.classify.owrules.OWRuleLearner",
+    ]
     priority = 19
 
     want_main_area = False

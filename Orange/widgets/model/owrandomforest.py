@@ -11,6 +11,10 @@ class OWRandomForest(OWBaseLearner):
     name = "Random Forest"
     description = "Predict using an ensemble of decision trees."
     icon = "icons/RandomForest.svg"
+    replaces = [
+        "Orange.widgets.classify.owrandomforest.OWRandomForest",
+        "Orange.widgets.regression.owrandomforestregression.OWRandomForestRegression",
+    ]
     priority = 40
 
     LEARNER = RandomForestLearner
