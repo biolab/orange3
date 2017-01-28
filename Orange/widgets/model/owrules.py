@@ -1,15 +1,16 @@
 from collections import OrderedDict
+
 import numpy as np
 from AnyQt.QtCore import Qt
 
+from Orange.classification.rules import (
+    WeightedRelativeAccuracyEvaluator, LaplaceAccuracyEvaluator,
+    EntropyEvaluator, _RuleClassifier, _RuleLearner, get_dist
+)
 from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.classification.rules import (WeightedRelativeAccuracyEvaluator,
-                                         LaplaceAccuracyEvaluator,
-                                         EntropyEvaluator, _RuleClassifier,
-                                         _RuleLearner, get_dist)
 
 
 class CustomRuleClassifier(_RuleClassifier):

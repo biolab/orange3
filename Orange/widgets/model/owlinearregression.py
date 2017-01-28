@@ -1,12 +1,13 @@
 from itertools import chain
 
-from AnyQt.QtWidgets import QLayout, QSizePolicy
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QLayout, QSizePolicy
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
     LassoRegressionLearner, LinearRegressionLearner,
-    RidgeRegressionLearner, ElasticNetLearner)
+    RidgeRegressionLearner, ElasticNetLearner
+)
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 

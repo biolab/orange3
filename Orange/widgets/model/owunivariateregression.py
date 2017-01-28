@@ -1,21 +1,20 @@
-from AnyQt.QtWidgets import QSizePolicy
-from AnyQt.QtGui import QColor, QPen, QFont, QPalette
-from AnyQt.QtCore import Qt, QRectF
-
-import pyqtgraph as pg
 import numpy as np
+import pyqtgraph as pg
+from AnyQt.QtCore import Qt, QRectF
+from AnyQt.QtGui import QColor, QPen, QFont, QPalette
+from AnyQt.QtWidgets import QSizePolicy
 
+from Orange.canvas import report
 from Orange.data import Table, Domain
 from Orange.data.variable import ContinuousVariable, StringVariable
-from Orange.regression.linear import (RidgeRegressionLearner, PolynomialLearner,
-                                      LinearRegressionLearner, LinearModel)
 from Orange.regression import Learner
-from Orange.preprocess.preprocess import Preprocess
+from Orange.regression.linear import (
+    RidgeRegressionLearner, PolynomialLearner, LinearRegressionLearner
+)
 from Orange.widgets import settings, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.canvas import report
 
 
 class OWUnivariateRegression(OWBaseLearner):

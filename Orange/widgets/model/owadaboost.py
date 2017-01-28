@@ -2,8 +2,7 @@ from AnyQt.QtCore import Qt
 
 from Orange.base import Learner
 from Orange.data import Table
-from Orange.modelling import SklAdaBoostLearner
-from Orange.modelling import SklTreeLearner
+from Orange.modelling import SklAdaBoostLearner, SklTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
