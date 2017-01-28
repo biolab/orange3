@@ -101,9 +101,6 @@ class OWKMeans(widget.OWWidget):
         ("Inter-cluster distance", lambda km: km.inter_cluster, True, False),
         ("Distance to centroids", lambda km: km.inertia, True, False)]
 
-    OUTPUT_CLASS, OUTPUT_ATTRIBUTE, OUTPUT_META = range(3)
-    OUTPUT_METHODS = ("Class", "Feature", "Meta")
-
     resizing_enabled = False
 
     k = Setting(3)
@@ -115,8 +112,6 @@ class OWKMeans(widget.OWWidget):
     smart_init = Setting(INIT_KMEANS)
     scoring = Setting(SILHOUETTE)
     append_cluster_ids = Setting(True)
-    place_cluster_ids = Setting(OUTPUT_CLASS)
-    output_name = Setting("Cluster")
     auto_run = Setting(True)
 
     def __init__(self):
@@ -186,14 +181,6 @@ class OWKMeans(widget.OWWidget):
         gui.lineEdit(
             sb, self, "max_iterations", controlWidth=60, valueType=int,
             validator=QIntValidator(), callback=self.run)
-
-        box = gui.vBox(self.controlArea, "Output")
-        gui.comboBox(box, self, "place_cluster_ids",
-                     label="Append cluster ID as:", orientation=Qt.Horizontal,
-                     callback=self.send_data, items=self.OUTPUT_METHODS)
-        gui.lineEdit(box, self, "output_name",
-                     label="Name:", orientation=Qt.Horizontal,
-                     callback=self.send_data)
 
         gui.separator(self.buttonsArea, 30)
         self.apply_button = gui.auto_commit(
@@ -391,22 +378,12 @@ class OWKMeans(widget.OWWidget):
             return
 
         clust_var = DiscreteVariable(
-            self.output_name, values=["C%d" % (x + 1) for x in range(km.k)])
+            "Cluster", values=["C%d" % (x + 1) for x in range(km.k)])
         clust_ids = km(self.data)
         domain = self.data.domain
-        attributes, classes = domain.attributes, domain.class_vars
-        meta_attrs = domain.metas
-        if self.place_cluster_ids == self.OUTPUT_CLASS:
-            if classes:
-                meta_attrs += classes
-            classes = [clust_var]
-        elif self.place_cluster_ids == self.OUTPUT_ATTRIBUTE:
-            attributes += (clust_var, )
-        else:
-            meta_attrs += (clust_var, )
-
-        domain = Domain(attributes, classes, meta_attrs)
-        new_table = Table.from_table(domain, self.data)
+        new_domain = Domain(
+            domain.attributes, [clust_var], domain.metas + domain.class_vars)
+        new_table = Table.from_table(new_domain, self.data)
         new_table.get_column_view(clust_var)[0][:] = clust_ids.X.ravel()
 
         centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
@@ -432,7 +409,8 @@ class OWKMeans(widget.OWWidget):
         # False positives (Setting is not recognized as int)
         # pylint: disable=invalid-sequence-index
         k_clusters = self.k
-        if self.optimize_k and self.optimization_runs and self.selected_row() is not None:
+        if self.optimize_k and self.optimization_runs and \
+                self.selected_row() is not None:
             k_clusters = self.optimization_runs[self.selected_row()][1].k
         self.report_items((
             ("Number of clusters", k_clusters),
@@ -440,13 +418,7 @@ class OWKMeans(widget.OWWidget):
              self.optimize_k != 0 and
              "{}, {} re-runs limited to {} steps".format(
                  self.INIT_METHODS[self.smart_init].lower(),
-                 self.n_init, self.max_iterations)),
-            ("Cluster ID in output",
-             self.append_cluster_ids and
-             "'{}' (as {})".format(
-                 self.output_name,
-                 self.OUTPUT_METHODS[self.place_cluster_ids].lower()))
-        ))
+                 self.n_init, self.max_iterations))))
         if self.data:
             self.report_data("Data", self.data)
             if self.optimize_k:
