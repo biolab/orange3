@@ -17,7 +17,7 @@ class TestOWKMeans(WidgetTest):
     def test_optimization_report_display(self):
         """ Check visibility of optimization report after we select the number of clusters  """
         self.send_signal("Data", self.iris)
-        radio_buttons = self.widget.n_clusters.findChildren(QRadioButton)
+        radio_buttons = self.widget.controls.optimize_k.findChildren(QRadioButton)
         radio_buttons[0].click()
         self.assertEqual(self.widget.mainArea.isHidden(), True)
         radio_buttons[1].click()
@@ -56,24 +56,23 @@ class TestOWKMeans(WidgetTest):
 
         self.KMeansFail.fail_on = {3, 5, 7}
         self.send_signal("Data", self.iris)
-        self.assertIsInstance(widget.optimization_runs[0][1], str)
-        self.assertIsInstance(widget.optimization_runs[2][1], str)
-        self.assertIsInstance(widget.optimization_runs[4][1], str)
-        self.assertNotIsInstance(widget.optimization_runs[1][1], str)
-        self.assertNotIsInstance(widget.optimization_runs[3][1], str)
-        self.assertNotIsInstance(widget.optimization_runs[5][1], str)
+        self.assertIsInstance(widget.optimization_runs[3], str)
+        self.assertIsInstance(widget.optimization_runs[5], str)
+        self.assertIsInstance(widget.optimization_runs[7], str)
+        self.assertNotIsInstance(widget.optimization_runs[4], str)
+        self.assertNotIsInstance(widget.optimization_runs[6], str)
+        self.assertNotIsInstance(widget.optimization_runs[8], str)
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 1)
         self.assertIsNotNone(self.get_output("Annotated Data"))
 
         self.KMeansFail.fail_on = set(range(3, 9))
-        widget.run()
+        widget.invalidate()
         self.assertTrue(widget.Error.failed.is_shown())
-        self.assertEqual(widget.optimization_runs, [])
         self.assertIsNone(self.get_output("Annotated Data"))
 
         self.KMeansFail.fail_on = set()
-        widget.run()
+        widget.invalidate()
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 0)
         self.assertIsNotNone(self.get_output("Annotated Data"))
@@ -88,6 +87,6 @@ class TestOWKMeans(WidgetTest):
         self.assertIsNone(self.get_output("Annotated Data"))
 
         self.KMeansFail.fail_on = set()
-        self.widget.run()
+        self.widget.invalidate()
         self.assertFalse(self.widget.Error.failed.is_shown())
         self.assertIsNotNone(self.get_output("Annotated Data"))
