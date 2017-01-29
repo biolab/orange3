@@ -54,9 +54,7 @@ class Fitter(Learner, metaclass=FitterMeta):
         """Get the learner for a given problem type."""
         # Prevent trying to access the learner when problem type is None
         if problem_type not in self.__fits__:
-            # We're mostly called from __getattr__ via getattr, so we should
-            # raise AttributeError instead of TypeError
-            raise AttributeError("No learner to handle '{}'".format(problem_type))
+            raise TypeError("No learner to handle '{}'".format(problem_type))
         if self.__learners[problem_type] is None:
             learner = self.__fits__[problem_type](**self.__kwargs(problem_type))
             learner.use_default_preprocessors = self.use_default_preprocessors
