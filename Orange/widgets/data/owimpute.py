@@ -4,8 +4,8 @@ import copy
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QWidget, QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
-    QVBoxLayout, QStackedLayout, QComboBox, QLineEdit,
+    QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
+    QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
 from AnyQt.QtCore import Qt
@@ -146,10 +146,10 @@ class OWImpute(OWWidget):
             minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
             value=self.default_value
             )
-        self.value_stack = value_stack = QStackedLayout()
+        self.value_stack = value_stack = QStackedWidget()
         value_stack.addWidget(self.value_combo)
         value_stack.addWidget(self.value_double)
-        method_layout.addLayout(value_stack)
+        method_layout.addWidget(value_stack)
 
         button_group.buttonClicked[int].connect(
             self.set_method_for_current_selection
