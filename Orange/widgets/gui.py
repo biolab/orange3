@@ -502,15 +502,23 @@ class SpinBoxWFocusOut(QtWidgets.QSpinBox):
         super().__init__(parent)
         self.setRange(minv, maxv)
         self.setSingleStep(step)
+        self.changed = False
+
+    def onValueChanged(self):
+        """
+        Sets the flag to determine whether the value has been changed.
+        """
+        self.changed = True
 
     def onEnter(self):
         """
         Commits the change by calling the appropriate callbacks.
         """
-        if self.cback:
+        if self.cback and self.changed:
             self.cback(int(str(self.text())))
-        if self.cfunc:
+        if self.cfunc and self.changed:
             self.cfunc()
+        self.changed = False
 
 
 class DoubleSpinBoxWFocusOut(QtWidgets.QDoubleSpinBox):
@@ -522,12 +530,20 @@ class DoubleSpinBoxWFocusOut(QtWidgets.QDoubleSpinBox):
         self.setDecimals(math.ceil(-math.log10(step)))
         self.setRange(minv, maxv)
         self.setSingleStep(step)
+        self.changed = False
+
+    def onValueChanged(self):
+        """
+        Sets the flag to determine whether the value has been changed.
+        """
+        self.changed = True
 
     def onEnter(self):
-        if self.cback:
+        if self.cback and self.changed:
             self.cback(float(str(self.text()).replace(",", ".")))
-        if self.cfunc:
+        if self.cfunc and self.changed:
             self.cfunc()
+        self.changed = False
 
 
 def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
@@ -650,6 +666,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         cbox.disables = [sbox]
         cbox.makeConsistent()
     if callback and callbackOnReturn:
+        sbox.valueChanged.connect(sbox.onValueChanged)
         sbox.editingFinished.connect(sbox.onEnter)
         if hasattr(sbox, "upButton"):
             sbox.upButton().clicked.connect(
