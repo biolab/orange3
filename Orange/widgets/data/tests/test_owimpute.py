@@ -2,10 +2,14 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
+from AnyQt.QtCore import Qt, QItemSelection
+from AnyQt.QtTest import QTest
+
 from Orange.data import Table
 from Orange.preprocess import impute
 from Orange.widgets.data.owimpute import OWImpute, AsDefault
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.itemmodels import select_row
 
 
@@ -86,8 +90,75 @@ class TestOWImpute(WidgetTest):
                               impute.DoNotImpute)
         self.assertIsInstance(widget.get_method_for_column(2),
                               impute.DoNotImpute)
-
         # reset both back to default
         varbg.button(asdefid).click()
         self.assertIsInstance(widget.get_method_for_column(0), AsDefault)
         self.assertIsInstance(widget.get_method_for_column(2), AsDefault)
+
+    def test_value_edit(self):
+        data = Table("heart_disease")[::10]
+        self.send_signal("Data", data)
+        widget = self.widget
+        model = widget.varmodel
+        view = widget.varview
+        selmodel = view.selectionModel()
+        varbg = widget.variable_button_group
+        method_types = [type(m) for m in OWImpute.METHODS]
+        asdefid = method_types.index(AsDefault)
+        valueid = method_types.index(impute.Default)
+
+        def selectvars(varlist, command=selmodel.ClearAndSelect):
+            indices = [data.domain.index(var) for var in varlist]
+            itemsel = QItemSelection()
+            for ind in indices:
+                midx = model.index(ind)
+                itemsel.select(midx, midx)
+            selmodel.select(itemsel, command)
+
+        def effective_method(var):
+            return widget.get_method_for_column(data.domain.index(var))
+
+        # select 'chest pain'
+        selectvars(['chest pain'])
+        self.assertTrue(widget.value_combo.isVisibleTo(widget) and
+                        widget.value_combo.isEnabledTo(widget))
+        self.assertEqual(varbg.checkedId(), asdefid)
+
+        simulate.combobox_activate_item(
+            widget.value_combo, data.domain["chest pain"].values[1])
+        # The 'Value' (impute.Default) should have been selected automatically
+        self.assertEqual(varbg.checkedId(), valueid)
+        imputer = effective_method('chest pain')
+        self.assertIsInstance(imputer, impute.Default)
+        self.assertEqual(imputer.default, 1)
+
+        # select continuous 'rest SBP' and 'cholesterol' variables
+        selectvars(["rest SBP", "cholesterol"])
+        self.assertTrue(widget.value_double.isVisibleTo(widget) and
+                        widget.value_double.isEnabledTo(widget))
+        self.assertEqual(varbg.checkedId(), asdefid)
+        widget.value_double.setValue(-1.0)
+        QTest.keyClick(self.widget.value_double, Qt.Key_Enter)
+        # The 'Value' (impute.Default) should have been selected automatically
+        self.assertEqual(varbg.checkedId(), valueid)
+        imputer = effective_method("rest SBP")
+        self.assertIsInstance(imputer, impute.Default)
+        self.assertEqual(imputer.default, -1.0)
+        imputer = effective_method("cholesterol")
+        self.assertIsInstance(imputer, impute.Default)
+        self.assertEqual(imputer.default, -1.0)
+
+        # Add 'chest pain' to the selection and ensure the value stack is
+        # disabled
+        selectvars(["chest pain"], selmodel.Select)
+        self.assertEqual(varbg.checkedId(), -1)
+        self.assertFalse(widget.value_combo.isEnabledTo(widget) and
+                         widget.value_double.isEnabledTo(widget))
+
+        # select 'chest pain' only and check that the selected value is
+        # restored in the value combo
+        selectvars(["chest pain"])
+        self.assertTrue(widget.value_combo.isVisibleTo(widget) and
+                        widget.value_combo.isEnabledTo(widget))
+        self.assertEqual(varbg.checkedId(), valueid)
+        self.assertEqual(widget.value_combo.currentIndex(), 1)
