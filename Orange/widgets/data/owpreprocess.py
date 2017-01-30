@@ -191,13 +191,14 @@ class DiscretizeEditor(BaseEditor):
 class ContinuizeEditor(BaseEditor):
     _Type = type(Continuize.FirstAsBase)
 
-    Continuizers = OrderedDict({
-        Continuize.FrequentAsBase: "Most frequent is base",
-        Continuize.Indicators: "One attribute per value",
-        Continuize.RemoveMultinomial: "Remove multinomial attributes",
-        Continuize.Remove: "Remove all discrete attributes",
-        Continuize.AsOrdinal: "Treat as ordinal",
-        Continuize.AsNormalizedOrdinal: "Divide by number of values"})
+    Continuizers = OrderedDict([
+        (Continuize.FrequentAsBase, "Most frequent is base"),
+        (Continuize.Indicators, "One attribute per value"),
+        (Continuize.RemoveMultinomial, "Remove multinomial attributes"),
+        (Continuize.Remove, "Remove all discrete attributes"),
+        (Continuize.AsOrdinal, "Treat as ordinal"),
+        (Continuize.AsNormalizedOrdinal, "Divide by number of values")
+    ])
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
