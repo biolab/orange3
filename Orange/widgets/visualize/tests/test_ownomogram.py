@@ -1,8 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.data import Table
-from Orange.classification import (NaiveBayesLearner, LogisticRegressionLearner,
-                                   MajorityLearner)
+import numpy as np
+
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.classification import (
+    NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
+)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.ownomogram import (
     OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem
@@ -113,6 +116,30 @@ class TestOWNomogram(WidgetTest):
                          ["sex", "status", "age"],
                          ["sex", "status", "age"],
                          ["sex", "status", "age"]])
+
+    def test_constant_feature_disc(self):
+        """Check nomogram for data with constant discrete feature"""
+        domain = Domain([DiscreteVariable("d1", ("a", "c")),
+                         DiscreteVariable("d2", ("b",))],
+                        DiscreteVariable("cls", ("e", "d")))
+        X = np.array([[0, 0], [1, 0], [0, 0], [1, 0]])
+        data = Table(domain, X, np.array([0, 1, 1, 0]))
+        cls = NaiveBayesLearner()(data)
+        self._test_helper(cls, [50, 50])
+        cls = LogisticRegressionLearner()(data)
+        self._test_helper(cls, [50, 50])
+
+    def test_constant_feature_cont(self):
+        """Check nomogram for data with constant continuous feature"""
+        domain = Domain([DiscreteVariable("d", ("a", "b")),
+                         ContinuousVariable("c")],
+                        DiscreteVariable("cls", ("c", "d")))
+        X = np.array([[0, 0], [1, 0], [0, 0], [1, 0]])
+        data = Table(domain, X, np.array([0, 1, 1, 0]))
+        cls = NaiveBayesLearner()(data)
+        self._test_helper(cls, [50, 50])
+        cls = LogisticRegressionLearner()(data)
+        self._test_helper(cls, [50, 50])
 
     def _test_helper(self, cls, values):
         self.send_signal("Classifier", cls)

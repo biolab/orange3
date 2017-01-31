@@ -238,6 +238,8 @@ class ContinuousItemMixin:
         start = float(self.tooltip_labels[0])
         stop = float(self.tooltip_labels[-1])
         delta = (self.tooltip_values[-1] - self.tooltip_values[0])
+        if not delta:
+            return np.nan
         return start + self.value * (stop - start) / delta
 
 
@@ -263,7 +265,8 @@ class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
 
     def move(self, x):
         super().move(x)
-        k = (x - self._min_x) / (self._max_x - self._min_x)
+        diff_ = np.nan_to_num(self._max_x - self._min_x)
+        k = (x - self._min_x) / diff_ if diff_ else 0
         self.setY(self._min_y - self._r / 2 + (self._max_y - self._min_y) * k)
 
     def mousePressEvent(self, event):
@@ -463,7 +466,8 @@ class ContinuousFeatureItem(RulerItem):
                  coef):
         self.name = name.toPlainText()
         self.diff = (data_extremes[1] - data_extremes[0]) * coef
-        k = (data_extremes[1] - data_extremes[0]) / (values[-1] - values[0])
+        diff_ = np.nan_to_num(values[-1] - values[0])
+        k = (data_extremes[1] - data_extremes[0]) / diff_ if diff_ else 0
         labels = [str(np.round(v * k + data_extremes[0], 1)) for v in values]
         super().__init__(name, values, scale, name_offset, offset, labels)
         self.dot.tooltip_labels = labels
@@ -525,7 +529,8 @@ class ContinuousFeature2DItem(QGraphicsWidget):
 
         # ticks
         for value in values:
-            k = (value - values[0]) / (values[-1] - values[0])
+            diff_ = np.nan_to_num(values[-1] - values[0])
+            k = (value - values[0]) / diff_ if diff_ else 0
             y_tick = (y_stop - y_start) * k + y_start - self.tick_height / 2
             x_tick = value * scale - self.tick_width / 2 + offset
             tick = QGraphicsRectItem(
@@ -887,7 +892,8 @@ class OWNomogram(OWWidget):
         minimums = [min(p) for p in points]
         if self.align == OWNomogram.ALIGN_LEFT:
             points = [p - m for m, p in zip(minimums, points)]
-        d = 100 / max(max(abs(p)) for p in points)
+        max_ = np.nan_to_num(max(max(abs(p)) for p in points))
+        d = 100 / max_ if max_ else 1
         if self.scale == OWNomogram.POINT_SCALE:
             points = [p * d for p in points]
 
@@ -934,7 +940,8 @@ class OWNomogram(OWWidget):
         max_p = max(max(p) for p in points)
         values = self.get_ruler_values(min_p, max_p, max_width)
         min_p, max_p = min(values), max(values)
-        scale_x = max_width / (max_p - min_p)
+        diff_ = np.nan_to_num(max_p - min_p)
+        scale_x = max_width / diff_ if diff_ else max_width
 
         nomogram_header = NomogramItem()
         point_item = RulerItem(point_text, values, scale_x, name_offset,
@@ -993,7 +1000,8 @@ class OWNomogram(OWWidget):
 
         values = self.get_ruler_values(min_sum, max_sum, max_width)
         min_sum, max_sum = min(values), max(values)
-        scale_x = max_width / (max_sum - min_sum)
+        diff_ = np.nan_to_num(max_sum - min_sum)
+        scale_x = max_width / diff_ if diff_ else max_width
         cls_var, cls_index = self.domain.class_var, self.target_class_index
         nomogram_footer = NomogramItem()
 
@@ -1105,7 +1113,7 @@ class OWNomogram(OWWidget):
     def get_ruler_values(start, stop, max_width, round_to_nearest=True):
         if max_width == 0:
             return [0]
-        diff = (stop - start) / max_width
+        diff = np.nan_to_num((stop - start) / max_width)
         if diff <= 0:
             return [0]
         decimals = int(np.floor(np.log10(diff)))
@@ -1127,6 +1135,8 @@ class OWNomogram(OWWidget):
 
     @staticmethod
     def get_points_from_coeffs(current_value, coefficients, possible_values):
+        if any(np.isnan(possible_values)):
+            return 0
         indices = np.argsort(possible_values)
         sorted_values = possible_values[indices]
         sorted_coefficients = coefficients[indices]
