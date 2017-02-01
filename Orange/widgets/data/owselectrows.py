@@ -475,8 +475,14 @@ class OWSelectRows(widget.OWWidget):
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
 
-        self.send("Matching Data", matching_output)
-        self.send("Unmatched Data", non_matching_output)
+        if matching_output is not None and not len(matching_output):
+            self.send("Matching Data", None)
+        else:
+            self.send("Matching Data", matching_output)
+        if non_matching_output is not None and not len(non_matching_output):
+            self.send("Unmatched Data", None)
+        else:
+            self.send("Unmatched Data", non_matching_output)
 
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)

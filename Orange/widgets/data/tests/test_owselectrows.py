@@ -78,3 +78,13 @@ class TestOWSelectRows(WidgetTest):
             self.widget.add_row(0, i, DFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
+
+    def test_output(self):
+        iris = Table("iris")
+        self.send_signal("Data", iris)
+        self.assertIsNotNone(self.get_output("Matching Data"))
+        self.assertIsNone(self.get_output("Unmatched Data"))
+        self.widget.conditions = [('sepal length', 0, ('0.0',))]
+        self.widget.commit()
+        self.assertIsNone(self.get_output("Matching Data"))
+        self.assertIsNotNone(self.get_output("Unmatched Data"))
