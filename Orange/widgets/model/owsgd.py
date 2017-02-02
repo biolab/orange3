@@ -3,8 +3,10 @@ from collections import OrderedDict
 from AnyQt.QtCore import Qt
 
 from Orange.canvas.report import bool_str
+from Orange.data import ContinuousVariable, StringVariable, Domain, Table
 from Orange.modelling.linear import SGDLearner
-from Orange.widgets import gui
+from Orange.widgets import gui, widget
+from Orange.widgets.classify.owlogisticregression import create_coef_table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -19,6 +21,8 @@ class OWSGD(OWBaseLearner):
     priority = 90
 
     LEARNER = SGDLearner
+
+    outputs = [("Coefficients", Table, widget.Explicit)]
 
     reg_losses = (
         ('Squared Loss', 'squared_loss'),
@@ -280,6 +284,22 @@ class OWSGD(OWBaseLearner):
             params['Random seed for shuffling'] = self.random_state
 
         return list(params.items())
+
+    def update_model(self):
+        super().update_model()
+        coeffs = None
+        if self.model is not None:
+            if self.model.domain.class_var.is_discrete:
+                coeffs = create_coef_table(self.model)
+            else:
+                attrs = [ContinuousVariable("coef", number_of_decimals=7)]
+                domain = Domain(attrs, metas=[StringVariable("name")])
+                cfs = list(self.model.intercept) + list(self.model.coefficients)
+                names = ["intercept"] + \
+                        [attr.name for attr in self.model.domain.attributes]
+                coeffs = Table(domain, list(zip(cfs, names)))
+                coeffs.name = "coefficients"
+        self.send("Coefficients", coeffs)
 
 
 if __name__ == '__main__':
