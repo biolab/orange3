@@ -19,7 +19,8 @@ class TestOWAdaBoostRegression(WidgetTest, WidgetLearnerTestMixin):
         self.valid_datasets = (self.data,)
         losses = [loss.lower() for loss in self.widget.losses]
         self.parameters = [
-            ParameterMapping('loss', self.widget.reg_algorithm_combo, losses),
+            ParameterMapping('loss', self.widget.reg_algorithm_combo, losses,
+                             problem_type='regression'),
             ParameterMapping('learning_rate', self.widget.learning_rate_spin),
             ParameterMapping('n_estimators', self.widget.n_estimators_spin)]
 

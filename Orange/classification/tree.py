@@ -64,6 +64,8 @@ class TreeLearner(Learner):
         self.min_samples_split = min_samples_split
         self.sufficient_majority = sufficient_majority
         self.max_depth = max_depth
+        self.params = {k: v for k, v in vars().items()
+                       if k not in ('args', 'kwargs')}
 
     def _select_attr(self, data):
         """Select the attribute for the next split.

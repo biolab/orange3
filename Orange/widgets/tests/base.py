@@ -465,30 +465,33 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         self.assertEqual(self.get_output(self.model_name).name, new_name)
 
+    def _get_param_value(self, learner, param):
+        if isinstance(learner, Fitter):
+            # Both is just a was to indicate to the tests, fitters don't
+            # actually support this
+            if param.problem_type == "both":
+                problem_type = learner.CLASSIFICATION
+            else:
+                problem_type = param.problem_type
+            return learner.get_params(problem_type).get(param.name)
+        else:
+            return learner.params.get(param.name)
+
     def test_parameters_default(self):
         """Check if learner's parameters are set to default (widget's) values
         """
         for dataset in self.valid_datasets:
             self.send_signal("Data", dataset)
             self.widget.apply_button.button.click()
-            if hasattr(self.widget.learner, "params"):
-                learner_params = self.widget.learner.params
-                for parameter in self.parameters:
-                    # Skip if the param isn't used for the given data type
-                    if self._should_check_parameter(parameter, dataset):
-                        self.assertEqual(learner_params.get(parameter.name),
-                                         parameter.get_value())
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if self._should_check_parameter(parameter, dataset):
+                    self.assertEqual(
+                        self._get_param_value(self.widget.learner, parameter),
+                        parameter.get_value())
 
     def test_parameters(self):
         """Check learner and model for various values of all parameters"""
-
-        def get_value(learner, name):
-            # Handle SKL and skl-like learners, and non-SKL learners
-            if hasattr(learner, "params"):
-                return learner.params.get(name)
-            else:
-                return getattr(learner, name)
-
         # Test params on every valid dataset, since some attributes may apply
         # to only certain problem types
         for dataset in self.valid_datasets:
@@ -504,15 +507,14 @@ class WidgetLearnerTestMixin:
                 for value in parameter.values:
                     parameter.set_value(value)
                     self.widget.apply_button.button.click()
-                    param = get_value(self.widget.learner, parameter.name)
+                    param = self._get_param_value(self.widget.learner, parameter)
                     self.assertEqual(
                         param, parameter.get_value(),
                         "Mismatching setting for parameter '%s'" % parameter)
                     self.assertEqual(
                         param, value,
                         "Mismatching setting for parameter '%s'" % parameter)
-                    param = get_value(self.get_output("Learner"),
-                                      parameter.name)
+                    param = self._get_param_value(self.get_output("Learner"), parameter)
                     self.assertEqual(
                         param, value,
                         "Mismatching setting for parameter '%s'" % parameter)
@@ -520,8 +522,7 @@ class WidgetLearnerTestMixin:
                     if issubclass(self.widget.LEARNER, SklModel):
                         model = self.get_output(self.model_name)
                         if model is not None:
-                            self.assertEqual(get_value(model, parameter.name),
-                                             value)
+                            self.assertEqual(self._get_param_value(model, parameter), value)
                             self.assertFalse(self.widget.Error.active)
                         else:
                             self.assertTrue(self.widget.Error.active)

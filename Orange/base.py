@@ -72,6 +72,8 @@ class Learner(_ReprableWithPreprocessors):
         This property is needed mainly because of the `Fitter` class, which can
         not know in advance, which preprocessors it will need to use. Therefore
         this resolves the active preprocessors using a lazy approach.
+    params : dict
+        The params that the learner is constructed with.
 
     """
     supports_multiclass = False

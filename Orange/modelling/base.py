@@ -38,9 +38,9 @@ class Fitter(Learner, metaclass=FitterMeta):
 
     def __init__(self, preprocessors=None, **kwargs):
         super().__init__(preprocessors=preprocessors)
-        self.params = kwargs
+        self.kwargs = kwargs
         # Make sure to pass preprocessor params to individual learners
-        self.params['preprocessors'] = preprocessors
+        self.kwargs['preprocessors'] = preprocessors
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
     def _fit_model(self, data):
@@ -56,7 +56,14 @@ class Fitter(Learner, metaclass=FitterMeta):
             return learner.fit(X, Y, W)
 
     def get_learner(self, problem_type):
-        """Get the learner for a given problem type."""
+        """Get the learner for a given problem type.
+
+        Returns
+        -------
+        Learner
+            The appropriate learner for the given problem type.
+
+        """
         # Prevent trying to access the learner when problem type is None
         if problem_type not in self.__fits__:
             raise TypeError("No learner to handle '{}'".format(problem_type))
@@ -69,7 +76,7 @@ class Fitter(Learner, metaclass=FitterMeta):
     def __kwargs(self, problem_type):
         learner_kwargs = set(
             self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
-        changed_kwargs = self._change_kwargs(self.params, problem_type)
+        changed_kwargs = self._change_kwargs(self.kwargs, problem_type)
         return {k: v for k, v in changed_kwargs.items() if k in learner_kwargs}
 
     def _change_kwargs(self, kwargs, problem_type):
@@ -95,3 +102,13 @@ class Fitter(Learner, metaclass=FitterMeta):
             and self.get_learner(self.CLASSIFICATION).supports_weights) and (
             hasattr(self.get_learner(self.REGRESSION), 'supports_weights')
             and self.get_learner(self.REGRESSION).supports_weights)
+
+    @property
+    def params(self):
+        raise TypeError(
+            'A fitter does not have its own params. If you need to access '
+            'learner params, please use the `get_params` method.')
+
+    def get_params(self, problem_type):
+        """Access the specific learner params of a given learner."""
+        return self.get_learner(problem_type).params
