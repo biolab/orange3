@@ -745,10 +745,11 @@ class OWNomogram(OWWidget):
             y = self.nomogram_main.layout.preferredHeight() + 30
             self.vertical_line.setLine(x, -6, x, y)
             self.hidden_vertical_line.setLine(x, -6, x, y)
-        self.scene.setSceneRect(QRectF(self.scene.sceneRect().x(),
-                                       self.scene.sceneRect().y(),
-                                       self.scene.itemsBoundingRect().width(),
-                                       self.nomogram.preferredSize().height()))
+        rect = QRectF(self.scene.sceneRect().x(),
+                      self.scene.sceneRect().y(),
+                      self.scene.itemsBoundingRect().width(),
+                      self.nomogram.preferredSize().height())
+        self.scene.setSceneRect(rect.adjusted(0, 0, 70, 70))
 
     def _sort_combo_changed(self):
         if self.nomogram_main is None:
@@ -928,10 +929,11 @@ class OWNomogram(OWWidget):
         nomogram.add_items([nomogram_head, self.nomogram_main, nomogram_foot])
         self.scene.addItem(nomogram)
         self.set_feature_marker_values()
-        self.scene.setSceneRect(QRectF(self.scene.itemsBoundingRect().x(),
-                                       self.scene.itemsBoundingRect().y(),
-                                       self.scene.itemsBoundingRect().width(),
-                                       self.nomogram.preferredSize().height()))
+        rect = QRectF(self.scene.itemsBoundingRect().x(),
+                      self.scene.itemsBoundingRect().y(),
+                      self.scene.itemsBoundingRect().width(),
+                      self.nomogram.preferredSize().height())
+        self.scene.setSceneRect(rect.adjusted(0, 0, 70, 70))
 
     def create_main_nomogram(self, name_items, points, max_width, point_text,
                              name_offset):
