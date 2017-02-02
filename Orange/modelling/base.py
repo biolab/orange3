@@ -38,17 +38,22 @@ class Fitter(Learner, metaclass=FitterMeta):
 
     def __init__(self, preprocessors=None, **kwargs):
         super().__init__(preprocessors=preprocessors)
-        self.kwargs = kwargs
+        self.params = kwargs
         # Make sure to pass preprocessor params to individual learners
-        self.kwargs['preprocessors'] = preprocessors
-        self.problem_type = None
+        self.params['preprocessors'] = preprocessors
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
-    def __call__(self, data):
-        # Set the appropriate problem type from the data
-        self.problem_type = self.CLASSIFICATION if \
-            data.domain.has_discrete_class else self.REGRESSION
-        return self.get_learner(self.problem_type)(data)
+    def _fit_model(self, data):
+        if data.domain.has_discrete_class:
+            learner = self.get_learner(self.CLASSIFICATION)
+        else:
+            learner = self.get_learner(self.REGRESSION)
+
+        if type(self).fit is Learner.fit:
+            return learner.fit_storage(data)
+        else:
+            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+            return learner.fit(X, Y, W)
 
     def get_learner(self, problem_type):
         """Get the learner for a given problem type."""
@@ -64,7 +69,7 @@ class Fitter(Learner, metaclass=FitterMeta):
     def __kwargs(self, problem_type):
         learner_kwargs = set(
             self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
-        changed_kwargs = self._change_kwargs(self.kwargs, self.problem_type)
+        changed_kwargs = self._change_kwargs(self.params, problem_type)
         return {k: v for k, v in changed_kwargs.items() if k in learner_kwargs}
 
     def _change_kwargs(self, kwargs, problem_type):
@@ -90,9 +95,3 @@ class Fitter(Learner, metaclass=FitterMeta):
             and self.get_learner(self.CLASSIFICATION).supports_weights) and (
             hasattr(self.get_learner(self.REGRESSION), 'supports_weights')
             and self.get_learner(self.REGRESSION).supports_weights)
-
-    def __getattr__(self, item):
-        # Make parameters accessible on the learner for simpler testing
-        if item in self.kwargs:
-            return self.kwargs[item]
-        return getattr(self.get_learner(self.problem_type), item)

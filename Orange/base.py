@@ -114,18 +114,20 @@ class Learner(_ReprableWithPreprocessors):
                             self.__class__.__name__)
 
         self.domain = data.domain
-
-        if type(self).fit is Learner.fit:
-            model = self.fit_storage(data)
-        else:
-            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            model = self.fit(X, Y, W)
+        model = self._fit_model(data)
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
         model.original_domain = origdomain
         model.original_data = origdata
         return model
+
+    def _fit_model(self, data):
+        if type(self).fit is Learner.fit:
+            return self.fit_storage(data)
+        else:
+            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+            return self.fit(X, Y, W)
 
     def preprocess(self, data):
         """Apply the `preprocessors` to the data"""
