@@ -1,14 +1,17 @@
 from sklearn.linear_model import SGDClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 from Orange.base import SklLearner
+from Orange.preprocess import Normalize
 from Orange.regression.linear import LinearModel
+
+__all__ = ["SGDClassificationLearner"]
 
 
 class SGDClassificationLearner(SklLearner):
     name = 'sgd'
     __wraps__ = SGDClassifier
+    __returns__ = LinearModel
+    preprocessors = SklLearner.preprocessors + [Normalize()]
 
     def __init__(self, loss='squared_loss',penalty='l2', alpha=0.0001,
                  l1_ratio=0.15,fit_intercept=True, n_iter=5, shuffle=True,
@@ -17,9 +20,3 @@ class SGDClassificationLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-    def fit(self, X, Y, W):
-        sk = self.__wraps__(**self.params)
-        clf = Pipeline([('scaler', StandardScaler()), ('sgd', sk)])
-        clf.fit(X, Y.ravel())
-        return LinearModel(clf)
