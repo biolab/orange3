@@ -5,7 +5,7 @@ from AnyQt.QtWidgets import QFormLayout, QApplication
 from AnyQt.QtCore import Qt
 
 import numpy as np
-import sklearn.cross_validation as skl_cross_validation
+import sklearn.model_selection as skl
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -330,12 +330,15 @@ class SampleFoldIndices(Reprable):
 
     def __call__(self, table):
         if self.stratified and table.domain.has_discrete_class:
-            # XXX: StratifiedKFold does not support random_state
-            ind = skl_cross_validation.StratifiedKFold(
-                table.Y.ravel(), self.folds, random_state=self.random_state)
+            splitter = skl.StratifiedKFold(
+                self.folds, random_state=self.random_state)
+            splitter.get_n_splits(table.X, table.Y)
+            ind = splitter.split(table.X, table.Y)
         else:
-            ind = skl_cross_validation.KFold(
-                len(table), self.folds, shuffle=True, random_state=self.random_state)
+            splitter = skl.KFold(
+                self.folds, random_state=self.random_state)
+            splitter.get_n_splits(table)
+            ind = splitter.split(table)
         return tuple(ind)
 
 
@@ -357,15 +360,17 @@ class SampleRandomN(Reprable):
             return others, sample
         if self.stratified and table.domain.has_discrete_class:
             test_size = max(len(table.domain.class_var.values), self.n)
-            ind = skl_cross_validation.StratifiedShuffleSplit(
-                table.Y.ravel(), n_iter=1,
-                test_size=test_size, train_size=len(table) - test_size,
+            splitter = skl.StratifiedShuffleSplit(
+                n_splits=1, test_size=test_size,
+                train_size=len(table) - test_size,
                 random_state=self.random_state)
+            splitter.get_n_splits(table.X, table.Y)
+            ind = splitter.split(table.X, table.Y)
         else:
-            ind = skl_cross_validation.ShuffleSplit(
-                len(table), n_iter=1,
-                test_size=self.n, random_state=self.random_state)
-
+            splitter = skl.ShuffleSplit(
+                n_splits=1, test_size=self.n, random_state=self.random_state)
+            splitter.get_n_splits(table)
+            ind = splitter.split(table)
         return next(iter(ind))
 
 
