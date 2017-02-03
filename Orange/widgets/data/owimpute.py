@@ -1,9 +1,11 @@
 import sys
+import copy
+
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QWidget, QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
-    QVBoxLayout, QStackedLayout, QComboBox, QLineEdit,
+    QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
+    QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
 from AnyQt.QtCore import Qt
@@ -75,13 +77,15 @@ class OWImpute(OWWidget):
     _default_method_index = settings.Setting(DO_NOT_IMPUTE)
     variable_methods = settings.ContextSetting({})
     autocommit = settings.Setting(False)
-    default_value = settings.Setting(0.)
 
     want_main_area = False
     resizing_enabled = False
 
     def __init__(self):
         super().__init__()
+        # copy METHODS (some are modified by the widget)
+        self.methods = copy.deepcopy(OWImpute.METHODS)
+
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(10, 10, 10, 10)
         self.controlArea.layout().addLayout(main_layout)
@@ -92,7 +96,7 @@ class OWImpute(OWWidget):
 
         button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
-        for i, method in enumerate(self.METHODS):
+        for i, method in enumerate(self.methods):
             if not method.columns_only:
                 button = QRadioButton(method.name)
                 button.setChecked(i == self.default_method_index)
@@ -125,7 +129,7 @@ class OWImpute(OWWidget):
         horizontal_layout.addLayout(method_layout)
 
         button_group = QButtonGroup()
-        for i, method in enumerate(self.METHODS):
+        for i, method in enumerate(self.methods):
             button = QRadioButton(text=method.name)
             button_group.addButton(button, i)
             method_layout.addWidget(button)
@@ -135,16 +139,14 @@ class OWImpute(OWWidget):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
             activated=self._on_value_selected
             )
-        self.value_combo.currentIndexChanged.connect(self._on_value_changed)
         self.value_double = QDoubleSpinBox(
             editingFinished=self._on_value_selected,
             minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
-            value=self.default_value
             )
-        self.value_stack = value_stack = QStackedLayout()
+        self.value_stack = value_stack = QStackedWidget()
         value_stack.addWidget(self.value_combo)
         value_stack.addWidget(self.value_double)
-        method_layout.addLayout(value_stack)
+        method_layout.addWidget(value_stack)
 
         button_group.buttonClicked[int].connect(
             self.set_method_for_current_selection
@@ -167,9 +169,9 @@ class OWImpute(OWWidget):
         box.layout().insertWidget(0, self.report_button)
 
         self.data = None
+        self.learner = None
         self.modified = False
-        self.default_method = self.METHODS[self.default_method_index]
-        self.update_varview()
+        self.default_method = self.methods[self.default_method_index]
 
     @property
     def default_method_index(self):
@@ -180,14 +182,14 @@ class OWImpute(OWWidget):
         if self._default_method_index != index:
             self._default_method_index = index
             self.default_button_group.button(index).setChecked(True)
-            self.default_method = self.METHODS[self.default_method_index]
-            self.METHODS[self.DEFAULT].method = self.default_method
+            self.default_method = self.methods[self.default_method_index]
+            self.methods[self.DEFAULT].method = self.default_method
 
             # update variable view
             for index in map(self.varmodel.index, range(len(self.varmodel))):
-                self.varmodel.setData(index,
-                                      self.variable_methods.get(index.row(), self.METHODS[self.DEFAULT]),
-                                      Qt.UserRole)
+                method = self.variable_methods.get(
+                    index.row(), self.methods[self.DEFAULT])
+                self.varmodel.setData(index, method, Qt.UserRole)
             self._invalidate()
 
     def set_default_method(self, index):
@@ -212,7 +214,7 @@ class OWImpute(OWWidget):
 
     def set_learner(self, learner):
         self.learner = learner or self.DEFAULT_LEARNER
-        imputer = self.METHODS[self.MODEL_BASED_IMPUTER]
+        imputer = self.methods[self.MODEL_BASED_IMPUTER]
         imputer.learner = self.learner
 
         button = self.default_button_group.button(self.MODEL_BASED_IMPUTER)
@@ -224,6 +226,7 @@ class OWImpute(OWWidget):
         if learner is not None:
             self.default_method_index = self.MODEL_BASED_IMPUTER
 
+        self.update_varview()
         self.commit()
 
     def get_method_for_column(self, column_index):
@@ -233,7 +236,7 @@ class OWImpute(OWWidget):
             column_index = column_index.row()
 
         return self.variable_methods.get(column_index,
-                                         self.METHODS[self.DEFAULT])
+                                         self.methods[self.DEFAULT])
 
     def _invalidate(self):
         self.modified = True
@@ -267,7 +270,7 @@ class OWImpute(OWWidget):
                                 drop_mask |= method(self.data, var)
                         else:
                             var = method(self.data, var)
-                    except:
+                    except Exception:  # pylint: disable=broad-except
                         self.Error.imputation_failed(var.name)
                         attributes = class_vars = None
                         break
@@ -310,40 +313,74 @@ class OWImpute(OWWidget):
 
     def _on_var_selection_changed(self):
         indexes = self.selection.selectedIndexes()
-        methods = set(self.get_method_for_column(i.row()).name for i in indexes)
+        methods = [self.get_method_for_column(i.row()) for i in indexes]
 
+        def method_key(method):
+            """
+            Decompose method into its type and parameters.
+            """
+            # The return value should be hashable and  __eq__ comparable
+            if isinstance(method, AsDefault):
+                return AsDefault, (method.method,)
+            elif isinstance(method, impute.Model):
+                return impute.Model, (method.learner,)
+            elif isinstance(method, impute.Default):
+                return impute.Default, (method.default,)
+            else:
+                return type(method), None
+
+        methods = set(method_key(m) for m in methods)
         selected_vars = [self.varmodel[index.row()] for index in indexes]
         has_discrete = any(var.is_discrete for var in selected_vars)
+        fixed_value = None
+        value_stack_enabled = False
+        current_value_widget = None
 
         if len(methods) == 1:
-            method = methods.pop()
-            for i, m in enumerate(self.METHODS):
-                if method == m.name:
+            method_type, parameters = methods.pop()
+            for i, m in enumerate(self.methods):
+                if method_type == type(m):
                     self.variable_button_group.button(i).setChecked(True)
+
+            if method_type is impute.Default:
+                (fixed_value,) = parameters
+
         elif self.variable_button_group.checkedButton() is not None:
+            # Uncheck the current button
             self.variable_button_group.setExclusive(False)
             self.variable_button_group.checkedButton().setChecked(False)
             self.variable_button_group.setExclusive(True)
+            assert self.variable_button_group.checkedButton() is None
 
-        for method, button in zip(self.METHODS,
+        for method, button in zip(self.methods,
                                   self.variable_button_group.buttons()):
             enabled = all(method.supports_variable(var) for var in
                           selected_vars)
             button.setEnabled(enabled)
 
         if not has_discrete:
-            self.value_stack.setEnabled(True)
-            self.value_stack.setCurrentWidget(self.value_double)
-            self._on_value_changed()
+            value_stack_enabled = True
+            current_value_widget = self.value_double
         elif len(selected_vars) == 1:
-            self.value_stack.setEnabled(True)
-            self.value_stack.setCurrentWidget(self.value_combo)
+            value_stack_enabled = True
+            current_value_widget = self.value_combo
             self.value_combo.clear()
             self.value_combo.addItems(selected_vars[0].values)
-            self._on_value_changed()
         else:
+            value_stack_enabled = False
+            current_value_widget = None
             self.variable_button_group.button(self.AS_INPUT).setEnabled(False)
-            self.value_stack.setEnabled(False)
+
+        self.value_stack.setEnabled(value_stack_enabled)
+        if current_value_widget is not None:
+            self.value_stack.setCurrentWidget(current_value_widget)
+            if fixed_value is not None:
+                if current_value_widget is self.value_combo:
+                    self.value_combo.setCurrentIndex(fixed_value)
+                elif current_value_widget is self.value_double:
+                    self.value_double.setValue(fixed_value)
+                else:
+                    assert False
 
     def set_method_for_current_selection(self, method_index):
         indexes = self.selection.selectedIndexes()
@@ -352,9 +389,18 @@ class OWImpute(OWWidget):
     def set_method_for_indexes(self, indexes, method_index):
         if method_index == self.DEFAULT:
             for index in indexes:
-                self.variable_methods.pop(index, None)
+                self.variable_methods.pop(index.row(), None)
+        elif method_index == OWImpute.AS_INPUT:
+            current = self.value_stack.currentWidget()
+            if current is self.value_combo:
+                value = self.value_combo.currentIndex()
+            else:
+                value = self.value_double.value()
+            for index in indexes:
+                method = impute.Default(default=value)
+                self.variable_methods[index.row()] = method
         else:
-            method = self.METHODS[method_index].copy()
+            method = self.methods[method_index].copy()
             for index in indexes:
                 self.variable_methods[index.row()] = method
 
@@ -369,24 +415,12 @@ class OWImpute(OWWidget):
             self.varmodel.setData(index, self.get_method_for_column(index.row()), Qt.UserRole)
 
     def _on_value_selected(self):
+        # The fixed 'Value' in the widget has been changed by the user.
         self.variable_button_group.button(self.AS_INPUT).setChecked(True)
-        self._on_value_changed()
-
-    def _on_value_changed(self):
-        widget = self.value_stack.currentWidget()
-        if widget is self.value_combo:
-            value = self.value_combo.currentText()
-        else:
-            value = self.value_double.value()
-            self.default_value = value
-
-        self.METHODS[self.AS_INPUT].default = value
-        index = self.variable_button_group.checkedId()
-        if index == self.AS_INPUT:
-            self.set_method_for_current_selection(index)
+        self.set_method_for_current_selection(self.AS_INPUT)
 
     def reset_variable_methods(self):
-        indexes = map(self.varmodel.index, range(len(self.varmodel)))
+        indexes = list(map(self.varmodel.index, range(len(self.varmodel))))
         self.set_method_for_indexes(indexes, self.DEFAULT)
         self.variable_button_group.button(self.DEFAULT).setChecked(True)
 
