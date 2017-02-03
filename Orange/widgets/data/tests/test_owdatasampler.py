@@ -61,27 +61,26 @@ class TestOWDataSampler(WidgetTest):
         buttons = self.widget.controls.sampling_type.group.buttons()
         buttons[sampling_type].click()
 
-    def test_outputs(self):
+    def test_no_intersection_in_outputs(self):
         """ Check whether outputs intersect and whether length of outputs sums
         to length of original data """
         self.send_signal("Data", self.zoo)
-        self._output_test_helper()
-        self.widget.cb_seed.setChecked(True)
-        self._output_test_helper()
-        self.widget.cb_stratify.setChecked(True)
-        self._output_test_helper()
+        w = self.widget
+        sampling_types = [w.FixedProportion, w.FixedSize, w.CrossValidation]
 
-    def _output_test_helper(self):
-        types = [self.widget.FixedProportion, self.widget.FixedSize,
-                 self.widget.CrossValidation]
-        for t in types:
-            self.select_sampling_type(t)
-            self.widget.commit()
-            sample = self.get_output("Data Sample")
-            other = self.get_output("Remaining Data")
-            self.assertEqual(len(self.zoo), len(sample) + len(other))
-            self._check_intersection(sample, other)
+        for replicable in [True, False]:
+            for stratified in [True, False]:
+                for sampling_type in sampling_types:
+                    self.widget.cb_seed.setChecked(replicable)
+                    self.widget.cb_stratify.setChecked(stratified)
+                    self.select_sampling_type(sampling_type)
+                    self.widget.commit()
 
-    def _check_intersection(self, sample, other):
+                    sample = self.get_output("Data Sample")
+                    other = self.get_output("Remaining Data")
+                    self.assertEqual(len(self.zoo), len(sample) + len(other))
+                    self.assertNoIntersection(sample, other)
+
+    def assertNoIntersection(self, sample, other):
         for inst in sample:
             self.assertNotIn(inst, other)
