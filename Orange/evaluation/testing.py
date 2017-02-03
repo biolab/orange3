@@ -144,7 +144,7 @@ class Results:
         if nmethods is not None:
             self.failed = [False] * nmethods
 
-        if data:
+        if data is not None:
             self.data = data if self.store_data else None
             self.domain = data.domain
             self.dtype = getattr(data.Y, 'dtype', self.dtype)

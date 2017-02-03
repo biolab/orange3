@@ -463,17 +463,22 @@ class OWPredictions(widget.OWWidget):
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
         results = None
+        # if the input data set contains the true target values, output a
+        # simple evaluation.Results instance
         if self.data.domain.class_var == class_var:
-            N = len(self.data)
-            results = Orange.evaluation.Results(self.data, store_data=True)
+            # omit rows with unknonw target values
+            nanmask = numpy.isnan(self.data.get_column_view(class_var)[0])
+            data = self.data[~nanmask]
+            N = len(data)
+            results = Orange.evaluation.Results(data, store_data=True)
             results.folds = None
             results.row_indices = numpy.arange(N)
-            results.actual = self.data.Y.ravel()
+            results.actual = data.Y.ravel()
             results.predicted = numpy.vstack(
-                tuple(p.results[0] for p in slots))
+                tuple(p.results[0][~nanmask] for p in slots))
             if classification:
                 results.probabilities = numpy.array(
-                    [p.results[1] for p in slots])
+                    [p.results[1][~nanmask] for p in slots])
             results.learner_names = [p.name for p in slots]
 
         self.send("Predictions", predictions)

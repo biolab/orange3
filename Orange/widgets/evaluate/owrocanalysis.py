@@ -298,6 +298,10 @@ class OWROCAnalysis(widget.OWWidget):
     priority = 1010
     inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
 
+    class Warning(widget.OWWidget.Warning):
+        empty_results = widget.Msg(
+            "Empty results on input. There is nothing to display.")
+
     target_index = settings.Setting(0)
     selected_classifiers = []
 
@@ -418,8 +422,10 @@ class OWROCAnalysis(widget.OWWidget):
         self.clear()
         self.results = check_results_adequacy(results, self.Error)
         if self.results is not None:
-            self._initialize(results)
+            self._initialize(self.results)
             self._setup_plot()
+        else:
+            self.warning()
 
     def clear(self):
         """Clear the widget state."""
@@ -517,7 +523,7 @@ class OWROCAnalysis(widget.OWWidget):
                 if self.display_convex_curve:
                     self.plot.addItem(graphics.hull_item)
 
-                if self.display_def_threshold:
+                if self.display_def_threshold and curve.is_valid:
                     points = curve.points
                     ind = numpy.argmin(numpy.abs(points.thresholds - 0.5))
                     item = pg.TextItem(
@@ -559,6 +565,8 @@ class OWROCAnalysis(widget.OWWidget):
                     if self.display_convex_curve:
                         self.plot.addItem(fold.hull_item)
             hull_curves = [fold.hull for curve in selected for fold in curve.folds]
+        else:
+            assert False
 
         if self.display_convex_hull and hull_curves:
             hull = convex_hull(hull_curves)
@@ -577,6 +585,14 @@ class OWROCAnalysis(widget.OWWidget):
 
         if self.roc_averaging == OWROCAnalysis.Merge:
             self._update_perf_line()
+
+        warning = ""
+        if not all(c.is_valid for c in hull_curves):
+            if any(c.is_valid for c in hull_curves):
+                warning = "Some ROC curves are undefined"
+            else:
+                warning = "All ROC curves are undefined"
+        self.warning(warning)
 
     def _on_target_changed(self):
         self.plot.clear()
@@ -612,10 +628,13 @@ class OWROCAnalysis(widget.OWWidget):
                 self.fp_cost, self.fn_cost, self.target_prior / 100.0)
 
             hull = self._rocch
-            ind = roc_iso_performance_line(m, hull)
-            angle = numpy.arctan2(m, 1)  # in radians
-            self._perf_line.setAngle(angle * 180 / numpy.pi)
-            self._perf_line.setPos((hull.fpr[ind[0]], hull.tpr[ind[0]]))
+            if hull.is_valid:
+                ind = roc_iso_performance_line(m, hull)
+                angle = numpy.arctan2(m, 1)  # in radians
+                self._perf_line.setAngle(angle * 180 / numpy.pi)
+                self._perf_line.setPos((hull.fpr[ind[0]], hull.tpr[ind[0]]))
+            else:
+                self._perf_line.setVisible(False)
 
     def onDeleteWidget(self):
         self.clear()
