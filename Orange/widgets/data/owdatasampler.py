@@ -377,7 +377,8 @@ class SampleRandomP(Reprable):
 
     def __call__(self, table):
         n = int(math.ceil(len(table) * self.p))
-        return SampleRandomN(n, self.stratified, self.random_state)(table)
+        return SampleRandomN(n, self.stratified,
+                             random_state=self.random_state)(table)
 
 
 class SampleBootstrap(Reprable):

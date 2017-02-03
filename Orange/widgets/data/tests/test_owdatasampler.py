@@ -10,6 +10,7 @@ class TestOWDataSampler(WidgetTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.iris = Table("iris")
+        cls.zoo = Table("zoo")
 
     def setUp(self):
         self.widget = self.create_widget(OWDataSampler)  # type: OWDataSampler
@@ -59,3 +60,28 @@ class TestOWDataSampler(WidgetTest):
     def select_sampling_type(self, sampling_type):
         buttons = self.widget.controls.sampling_type.group.buttons()
         buttons[sampling_type].click()
+
+    def test_outputs(self):
+        """ Check whether outputs intersect and whether length of outputs sums
+        to length of original data """
+        self.send_signal("Data", self.zoo)
+        self._output_test_helper()
+        self.widget.cb_seed.setChecked(True)
+        self._output_test_helper()
+        self.widget.cb_stratify.setChecked(True)
+        self._output_test_helper()
+
+    def _output_test_helper(self):
+        types = [self.widget.FixedProportion, self.widget.FixedSize,
+                 self.widget.CrossValidation]
+        for t in types:
+            self.select_sampling_type(t)
+            self.widget.commit()
+            sample = self.get_output("Data Sample")
+            other = self.get_output("Remaining Data")
+            self.assertEqual(len(self.zoo), len(sample) + len(other))
+            self._check_intersection(sample, other)
+
+    def _check_intersection(self, sample, other):
+        for inst in sample:
+            self.assertNotIn(inst, other)
