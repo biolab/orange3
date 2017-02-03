@@ -6,6 +6,33 @@ Change Log
 * ...
 
 
+[3.3.11] - 2017-02-03
+--------------------
+##### Enhancements
+* Widget testing utilities ([#1939](../../pull/1939))
+
+##### Bugfixes
+* KMeans: Fix crashes when underlying algorithm fails ([#1974](../../pull/1974))
+* owpaintdata: Adjust color model to input dataset ([#1988](../../pull/1988))
+* scatterplot: Fix density image ([#1990](../../pull/1990))
+* owpaintdata: Fix an error when the input dataset contains NaN ([#1972](../../pull/1972))
+* Table: Ensure correct dtype in `_compute_distributions` ([#1969](../../pull/1969))
+* Evaluation Results input validation ([#1954](../../pull/1954))
+* owimpute: Fix editing of individual imputers ([#1966](../../pull/1966))
+* gui: Trigger callback in SpinBoxWFocusOut only if value changed ([#1979](../../pull/1979))
+* Python 3.6 compatibility ([#1963](../../pull/1963))
+* File: Fix crash when last_path is None ([#1961](../../pull/1961))
+* Paint Data: in-place output modification ([#1959](../../pull/1959))
+* DataSampler: Fix crash when stratifying unbalanced datasets ([#1952](../../pull/1952))
+* Table.__repr__: Fix for sparse data with < 5 instances ([#1951](../../pull/1951))
+* Catch errors during learning in learner widgets ([#1949](../../pull/1949))
+* OWMosaic: Fix crash for attribute with no values ([#1941](../../pull/1941))
+* Impute: Fix crash when model-based imputation fails ([#1937](../../pull/1937))
+* OWSieve: Fix crash for attribute with no values ([#1934](../../pull/1934))
+* Tree: Fix crash when two attributes equal number of values ([#1928](../../pull/1928))
+* Store changed variables in File widget ([#1805](../../pull/1805))
+
+
 [3.3.10] - 2017-01-18
 --------------------
 ##### Enhancements
@@ -347,7 +374,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.10...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.11...HEAD
+[3.3.11]: https://github.com/biolab/orange3/compare/3.3.10...3.3.11
 [3.3.10]: https://github.com/biolab/orange3/compare/3.3.9...3.3.10
 [3.3.9]: https://github.com/biolab/orange3/compare/3.3.8...3.3.9
 [3.3.8]: https://github.com/biolab/orange3/compare/3.3.7...3.3.8
