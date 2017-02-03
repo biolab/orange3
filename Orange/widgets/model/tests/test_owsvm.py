@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.widgets.classify.owsvmclassification import OWSVM
+from Orange.widgets.model.owsvm import OWSVM
 from Orange.widgets.tests.base import (
     WidgetTest,
     DefaultParameterMapping,
@@ -14,6 +14,9 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(
             OWSVM, stored_settings={"auto_apply": False})
         self.init()
+
+        # All this nonsense is necessary because we add an `auto` option to the
+        # gamma spin box
         gamma_spin = self.widget._kernel_params[0]
         values = [self.widget._default_gamma, gamma_spin.maximum()]
 
@@ -29,7 +32,7 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
                 gamma_spin.setValue(value)
 
         self.parameters = [
-            ParameterMapping("C", self.widget.c_spin),
+            ParameterMapping("C", self.widget.C_spin),
             ParameterMapping("gamma", self.widget._kernel_params[0],
                              values=values, setter=setter, getter=getter),
             ParameterMapping("coef0", self.widget._kernel_params[1]),
