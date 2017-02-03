@@ -709,11 +709,41 @@ def results_merge(results):
 
 
 def results_one_vs_rest(results, pos_index):
+    from Orange.preprocess.transformation import Indicator
     actual = results.actual == pos_index
     predicted = results.predicted == pos_index
-    return Orange.evaluation.Results(
-        nmethods=1, domain=results.domain,
-        actual=actual, predicted=predicted)
+    if results.probabilities is not None:
+        c = results.probabilities.shape[2]
+        assert c >= 2
+        neg_indices = [i for i in range(c) if i != pos_index]
+        pos_prob = results.probabilities[:, :, [pos_index]]
+        neg_prob = np.sum(results.probabilities[:, :, neg_indices],
+                          axis=2, keepdims=True)
+        probabilities = np.dstack((neg_prob, pos_prob))
+    else:
+        probabilities = None
+
+    res = Orange.evaluation.Results()
+    res.actual = actual
+    res.predicted = predicted
+    res.folds = results.folds
+    res.row_indices = results.row_indices
+    res.probabilities = probabilities
+
+    value = results.domain.class_var.values[pos_index]
+    class_var = Orange.data.DiscreteVariable(
+        "I({}=={})".format(results.domain.class_var.name, value),
+        values=["False", "True"],
+        compute_value=Indicator(results.domain.class_var, pos_index)
+    )
+    domain = Orange.data.Domain(
+        results.domain.attributes,
+        [class_var],
+        results.domain.metas
+    )
+    res.data = None
+    res.domain = domain
+    return res
 
 
 def main(argv=None):
