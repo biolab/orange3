@@ -1226,18 +1226,16 @@ class OWPaintData(OWWidget):
             self.plot.removeItem(self._scatter_item)
             self._scatter_item = None
 
-        nclasses = len(self.class_model)
-        pens = [pen(self.colors[i]) for i in range(nclasses)]
-
         x = self.__buffer[:, 0].copy()
         if self.hasAttr2:
             y = self.__buffer[:, 1].copy()
         else:
             y = np.zeros(self.__buffer.shape[0])
-        pen = [pens[ci] for ci in self.__buffer[:, 2].astype(int)]
 
+        colors = self.colors[self.__buffer[:, 2]]
+        pens = [pen(c) for c in colors]
         self._scatter_item = pg.ScatterPlotItem(
-            x, y, symbol="+", pen=pen
+            x, y, symbol="+", pen=pens
         )
         self.plot.addItem(self._scatter_item)
 
