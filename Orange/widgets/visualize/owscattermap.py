@@ -25,6 +25,7 @@ from Orange.preprocess.discretize import EqualWidth, Discretizer
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.widget import Msg
 from Orange.widgets.io import FileFormat
 from Orange.canvas import report
 
@@ -488,6 +489,9 @@ class OWScatterMap(widget.OWWidget):
 
     graph_name = "plot.plotItem"
 
+    class Error(widget.OWWidget.Error):
+        no_values = Msg("Feature {} has no values.")
+
     def __init__(self):
         super().__init__()
 
@@ -658,6 +662,7 @@ class OWScatterMap(widget.OWWidget):
         self._item = None
         self._cache = {}
         self.plot.clear()
+        self.clear_messages()
 
     def _on_z_var_changed(self):
         if 0 <= self.z_var_index < len(self.z_var_model):
@@ -683,6 +688,7 @@ class OWScatterMap(widget.OWWidget):
     def setup_plot(self):
         """Setup the density map plot"""
         self.plot.clear()
+        self.clear_messages()
         self.x_var_index = min(self.x_var_index, len(self.x_var_model) - 1)
         self.y_var_index = min(self.y_var_index, len(self.y_var_model) - 1)
         if not self.dataset or self.x_var_index == -1 or self.y_var_index == -1:
@@ -706,6 +712,8 @@ class OWScatterMap(widget.OWWidget):
             root = self._cache[xvar, yvar, zvar]
         else:
             root = self.get_root(data, xvar, yvar, zvar)
+            if root is None:
+                return
             self._cache[xvar, yvar, zvar] = root
 
         self._root = root
@@ -718,16 +726,26 @@ class OWScatterMap(widget.OWWidget):
         x_disc = EqualWidth(n=self.n_bins)(data, xvar)
         y_disc = EqualWidth(n=self.n_bins)(data, yvar)
 
-        def bins(var):
+        def bins(var, orig_var):
             points = list(var.compute_value.points)
+            if not len(points):
+                col = data.get_column_view(orig_var)[0]
+                return np.arange(self.n_bins) + np.mean(col[~np.isnan(col)])
             assert points[0] <= points[1]
             width = points[1] - points[0]
             return np.array([points[0] - width] +
                             points +
                             [points[-1] + width])
 
-        xbins = bins(x_disc)
-        ybins = bins(y_disc)
+        xbins = bins(x_disc, xvar)
+        ybins = bins(y_disc, yvar)
+
+        if all(np.isnan(xbins)):
+            self.Error.no_values(xvar)
+            return None
+        if all(np.isnan(ybins)):
+            self.Error.no_values(yvar)
+            return None
 
         # Extend the lower/upper bin edges to infinity.
         # (the grid_bin function has an optimization for this case).
