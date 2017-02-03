@@ -1070,6 +1070,8 @@ class OWNomogram(OWWidget):
     def _init_feature_marker_values(self):
         self.feature_marker_values = []
         cls_index = self.target_class_index
+        instances = Table(self.domain, self.instances) \
+            if self.instances else None
         for i, attr in enumerate(self.domain.attributes):
             value, feature_val = 0, None
             if len(self.log_reg_coeffs):
@@ -1078,9 +1080,9 @@ class OWNomogram(OWWidget):
                     feature_val = np.nan_to_num(ind[np.argmax(n)])
                 else:
                     feature_val = np.average(self.data.X[:, i])
-            inst_in_dom = self.instances and attr in self.instances.domain
-            if inst_in_dom and not np.isnan(self.instances[0][attr]):
-                feature_val = self.instances[0][attr]
+            inst_in_dom = instances and attr in instances.domain
+            if inst_in_dom and not np.isnan(instances[0][attr]):
+                feature_val = instances[0][attr]
             if feature_val is not None:
                 value = self.points[i][cls_index][int(feature_val)] \
                     if attr.is_discrete else \
