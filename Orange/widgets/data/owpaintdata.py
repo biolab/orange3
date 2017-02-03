@@ -794,6 +794,7 @@ class OWPaintData(OWWidget):
 
         self.input_data = None
         self.input_classes = []
+        self.input_colors = None
         self.input_has_attr2 = True
         self.current_tool = None
         self._selected_indices = None
@@ -1016,9 +1017,12 @@ class OWPaintData(OWWidget):
             if data.domain.class_vars:
                 self.Warning.continuous_target()
             self.input_classes = ["C1"]
+            self.input_colors = None
             y = np.zeros(len(data))
         else:
             self.input_classes = y.values
+            self.input_colors = y.colors
+
             y = data[:, y].Y
 
         self.input_has_attr2 = len(data.domain.attributes) >= 2
@@ -1036,7 +1040,16 @@ class OWPaintData(OWWidget):
         self.undo_stack.clear()
 
         index = self.selected_class_label()
+        if self.input_colors is not None:
+            colors = self.input_colors
+        else:
+            colors = colorpalette.DefaultRGBColors
+        palette = colorpalette.ColorPaletteGenerator(
+            number_of_colors=len(colors), rgb_colors=colors)
+        self.colors = palette
+        self.class_model.colors = palette
         self.class_model[:] = self.input_classes
+
         newindex = min(max(index, 0), len(self.class_model) - 1)
         itemmodels.select_row(self.classValuesView, newindex)
 

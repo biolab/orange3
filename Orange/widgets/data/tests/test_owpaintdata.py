@@ -4,7 +4,7 @@
 import numpy as np
 from AnyQt.QtCore import QRectF, QPointF
 
-from Orange.data import Table
+from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data import owpaintdata
 from Orange.widgets.data.owpaintdata import OWPaintData
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -47,3 +47,12 @@ class TestOWPaintData(WidgetTest):
         np.testing.assert_equal(output1.Y, output1_copy.Y)
 
         self.assertTrue(np.any(output1.X != output2.X))
+
+    def test_20_values_class(self):
+        domain = Domain(
+            [ContinuousVariable("A"),
+             ContinuousVariable("B")],
+            DiscreteVariable("C", values=[chr(ord("a") + i) for i in range(20)])
+        )
+        data = Table(domain, [[0.1, 0.2, "a"], [0.4, 0.7, "t"]])
+        self.send_signal("Data", data)
