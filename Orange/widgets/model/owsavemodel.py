@@ -1,23 +1,24 @@
 import os
+
 import dill as pickle
-
 from AnyQt.QtWidgets import (
-    QComboBox, QStyle, QSizePolicy, QHBoxLayout, QFileDialog, QApplication
+    QComboBox, QStyle, QSizePolicy, QFileDialog, QApplication
 )
-from Orange.base import Model
 
+from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import stdpaths
 
 
-class OWSaveClassifier(widget.OWWidget):
-    name = "Save Classifier"
-    description = "Save a trained classifier to an output file."
-    icon = "icons/SaveClassifier.svg"
+class OWSaveModel(widget.OWWidget):
+    name = "Save Model"
+    description = "Save a trained model to an output file."
+    icon = "icons/SaveModel.svg"
+    replaces = ["Orange.widgets.classify.owsaveclassifier.OWSaveClassifier"]
     priority = 3000
 
-    inputs = [("Classifer", Model, "setModel")]
+    inputs = [("Model", Model, "setModel")]
 
     #: Current (last selected) filename or None.
     filename = Setting(None)
@@ -25,7 +26,7 @@ class OWSaveClassifier(widget.OWWidget):
     history = Setting([])
 
     FILE_EXT = '.pkcls'
-    FILTER = "Pickled classifier (*" + FILE_EXT + ");;All Files (*)"
+    FILTER = "Pickled model (*" + FILE_EXT + ");;All Files (*)"
 
     want_main_area = False
     resizing_enabled = False
@@ -33,7 +34,7 @@ class OWSaveClassifier(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.selectedIndex = -1
-        #: input model/classifier
+        #: input model
         self.model = None
 
         box = gui.hBox(self.controlArea, self.tr("File"))
@@ -71,7 +72,7 @@ class OWSaveClassifier(widget.OWWidget):
             self.filename = None
 
     def setModel(self, model):
-        """Set input classifier."""
+        """Set input model."""
         self.model = model
         self.savebutton.setEnabled(
             not (model is None or self.filename is None))
@@ -139,7 +140,7 @@ class OWSaveClassifier(widget.OWWidget):
 
 def main():
     app = QApplication([])
-    w = OWSaveClassifier()
+    w = OWSaveModel()
     w.show()
     return app.exec_()
 

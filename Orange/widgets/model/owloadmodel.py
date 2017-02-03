@@ -1,27 +1,27 @@
 import os
-import dill as pickle
 
+import dill as pickle
 from AnyQt.QtCore import QTimer
 from AnyQt.QtWidgets import (
     QSizePolicy, QHBoxLayout, QComboBox, QStyle, QFileDialog
 )
-from Orange.base import Model
 
+from Orange.base import Model
 from Orange.widgets import widget, gui
+from Orange.widgets.model import owsavemodel
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import stdpaths
-
-from Orange.widgets.classify import owsaveclassifier
 from Orange.widgets.widget import Msg
 
 
-class OWLoadClassifier(widget.OWWidget):
-    name = "Load Classifier"
-    description = "Load a classifier from an input file."
+class OWLoadModel(widget.OWWidget):
+    name = "Load Model"
+    description = "Load a model from an input file."
     priority = 3050
-    icon = "icons/LoadClassifier.svg"
+    replaces = ["Orange.widgets.classify.owloadclassifier.OWLoadClassifier"]
+    icon = "icons/LoadModel.svg"
 
-    outputs = [("Classifier", Model, widget.Dynamic)]
+    outputs = [("Model", Model, widget.Dynamic)]
 
     #: List of recent filenames.
     history = Setting([])
@@ -31,7 +31,7 @@ class OWLoadClassifier(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         load_error = Msg("An error occured while reading '{}'")
 
-    FILTER = owsaveclassifier.OWSaveClassifier.FILTER
+    FILTER = owsavemodel.OWSaveModel.FILTER
 
     want_main_area = False
     resizing_enabled = False
@@ -100,13 +100,13 @@ class OWLoadClassifier(widget.OWWidget):
         """Load the object from filename and send it to output."""
         try:
             with open(filename, "rb") as f:
-                classifier = pickle.load(f)
+                model = pickle.load(f)
         except (pickle.UnpicklingError, OSError, EOFError):
             self.Error.load_error(os.path.split(filename)[-1])
         else:
             self.Error.load_error.clear()
             self._remember(filename)
-            self.send("Classifier", classifier)
+            self.send("Model", model)
 
     def _remember(self, filename):
         """
@@ -132,7 +132,7 @@ class OWLoadClassifier(widget.OWWidget):
 def main():
     from AnyQt.QtWidgets import QApplication
     app = QApplication([])
-    w = OWLoadClassifier()
+    w = OWLoadModel()
     w.show()
     return app.exec_()
 
