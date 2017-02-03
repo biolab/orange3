@@ -242,8 +242,9 @@ class OWReport(OWWidget):
                     "onClick='pybridge._select_item(this.id)'>{}<div " \
                     "class='textwrapper'><textarea " \
                     "placeholder='Write a comment...'" \
-                    "onInput='pybridge._add_comment(this.parentNode." \
-                    "parentNode.id, this.value)'>{}</textarea></div>" \
+                    "onInput='this.innerHTML = this.value;" \
+                    "pybridge._add_comment(this.parentNode.parentNode.id, this.value);'" \
+                    ">{}</textarea></div>" \
                     "</div>".format(item.id, item.html, item.comment)
         html += "</body></html>"
         self.report_view.setHtml(html)
