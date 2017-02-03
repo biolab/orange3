@@ -2,7 +2,7 @@ import sys
 import warnings
 import contextlib
 
-from AnyQt.QtCore import Qt, QObject, QEventLoop, QTimer
+from AnyQt.QtCore import Qt, QObject, QEventLoop, QTimer, QLocale
 from AnyQt.QtTest import QTest
 
 
@@ -285,3 +285,16 @@ class simulate:
         if index < 0:
             raise ValueError("{!r} not in {}".format(value, cbox))
         simulate.combobox_activate_index(cbox, index, delay)
+
+
+def override_locale(language):
+    """Execute the wrapped code with a different locale."""
+    def wrapper(f):
+        def wrap(*args, **kwargs):
+            locale = QLocale()
+            QLocale.setDefault(QLocale(language))
+            result = f(*args, **kwargs)
+            QLocale.setDefault(locale)
+            return result
+        return wrap
+    return wrapper
