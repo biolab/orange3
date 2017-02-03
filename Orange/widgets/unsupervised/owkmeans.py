@@ -428,24 +428,20 @@ class OWKMeans(widget.OWWidget):
     def send_report(self):
         # False positives (Setting is not recognized as int)
         # pylint: disable=invalid-sequence-index
-        k_clusters = self.k
-        if self.optimize_k and self.optimization_runs and \
-                self.selected_row() is not None:
+        if self.optimize_k and self.selected_row() is not None:
             k_clusters = self.k_from + self.selected_row()
+        else:
+            k_clusters = self.k
         self.report_items((
             ("Number of clusters", k_clusters),
-            ("Optimization",
-             self.optimize_k != 0 and
-             "{}, {} re-runs limited to {} steps".format(
-                 self.INIT_METHODS[self.smart_init].lower(),
-                 self.n_init, self.max_iterations))))
+            ("Optimization", "{}, {} re-runs limited to {} steps".format(
+                self.INIT_METHODS[self.smart_init].lower(),
+                self.n_init, self.max_iterations))))
         if self.data:
             self.report_data("Data", self.data)
             if self.optimize_k:
                 self.report_table(
-                    "Scoring by {}".format(
-                        self.SCORING_METHODS[self.scoring][0]),
-                    self.table_view)
+                    "Scores for different numbers of clusters", self.table_view)
 
 
 def main():
