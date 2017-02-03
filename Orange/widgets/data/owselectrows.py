@@ -11,7 +11,7 @@ from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
 )
-from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex
+from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex, QLocale
 
 from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
                          Table, TimeVariable)
@@ -33,6 +33,27 @@ class SelectRowsContextHandler(DomainContextHandler):
         """Return True if condition applies to a variable in given domain."""
         varname, *_ = condition
         return varname in attrs or varname in metas
+
+    def encode_setting(self, context, setting, value):
+        if setting.name == 'conditions':
+            CONTINUOUS = vartype(ContinuousVariable())
+            for i, (attr, op, values) in enumerate(value):
+                if context.attributes.get(attr) == CONTINUOUS:
+                    if isinstance(values[0], str):
+                        values = [QLocale().toDouble(v)[0] for v in values]
+                        value[i] = (attr, op, values)
+        return super().encode_setting(context, setting, value)
+
+    def decode_setting(self, setting, value, domain=None):
+        value = super().decode_setting(setting, value, domain)
+        if setting.name == 'conditions':
+            for i, (attr, op, values) in enumerate(value):
+                var = attr in domain and domain[attr]
+                if var and var.is_continuous and not isinstance(var, TimeVariable):
+                    value[i] = (attr, op,
+                                list([QLocale().toString(float(i), 'f')
+                                      for i in values]))
+        return value
 
 
 class FilterDiscreteType(enum.Enum):
@@ -67,7 +88,7 @@ class OWSelectRows(widget.OWWidget):
             (FilterContinuous.NotEqual, "is not"),
             (FilterContinuous.Less, "is below"),
             (FilterContinuous.LessEqual, "is at most"),
-            (FilterContinuous.Greater,"is greater than"),
+            (FilterContinuous.Greater, "is greater than"),
             (FilterContinuous.GreaterEqual, "is at least"),
             (FilterContinuous.Between, "is between"),
             (FilterContinuous.Outside, "is outside"),
@@ -272,9 +293,10 @@ class OWSelectRows(widget.OWWidget):
     class QDoubleValidatorEmpty(QDoubleValidator):
         def validate(self, input_, pos):
             if not input_:
-                return (QDoubleValidator.Acceptable, input_, pos)
-            else:
-                return super().validate(input_, pos)
+                return QDoubleValidator.Acceptable, input_, pos
+            if self.locale().groupSeparator() in input_:
+                return QDoubleValidator.Invalid, input_, pos
+            return super().validate(input_, pos)
 
     def set_new_values(self, oper_combo, adding_all, selected_values=None):
         # def remove_children():
@@ -403,6 +425,24 @@ class OWSelectRows(widget.OWWidget):
             # controls are being constructed
             pass
 
+    def _values_to_floats(self, attr, values):
+        if not all(values):
+            return None
+        if isinstance(attr, TimeVariable):
+            parse = lambda x: (attr.parse(x), True)
+        else:
+            parse = QLocale().toDouble
+
+        try:
+            floats, ok = zip(*[parse(v) for v in values])
+            if not all(ok):
+                raise ValueError('Some values could not be parsed as floats'
+                                 'in the current locale: {}'.format(values))
+        except TypeError:
+            floats = values  # values already floats
+        assert all(isinstance(v, float) for v in floats)
+        return floats
+
     def commit(self):
         matching_output = self.data
         non_matching_output = None
@@ -416,19 +456,15 @@ class OWSelectRows(widget.OWWidget):
                 operators = self.Operators[type(attr)]
                 opertype, _ = operators[oper_idx]
                 if attr.is_continuous:
-                    if any(not v for v in values):
+                    try:
+                        floats = self._values_to_floats(attr, values)
+                    except ValueError as e:
+                        self.error(e.args[0])
+                        return
+                    if floats is None:
                         continue
-
-                    # Parse datetime strings into floats
-                    if isinstance(attr, TimeVariable):
-                        try:
-                            values = [attr.parse(v) for v in values]
-                        except ValueError as e:
-                            self.error(e.args[0])
-                            return
-
                     filter = data_filter.FilterContinuous(
-                        attr_index, opertype, *[float(v) for v in values])
+                        attr_index, opertype, *floats)
                 elif attr.is_string:
                     filter = data_filter.FilterString(
                         attr_index, opertype, *[str(v) for v in values])
