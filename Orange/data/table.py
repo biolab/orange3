@@ -1309,6 +1309,8 @@ class Table(MutableSequence, Storage):
                 m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
             elif col < 0:
                 m, W, Xcsc = _get_matrix(self.metas, Xcsc, col * (-1) - 1)
+                if np.issubdtype(m.dtype, np.dtype(object)):
+                    m = m.astype(float)
             else:
                 m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
             if var.is_discrete:
