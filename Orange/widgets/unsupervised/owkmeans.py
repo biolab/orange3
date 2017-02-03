@@ -1,5 +1,7 @@
 import math
 import operator
+import re
+from itertools import chain
 
 from AnyQt.QtWidgets import QGridLayout, QSizePolicy as Policy, QTableView, \
     QStyle
@@ -379,6 +381,18 @@ class OWKMeans(widget.OWWidget):
         self.scoring = len(self.SCORING_METHODS)
         self.send_data()
 
+    def _get_var_name(self):
+        domain = self.data.domain
+        re_cluster = re.compile(r"Cluster \((\d+)\)")
+        names = [var.name for var in chain(domain, domain.metas)]
+        matches = (re_cluster.fullmatch(name) for name in names)
+        matches = [m for m in matches if m]
+        name = "Cluster"
+        if matches or "Cluster" in names:
+            last_num = max((int(m.group(1)) for m in matches), default=0)
+            name += " ({})".format(last_num + 1)
+        return name
+
     def send_data(self):
         if self.optimize_k:
             row = self.selected_row()
@@ -392,9 +406,8 @@ class OWKMeans(widget.OWWidget):
             self.send("Centroids", None)
             return
 
-        # TODO: add (n) if a column with this name is already in domain
         clust_var = DiscreteVariable(
-            "Cluster", values=["C%d" % (x + 1) for x in range(km.k)])
+            self._get_var_name(), values=["C%d" % (x + 1) for x in range(km.k)])
         clust_ids = km(self.data)
         domain = self.data.domain
         new_domain = Domain(
