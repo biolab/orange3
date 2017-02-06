@@ -77,27 +77,24 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_not_enough_data_settings_changed(self):
         """Check widget for dataset with one feature or for one instance"""
-        self._test_helper()
-        self.widget.controls.merge_kmeans.setChecked(True)
-        self._test_helper(True)
-
-    def _test_helper(self, kmeans_checked=False):
         msg = self.widget.Error
-        for col_checked in (False, True):
-            self.widget.controls.col_clustering.setChecked(col_checked)
-            self.send_signal("Data", None)
-            self.send_signal("Data", self.data[:, 0])
-            if col_checked:
-                self.assertTrue(msg.not_enough_features.is_shown())
-            for row_checked in (False, True):
-                self.widget.controls.row_clustering.setChecked(row_checked)
+        for kmeans_checked in (False, True):
+            self.widget.controls.merge_kmeans.setChecked(kmeans_checked)
+            for col_checked in (False, True):
+                self.widget.controls.col_clustering.setChecked(col_checked)
                 self.send_signal("Data", None)
-                self.send_signal("Data", self.data[0:1])
-                if row_checked:
-                    self.assertTrue(msg.not_enough_instances.is_shown())
-                elif kmeans_checked and row_checked:
-                    self.assertTrue(msg.not_enough_instances_k_means.is_shown())
-        self.send_signal("Data", None)
-        self.assertFalse(msg.not_enough_features.is_shown())
-        self.assertFalse(msg.not_enough_instances.is_shown())
-        self.assertFalse(msg.not_enough_instances_k_means.is_shown())
+                self.send_signal("Data", self.data[:, 0])
+                if col_checked:
+                    self.assertTrue(msg.not_enough_features.is_shown())
+                for row_checked in (False, True):
+                    self.widget.controls.row_clustering.setChecked(row_checked)
+                    self.send_signal("Data", None)
+                    self.send_signal("Data", self.data[0:1])
+                    if row_checked:
+                        self.assertTrue(msg.not_enough_instances.is_shown())
+                    elif kmeans_checked and row_checked:
+                        self.assertTrue(msg.not_enough_instances_k_means.is_shown())
+            self.send_signal("Data", None)
+            self.assertFalse(msg.not_enough_features.is_shown())
+            self.assertFalse(msg.not_enough_instances.is_shown())
+            self.assertFalse(msg.not_enough_instances_k_means.is_shown())
