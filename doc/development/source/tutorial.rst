@@ -137,7 +137,7 @@ How about displaying a number?
        description = "Print out a number"
        icon = "icons/print.svg"
 
-       inputs = [("Number", int, "set_number")
+       inputs = [("Number", int, "set_number")]
        outputs = []
 
        want_main_area = False
