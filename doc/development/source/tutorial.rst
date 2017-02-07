@@ -52,13 +52,14 @@ We will start with a very simple example. A widget that will output
 a single integer specified by the user.
 
 .. code-block:: python
+
     from Orange.widgets import widget, gui
 
     class IntNumber(widget.OWWidget):
         # Widget's name as displayed in the canvas
         name = "Integer Number"
         # Short widget description
-        description "Lets the user input a number"
+        description = "Lets the user input a number"
 
         # An icon resource file path for this widget
         # (a path relative to the module where this widget is defined)
