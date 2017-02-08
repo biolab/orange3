@@ -8,6 +8,8 @@ from itertools import chain, count
 from collections import OrderedDict
 import warnings
 
+import numpy as np
+
 # Exposed here for convenience. Prefer patching to try-finally blocks
 from unittest.mock import patch  # pylint: disable=unused-import
 
@@ -234,7 +236,7 @@ class Reprable:
                     param.kind not in (param.VAR_POSITIONAL,
                                        param.VAR_KEYWORD)):
                     value = getattr(self, param.name)
-                    if value != param.default:
+                    if not self.__equal(value, param.default):
                         names_values.append((param.name, value))
 
         module = self._reprable_module
@@ -245,6 +247,17 @@ class Reprable:
                                  cls.__name__,
                                  ', '.join('{}={!r}'.format(*pair)
                                            for pair in names_values))
+
+    @staticmethod
+    def __equal(obj1, obj2):
+        try:
+            # If the objects are broadcastable (works for array_like as
+            # for arbitrary objects), compare them for equality (possibly
+            # element-wise)
+            return np.broadcast(obj1, obj2) and np.all(obj1 == obj2)
+        except ValueError:
+            # Broadcasting failed
+            return False
 
 
 # For best result, keep this at the bottom

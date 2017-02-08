@@ -33,6 +33,19 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(try_(lambda: np.whatever()))
         self.assertEqual(try_(len, default=SOMETHING), SOMETHING)
 
+    def test_reprable(self):
+        from Orange.data import ContinuousVariable
+        from Orange.preprocess.impute import ReplaceUnknownsRandom
+        from Orange.statistics.distribution import Continuous
+
+        var = ContinuousVariable('x')
+        transform = ReplaceUnknownsRandom(var, Continuous(1, var))
+
+        self.assertEqual(repr(transform).replace('\n       ', ' '),
+                         "ReplaceUnknownsRandom("
+                         "variable=ContinuousVariable(name='x', number_of_decimals=3), "
+                         "distribution=Continuous([[ 0.], [ 0.]]))")
+
     def test_deepgetattr(self):
         class a:
             l = []
