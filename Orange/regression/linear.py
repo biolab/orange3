@@ -1,11 +1,10 @@
 import numpy as np
 
 import sklearn.linear_model as skl_linear_model
-import sklearn.pipeline as skl_pipeline
 import sklearn.preprocessing as skl_preprocessing
 
 from Orange.data import Variable, ContinuousVariable
-from Orange.preprocess import Continuize, Normalize, RemoveNaNColumns, SklImpute
+from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
 from Orange.regression import Learner, Model, SklLearner, SklModel
 
@@ -82,6 +81,7 @@ class ElasticNetCVLearner(LinearRegressionLearner):
 
 class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
+    preprocessors = SklLearner.preprocessors + [Normalize()]
 
     def __init__(self, loss='squared_loss',penalty='l2', alpha=0.0001,
                  l1_ratio=0.15, fit_intercept=True, n_iter=5, shuffle=True,
@@ -91,13 +91,6 @@ class SGDRegressionLearner(LinearRegressionLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-    def fit(self, X, Y, W):
-        sk = self.__wraps__(**self.params)
-        clf = skl_pipeline.Pipeline(
-            [('scaler', skl_preprocessing.StandardScaler()), ('sgd', sk)])
-        clf.fit(X, Y.ravel())
-        return LinearModel(clf)
 
 
 class PolynomialLearner(Learner):
