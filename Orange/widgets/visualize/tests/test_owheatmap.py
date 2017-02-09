@@ -43,7 +43,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Error.active)
 
     def test_information_message(self):
-        self.widget.sort_rows = self.widget.OrderedClustering
+        self.widget.controls.row_clustering.setChecked(True)
         continuizer = Continuize()
         cont_titanic = continuizer(self.titanic)
         self.send_signal("Data", cont_titanic)
@@ -56,14 +56,12 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # check output when "Sorting Column" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output("Selected Data"))
-        self.widget.colsortcb.activated.emit(1)
-        self.widget.colsortcb.setCurrentIndex(1)
+        self.widget.controls.col_clustering.setChecked(True)
         self.assertIsNone(self.get_output("Selected Data"))
         # check output when "Sorting Row" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output("Selected Data"))
-        self.widget.rowsortcb.activated.emit(1)
-        self.widget.rowsortcb.setCurrentIndex(1)
+        self.widget.controls.row_clustering.setChecked(True)
         self.assertIsNone(self.get_output("Selected Data"))
         # check output when "Merge by k-means" setting changes
         self._select_data()
@@ -79,30 +77,24 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_not_enough_data_settings_changed(self):
         """Check widget for dataset with one feature or for one instance"""
-        self._test_helper()
-        self.widget.controls.merge_kmeans.setChecked(True)
-        self._test_helper(True)
-
-    def _test_helper(self, checked=False):
-        iris = Table("iris")
         msg = self.widget.Error
-        for i in range(0, self.widget.colsortcb.count()):
-            self.widget.colsortcb.activated.emit(i)
-            self.widget.colsortcb.setCurrentIndex(i)
-            self.send_signal("Data", None)
-            self.send_signal("Data", iris[:, 0])
-            if i > 0:
-                self.assertTrue(msg.not_enough_features.is_shown())
-            for j in range(0, self.widget.rowsortcb.count()):
-                self.widget.rowsortcb.activated.emit(j)
-                self.widget.rowsortcb.setCurrentIndex(j)
+        for kmeans_checked in (False, True):
+            self.widget.controls.merge_kmeans.setChecked(kmeans_checked)
+            for col_checked in (False, True):
+                self.widget.controls.col_clustering.setChecked(col_checked)
                 self.send_signal("Data", None)
-                self.send_signal("Data", iris[0:1])
-                if j > 1:
-                    self.assertTrue(msg.not_enough_instances.is_shown())
-                elif checked and j > 1:
-                    self.assertTrue(msg.not_enough_instances_k_means.is_shown())
-        self.send_signal("Data", None)
-        self.assertFalse(msg.not_enough_features.is_shown())
-        self.assertFalse(msg.not_enough_instances.is_shown())
-        self.assertFalse(msg.not_enough_instances_k_means.is_shown())
+                self.send_signal("Data", self.data[:, 0])
+                if col_checked:
+                    self.assertTrue(msg.not_enough_features.is_shown())
+                for row_checked in (False, True):
+                    self.widget.controls.row_clustering.setChecked(row_checked)
+                    self.send_signal("Data", None)
+                    self.send_signal("Data", self.data[0:1])
+                    if row_checked:
+                        self.assertTrue(msg.not_enough_instances.is_shown())
+                    elif kmeans_checked and row_checked:
+                        self.assertTrue(msg.not_enough_instances_k_means.is_shown())
+            self.send_signal("Data", None)
+            self.assertFalse(msg.not_enough_features.is_shown())
+            self.assertFalse(msg.not_enough_instances.is_shown())
+            self.assertFalse(msg.not_enough_instances_k_means.is_shown())
