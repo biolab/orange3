@@ -12,6 +12,7 @@ class TestOWSGDRegression(WidgetTest, WidgetLearnerTestMixin):
             OWSGD, stored_settings={"auto_apply": False})
         self.init()
         self.data = self.housing
+        self.valid_datasets = (self.housing,)
         self.parameters = [
             ParameterMapping('loss', self.widget.reg_loss_function_combo,
                              list(zip(*self.widget.reg_losses))[1]),

@@ -1,6 +1,7 @@
 import os
+import sip
 import unittest
-
+from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtWidgets import (
@@ -9,19 +10,21 @@ from AnyQt.QtWidgets import (
 
 from Orange.base import SklModel, Model
 from Orange.canvas.report.owreport import OWReport
-from Orange.classification.base_classification import (LearnerClassification,
-                                                       ModelClassification)
+from Orange.classification.base_classification import (
+    LearnerClassification, ModelClassification
+)
 from Orange.data import Table
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize
 from Orange.preprocess.preprocess import PreprocessorList
-from Orange.regression.base_regression import LearnerRegression, ModelRegression
-from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.regression.base_regression import (
+    LearnerRegression, ModelRegression
+)
+from Orange.widgets.utils.annotated_data import (
+    ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
+)
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
-# For tests, let memory freeing entirely to Python / OS
-import sip
 sip.setdestroyonexit(False)
 
 app = None
@@ -213,12 +216,20 @@ class BaseParameterMapping:
         It sets component's value.
     """
 
-    def __init__(self, name, gui_element, values, getter, setter):
+    def __init__(self, name, gui_element, values, getter, setter,
+                 problem_type="both"):
         self.name = name
         self.gui_element = gui_element
         self.values = values
         self.get_value = getter
         self.set_value = setter
+        self.problem_type = problem_type
+
+    def __str__(self):
+        if self.problem_type == "both":
+            return self.name
+        else:
+            return "%s (%s)" % (self.name, self.problem_type)
 
 
 class DefaultParameterMapping(BaseParameterMapping):
@@ -266,11 +277,13 @@ class ParameterMapping(BaseParameterMapping):
     """
 
     def __init__(self, name, gui_element, values=None,
-                 getter=None, setter=None):
-        super().__init__(name, gui_element,
-                         values or self._default_values(gui_element),
-                         getter or self._default_get_value(gui_element, values),
-                         setter or self._default_set_value(gui_element, values))
+                 getter=None, setter=None, **kwargs):
+        super().__init__(
+            name, gui_element,
+            values or self._default_values(gui_element),
+            getter or self._default_get_value(gui_element, values),
+            setter or self._default_set_value(gui_element, values),
+            **kwargs)
 
     @staticmethod
     def get_gui_element(widget, attribute):
@@ -455,13 +468,16 @@ class WidgetLearnerTestMixin:
     def test_parameters_default(self):
         """Check if learner's parameters are set to default (widget's) values
         """
-        self.send_signal("Data", self.data)
-        self.widget.apply_button.button.click()
-        if hasattr(self.widget.learner, "params"):
-            learner_params = self.widget.learner.params
-            for parameter in self.parameters:
-                self.assertEqual(learner_params.get(parameter.name),
-                                 parameter.get_value())
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
+            self.widget.apply_button.button.click()
+            if hasattr(self.widget.learner, "params"):
+                learner_params = self.widget.learner.params
+                for parameter in self.parameters:
+                    # Skip if the param isn't used for the given data type
+                    if self._should_check_parameter(parameter, dataset):
+                        self.assertEqual(learner_params.get(parameter.name),
+                                         parameter.get_value())
 
     def test_parameters(self):
         """Check learner and model for various values of all parameters"""
@@ -473,31 +489,76 @@ class WidgetLearnerTestMixin:
             else:
                 return getattr(learner, name)
 
-        self.send_signal("Data", self.data)
+        # Test params on every valid dataset, since some attributes may apply
+        # to only certain problem types
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
 
-        for parameter in self.parameters:
-            assert isinstance(parameter, BaseParameterMapping)
-            for value in parameter.values:
-                parameter.set_value(value)
-                self.widget.apply_button.button.click()
-                param = get_value(self.widget.learner, parameter.name)
-                self.assertEqual(param, parameter.get_value(),
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                self.assertEqual(param, value,
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                param = get_value(self.get_output("Learner"), parameter.name)
-                self.assertEqual(param, value,
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                if issubclass(self.widget.LEARNER, SklModel):
-                    model = self.get_output(self.model_name)
-                    if model is not None:
-                        self.assertEqual(get_value(model, parameter.name), value)
-                        self.assertFalse(self.widget.Error.active)
-                    else:
-                        self.assertTrue(self.widget.Error.active)
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if not self._should_check_parameter(parameter, dataset):
+                    continue
+
+                assert isinstance(parameter, BaseParameterMapping)
+
+                for value in parameter.values:
+                    parameter.set_value(value)
+                    self.widget.apply_button.button.click()
+                    param = get_value(self.widget.learner, parameter.name)
+                    self.assertEqual(
+                        param, parameter.get_value(),
+                        "Mismatching setting for parameter '%s'" % parameter)
+                    self.assertEqual(
+                        param, value,
+                        "Mismatching setting for parameter '%s'" % parameter)
+                    param = get_value(self.get_output("Learner"),
+                                      parameter.name)
+                    self.assertEqual(
+                        param, value,
+                        "Mismatching setting for parameter '%s'" % parameter)
+
+                    if issubclass(self.widget.LEARNER, SklModel):
+                        model = self.get_output(self.model_name)
+                        if model is not None:
+                            self.assertEqual(get_value(model, parameter.name),
+                                             value)
+                            self.assertFalse(self.widget.Error.active)
+                        else:
+                            self.assertTrue(self.widget.Error.active)
+
+    def test_params_trigger_settings_changed(self):
+        """Check that the learner gets updated whenever a param is changed."""
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
+
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if not self._should_check_parameter(parameter, dataset):
+                    continue
+
+                assert isinstance(parameter, BaseParameterMapping)
+                # Set the mock here so we can include the param name in the
+                # error message, so if any test fails, we see where
+                # We mock `apply` and not `settings_changed` since that's
+                # sometimes connected with Qt signals, which are not directly
+                # called
+                self.widget.apply = Mock(name="apply(%s)" % parameter)
+                # Since the settings only get updated when the value actually
+                # changes, find a value that isn't the same as the current
+                # value and try with that
+                new_value = [x for x in parameter.values
+                             if x != parameter.get_value()][0]
+                parameter.set_value(new_value)
+                self.widget.apply.assert_called_once_with()
+
+    @staticmethod
+    def _should_check_parameter(parameter, data):
+        """Should the param be passed into the learner given the data"""
+        return ((parameter.problem_type == "classification" and
+                 data.domain.has_discrete_class) or
+                (parameter.problem_type == "regression" and
+                 data.domain.has_continuous_class) or
+                (parameter.problem_type == "both"))
 
 
 class WidgetOutputsTestMixin:

@@ -11,6 +11,7 @@ class TestOWRegressionTree(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(
             OWTreeLearner, stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.housing,)
         self.model_class = Model
         self.parameters = [
             ParameterMapping.from_attribute(self.widget, 'max_depth'),

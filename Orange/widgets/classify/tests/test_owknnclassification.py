@@ -10,6 +10,7 @@ class TestOWKNNLearner(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWKNNLearner,
                                          stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.iris,)
         self.parameters = [
             ParameterMapping('metric', self.widget.metrics_combo,
                              self.widget.metrics),

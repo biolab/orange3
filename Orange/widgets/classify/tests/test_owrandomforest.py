@@ -10,8 +10,10 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         self.widget = self.create_widget(OWRandomForest,
                                          stored_settings={"auto_apply": False})
         self.init()
+        self.valid_datasets = (self.iris,)
         nest_spin = self.widget.n_estimators_spin
-        nest_min_max = [nest_spin.minimum() * 10, nest_spin.minimum()]
+        # Let's test this out with 1 and 3 trees, so this doesn't take forever
+        nest_min_max = [1, 3]
         self.parameters = [
             ParameterMapping("n_estimators", nest_spin, nest_min_max),
             ParameterMapping("min_samples_split",
