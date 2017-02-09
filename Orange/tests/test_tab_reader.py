@@ -206,3 +206,23 @@ class TestTabReader(unittest.TestCase):
         table2 = TabReader(table1.__file__).read()
         self.assertEqual(table1.name, 'iris')
         self.assertEqual(table2.name, 'iris')
+
+    def test_metadata(self):
+        tempdir = tempfile.mkdtemp()
+        table = Table("titanic")
+        table.attributes = OrderedDict()
+        table.attributes["a"] = "aa"
+        table.attributes["b"] = "bb"
+        fname = path.join(tempdir, "out.tab")
+        TabReader.write_table_metadata(fname, table)
+        self.assertTrue(path.isfile(fname + ".metadata"))
+        shutil.rmtree(tempdir)
+
+    def test_no_metadata(self):
+        tempdir = tempfile.mkdtemp()
+        table = Table("titanic")
+        table.attributes = OrderedDict()
+        fname = path.join(tempdir, "out.tab")
+        TabReader.write_table_metadata(fname, table)
+        self.assertFalse(path.isfile(fname + ".metadata"))
+        shutil.rmtree(tempdir)
