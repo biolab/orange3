@@ -195,6 +195,8 @@ class DiscretizeEditor(BaseEditor):
 
 
 class ContinuizeEditor(BaseEditor):
+    _Type = type(Continuize.FirstAsBase)
+
     Continuizers = OrderedDict({
         Continuize.FrequentAsBase: "Most frequent is base",
         Continuize.Indicators: "One attribute per value",
@@ -206,7 +208,6 @@ class ContinuizeEditor(BaseEditor):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.setLayout(QVBoxLayout())
-
         self.__treatment = Continuize.Indicators
         self.__group = group = QButtonGroup(exclusive=True)
         group.buttonClicked.connect(self.__on_buttonClicked)
@@ -215,13 +216,15 @@ class ContinuizeEditor(BaseEditor):
             rb = QRadioButton(
                 text=text,
                 checked=self.__treatment == treatment)
-            group.addButton(rb, int(treatment))
+            group.addButton(rb, _enum_to_index(ContinuizeEditor._Type,
+                                               treatment))
             self.layout().addWidget(rb)
 
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
     def setTreatment(self, treatment):
-        b = self.__group.button(treatment)
+        buttonid = _enum_to_index(ContinuizeEditor._Type, treatment)
+        b = self.__group.button(buttonid)
         if b is not None:
             b.setChecked(True)
             self.__treatment = treatment
@@ -238,7 +241,8 @@ class ContinuizeEditor(BaseEditor):
         return {"multinomial_treatment": self.__treatment}
 
     def __on_buttonClicked(self):
-        self.__treatment = self.__group.checkedId()
+        self.__treatment = _index_to_enum(
+            ContinuizeEditor._Type, self.__group.checkedId())
         self.changed.emit()
         self.edited.emit()
 
