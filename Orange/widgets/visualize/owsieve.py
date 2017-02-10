@@ -168,7 +168,7 @@ class OWSieveDiagram(OWWidget):
             self.domain_model.set_domain(data.domain)
             if any(attr.is_continuous for attr in data.domain):
                 discretizer = Discretize(
-                    method=EqualFreq(n=4),
+                    method=EqualFreq(n=4),remove_const=False,
                     discretize_classes=True, discretize_metas=True)
                 self.discrete_data = discretizer(data)
             else:
