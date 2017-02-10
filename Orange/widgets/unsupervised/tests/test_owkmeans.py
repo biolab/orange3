@@ -56,12 +56,12 @@ class TestOWKMeans(WidgetTest):
 
         self.KMeansFail.fail_on = {3, 5, 7}
         self.send_signal("Data", self.iris)
-        self.assertIsInstance(widget.optimization_runs[3], str)
-        self.assertIsInstance(widget.optimization_runs[5], str)
-        self.assertIsInstance(widget.optimization_runs[7], str)
-        self.assertNotIsInstance(widget.optimization_runs[4], str)
-        self.assertNotIsInstance(widget.optimization_runs[6], str)
-        self.assertNotIsInstance(widget.optimization_runs[8], str)
+        self.assertIsInstance(widget.clusterings[3], str)
+        self.assertIsInstance(widget.clusterings[5], str)
+        self.assertIsInstance(widget.clusterings[7], str)
+        self.assertNotIsInstance(widget.clusterings[4], str)
+        self.assertNotIsInstance(widget.clusterings[6], str)
+        self.assertNotIsInstance(widget.clusterings[8], str)
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 1)
         self.assertIsNotNone(self.get_output("Annotated Data"))
