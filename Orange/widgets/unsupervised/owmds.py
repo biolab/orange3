@@ -133,6 +133,8 @@ class OWMDS(OWWidget):
         no_attributes = Msg("Data has no attributes")
         mismatching_dimensions = \
             Msg("Data and distances dimensions do not match.")
+        out_of_memory = Msg("Out of memory")
+        optimization_error = Msg("Error during optimization\n{}")
 
     def __init__(self):
         super().__init__()
@@ -621,6 +623,7 @@ class OWMDS(OWWidget):
             return
 
         loop = self.__update_loop
+        self.Error.out_of_memory.clear()
         try:
             embedding, stress, progress = next(self.__update_loop)
             assert self.__update_loop is loop
@@ -630,6 +633,14 @@ class OWMDS(OWWidget):
             self.__draw_similar_pairs = True
             self._update_plot()
             self.plot.autoRange(padding=0.1, items=[self._scatter_item])
+        except MemoryError:
+            self.Error.out_of_memory()
+            self.__set_update_loop(None)
+            self.__draw_similar_pairs = True
+        except Exception as exc:
+            self.Error.optimization_error(str(exc))
+            self.__set_update_loop(None)
+            self.__draw_similar_pairs = True
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
