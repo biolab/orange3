@@ -102,8 +102,8 @@ class LinearRegressionModel(Model):
 
 if __name__ == '__main__':
     import Orange.data
-    import sklearn.cross_validation as skl_cross_validation
-    
+    from Orange.evaluation import CrossValidation
+
     np.random.seed(42)
 
     def numerical_grad(f, params, e=1e-4):
@@ -136,7 +136,8 @@ if __name__ == '__main__':
     for lambda_ in (0.01, 0.03, 0.1, 0.3, 1, 3):
         m = LinearRegressionLearner(lambda_=lambda_)
         scores = []
-        for tr_ind, te_ind in skl_cross_validation.KFold(d.X.shape[0]):
+        res = CrossValidation(d, [m], 3, False)
+        for tr_ind, te_ind in res.indices:
             s = np.mean((m(d[tr_ind])(d[te_ind]) - d[te_ind].Y.ravel())**2)
             scores.append(s)
         print('{:5.2f} {}'.format(lambda_, np.mean(scores)))

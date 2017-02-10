@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 
 import joblib
-import sklearn.cross_validation as skl_cross_validation
+import sklearn.model_selection as skl
 
 from Orange.util import OrangeWarning
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
@@ -507,7 +507,7 @@ class CrossValidation(Results):
     def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
                  store_models=False, preprocessor=None, callback=None, warnings=None,
                  n_jobs=1):
-        self.k = k
+        self.k = int(k)
         self.stratified = stratified
         self.random_state = random_state
         if warnings is None:
@@ -523,16 +523,20 @@ class CrossValidation(Results):
         self.indices = None
         if self.stratified and test_data.domain.has_discrete_class:
             try:
-                self.indices = skl_cross_validation.StratifiedKFold(
-                    test_data.Y, self.k, shuffle=True, random_state=self.random_state
+                splitter = skl.StratifiedKFold(
+                    self.k, shuffle=True, random_state=self.random_state
                 )
+                splitter.get_n_splits(test_data.X, test_data.Y)
+                self.indices = list(splitter.split(test_data.X, test_data.Y))
             except ValueError:
                 self.warnings.append("Using non-stratified sampling.")
                 self.indices = None
         if self.indices is None:
-            self.indices = skl_cross_validation.KFold(
-                len(test_data), self.k, shuffle=True, random_state=self.random_state
+            splitter = skl.KFold(
+                self.k, shuffle=True, random_state=self.random_state
             )
+            splitter.get_n_splits(test_data)
+            self.indices = list(splitter.split(test_data))
 
 
 class LeaveOneOut(Results):
@@ -546,7 +550,9 @@ class LeaveOneOut(Results):
                          callback=callback, n_jobs=n_jobs)
 
     def setup_indices(self, train_data, test_data):
-        self.indices = skl_cross_validation.LeaveOneOut(len(test_data))
+        splitter = skl.LeaveOneOut()
+        splitter.get_n_splits(test_data)
+        self.indices = list(splitter.split(test_data))
 
     def prepare_arrays(self, test_data):
         # sped up version of super().prepare_arrays(data)
@@ -571,15 +577,20 @@ class ShuffleSplit(Results):
 
     def setup_indices(self, train_data, test_data):
         if self.stratified and test_data.domain.has_discrete_class:
-            self.indices = skl_cross_validation.StratifiedShuffleSplit(
-                test_data.Y, n_iter=self.n_resamples, train_size=self.train_size,
+            splitter = skl.StratifiedShuffleSplit(
+                n_splits=self.n_resamples, train_size=self.train_size,
                 test_size=self.test_size, random_state=self.random_state
             )
+            splitter.get_n_splits(test_data.X, test_data.Y)
+            self.indices = list(splitter.split(test_data.X, test_data.Y))
+
         else:
-            self.indices = skl_cross_validation.ShuffleSplit(
-                len(test_data), n_iter=self.n_resamples, train_size=self.train_size,
+            splitter = skl.ShuffleSplit(
+                n_splits=self.n_resamples, train_size=self.train_size,
                 test_size=self.test_size, random_state=self.random_state
             )
+            splitter.get_n_splits(test_data)
+            self.indices = list(splitter.split(test_data))
 
 
 class TestOnTestData(Results):
@@ -664,13 +675,15 @@ def sample(table, n=0.7, stratified=False, replace=False,
     n = len(table) - n
     if stratified and table.domain.has_discrete_class:
         test_size = max(len(table.domain.class_var.values), n)
-        ind = skl_cross_validation.StratifiedShuffleSplit(
-            table.Y.ravel(), n_iter=1,
-            test_size=test_size, train_size=len(table) - test_size,
+        splitter = skl.StratifiedShuffleSplit(
+            n_splits=1, test_size=test_size, train_size=len(table) - test_size,
             random_state=random_state)
+        splitter.get_n_splits(table.X, table.Y)
+        ind = splitter.split(table.X, table.Y)
     else:
-        ind = skl_cross_validation.ShuffleSplit(
-            len(table), n_iter=1,
-            test_size=n, random_state=random_state)
-    ind = next(iter(ind))
+        splitter = skl.ShuffleSplit(
+            n_splits=1, test_size=n, random_state=random_state)
+        splitter.get_n_splits(table)
+        ind = splitter.split(table)
+    ind = next(ind)
     return table[ind[0]], table[ind[1]]
