@@ -37,3 +37,12 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         X = np.array([1, 2, 0, 1, 0, 2])[:, None]
         data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
         self.send_signal("Data", data)
+
+    def test_keyerror(self):
+        """gh-2007
+        Check if it works when a table has only one row or duplicates.
+        Discretizer must have remove_const set to False.
+        """
+        data = Table("iris")
+        data = data[0:1]
+        self.send_signal("Data", data)
