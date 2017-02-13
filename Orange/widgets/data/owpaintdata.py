@@ -768,7 +768,7 @@ class OWPaintData(OWWidget):
     outputs = [("Data", Orange.data.Table)]
     inputs = [("Data", Orange.data.Table, "set_data")]
 
-    autocommit = Setting(False)
+    autocommit = Setting(True)
     table_name = Setting("Painted data")
     attr1 = Setting("x")
     attr2 = Setting("y")
@@ -1287,7 +1287,7 @@ class OWPaintData(OWWidget):
 
     def sizeHint(self):
         sh = super().sizeHint()
-        return sh.expandedTo(QSize(1200, 800))
+        return sh.expandedTo(QSize(900, 650))
 
     def onDeleteWidget(self):
         self.plot.clear()
