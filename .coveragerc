@@ -7,7 +7,6 @@ source =
     Orange
 omit =
     Orange/canvas/*
-    Orange/widgets/*
     Orange/tests/*
     */setup.py
     */*/setup.py
