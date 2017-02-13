@@ -228,37 +228,6 @@ def left_join_indices(table1, table2, vars1, vars2):
     return indices
 
 
-def right_join_indices(table1, table2, vars1, vars2):
-    indices = left_join_indices(table2, table1, vars2, vars1)
-    return [(j, i) for i, j in indices]
-
-
-def inner_join_indices(table1, table2, vars1, vars2):
-    indices = left_join_indices(table1, table2, vars1, vars2)
-    return [(i, j) for i, j in indices if j is not None]
-
-
-def left_join(left, right, left_vars, right_vars):
-    """
-    Left join `left` and `right` on values of `left/right_vars`.
-    """
-    indices = left_join_indices(left, right, left_vars, right_vars)
-    return join_table_by_indices(left, right, indices)
-
-
-def right_join(left, right, left_vars, right_vars):
-    """
-    Right join left and right on attributes attr1 and attr2
-    """
-    indices = right_join_indices(left, right, left_vars, right_vars)
-    return join_table_by_indices(left, right, indices)
-
-
-def inner_join(left, right, left_vars, right_vars):
-    indices = inner_join_indices(left, right, left_vars, right_vars)
-    return join_table_by_indices(left, right, indices)
-
-
 def join_table_by_indices(left, right, indices):
     domain = Orange.data.Domain(
         left.domain.attributes + right.domain.attributes,
