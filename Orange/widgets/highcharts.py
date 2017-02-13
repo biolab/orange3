@@ -123,6 +123,29 @@ class Highchart(WebviewWidget):
         if enable_select and not selection_callback:
             raise ValueError('enable_select requires selection_callback')
 
+        if enable_select:
+            # We need to make sure the _Bridge object below with the selection
+            # callback is exposed in JS via QWebChannel.registerObject() and
+            # not through WebviewWidget.exposeObject() as the latter mechanism
+            # doesn't transmit QObjects correctly.
+            class _Bridge(QObject):
+                @pyqtSlot('QVariantList')
+                def _highcharts_on_selected_points(self, points):
+                    selection_callback([np.sort(selected).astype(int)
+                                        for selected in points])
+            if bridge is None:
+                bridge = _Bridge()
+            else:
+                # Thus, we patch existing user-passed bridge with our
+                # selection callback method
+                attrs = bridge.__dict__.copy()
+                attrs['_highcharts_on_selected_points'] = _Bridge._highcharts_on_selected_points
+                assert isinstance(bridge, QObject), 'bridge needs to be a QObject'
+                _Bridge = type(bridge.__class__.__name__,
+                               bridge.__class__.__mro__,
+                               attrs)
+                bridge = _Bridge()
+
         super().__init__(parent, bridge, debug=debug)
 
         self.highchart = highchart
@@ -134,14 +157,6 @@ class Highchart(WebviewWidget):
                 mapNavigation_enableMouseWheelZoom=True,
                 mapNavigation_enableButtons=False)))
         if enable_select:
-
-            class _Bridge(QObject):
-                @pyqtSlot('QVariantList')
-                def on_selected_points(self, points):
-                    selection_callback([np.sort(selected).astype(int)
-                                        for selected in points])
-
-            self.exposeObject('_highcharts_bridge', _Bridge())
             _merge_dicts(options, _kwargs_options(dict(
                 chart_events_click='/**/unselectAllPoints/**/')))
         if enable_point_select:
@@ -232,7 +247,7 @@ class Highchart(WebviewWidget):
 
 def main():
     """ A simple test. """
-    from AnyQt.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     app = QApplication([])
 
     def _on_selected_points(points):
@@ -251,4 +266,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
