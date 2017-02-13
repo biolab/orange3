@@ -60,7 +60,7 @@ class _QWidgetJavaScriptWrapper(QObject):
         while isinstance(w, QWidget):
             if w.windowFlags() & (Qt.Window | Qt.Dialog):
                 return w.hide()
-            w = w.parent()
+            w = w.parent() if callable(w.parent) else w.parent
 
 
 if HAVE_WEBENGINE:
