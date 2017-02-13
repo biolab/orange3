@@ -268,6 +268,12 @@ def join_table_by_indices(left, right, indices):
     X = join_array_by_indices(left.X, right.X, indices)
     Y = join_array_by_indices(numpy.c_[left.Y], numpy.c_[right.Y], indices)
     metas = join_array_by_indices(left.metas, right.metas, indices)
+    for col, var in enumerate(domain.metas):
+        if var.is_string:
+            for row in range(metas.shape[0]):
+                cell = metas[row, col]
+                if type(cell) == float and numpy.isnan(cell):
+                    metas[row, col] = ""
 
     return Orange.data.Table.from_numpy(domain, X, Y, metas)
 
@@ -291,6 +297,10 @@ def join_array_by_indices(left, right, indices, masked=float("nan")):
     def hstack_blocks(blocks):
         return numpy.hstack(list(map(numpy.vstack, blocks)))
 
+    if left.shape[1] and left.dtype == object:
+        leftparts = numpy.array(leftparts).astype(object)
+    if right.shape[1] and right.dtype == object:
+        rightparts = numpy.array(rightparts).astype(object)
     return hstack_blocks((leftparts, rightparts))
 
 
