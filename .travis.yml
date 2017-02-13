@@ -20,9 +20,6 @@ matrix:
           env: PYQT5=true
           dist: trusty
           addons: { apt: { packages: [] } }
-    allow_failures:
-        - *pylint
-        - *pyqt5
     fast_finish: true
 
 cache:
