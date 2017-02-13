@@ -1,8 +1,9 @@
 import time
 import os
+import sys
 import unittest
 
-from AnyQt.QtCore import Qt, QPoint
+from AnyQt.QtCore import Qt, QPoint, QObject
 from AnyQt.QtWidgets import qApp
 from AnyQt.QtTest import QTest
 
@@ -12,15 +13,26 @@ from Orange.widgets.highcharts import Highchart
 
 
 class SelectionScatter(Highchart):
-    def __init__(self, selected_indices_callback):
-        super().__init__(enable_select='xy+',
+    def __init__(self, bridge, selected_indices_callback):
+        super().__init__(bridge=bridge,
+                         enable_select='xy+',
                          selection_callback=selected_indices_callback,
                          options=dict(chart=dict(type='scatter')))
 
 
 class HighchartTest(WidgetTest):
     @unittest.skipIf(os.environ.get('APPVEYOR'), 'test stalls on AppVeyor')
+    @unittest.skipIf(sys.version_info[:2] <= (3, 4),
+                     'the second iteration stalls on Travis / Py3.4')
     def test_selection(self):
+
+        class NoopBridge(QObject):
+            pass
+
+        for bridge in (NoopBridge(), None):
+            self._selection_test(bridge)
+
+    def _selection_test(self, bridge):
         data = Table('iris')
         selected_indices = []
 
@@ -28,7 +40,7 @@ class HighchartTest(WidgetTest):
             nonlocal selected_indices
             selected_indices = indices
 
-        scatter = SelectionScatter(selection_callback)
+        scatter = SelectionScatter(bridge, selection_callback)
         scatter.chart(options=dict(series=[dict(data=data.X[:, :2])]))
         scatter.show()
 
@@ -65,5 +77,6 @@ class HighchartTest(WidgetTest):
 
         self.assertFalse(len(selected_indices))
 
+        # Test Esc hiding
         QTest.keyClick(scatter, Qt.Key_Escape)
         self.assertTrue(scatter.isHidden())
