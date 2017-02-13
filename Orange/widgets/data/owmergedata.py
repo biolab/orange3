@@ -15,6 +15,7 @@ from Orange.widgets.utils.sql import check_sql_input
 INSTANCEID = "Source position (index)"
 INDEX = "Position (index)"
 
+
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge data sets based on the values of selected data features."
@@ -23,11 +24,11 @@ class OWMergeData(widget.OWWidget):
 
     inputs = [("Data A", Orange.data.Table, "setDataA", widget.Default),
               ("Data B", Orange.data.Table, "setDataB")]
-    outputs = [("Merged Data A+B", Orange.data.Table, ),
-               ("Merged Data B+A", Orange.data.Table, )]
+    outputs = [("Merged Data", Orange.data.Table)]
 
     attr_a = settings.Setting('', schema_only=True)
     attr_b = settings.Setting('', schema_only=True)
+    inner = settings.Setting(True)
 
     want_main_area = False
 
@@ -39,45 +40,37 @@ class OWMergeData(widget.OWWidget):
         self.dataB = None
 
         # GUI
-        w = QWidget(self)
-        self.controlArea.layout().addWidget(w)
-        grid = QGridLayout()
-        grid.setContentsMargins(0, 0, 0, 0)
-        w.setLayout(grid)
+        box = gui.hBox(self.controlArea, "Match instances by")
 
         # attribute A selection
-        boxAttrA = gui.vBox(self, self.tr("Attribute A"), addToLayout=False)
-        grid.addWidget(boxAttrA, 0, 0)
-
-        self.attrViewA = gui.comboBox(boxAttrA, self, 'attr_a',
-                                      orientation=Qt.Horizontal,
+        self.attrViewA = gui.comboBox(box, self, 'attr_a', label="Data A",
+                                      orientation=Qt.Vertical,
                                       sendSelectedValue=True,
                                       callback=self._invalidate)
         self.attrModelA = itemmodels.VariableListModel()
         self.attrViewA.setModel(self.attrModelA)
 
         # attribute  B selection
-        boxAttrB = gui.vBox(self, self.tr("Attribute B"), addToLayout=False)
-        grid.addWidget(boxAttrB, 0, 1)
-
-        self.attrViewB = gui.comboBox(boxAttrB, self, 'attr_b',
-                                      orientation=Qt.Horizontal,
+        self.attrViewB = gui.comboBox(box, self, 'attr_b', label="Data B",
+                                      orientation=Qt.Vertical,
                                       sendSelectedValue=True,
                                       callback=self._invalidate)
         self.attrModelB = itemmodels.VariableListModel()
         self.attrViewB.setModel(self.attrModelB)
 
         # info A
-        boxDataA = gui.vBox(self, self.tr("Data A Input"), addToLayout=False)
-        grid.addWidget(boxDataA, 1, 0)
-        self.infoBoxDataA = gui.widgetLabel(boxDataA, self.dataInfoText(None))
+        box = gui.hBox(self.controlArea, box=None)
+        self.infoBoxDataA = gui.label(box, self, self.dataInfoText(None),
+                                      box="Data A Info")
 
         # info B
-        boxDataB = gui.vBox(self, self.tr("Data B Input"), addToLayout=False)
-        grid.addWidget(boxDataB, 1, 1)
-        self.infoBoxDataB = gui.widgetLabel(boxDataB, self.dataInfoText(None))
+        self.infoBoxDataB = gui.label(box, self, self.dataInfoText(None),
+                                      box="Data B Info")
 
-        gui.rubber(self)
+        gui.separator(self.controlArea)
+        box = gui.vBox(self.controlArea, box=True)
+        gui.checkBox(box, self, "inner", "Exclude instances without a match",
+                     callback=self._invalidate)
 
     def _setAttrs(self, model, data, othermodel, otherdata):
         model[:] = allvars(data) if data is not None else []
@@ -131,7 +124,7 @@ class OWMergeData(widget.OWWidget):
         return "\n".join([instances, attributes])
 
     def commit(self):
-        AB, BA = None, None
+        AB = None
         if (self.attr_a and self.attr_b and
                 self.dataA is not None and
                 self.dataB is not None):
@@ -139,10 +132,8 @@ class OWMergeData(widget.OWWidget):
                     self.dataA.domain[self.attr_a])
             varB = (self.attr_b if self.attr_b in (INDEX, INSTANCEID) else
                     self.dataB.domain[self.attr_b])
-            AB = merge(self.dataA, varA, self.dataB, varB)
-            BA = merge(self.dataB, varB, self.dataA, varA)
-        self.send("Merged Data A+B", AB)
-        self.send("Merged Data B+A", BA)
+            AB = merge(self.dataA, varA, self.dataB, varB, self.inner)
+        self.send("Merged Data", AB)
 
     def _invalidate(self):
         self.commit()
@@ -168,27 +159,30 @@ def allvars(data):
     return (INDEX,) + data.domain.attributes + data.domain.class_vars + data.domain.metas
 
 
-def merge(A, varA, B, varB):
-    join_indices = left_join_indices(A, B, (varA,), (varB,))
+def merge(A, varA, B, varB, inner=True):
+    join_indices = inner_join_indices(A, B, varA, varB) if inner else \
+        outer_join_indices(A, B, varA, varB)
     seen_set = set()
 
     def seen(val):
-        return val in seen_set or bool(seen_set.add(val))
+        return (val in seen_set or bool(seen_set.add(val))) and val is not None
 
     merge_indices = [(i, j) for i, j in join_indices if not seen(i)]
 
-    all_vars_A = set(A.domain.variables + A.domain.metas)
+    all_vars = set(A.domain.variables + A.domain.metas)
+    if inner:
+        all_vars.add(varB)
+
     iter_vars_B = itertools.chain(
         enumerate(B.domain.variables),
         ((-i, m) for i, m in enumerate(B.domain.metas, start=1))
     )
-    reduced_indices_B = [i for i, var in iter_vars_B if not var in all_vars_A]
-    reduced_B = B[:, list(reduced_indices_B)]
+    reduced_B = B[:, [i for i, var in iter_vars_B if var not in all_vars]]
 
     return join_table_by_indices(A, reduced_B, merge_indices)
 
 
-def group_table_indices(table, key_vars, exclude_unknown=False):
+def group_table_indices(table, key_var, exclude_unknown=False):
     """
     Group table indices based on values of selected columns (`key_vars`).
 
@@ -196,39 +190,60 @@ def group_table_indices(table, key_vars, exclude_unknown=False):
     into a list of indices in the table where they are present.
 
     :param Orange.data.Table table:
-    :param list-of-Orange.data.FeatureDescriptor] key_vars:
+    :param Orange.data.FeatureDescriptor] key_var:
     :param bool exclude_unknown:
 
     """
     groups = defaultdict(list)
     for i, inst in enumerate(table):
-        key = [inst.id if a == INSTANCEID else
-               i if a == INDEX else inst[a]
-                   for a in key_vars]
-        if exclude_unknown and any(math.isnan(k) for k in key):
+        key = inst.id if key_var == INSTANCEID else i if \
+            key_var == INDEX else inst[key_var]
+        if exclude_unknown and math.isnan(key):
             continue
-        key = tuple([str(k) for k in key])
-        groups[key].append(i)
+        groups[str(key)].append(i)
     return groups
 
 
-def left_join_indices(table1, table2, vars1, vars2):
-    key_map1 = group_table_indices(table1, vars1)
-    key_map2 = group_table_indices(table2, vars2)
+def inner_join_indices(table1, table2, var1, var2):
+    key_map1 = group_table_indices(table1, var1, True)
+    key_map2 = group_table_indices(table2, var2, True)
     indices = []
     for i, inst in enumerate(table1):
-        key = tuple([str(inst.id if v == INSTANCEID else
-                         i if v == INDEX else inst[v])
-                            for v in vars1])
+        key = str(inst.id if var1 == INSTANCEID
+                  else i if var1 == INDEX else inst[var1])
+        if key in key_map1 and key in key_map2:
+            for j in key_map2[key]:
+                indices.append((i, j))
+    return indices
+
+
+def outer_join_indices(table1, table2, var1, var2):
+    key_map1 = group_table_indices(table1, var1, True)
+    key_map2 = group_table_indices(table2, var2, True)
+    indices = []
+
+    def get_key(var):
+        # local function due to better performance
+        return str(inst.id if var == INSTANCEID
+                   else i if var == INDEX else inst[var])
+
+    for i, inst in enumerate(table1):
+        key = get_key(var1)
         if key in key_map1 and key in key_map2:
             for j in key_map2[key]:
                 indices.append((i, j))
         else:
             indices.append((i, None))
+    for i, inst in enumerate(table2):
+        key = get_key(var2)
+        if not (key in key_map1 and key in key_map2):
+            indices.append((None, i))
     return indices
 
 
 def join_table_by_indices(left, right, indices):
+    if not indices:
+        return None
     domain = Orange.data.Domain(
         left.domain.attributes + right.domain.attributes,
         left.domain.class_vars + right.domain.class_vars,
@@ -241,7 +256,7 @@ def join_table_by_indices(left, right, indices):
         if var.is_string:
             for row in range(metas.shape[0]):
                 cell = metas[row, col]
-                if type(cell) == float and numpy.isnan(cell):
+                if isinstance(cell, float) and numpy.isnan(cell):
                     metas[row, col] = ""
 
     return Orange.data.Table.from_numpy(domain, X, Y, metas)
