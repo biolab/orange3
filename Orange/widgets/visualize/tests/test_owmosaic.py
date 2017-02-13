@@ -53,6 +53,14 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
         self.send_signal("Data", data)
 
+    def test_keyerror(self):
+        """gh-2014
+        Check if it works when a table has only one row or duplicates.
+        Discretizer must have remove_const set to False.
+        """
+        data = Table("iris")
+        data = data[0:1]
+        self.send_signal("Data", data)
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget

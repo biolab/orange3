@@ -404,7 +404,7 @@ class OWMosaicDisplay(OWWidget):
             self.discrete_data = None
         elif any(attr.is_continuous for attr in data.domain):
             self.discrete_data = Discretize(
-                method=EqualFreq(n=4), discretize_classes=True,
+                method=EqualFreq(n=4), remove_const=False, discretize_classes=True,
                 discretize_metas=True)(data)
         else:
             self.discrete_data = self.data
