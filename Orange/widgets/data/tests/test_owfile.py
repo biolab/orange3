@@ -99,3 +99,15 @@ class TestOWFile(WidgetTest):
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
         # Doesn't crash and contains a single item, (none).
         self.assertEqual(self.widget.file_combo.count(), 1)
+
+    def test_check_column_noname(self):
+        '''
+        GH-2018
+        '''
+        self.assertFalse(self.widget.Warning.column_without_name.is_shown())
+        self.open_dataset("iris")
+        data = self.get_output("Data")
+        idx = self.widget.domain_editor.model().createIndex(1, 0)
+        self.widget.domain_editor.model().setData(idx, "", Qt.EditRole)
+        self.widget.apply_button.click()
+        self.assertTrue(self.widget.Warning.column_without_name.is_shown())

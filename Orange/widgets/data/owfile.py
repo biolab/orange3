@@ -116,6 +116,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     class Warning(widget.OWWidget.Warning):
         file_too_big = widget.Msg("The file is too large to load automatically."
                                   " Press Reload to load.")
+        column_without_name = widget.Msg("Columns need to have a name.")
 
     def __init__(self):
         super().__init__()
@@ -389,6 +390,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.variables[:] = self.current_context.modified_variables
 
     def apply_domain_edit(self):
+        self.Warning.column_without_name.clear()
+        domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+        if '' in domain:
+            self.Warning.column_without_name()
         if self.data is not None:
             domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
             X, y, m = cols
