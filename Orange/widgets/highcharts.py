@@ -152,6 +152,18 @@ class Highchart(WebviewWidget):
         self.enable_zoom = enable_zoom
         enable_point_select = '+' in enable_select
         enable_rect_select = enable_select.replace('+', '')
+
+        self._update_options_dict(options, enable_zoom, enable_select,
+                                  enable_point_select, enable_rect_select,
+                                  kwargs)
+
+        with open(self._HIGHCHARTS_HTML) as html:
+            self.setHtml(html.read() % dict(javascript=javascript,
+                                            options=json(options)),
+                         self.toFileURL(dirname(self._HIGHCHARTS_HTML)) + '/')
+
+    def _update_options_dict(self, options, enable_zoom, enable_select,
+                             enable_point_select, enable_rect_select, kwargs):
         if enable_zoom:
             _merge_dicts(options, _kwargs_options(dict(
                 mapNavigation_enableMouseWheelZoom=True,
@@ -169,11 +181,6 @@ class Highchart(WebviewWidget):
                 chart_events_selection='/**/rectSelectPoints/**/')))
         if kwargs:
             _merge_dicts(options, _kwargs_options(kwargs))
-
-        with open(self._HIGHCHARTS_HTML) as html:
-            self.setHtml(html.read() % dict(javascript=javascript,
-                                            options=json(options)),
-                         self.toFileURL(dirname(self._HIGHCHARTS_HTML)) + '/')
 
     def contextMenuEvent(self, event):
         """ Zoom out on right click. Also disable context menu."""
