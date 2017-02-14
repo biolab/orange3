@@ -4,6 +4,8 @@ into Qt. WebviewWidget provides a somewhat uniform interface (_WebViewBase)
 around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
+import os
+from os.path import join, dirname, abspath
 import warnings
 from random import random
 from collections.abc import Mapping, Set, Sequence, Iterable
@@ -12,7 +14,6 @@ from itertools import count
 
 from urllib.parse import urljoin
 from urllib.request import pathname2url
-from os.path import join, dirname, abspath
 
 import numpy as np
 
@@ -40,6 +41,26 @@ except ImportError:
 
 _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')
+
+_ORANGE_DEBUG = os.environ.get('ORANGE_DEBUG')
+
+
+class _QWidgetJavaScriptWrapper(QObject):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.__parent = parent
+
+    @pyqtSlot()
+    def load_really_finished(self):
+        self.__parent._load_really_finished()
+
+    @pyqtSlot()
+    def hideWindow(self):
+        w = self.__parent
+        while isinstance(w, QWidget):
+            if w.windowFlags() & (Qt.Window | Qt.Dialog):
+                return w.hide()
+            w = w.parent() if callable(w.parent) else w.parent
 
 
 if HAVE_WEBENGINE:
@@ -71,7 +92,7 @@ if HAVE_WEBENGINE:
                 warnings.warn(
                     'To debug QWebEngineView, set environment variable '
                     'QTWEBENGINE_REMOTE_DEBUGGING={port} and then visit '
-                    'http://localhost:{port}/ in a Chromium-based browser. '
+                    'http://127.0.0.1:{port}/ in a Chromium-based browser. '
                     'See https://doc.qt.io/qt-5/qtwebengine-debugging.html '
                     'This has also been done for you.'.format(port=port))
             super().__init__(parent,
@@ -92,7 +113,7 @@ if HAVE_WEBENGINE:
                 with open(_WEBENGINE_INIT_WEBCHANNEL, encoding="utf-8") as f:
                     init_webchannel_src = f.read()
                 self._onloadJS(source + init_webchannel_src %
-                                   dict(exposeObject_prefix=self._EXPOSED_OBJ_PREFIX),
+                               dict(exposeObject_prefix=self._EXPOSED_OBJ_PREFIX),
                                name='webchannel_init',
                                injection_point=QWebEngineScript.DocumentCreation)
             else:
@@ -416,6 +437,11 @@ elif HAVE_WEBENGINE:
             self._objects = {}
 
         def send_object(self, name, obj):
+            if isinstance(obj, QObject):
+                raise ValueError(
+                    "QWebChannel doesn't transmit QObject instances. If you "
+                    "need a QObject available in JavaScript, pass it as a "
+                    "bridge in WebviewWidget constructor.")
             id = next(self._id_gen)
             value = self._objects[id] = dict(id=id, name=name, obj=obj)
             # Wait till JS is connected to receive objects
