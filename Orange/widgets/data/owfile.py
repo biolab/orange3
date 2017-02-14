@@ -259,7 +259,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self, 'Open Orange Data File', start_file, self.dlg_formats)
         if not filename:
             return
-        self.loaded_file = filename
         self.add_path(filename)
         self.source = self.LOCAL_FILE
         self.load_data()
@@ -305,7 +304,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.info.setText(self._describe(data))
 
-        add_origin(data, self.loaded_file or self.last_path())
+        self.loaded_file = self.last_path()
+        add_origin(data, self.loaded_file)
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()  # sends data
@@ -426,7 +426,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             home = os.path.expanduser("~")
             if self.loaded_file.startswith(home):
                 # os.path.join does not like ~
-                name = "~/" + \
+                name = "~" + os.path.sep + \
                        self.loaded_file[len(home):].lstrip("/").lstrip("\\")
             else:
                 name = self.loaded_file
