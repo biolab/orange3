@@ -53,7 +53,7 @@ class TestVennDiagram(unittest.TestCase):
 
     def test_varying_between_missing_vals(self):
         data = Table(test_filename("test9.tab"))
-        self.assertEqual(6, len(varying_between(data, [data.domain[0]])))
+        self.assertEqual(6, len(varying_between(data, data.domain[0])))
 
     def test_venn_diagram(self):
         sources = ["SVM Learner", "Naive Bayes", "Random Forest"]
@@ -79,7 +79,7 @@ class TestVennDiagram(unittest.TestCase):
             tables.append(temp_table)
 
         data = table_concat(tables)
-        varying = varying_between(data, [item_id_var])
+        varying = varying_between(data, item_id_var)
         if source_var in varying:
             varying.remove(source_var)
         data = reshape_wide(data, varying, [item_id_var], [source_var])

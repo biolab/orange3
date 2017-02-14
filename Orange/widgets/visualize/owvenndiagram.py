@@ -596,7 +596,7 @@ class OWVennDiagram(widget.OWWidget):
             data = table_concat(selected_subsets)
             # Get all variables which are not constant between the same
             # item set
-            varying = varying_between(data, [item_id_var])
+            varying = varying_between(data, item_id_var)
 
             if source_var in varying:
                 varying.remove(source_var)
@@ -613,7 +613,7 @@ class OWVennDiagram(widget.OWWidget):
             annotated_data = table_concat(annotated_data_subsets)
             indices = numpy.hstack(annotated_data_masks)
             annotated_data = create_annotated_table(annotated_data, indices)
-            varying = varying_between(annotated_data, [item_id_var])
+            varying = varying_between(annotated_data, item_id_var)
             if source_var in varying:
                 varying.remove(source_var)
             annotated_data = reshape_wide(annotated_data, varying,
@@ -877,27 +877,22 @@ def unique_non_nan(ar):
     return uniq[~numpy.isnan(uniq)]
 
 
-def varying_between(table, idvarlist):
+def varying_between(table, idvar):
     """
     Return a list of all variables with non constant values between
-    groups defined by `idvarlist`.
+    groups defined by `idvar`.
 
     """
-    def inst_key(inst, vars):
-        return tuple(str(inst[var]) for var in vars)
-
-    excluded = set(idvarlist)
     all_possible = [var for var in table.domain.variables + table.domain.metas
-                    if var not in excluded]
+                    if var != idvar]
     candidate_set = set(all_possible)
 
-    idmap = group_table_indices(table, idvarlist)
-    values = {}
+    idmap = group_table_indices(table, idvar)
+
     varying = set()
     for indices in idmap.values():
         subset = table[indices]
         for var in list(candidate_set):
-            values = subset[:, var]
             values, _ = subset.get_column_view(var)
 
             if var.is_string:
