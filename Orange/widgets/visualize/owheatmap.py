@@ -1423,6 +1423,10 @@ class OWHeatMap(widget.OWWidget):
             self.__fixup_grid_layout()
 
     def check_threshold_consistency(self):
+        if self.threshold_low >= self.threshold_high:
+            self.threshold_low = 0 if self.threshold_high < 0.05 else self.threshold_high - 0.0499999999999999
+        if self.threshold_high == 0:
+            self.threshold_high = 0.05
         return self.threshold_low < self.threshold_high
 
     def update_color_schema(self):
