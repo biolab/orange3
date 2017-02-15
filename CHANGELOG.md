@@ -6,6 +6,17 @@ Change Log
 * ...
 
 
+[3.3.12] - 2017-02-14
+--------------------
+##### Bugfixes
+* Highcharts: Fix freezing on Qt5 ([#2015](../../pull/2015))
+* Handle KeyError Mosaic Display (owmosaic.py) ([#2014](../../pull/2014))
+* Loading iris on C locale ([#1998](../../pull/1998))
+* Handle KeyError Sieve Diagram widget (owsieve) when one row ([#2007](../../pull/2007))
+* Test Learners: Fix AUC for selected single target class ([#1996](../../pull/1996))
+* OWDataSampler: Fix 'Fixed proportion of data' option ([#1995](../../pull/1995))
+
+
 [3.3.11] - 2017-02-03
 --------------------
 ##### Enhancements
@@ -374,7 +385,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.11...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.3.12...HEAD
+[3.3.12]: https://github.com/biolab/orange3/compare/3.3.11...3.3.12
 [3.3.11]: https://github.com/biolab/orange3/compare/3.3.10...3.3.11
 [3.3.10]: https://github.com/biolab/orange3/compare/3.3.9...3.3.10
 [3.3.9]: https://github.com/biolab/orange3/compare/3.3.8...3.3.9
