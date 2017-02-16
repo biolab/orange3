@@ -305,8 +305,9 @@ class OWScatterPlot(OWWidget):
     #         self.graph.selectionCurveList.append(c)
 
     def reset_graph_data(self, *_):
-        self.graph.rescale_data()
-        self.update_graph()
+        if self.data is not None:
+            self.graph.rescale_data()
+            self.update_graph()
 
     def set_data(self, data):
         self.clear_messages()
