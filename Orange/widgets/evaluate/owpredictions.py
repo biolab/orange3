@@ -23,8 +23,9 @@ import Orange
 import Orange.evaluation
 
 from Orange.base import Model
-from Orange.data import ContinuousVariable, DiscreteVariable
+from Orange.data import ContinuousVariable, DiscreteVariable, Value
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils import colorpalette
@@ -41,7 +42,7 @@ PredictorSlot = namedtuple(
 )
 
 
-class OWPredictions(widget.OWWidget):
+class OWPredictions(OWWidget):
     name = "Predictions"
     icon = "icons/Predictions.svg"
     priority = 200
@@ -51,6 +52,12 @@ class OWPredictions(widget.OWWidget):
                "set_predictor", widget.Multiple)]
     outputs = [("Predictions", Orange.data.Table),
                ("Evaluation Results", Orange.evaluation.Results)]
+
+    class Warning(OWWidget.Warning):
+        empty_data = Msg("Empty data set")
+
+    class Error(OWWidget.Error):
+        predictor_failed = Msg("One or more predictors failed (see more...)\n{}")
 
     settingsHandler = settings.ClassValuesContextHandler()
     #: Display the full input dataset or only the target variable columns (if
@@ -90,13 +97,12 @@ class OWPredictions(widget.OWWidget):
                    tooltip="Show rows in the original order")
 
         self.classification_options = box = gui.vBox(
-            self.controlArea, "Options (classification)", spacing=-1,
-            addSpace=False)
+            self.controlArea, "Show", spacing=-1, addSpace=False)
 
-        gui.checkBox(box, self, "show_predictions", "Show predicted class",
+        gui.checkBox(box, self, "show_predictions", "Predicted class",
                      callback=self._update_prediction_delegate)
         b = gui.checkBox(box, self, "show_probabilities",
-                         "Show predicted probabilities",
+                         "Predicted probabilities for:",
                          callback=self._update_prediction_delegate)
         ibox = gui.indentedBox(box, sep=gui.checkButtonOffsetHint(b),
                                addSpace=False)
@@ -170,13 +176,21 @@ class OWPredictions(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         """Set the input data set"""
+        if data is not None and not len(data):
+            data = None
+            self.Warning.empty_data()
+        else:
+            self.Warning.empty_data.clear()
+
         self.data = data
         if data is None:
+            self.class_var = class_var = None
             self.dataview.setModel(None)
             self.predictionsview.setModel(None)
             self.predictionsview.setItemDelegate(PredictionsItemDelegate())
         else:
             # force full reset of the view's HeaderView state
+            self.class_var = class_var = data.domain.class_var
             self.dataview.setModel(None)
             model = TableModel(data, parent=None)
             modelproxy = TableSortProxyModel()
@@ -184,7 +198,19 @@ class OWPredictions(widget.OWWidget):
             self.dataview.setModel(modelproxy)
             self._update_column_visibility()
 
-        self.invalidate_predictions()
+        discrete_class = class_var is not None and class_var.is_discrete
+        self.classification_options.setVisible(discrete_class)
+
+        self.closeContext()
+        if discrete_class:
+            self.class_values = list(class_var.values)
+            self.selected_classes = list(range(len(self.class_values)))
+            self.openContext(self.class_var)
+        else:
+            self.class_values = []
+            self.selected_classes = []
+
+        self._invalidate_predictions()
 
     def set_predictor(self, predictor=None, id=None):
         if id in self.predictors:
@@ -197,101 +223,85 @@ class OWPredictions(widget.OWWidget):
             self.predictors[id] = \
                 PredictorSlot(predictor, predictor.name, None)
 
-        if predictor is not None:
-            self.class_var = predictor.domain.class_var
-
     def handleNewSignals(self):
-        self.clear_messages()
-        if self.data is not None and not len(self.data):
-            # The logic of this widget is complicated, so let us just pretend
-            # that we have not data. (Even issuing an error message here doesn't
-            # work since the next signal would clear it.). If the widget
-            # shows nothing, the user will check the data table anyway.
-            self.data = None
         if self.data is not None:
-            for inputid, pred in list(self.predictors.items()):
-                if pred.results is None or numpy.isnan(pred.results[0]).all():
-                    try:
-                        results = self.predict(pred.predictor, self.data)
-                    except ValueError as err:
-                        err_msg = '{}:\n'.format(pred.predictor.name) + \
-                                  str(err)
-                        self.error(err_msg)
-                        n, m = len(self.data), 1
-                        if self.data.domain.has_discrete_class:
-                            m = len(self.data.domain.class_var.values)
-                        probabilities = numpy.full((n, m), numpy.nan)
-                        results = (numpy.full(n, numpy.nan), probabilities)
-                    self.predictors[inputid] = pred._replace(results=results)
-
-        if not self.predictors:
-            self.class_var = None
-
-        self.classification_options.setVisible(
-            self.class_var is not None and self.class_var.is_discrete)
-
-        self.closeContext()
-        if self.class_var is not None and self.class_var.is_discrete:
-            self.class_values = list(self.class_var.values)
-            self.selected_classes = list(range(len(self.class_values)))
-            self.openContext(self.class_var)
-        else:
-            self.class_values = []
-            self.selected_classes = []
-
+            self._call_predictors()
         self._update_predictions_model()
         self._update_prediction_delegate()
-        # Check for prediction target consistency
-        target_vars = set([p.predictor.domain.class_var
-                           for p in self.predictors.values()])
-        self.warning("Mismatching class variables", shown=len(target_vars) > 1)
+        self._set_errors()
+        self._update_info()
+        self.commit()
 
-        # Update the Info box text.
+    def _call_predictors(self):
+        for inputid, pred in self.predictors.items():
+            if pred.results is None:
+                try:
+                    predictor_class = pred.predictor.domain.class_var
+                    if predictor_class != self.class_var:
+                        results = "{}: mismatching target ({})".format(
+                            pred.predictor.name, predictor_class.name)
+                    else:
+                        results = self.predict(pred.predictor, self.data)
+                except ValueError as err:
+                    results = "{}: {}".format(pred.predictor.name, err)
+                self.predictors[inputid] = pred._replace(results=results)
+
+    def _set_errors(self):
+        errors = "\n".join(p.results for p in self.predictors.values()
+                           if isinstance(p.results, str))
+        if errors:
+            self.Error.predictor_failed(errors)
+        else:
+            self.Error.predictor_failed.clear()
+
+    def _update_info(self):
         info = []
         if self.data is not None:
             info.append("Data: {} instances.".format(len(self.data)))
         else:
             info.append("Data: N/A")
 
-        if self.predictors:
-            info.append("Predictors: {}".format(len(self.predictors)))
+        n_predictors = len(self.predictors)
+        n_valid = len(self._valid_predictors())
+        if n_valid != n_predictors:
+            info.append("Predictors: {} (+ {} failed)".format(
+                n_valid, n_predictors - n_valid))
         else:
-            info.append("Predictors: N/A")
+            info.append("Predictors: {}".format(n_predictors or "N/A"))
 
-        if self.class_var is not None:
-            if self.class_var.is_discrete:
-                info.append("Task: Classification")
-                self.checkbox_class.setEnabled(True)
-                self.checkbox_prob.setEnabled(True)
-            else:
-                info.append("Task: Regression")
-                self.checkbox_class.setEnabled(False)
-                self.checkbox_prob.setEnabled(False)
-        else:
+        if self.class_var is None:
             info.append("Task: N/A")
+        elif self.class_var.is_discrete:
+            info.append("Task: Classification")
+            self.checkbox_class.setEnabled(True)
+            self.checkbox_prob.setEnabled(True)
+        else:
+            info.append("Task: Regression")
+            self.checkbox_class.setEnabled(False)
+            self.checkbox_prob.setEnabled(False)
 
         self.infolabel.setText("\n".join(info))
-        self.commit()
 
-    def invalidate_predictions(self):
+    def _invalidate_predictions(self):
         for inputid, pred in list(self.predictors.items()):
             self.predictors[inputid] = pred._replace(results=None)
+
+    def _valid_predictors(self):
+        return [p for p in self.predictors.values()
+                if p.results is not None and not isinstance(p.results, str)]
 
     def _update_predictions_model(self):
         """Update the prediction view model."""
         if self.data is not None:
-            slots = self.predictors.values()
+            slots = self._valid_predictors()
             results = []
+            class_var = self.class_var
             for p in slots:
                 values, prob = p.results
-                if p.predictor.domain.class_var.is_discrete:
-                    values = [
-                        Orange.data.Value(p.predictor.domain.class_var, v)
-                        for v in values
-                    ]
+                if self.class_var.is_discrete:
+                    values = [Value(class_var, v) for v in values]
                 results.append((values, prob))
             results = list(zip(*(zip(*res) for res in results)))
-
             headers = [p.name for p in slots]
             model = PredictionsModel(results, headers)
         else:
@@ -370,7 +380,7 @@ class OWPredictions(widget.OWWidget):
                     float_fmt = "{{dist[{}]:.{}f}}"
                     dist_fmt = " : ".join(
                         float_fmt.format(i, decimals)
-                        for i in range(len(self.class_var.values))
+                        for i in range(len(self.class_values))
                         if i in self.selected_classes
                     )
                 if self.show_predictions:
@@ -410,41 +420,36 @@ class OWPredictions(widget.OWWidget):
         self.splitter.setSizes([w, w1 + w2 - w])
 
     def commit(self):
-        if self.data is None or not self.predictors:
+        slots = self._valid_predictors()
+        if self.data is None or not slots:
             self.send("Predictions", None)
             self.send("Evaluation Results", None)
             return
 
-        predictor = next(iter(self.predictors.values())).predictor
-        class_var = predictor.domain.class_var
+        class_var = self.class_var
         classification = class_var and class_var.is_discrete
 
         newmetas = []
         newcolumns = []
-        slots = list(self.predictors.values())
-
         if classification:
             if self.output_predictions:
-                mc = [DiscreteVariable(name=p.name, values=class_var.values)
+                mc = [DiscreteVariable(name=p.name, values=self.class_values)
                       for p in slots]
                 newmetas.extend(mc)
-                newcolumns.extend(p.results[0].reshape((-1, 1))
-                                  for p in slots)
+                newcolumns.extend(p.results[0].reshape((-1, 1)) for p in slots)
 
             if self.output_probabilities:
                 for p in slots:
                     m = [ContinuousVariable(name="%s(%s)" % (p.name, value))
-                         for value in class_var.values]
+                         for value in self.class_values]
                     newmetas.extend(m)
                 newcolumns.extend(p.results[1] for p in slots)
 
         else:
             # regression
-            mc = [ContinuousVariable(name=p.name)
-                  for p in self.predictors.values()]
+            mc = [ContinuousVariable(name=p.name) for p in slots]
             newmetas.extend(mc)
-            newcolumns.extend(p.results[0].reshape((-1, 1))
-                              for p in slots)
+            newcolumns.extend(p.results[0].reshape((-1, 1)) for p in slots)
 
         if self.output_attrs:
             attrs = list(self.data.domain.attributes)
@@ -452,8 +457,7 @@ class OWPredictions(widget.OWWidget):
             attrs = []
         metas = list(self.data.domain.metas) + newmetas
 
-        domain = Orange.data.Domain(attrs, self.data.domain.class_var,
-                                    metas=metas)
+        domain = Orange.data.Domain(attrs, self.class_var, metas=metas)
         predictions = self.data.from_table(domain, self.data)
 
         if newcolumns:
@@ -462,24 +466,20 @@ class OWPredictions(widget.OWWidget):
             )
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
-        results = None
-        # if the input data set contains the true target values, output a
-        # simple evaluation.Results instance
-        if self.data.domain.class_var == class_var:
-            # omit rows with unknonw target values
-            nanmask = numpy.isnan(self.data.get_column_view(class_var)[0])
-            data = self.data[~nanmask]
-            N = len(data)
-            results = Orange.evaluation.Results(data, store_data=True)
-            results.folds = None
-            results.row_indices = numpy.arange(N)
-            results.actual = data.Y.ravel()
-            results.predicted = numpy.vstack(
-                tuple(p.results[0][~nanmask] for p in slots))
-            if classification:
-                results.probabilities = numpy.array(
-                    [p.results[1][~nanmask] for p in slots])
-            results.learner_names = [p.name for p in slots]
+        # omit rows with unknonw target values
+        nanmask = numpy.isnan(self.data.get_column_view(class_var)[0])
+        data = self.data[~nanmask]
+        N = len(data)
+        results = Orange.evaluation.Results(data, store_data=True)
+        results.folds = None
+        results.row_indices = numpy.arange(N)
+        results.actual = data.Y.ravel()
+        results.predicted = numpy.vstack(
+            tuple(p.results[0][~nanmask] for p in slots))
+        if classification:
+            results.probabilities = numpy.array(
+                [p.results[1][~nanmask] for p in slots])
+        results.learner_names = [p.name for p in slots]
 
         self.send("Predictions", predictions)
         self.send("Evaluation Results", results)
