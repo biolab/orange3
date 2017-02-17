@@ -6,7 +6,7 @@ from Orange.canvas.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
 from Orange.modelling.linear import SGDLearner
 from Orange.widgets import gui, widget
-from Orange.widgets.classify.owlogisticregression import create_coef_table
+from Orange.widgets.model.owlogisticregression import create_coef_table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
