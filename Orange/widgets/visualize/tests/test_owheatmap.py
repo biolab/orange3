@@ -98,3 +98,12 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
             self.assertFalse(msg.not_enough_features.is_shown())
             self.assertFalse(msg.not_enough_instances.is_shown())
             self.assertFalse(msg.not_enough_instances_k_means.is_shown())
+
+    def test_color_low_high(self):
+        """
+        GH-2025
+        Prevent horizontal sliders to set Low >= High.
+        """
+        self.widget.controls.threshold_low.setValue(4)
+        self.widget.controls.threshold_high.setValue(2)
+        self.assertGreater(self.widget.threshold_high, self.widget.threshold_low)
