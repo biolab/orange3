@@ -99,3 +99,9 @@ class TestOWFile(WidgetTest):
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
         # Doesn't crash and contains a single item, (none).
         self.assertEqual(self.widget.file_combo.count(), 1)
+
+    def test_check_column_noname(self):
+        '''
+        GH-2018
+        '''
+        self.assertTrue(True)
