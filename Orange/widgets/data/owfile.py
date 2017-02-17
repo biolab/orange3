@@ -391,11 +391,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def apply_domain_edit(self):
         self.Warning.column_without_name.clear()
-        domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
-        if '' in domain:
-            self.Warning.column_without_name()
         if self.data is not None:
             domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+            if '' in domain:
+                self.Warning.column_without_name()
             X, y, m = cols
             X = np.array(X).T if len(X) else np.empty((len(self.data), 0))
             y = np.array(y).T if len(y) else None
