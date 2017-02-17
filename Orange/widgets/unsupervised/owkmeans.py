@@ -130,7 +130,7 @@ class OWKMeans(widget.OWWidget):
             sb, self, "n_init", controlWidth=60,
             valueType=int, validator=QIntValidator(), callback=self.invalidate)
         layout.addWidget(
-            gui.widgetLabel(None, "Maximal iterations: "), 1, 0, Qt.AlignLeft)
+            gui.widgetLabel(None, "Maximum iterations: "), 1, 0, Qt.AlignLeft)
         sb = gui.hBox(None, margin=0)
         layout.addWidget(sb, 1, 1)
         gui.lineEdit(
@@ -154,7 +154,6 @@ class OWKMeans(widget.OWWidget):
         table.horizontalHeader().setStretchLastSection(True)
         table.horizontalHeader().hide()
         table.setShowGrid(False)
-        table.setStyleSheet("background-color: transparent;")
         box.layout().addWidget(table)
 
     def adjustSize(self):
