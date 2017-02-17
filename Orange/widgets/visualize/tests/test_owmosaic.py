@@ -5,7 +5,7 @@ import numpy as np
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
 
-from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable
+from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, StringVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay, MosaicVizRank
 
@@ -28,7 +28,7 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
 
     def test_empty_column(self):
         """Check that the widget doesn't crash if the columns are empty"""
-        self.send_signal("Data", self.data[:,:0])
+        self.send_signal("Data", self.data[:, :0])
 
     def _select_data(self):
         self.widget.select_area(1, QMouseEvent(
@@ -42,6 +42,13 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
                         metas=[ContinuousVariable("m")])
         data = Table(domain, np.arange(6).reshape(6, 1),
                      metas=np.arange(6).reshape(6, 1))
+        self.send_signal("Data", data)
+
+    def test_string_meta(self):
+        """Check widget for dataset with only one string meta"""
+        domain = Domain([], metas=[StringVariable("m")])
+        data = Table(domain, np.empty((6, 0)),
+                     metas=np.array(["meta"] * 6).reshape(6, 1))
         self.send_signal("Data", data)
 
     def test_missing_values(self):

@@ -400,8 +400,10 @@ class OWMosaicDisplay(OWWidget):
         self.closeContext()
         self.data = data
         self.init_combos(self.data)
-        if self.data is None or not len(self.data) or not  \
-                any(attr.is_discrete or attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
+        if (self.data is None or
+                not len(self.data) or
+                not any(attr.is_discrete or attr.is_continuous
+                        for attr in chain(data.domain, data.domain.metas))):
             self.discrete_data = None
         elif any(attr.is_continuous for attr in data.domain):
             self.discrete_data = Discretize(
