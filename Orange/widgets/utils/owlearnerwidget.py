@@ -7,6 +7,7 @@ from Orange.modelling import Fitter
 from Orange.preprocess.preprocess import Preprocess
 from Orange.regression.base_regression import LearnerRegression
 from Orange.widgets import gui
+from Orange.widgets import widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
@@ -51,10 +52,11 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
 
     @classmethod
     def update_channel(cls, channel, items):
-        item_names = set(item[0] for item in channel)
+        item_names = set(item[0] if isinstance(item, tuple) else item.name
+                         for item in channel)
 
         for item in items:
-            if not item[0] in item_names:
+            if item[0] not in item_names:
                 channel.append(item)
 
         return channel
@@ -79,17 +81,20 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
     @classmethod
     def default_outputs(cls, attrib):
         learner_class = attrib['LEARNER']
+        replaces = []
         if issubclass(learner_class, LearnerClassification):
             model_name = 'Classifier'
         elif issubclass(learner_class, LearnerRegression):
             model_name = 'Predictor'
         else:
             model_name = 'Model'
+            replaces = ['Classifier', 'Predictor']
 
         attrib['OUTPUT_MODEL_NAME'] = model_name
 
-        return [("Learner", learner_class),
-                (model_name, learner_class.__returns__)]
+        return [widget.OutputSignal("Learner", learner_class),
+                widget.OutputSignal(model_name, learner_class.__returns__,
+                                    replaces=replaces)]
 
     @classmethod
     def add_extra_attributes(cls, name, attrib):
