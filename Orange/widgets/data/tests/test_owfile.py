@@ -1,13 +1,16 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from os import path
+from os import path, remove
 from unittest.mock import Mock
+
+import numpy as np
 
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 
 import Orange
-from Orange.data import FileFormat, dataset_dirs, StringVariable
+from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
+    Domain, DiscreteVariable
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.tests.base import WidgetTest
 
@@ -99,3 +102,28 @@ class TestOWFile(WidgetTest):
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
         # Doesn't crash and contains a single item, (none).
         self.assertEqual(self.widget.file_combo.count(), 1)
+
+    def test_file_not_found(self):
+        # Create a dummy file
+        file_name = "test_owfile_data.tab"
+        domainA = Domain([DiscreteVariable("d1", values=("a", "b"))],
+                         DiscreteVariable("c1", values=("aaa", "bbb")))
+        dataA = Table(domainA, np.array([[0], [1], [0], [np.nan]]),
+                      np.array([0, 1, 0, 1]))
+        dataA.save(file_name)
+
+        # Open the file with the widget
+        self.open_dataset(file_name)
+        self.assertEqual(self.get_output("Data").domain, dataA.domain)
+
+        # Delete the file and try to reload it
+        remove(file_name)
+        self.widget.load_data()
+        self.assertEqual(file_name, path.basename(self.widget.last_path()))
+        self.assertTrue(self.widget.Error.file_not_found.is_shown())
+        self.assertIsNone(self.get_output("Data"))
+        self.assertEqual(self.widget.info.text(), "No data.")
+
+        # Open a sample dataset
+        self.open_dataset("iris")
+        self.assertFalse(self.widget.Error.file_not_found.is_shown())

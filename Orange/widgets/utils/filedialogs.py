@@ -1,6 +1,7 @@
 import os
 
-from AnyQt.QtCore import QFileInfo
+from AnyQt.QtCore import QFileInfo, Qt
+from AnyQt.QtGui import QBrush
 from AnyQt.QtWidgets import \
     QMessageBox, QFileDialog, QFileIconProvider, QComboBox
 
@@ -281,6 +282,8 @@ class RecentPathsWidgetMixin:
                 rec.append(
                     RecentPath.create(recent.search(search_paths), search_paths, **kwargs)
                 )
+            else:
+                rec.append(recent)
         # change the list in-place for the case the widgets wraps this list
         # in some model (untested!)
         self.recent_paths[:] = rec
@@ -351,6 +354,9 @@ class RecentPathsWComboMixin(RecentPathsWidgetMixin):
             for i, recent in enumerate(self.recent_paths):
                 self.file_combo.addItem(recent.basename)
                 self.file_combo.model().item(i).setToolTip(recent.abspath)
+                if not os.path.exists(recent.abspath):
+                    self.file_combo.setItemData(i, QBrush(Qt.red),
+                                                Qt.TextColorRole)
 
     def workflowEnvChanged(self, key, value, oldvalue):
         super().workflowEnvChanged(key, value, oldvalue)

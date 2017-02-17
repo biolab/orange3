@@ -117,6 +117,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         file_too_big = widget.Msg("The file is too large to load automatically."
                                   " Press Reload to load.")
 
+    class Error(widget.OWWidget.Error):
+        file_not_found = widget.Msg("File not found.")
+
     def __init__(self):
         super().__init__()
         RecentPathsWComboMixin.__init__(self)
@@ -219,7 +222,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         if self.source == self.LOCAL_FILE:
             last_path = self.last_path()
-            if last_path and os.path.getsize(last_path) > self.SIZE_LIMIT:
+            if last_path and os.path.exists(last_path) and \
+                    os.path.getsize(last_path) > self.SIZE_LIMIT:
                 self.Warning.file_too_big()
                 return
 
@@ -271,7 +275,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.closeContext()
         self.domain_editor.set_domain(None)
         self.apply_button.setEnabled(False)
-        self.Warning.file_too_big.clear()
+        self.clear_messages()
+        self.set_file_list()
+        if self.last_path() and not os.path.exists(self.last_path()):
+            self.Error.file_not_found()
+            self.send("Data", None)
+            self.info.setText("No data.")
+            return
 
         error = None
         try:
