@@ -7,16 +7,15 @@ from collections import OrderedDict, namedtuple
 
 import numpy
 from AnyQt.QtWidgets import (
-    QTableView, QListWidget, QSplitter, QScrollBar, QStyledItemDelegate,
+    QTableView, QListWidget, QSplitter, QStyledItemDelegate,
     QToolTip, QAbstractItemView, QStyleOptionViewItem, QStyle,
     QApplication,
 )
-from AnyQt.QtGui import QColor, QPainter, QHelpEvent
+from AnyQt.QtGui import QPainter, QHelpEvent
 from AnyQt.QtCore import (
     Qt, QSize, QModelIndex, QAbstractTableModel, QSortFilterProxyModel,
-    QLocale
+    QLocale, pyqtSlot as Slot
 )
-from AnyQt.QtCore import pyqtSlot as Slot
 from AnyQt import QtCore, QtGui
 
 import Orange
@@ -164,8 +163,7 @@ class OWPredictions(OWWidget):
         self.predictionsview.verticalHeader().setDefaultSectionSize(22)
         self.dataview.verticalHeader().sectionResized.connect(
             lambda index, _, size:
-                self.predictionsview.verticalHeader()
-                    .resizeSection(index, size)
+            self.predictionsview.verticalHeader().resizeSection(index, size)
         )
 
         self.splitter.addWidget(self.predictionsview)
@@ -368,43 +366,36 @@ class OWPredictions(OWWidget):
 
     def _update_prediction_delegate(self):
         """Update the predicted probability visibility state"""
-        delegate = PredictionsItemDelegate()
-        colors = None
         if self.class_var is not None:
-            if self.class_var.is_discrete:
-                colors = [QtGui.QColor(*rgb) for rgb in self.class_var.colors]
-                dist_fmt = ""
-                pred_fmt = ""
-                if self.show_probabilities:
-                    decimals = 2
-                    float_fmt = "{{dist[{}]:.{}f}}"
-                    dist_fmt = " : ".join(
-                        float_fmt.format(i, decimals)
-                        for i in range(len(self.class_values))
-                        if i in self.selected_classes
-                    )
-                if self.show_predictions:
-                    pred_fmt = "{value!s}"
-                if pred_fmt and dist_fmt:
-                    fmt = dist_fmt + " \N{RIGHTWARDS ARROW} " + pred_fmt
-                else:
-                    fmt = dist_fmt or pred_fmt
+            delegate = PredictionsItemDelegate()
+            if self.class_var.is_continuous:
+                self._setup_delegate_continuous(delegate)
             else:
-                assert isinstance(self.class_var, ContinuousVariable)
-                fmt = "{{value:.{}f}}".format(
-                    self.class_var.number_of_decimals)
-
-            delegate.setFormat(fmt)
-            if self.draw_dist and colors is not None:
-                delegate.setColors(colors)
+                self._setup_delegate_discrete(delegate)
+                proxy = self.predictionsview.model()
+                if proxy is not None:
+                    proxy.setProbInd(
+                        numpy.array(self.selected_classes, dtype=int))
             self.predictionsview.setItemDelegate(delegate)
             self.predictionsview.resizeColumnsToContents()
-
-        if self.class_var is not None and self.class_var.is_discrete:
-            proxy = self.predictionsview.model()
-            if proxy is not None:
-                proxy.setProbInd(numpy.array(self.selected_classes, dtype=int))
         self._update_spliter()
+
+    def _setup_delegate_discrete(self, delegate):
+        colors = [QtGui.QColor(*rgb) for rgb in self.class_var.colors]
+        fmt = []
+        if self.show_probabilities:
+            fmt.append(" : ".join("{{dist[{}]:.2f}}".format(i)
+                                  for i in sorted(self.selected_classes)))
+        if self.show_predictions:
+            fmt.append("{value!s}")
+        delegate.setFormat(" \N{RIGHTWARDS ARROW} ".join(fmt))
+        if self.draw_dist and colors is not None:
+            delegate.setColors(colors)
+        return delegate
+
+    def _setup_delegate_continuous(self, delegate):
+        delegate.setFormat(
+            "{{value:.{}f}}".format(self.class_var.number_of_decimals))
 
     def _update_spliter(self):
         if self.data is None:
@@ -420,53 +411,16 @@ class OWPredictions(OWWidget):
         self.splitter.setSizes([w, w1 + w2 - w])
 
     def commit(self):
+        self._commit_predictions()
+        self._commit_evaluation_results()
+
+    def _commit_evaluation_results(self):
+        class_var = self.class_var
         slots = self._valid_predictors()
-        if self.data is None or not slots:
-            self.send("Predictions", None)
+        if not slots:
             self.send("Evaluation Results", None)
             return
 
-        class_var = self.class_var
-        classification = class_var and class_var.is_discrete
-
-        newmetas = []
-        newcolumns = []
-        if classification:
-            if self.output_predictions:
-                mc = [DiscreteVariable(name=p.name, values=self.class_values)
-                      for p in slots]
-                newmetas.extend(mc)
-                newcolumns.extend(p.results[0].reshape((-1, 1)) for p in slots)
-
-            if self.output_probabilities:
-                for p in slots:
-                    m = [ContinuousVariable(name="%s(%s)" % (p.name, value))
-                         for value in self.class_values]
-                    newmetas.extend(m)
-                newcolumns.extend(p.results[1] for p in slots)
-
-        else:
-            # regression
-            mc = [ContinuousVariable(name=p.name) for p in slots]
-            newmetas.extend(mc)
-            newcolumns.extend(p.results[0].reshape((-1, 1)) for p in slots)
-
-        if self.output_attrs:
-            attrs = list(self.data.domain.attributes)
-        else:
-            attrs = []
-        metas = list(self.data.domain.metas) + newmetas
-
-        domain = Orange.data.Domain(attrs, self.class_var, metas=metas)
-        predictions = self.data.from_table(domain, self.data)
-
-        if newcolumns:
-            newcolumns = numpy.hstack(
-                [numpy.atleast_2d(cols) for cols in newcolumns]
-            )
-            predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
-
-        # omit rows with unknonw target values
         nanmask = numpy.isnan(self.data.get_column_view(class_var)[0])
         data = self.data[~nanmask]
         N = len(data)
@@ -476,13 +430,54 @@ class OWPredictions(OWWidget):
         results.actual = data.Y.ravel()
         results.predicted = numpy.vstack(
             tuple(p.results[0][~nanmask] for p in slots))
-        if classification:
+        if class_var and class_var.is_discrete:
             results.probabilities = numpy.array(
                 [p.results[1][~nanmask] for p in slots])
         results.learner_names = [p.name for p in slots]
-
-        self.send("Predictions", predictions)
         self.send("Evaluation Results", results)
+
+    def _commit_predictions(self):
+        slots = self._valid_predictors()
+        if not slots:
+            self.send("Predictions", None)
+            return
+
+        class_var = self.class_var
+        if class_var and class_var.is_discrete:
+            newmetas, newcolumns = self._classification_output_columns()
+        else:
+            newmetas, newcolumns = self._regression_output_columns()
+
+        attrs = list(self.data.domain.attributes) if self.output_attrs else []
+        metas = list(self.data.domain.metas) + newmetas
+        domain = Orange.data.Domain(attrs, class_var, metas=metas)
+        predictions = self.data.from_table(domain, self.data)
+        if newcolumns:
+            newcolumns = numpy.hstack(
+                [numpy.atleast_2d(cols) for cols in newcolumns])
+            predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
+        self.send("Predictions", predictions)
+
+    def _classification_output_columns(self):
+        newmetas = []
+        newcolumns = []
+        slots = self._valid_predictors()
+        if self.output_predictions:
+            newmetas += [DiscreteVariable(name=p.name, values=self.class_values)
+                         for p in slots]
+            newcolumns += [p.results[0].reshape((-1, 1)) for p in slots]
+
+        if self.output_probabilities:
+            newmetas += [ContinuousVariable(name="%s(%s)" % (p.name, value))
+                         for p in slots for value in self.class_values]
+            newcolumns += [p.results[1] for p in slots]
+        return newmetas, newcolumns
+
+    def _regression_output_columns(self):
+        slots = self._valid_predictors()
+        newmetas = [ContinuousVariable(name=p.name) for p in slots]
+        newcolumns = [p.results[0].reshape((-1, 1)) for p in slots]
+        return newmetas, newcolumns
 
     def send_report(self):
         def merge_data_with_predictions():
@@ -591,7 +586,7 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         else:
             return super().helpEvent(event, view, option, index)
 
-    def initStyleOption(self, option,  index):
+    def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         dist = self.distribution(index)
         if dist is None:
@@ -705,7 +700,7 @@ def drawDistBar(painter, rect, distribution, colortable):
     # assert numpy.all(distribution >= 0)
     painter.save()
     painter.translate(rect.topLeft())
-    for i, (dvalue, color) in enumerate(zip(distribution, colortable)):
+    for dvalue, color in zip(distribution, colortable):
         if dvalue and numpy.isfinite(dvalue):
             painter.setBrush(color)
             width = rect.width() * dvalue
@@ -878,8 +873,8 @@ def tool_tip(value):
         return str(value)
 
 
-def main(argv=sys.argv):
-    app = QApplication(list(argv))
+def main(argv=None):
+    app = QApplication(list(argv if argv is not None else sys.argv))
     argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
