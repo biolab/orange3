@@ -441,9 +441,6 @@ class OWHeatMap(widget.OWWidget):
             "Not enough instances for k-means merging")
         not_enough_memory = Msg("Not enough memory to show this data")
 
-    class Warning(widget.OWWidget.Warning):
-        threshold_error = Msg("Low slider should be less than High")
-
     def __init__(self):
         super().__init__()
 
@@ -499,11 +496,11 @@ class OWHeatMap(widget.OWWidget):
         lowslider = gui.hSlider(
             colorbox, self, "threshold_low", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
-            createLabel=False, callback=self.update_color_schema)
+            createLabel=False, callback=self.update_lowslider)
         highslider = gui.hSlider(
             colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
-            createLabel=False, callback=self.update_color_schema)
+            createLabel=False, callback=self.update_highslider)
         gammaslider = gui.hSlider(
             colorbox, self, "gamma", minValue=0.0, maxValue=20.0,
             step=1.0, ticks=True, intOnly=False,
@@ -1314,15 +1311,19 @@ class OWHeatMap(widget.OWWidget):
             layout.setSpacing(self.SpaceX)
             self.__fixup_grid_layout()
 
-    def check_threshold_consistency(self):
-        return self.threshold_low < self.threshold_high
+    def update_lowslider(self):
+        low, high = self.controls.threshold_low, self.controls.threshold_high
+        if low.value() >= high.value():
+            low.setSliderPosition(high.value() - 1)
+        self.update_color_schema()
+
+    def update_highslider(self):
+        low, high = self.controls.threshold_low, self.controls.threshold_high
+        if low.value() >= high.value():
+            high.setSliderPosition(low.value() + 1)
+        self.update_color_schema()
 
     def update_color_schema(self):
-        if not self.check_threshold_consistency():
-            self.Warning.threshold_error()
-            return
-        else:
-            self.Warning.clear()
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
             heatmap.set_color_table(palette)
