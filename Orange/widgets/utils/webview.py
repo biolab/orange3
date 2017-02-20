@@ -523,3 +523,18 @@ elif HAVE_WEBENGINE:
         def exposeObject(self, name, obj):
             obj = _to_primitive_types(obj)
             self._jsobject_channel.send_object(name, obj)
+
+        def setHtml(self, html, base_url=''):
+            # TODO: remove once anaconda will provide PyQt without this bug.
+            #
+            # At least on some installations of PyQt 5.6.0 with anaconda
+            # WebViewWidget grabs focus on setHTML which can be quite annoying.
+            # For example, if you have a line edit as filter and show results
+            # in WebWiew, then WebView grabs focus after every typed character.
+            #
+            # http://stackoverflow.com/questions/36609489
+            # https://bugreports.qt.io/browse/QTBUG-52999
+            initial_state = self.isEnabled()
+            self.setEnabled(False)
+            super().setHtml(html, base_url)
+            self.setEnabled(initial_state)
