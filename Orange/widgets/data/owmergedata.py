@@ -83,18 +83,33 @@ class OWMergeData(widget.OWWidget):
                 if len(model_) and model_[0] != INSTANCEID:
                     model_.insert(0, INSTANCEID)
 
+    def _find_best_match(self):
+        if self.dataA and self.dataB:
+            attr_a, attr_b, n_max_intersect = INDEX, INDEX, 0
+            str_metas_a = [m for m in self.dataA.domain.metas if m.is_string]
+            str_metas_b = [m for m in self.dataB.domain.metas if m.is_string]
+            for m_a, m_b in itertools.product(str_metas_a, str_metas_b):
+                n_inter = len(numpy.intersect1d(self.dataA[:, m_a].metas,
+                                                self.dataB[:, m_b].metas))
+                if n_inter > n_max_intersect:
+                    n_max_intersect, attr_a, attr_b = n_inter, m_a, m_b
+            self.attr_a, self.attr_b = attr_a, attr_b
+            self.attrViewA.setCurrentIndex(self.attrModelA.indexOf(attr_a))
+            self.attrViewB.setCurrentIndex(self.attrModelB.indexOf(attr_b))
+
     @check_sql_input
     def setDataA(self, data):
         self.dataA = data
         self._setAttrs(self.attrModelA, data, self.attrModelB, self.dataB)
         curr_index = -1
-        if self.attr_a:
+        if self.attr_a and self.attr_a != INDEX:
             curr_index = next((i for i, val in enumerate(self.attrModelA)
                                if str(val) == self.attr_a), -1)
         if curr_index != -1:
             self.attrViewA.setCurrentIndex(curr_index)
         else:
             self.attr_a = INDEX
+            self._find_best_match()
         self.infoBoxDataA.setText(self.dataInfoText(data))
 
     @check_sql_input
@@ -102,13 +117,14 @@ class OWMergeData(widget.OWWidget):
         self.dataB = data
         self._setAttrs(self.attrModelB, data, self.attrModelA, self.dataA)
         curr_index = -1
-        if self.attr_b:
+        if self.attr_b and self.attr_b != INDEX:
             curr_index = next((i for i, val in enumerate(self.attrModelB)
                                if str(val) == self.attr_b), -1)
         if curr_index != -1:
             self.attrViewB.setCurrentIndex(curr_index)
         else:
             self.attr_b = INDEX
+            self._find_best_match()
         self.infoBoxDataB.setText(self.dataInfoText(data))
 
     def handleNewSignals(self):

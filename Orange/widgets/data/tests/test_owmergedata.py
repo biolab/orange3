@@ -384,3 +384,12 @@ class TestOWMergeData(WidgetTest):
         np.testing.assert_array_equal(table1.Y, table2.Y)
         np.testing.assert_array_equal(table1.metas.astype(str),
                                       table2.metas.astype(str))
+
+    def test_best_match(self):
+        """Check default merging attributes setup"""
+        dataA = Table("zoo")
+        dataB = Table("zoo-with-images")
+        self.send_signal("Data A", dataA)
+        self.send_signal("Data B", dataB)
+        self.assertEqual(self.widget.attr_a, dataA.domain[-1])
+        self.assertEqual(self.widget.attr_b, dataB.domain[-1])
