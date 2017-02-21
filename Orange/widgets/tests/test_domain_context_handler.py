@@ -261,6 +261,11 @@ class TestDomainContextHandler(TestCase):
         val = self.handler.encode_setting(None, setting, var)
         self.assertEqual(val, (var.name, 100 + vartype(var)))
 
+        # Should not crash on anonymous variables
+        var.name = ""
+        val = self.handler.encode_setting(None, setting, var)
+        self.assertEqual(val, (var.name, 100 + vartype(var)))
+
     def test_decode_setting(self):
         setting = ContextSetting(None)
 
