@@ -304,7 +304,7 @@ class OWDistanceMatrix(widget.OWWidget):
         elif isinstance(self.items, Table):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
-            labels = [var.repr_val(value) for value in column]
+            labels = [var.str_val(value) for value in column]
         saved_selection = self.tableview.selectionModel().selected_items()
         self.tablemodel.set_labels(labels, var, column)
         if labels:
