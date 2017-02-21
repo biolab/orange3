@@ -40,6 +40,7 @@ class OWMergeData(widget.OWWidget):
         # data
         self.dataA = None
         self.dataB = None
+        self.dataA_len = self.p_intersect = 0
 
         # GUI
         box = gui.hBox(self.controlArea, "Match instances by")
@@ -70,9 +71,11 @@ class OWMergeData(widget.OWWidget):
                                       box="Data B Info")
 
         gui.separator(self.controlArea)
-        box = gui.vBox(self.controlArea, box=True)
-        gui.checkBox(box, self, "inner", "Exclude instances without a match",
-                     callback=self._invalidate)
+        box = gui.vBox(self.controlArea, "Output")
+        self.infoBoxOutput = gui.label(box, self, "No data")
+        self.inner_check = gui.checkBox(
+            box, self, "inner", "Exclude instances without a match",
+            callback=self._invalidate)
 
     def _setAttrs(self, model, data, othermodel, otherdata):
         model[:] = allvars(data) if data is not None else []
@@ -143,6 +146,7 @@ class OWMergeData(widget.OWWidget):
 
     def commit(self):
         AB = None
+        self.dataA_len = self.p_intersect = 0
         if (self.attr_a and self.attr_b and
                 self.dataA is not None and
                 self.dataB is not None):
@@ -151,9 +155,18 @@ class OWMergeData(widget.OWWidget):
             varB = (self.attr_b if self.attr_b in (INDEX, INSTANCEID) else
                     self.dataB.domain[self.attr_b])
             AB = merge(self.dataA, varA, self.dataB, varB, self.inner)
+            if AB is not None:
+                self.dataA_len = len(AB)
+                self.p_intersect = round(self.dataA_len / len(self.dataA) * 100)
+                if self.p_intersect == 100 and self.inner_check.isChecked():
+                    self.inner_check.setEnabled(False)
         self.send("Merged Data", AB)
+        output_info = "Matching instances: {} ({}%)".format(self.dataA_len,
+                                                            self.p_intersect)
+        self.infoBoxOutput.setText(output_info)
 
     def _invalidate(self):
+        self.inner_check.setEnabled(True)
         self.commit()
 
     def send_report(self):
@@ -167,10 +180,12 @@ class OWMergeData(widget.OWWidget):
             attr_b = self.attr_b
             if attr_b in self.dataB.domain:
                 attr_b = self.dataB.domain[attr_b]
-        self.report_items((
-            ("Attribute A", attr_a),
-            ("Attribute B", attr_b),
-        ))
+        self.report_items("Matching attributes", [("Data A", attr_a),
+                                                  ("Data B", attr_b)])
+        output_info = "{} ({}%)".format(self.dataA_len, self.p_intersect)
+        check_info = ["Included", "Excluded"][int(self.inner)]
+        self.report_items("Output", [("Matching instances", output_info),
+                                     ("Instances without a match", check_info)])
 
 
 def allvars(data):

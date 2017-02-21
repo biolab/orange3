@@ -56,6 +56,8 @@ class TestOWMergeData(WidgetTest):
         self.widget.attr_b = "Source position (index)"
         self.widget.commit()
         self.assertTablesEqual(self.get_output("Merged Data"), result)
+        self.assertEqual(self.widget.infoBoxOutput.text(),
+                         "Matching instances: 2 (67%)")
 
     def test_output_merge_by_ids_outer(self):
         """Check output for merging all values by IDs"""
@@ -65,6 +67,8 @@ class TestOWMergeData(WidgetTest):
         self.widget.attr_b = "Source position (index)"
         self.widget.controls.inner.setChecked(False)
         self.assertTablesEqual(self.get_output("Merged Data"), self.dataA)
+        self.assertEqual(self.widget.infoBoxOutput.text(),
+                         "Matching instances: 4 (100%)")
 
     def test_output_merge_by_index_inner_AB(self):
         """Check output for merging only matching values by row index"""
@@ -393,3 +397,16 @@ class TestOWMergeData(WidgetTest):
         self.send_signal("Data B", dataB)
         self.assertEqual(self.widget.attr_a, dataA.domain[-1])
         self.assertEqual(self.widget.attr_b, dataB.domain[-1])
+
+    def test_exclude_instances_check_box(self):
+        dataA = Table("zoo")
+        dataB = Table("zoo-with-images")
+        self.send_signal("Data A", dataA)
+        self.send_signal("Data B", dataA)
+        self.assertFalse(self.widget.inner_check.isEnabled())
+        self.send_signal("Data B", dataB)
+        self.assertTrue(self.widget.inner_check.isEnabled())
+        self.send_signal("Data A", dataB)
+        self.assertFalse(self.widget.inner_check.isEnabled())
+        self.send_signal("Data A", dataA)
+        self.assertTrue(self.widget.inner_check.isEnabled())
