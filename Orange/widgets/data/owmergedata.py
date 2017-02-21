@@ -24,7 +24,9 @@ class OWMergeData(widget.OWWidget):
 
     inputs = [("Data A", Orange.data.Table, "setDataA", widget.Default),
               ("Data B", Orange.data.Table, "setDataB")]
-    outputs = [("Merged Data", Orange.data.Table)]
+    outputs = [widget.OutputSignal(
+        "Merged Data", Orange.data.Table,
+        replaces=["Merged Data A+B", "Merged Data B+A"])]
 
     attr_a = settings.Setting('', schema_only=True)
     attr_b = settings.Setting('', schema_only=True)
