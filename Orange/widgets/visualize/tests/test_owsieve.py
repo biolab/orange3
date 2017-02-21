@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from math import isnan
 import numpy as np
 
 from AnyQt.QtCore import QEvent, QPoint, Qt
@@ -8,6 +9,7 @@ from AnyQt.QtGui import QMouseEvent
 from Orange.data import DiscreteVariable, Domain, Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
+from Orange.widgets.visualize.owsieve import ChiSqStats
 
 
 class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -46,3 +48,14 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         data = Table("iris")
         data = data[0:1]
         self.send_signal("Data", data)
+
+    def test_chisquare(self):
+        """
+         gh-2031
+         Check if it can calculate chi square when there are no attributes which suppose to be.
+        """
+        a = DiscreteVariable("a", values=["y", "n"])
+        b = DiscreteVariable("b", values=["y", "n", "o"])
+        table = Table(Domain([a, b]), list(zip("yynny", "ynyyn")))
+        chi = ChiSqStats(table, 0, 1)
+        self.assertFalse(isnan(chi.chisq))
