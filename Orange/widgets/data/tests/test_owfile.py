@@ -127,3 +127,15 @@ class TestOWFile(WidgetTest):
         # Open a sample dataset
         self.open_dataset("iris")
         self.assertFalse(self.widget.Error.file_not_found.is_shown())
+
+    def test_check_column_noname(self):
+        """
+        GH-2018
+        """
+        self.open_dataset("iris")
+        idx = self.widget.domain_editor.model().createIndex(1, 0)
+        temp = self.widget.domain_editor.model().data(idx, Qt.DisplayRole)
+        self.widget.domain_editor.model().setData(idx, "   ", Qt.EditRole)
+        self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
+        self.widget.domain_editor.model().setData(idx, "", Qt.EditRole)
+        self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)

@@ -79,7 +79,7 @@ class VarTableModel(QAbstractTableModel):
         row, col = index.row(), index.column()
         row_data = self.variables[row]
         if role == Qt.EditRole:
-            if col == Column.name:
+            if col == Column.name and not (value.isspace() or value == ""):
                 row_data[col] = value
             elif col == Column.tpe:
                 vartype = self.name2type[value]
@@ -125,7 +125,7 @@ class ComboDelegate(HorizontalGridDelegate):
             def hidePopup(me):
                 if me.popup_shown:
                     self.view.model().setData(
-                            index, me.highlighted_text, Qt.EditRole)
+                        index, me.highlighted_text, Qt.EditRole)
                     self.popup_shown = False
                 super().hidePopup()
                 self.view.closeEditor(me, self.NoHint)
@@ -211,9 +211,9 @@ class DomainEditor(QTableView):
 
         for (name, tpe, place, _, _), (orig_var, orig_plc) in \
                 zip(variables,
-                    chain([(at, Place.feature) for at in domain.attributes],
-                          [(cl, Place.class_var) for cl in domain.class_vars],
-                          [(mt, Place.meta) for mt in domain.metas])):
+                        chain([(at, Place.feature) for at in domain.attributes],
+                              [(cl, Place.class_var) for cl in domain.class_vars],
+                              [(mt, Place.meta) for mt in domain.metas])):
             if place == Place.skip:
                 continue
             if orig_plc == Place.meta:
@@ -277,7 +277,8 @@ class DomainEditor(QTableView):
             return False
 
         def discrete_value_display(value_list):
-            result = ", ".join(str(v) for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
+            result = ", ".join(str(v)
+                               for v in value_list[:VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT])
             if len(value_list) > VarTableModel.DISCRETE_VALUE_DISPLAY_LIMIT:
                 result += ", ..."
             return result
