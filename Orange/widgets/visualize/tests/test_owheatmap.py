@@ -1,11 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import numpy as np
-
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.preprocess import Continuize
 from Orange.widgets.visualize.owheatmap import OWHeatMap
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 
 
 class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
@@ -101,9 +99,21 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_color_low_high(self):
         """
-        GH-2025
         Prevent horizontal sliders to set Low >= High.
+        GH-2025
         """
         self.widget.controls.threshold_low.setValue(4)
         self.widget.controls.threshold_high.setValue(2)
         self.assertGreater(self.widget.threshold_high, self.widget.threshold_low)
+
+    def test_data_column_nans(self):
+        """
+        Send data with one column with all values set to NaN.
+        ValueError should not be thrown (Invalid number of variable columns)
+        That column is now suppose to be removed in a table array and
+        in a domain as well.
+        GH-2057
+        """
+        table = datasets.data_one_column_nans()
+        self.widget.controls.merge_kmeans.setChecked(True)
+        self.send_signal("Data", table)
