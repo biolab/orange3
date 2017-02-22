@@ -237,6 +237,7 @@ class OWTreeGraph(OWTreeViewer2D):
         if self.domain.class_var.is_discrete:
             self.target_class_index = i
             self.toggle_node_color_cls()
+            self.set_node_info()
         else:
             self.regression_colors = i
             self.toggle_node_color_reg()
