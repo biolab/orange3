@@ -512,6 +512,20 @@ class OWMosaicDisplay(OWWidget):
         spacing = self.SPACING
         bar_width = self.BAR_WIDTH
 
+        def get_counts(attr_vals, values):
+            """This function calculates rectangles' widths.
+            If all widths are zero then all widths are set to 1."""
+            if attr_vals == "":
+                counts = [conditionaldict[val] for val in values]
+            else:
+                counts = [conditionaldict[attr_vals + "-" + val]
+                          for val in values]
+            total = sum(counts)
+            if total == 0:
+                counts = [1] * len(values)
+                total = sum(counts)
+            return total, counts
+
         def draw_data(attr_list, x0_x1, y0_y1, side, condition,
                       total_attrs, used_attrs, used_vals, attr_vals=""):
             x0, x1 = x0_x1
@@ -542,12 +556,7 @@ class OWMosaicDisplay(OWWidget):
                 if whole == 0:
                     edge = (y1 - y0) / float(len(values) - 1)
 
-            if attr_vals == "":
-                counts = [conditionaldict[val] for val in values]
-            else:
-                counts = [conditionaldict[attr_vals + "-" + val]
-                          for val in values]
-            total = sum(counts)
+            total, counts = get_counts(attr_vals, values)
 
             # if we are visualizing the third attribute and the first attribute
             # has the last value, we have to reverse the order in which the
@@ -633,15 +642,7 @@ class OWMosaicDisplay(OWWidget):
             # calculate position of first attribute
             currpos = 0
 
-            if attr_vals == "":
-                counts = [conditionaldict.get(val, 1) for val in values]
-            else:
-                counts = [conditionaldict.get(attr_vals + "-" + val, 1)
-                          for val in values]
-            total = sum(counts)
-            if total == 0:
-                counts = [1] * len(values)
-                total = sum(counts)
+            total, counts = get_counts(attr_vals, values)
 
             aligns = [Qt.AlignTop | Qt.AlignHCenter,
                       Qt.AlignRight | Qt.AlignVCenter,
