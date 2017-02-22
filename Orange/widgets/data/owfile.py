@@ -5,8 +5,7 @@ from warnings import catch_warnings
 import numpy as np
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QFileDialog, QGridLayout, QLabel, \
-    QLineEdit
-from AnyQt.QtWidgets import QSizePolicy as Policy
+    QLineEdit, QSizePolicy as Policy
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
