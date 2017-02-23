@@ -1,5 +1,4 @@
 """General tree learner base widget, and classification tree widget"""
-
 from Orange.data import Table
 from Orange.modelling.tree import TreeLearner
 from Orange.classification.tree import TreeLearner as ClassificationTreeLearner
@@ -22,6 +21,9 @@ class OWTreeLearner(OWTreeLearner):
         (("Stop when majority reaches [%]: ",
           "limit_majority", "sufficient_majority", 51, 100),) + \
         OWTreeLearner.spin_boxes[-1:]
+
+    replaces = ['Orange.widgets.classify.owclassificationtree.OWClassificationTree']
+
 
     class Error(OWTreeLearner.Error):
         cannot_binarize = Msg("Binarization cannot handle '{}'\n"
@@ -69,7 +71,7 @@ def _test():
     from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
-    ow = OWClassificationTree()
+    ow = OWTreeLearner()
     d = Table('iris')
     ow.set_data(d)
     ow.show()
