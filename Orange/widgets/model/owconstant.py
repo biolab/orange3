@@ -7,6 +7,7 @@ class OWConstant(OWBaseLearner):
     name = "Constant"
     description = "Predict the most frequent class or mean value " \
                   "from the training set."
+    icon = "icons/Constant.svg"
     replaces = [
         "Orange.widgets.classify.owmajority.OWMajority",
         "Orange.widgets.regression.owmean.OWMean",
