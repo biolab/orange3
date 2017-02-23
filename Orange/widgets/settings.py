@@ -987,9 +987,8 @@ class DomainContextHandler(ContextHandler):
             setattr(widget, self.reservoir, ll)
 
     def encode_setting(self, context, setting, value):
-        value = copy.copy(value)
         if isinstance(value, list):
-            return value
+            return copy.copy(value)
         elif isinstance(setting, ContextSetting):
             if isinstance(value, str):
                 if not setting.exclude_attributes and value in context.attributes:
@@ -998,7 +997,7 @@ class DomainContextHandler(ContextHandler):
                     return value, context.metas[value]
             elif isinstance(value, Variable):
                 return value.name, 100 + vartype(value)
-        return value, -2
+        return copy.copy(value), -2
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
