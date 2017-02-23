@@ -28,8 +28,10 @@ class TestOWSVMRegression(WidgetTest, WidgetLearnerTestMixin):
                 gamma_spin.setValue(value)
 
         self.parameters = [
-            ParameterMapping("C", self.widget.C_spin),
-            ParameterMapping("epsilon", self.widget.epsilon_spin),
+            ParameterMapping("C", self.widget.C_spin,
+                             problem_type="regression"),
+            ParameterMapping("epsilon", self.widget.epsilon_spin,
+                             problem_type="regression"),
             ParameterMapping("gamma", self.widget._kernel_params[0],
                              values=values, setter=setter, getter=getter),
             ParameterMapping("coef0", self.widget._kernel_params[1]),
@@ -44,8 +46,10 @@ class TestOWSVMRegression(WidgetTest, WidgetLearnerTestMixin):
         # setChecked(True) does not trigger callback event
         self.widget.nu_radio.click()
         self.assertEqual(self.widget.svm_type, OWSVM.Nu_SVM)
-        self.parameters[0] = ParameterMapping("C", self.widget.nu_C_spin)
-        self.parameters[1] = ParameterMapping("nu", self.widget.nu_spin)
+        self.parameters[0] = ParameterMapping("C", self.widget.nu_C_spin,
+                                              problem_type="regression")
+        self.parameters[1] = ParameterMapping("nu", self.widget.nu_spin,
+                                              problem_type="regression")
         self.test_parameters()
 
     def test_kernel_equation(self):

@@ -15,8 +15,10 @@ class TestOWSGDRegression(WidgetTest, WidgetLearnerTestMixin):
         self.valid_datasets = (self.housing,)
         self.parameters = [
             ParameterMapping('loss', self.widget.reg_loss_function_combo,
-                             list(zip(*self.widget.reg_losses))[1]),
-            ParameterMapping.from_attribute(self.widget, 'reg_epsilon', 'epsilon'),
+                             list(zip(*self.widget.reg_losses))[1],
+                             problem_type='regression'),
+            ParameterMapping('epsilon', self.widget.reg_epsilon_spin,
+                             problem_type='regression'),
             ParameterMapping('penalty', self.widget.penalty_combo,
                              list(zip(*self.widget.penalties))[1]),
             ParameterMapping.from_attribute(self.widget, 'alpha'),

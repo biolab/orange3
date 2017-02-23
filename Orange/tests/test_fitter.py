@@ -1,8 +1,9 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
+from Orange.evaluation import CrossValidation
 from Orange.modelling import Fitter
 from Orange.preprocess import Randomize
 from Orange.regression.base_regression import LearnerRegression
@@ -92,14 +93,13 @@ class FitterTest(unittest.TestCase):
         fitter = DummyFitter()
         self.assertEqual(fitter.get_learner(Fitter.CLASSIFICATION).param, 1)
         self.assertEqual(fitter.get_learner(Fitter.REGRESSION).param, 2)
-        self.assertEqual(fitter.name, 'dummy')
 
         # Pass specific params
         try:
             fitter = DummyFitter(classification_param=10, regression_param=20)
             self.assertEqual(fitter.get_learner(Fitter.CLASSIFICATION).param, 10)
             self.assertEqual(fitter.get_learner(Fitter.REGRESSION).param, 20)
-        except AttributeError:
+        except TypeError:
             self.fail('Fitter did not properly distribute params to learners')
 
     def test_error_for_data_type_with_no_learner(self):
@@ -126,3 +126,7 @@ class FitterTest(unittest.TestCase):
         self.assertEqual(
             tuple(learner.active_preprocessors), (pp,),
             'Fitter did not properly pass its preprocessors to its learners')
+
+    def test_n_jobs_fitting(self):
+        with patch('Orange.evaluation.testing.CrossValidation._MIN_NJOBS_X_SIZE', 1):
+            CrossValidation(self.heart_disease, [DummyFitter()], k=5, n_jobs=5)

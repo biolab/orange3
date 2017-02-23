@@ -59,11 +59,12 @@ class TreeLearner(Learner):
             min_samples_leaf=1, min_samples_split=2, sufficient_majority=0.95,
             **kwargs):
         super().__init__(*args, **kwargs)
-        self.binarize = binarize
-        self.min_samples_leaf = min_samples_leaf
-        self.min_samples_split = min_samples_split
-        self.sufficient_majority = sufficient_majority
-        self.max_depth = max_depth
+        self.params = {}
+        self.binarize = self.params['binarize'] = binarize
+        self.min_samples_leaf = self.params['min_samples_leaf'] = min_samples_leaf
+        self.min_samples_split = self.params['min_samples_split'] = min_samples_split
+        self.sufficient_majority = self.params['sufficient_majority'] = sufficient_majority
+        self.max_depth = self.params['max_depth'] = max_depth
 
     def _select_attr(self, data):
         """Select the attribute for the next split.
