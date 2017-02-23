@@ -1,21 +1,20 @@
-from AnyQt.QtWidgets import QSizePolicy
-from AnyQt.QtGui import QColor, QPen, QFont, QPalette
-from AnyQt.QtCore import Qt, QRectF
-
-import pyqtgraph as pg
 import numpy as np
+import pyqtgraph as pg
+from AnyQt.QtCore import Qt, QRectF
+from AnyQt.QtGui import QColor, QPen, QFont, QPalette
+from AnyQt.QtWidgets import QSizePolicy
 
+from Orange.canvas import report
 from Orange.data import Table, Domain
 from Orange.data.variable import ContinuousVariable, StringVariable
-from Orange.regression.linear import (RidgeRegressionLearner, PolynomialLearner,
-                                      LinearRegressionLearner, LinearModel)
 from Orange.regression import Learner
-from Orange.preprocess.preprocess import Preprocess
+from Orange.regression.linear import (
+    RidgeRegressionLearner, PolynomialLearner, LinearRegressionLearner
+)
 from Orange.widgets import settings, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.canvas import report
 
 
 class OWUnivariateRegression(OWBaseLearner):
@@ -39,7 +38,6 @@ class OWUnivariateRegression(OWBaseLearner):
     want_main_area = True
 
     def add_main_layout(self):
-
         self.data = None
         self.preprocessors = None
         self.learner = None
@@ -109,8 +107,6 @@ class OWUnivariateRegression(OWBaseLearner):
         self.report_plot(self.plot)
         if caption:
             self.report_caption(caption)
-
-
 
     def clear(self):
         self.data = None
@@ -186,20 +182,19 @@ class OWUnivariateRegression(OWBaseLearner):
         self.plotview.replot()
 
     def apply(self):
-        learner = self.learner
         predictor = None
 
+        degree = int(self.polynomialexpansion)
+        learner = self.LEARNER(
+            preprocessors=self.preprocessors,
+            degree=degree,
+            learner=LinearRegressionLearner() if self.learner is None else self.learner)
+
         if self.data is not None:
-
-            degree = int(self.polynomialexpansion)
-            learner = self.LEARNER(preprocessors=self.preprocessors,
-                                   degree=degree,
-                                   learner=LinearRegressionLearner() if self.learner is None
-                                    else learner)
-
             attributes = self.x_var_model[self.x_var_index]
             class_var = self.y_var_model[self.y_var_index]
-            data_table = Table(Domain([attributes], class_vars=[class_var]), self.data)
+            data_table = Table(Domain([attributes], class_vars=[class_var]),
+                               self.data)
 
             learner.name = self.learner_name
             predictor = learner(data_table)
@@ -252,15 +247,14 @@ class OWUnivariateRegression(OWBaseLearner):
             self.send("Coefficients", None)
 
 
-
 if __name__ == "__main__":
     import sys
     from AnyQt.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
     ow = OWUnivariateRegression()
-    learner = RidgeRegressionLearner(alpha=1.0)
-    polylearner = PolynomialLearner(learner, degree=2)
+    learner = RidgeRegressionLearner()
+    polylearner = PolynomialLearner(learner)
     d = Table('iris')
     ow.set_data(d)
     ow.set_learner(learner)
