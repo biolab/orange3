@@ -443,6 +443,7 @@ class SilhouettePlot(QGraphicsWidget):
         self.__hoveredItem = None
         self.setLayout(self.__layout)
         self.layout().setColumnSpacing(0, 1.)
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def setScores(self, scores, labels, values, rownames=None):
         """
@@ -681,6 +682,16 @@ class SilhouettePlot(QGraphicsWidget):
                 self.setSelection(self.__selstate.selection)
             event.accept()
 
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Up, Qt.Key_Down):
+            if event.key() == Qt.Key_Up:
+                self.__move_selection(self.selection(), -1)
+            elif event.key() == Qt.Key_Down:
+                self.__move_selection(self.selection(), 1)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
     def mouseMoveEvent(self, event):
         # Reimplemented
         if event.buttons() & Qt.LeftButton:
@@ -722,6 +733,13 @@ class SilhouettePlot(QGraphicsWidget):
             action = action = self.__selstate.action & ~SelectAction.Current
             self.__setSelectionRect(rect, action)
             self.__selstate = None
+
+    def __move_selection(self, selection, offset):
+        ids = numpy.asarray([pi.data(0) for pi in self.__plotItems()]).ravel()
+        indices = [numpy.where(ids == i)[0] for i in selection]
+        indices = numpy.asarray(indices) + offset
+        if min(indices) >= 0 and max(indices) < len(ids):
+            self.setSelection(ids[indices])
 
     def __setSelectionRect(self, rect, action):
         # Set the current mouse drag selection rectangle
