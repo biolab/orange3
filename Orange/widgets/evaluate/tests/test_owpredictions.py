@@ -45,3 +45,44 @@ class TestOWPredictions(WidgetTest):
         self.send_signal("Data", data)
         evres = self.get_output("Evaluation Results")
         self.assertEqual(len(evres.data), 0)
+
+    def test_mismatching_targets(self):
+        titanic = Table("titanic")
+        majority_titanic = MajorityLearner()(titanic)
+        majority_iris = MajorityLearner()(self.iris)
+
+        self.send_signal("Data", self.iris)
+        self.send_signal("Predictors", majority_iris, 1)
+        self.send_signal("Predictors", majority_titanic, 2)
+        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
+        output = self.get_output("Predictions")
+        self.assertEqual(len(output.domain.metas), 4)
+
+        self.send_signal("Predictors", None, 1)
+        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+        self.send_signal("Data", None)
+        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+        self.send_signal("Predictors", None, 2)
+        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+        self.send_signal("Predictors", majority_titanic, 2)
+        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+        self.send_signal("Data", self.iris)
+        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+        self.send_signal("Predictors", majority_iris, 2)
+        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertEqual(len(output.domain.metas), 4)
+
+        self.send_signal("Predictors", majority_iris, 1)
+        self.send_signal("Predictors", majority_titanic, 3)
+        output = self.get_output("Predictions")
+        self.assertEqual(len(output.domain.metas), 8)
