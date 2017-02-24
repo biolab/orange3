@@ -679,8 +679,8 @@ class OWRank(OWWidget):
         metas = [StringVariable("Feature name")]
         domain = Domain(features, metas=metas)
 
-        scores = np.array([row for i, row in enumerate(self.measure_scores)
-                           if i in indices or i >= len(self.measures)]).T
+        scores = np.nan_to_num(np.array([row for i, row in enumerate(self.measure_scores)
+                           if i in indices or i >= len(self.measures)], dtype=np.float64).T)
         feature_names = np.array([a.name for a in self.data.domain.attributes])
         # Reshape to 2d array as Table does not like 1d arrays
         feature_names = feature_names[:, None]
