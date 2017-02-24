@@ -15,8 +15,7 @@ def widget_discovery(discovery):
     pkgs = [
         "Orange.widgets.data",
         "Orange.widgets.visualize",
-        "Orange.widgets.classify",
-        "Orange.widgets.regression",
+        "Orange.widgets.model",
         "Orange.widgets.evaluate",
         "Orange.widgets.unsupervised",
     ]

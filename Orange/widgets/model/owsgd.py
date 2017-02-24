@@ -6,7 +6,7 @@ from Orange.canvas.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
 from Orange.modelling.linear import SGDLearner
 from Orange.widgets import gui, widget
-from Orange.widgets.classify.owlogisticregression import create_coef_table
+from Orange.widgets.model.owlogisticregression import create_coef_table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -18,6 +18,9 @@ class OWSGD(OWBaseLearner):
     description = 'Minimize an objective function using a stochastic ' \
                   'approximation of gradient descent.'
     icon = "icons/SGD.svg"
+    replaces = [
+        "Orange.widgets.regression.owsgdregression.OWSGDRegression",
+    ]
     priority = 90
 
     LEARNER = SGDLearner

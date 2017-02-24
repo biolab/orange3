@@ -427,7 +427,7 @@ if __name__ == "__main__":
     from Orange.widgets.data.owfile import OWFile
     from Orange.widgets.data.owtable import OWDataTable
     from Orange.widgets.data.owdiscretize import OWDiscretize
-    from Orange.widgets.classify.owrandomforest import OWRandomForest
+    from Orange.widgets.model.owrandomforest import OWRandomForest
 
     iris = Table("iris")
     app = QApplication(sys.argv)

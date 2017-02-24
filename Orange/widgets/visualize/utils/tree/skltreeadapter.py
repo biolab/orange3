@@ -169,7 +169,7 @@ class SklTreeAdapter(BaseTreeAdapter):
 
         See Also
         --------
-        Orange.widgets.classify.owclassificationtreegraph.OWTreeGraph
+        Orange.widgets.model.owclassificationtreegraph.OWTreeGraph
         """
 
         def find_largest_idx(n):

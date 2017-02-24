@@ -68,10 +68,9 @@ test:
     - Orange.canvas.utils
 
     - Orange.widgets
-    - Orange.widgets.classify
     - Orange.widgets.data
     - Orange.widgets.evaluate
-    - Orange.widgets.regression
+    - Orange.widgets.model
     - Orange.widgets.unsupervised
     - Orange.widgets.visualize
 
@@ -80,6 +79,7 @@ test:
     - Orange.data
     - Orange.distance
     - Orange.evaluation
+    - Orange.modelling
     - Orange.preprocess
     - Orange.projection
     - Orange.regression

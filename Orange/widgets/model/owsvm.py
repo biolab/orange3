@@ -15,6 +15,10 @@ class OWSVM(OWBaseLearner):
     description = "Support Vector Machines map inputs to higher-dimensional " \
                   "feature spaces."
     icon = "icons/SVM.svg"
+    replaces = [
+        "Orange.widgets.classify.owsvmclassification.OWSVMClassification",
+        "Orange.widgets.regression.owsvmregression.OWSVMRegression",
+    ]
     priority = 50
 
     LEARNER = SVMFitter
