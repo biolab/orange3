@@ -353,6 +353,23 @@ class OWMosaicDisplay(OWWidget):
         else:
             self.update_graph()
 
+    def _get_discrete_data(self, data):
+        """
+        Discretizes continuous attributes.
+        Returns None when there is no data, no rows, or no discrete or continuous attributes.
+        """
+        if (data is None or
+                not len(data) or
+                not any(attr.is_discrete or attr.is_continuous
+                        for attr in chain(data.domain, data.domain.metas))):
+            return None
+        elif any(attr.is_continuous for attr in data.domain):
+            return Discretize(
+                method=EqualFreq(n=4), remove_const=False, discretize_classes=True,
+                discretize_metas=True)(data)
+        else:
+            return data
+
     def init_combos(self, data):
         for combo in self.attr_combos:
             combo.clear()
@@ -400,14 +417,7 @@ class OWMosaicDisplay(OWWidget):
         self.closeContext()
         self.data = data
         self.init_combos(self.data)
-        if self.data is None or not len(self.data):
-            self.discrete_data = None
-        elif any(attr.is_continuous for attr in data.domain):
-            self.discrete_data = Discretize(
-                method=EqualFreq(n=4), remove_const=False, discretize_classes=True,
-                discretize_metas=True)(data)
-        else:
-            self.discrete_data = self.data
+        self.discrete_data = self._get_discrete_data(self.data)
 
         self.vizrank.stop_and_reset()
         self.vizrank_button.setEnabled(
