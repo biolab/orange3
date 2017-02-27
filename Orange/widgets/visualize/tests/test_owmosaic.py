@@ -7,7 +7,7 @@ from AnyQt.QtGui import QMouseEvent
 
 from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, StringVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
-from Orange.widgets.visualize.owmosaic import OWMosaicDisplay, MosaicVizRank
+from Orange.widgets.visualize.owmosaic import OWMosaicDisplay
 
 
 class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
@@ -205,3 +205,21 @@ class MosaicVizRankTests(WidgetTest):
         data = Table("housing.tab")
         widget.set_data(data)
         vizrank.toggle()
+
+    def test_nan_column(self):
+        """
+        A column with only NaN-s used to throw an error
+        (ZeroDivisionError) when loaded into widget.
+        GH-2046
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"), ContinuousVariable("b"), ContinuousVariable("c")]),
+            np.array([
+                [0, np.NaN, 0],
+                [0, np.NaN, 0],
+                [0, np.NaN, 0]
+            ])
+        )
+        self.send_signal("Data", table)
+
