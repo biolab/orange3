@@ -397,7 +397,7 @@ if HAVE_WEBKIT:
             self._obj = dict(obj=obj)
 
         @pyqtProperty('QVariantMap')
-        def pop_object(self, constant=True):
+        def pop_object(self):
             return self._obj
 
     @inherit_docstrings
