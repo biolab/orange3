@@ -183,6 +183,15 @@ def get_meta_from_archive(path):
                 for key in ('Name', 'Version', 'Description', 'Summary')]
 
 
+def cleanup(name, sep="-"):
+    """Used for sanitizing addon names. The function removes Orange/Orange3
+    from the name and adds spaces before upper letters of the leftover to
+    separate its words."""
+    prefix, separator, postfix = name.partition(sep)
+    name = postfix if separator == sep else prefix
+    return " ".join(re.findall("[A-Z][a-z]*", name[0].upper() + name[1:]))
+
+
 class AddonManagerWidget(QWidget):
 
     statechanged = Signal()
@@ -277,7 +286,7 @@ class AddonManagerWidget(QWidget):
             else:
                 item1.setCheckState(Qt.Unchecked)
 
-            item2 = QStandardItem(name)
+            item2 = QStandardItem(cleanup(name))
 
             item2.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             item2.setToolTip(summary)
