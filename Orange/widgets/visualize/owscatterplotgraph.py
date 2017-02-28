@@ -12,7 +12,6 @@ from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 import pyqtgraph.graphicsItems.ScatterPlotItem
-from pyqtgraph.graphicsItems.ImageItem import ImageItem
 from pyqtgraph.graphicsItems.LegendItem import LegendItem, ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
@@ -298,7 +297,11 @@ class DiscretizedScale:
         """
         super().__init__()
         dif = max_v - min_v if max_v != min_v else 1
-        decimals = -floor(log10(dif))
+        if np.isnan(dif):
+            min_v = 0
+            dif = decimals = 1
+        else:
+            decimals = -floor(log10(dif))
         resolution = 10 ** -decimals
         bins = ceil(dif / resolution)
         if bins < 6:
