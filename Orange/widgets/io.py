@@ -5,6 +5,7 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.data.io import FileFormat
+from Orange.widgets.utils.webview import WebviewWidget
 
 
 class ImgFormat(FileFormat):
@@ -148,3 +149,18 @@ class SvgFormat(ImgFormat):
     @staticmethod
     def _export(exporter, filename):
         exporter.export(filename)
+
+    @classmethod
+    def write_image(cls, filename, scene):
+        # WebviewWidget exposes its SVG contents more directly;
+        # no need to go via QPainter if we can avoid it
+        if isinstance(scene, WebviewWidget):
+            try:
+                svg = scene.svg()
+                with open(filename, 'w') as f:
+                    f.write(svg)
+                return
+            except (ValueError, IOError):
+                pass
+
+        super().write_image(filename, scene)
