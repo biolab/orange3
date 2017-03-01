@@ -12,15 +12,35 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.highcharts import Highchart
 
 
-class SelectionScatter(Highchart):
+class Scatter(Highchart):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args,
+                         options=dict(chart=dict(type='scatter')),
+                         **kwargs)
+
+
+class SelectionScatter(Scatter):
     def __init__(self, bridge, selected_indices_callback):
         super().__init__(bridge=bridge,
                          enable_select='xy+',
-                         selection_callback=selected_indices_callback,
-                         options=dict(chart=dict(type='scatter')))
+                         selection_callback=selected_indices_callback)
 
 
 class HighchartTest(WidgetTest):
+    def test_svg_is_svg(self):
+        scatter = Scatter()
+        scatter.chart(dict(series=dict(data=[[0, 1],
+                                             [1, 2]])))
+        while True:
+            try:
+                svg = scatter.svg()
+                break
+            except ValueError:
+                qApp.processEvents()
+
+        self.assertEqual(svg[:5], '<svg ')
+        self.assertEqual(svg[-6:], '</svg>')
+
     @unittest.skipIf(os.environ.get('APPVEYOR'), 'test stalls on AppVeyor')
     @unittest.skipIf(sys.version_info[:2] <= (3, 4),
                      'the second iteration stalls on Travis / Py3.4')
