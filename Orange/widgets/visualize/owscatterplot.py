@@ -228,6 +228,9 @@ class OWScatterPlot(OWWidget):
         self.cb_class_density = gui.checkBox(
             box, self, value='graph.class_density', label='Show class density',
             callback=self.update_density)
+        self.cb_reg_line = gui.checkBox(
+            box, self, value='graph.show_reg_line',
+            label='Show regression line', callback=self.update_regression_line)
         gui.checkBox(
             box, self, 'graph.label_only_selected',
             'Label only selected points', callback=self.graph.update_labels)
@@ -415,6 +418,7 @@ class OWScatterPlot(OWWidget):
         self.attribute_selection_list = None
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.unconditional_commit()
 
     def set_shown_attributes(self, attributes):
@@ -445,6 +449,7 @@ class OWScatterPlot(OWWidget):
     def update_attr(self):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.send_features()
 
     def update_colors(self):
@@ -452,6 +457,9 @@ class OWScatterPlot(OWWidget):
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_density(self):
+        self.update_graph(reset_view=False)
+
+    def update_regression_line(self):
         self.update_graph(reset_view=False)
 
     def update_graph(self, reset_view=True, **_):

@@ -66,6 +66,7 @@ the left side of the widget. A snapshot below shows the scatterplot of the
    -  *Show gridlines* displays the grid behind the plot.
    -  *Show all data on mouse hover* enables information bubbles if the cursor is placed on a dot.
    -  *Show class density* colors the graph by class (see the screenshot below).
+   -  *Show regression line* draws the regression line for pair of continuous attributes.
    -  *Label only selected points* allows you to select individual data instances and label them. 
 
 4. *Select, zoom, pan and zoom to fit* are the options for exploring the graph.
@@ -88,7 +89,7 @@ the scatterplot would display only eight distinct points.
 .. figure:: images/Scatterplot-Titanic.png
 
 Here is an example of the **Scatter Plot** widget if the *Show class
-density* box is ticked.
+density* and *Show regression line* boxes are ticked.
 
 .. figure:: images/Scatterplot-ClassDensity.png
 
@@ -97,17 +98,17 @@ Intelligent Data Visualization
 
 If a data set has many attributes, it is impossible to manually scan
 through all the pairs to find interesting or useful scatterplots. Orange
-implements intelligent data visualization with the **Score Plots**
+implements intelligent data visualization with the **Find Informative Projections**
 option in the widget. The goal of optimization is to find scatterplot
 projections where instances are well separated.
 
-To use this method, go to the *Score Plots* option in the widget, open
+To use this method, go to the *Find Informative Projections* option in the widget, open
 the subwindow and press *Start Evaluation*. The feature will return a
 list of attribute pairs by average classification accuracy score.
 
 Below, there is an example demonstrating the utility of ranking. The
 first scatterplot projection was set as the default sepal width to sepal
-length plot (we used the Iris data set for simplicity). Upon running *Score Plots* optimization, the scatterplot converted to a much better
+length plot (we used the Iris data set for simplicity). Upon running *Find Informative Projections* optimization, the scatterplot converted to a much better
 projection of petal width to petal length plot.
 
 .. figure:: images/ScatterPlotExample-Ranking.png

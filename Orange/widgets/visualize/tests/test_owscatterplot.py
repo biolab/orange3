@@ -117,3 +117,15 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         simulate.combobox_activate_item(self.widget.cb_attr_y, "a")
 
         self.widget.update_graph()
+
+    def test_regression_line(self):
+        """It is possible to draw the line only for pair of continuous attrs"""
+        self.send_signal("Data", self.data)
+        self.assertTrue(self.widget.cb_reg_line.isEnabled())
+        self.assertIsNone(self.widget.graph.reg_line_item)
+        self.widget.cb_reg_line.setChecked(True)
+        self.assertIsNotNone(self.widget.graph.reg_line_item)
+        self.widget.cb_attr_y.activated.emit(4)
+        self.widget.cb_attr_y.setCurrentIndex(4)
+        self.assertFalse(self.widget.cb_reg_line.isEnabled())
+        self.assertIsNone(self.widget.graph.reg_line_item)
