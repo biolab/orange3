@@ -190,6 +190,31 @@ class TestOWSelectRows(WidgetTest):
         values = self.widget.conditions[0][2]
         self.assertTrue(values[0].startswith("5,2"))
 
+    def test_load_settings(self):
+        iris = Table("iris")[:5]
+        self.send_signal("Data", iris)
+
+        sepal_length, sepal_width = iris.domain[:2]
+
+        self.widget.remove_all_button.click()
+        self.enterFilter(sepal_width, "is below", "5.2")
+        self.enterFilter(sepal_length, "is at most", "4")
+        data = self.widget.settingsHandler.pack_data(self.widget)
+
+        w2 = self.create_widget(OWSelectRows, data)
+        self.send_signal("Data", iris, widget=w2)
+
+        var_combo = w2.cond_list.cellWidget(0, 0)
+        self.assertEqual(var_combo.currentText(), "sepal width")
+        oper_combo = w2.cond_list.cellWidget(0, 1)
+        self.assertEqual(oper_combo.currentText(), "is below")
+
+        var_combo = w2.cond_list.cellWidget(1, 0)
+        self.assertEqual(var_combo.currentText(), "sepal length")
+        oper_combo = w2.cond_list.cellWidget(1, 1)
+        self.assertEqual(oper_combo.currentText(), "is at most")
+
+
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()
         context = ch.new_context(domain, *ch.encode_domain(domain))

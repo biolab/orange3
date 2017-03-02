@@ -194,9 +194,7 @@ class OWSelectRows(widget.OWWidget):
             minimumContentsLength=12,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row
-        for var in filter_visible(chain(self.data.domain.class_vars,
-                                        self.data.domain.metas,
-                                        self.data.domain.attributes)):
+        for var in self._visible_variables(self.data.domain):
             attr_combo.addItem(*gui.attributeItem(var))
         attr_combo.setCurrentIndex(attr or 0)
         self.cond_list.setCellWidget(row, 0, attr_combo)
@@ -215,6 +213,13 @@ class OWSelectRows(widget.OWWidget):
             lambda _: self.set_new_operators(attr_combo, False))
 
         self.cond_list.resizeRowToContents(row)
+
+    @staticmethod
+    def _visible_variables(domain):
+        """Generate variables in order they should be presented in in combos."""
+        return filter_visible(chain(domain.class_vars,
+                                    domain.metas,
+                                    domain.attributes))
 
     def add_all(self):
         if self.cond_list.rowCount():
@@ -395,8 +400,7 @@ class OWSelectRows(widget.OWWidget):
         except Exception:
             pass
 
-        variables = list(filter_visible(chain(data.domain.variables,
-                                              data.domain.metas)))
+        variables = list(self._visible_variables(self.data.domain))
         varnames = [v.name for v in variables]
         if self.conditions:
             for attr, cond_type, cond_value in self.conditions:
