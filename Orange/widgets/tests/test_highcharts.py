@@ -4,7 +4,6 @@ import sys
 import unittest
 
 from AnyQt.QtCore import Qt, QPoint, QObject
-from AnyQt.QtWidgets import qApp
 from AnyQt.QtTest import QTest
 
 from Orange.data import Table
@@ -31,12 +30,7 @@ class HighchartTest(WidgetTest):
         scatter = Scatter()
         scatter.chart(dict(series=dict(data=[[0, 1],
                                              [1, 2]])))
-        while True:
-            try:
-                svg = scatter.svg()
-                break
-            except ValueError:
-                qApp.processEvents()
+        svg = self.process_events(lambda: scatter.svg())
 
         self.assertEqual(svg[:5], '<svg ')
         self.assertEqual(svg[-6:], '</svg>')
@@ -64,9 +58,7 @@ class HighchartTest(WidgetTest):
         scatter.chart(options=dict(series=[dict(data=data.X[:, :2])]))
         scatter.show()
 
-        while scatter.isHidden() or not scatter.geometry().isValid():
-            qApp.processEvents()
-            time.sleep(.05)
+        self.process_events(lambda: not scatter.isHidden() and scatter.geometry().isValid())
 
         time.sleep(1)  # add some time for WM to place window or whatever
         topleft = scatter.geometry().topLeft()
@@ -76,14 +68,12 @@ class HighchartTest(WidgetTest):
 
         # Simulate selection
         QTest.mousePress(scatter, Qt.LeftButton, Qt.NoModifier, startpos, 1000)
-        qApp.processEvents()
+        self.process_events()
         QTest.mouseMove(scatter, endpos)
-        qApp.processEvents()
+        self.process_events()
         QTest.mouseRelease(scatter, Qt.LeftButton, Qt.NoModifier, endpos, 100)
 
-        while not selected_indices:
-            qApp.processEvents()
-            time.sleep(.05)
+        self.process_events(lambda: len(selected_indices))
 
         self.assertEqual(len(selected_indices), 1)
         self.assertGreater(len(selected_indices[0]), 0)
@@ -91,9 +81,7 @@ class HighchartTest(WidgetTest):
         # Simulate deselection
         QTest.mouseClick(scatter, Qt.LeftButton, Qt.NoModifier, startpos - QPoint(10, 10))
 
-        while selected_indices:
-            qApp.processEvents()
-            time.sleep(.05)
+        self.process_events(lambda: not len(selected_indices))
 
         self.assertFalse(len(selected_indices))
 
