@@ -4,7 +4,7 @@ import numpy
 
 from AnyQt.QtWidgets import QListView, QApplication
 from AnyQt.QtGui import QBrush, QColor, QPainter
-from AnyQt.QtCore import Qt, QEvent, QItemSelectionModel, QItemSelection
+from AnyQt.QtCore import QEvent, QItemSelectionModel, QItemSelection
 
 import pyqtgraph as pg
 import Orange.data
@@ -14,7 +14,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
-from Orange.widgets.io import FileFormat
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -140,6 +139,12 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     def _var_changed(self):
         self.selected_var_indices = sorted(
             ind.row() for ind in self.varview.selectionModel().selectedRows())
+        rfs = self.update_XY()
+        if rfs is not None:
+            if self.component_x >= rfs:
+                self.component_x = rfs-1
+            if self.component_y >= rfs:
+                self.component_y = rfs-1
         self._invalidate()
 
     def _component_changed(self):
@@ -160,6 +165,15 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         return super().customEvent(event)
 
     def _update_CA(self):
+        self.update_XY()
+        self.component_x, self.component_y = self.component_x, self.component_y
+
+        self._setup_plot()
+        self._update_info()
+
+    def update_XY(self):
+        self.axis_x_cb.clear()
+        self.axis_y_cb.clear()
         ca_vars = self.selected_vars()
         if len(ca_vars) == 0:
             return
@@ -171,25 +185,23 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             ctable = contingency.get_contingency(self.data, *ca_vars[::-1])
 
         self.ca = correspondence(ctable, )
+        rfs = self.ca.row_factors.shape[1]
         axes = ["{}".format(i + 1)
-                for i in range(self.ca.row_factors.shape[1])]
-        self.axis_x_cb.clear()
+                for i in range(rfs)]
         self.axis_x_cb.addItems(axes)
-        self.axis_y_cb.clear()
         self.axis_y_cb.addItems(axes)
-        self.component_x, self.component_y = self.component_x, self.component_y
-
-        self._setup_plot()
-        self._update_info()
+        return rfs
 
     def _setup_plot(self):
         self.plot.clear()
-
         points = self.ca
         variables = self.selected_vars()
         colors = colorpalette.ColorPaletteGenerator(len(variables))
 
         p_axes = self._p_axes()
+
+        if points == None:
+            return
 
         if len(variables) == 2:
             row_points = self.ca.row_factors[:, p_axes]
@@ -220,7 +232,10 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                 item.setPos(point[0], point[1])
 
         inertia = self.ca.inertia_of_axis()
-        inertia = 100 * inertia / numpy.sum(inertia)
+        if numpy.sum(inertia) == 0:
+            inertia = 100 * inertia
+        else:
+            inertia = 100 * inertia / numpy.sum(inertia)
 
         ax = self.plot.getAxis("bottom")
         ax.setLabel("Component {} ({:.1f}%)"
@@ -236,7 +251,10 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             fmt = ("Axis 1: {:.2f}\n"
                    "Axis 2: {:.2f}")
             inertia = self.ca.inertia_of_axis()
-            inertia = 100 * inertia / numpy.sum(inertia)
+            if numpy.sum(inertia) == 0:
+                inertia = 100 * inertia
+            else:
+                inertia = 100 * inertia / numpy.sum(inertia)
 
             ax1, ax2 = self._p_axes()
             self.infotext.setText(fmt.format(inertia[ax1], inertia[ax2]))
@@ -314,6 +332,7 @@ def correspondence(A):
     E = row_sum * col_sum
 
     D_r, D_c = row_sum.ravel() ** -1, col_sum.ravel() ** -1
+    D_r, D_c = numpy.nan_to_num(D_r), numpy.nan_to_num(D_c)
 
     def gsvd(M, Wu, Wv):
         assert len(M.shape) == 2
