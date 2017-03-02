@@ -345,7 +345,6 @@ class _WebViewBase:
         exposeObject() method are indeed exposed in JS, and the code `code`
         has finished evaluating.
         """
-
         def _later():
             if not self.__is_init and self.__js_queue:
                 return QTimer.singleShot(1, _later)
@@ -355,6 +354,10 @@ class _WebViewBase:
                 self.__js_queue.clear()
                 self._evalJS(code)
 
+        # WebView returns the result of the last evaluated expression.
+        # This result may be too complex an object to safely receive on this
+        # end, so instead, just make it return 0.
+        code += ';0;'
         self.__js_queue.append(code)
         QTimer.singleShot(1, _later)
 
@@ -397,7 +400,7 @@ if HAVE_WEBKIT:
             self._obj = dict(obj=obj)
 
         @pyqtProperty('QVariantMap')
-        def pop_object(self, constant=True):
+        def pop_object(self):
             return self._obj
 
     @inherit_docstrings
@@ -408,8 +411,10 @@ if HAVE_WEBKIT:
 
             def load_finished():
                 if not sip.isdeleted(self):
-                    self.frame.addToJavaScriptWindowObject('__bridge', _QWidgetJavaScriptWrapper(self))
-                    self._evalJS('setTimeout(function(){ __bridge.load_really_finished(); }, 100);')
+                    self.frame.addToJavaScriptWindowObject(
+                        '__bridge', _QWidgetJavaScriptWrapper(self))
+                    self._evalJS('setTimeout(function(){'
+                                 '__bridge.load_really_finished(); }, 100);')
 
             self.loadFinished.connect(load_finished)
 

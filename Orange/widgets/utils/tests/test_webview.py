@@ -1,7 +1,7 @@
 from os.path import dirname
 
 from AnyQt.QtCore import Qt, QObject, pyqtSlot
-from AnyQt.QtWidgets import QDialog, qApp
+from AnyQt.QtWidgets import QDialog
 from AnyQt.QtTest import QTest
 
 from Orange.widgets.tests.base import WidgetTest
@@ -17,14 +17,8 @@ class WebviewWidgetTest(WidgetTest):
         SVG = '<svg xmlns:dc="...">asd</svg>'
         w.onloadJS('''document.write('{}');'''.format(SVG))
         w.setUrl(SOME_URL)
+        svg = self.process_events(lambda: w.svg())
 
-        svg = None
-        while svg is None:
-            try:
-                svg = w.svg()
-                break
-            except ValueError:
-                qApp.processEvents()
         self.assertEqual(svg, SVG)
         self.assertEqual(
             w.html(), '<html><head></head><body>foo<svg xmlns:dc="...">asd</svg></body></html>')
@@ -32,6 +26,7 @@ class WebviewWidgetTest(WidgetTest):
     def test_exposeObject(self):
         test = self
         OBJ = dict(a=[1, 2], b='c')
+        done = False
 
         class Bridge(QObject):
             @pyqtSlot('QVariantMap')
@@ -44,12 +39,9 @@ class WebviewWidgetTest(WidgetTest):
         w.setUrl(SOME_URL)
         w.exposeObject('obj', OBJ)
         w.evalJS('''pybridge.check_object(window.obj);''')
+        self.process_events(lambda: done)
 
-        done = False
-        while not done:
-            qApp.processEvents()
-
-        self.assertRaises(ValueError, w.exposeObject, 'obj', QDialog())
+        self.assertRaises(Warning, w.exposeObject, 'obj', QDialog())
 
     def test_escape_hides(self):
         # NOTE: This test doesn't work as it is supposed to.

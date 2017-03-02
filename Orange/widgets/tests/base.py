@@ -1,7 +1,9 @@
 import os
-import sip
+import time
 import unittest
 from unittest.mock import Mock
+
+import sip
 
 import numpy as np
 from AnyQt.QtWidgets import (
@@ -137,12 +139,34 @@ class WidgetTest(GuiTest):
             settings_handler.global_contexts = []
 
     @staticmethod
-    def process_events():
-        """Process Qt events.
+    def process_events(until: callable=None):
+        """Process Qt events, optionally until `until` returns
+        something True-ish.
 
         Needs to be called manually as QApplication.exec is never called.
+
+        Parameters
+        ----------
+        until: callable or None
+            If callable, the events are processed until the function returns
+            something True-ish.
+
+        Returns
+        -------
+        If until is not None, the True-ish result of its call.
         """
-        app.processEvents()
+        if until is None:
+            until = lambda: True
+
+        while True:
+            app.processEvents()
+            try:
+                result = until()
+                if result:
+                    return result
+            except Exception:  # until can fail with anything; pylint: disable=broad-except
+                pass
+            time.sleep(.05)
 
     def show(self, widget=None):
         """Show widget in interactive mode.

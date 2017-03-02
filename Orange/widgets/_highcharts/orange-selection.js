@@ -28,6 +28,21 @@ Highcharts.Chart.prototype.getSelectedPointsForExport = function() {
     return points;
 };
 
+Highcharts.wrap(Highcharts.Point.prototype, 'select', function (proceed) {
+    // Super call with the original arguments
+    proceed.apply(this, Array.prototype.slice.call(arguments, 1));
+
+    // Raise selected point to front
+    if (this.selected) {
+        this.graphic.element.parentNode.appendChild(this.graphic.element);
+    } else {
+        // or lower deselected point to back
+        this.graphic.element.parentNode.insertBefore(
+            this.graphic.element,
+            this.graphic.element.parentNode.firstChild);
+    }
+});
+
 function unselectAllPoints(e) {
     // Only handle left click on the canvas area, if no modifier pressed
     if (e.ctrlKey  ||

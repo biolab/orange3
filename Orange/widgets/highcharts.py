@@ -242,15 +242,6 @@ class Highchart(WebviewWidget):
             }; 0;
         ''')
 
-    def svg(self):
-        """
-        Returns div that is container of a chart.
-        This method overrides svg method from WebView because
-        SVG itself does not contain chart labels (title, axis labels, ...)
-        """
-        html = self.html()
-        return html[html.index('<div id="container"'):html.rindex('</div>') + 6]
-
 
 def main():
     """ A simple test. """
