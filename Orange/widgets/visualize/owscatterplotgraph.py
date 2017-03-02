@@ -760,12 +760,24 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             p.setCosmetic(True)
             return p
 
-        pens = [QPen(Qt.NoPen),
-                make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1.)]
+        nopen = QPen(Qt.NoPen)
         if self.selection is not None:
+            sels = np.max(self.selection)
+            if sels == 1:
+                pens = [nopen,
+                        make_pen(QColor(255, 190, 0, 255),
+                                 SELECTION_WIDTH + 1.)]
+            else:
+                # Start with the first color so that the colors of the
+                # additional attribute in annotation (which start with 0,
+                # unselected) will match these colors
+                palette = ColorPaletteGenerator(number_of_colors=sels + 1)
+                pens = [nopen] + \
+                       [make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
+                        for i in range(sels)]
             pen = [pens[a] for a in self.selection[self.valid_data]]
         else:
-            pen = [pens[0]] * self.n_points
+            pen = [nopen] * self.n_points
         brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
         return pen, brush
 
@@ -1036,14 +1048,22 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         keys = QApplication.keyboardModifiers()
         if self.selection is None or not keys & (
                 Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
-            self.selection = np.full(len(self.data), False, dtype=np.bool)
+            self.selection = np.zeros(len(self.data), dtype=np.uint8)
         indices = [p.data() for p in points]
         if keys & Qt.AltModifier:
-            self.selection[indices] = False
+            self.selection[indices] = 0
+        elif keys & Qt.ControlModifier and keys & Qt.ShiftModifier:
+            self.selection[indices] = np.max(self.selection)
         elif keys & Qt.ControlModifier:
-            self.selection[indices] = ~self.selection[indices]
+            elements = self.selection[indices]
+            indices = np.array(indices, dtype=int)
+            to_unselect = indices[np.flatnonzero(elements)]
+            to_select = indices[np.flatnonzero(elements == 0)]
+            self.selection[to_unselect] = 0
+            if len(to_select):
+                self.selection[to_select] = np.max(self.selection) + 1
         else:  # Handle shift and no modifiers
-            self.selection[indices] = True
+            self.selection[indices] = np.max(self.selection) + 1
         self.update_colors(keep_colors=True)
         if self.label_only_selected:
             self.update_labels()
@@ -1051,7 +1071,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def get_selection(self):
         if self.selection is None:
-            return np.array([], dtype=int)
+            return np.array([], dtype=np.uint8)
         else:
             return np.flatnonzero(self.selection)
 
