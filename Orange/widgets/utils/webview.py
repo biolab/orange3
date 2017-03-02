@@ -411,8 +411,10 @@ if HAVE_WEBKIT:
 
             def load_finished():
                 if not sip.isdeleted(self):
-                    self.frame.addToJavaScriptWindowObject('__bridge', _QWidgetJavaScriptWrapper(self))
-                    self._evalJS('setTimeout(function(){ __bridge.load_really_finished(); }, 100);')
+                    self.frame.addToJavaScriptWindowObject(
+                        '__bridge', _QWidgetJavaScriptWrapper(self))
+                    self._evalJS('setTimeout(function(){'
+                                 '__bridge.load_really_finished(); }, 100);')
 
             self.loadFinished.connect(load_finished)
 
