@@ -7,6 +7,7 @@ import numpy as np
 
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
+from AnyQt.QtWidgets import QComboBox
 
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
@@ -14,6 +15,7 @@ from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
 
@@ -165,3 +167,31 @@ a
         with named_file(file2, suffix=".tab") as filename:
             self.open_dataset(filename)
             self.assertEqual(editor.model().data(idx, Qt.DisplayRole), "a, b, c")
+
+    def test_check_datetime_disabled(self):
+        """
+        Datetime option is disable if numerical is disabled as well.
+        GH-2050 (code fixes)
+        GH-2120
+        """
+        dat = """\
+            01.08.16\t42.15\tneumann\t2017-02-20
+            03.08.16\t16.08\tneumann\t2017-02-21
+            04.08.16\t23.04\tneumann\t2017-02-22
+            03.09.16\t48.84\tturing\t2017-02-23
+            02.02.17\t23.16\tturing\t2017-02-24"""
+        with named_file(dat, suffix=".tab") as filename:
+            self.open_dataset(filename)
+            domain_editor = self.widget.domain_editor
+            idx = lambda x: self.widget.domain_editor.model().createIndex(x, 1)
+
+            qcombobox = QComboBox()
+            combo = ComboDelegate(domain_editor,
+                                  VarTableModel.typenames).createEditor(qcombobox, None, idx(2))
+            vartype_delegate = VarTypeDelegate(domain_editor, VarTableModel.typenames)
+
+            vartype_delegate.setEditorData(combo, idx(2))
+            counts = [4, 2, 4, 2]
+            for i in range(4):
+                vartype_delegate.setEditorData(combo, idx(i))
+                self.assertEqual(combo.count(), counts[i])
