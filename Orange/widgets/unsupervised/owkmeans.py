@@ -90,7 +90,7 @@ class OWKMeans(widget.OWWidget):
         layout = QGridLayout()
         bg = gui.radioButtonsInBox(
             self.controlArea, self, "optimize_k", orientation=layout,
-            box="Number of Clusters", callback=self.apply)
+            box="Number of Clusters", callback=self.invalidate)
         layout.addWidget(
             gui.appendRadioButton(bg, "Fixed:", addToLayout=False), 1, 1)
         sb = gui.hBox(None, margin=0)
