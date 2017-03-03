@@ -1,27 +1,22 @@
 import sys
-import bisect
-import contextlib
-import warnings
 from collections import OrderedDict
 import pkg_resources
 
 import numpy
 
 from AnyQt.QtWidgets import (
-    QWidget, QButtonGroup, QGroupBox, QRadioButton, QSlider, QFocusFrame,
-    QDoubleSpinBox, QComboBox, QSpinBox, QListView, QDockWidget, QLabel,
-    QScrollArea, QVBoxLayout, QHBoxLayout, QFormLayout, QSpacerItem,
-    QSizePolicy, QStyle, QStylePainter, QAction, QLabel,
-    QApplication, QCheckBox
+    QWidget, QButtonGroup, QGroupBox, QRadioButton, QSlider,
+    QDoubleSpinBox, QComboBox, QSpinBox, QListView, QLabel,
+    QScrollArea, QVBoxLayout, QHBoxLayout, QFormLayout,
+    QSizePolicy, QApplication, QCheckBox
 )
 
 from AnyQt.QtGui import (
-    QCursor, QIcon, QPainter, QPixmap, QStandardItemModel, QStandardItem,
-    QDrag, QKeySequence
+    QIcon, QStandardItemModel, QStandardItem
 )
 
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QSize, QModelIndex, QMimeData, QTimer
+    Qt, QEvent, QSize, QMimeData, QTimer
 )
 
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -34,7 +29,6 @@ from Orange.preprocess import Continuize, ProjectPCA, \
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.util import Reprable
 
 from Orange.widgets.data.utils.preprocess import (
     BaseEditor, blocked, StandardItemModel, DescriptionRole,
@@ -271,9 +265,9 @@ class ImputeEditor(BaseEditor):
 
     Imputers = {
         NoImputation: (None, {}),
-#         Constant: (None, {"value": 0})
+        #         Constant: (None, {"value": 0})
         Average: (preprocess.impute.Average(), {}),
-#         Model: (preprocess.impute.Model, {}),
+        #         Model: (preprocess.impute.Model, {}),
         Random: (preprocess.impute.Random(), {}),
         DropRows: (None, {})
     }
@@ -1175,7 +1169,7 @@ class OWPreprocess(widget.OWWidget):
             self.error()
             try:
                 data = preprocessor(self.data)
-            except ValueError as e:
+            except (ValueError, ZeroDivisionError) as e:
                 self.error(str(e))
                 return
         else:
@@ -1258,4 +1252,3 @@ def test_main(argv=sys.argv):
 
 if __name__ == "__main__":
     sys.exit(test_main())
-

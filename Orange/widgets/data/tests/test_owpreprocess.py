@@ -9,7 +9,7 @@ from Orange.preprocess import (
 from Orange.preprocess import discretize, impute, fss, score
 from Orange.widgets.data import owpreprocess
 from Orange.widgets.data.owpreprocess import OWPreprocess
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, datasets
 
 
 class TestOWPreprocess(WidgetTest):
@@ -43,6 +43,20 @@ class TestOWPreprocess(WidgetTest):
 
         np.testing.assert_allclose(output.X.mean(0), 0, atol=1e-7)
         np.testing.assert_allclose(output.X.std(0), 1, atol=1e-7)
+
+    def test_data_column_nans(self):
+        """
+        ZeroDivisonError - Weights sum to zero, can't be normalized
+        In case when all rows in a column are NaN then it throws that error.
+        GH-2064
+        """
+        table = datasets.data_one_column_nans()
+        saved = {"preprocessors": [("orange.preprocess.scale",
+                                    {"center": Scale.CenteringType.Mean,
+                                     "scale": Scale.ScalingType.Std})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal("Data", table)
 
 
 # Test for editors

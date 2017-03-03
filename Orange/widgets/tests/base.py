@@ -15,7 +15,7 @@ from Orange.canvas.report.owreport import OWReport
 from Orange.classification.base_classification import (
     LearnerClassification, ModelClassification
 )
-from Orange.data import Table
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize
 from Orange.preprocess.preprocess import PreprocessorList
@@ -709,3 +709,26 @@ class datasets:
         data : Orange.data.Table
         """
         return Table(cls.path("missing_data_3.tab"))
+
+    @classmethod
+    def data_one_column_nans(cls):
+        """
+        Data set with two continuous features and one discrete. One continuous
+        columns has missing values (NaN).
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"),
+                 ContinuousVariable("b"),
+                 DiscreteVariable("c", values=["y", "n"])]
+            ),
+            list(zip(
+                [42.48, 16.84, 15.23, 23.8],
+                ["", "", "", ""],
+                "ynyn"
+            )))
+        return table
