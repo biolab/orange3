@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-from Orange.data import Table
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.data.table import dataset_dirs
 from Orange.tests import test_dirname
 from Orange.widgets.tests.base import WidgetTest
@@ -43,3 +43,17 @@ class TestOWDistributions(WidgetTest):
         self.send_signal("Data", None)
         self.assertEqual(self.widget.cb_prob.count(), 0)
         self.assertEqual(self.widget.groupvarview.count(), 0)
+
+    def test_discretize_meta(self):
+        """The widget discretizes continuous meta attributes"""
+        domain = self.iris.domain
+        mdomain = Domain(domain.attributes[:-1], domain.class_var,
+                         metas=domain.attributes[-1:])
+        miris = Table(mdomain, self.iris)
+        self.send_signal("Data", miris)
+        widget = self.widget
+        widget.disc_cont = True
+        widget.varview.selectionModel().select(
+            widget.varview.model().index(4, 0))
+        self.assertIsInstance(widget.var, DiscreteVariable)
+        self.assertEqual(widget.var.name, mdomain.metas[0].name)

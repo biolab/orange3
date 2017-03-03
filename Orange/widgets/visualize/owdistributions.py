@@ -287,10 +287,12 @@ class OWDistributions(widget.OWWidget):
         if self.var is None:
             return
         if self.disc_cont:
-            data = self.data[:, (self.var, self.cvar) if self.cvar else self.var ]
+            domain = Orange.data.Domain(
+                [self.var, self.cvar] if self.cvar else [self.var])
+            data = Orange.data.Table(domain, data)
             disc = Orange.preprocess.discretize.EqualWidth(n=self.bins[self.smoothing_index])
             data = Orange.preprocess.Discretize(method=disc, remove_const=False)(data)
-            self.var = (list(data.domain) + list(data.domain.metas))[0]
+            self.var = data.domain[0]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
         if self.cvar:
