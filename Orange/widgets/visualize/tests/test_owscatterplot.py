@@ -1,15 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from unittest.mock import MagicMock
-
 import numpy as np
 
 from AnyQt.QtCore import QRectF
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.visualize.owscatterplot import \
     OWScatterPlot, ScatterPlotVizRank
+from Orange.widgets.tests.utils import simulate
 
 
 class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -70,7 +70,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_optional_combos(self):
         domain = self.data.domain
         d1 = Domain(domain.attributes[:2], domain.class_var,
-                   [domain.attributes[2]])
+                    [domain.attributes[2]])
         t1 = Table(d1, self.data)
         self.send_signal("Data", t1)
         self.widget.graph.attr_size = domain.attributes[2]
@@ -102,3 +102,18 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.report_plot.assert_not_called()
         self.widget.report_caption.assert_not_called()
         self.widget.report_items.assert_not_called()
+
+    def test_data_column_nans(self):
+        """
+        ValueError cannot convert float NaN to integer.
+        In case when all column values are NaN then it throws that error.
+        GH-2061
+        """
+        table = datasets.data_one_column_nans()
+        self.send_signal("Data", table)
+
+        simulate.combobox_activate_item(self.widget.cb_attr_color, "b")
+        simulate.combobox_activate_item(self.widget.cb_attr_x, "a")
+        simulate.combobox_activate_item(self.widget.cb_attr_y, "a")
+
+        self.widget.update_graph()

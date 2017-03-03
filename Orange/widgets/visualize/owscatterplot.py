@@ -1,6 +1,6 @@
 import numpy as np
 
-from AnyQt.QtCore import QSize, Qt, QTimer
+from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtGui import (
     QPen, QFont, QFontInfo, QPalette, QKeySequence,
 )
@@ -162,7 +162,7 @@ class OWScatterPlot(OWWidget):
         box = gui.vBox(self.controlArea, "Axis Data")
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=dmod.PRIMITIVE)
-        gui.comboBox(
+        self.cb_attr_x = gui.comboBox(
             box, self, "attr_x", label="Axis x:", callback=self.update_attr,
             model=self.xy_model, **common_options)
         self.cb_attr_y = gui.comboBox(
@@ -409,7 +409,7 @@ class OWScatterPlot(OWWidget):
         self.graph.new_data(self.data_metas_X, self.subset_data)
         if self.attribute_selection_list and \
                 all(attr in self.graph.domain
-                    for attr in self.attribute_selection_list):
+                        for attr in self.attribute_selection_list):
             self.attr_x = self.attribute_selection_list[0]
             self.attr_y = self.attribute_selection_list[1]
         self.attribute_selection_list = None
