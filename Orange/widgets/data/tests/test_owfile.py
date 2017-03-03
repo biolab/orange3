@@ -130,7 +130,8 @@ class TestOWFile(WidgetTest):
 
     def test_check_column_noname(self):
         """
-        GH-2018
+        Column name cannot be changed to an empty string or a string with whitespaces.
+        GH-2039
         """
         self.open_dataset("iris")
         idx = self.widget.domain_editor.model().createIndex(1, 0)

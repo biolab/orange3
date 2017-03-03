@@ -140,9 +140,15 @@ class VarTypeDelegate(ComboDelegate):
         combo.clear()
         no_numeric = not self.view.model().variables[
             index.row()][Column.not_valid]
-        ind = self.items.index(index.data())
-        combo.addItems(self.items[:1] + self.items[1 + no_numeric:])
-        combo.setCurrentIndex(ind - (no_numeric and ind > 1))
+        if no_numeric:
+            # Do not allow selection of numeric and datetime
+            items = [i for i in self.items if i not in ("numeric", "datetime")]
+        else:
+            items = self.items
+
+        ind = items.index(index.data())
+        combo.addItems(items)
+        combo.setCurrentIndex(ind)
 
 
 class PlaceDelegate(ComboDelegate):
