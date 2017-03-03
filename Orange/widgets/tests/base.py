@@ -1,11 +1,14 @@
 import os
 import time
+from contextlib import contextmanager
 import unittest
 from unittest.mock import Mock
 
 import sip
 
 import numpy as np
+from AnyQt.QtCore import Qt
+from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
@@ -216,6 +219,24 @@ class WidgetTest(GuiTest):
         if widget is None:
             widget = self.widget
         return self.signal_manager.outputs.get((widget, output_name), None)
+
+    @contextmanager
+    def modifiers(self, modifiers):
+        """
+        Context that simulates pressed modifiers
+
+        Since QTest.keypress requries pressing some key, we simulate
+        pressing "BassBoost" that looks exotic enough to not meddle with
+        anything.
+        """
+        old_modifiers = QApplication.keyboardModifiers()
+        try:
+            QTest.keyPress(self.widget, Qt.Key_BassBoost, modifiers)
+            yield
+        finally:
+            QTest.keyRelease(self.widget, Qt.Key_BassBoost, old_modifiers)
+
+
 
 
 class BaseParameterMapping:
