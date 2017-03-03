@@ -1,3 +1,4 @@
+import sys
 import itertools
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
@@ -8,7 +9,8 @@ from scipy.stats import linregress
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
     QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter)
-from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture
+from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
+    QGraphicsTextItem, QGraphicsRectItem
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
@@ -356,12 +358,17 @@ class InteractiveViewBox(ViewBox):
             pos = ev.pos()
             if ev.button() == Qt.LeftButton:
                 self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
+                scene = self.scene()
+                dragtip = scene.drag_tooltip
                 if ev.isFinish():
+                    dragtip.hide()
                     self.rbScaleBox.hide()
                     pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
                     value_rect = self.childGroup.mapRectFromParent(pixel_rect)
                     self.graph.select_by_rectangle(value_rect)
                 else:
+                    dragtip.setPos(10, self.height() + 3)
+                    dragtip.show()  # although possibly already shown
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             ev.ignore()
@@ -492,6 +499,19 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.getPlotItem().buttonsHidden = True
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.sizeHint = lambda: QSize(500, 500)
+        scene = self.plot_widget.scene()
+
+        text = QGraphicsTextItem(
+            "Shift: add group, Shift-{0}: append to group, "
+            "Alt: remove, {0}: switch".
+            format("Cmd" if sys.platform == "darwin" else "Ctrl"))
+        text.setPos(4, 2)
+        r = text.boundingRect()
+        rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
+        rect.setBrush(QColor(192, 192, 192, 128))
+        rect.setPen(QPen(Qt.NoPen))
+        scene.drag_tooltip = scene.createItemGroup([rect, text])
+        scene.drag_tooltip.hide()
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
