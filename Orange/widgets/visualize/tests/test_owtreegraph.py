@@ -60,7 +60,7 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
 
         # Make sure the tree are deterministic for iris
         scene_nodes = []
-        for i in range(n_tries):
+        for _ in range(n_tries):
             self.send_signal(self.signal_name, self.signal_data)
             scene_nodes.append([n.pos() for n in self.widget.scene.nodes()])
         for node_row in zip(*scene_nodes):
@@ -73,7 +73,7 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         # Make sure trees are deterministic with data where some variables have
         # the same entropy
         scene_nodes = []
-        for i in range(n_tries):
+        for _ in range(n_tries):
             self.send_signal(self.signal_name, self.data_same_entropy)
             scene_nodes.append([n.pos() for n in self.widget.scene.nodes()])
         for node_row in zip(*scene_nodes):

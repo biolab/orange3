@@ -301,7 +301,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
         # Make sure the tree are deterministic for iris
         scene_nodes = []
-        for i in range(n_tries):
+        for _ in range(n_tries):
             self.send_signal(self.signal_name, self.signal_data)
             scene_nodes.append([n.pos() for n in self.get_visible_squares()])
         for node_row in zip(*scene_nodes):
@@ -317,7 +317,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             path.dirname(__file__), "../../tests/datasets/same_entropy.tab"))
         data_same_entropy = TreeLearner()(data_same_entropy)
         scene_nodes = []
-        for i in range(n_tries):
+        for _ in range(n_tries):
             self.send_signal(self.signal_name, data_same_entropy)
             scene_nodes.append([n.pos() for n in self.get_visible_squares()])
         for node_row in zip(*scene_nodes):

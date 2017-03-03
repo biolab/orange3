@@ -4,7 +4,7 @@ from AnyQt.QtGui import (
     QBrush, QPen, QColor, QPainter, QPainterPath, QTransform
 )
 from AnyQt.QtWidgets import (
-    QGraphicsItem, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem,
+    QGraphicsItem, QGraphicsEllipseItem, QGraphicsTextItem,
     QGraphicsLineItem, QGraphicsScene, QGraphicsView, QStyle, QSizePolicy,
     QFormLayout
 )
@@ -287,7 +287,7 @@ class TreeGraphicsScene(QGraphicsScene):
 
         if node.branches and node.isOpen:
             for n in node.branches:
-                x, ry = self._fix_pos(n, x, y + self._VSPACING + brect(node).height())
+                x, _ = self._fix_pos(n, x, y + self._VSPACING + brect(node).height())
             x = (node.branches[0].pos().x() + node.branches[-1].pos().x()) / 2
             node.setPos(x, y)
             for e in node.graph_edges():
@@ -435,7 +435,7 @@ class OWTreeViewer2D(OWWidget):
 
         if self.model:
             self.reportSection("Tree")
-            urlfn, filefn = self.getUniqueImageName(ext=".svg")
+            _, filefn = self.getUniqueImageName(ext=".svg")
             svg = QSvgGenerator()
             svg.setFileName(filefn)
             ssize = self.scene.sceneRect().size()
