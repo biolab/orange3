@@ -44,4 +44,5 @@ def create_annotated_table(data, selected_indices):
     table = Table(domain, data.X, data.Y,
                   metas=np.hstack((data.metas, annotated)))
     table.attributes = data.attributes
+    table.ids = data.ids
     return table
