@@ -27,7 +27,8 @@ class RandomForestClassifier(SklModel, RandomForestModel):
             t.supports_multiclass = self.supports_multiclass
             t.name = "{} - tree {}".format(self.name, i)
             t.original_domain = self.original_domain
-            t.instances = self.instances
+            if hasattr(self, 'instances'):
+                t.instances = self.instances
             return t
 
         return [wrap(tree, i)
