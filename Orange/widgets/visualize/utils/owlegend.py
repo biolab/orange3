@@ -496,6 +496,7 @@ class Legend(Anchorable):
         self.setFlags(QGraphicsWidget.ItemIsMovable |
                       QGraphicsItem.ItemIgnoresTransformations)
 
+        self._setup_layout()
         if domain is not None:
             self.set_domain(domain)
         elif items is not None:
@@ -560,6 +561,10 @@ class Legend(Anchorable):
         else:
             return QColor(obj)
 
+    def setVisible(self, is_visible):
+        """Only display the legend if it contains any items."""
+        return super().setVisible(is_visible and len(self._layout) > 0)
+
     def paint(self, painter, options, widget=None):
         painter.save()
         pen = QPen(QColor(196, 197, 193, 200), 1)
@@ -591,7 +596,6 @@ class OWDiscreteLegend(Legend):
         self.set_items(zip(class_var.values, class_var.colors.tolist()))
 
     def set_items(self, values):
-        self._setup_layout()
         for class_name, color in values:
             legend_item = LegendItem(
                 color=self._convert_to_color(color),
@@ -651,7 +655,6 @@ class OWContinuousLegend(Legend):
         if self.orientation == Qt.Vertical and vals[0] < vals[len(vals) - 1]:
             colors, vals = list(reversed(colors)), list(reversed(vals))
 
-        self._setup_layout()
         self._layout.addItem(ContinuousLegendItem(
             palette=colors,
             values=vals,

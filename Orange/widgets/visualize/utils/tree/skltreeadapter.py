@@ -28,10 +28,8 @@ class SklTreeAdapter(BaseTreeAdapter):
     FEATURE_UNDEFINED = -2
 
     def __init__(self, model):
-        self.model = model
+        super().__init__(model)
         self._tree = model.skl_model.tree_
-        self._domain = model.domain
-
         self._all_leaves = None
 
     @memoize_method(maxsize=1024)
@@ -51,8 +49,8 @@ class SklTreeAdapter(BaseTreeAdapter):
         return self.ROOT_PARENT
 
     def has_children(self, node):
-        return self._tree.children_left[node] != self.NO_CHILD \
-               or self._tree.children_right[node] != self.NO_CHILD
+        return (self._tree.children_left[node] != self.NO_CHILD or
+                self._tree.children_right[node] != self.NO_CHILD)
 
     def children(self, node):
         if self.has_children(node):
@@ -71,7 +69,7 @@ class SklTreeAdapter(BaseTreeAdapter):
         # detect this because you can't have classification trees when there's
         # only one class
         if value.shape[1] == 1:
-            var = np.var(self.get_instances_in_nodes(self.model.instances, node).Y)
+            var = np.var(self.get_instances_in_nodes(node).Y)
             variances = np.array([(var * np.ones(value.shape[0]))]).T
             value = np.hstack((value, variances))
         return value
@@ -90,10 +88,6 @@ class SklTreeAdapter(BaseTreeAdapter):
     @property
     def root(self):
         return 0
-
-    @property
-    def domain(self):
-        return self._domain
 
     @memoize_method(maxsize=1024)
     def rules(self, node):
@@ -195,7 +189,7 @@ class SklTreeAdapter(BaseTreeAdapter):
 
             return left, right + 1
 
-    def get_samples_in_leaves(self, data):
+    def get_samples_in_leaves(self):
         """Get an array of instance indices that belong to each leaf.
 
         For a given dataset X, separate the instances out into an array, so
@@ -231,7 +225,7 @@ class SklTreeAdapter(BaseTreeAdapter):
                 feature_idx = self._tree.feature[node_id]
                 thresh = self._tree.threshold[node_id]
 
-                column = data[indices, feature_idx]
+                column = self.instances.X[indices, feature_idx]
                 leftmask = column <= thresh
                 leftind = assign(self._tree.children_left[node_id],
                                  indices[leftmask])
@@ -247,14 +241,14 @@ class SklTreeAdapter(BaseTreeAdapter):
         if self._all_leaves is not None:
             return self._all_leaves
 
-        n, _ = data.shape
+        n, _ = self.instances.X.shape
 
         items = np.arange(n, dtype=int)
         leaf_indices = assign(0, items)
         self._all_leaves = leaf_indices
         return leaf_indices
 
-    def get_instances_in_nodes(self, dataset, nodes):
+    def get_instances_in_nodes(self, nodes):
         if not isinstance(nodes, (list, tuple)):
             nodes = [nodes]
 
@@ -267,14 +261,14 @@ class SklTreeAdapter(BaseTreeAdapter):
 
             indices = np.searchsorted(all_leaves, node_leaves)
             # all the leaf samples for each leaf
-            leaf_samples = self.get_samples_in_leaves(dataset.X)
+            leaf_samples = self.get_samples_in_leaves()
             # filter out the leaf samples array that are not selected
             leaf_samples = [leaf_samples[i] for i in indices]
             indices = np.hstack(leaf_samples)
         else:
             indices = []
 
-        return dataset[indices] if len(indices) else None
+        return self.instances[indices] if len(indices) else None
 
     def get_indices(self, nodes):
         if not isinstance(nodes, (list, tuple)):

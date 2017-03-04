@@ -15,15 +15,20 @@ Point : namedtuple (x, y)
     Self exaplanatory.
 
 """
+from abc import ABCMeta, abstractmethod
 from collections import namedtuple, defaultdict, deque
 from math import pi, sqrt, cos, sin, degrees
 
-from AnyQt.QtCore import Qt, QPointF, QTimer, QRectF, QSizeF
-from AnyQt.QtGui import QColor, QBrush, QPen
+import numpy as np
+from AnyQt.QtCore import Qt, QTimer, QRectF, QSizeF
+from AnyQt.QtGui import QColor, QPen
 from AnyQt.QtWidgets import (
     QSizePolicy, QGraphicsItem, QGraphicsRectItem, QGraphicsWidget, QStyle
 )
 
+from Orange.widgets.utils import to_html
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
+from Orange.widgets.visualize.utils.tree.rules import Rule
 from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 
 # z index range, increase if needed
@@ -89,32 +94,32 @@ class PythagorasTreeViewer(QGraphicsWidget):
                  **kwargs):
         super().__init__(parent)
 
-        # Instance variables
-        # The tree adapter parameter will be handled at the end of init
+        # In case a tree was passed, it will be handled at the end of init
         self.tree_adapter = None
-        # The root tree node instance which is calculated inside the class
-        self._tree = None
-        self._padding = padding
+        self.root = None
 
-        self.setSizePolicy(QSizePolicy.Expanding,
-                           QSizePolicy.Expanding)
-
-        # Necessary settings that need to be set from the outside
         self._depth_limit = depth_limit
-        # Provide a nice green default in case no color function is provided
-        self.__calc_node_color_func = kwargs.get('node_color_func')
-        self.__get_tooltip_func = kwargs.get('tooltip_func')
         self._interactive = kwargs.get('interactive', True)
+        self._padding = padding
 
         self._square_objects = {}
         self._drawn_nodes = deque()
         self._frontier = deque()
 
-        # If a tree adapter was passed, set and draw the tree
-        if adapter is not None:
-            self.set_tree(adapter)
+        self._target_class_index = 0
 
-    def set_tree(self, tree_adapter, weight_adjustment=lambda x: x):
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        # If a tree was passed in the constructor, set and draw the tree
+        if adapter is not None:
+            self.set_tree(
+                adapter,
+                target_class_index=kwargs.get('target_class_index'),
+                weight_adjustment=kwargs.get('weight_adjustment'),
+            )
+
+    def set_tree(self, tree_adapter, weight_adjustment=lambda x: x,
+                 target_class_index=0):
         """Pass in a new tree adapter instance and perform updates to canvas.
 
         Parameters
@@ -123,6 +128,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
             The new tree adapter that is to be used.
         weight_adjustment : callable
             A weight adjustment function that with signature `x -> x`
+        target_class_index : int
 
         Returns
         -------
@@ -132,10 +138,10 @@ class PythagorasTreeViewer(QGraphicsWidget):
         self.tree_adapter = tree_adapter
 
         if self.tree_adapter is not None:
-            self._tree = self._calculate_tree(
-                self.tree_adapter, weight_adjustment)
+            self.root = self._calculate_tree(self.tree_adapter, weight_adjustment)
             self.set_depth_limit(tree_adapter.max_depth)
-            self._draw_tree(self._tree)
+            self.target_class_changed(target_class_index)
+            self._draw_tree(self.root)
 
     def set_depth_limit(self, depth):
         """Update the drawing depth limit.
@@ -153,94 +159,36 @@ class PythagorasTreeViewer(QGraphicsWidget):
 
         """
         self._depth_limit = depth
-        self._draw_tree(self._tree)
+        self._draw_tree(self.root)
 
-    def set_node_color_func(self, func):
-        """Set the function that will be used to calculate the node colors.
-
-        The function must accept one parameter that represents the label of a
-        given node and return the appropriate QColor object that should be used
-        for the node.
-
-        Parameters
-        ----------
-        func : Callable
-            func :: label -> QColor
-
-        Returns
-        -------
-
-        """
-        if func != self._calc_node_color:
-            self.__calc_node_color_func = func
-            self._update_node_colors()
-
-    def _calc_node_color(self, *args):
-        """Get the node color with a nice default fallback."""
-        if self.__calc_node_color_func is not None:
-            return self.__calc_node_color_func(*args)
-        return QColor('#297A1F')
-
-    def set_tooltip_func(self, func):
-        """Set the function that will be used the get the node tooltips.
-
-        Parameters
-        ----------
-        func : Callable
-            func :: label -> str
-
-        Returns
-        -------
-
-        """
-        if func != self._get_tooltip:
-            self.__get_tooltip_func = func
-            self._update_node_tooltips()
-
-    def _get_tooltip(self, *args):
-        """Get the node tooltip with a nice default fallback."""
-        if self.__get_tooltip_func is not None:
-            return self.__get_tooltip_func(*args)
-        return 'Tooltip'
-
-    def target_class_has_changed(self):
+    def target_class_changed(self, target_class_index=0):
         """When the target class has changed, perform appropriate updates."""
-        self._update_node_colors()
-        self._update_node_tooltips()
+        self._target_class_index = target_class_index
 
-    def tooltip_has_changed(self):
-        """When the tooltip should change, perform appropriate updates."""
-        self._update_node_tooltips()
+        def _recurse(node):
+            node.target_class_index = target_class_index
+            if len(node.children) > 0:
+                for child in node.children:
+                    _recurse(child)
 
-    def _update_node_colors(self):
-        """Update all the node colors.
+        _recurse(self.root)
 
-        Should be called when the color method is changed and the nodes need to
-        be drawn with the new colors.
-
-        Returns
-        -------
-
-        """
+    def tooltip_changed(self, tooltip_enabled):
+        """Set the tooltip to the appropriate value on each square."""
         for square in self._squares():
-            square.setBrush(self._calc_node_color(self.tree_adapter,
-                                                  square.tree_node))
-
-    def _update_node_tooltips(self):
-        """Update all the tooltips for the squares."""
-        for square in self._squares():
-            square.setToolTip(self._get_tooltip(square.tree_node))
+            if tooltip_enabled:
+                square.setToolTip(square.tree_node.tooltip)
+            else:
+                square.setToolTip(None)
 
     def clear(self):
         """Clear the entire widget state."""
-        self.__calc_node_color_func = None
-        self.__get_tooltip_func = None
         self.clear_tree()
 
     def clear_tree(self):
         """Clear only the tree, keeping tooltip and color functions."""
         self.tree_adapter = None
-        self._tree = None
+        self.root = None
         self._clear_scene()
 
     def _calculate_tree(self, tree_adapter, weight_adjustment):
@@ -276,7 +224,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
         -------
 
         """
-        if self._tree is None:
+        if self.root is None:
             return
         # if this is the first time drawing the tree begin with root
         if not self._drawn_nodes:
@@ -309,20 +257,14 @@ class PythagorasTreeViewer(QGraphicsWidget):
             self._drawn_nodes.append((depth, node))
             self._frontier.extend((depth + 1, c) for c in node.children)
 
+            node.target_class_index = self._target_class_index
             if node.label in self._square_objects:
                 self._square_objects[node.label].show()
             else:
                 square_obj = InteractiveSquareGraphicsItem \
                     if self._interactive else SquareGraphicsItem
                 self._square_objects[node.label] = square_obj(
-                    node,
-                    parent=self,
-                    brush=QBrush(
-                        self._calc_node_color(self.tree_adapter, node)
-                    ),
-                    tooltip=self._get_tooltip(node),
-                    zvalue=depth,
-                )
+                    node, parent=self, zvalue=depth)
 
     def _depth_was_decreased(self):
         if not self._drawn_nodes:
@@ -349,8 +291,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
             -self._padding, -self._padding, self._padding, self._padding)
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return self.boundingRect().size() + \
-               QSizeF(self._padding, self._padding)
+        return self.boundingRect().size() + QSizeF(self._padding, self._padding)
 
 
 class SquareGraphicsItem(QGraphicsRectItem):
@@ -370,14 +311,9 @@ class SquareGraphicsItem(QGraphicsRectItem):
 
     def __init__(self, tree_node, parent=None, **kwargs):
         self.tree_node = tree_node
+        super().__init__(self._get_rect_attributes(), parent)
         self.tree_node.graphics_item = self
 
-        center, length, angle = tree_node.square
-        self._center_point = center
-        self.center = QPointF(*center)
-        self.length = length
-        self.angle = angle
-        super().__init__(self._get_rect_attributes(), parent)
         self.setTransformOriginPoint(self.boundingRect().center())
         self.setRotation(degrees(angle))
 
@@ -405,6 +341,10 @@ class SquareGraphicsItem(QGraphicsRectItem):
 
             self.setZValue(base_z + own_index * self.z_step)
 
+    def update(self):
+        self.setBrush(self.tree_node.color)
+        return super().update()
+
     def _get_rect_attributes(self):
         """Get the rectangle attributes requrired to draw item.
 
@@ -412,10 +352,10 @@ class SquareGraphicsItem(QGraphicsRectItem):
         data passed down in the constructor.
 
         """
-        height = width = self.length
-        x = self.center.x() - self.length / 2
-        y = self.center.y() - self.length / 2
-        return QRectF(x, y, height, width)
+        center, length, _ = self.tree_node.square
+        x = center[0] - length / 2
+        y = center[1] - length / 2
+        return QRectF(x, y, length, length)
 
 
 class InteractiveSquareGraphicsItem(SquareGraphicsItem):
@@ -450,8 +390,11 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
         # The max z value changes if any item is selected
         self.any_selected = False
 
-        self.setToolTip(kwargs.get('tooltip', 'Tooltip'))
         self.timer.setSingleShot(True)
+
+    def update(self):
+        self.setToolTip(self.tree_node.tooltip)
+        return super().update()
 
     def hoverEnterEvent(self, event):
         self.timer.stop()
@@ -554,7 +497,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
             super().paint(painter, option, widget)
 
 
-class TreeNode:
+class TreeNode(metaclass=ABCMeta):
     """A node in the tree structure used to represent the tree adapter
 
     Parameters
@@ -563,7 +506,7 @@ class TreeNode:
         The label of the tree node, can be looked up in the original tree.
     square : Square
         The square the represents the tree node.
-    parent : TreeNode or object
+    tree : TreeAdapter
         The parent of the current node. In the case of root, an object
         containing the root label of the tree adapter should be passed.
     children : tuple of TreeNode, optional, default is empty tuple
@@ -571,15 +514,182 @@ class TreeNode:
 
     """
 
-    def __init__(self, label, square, parent, children=()):
+    def __init__(self, label, square, tree, children=()):
         self.label = label
         self.square = square
-        self.parent = parent
+        self.tree = tree
         self.children = children
-        self.graphics_item = None
+        self.parent = None
+        # Properties that should update the associated graphics item
+        self.__graphics_item = None
+        self.__target_class_index = None
 
-    def __str__(self):
-        return '({}) -> [{}]'.format(self.parent, self.label)
+    @property
+    def graphics_item(self):
+        return self.__graphics_item
+
+    @graphics_item.setter
+    def graphics_item(self, graphics_item):
+        self.__graphics_item = graphics_item
+        self._update_graphics_item()
+
+    @property
+    def target_class_index(self):
+        return self.__target_class_index
+
+    @target_class_index.setter
+    def target_class_index(self, target_class_index):
+        self.__target_class_index = target_class_index
+        self._update_graphics_item()
+
+    def _update_graphics_item(self):
+        if self.__graphics_item is not None:
+            self.__graphics_item.update()
+
+    @classmethod
+    def from_tree(cls, label, square, tree, children=()):
+        """Construct the appropriate type of node from the given tree."""
+        if tree.domain.has_discrete_class:
+            node = DiscreteTreeNode
+        else:
+            node = ContinuousTreeNode
+        return node(label, square, tree, children)
+
+    @property
+    @abstractmethod
+    def color(self):
+        pass
+
+    @property
+    @abstractmethod
+    def tooltip(self):
+        pass
+
+    @property
+    @abstractmethod
+    def color_palette(self):
+        pass
+
+    def _rules_str(self):
+        rules = self.tree.rules(self.label)
+        if len(rules):
+            if isinstance(rules[0], Rule):
+                sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
+                return '<br>'.join(str(rule) for rule in sorted_rules) + \
+                       '<br><b>%s</b>' % rules[-1]
+            else:
+                return '<br>'.join(to_html(rule) for rule in rules)
+        else:
+            return ''
+
+
+class DiscreteTreeNode(TreeNode):
+    @property
+    def color_palette(self):
+        return [QColor(*c) for c in self.tree.domain.class_var.colors]
+
+    @property
+    def color(self):
+        distribution = self.tree.get_distribution(self.label)[0]
+        total = np.sum(distribution)
+
+        if self.target_class_index:
+            p = distribution[self.target_class_index - 1] / total
+            color = self.color_palette[self.target_class_index - 1].lighter(200 - 100 * p)
+        else:
+            modus = np.argmax(distribution)
+            p = distribution[modus] / (total or 1)
+            color = self.color_palette[int(modus)].lighter(400 - 300 * p)
+        return color
+
+    @property
+    def tooltip(self):
+        distribution = self.tree.get_distribution(self.label)[0]
+        total = int(np.sum(distribution))
+        if self.target_class_index:
+            samples = distribution[self.target_class_index - 1]
+            text = ''
+        else:
+            modus = np.argmax(distribution)
+            samples = distribution[modus]
+            text = self.tree.domain.class_vars[0].values[modus] + \
+                '<br>'
+        ratio = samples / np.sum(distribution)
+
+        rules_str = self._rules_str()
+        splitting_attr = self.tree.attribute(self.label)
+
+        return '<p>' \
+            + text \
+            + '{}/{} samples ({:2.3f}%)'.format(
+                int(samples), total, ratio * 100) \
+            + '<hr>' \
+            + ('Split by ' + splitting_attr.name
+               if not self.tree.is_leaf(self.label) else '') \
+            + ('<br><br>'
+               if rules_str and not self.tree.is_leaf(self.label)
+               else '') \
+            + rules_str \
+            + '</p>'
+
+
+class ContinuousTreeNode(TreeNode):
+    COLOR_NONE, COLOR_MEAN, COLOR_STD = range(3)
+    COLOR_METHODS = {
+        'None': COLOR_NONE,
+        'Mean': COLOR_MEAN,
+        'Standard deviation': COLOR_STD,
+    }
+
+    @property
+    def color_palette(self):
+        return ContinuousPaletteGenerator(*self.tree.domain.class_var.colors)
+
+    @property
+    def color(self):
+        if self.target_class_index is self.COLOR_MEAN:
+            return self._color_mean()
+        elif self.target_class_index is self.COLOR_STD:
+            return self._color_var()
+        else:
+            return QColor(255, 255, 255)
+
+    def _color_mean(self):
+        """Color the nodes with respect to the mean of instances inside."""
+        min_mean = np.min(self.tree.instances.Y)
+        max_mean = np.max(self.tree.instances.Y)
+        instances = self.tree.get_instances_in_nodes(self.label)
+        mean = np.mean(instances.Y)
+        return self.color_palette[(mean - min_mean) / (max_mean - min_mean)]
+
+    def _color_var(self):
+        """Color the nodes with respect to the variance of instances inside."""
+        min_std, max_std = 0, np.std(self.tree.instances.Y)
+        instances = self.tree.get_instances_in_nodes(self.label)
+        std = np.std(instances.Y)
+        return self.color_palette[(std - min_std) / (max_std - min_std)]
+
+    @property
+    def tooltip(self):
+        num_samples = self.tree.num_samples(self.label)
+
+        instances = self.tree.get_instances_in_nodes(self.label)
+        mean = np.mean(instances.Y)
+        std = np.std(instances.Y)
+
+        rules_str = self._rules_str()
+        splitting_attr = self.tree.attribute(self.label)
+
+        return '<p>Mean: {:2.3f}'.format(mean) \
+            + '<br>Standard deviation: {:2.3f}'.format(std) \
+            + '<br>{} samples'.format(num_samples) \
+            + '<hr>' \
+            + ('Split by ' + splitting_attr.name
+               if not self.tree.is_leaf(self.label) else '') \
+            + ('<br><br>' if rules_str and not self.tree.is_leaf(
+               self.label) else '') \
+            + rules_str \
+            + '</p>'
 
 
 class PythagorasTree:
@@ -637,7 +747,7 @@ class PythagorasTree:
             for child, cw in zip(tree.children(node), normalized_child_weights)
         )
         # make sure to pass a reference to parent to each child
-        obj = TreeNode(node, square, tree.parent(node), children)
+        obj = TreeNode.from_tree(node, square, tree, children)
         # mutate the existing data stored in the created tree node
         for c in children:
             c.parent = obj

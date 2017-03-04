@@ -322,8 +322,7 @@ class OWTreeGraph(OWTreeViewer2D):
             return
         nodes = [item.node_inst for item in self.scene.selectedItems()
                  if isinstance(item, TreeNode)]
-        data = self.tree_adapter.get_instances_in_nodes(
-            self.clf_dataset, nodes)
+        data = self.tree_adapter.get_instances_in_nodes(nodes)
         self.send("Selected Data", data)
         self.send(ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table(
             self.dataset,
@@ -411,10 +410,10 @@ class OWTreeGraph(OWTreeViewer2D):
                 node.backgroundBrush = brush
         elif self.regression_colors == self.COL_INSTANCE:
             max_insts = len(self.tree_adapter.get_instances_in_nodes(
-                self.dataset, [self.tree_adapter.root]))
+                [self.tree_adapter.root]))
             for node in self.scene.nodes():
                 node_insts = len(self.tree_adapter.get_instances_in_nodes(
-                    self.dataset, [node.node_inst]))
+                    [node.node_inst]))
                 node.backgroundBrush = QBrush(def_color.lighter(
                     120 - 20 * node_insts / max_insts))
         elif self.regression_colors == self.COL_MEAN:
