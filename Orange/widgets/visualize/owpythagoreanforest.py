@@ -51,6 +51,11 @@ class OWPythagoreanForest(OWWidget):
         self.clf_dataset = None
         # We need to store refernces to the trees and grid items
         self.grid_items, self.ptrees = [], []
+        # In some rare cases, we need to prevent commiting, the only one
+        # that this currently helps is that when changing the size calculation
+        # the trees are all recomputed, but we don't want to output a new tree
+        # to keep things consistent with other ui controls.
+        self.__prevent_commit = False
 
         self.color_palette = None
 
@@ -153,12 +158,13 @@ class OWPythagoreanForest(OWWidget):
     def update_size_calc(self):
         """When the size calculation of the trees is changed."""
         if self.model is not None:
-            self.grid.clear()
-            self._draw_trees()
-            # Keep the selected item
-            if self.selected_tree_index != -1:
-                self.grid_items[self.selected_tree_index].setSelected(True)
-            self.update_depth()
+            with self._prevent_commit():
+                self.grid.clear()
+                self._draw_trees()
+                # Keep the selected item
+                if self.selected_tree_index != -1:
+                    self.grid_items[self.selected_tree_index].setSelected(True)
+                self.update_depth()
 
     def zoom_changed(self):
         """When we update the "Zoom" slider."""
@@ -168,6 +174,12 @@ class OWPythagoreanForest(OWWidget):
         width = (self.view.width() - self.view.verticalScrollBar().width())
         self.grid.reflow(width)
         self.grid.setPreferredWidth(width)
+
+    @contextmanager
+    def _prevent_commit(self):
+        self.__prevent_commit = True
+        yield
+        self.__prevent_commit = False
 
     def _update_info_box(self):
         self.ui_info.setText('Trees: {}'.format(len(self.forest_adapter.get_trees())))
@@ -230,7 +242,7 @@ class OWPythagoreanForest(OWWidget):
                 self.grid_items.append(grid_item)
                 self.ptrees.append(ptree)
                 prg.advance()
-            
+
             self.grid.set_items(self.grid_items)
             # This is necessary when adding items for the first time
             if self.grid:
@@ -253,6 +265,9 @@ class OWPythagoreanForest(OWWidget):
 
     def commit(self):
         """Commit the selected tree to output."""
+        if self.__prevent_commit:
+            return
+
         if len(self.scene.selectedItems()) == 0:
             self.send('Tree', None)
             # The selected tree index should only reset when model changes
