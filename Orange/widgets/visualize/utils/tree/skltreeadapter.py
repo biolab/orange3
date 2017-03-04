@@ -63,6 +63,7 @@ class SklTreeAdapter(BaseTreeAdapter):
     def __right_child(self, node):
         return self._tree.children_right[node]
 
+    @memoize_method(maxsize=1024)
     def get_distribution(self, node):
         value = self._tree.value[node]
         # If regression tree, we have to compute variance by hand, we can
@@ -233,11 +234,6 @@ class SklTreeAdapter(BaseTreeAdapter):
                                   indices[~leftmask])
                 return list.__iadd__(leftind, rightind)
 
-        # TODO this kind of cache can lead to all sorts of problems, but numpy
-        # arrays are unhashable, and this gives huge performance boosts
-        # also this would only become a problem if the function required to
-        # handle multiple datasets, which it doesn't, it just deals with the
-        # one the classification tree was fit to.
         if self._all_leaves is not None:
             return self._all_leaves
 

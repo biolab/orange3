@@ -41,9 +41,6 @@ Point = namedtuple('Point', ['x', 'y'])
 class PythagorasTreeViewer(QGraphicsWidget):
     """Pythagoras tree viewer graphics widget.
 
-    Simply pass in a tree adapter instance and a valid scene object, and the
-    pythagoras tree will be added.
-
     Examples
     --------
     >>> from Orange.widgets.visualize.utils.tree.treeadapter import (
@@ -69,7 +66,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
         scene.
     adapter : TreeAdapter, optional
         Any valid tree adapter instance.
-    interacitive : bool, optional,
+    interacitive : bool, optional
         Specify whether the widget should have an interactive display. This
         means special hover effects, selectable boxes. Default is true.
 
@@ -201,15 +198,15 @@ class PythagorasTreeViewer(QGraphicsWidget):
     def _draw_tree(self, root):
         """Efficiently draw the tree with regards to the depth.
 
-        If using a recursive approach, the tree had to be redrawn every time
-        the depth was changed, which was very impractical for larger trees,
-        since everything got very slow, very fast.
+        If we used a recursive approach, the tree would have to be redrawn
+        every time the depth changed, which is very impractical for larger
+        trees, since drawing can take a long time.
 
-        In this approach, we use two queues to represent the tree frontier and
-        the nodes that have already been drawn. We also store the depth. This
-        way, when the max depth is increased, we do not redraw the whole tree
-        but only iterate throught the frontier and draw those nodes, and update
-        the frontier accordingly.
+        Using an iterative approach, we use two queues to represent the tree
+        frontier and the nodes that have already been drawn. We also store the
+        current depth. This way, when the max depth is increased, we do not
+        redraw the entire tree but only iterate through the frontier and draw
+        those nodes, and update the frontier accordingly.
         When decreasing the max depth, we reverse the process, we clear the
         frontier, and remove nodes from the drawn nodes, and append those with
         depth max_depth + 1 to the frontier, so the frontier doesn't get
@@ -304,8 +301,7 @@ class SquareGraphicsItem(QGraphicsRectItem):
     ----------
     tree_node : TreeNode
         The tree node the square represents.
-    brush : QColor, optional
-        The brush to be used as the backgound brush.
+    parent : QGraphicsItem
 
     """
 
@@ -315,7 +311,7 @@ class SquareGraphicsItem(QGraphicsRectItem):
         self.tree_node.graphics_item = self
 
         self.setTransformOriginPoint(self.boundingRect().center())
-        self.setRotation(degrees(angle))
+        self.setRotation(degrees(self.tree_node.square.angle))
 
         self.setBrush(kwargs.get('brush', QColor('#297A1F')))
         # The border should be invariant to scaling
@@ -369,10 +365,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
     ----------
     tree_node : TreeNode
         The tree node the square represents.
-    brush : QColor, optional
-        The brush to be used as the backgound brush.
-    pen : QPen, optional
-        The pen to be used for the border.
+    parent : QGraphicsItem
 
     """
 
@@ -498,7 +491,15 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
 
 class TreeNode(metaclass=ABCMeta):
-    """A node in the tree structure used to represent the tree adapter
+    """A tree node meant to be used in conjuction with graphics items.
+
+    The tree node contains methods that are very general to any tree
+    visualisation, containing methods for the node color and tooltip.
+
+    This is an abstract class and not meant to be used by itself. There are two
+    subclasses - `DiscreteTreeNode` and `ContinuousTreeNode`, which need no
+    explanation. If you don't wish to deal with figuring out which node to use,
+    the `from_tree` method is provided.
 
     Parameters
     ----------
@@ -507,8 +508,7 @@ class TreeNode(metaclass=ABCMeta):
     square : Square
         The square the represents the tree node.
     tree : TreeAdapter
-        The parent of the current node. In the case of root, an object
-        containing the root label of the tree adapter should be passed.
+        The tree model that the node belongs to.
     children : tuple of TreeNode, optional, default is empty tuple
         All the children that belong to this node.
 
@@ -558,12 +558,24 @@ class TreeNode(metaclass=ABCMeta):
     @property
     @abstractmethod
     def color(self):
-        pass
+        """Get the color of the node.
+
+        Returns
+        -------
+        QColor
+
+        """
 
     @property
     @abstractmethod
     def tooltip(self):
-        pass
+        """get the tooltip for the node.
+
+        Returns
+        -------
+        str
+
+        """
 
     @property
     @abstractmethod
@@ -584,6 +596,13 @@ class TreeNode(metaclass=ABCMeta):
 
 
 class DiscreteTreeNode(TreeNode):
+    """Discrete tree node containing methods for tree visualisations.
+
+    Colors are defined by the data domain, and possible colorings are different
+    target classes.
+
+    """
+
     @property
     def color_palette(self):
         return [QColor(*c) for c in self.tree.domain.class_var.colors]
@@ -634,6 +653,17 @@ class DiscreteTreeNode(TreeNode):
 
 
 class ContinuousTreeNode(TreeNode):
+    """Continuous tree node containing methods for tree visualisations.
+
+    There are three modes of coloring:
+     - None, which is a solid color
+     - Mean, which colors nodes w.r.t. the mean value of all the
+       instances that belong to a given node.
+     - Standard deviation, which colors nodes w.r.t the standard deviation of
+       all the instances that belong to a given node.
+
+    """
+
     COLOR_NONE, COLOR_MEAN, COLOR_STD = range(3)
     COLOR_METHODS = {
         'None': COLOR_NONE,
