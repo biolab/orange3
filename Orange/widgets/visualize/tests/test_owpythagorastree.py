@@ -314,7 +314,8 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         # Make sure trees are deterministic with data where some variables have
         # the same entropy
         data_same_entropy = Table(path.join(
-            path.dirname(__file__), "../../tests/datasets/same_entropy.tab"))
+            path.dirname(path.dirname(path.dirname(__file__))), "tests",
+            "datasets", "same_entropy.tab"))
         data_same_entropy = TreeLearner()(data_same_entropy)
         scene_nodes = []
         for _ in range(n_tries):

@@ -23,7 +23,8 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
 
         # Load a dataset that contains two variables with the same entropy
         data_same_entropy = Table(path.join(
-            path.dirname(__file__), "../../tests/datasets/same_entropy.tab"))
+            path.dirname(path.dirname(path.dirname(__file__))), "tests",
+            "datasets", "same_entropy.tab"))
         cls.data_same_entropy = tree(data_same_entropy)
         cls.data_same_entropy.instances = data_same_entropy
 
