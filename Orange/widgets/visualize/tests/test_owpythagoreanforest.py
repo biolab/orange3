@@ -94,33 +94,33 @@ class TestOWPythagoreanForest(WidgetTest):
 
         trees = self.get_tree_widgets()
         for tree in trees:
-            tree.target_class_has_changed = Mock()
+            tree.target_class_changed = Mock()
 
         self.set_combo_option(self.widget.ui_target_class_combo, 'No')
         for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
-            tree.target_class_has_changed.reset_mock()
+            tree.target_class_changed.assert_called()
+            tree.target_class_changed.reset_mock()
 
         self.set_combo_option(self.widget.ui_target_class_combo, 'Yes')
         for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
+            tree.target_class_changed.assert_called()
 
     def test_target_class_for_regression_rf(self):
         self.send_signal('Random forest', self.housing)
 
         trees = self.get_tree_widgets()
         for tree in trees:
-            tree.target_class_has_changed = Mock()
+            tree.target_class_changed = Mock()
 
-        self.set_combo_option(self.widget.ui_target_class_combo, 'Class mean')
+        self.set_combo_option(self.widget.ui_target_class_combo, 'Mean')
         for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
-            tree.target_class_has_changed.reset_mock()
+            tree.target_class_changed.assert_called()
+            tree.target_class_changed.reset_mock()
 
         self.set_combo_option(self.widget.ui_target_class_combo,
                               'Standard deviation')
         for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
+            tree.target_class_changed.assert_called()
 
     def test_zoom(self):
         self.send_signal('Random forest', self.titanic)

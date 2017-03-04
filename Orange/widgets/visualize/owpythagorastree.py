@@ -363,11 +363,8 @@ class OWPythagorasTree(OWWidget):
                 lst_colors = [QColor(*c) for c in [start, end]]
             return lst_colors
 
-        # Currently, the first index just draws the outline without any color
-        if self.target_class_index == 0:
-            items = None
         # The colors are the class mean
-        elif self.target_class_index == 1:
+        if self.target_class_index == 1:
             values = (np.min(self.clf_dataset.Y), np.max(self.clf_dataset.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
@@ -380,6 +377,8 @@ class OWPythagorasTree(OWWidget):
             while len(values) != len(colors):
                 values.insert(1, -1)
             items = list(zip(values, colors))
+        else:
+            items = None
 
         self.legend = OWContinuousLegend(items=items, **self.LEGEND_OPTIONS)
         self.legend.setVisible(self.show_legend)
