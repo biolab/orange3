@@ -172,7 +172,7 @@ class simulate:
     Utility functions for simulating user interactions with Qt widgets.
     """
     @staticmethod
-    def combobox_run_through_all(cbox, delay=-1):
+    def combobox_run_through_all(cbox, delay=-1, callback=None):
         """
         Run through all items in a given combo box, simulating the user
         focusing the combo box and pressing the Down arrow key activating
@@ -187,6 +187,9 @@ class simulate:
         delay : int
             Run the event loop after the simulated key press (-1, the default,
             means no delay)
+        callback : callable
+            A callback that will be executed after every item change. Takes no
+            parameters.
 
         See Also
         --------
@@ -198,6 +201,8 @@ class simulate:
         for i in range(cbox.count()):
             with excepthook_catch() as exlist:
                 QTest.keyClick(cbox, Qt.Key_Down, delay=delay)
+                if callback:
+                    callback()
             if exlist:
                 raise exlist[0][1] from exlist[0][1]
 
