@@ -145,7 +145,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             return True
         return all(first == curr for curr in iter_items)
 
-    def test_changing_color_changes_node_coloring(self):
+    def test_changing_target_class_changes_node_coloring(self):
         """Changing the `Target class` combo box should update colors."""
         def _test(data_type):
             squares = []
