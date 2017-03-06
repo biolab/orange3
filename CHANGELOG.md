@@ -425,7 +425,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.12...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.0...HEAD
+[3.4.0]: https://github.com/biolab/orange3/compare/3.3.12...3.4.0
 [3.3.12]: https://github.com/biolab/orange3/compare/3.3.11...3.3.12
 [3.3.11]: https://github.com/biolab/orange3/compare/3.3.10...3.3.11
 [3.3.10]: https://github.com/biolab/orange3/compare/3.3.9...3.3.10
