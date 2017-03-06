@@ -6,6 +6,46 @@ Change Log
 * ...
 
 
+[3.4] - 2017-03-06
+--------------------
+##### Enhancements
+* OWSGD: Output coefficients ([#1981](../../pull/1981))
+* OWNomogram: Add a new widget ([#1936](../../pull/1936))
+* OWRandomize: Add a new widget ([#1863](../../pull/1863))
+* Map widget ([#1735](../../pull/1735))
+* Table.transpose: Use heuristic to guess data type of attributes of attributes ([#1844](../../pull/1844))
+* Create Class widget ([#1766](../../pull/1766))
+
+##### Bugfixes
+* Heatmap: Fix crash on data with empty columns ([#2057](../../pull/2057))
+* ScatterPlot: Fix crash when coloring by column of unknowns ([#2061](../../pull/2061))
+* owpreprocess: Handle columns with only NaN values ([#2064](../../pull/2064))
+* File: Disallow changing string columns to datetime ([#2050](../../pull/2050))
+* OWKMeans: Auto-commit fix and silhuette optimization ([#2073](../../pull/2073))
+* OWDistributions: Fix binning of meta attributes ([#2068](../../pull/2068))
+* SelectRows: Fix loading of conditions ([#2065](../../pull/2065))
+* OWRandomize: New icon ([#2069](../../pull/2069))
+* ZeroDivisionError owmosaic.py ([#2046](../../pull/2046))
+* OWMosaic:  Fix crash for empty column ([#2006](../../pull/2006))
+* Fitter: Fix infinite recursion in __getattr__ ([#1977](../../pull/1977))
+* OWTreeGraph: Update node text when selecting target class ([#2045](../../pull/2045))
+* Prevent PickleError (owfile.py) ([#2039](../../pull/2039))
+* Fix Chi2 computation for variables with values with no instances ([#2031](../../pull/2031))
+* OWDistanceMatrix: Remove quotes with string labels ([#2034](../../pull/2034))
+* owheatmap: Prevent sliders to set Low >= High ([#2025](../../pull/2025))
+* WebviewWidget: WebEngine Don't Grab Focus on setHtml ([#1983](../../pull/1983))
+* OWFile: Show error msg when file doesn't exists ([#2024](../../pull/2024))
+* Preprocess Widget: Continuize type error ([#1978](../../pull/1978))
+* data/io.py Metadata file not saved anymore when it is empty ([#2002](../../pull/2002))
+* Import from AnyQt instead from PyQt4 ([#2004](../../pull/2004))
+* OWNomogram: Adjust scene rect ([#1982](../../pull/1982))
+* owconcatenate: Fix domain intersection (remove duplicates) ([#1967](../../pull/1967))
+* preprocess: Reset number_of_decimals after scaling ([#1914](../../pull/1914))
+* Treeviewer sklearn tree compatibility ([#1870](../../pull/1870))
+* OWSVR: Update learner when SVR type changes ([#1878](../../pull/1878))
+* Tree widget binarization ([#1837](../../pull/1837))
+
+
 [3.3.12] - 2017-02-14
 --------------------
 ##### Bugfixes
