@@ -846,11 +846,8 @@ class OWPaintData(OWWidget):
         gui.separator(namesBox)
 
         gui.widgetLabel(namesBox, "Labels")
-        self.classValuesView = listView = QListView(
-            selectionMode=QListView.SingleSelection,
-            sizePolicy=QSizePolicy(QSizePolicy.Ignored,
-                                   QSizePolicy.Maximum)
-        )
+        self.classValuesView = listView = gui.ListViewWithSizeHint(
+            preferred_size=(-1, 30))
         listView.setModel(self.class_model)
         itemmodels.select_row(listView, 0)
         namesBox.layout().addWidget(listView)
@@ -940,7 +937,6 @@ class OWPaintData(OWWidget):
             tBox, self, "Reset to Input Data", self.reset_to_input)
         self.btResetToInput.setDisabled(True)
 
-        gui.rubber(self.controlArea)
         gui.auto_commit(self.left_side, self, "autocommit",
                         "Send")
 
@@ -1287,7 +1283,7 @@ class OWPaintData(OWWidget):
 
     def sizeHint(self):
         sh = super().sizeHint()
-        return sh.expandedTo(QSize(900, 650))
+        return sh.expandedTo(QSize(570, 690))
 
     def onDeleteWidget(self):
         self.plot.clear()
