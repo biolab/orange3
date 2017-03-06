@@ -19,8 +19,10 @@ from AnyQt.QtGui import (
     QTransform, QIcon, QBrush,
     QStandardItemModel, QStandardItem,
 )
-from AnyQt.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import (
+    Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent,
+    pyqtSignal as Signal,
+)
 import pyqtgraph as pg
 
 from Orange.data import Domain, Table, DiscreteVariable, StringVariable
@@ -32,7 +34,6 @@ from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.io import FileFormat
 
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
@@ -57,7 +58,7 @@ def split_domain(domain, split_label):
         domains.append((value, group_domain))
 
     if domains:
-        assert(all(len(dom) == len(domains[0][1]) for _, dom in domains))
+        assert all(len(dom) == len(domains[0][1]) for _, dom in domains)
 
     return sorted(domains, key=lambda t: attr_values.index(t[0]))
 
@@ -334,7 +335,7 @@ ColumnPart = namedtuple(
      "domain",   #: list of Variable
      "cluster",  #: hierarchical.Tree option
      "cluster_ordered",  #: hierarchical.Tree option
-     ]
+    ]
 )
 
 
@@ -368,7 +369,7 @@ Parts = namedtuple(
     ["rows",     #: A list of RowPart descriptors
      "columns",  #: A list of ColumnPart descriptors
      "span",     #: (min, max) global data range
-     ]
+    ]
 )
 
 Parts.levels = property(lambda self: self.span)
@@ -556,7 +557,12 @@ class OWHeatMap(widget.OWWidget):
                      callback=self.__aspect_mode_changed)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection", "Send Automatically")
+        gui.auto_commit(self.controlArea,
+                        self,
+                        "auto_commit",
+                        "Send Selection",
+                        "Send Automatically"
+                       )
 
         # Scene with heatmap
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)
@@ -702,7 +708,6 @@ class OWHeatMap(widget.OWWidget):
             self.openContext(self.data)
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
-
         self.update_heatmaps()
 
     def update_heatmaps(self):
@@ -827,7 +832,7 @@ class OWHeatMap(widget.OWWidget):
 
         col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
                       for col in parts.columns]
-        return parts._replace(columns=col_groups,  rows=parts.rows)
+        return parts._replace(columns=col_groups, rows=parts.rows)
 
     def construct_heatmaps(self, data, split_label=None):
         if split_label is not None:
@@ -854,6 +859,7 @@ class OWHeatMap(widget.OWWidget):
                 )
                 nclust = min(self.merge_kmeans_k, len(effective_data) - 1)
                 self.kmeans_model = kmeans_compress(effective_data, k=nclust)
+                effective_data.domain = self.kmeans_model.pre_domain
                 self.merge_indices = [np.flatnonzero(self.kmeans_model.labels_ == ind)
                                       for ind in range(nclust)]
                 effective_data = Orange.data.Table(
@@ -974,7 +980,7 @@ class OWHeatMap(widget.OWWidget):
                     QSizePolicy.Expanding, QSizePolicy.Ignored)
                 dendrogram.itemClicked.connect(
                     lambda item, partindex=i:
-                        self.__select_by_cluster(item, partindex)
+                    self.__select_by_cluster(item, partindex)
                 )
 
                 grid.addItem(dendrogram, Row0 + i * 2 + 1, DendrogramColumn)
@@ -1731,8 +1737,8 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
         """Return the cell row, column from `pos` in local coordinates.
         """
         if self.__pixmap.isNull() or not (
-                    self.heatmap_item.geometry().contains(pos) or
-                    self.averages_item.geometry().contains(pos)):
+                self.heatmap_item.geometry().contains(pos) or
+                self.averages_item.geometry().contains(pos)):
             return (-1, -1)
 
         if self.heatmap_item.geometry().contains(pos):
