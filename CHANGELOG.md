@@ -6,7 +6,7 @@ Change Log
 * ...
 
 
-[3.4] - 2017-03-06
+[3.4.0] - 2017-03-06
 --------------------
 ##### Enhancements
 * OWSGD: Output coefficients ([#1981](../../pull/1981))
