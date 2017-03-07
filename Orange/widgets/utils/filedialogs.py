@@ -5,7 +5,7 @@ from AnyQt.QtGui import QBrush
 from AnyQt.QtWidgets import \
     QMessageBox, QFileDialog, QFileIconProvider, QComboBox
 
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import ContextSetting
 
 
 def fix_extension(ext, format, suggested_ext, suggested_format):
@@ -249,7 +249,7 @@ class RecentPathsWidgetMixin:
     SEARCH_PATHS = []
 
     #: List[RecentPath]
-    recent_paths = Setting([])
+    recent_paths = ContextSetting([])
 
     _init_called = False
 
