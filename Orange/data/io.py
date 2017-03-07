@@ -17,6 +17,8 @@ from os import path, unlink
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
 from urllib.request import urlopen, Request
+from fnmatch import fnmatch
+from glob import glob
 
 import bottleneck as bn
 import numpy as np
@@ -362,7 +364,7 @@ class FileFormat(metaclass=FileFormatMeta):
             # Skip ambiguous, invalid compression-only extensions added on OSX
             if ext in Compression.all:
                 continue
-            if filename.endswith(ext):
+            if fnmatch(path.basename(filename), '*' + ext):
                 return reader(filename)
 
         raise IOError('No readers for file "{}"'.format(filename))
@@ -421,10 +423,12 @@ class FileFormat(metaclass=FileFormatMeta):
             if path.exists(absolute_filename):
                 break
             for ext in cls.readers:
-                if filename.endswith(ext):
+                if fnmatch(path.basename(filename), '*' + ext):
                     break
-                if path.exists(absolute_filename + ext):
-                    absolute_filename += ext
+                # glob uses fnmatch internally
+                matching_files = glob(absolute_filename + ext)
+                if matching_files:
+                    absolute_filename = matching_files[0]
                     break
             if path.exists(absolute_filename):
                 break
