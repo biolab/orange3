@@ -545,12 +545,14 @@ class Table(MutableSequence, Storage):
         writer.write_file(filename, self)
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, sheet=None):
         """
         Read a data table from a file. The path can be absolute or relative.
 
         :param filename: File name
         :type filename: str
+        :param sheet: Sheet in a file (optional)
+        :type sheet: str
         :return: a new data table
         :rtype: Orange.data.Table
         """
@@ -558,6 +560,7 @@ class Table(MutableSequence, Storage):
 
         absolute_filename = FileFormat.locate(filename, dataset_dirs)
         reader = FileFormat.get_reader(absolute_filename)
+        reader.select_sheet(sheet)
         data = reader.read()
 
         # Readers return plain table. Make sure to cast it to appropriate

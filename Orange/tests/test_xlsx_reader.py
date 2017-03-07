@@ -6,7 +6,7 @@ import os
 
 import numpy as np
 
-from Orange.data import io, ContinuousVariable, DiscreteVariable
+from Orange.data import io, ContinuousVariable, DiscreteVariable, Table
 
 
 def get_dataset(name):
@@ -45,6 +45,11 @@ class TextExcelSheets(unittest.TestCase):
     def test_named_sheet(self):
         self.reader.select_sheet("my_sheet")
         table = self.reader.read()
+        self.assertEqual(len(table.domain.attributes), 4)
+        self.assertEqual(table.name, 'header_0_sheet-my_sheet')
+
+    def test_named_sheet_table(self):
+        table = Table(get_dataset("header_0_sheet.xlsx"), sheet="my_sheet")
         self.assertEqual(len(table.domain.attributes), 4)
         self.assertEqual(table.name, 'header_0_sheet-my_sheet')
 
