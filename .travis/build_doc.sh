@@ -8,11 +8,13 @@ cd "$TRAVIS_BUILD_DIR"
 # Ensure new images have indexed palettes
 images="$(git diff --name-only origin/master..HEAD |
           grep -E '\bdoc/' | grep -iE '\.(png|jpg)$' || true )"
-echo -e "Checking if images are indexed:\n$images"
+echo "Checking if images are indexed:"
 while read image; do
     [ "$image" ] || break;
-    if identify -verbose "$image" | grep -q '^ *Type: TrueColor'; then
-        echo "Error: image '$image' is true color" >&2
+    imtype=$(identify -verbose "$image" | awk '/^ *Type: /{ print $2 }')
+    echo "$image  $imtype"
+    if ! echo "$imtype" | grep -Eq '(Palette|Grayscale)'; then
+        echo "Error: image '$image' is not indexed or grayscale" >&2
         not_ok=1
     fi
 done < <(echo "$images")
