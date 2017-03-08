@@ -398,7 +398,7 @@ class OWTestLearners(OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self.commit()
+        self._invalidate()
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
