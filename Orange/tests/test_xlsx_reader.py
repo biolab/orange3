@@ -49,7 +49,8 @@ class TextExcelSheets(unittest.TestCase):
         self.assertEqual(table.name, 'header_0_sheet-my_sheet')
 
     def test_named_sheet_table(self):
-        table = Table(get_dataset("header_0_sheet.xlsx"), sheet="my_sheet")
+        table = Table.from_file(get_dataset("header_0_sheet.xlsx"),
+                                sheet="my_sheet")
         self.assertEqual(len(table.domain.attributes), 4)
         self.assertEqual(table.name, 'header_0_sheet-my_sheet')
 

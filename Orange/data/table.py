@@ -195,7 +195,7 @@ class Table(MutableSequence, Storage):
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
             else:
-                return cls.from_file(args[0], **kwargs)
+                return cls.from_file(args[0])
         elif isinstance(args[0], Table):
             return cls.from_table(args[0].domain, args[0])
         elif isinstance(args[0], Domain):
