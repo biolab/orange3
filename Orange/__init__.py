@@ -33,7 +33,12 @@ except ImportError:
     pass
 else:
     if AnyQt.USED_API == "pyqt5":
+        # Make the chosen PyQt version pinned
+        from AnyQt.QtCore import QObject
+        del QObject
+
         import pyqtgraph  # import pyqtgraph first so that it can detect Qt5
         del pyqtgraph
+
         AnyQt.importhooks.install_backport_hook('pyqt4')
     del AnyQt
