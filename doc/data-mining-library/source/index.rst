@@ -40,5 +40,6 @@ Available classes and methods.
    reference/clustering
    reference/distance
    reference/evaluation
+   reference/projection
    reference/misc
 
