@@ -362,27 +362,27 @@ class WidgetLearnerTestMixin:
     widget = None  # type: OWBaseLearner
 
     def init(self):
-        self.iris = iris = Table("iris")
-        self.housing = housing = Table("housing")
+        cls_ds = Table(datasets.path("testing_dataset_cls"))
+        reg_ds = Table(datasets.path("testing_dataset_reg"))
 
         if issubclass(self.widget.LEARNER, Fitter):
-            self.data = iris
-            self.valid_datasets = (iris, housing)
+            self.data = cls_ds
+            self.valid_datasets = (cls_ds, reg_ds)
             self.inadequate_dataset = ()
             self.learner_class = Fitter
             self.model_class = Model
             self.model_name = 'Model'
         elif issubclass(self.widget.LEARNER, LearnerClassification):
-            self.data = iris
-            self.valid_datasets = (iris,)
-            self.inadequate_dataset = (housing,)
+            self.data = cls_ds
+            self.valid_datasets = (cls_ds,)
+            self.inadequate_dataset = (reg_ds,)
             self.learner_class = LearnerClassification
             self.model_class = ModelClassification
             self.model_name = 'Classifier'
         else:
-            self.data = housing
-            self.valid_datasets = (housing,)
-            self.inadequate_dataset = (iris,)
+            self.data = reg_ds
+            self.valid_datasets = (reg_ds,)
+            self.inadequate_dataset = (cls_ds,)
             self.learner_class = LearnerRegression
             self.model_class = ModelRegression
             self.model_name = 'Predictor'
