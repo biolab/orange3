@@ -516,7 +516,7 @@ class OWSelectRows(widget.OWWidget):
                 attr_flags = sum([Remove.RemoveConstant * purge_attrs,
                                   Remove.RemoveUnusedValues * purge_attrs])
                 class_flags = sum([Remove.RemoveConstant * purge_classes,
-                                  Remove.RemoveUnusedValues * purge_classes])
+                                   Remove.RemoveUnusedValues * purge_classes])
                 # same settings used for attributes and meta features
                 remover = Remove(attr_flags, class_flags, attr_flags)
 
@@ -540,7 +540,9 @@ class OWSelectRows(widget.OWWidget):
         else:
             lab1.setText(label + "~%s row%s, %s variable%s" %
                          (sp(data.approx_len()) +
-            sp(len(data.domain.variables) + len(data.domain.metas))))
+                          sp(len(data.domain.variables) +
+                             len(data.domain.metas)))
+                        )
 
     def send_report(self):
         if not self.data:
