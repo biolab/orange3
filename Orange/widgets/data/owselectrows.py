@@ -5,8 +5,8 @@ from itertools import chain
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
-    QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy
-)
+    QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
+    QLabel)
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
@@ -293,7 +293,7 @@ class OWSelectRows(widget.OWWidget):
                             names.append(item.text())
                     child.desc_text = ', '.join(names)
                     child.set_text()
-            elif child is None:
+            elif isinstance(child, QLabel) or child is None:
                 pass
             else:
                 raise TypeError('Type %s not supported.' % type(child))
@@ -344,8 +344,10 @@ class OWSelectRows(widget.OWWidget):
             lc = self._get_lineedit_contents(box) + lc
         oper = oper_combo.currentIndex()
 
-        if oper == oper_combo.count() - 1:
-            self.cond_list.removeCellWidget(oper_combo.row, 2)
+        if oper_combo.currentText() == "is defined":
+            label = QLabel()
+            label.var_type = vartype(var)
+            self.cond_list.setCellWidget(oper_combo.row, 2, label)
         elif var.is_discrete:
             if oper_combo.currentText() == "is one of":
                 if selected_values:
