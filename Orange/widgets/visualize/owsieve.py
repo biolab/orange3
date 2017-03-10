@@ -1,4 +1,5 @@
 import math
+from itertools import chain
 
 import numpy as np
 from scipy.stats.distributions import chi2
@@ -167,13 +168,13 @@ class OWSieveDiagram(OWWidget):
             self.domain_model.set_domain(None)
         else:
             self.domain_model.set_domain(data.domain)
-            if any(attr.is_continuous for attr in data.domain):
+            if any(attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
                 discretizer = Discretize(
-                    method=EqualFreq(n=4),remove_const=False,
+                    method=EqualFreq(n=4), remove_const=False,
                     discretize_classes=True, discretize_metas=True)
                 self.discrete_data = discretizer(data)
             else:
-                self.discrete_data = self.data
+                self.discrete_data = data
         self.attrs = [x for x in self.domain_model if isinstance(x, Variable)]
         if self.attrs:
             self.attr_x = self.attrs[0]

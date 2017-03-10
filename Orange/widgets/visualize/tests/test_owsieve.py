@@ -1,15 +1,17 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from math import isnan
+from unittest.mock import patch
 import numpy as np
 
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
 
-from Orange.data import DiscreteVariable, Domain, Table
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
 from Orange.widgets.visualize.owsieve import ChiSqStats
+from Orange.widgets.visualize.owsieve import Discretize
 
 
 class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -59,3 +61,28 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         table = Table(Domain([a, b]), list(zip("yynny", "ynyyn")))
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
+
+    def test_metadata(self):
+        """
+        Widget should intepret meta data which are continuous or discrete in the same way
+        as features or target. However still one variable should be target or feature.
+        gh-2098
+        """
+        table = Table(
+            Domain(
+                [],
+                [],
+                [ContinuousVariable("a"),
+                 DiscreteVariable("b", values=["y", "n"])]
+            ),
+            list(zip(
+                [42.48, 16.84, 15.23, 23.8],
+                "yynn"))
+        )
+        with patch("Orange.widgets.visualize.owsieve.Discretize",
+                   wraps=Discretize) as disc:
+            self.send_signal("Data", table)
+            self.assertTrue(disc.called)
+        metas = self.widget.discrete_data.domain.metas
+        self.assertEqual(len(metas), 2)
+        self.assertTrue(all(attr.is_discrete for attr in metas))
