@@ -3,6 +3,7 @@ from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
 import numpy as np
+from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
@@ -15,6 +16,7 @@ import pyqtgraph.graphicsItems.ScatterPlotItem
 from pyqtgraph.graphicsItems.LegendItem import LegendItem, ItemSample
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
+from pyqtgraph.graphicsItems.InfiniteLine import InfiniteLine
 from pyqtgraph.Point import Point
 
 
@@ -474,6 +476,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_legend = Setting(True)
     tooltip_shows_all = Setting(False)
     class_density = Setting(False)
+    show_reg_line = Setting(False)
     resolution = 256
 
     CurveSymbols = np.array("o x t + d s ?".split())
@@ -495,6 +498,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.density_img = None
         self.scatterplot_item = None
         self.scatterplot_item_sel = None
+        self.reg_line_item = None
 
         self.labels = []
 
@@ -551,6 +555,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.density_img = None
         self.scatterplot_item = None
         self.scatterplot_item_sel = None
+        self.reg_line_item = None
         self.labels = []
         self.selection = None
         self.valid_data = None
@@ -570,6 +575,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item_sel:
             self.plot_widget.removeItem(self.scatterplot_item_sel)
             self.scatterplot_item_sel = None
+        if self.reg_line_item:
+            self.plot_widget.removeItem(self.reg_line_item)
+            self.reg_line_item = None
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
@@ -653,9 +661,28 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
 
+        self.draw_regression_line(x_data, y_data, min_x, max_x)
         self.update_labels()
         self.make_legend()
         self.plot_widget.replot()
+
+    def draw_regression_line(self, x_data, y_data, min_x, max_x):
+        if self.show_reg_line and self.can_draw_regresssion_line():
+            slope, intercept, _, _, _ = linregress(x_data, y_data)
+            start_y = min_x * slope + intercept
+            end_y = max_x * slope + intercept
+            angle = np.degrees(np.arctan((end_y - start_y) / (max_x - min_x)))
+            rotate = ((angle + 45) % 180) - 45 > 90
+            color = QColor("#505050")
+            l_opts = dict(color=color, position=abs(int(rotate) - 0.85),
+                          rotateAxis=(1, 0), movable=True)
+            self.reg_line_item = InfiniteLine(
+                pos=QPointF(min_x, start_y), pen=pg.mkPen(color=color, width=1),
+                angle=angle, label="r = {:.2f}".format(slope), labelOpts=l_opts)
+            if rotate:
+                self.reg_line_item.label.angle = 180
+                self.reg_line_item.label.updateTransform()
+            self.plot_widget.addItem(self.reg_line_item)
 
     def can_draw_density(self):
         return self.domain is not None and \
@@ -666,6 +693,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def should_draw_density(self):
         return self.class_density and self.n_points > 1 and self.can_draw_density()
+
+    def can_draw_regresssion_line(self):
+        return self.domain is not None and \
+               self.shown_x.is_continuous and \
+               self.shown_y.is_continuous
 
     def set_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
