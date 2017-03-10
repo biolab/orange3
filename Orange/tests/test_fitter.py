@@ -2,10 +2,10 @@ import unittest
 from unittest.mock import Mock, patch
 
 from Orange.classification.base_classification import LearnerClassification
-from Orange.data import Table
+from Orange.data import Table, ContinuousVariable
 from Orange.evaluation import CrossValidation
 from Orange.modelling import Fitter
-from Orange.preprocess import Randomize
+from Orange.preprocess import Randomize, Discretize
 from Orange.regression.base_regression import LearnerRegression
 
 
@@ -130,3 +130,25 @@ class FitterTest(unittest.TestCase):
     def test_n_jobs_fitting(self):
         with patch('Orange.evaluation.testing.CrossValidation._MIN_NJOBS_X_SIZE', 1):
             CrossValidation(self.heart_disease, [DummyFitter()], k=5, n_jobs=5)
+
+    def test_properly_delegates_preprocessing(self):
+        class DummyClassificationLearner(LearnerClassification):
+            preprocessors = [Discretize()]
+
+            def __init__(self, classification_param=1, **_):
+                super().__init__()
+                self.param = classification_param
+
+        class DummyFitter(Fitter):
+            __fits__ = {'classification': DummyClassificationLearner,
+                        'regression': DummyRegressionLearner}
+
+        data = self.heart_disease
+        fitter = DummyFitter()
+        # Sanity check
+        self.assertTrue(any(
+            isinstance(v, ContinuousVariable) for v in data.domain.variables))
+        # Preprocess the data and check that the discretization was applied
+        pp_data = fitter.preprocess(self.heart_disease)
+        self.assertTrue(not any(
+            isinstance(v, ContinuousVariable) for v in pp_data.domain.variables))

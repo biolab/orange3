@@ -55,6 +55,12 @@ class Fitter(Learner, metaclass=FitterMeta):
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
             return learner.fit(X, Y, W)
 
+    def preprocess(self, data):
+        if data.domain.has_discrete_class:
+            return self.get_learner(self.CLASSIFICATION).preprocess(data)
+        else:
+            return self.get_learner(self.REGRESSION).preprocess(data)
+
     def get_learner(self, problem_type):
         """Get the learner for a given problem type.
 
