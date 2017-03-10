@@ -195,7 +195,7 @@ class Table(MutableSequence, Storage):
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
             else:
-                return cls.from_file(args[0], **kwargs)
+                return cls.from_file(args[0])
         elif isinstance(args[0], Table):
             return cls.from_table(args[0].domain, args[0])
         elif isinstance(args[0], Domain):
@@ -545,12 +545,14 @@ class Table(MutableSequence, Storage):
         writer.write_file(filename, self)
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, sheet=None):
         """
         Read a data table from a file. The path can be absolute or relative.
 
         :param filename: File name
         :type filename: str
+        :param sheet: Sheet in a file (optional)
+        :type sheet: str
         :return: a new data table
         :rtype: Orange.data.Table
         """
@@ -558,6 +560,7 @@ class Table(MutableSequence, Storage):
 
         absolute_filename = FileFormat.locate(filename, dataset_dirs)
         reader = FileFormat.get_reader(absolute_filename)
+        reader.select_sheet(sheet)
         data = reader.read()
 
         # Readers return plain table. Make sure to cast it to appropriate
