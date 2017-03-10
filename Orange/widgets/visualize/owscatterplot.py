@@ -281,6 +281,14 @@ class OWScatterPlot(OWWidget):
         )
         self.addActions([zoom_in, zoom_out, zoom_fit])
 
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
+    def keyReleaseEvent(self, event):
+        super().keyReleaseEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
     #     for curve in self.graph.selectionCurveList:

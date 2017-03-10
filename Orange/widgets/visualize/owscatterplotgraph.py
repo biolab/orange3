@@ -500,18 +500,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.sizeHint = lambda: QSize(500, 500)
         scene = self.plot_widget.scene()
+        self._create_drag_tooltip(scene)
 
-        text = QGraphicsTextItem(
-            "Shift: add group, Shift-{0}: append to group, "
-            "Alt: remove, {0}: switch".
-            format("Cmd" if sys.platform == "darwin" else "Ctrl"))
-        text.setPos(4, 2)
-        r = text.boundingRect()
-        rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
-        rect.setBrush(QColor(192, 192, 192, 128))
-        rect.setPen(QPen(Qt.NoPen))
-        scene.drag_tooltip = scene.createItemGroup([rect, text])
-        scene.drag_tooltip.hide()
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
@@ -567,6 +557,39 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self._tooltip_delegate = HelpEventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
+
+    def _create_drag_tooltip(self, scene):
+        tip_parts = [
+            (Qt.ShiftModifier, "Shift: Add group"),
+            (Qt.ShiftModifier + Qt.ControlModifier,
+             "Shift-{}: Append to group".
+             format("Cmd" if sys.platform == "darwin" else "Ctrl")),
+            (Qt.AltModifier, "Alt: Remove")
+        ]
+        all_parts = ", ".join(part for _, part in tip_parts)
+        self.tiptexts = {
+            int(modifier): all_parts.replace(part, "<b>{}</b>".format(part))
+            for modifier, part in tip_parts
+        }
+        self.tiptexts[0] = all_parts
+
+        self.tip_textitem = text = QGraphicsTextItem()
+        # Set to the longest text
+        text.setHtml(self.tiptexts[Qt.ShiftModifier + Qt.ControlModifier])
+        text.setPos(4, 2)
+        r = text.boundingRect()
+        rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
+        rect.setBrush(QColor(224, 224, 224, 212))
+        rect.setPen(QPen(Qt.NoPen))
+        self.update_tooltip(Qt.NoModifier)
+
+        scene.drag_tooltip = scene.createItemGroup([rect, text])
+        scene.drag_tooltip.hide()
+
+    def update_tooltip(self, modifiers):
+        modifiers &= Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier
+        text = self.tiptexts.get(int(modifiers), self.tiptexts[0])
+        self.tip_textitem.setHtml(text)
 
     def new_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
@@ -1065,25 +1088,23 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # noinspection PyArgumentList
         if self.data is None:
             return
-        keys = QApplication.keyboardModifiers()
-        if self.selection is None or not keys & (
-                Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
+        if self.selection is None:
             self.selection = np.zeros(len(self.data), dtype=np.uint8)
         indices = [p.data() for p in points]
+        keys = QApplication.keyboardModifiers()
+        # Remove from selection
         if keys & Qt.AltModifier:
             self.selection[indices] = 0
-        elif keys & Qt.ControlModifier and keys & Qt.ShiftModifier:
+        # Append to the last group
+        elif keys & Qt.ShiftModifier and keys & Qt.ControlModifier:
             self.selection[indices] = np.max(self.selection)
-        elif keys & Qt.ControlModifier:
-            elements = self.selection[indices]
-            indices = np.array(indices, dtype=int)
-            to_unselect = indices[np.flatnonzero(elements)]
-            to_select = indices[np.flatnonzero(elements == 0)]
-            self.selection[to_unselect] = 0
-            if len(to_select):
-                self.selection[to_select] = np.max(self.selection) + 1
-        else:  # Handle shift and no modifiers
+        # Create a new group
+        elif keys & Qt.ShiftModifier:
             self.selection[indices] = np.max(self.selection) + 1
+        # No modifiers: new selection
+        else:
+            self.selection = np.zeros(len(self.data), dtype=np.uint8)
+            self.selection[indices] = 1
         self.update_colors(keep_colors=True)
         if self.label_only_selected:
             self.update_labels()
