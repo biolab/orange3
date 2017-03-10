@@ -1057,7 +1057,8 @@ class ListViewWithSizeHint(QListView):
         self.preferred_size = preferred_size
 
     def sizeHint(self):
-        return self.preferred_size or super().sizeHint()
+        return self.preferred_size if self.preferred_size is not None \
+            else super().sizeHint()
 
 
 def listView(widget, master, value=None, model=None, box=None, callback=None,
