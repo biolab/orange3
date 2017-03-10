@@ -12,7 +12,7 @@ from AnyQt.QtGui import (
     QPalette
 )
 from AnyQt.QtWidgets import (
-    QListView, QSizePolicy, QAction, QUndoCommand, QUndoStack, QGridLayout,
+    QSizePolicy, QAction, QUndoCommand, QUndoStack, QGridLayout,
     QFormLayout, QToolButton, QActionGroup
 )
 
