@@ -146,15 +146,15 @@ class OWMergeData(widget.OWWidget):
         model[:] = list(chain([INDEX], data.domain, data.domain.metas))
 
     def _add_instanceid_to_models(self):
+        needs_id = self.data is not None and self.extra_data is not None and \
+                        len(np.intersect1d(self.data.ids, self.extra_data.ids))
         for model in (self.model_unique_with_id,
                       self.extra_model_unique_with_id):
-            if INSTANCEID in model:
-                model.remove(INSTANCEID)
-        if self.data is not None and self.extra_data is not None and \
-                len(np.intersect1d(self.data.ids, self.extra_data.ids)):
-            for model in (self.model_unique_with_id,
-                          self.extra_model_unique_with_id):
+            has_id = model and model[0] == INSTANCEID
+            if needs_id and not has_id:
                 model.insert(0, INSTANCEID)
+            elif not needs_id and has_id:
+                del model[0]
 
     def _init_combo_current_items(self, variables, models):
         for var, model in zip(variables, models):
@@ -163,30 +163,33 @@ class OWMergeData(widget.OWWidget):
                 setattr(self, var, value if value in model else INDEX)
 
     def _find_best_match(self):
+        def get_unique_str_metas_names(model_):
+            return [m for m in model_ if isinstance(m, StringVariable)]
+
+        def best_match(model, extra_model):
+            attr, extra_attr, n_max_intersect = INDEX, INDEX, 0
+            str_metas = get_unique_str_metas_names(model)
+            extra_str_metas = get_unique_str_metas_names(extra_model)
+            for m_a, m_b in product(str_metas, extra_str_metas):
+                n_inter = len(np.intersect1d(self.data[:, m_a].metas,
+                                             self.extra_data[:, m_b].metas))
+                if n_inter > n_max_intersect:
+                    n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
+            return attr, extra_attr
+
+        def set_attrs(attr_name, attr_extra_name, attr, extra_attr):
+            if getattr(self, attr_name) == INDEX and \
+                    getattr(self, attr_extra_name) == INDEX:
+                setattr(self, attr_name, attr)
+                setattr(self, attr_extra_name, extra_attr)
+
         if self.data and self.extra_data:
-
-            def get_unique_str_metas_names(model_):
-                return [m for m in model_ if isinstance(m, StringVariable)]
-
-            models = ((("augment",), self.model, self.extra_model_unique),
-                      (("merge", "combine"), self.model_unique_with_id,
-                       self.extra_model_unique_with_id))
-            for types, model, extra_model in models:
-                attr, extra_attr, n_max_intersect = INDEX, INDEX, 0
-                str_metas = get_unique_str_metas_names(model)
-                extra_str_metas = get_unique_str_metas_names(extra_model)
-                for m_a, m_b in product(str_metas, extra_str_metas):
-                    n_inter = len(np.intersect1d(self.data[:, m_a].metas,
-                                                 self.extra_data[:, m_b].metas))
-                    if n_inter > n_max_intersect:
-                        n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
-
-                for t in types:
-                    if getattr(self, "attr_{}_data".format(t)) != INDEX or \
-                            getattr(self, "attr_{}_extra".format(t)) != INDEX:
-                        break
-                    setattr(self, "attr_{}_data".format(t), attr)
-                    setattr(self, "attr_{}_extra".format(t), extra_attr)
+            attrs = best_match(self.model, self.extra_model_unique)
+            set_attrs("attr_augment_data", "attr_augment_extra", *attrs)
+            attrs = best_match(self.model_unique_with_id,
+                               self.extra_model_unique_with_id)
+            set_attrs("attr_merge_data", "attr_merge_extra", *attrs)
+            set_attrs("attr_combine_data", "attr_combine_extra", *attrs)
 
     @check_sql_input
     def setData(self, data):
