@@ -1,5 +1,5 @@
 from enum import IntEnum
-from itertools import chain, product
+from itertools import chain, product, tee
 
 from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 
@@ -120,13 +120,7 @@ class OWMergeData(widget.OWWidget):
             model[:] = []
             return
         m = [INDEX]
-        for attr in data.domain:
-            col = data.get_column_view(attr)[0]
-            col = col[~np.isnan(col)]
-            if len(np.unique(col)) == len(col):
-                m.append(attr)
-        # TODO: sparse data...
-        for attr in data.domain.metas:
+        for attr in chain(data.domain.variables, data.domain.metas):
             col = data.get_column_view(attr)[0]
             if attr.is_primitive():
                 col = col.astype(float)
@@ -149,11 +143,11 @@ class OWMergeData(widget.OWWidget):
             len(np.intersect1d(self.data.ids, self.extra_data.ids))
         for model in (self.model_unique_with_id,
                       self.extra_model_unique_with_id):
-            has_id = model and model[0] == INSTANCEID
+            has_id = INSTANCEID in model
             if needs_id and not has_id:
                 model.insert(0, INSTANCEID)
             elif not needs_id and has_id:
-                del model[0]
+                model.remove(INSTANCEID)
 
     def _init_combo_current_items(self, variables, models):
         for var, model in zip(variables, models):
@@ -260,37 +254,51 @@ class OWMergeData(widget.OWWidget):
         operation = ["augment", "merge", "combine"][self.merging]
         var_data = getattr(self, "attr_{}_data".format(operation))
         var_extra_data = getattr(self, "attr_{}_extra".format(operation))
+        merge_method = getattr(self, "_{}_indices".format(operation))
 
-        method = getattr(self, "_{}_indices".format(operation))
-        merge_indices = method(var_data, var_extra_data)
-        reduced_extra = self._compute_reduced_extra(var_extra_data)
-        return self.join_table_by_indices(reduced_extra, merge_indices)
+        extra_map = self._get_keymap(self.extra_data, var_extra_data)
+        match_indices = merge_method(var_data, extra_map)
+        reduced_extra_data = self._compute_reduced_extra_data(var_extra_data)
+        return self._join_table_by_indices(reduced_extra_data, match_indices)
 
-    def _compute_reduced_extra(self, var_extra_data):
+    def _compute_reduced_extra_data(self, var_extra_data):
+        """Prepare a table with extra columns that will appear in the merged
+        table"""
         domain = self.data.domain
         extra_domain = self.extra_data.domain
         all_vars = set(chain(domain.variables, domain.metas))
         if self.merging != MergeType.OUTER_JOIN:
             all_vars.add(var_extra_data)
-        iter_extra_vars = chain(
-            enumerate(extra_domain.variables),
-            ((-i, m) for i, m in enumerate(extra_domain.metas, start=1)))
-        return self.extra_data[:, [i for i, var in iter_extra_vars
+        extra_vars = chain(extra_domain.variables, extra_domain.metas)
+        return self.extra_data[:, [var for var in extra_vars
                                    if var not in all_vars]]
 
     @staticmethod
-    def get_keymap(data, var):
-        if var == INSTANCEID:
-            return {inst.id: i for i, inst in enumerate(data)}
-        elif var == INDEX:
-            return {i: i for i in range(len(data))}
-        elif var != INDEX:
-            return {str(inst[var]): i for i, inst in enumerate(data)}
+    def _get_keymap(data, var):
+        """Return a generator of pairs (match values in a table, index).
+        This is like reversed pairs from enumeration of values.
 
-    def _augment_indices(self, var_data, var_extra_data):
+        All joins construct a map for extra data, and outer join constructs
+        one for primary and uses it to lookup for non-matched rows.
+
+        The generator is used to fill a dict for left and inner join, while
+        outer join also traverses it to insert non-matched extra rows in the
+        original order.
+        """
+        if var == INSTANCEID:
+            return ((inst.id, i) for i, inst in enumerate(data))
+        elif var == INDEX:
+            return ((i, i) for i in range(len(data)))
+        else:
+            return ((str(inst[var]), i) for i, inst in enumerate(data))
+
+    def _augment_indices(self, var_data, extra_map):
+        """Compute a two-row array of indices:
+        - the first row contains indices for the primary table,
+        - the second row contains the matching rows in the extra table or -1"""
         data = self.data
         n = len(self.data)
-        extra_map = self.get_keymap(self.extra_data, var_extra_data)
+        extra_map = dict(extra_map)
         if var_data == INSTANCEID:
             keys = (extra_map.get(inst.id, -1) for inst in data)
         elif var_data == INDEX:
@@ -300,42 +308,44 @@ class OWMergeData(widget.OWWidget):
         return np.vstack((np.arange(n, dtype=np.int64),
                           np.fromiter(keys, dtype=np.int64, count=n)))
 
-    def _merge_indices(self, var_data, var_extra_data):
-        augmented = self._augment_indices(var_data, var_extra_data)
+    def _merge_indices(self, var_data, extra_map):
+        """Use _augment_indices to compute the array of indices,
+        then remove those with no match in the second table"""
+        augmented = self._augment_indices(var_data, extra_map)
         return augmented[:, augmented[1] != -1]
 
-    def _combine_indices(self, var_data, var_extra_data):
-        extra_data = self.extra_data
-        if var_extra_data == INSTANCEID:
-            to_add = (inst.id for inst in extra_data)
-        elif var_extra_data == INDEX:
-            to_add = range(len(extra_data))
-        else:
-            to_add = (str(inst[var_extra_data]) for inst in extra_data)
-        key_map = self.get_keymap(self.data, var_data)
-        keys = np.fromiter((j for j, key in enumerate(to_add)
-                            if key not in key_map), dtype=np.int64)
+    def _combine_indices(self, var_data, extra_map):
+        """Use _augment_indices to compute the array of indices,
+        then add rows in the second table without a match in the first"""
+        to_add, extra_map = tee(extra_map)
+        # dict instead of set because we have pairs; we'll need only keys
+        key_map = dict(self._get_keymap(self.data, var_data))
+        keys = np.fromiter((j for key, j in to_add if key not in key_map),
+                           dtype=np.int64)
         right_indices = np.vstack((np.full(len(keys), -1, np.int64), keys))
         return np.hstack(
-            (self._augment_indices(var_data, var_extra_data), right_indices))
+            (self._augment_indices(var_data, extra_map), right_indices))
 
-    def join_table_by_indices(self, reduced_extra, indices):
+    def _join_table_by_indices(self, reduced_extra, indices):
+        """Join (horizontally) self.data and reduced_extra, taking the pairs
+        of rows given in indices"""
         if not len(indices):
             return None
         domain = Orange.data.Domain(
             *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
               for x in ("attributes", "class_vars", "metas")))
-        X = self.join_array_by_indices(
-            self.data.X, reduced_extra.X, indices)
-        Y = self.join_array_by_indices(
+        X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
+        Y = self._join_array_by_indices(
             np.c_[self.data.Y], np.c_[reduced_extra.Y], indices)
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
-        metas = self.join_array_by_indices(
+        metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, indices, string_cols)
         return Orange.data.Table.from_numpy(domain, X, Y, metas)
 
     @staticmethod
-    def join_array_by_indices(left, right, indices, string_cols=None):
+    def _join_array_by_indices(left, right, indices, string_cols=None):
+        """Join (horizontally) two arrays, taking pairs of rows given in indices
+        """
         tpe = object if object in (left.dtype, right.dtype) else left.dtype
         left_width, right_width = left.shape[1], right.shape[1]
         arr = np.full((indices.shape[1], left_width + right_width), np.nan, tpe)
