@@ -266,6 +266,19 @@ class SettingHandlerTestCase(unittest.TestCase):
         settings = handler.pack_data(widget)
         self.assertIn(VERSION_KEY, settings)
 
+    def test_initialize_copies_mutables(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+        handler.defaults = dict(list_setting=[])
+
+        widget = SimpleWidget()
+        handler.initialize(widget)
+
+        widget2 = SimpleWidget()
+        handler.initialize(widget2)
+
+        self.assertNotEqual(id(widget.list_setting), id(widget2.list_setting))
+
     @contextmanager
     def override_default_settings(self, widget, defaults=None):
         if defaults is None:
@@ -292,6 +305,7 @@ class SimpleWidget:
 
     setting = Setting(42)
     schema_only_setting = Setting(None, schema_only=True)
+    list_setting = Setting([])
     non_setting = 5
 
     component = SettingProvider(Component)
