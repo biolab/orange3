@@ -168,6 +168,15 @@ Elliptic Envelope
    :members:
 
 
+.. index:: neural network
+   pair: classification; neural network
+
+Neural Network
+--------------
+.. autoclass:: NNClassificationLearner
+   :members:
+
+
 .. index:: Rule induction
    pair: classification; rules
 
