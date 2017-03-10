@@ -1,6 +1,4 @@
 from enum import IntEnum
-import math
-from collections import defaultdict
 from itertools import chain, product
 
 from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
@@ -13,17 +11,17 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 
-INSTANCEID = "Source position (index)"
-INDEX = "Position (index)"
-
 
 class MergeType(IntEnum):
     LEFT_JOIN, INNER_JOIN, OUTER_JOIN = 0, 1, 2
 
+INSTANCEID = "Source position (index)"
+INDEX = "Position (index)"
+
 
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
-    description = "Merge data sets based on the values of selected data features."
+    description = "Merge data sets based on the values of selected features."
     icon = "icons/MergeData.svg"
     priority = 1110
 
@@ -105,11 +103,12 @@ class OWMergeData(widget.OWWidget):
         self.set_merging()
 
     def set_merging(self):
+        # pylint: disable=invalid-sequence-index
         # all boxes should be hidden before one is shown, otherwise widget's
         # layout changes height
         for box in self.attr_boxes:
             box.hide()
-        self.attr_boxes[int(self.merging)].show()
+        self.attr_boxes[self.merging].show()
 
     def change_merging(self):
         self.set_merging()
@@ -147,7 +146,7 @@ class OWMergeData(widget.OWWidget):
 
     def _add_instanceid_to_models(self):
         needs_id = self.data is not None and self.extra_data is not None and \
-                        len(np.intersect1d(self.data.ids, self.extra_data.ids))
+            len(np.intersect1d(self.data.ids, self.extra_data.ids))
         for model in (self.model_unique_with_id,
                       self.extra_model_unique_with_id):
             has_id = model and model[0] == INSTANCEID
@@ -228,23 +227,15 @@ class OWMergeData(widget.OWWidget):
 
     def commit(self):
         self.Warning.duplicate_names.clear()
-        merged_data = None
-        if self.data is not None and self.extra_data is not None:
-            if self.merging == MergeType.LEFT_JOIN:
-                var_data = self.attr_augment_data
-                var_extra_data = self.attr_augment_extra
-            elif self.merging == MergeType.INNER_JOIN:
-                var_data = self.attr_merge_data
-                var_extra_data = self.attr_merge_extra
-            else:
-                var_data = self.attr_combine_data
-                var_extra_data = self.attr_combine_extra
-            merged_data = merge(self.data, var_data, self.extra_data,
-                                var_extra_data, self.merging)
+        if self.data is None or self.extra_data is None:
+            merged_data = None
+        else:
+            merged_data = self.merge()
             if merged_data:
-                var_names = [var.name for var in merged_data.domain.variables +
-                             merged_data.domain.metas]
-                if len(np.unique(var_names)) != len(var_names):
+                merged_domain = merged_data.domain
+                var_names = [var.name for var in chain(merged_domain.variables,
+                                                       merged_domain.metas)]
+                if len(set(var_names)) != len(var_names):
                     self.Warning.duplicate_names()
         self.send("Data", merged_data)
 
@@ -252,6 +243,7 @@ class OWMergeData(widget.OWWidget):
         self.commit()
 
     def send_report(self):
+        # pylint: disable=invalid-sequence-index
         attr = (self.attr_augment_data, self.attr_merge_data,
                 self.attr_combine_data)
         extra_attr = (self.attr_augment_extra, self.attr_merge_extra,
@@ -259,126 +251,102 @@ class OWMergeData(widget.OWWidget):
         merging_types = ("Append columns from Extra Data", "Find matching rows",
                          "Concatenate tables, merge rows")
         self.report_items((
-            ("Merging", merging_types[int(self.merging)]),
-            ("Data attribute", attr[int(self.merging)]),
-            ("Extra data attribute", extra_attr[int(self.merging)])))
+            ("Merging", merging_types[self.merging]),
+            ("Data attribute", attr[self.merging]),
+            ("Extra data attribute", extra_attr[self.merging])))
 
+    def merge(self):
+        # pylint: disable=invalid-sequence-index
+        operation = ["augment", "merge", "combine"][self.merging]
+        var_data = getattr(self, "attr_{}_data".format(operation))
+        var_extra_data = getattr(self, "attr_{}_extra".format(operation))
 
-def merge(A, varA, B, varB, merge_type):
-    indices = join_indices(A, B, varA, varB, merge_type)
-    seen_set = set()
+        method = getattr(self, "_{}_indices".format(operation))
+        merge_indices = method(var_data, var_extra_data)
+        reduced_extra = self._compute_reduced_extra(var_extra_data)
+        return self.join_table_by_indices(reduced_extra, merge_indices)
 
-    def seen(val):
-        return (val in seen_set or bool(seen_set.add(val))) and val is not None
+    def _compute_reduced_extra(self, var_extra_data):
+        domain = self.data.domain
+        extra_domain = self.extra_data.domain
+        all_vars = set(chain(domain.variables, domain.metas))
+        if self.merging != MergeType.OUTER_JOIN:
+            all_vars.add(var_extra_data)
+        iter_extra_vars = chain(
+            enumerate(extra_domain.variables),
+            ((-i, m) for i, m in enumerate(extra_domain.metas, start=1)))
+        return self.extra_data[:, [i for i, var in iter_extra_vars
+                                   if var not in all_vars]]
 
-    merge_indices = [(i, j) for i, j in indices if not seen(i)]
+    @staticmethod
+    def get_keymap(data, var):
+        if var == INSTANCEID:
+            return {inst.id: i for i, inst in enumerate(data)}
+        elif var == INDEX:
+            return {i: i for i in range(len(data))}
+        elif var != INDEX:
+            return {str(inst[var]): i for i, inst in enumerate(data)}
 
-    all_vars = set(A.domain.variables + A.domain.metas)
-    if merge_type != MergeType.OUTER_JOIN:
-        all_vars.add(varB)
-
-    iter_vars_B = chain(
-        enumerate(B.domain.variables),
-        ((-i, m) for i, m in enumerate(B.domain.metas, start=1)))
-    reduced_B = B[:, [i for i, var in iter_vars_B if var not in all_vars]]
-
-    return join_table_by_indices(A, reduced_B, merge_indices)
-
-
-def group_table_indices(table, key_var, exclude_unknown=False):
-    """
-    Group table indices based on values of selected columns (`key_vars`).
-
-    Return a dictionary mapping all unique value combinations (keys)
-    into a list of indices in the table where they are present.
-
-    :param Orange.data.Table table:
-    :param Orange.data.FeatureDescriptor] key_var:
-    :param bool exclude_unknown:
-
-    """
-    groups = defaultdict(list)
-    for i, inst in enumerate(table):
-        key = inst.id if key_var == INSTANCEID else i if \
-            key_var == INDEX else inst[key_var]
-        if exclude_unknown and math.isnan(key):
-            continue
-        groups[str(key)].append(i)
-    return groups
-
-
-def join_indices(table1, table2, var1, var2, join_type):
-    key_map1 = group_table_indices(table1, var1, True)
-    key_map2 = group_table_indices(table2, var2, True)
-    indices = []
-
-    def get_key(var):
-        return str(inst.id if var == INSTANCEID
-                   else i if var == INDEX else inst[var])
-
-    for i, inst in enumerate(table1):
-        key = get_key(var1)
-        if key in key_map1 and key in key_map2:
-            for j in key_map2[key]:
-                indices.append((i, j))
-        elif join_type != MergeType.INNER_JOIN:
-            indices.append((i, None))
-
-    if join_type != MergeType.OUTER_JOIN:
-        return indices
-
-    for i, inst in enumerate(table2):
-        key = get_key(var2)
-        if not (key in key_map1 and key in key_map2):
-            indices.append((None, i))
-    return indices
-
-
-def join_table_by_indices(left, right, indices):
-    if not indices:
-        return None
-    domain = Orange.data.Domain(
-        left.domain.attributes + right.domain.attributes,
-        left.domain.class_vars + right.domain.class_vars,
-        left.domain.metas + right.domain.metas
-    )
-    X = join_array_by_indices(left.X, right.X, indices)
-    Y = join_array_by_indices(np.c_[left.Y], np.c_[right.Y], indices)
-    metas = join_array_by_indices(left.metas, right.metas, indices)
-    for col, var in enumerate(domain.metas):
-        if var.is_string:
-            for row in range(metas.shape[0]):
-                cell = metas[row, col]
-                if isinstance(cell, float) and np.isnan(cell):
-                    metas[row, col] = ""
-
-    return Orange.data.Table.from_numpy(domain, X, Y, metas)
-
-
-def join_array_by_indices(left, right, indices, masked=float("nan")):
-    left_masked = [masked] * left.shape[1]
-    right_masked = [masked] * right.shape[1]
-
-    leftparts = []
-    rightparts = []
-    for i, j in indices:
-        if i is not None:
-            leftparts.append(left[i])
+    def _augment_indices(self, var_data, var_extra_data):
+        data = self.data
+        n = len(self.data)
+        extra_map = self.get_keymap(self.extra_data, var_extra_data)
+        if var_data == INSTANCEID:
+            keys = (extra_map.get(inst.id, -1) for inst in data)
+        elif var_data == INDEX:
+            keys = (extra_map.get(i, -1) for i in range(n))
         else:
-            leftparts.append(left_masked)
-        if j is not None:
-            rightparts.append(right[j])
+            keys = (extra_map.get(str(inst[var_data]), -1) for inst in data)
+        return np.vstack((np.arange(n, dtype=np.int64),
+                          np.fromiter(keys, dtype=np.int64, count=n)))
+
+    def _merge_indices(self, var_data, var_extra_data):
+        augmented = self._augment_indices(var_data, var_extra_data)
+        return augmented[:, augmented[1] != -1]
+
+    def _combine_indices(self, var_data, var_extra_data):
+        extra_data = self.extra_data
+        if var_extra_data == INSTANCEID:
+            to_add = (inst.id for inst in extra_data)
+        elif var_extra_data == INDEX:
+            to_add = range(len(extra_data))
         else:
-            rightparts.append(right_masked)
+            to_add = (str(inst[var_extra_data]) for inst in extra_data)
+        key_map = self.get_keymap(self.data, var_data)
+        keys = np.fromiter((j for j, key in enumerate(to_add)
+                            if key not in key_map), dtype=np.int64)
+        right_indices = np.vstack((np.full(len(keys), -1, np.int64), keys))
+        return np.hstack(
+            (self._augment_indices(var_data, var_extra_data), right_indices))
 
-    def hstack_blocks(blocks):
-        return np.hstack(list(map(np.vstack, blocks)))
+    def join_table_by_indices(self, reduced_extra, indices):
+        if not len(indices):
+            return None
+        domain = Orange.data.Domain(
+            *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
+              for x in ("attributes", "class_vars", "metas")))
+        X = self.join_array_by_indices(
+            self.data.X, reduced_extra.X, indices)
+        Y = self.join_array_by_indices(
+            np.c_[self.data.Y], np.c_[reduced_extra.Y], indices)
+        string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
+        metas = self.join_array_by_indices(
+            self.data.metas, reduced_extra.metas, indices, string_cols)
+        return Orange.data.Table.from_numpy(domain, X, Y, metas)
 
-    if left.shape[1] and left.dtype == object:
-        leftparts = np.array(leftparts).astype(object)
-    if right.shape[1] and right.dtype == object:
-        rightparts = np.array(rightparts).astype(object)
-    return hstack_blocks((leftparts, rightparts))
+    @staticmethod
+    def join_array_by_indices(left, right, indices, string_cols=None):
+        tpe = object if object in (left.dtype, right.dtype) else left.dtype
+        left_width, right_width = left.shape[1], right.shape[1]
+        arr = np.full((indices.shape[1], left_width + right_width), np.nan, tpe)
+        if string_cols:
+            arr[:, string_cols] = ""
+        for indices, to_change, lookup in (
+                (indices[0], arr[:, :left_width], left),
+                (indices[1], arr[:, left_width:], right)):
+            known = indices != -1
+            to_change[known] = lookup[indices[known]]
+        return arr
 
 
 def test():
