@@ -9,9 +9,8 @@ from Orange.data import Table, Storage, Instance, Value
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
-                               RemoveNaNColumns, SklImpute)
+                               RemoveNaNColumns, SklImpute, Normalize)
 from Orange.util import Reprable, patch
-
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
@@ -394,3 +393,20 @@ class KNNBase:
                         self.params.get("metric") == "mahalanobis":
             self.params["metric_params"] = {"V": np.cov(X.T)}
         return super().fit(X, Y, W)
+
+
+class NNBase:
+    """Base class for neural network (classification and regression) learners
+    """
+    preprocessors = SklLearner.preprocessors + [Normalize()]
+
+    def __init__(self, hidden_layer_sizes=(100,), activation='relu',
+                 solver='adam', alpha=0.0001, batch_size='auto',
+                 learning_rate='constant', learning_rate_init=0.001,
+                 power_t=0.5, max_iter=200, shuffle=True, random_state=None,
+                 tol=0.0001, verbose=False, warm_start=False, momentum=0.9,
+                 nesterovs_momentum=True, early_stopping=False,
+                 validation_fraction=0.1, beta_1=0.9, beta_2=0.999,
+                 epsilon=1e-08, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
