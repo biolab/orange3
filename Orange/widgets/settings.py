@@ -142,13 +142,14 @@ class SettingProvider:
         self._initialize_providers(instance, data)
 
     def _initialize_settings(self, instance, data):
+        if data is None:
+            data = {}
         for name, setting in self.settings.items():
-            if data and name in data:
-                setattr(instance, name, data[name])
-            elif isinstance(setting.default, _IMMUTABLES):
-                setattr(instance, name, setting.default)
+            value = data.get(name, setting.default)
+            if isinstance(value, _IMMUTABLES):
+                setattr(instance, name, value)
             else:
-                setattr(instance, name, copy.copy(setting.default))
+                setattr(instance, name, copy.copy(value))
 
     def _initialize_providers(self, instance, data):
         if not data:
