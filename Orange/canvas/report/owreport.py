@@ -171,6 +171,7 @@ class OWReport(OWWidget):
             def _add_comment(myself, item_id, value):
                 item = self.table_model.get_item_by_id(item_id)
                 item.comment = value
+                self.report_changed = True
 
         self.report_view = WebviewWidget(self.mainArea, bridge=PyBridge(self))
         self.mainArea.layout().addWidget(self.report_view)
@@ -239,10 +240,11 @@ class OWReport(OWWidget):
             item = self.table_model.item(i)
             html += "<div id='{}' class='normal' " \
                     "onClick='pybridge._select_item(this.id)'>{}<div " \
-                    "class='textwrapper'><textarea required='required' " \
+                    "class='textwrapper'><textarea " \
                     "placeholder='Write a comment...'" \
-                    "onInput='pybridge._add_comment(this.parentNode." \
-                    "parentNode.id, this.value)'>{}</textarea></div>" \
+                    "onInput='this.innerHTML = this.value;" \
+                    "pybridge._add_comment(this.parentNode.parentNode.id, this.value);'" \
+                    ">{}</textarea></div>" \
                     "</div>".format(item.id, item.html, item.comment)
         html += "</body></html>"
         self.report_view.setHtml(html)
@@ -260,18 +262,6 @@ class OWReport(OWWidget):
         self.report_view.evalJS(
             "document.getElementById('{}').className = 'selected';"
             .format(item.id))
-        self.report_changed = True
-
-
-    @pyqtSlot(str)
-    def _select_item(self, item_id):
-        item = self.table_model.get_item_by_id(item_id)
-        self.table.selectRow(self.table_model.indexFromItem(item).row())
-        self._change_selected_item(item)
-
-    def _add_comment(self, item_id, value):
-        item = self.table_model.get_item_by_id(item_id)
-        item.comment = value
         self.report_changed = True
 
     def make_report(self, widget):
@@ -410,8 +400,6 @@ class OWReport(OWWidget):
         if not hasattr(app_inst, "_report_window"):
             report = OWReport()
             app_inst._report_window = report
-            app_inst.sendPostedEvents(report, 0)
-            app_inst.aboutToQuit.connect(report.deleteLater)
         return app_inst._report_window
 
     @staticmethod
