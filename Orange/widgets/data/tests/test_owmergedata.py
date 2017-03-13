@@ -25,10 +25,10 @@ class TestOWMergeData(WidgetTest):
 
         domainB = Domain([DiscreteVariable("dB1", values=("a", "b", "c")),
                           DiscreteVariable("dB2", values=("aa", "bb"))],
-                         DiscreteVariable("cls", values=("bbb", "ccc", "ddd")),
+                         DiscreteVariable("cls", values=("bbb", "ccc")),
                          [DiscreteVariable("mB1", ("m4", "m5"))])
         XB = np.array([[0, 0], [1, 1], [2, np.nan]])
-        yB = np.array([2, 1, 0])
+        yB = np.array([np.nan, 1, 0])
         metasB = np.array([[np.nan], [1], [0]]).astype(object)
         cls.dataA = Table(domainA, XA, yA, metasA)
         cls.dataB = Table(domainB, XB, yB, metasB)
@@ -162,7 +162,7 @@ class TestOWMergeData(WidgetTest):
                           domainA.metas + domainB.metas)
         result_X = np.array([[0, 0, 0, 0], [1, 1, 1, 1],
                              [2, 0, 2, np.nan], [3, 1, np.nan, np.nan]])
-        result_Y = np.array([[0, 2], [1, 1], [2, 0], [np.nan, np.nan]])
+        result_Y = np.array([[0, np.nan], [1, 1], [2, 0], [np.nan, np.nan]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 1.0],
                              [np.nan, "m3", 0.0], [0.0, "m4", np.nan]
                             ]).astype(object)
@@ -180,7 +180,7 @@ class TestOWMergeData(WidgetTest):
                           domainA.class_vars + domainB.class_vars,
                           domainA.metas + domainB.metas)
         result_X = np.array([[0, 0, 0, 0], [1, 1, 1, 1], [2, 0, 2, np.nan]])
-        result_Y = np.array([[0, 2], [1, 1], [2, 0]])
+        result_Y = np.array([[0, np.nan], [1, 1], [2, 0]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 1.0],
                              [np.nan, "m3", 0.0]]).astype(object)
         result = Table(result_d, result_X, result_Y, result_M)
@@ -199,7 +199,7 @@ class TestOWMergeData(WidgetTest):
                           domainA.metas + domainB.metas)
         result_X = np.array([[0, 0, 0, 0], [1, 1, 1, 1],
                              [2, 0, 2, np.nan], [3, 1, np.nan, np.nan]])
-        result_Y = np.array([[0, 2], [1, 1], [2, 0], [np.nan, np.nan]])
+        result_Y = np.array([[0, np.nan], [1, 1], [2, 0], [np.nan, np.nan]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 1.0],
                              [np.nan, "m3", 0.0], [0.0, "m4", np.nan]]
                            ).astype(object)
@@ -219,7 +219,7 @@ class TestOWMergeData(WidgetTest):
                           domainA.metas + domainB.metas)
         result_X = np.array([[0, 0, 0], [1, 1, 1],
                              [2, 0, np.nan], [3, 1, np.nan]])
-        result_Y = np.array([[0, 2], [1, 1], [2, 0], [np.nan, np.nan]])
+        result_Y = np.array([[0, np.nan], [1, 1], [2, 0], [np.nan, np.nan]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 1.0],
                              [np.nan, "m3", 0.0], [0.0, "m4", np.nan]]
                            ).astype(object)
@@ -239,7 +239,7 @@ class TestOWMergeData(WidgetTest):
                           domainA.class_vars + domainB.class_vars,
                           domainA.metas + domainB.metas)
         result_X = np.array([[0, 0, 0], [1, 1, 1], [2, 0, np.nan]])
-        result_Y = np.array([[0, 2], [1, 1], [2, 0]])
+        result_Y = np.array([[0, np.nan], [1, 1], [2, 0]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 1.0],
                              [np.nan, "m3", 0.0]]).astype(object)
         result = Table(result_d, result_X, result_Y, result_M)
@@ -260,7 +260,7 @@ class TestOWMergeData(WidgetTest):
                           domainA.metas + domainB.metas)
         result_X = np.array([[0, 0, 0, 0], [1, 1, 1, 1],
                              [2, 0, 2, np.nan], [3, 1, np.nan, np.nan]])
-        result_Y = np.array([[0, 2], [1, 1], [2, 0], [np.nan, np.nan]])
+        result_Y = np.array([[0, np.nan], [1, 1], [2, 0], [np.nan, np.nan]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 1.0],
                              [np.nan, "m3", 0.0], [0.0, "m4", np.nan]]
                            ).astype(object)
@@ -324,7 +324,7 @@ class TestOWMergeData(WidgetTest):
                              [2, 0, 1, 1], [3, 1, np.nan, np.nan],
                              [np.nan, np.nan, 0, 0]])
         result_Y = np.array([[0, np.nan], [1, 0], [2, 1], [np.nan, np.nan],
-                             [np.nan, 2]])
+                             [np.nan, np.nan]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", 0.0],
                              [np.nan, "m3", 1.0], [0.0, "m4", np.nan],
                              [np.nan, "", np.nan]]).astype(object)
@@ -389,7 +389,7 @@ class TestOWMergeData(WidgetTest):
                              [2, 0, np.nan, np.nan], [3, 1, 2, np.nan],
                              [np.nan, np.nan, 0, 0], [np.nan, np.nan, 1, 1]])
         result_Y = np.array([[0, np.nan], [1, np.nan], [2, np.nan],
-                             [np.nan, 0], [np.nan, 2], [np.nan, 1]])
+                             [np.nan, 0], [np.nan, np.nan], [np.nan, 1]])
         result_M = np.array([[0.0, "m1", np.nan], [1.0, "m2", np.nan],
                              [np.nan, "m3", np.nan], [0.0, "m4", 0.0],
                              [np.nan, "", np.nan], [np.nan, "", 1.0]]
@@ -425,4 +425,3 @@ class TestOWMergeData(WidgetTest):
         self.assertEqual(self.widget.attr_merge_extra, zoo_images.domain[-1])
         self.assertEqual(self.widget.attr_combine_data, zoo.domain[-1])
         self.assertEqual(self.widget.attr_combine_extra, zoo_images.domain[-1])
-

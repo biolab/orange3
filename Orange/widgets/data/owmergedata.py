@@ -6,7 +6,7 @@ from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 import numpy as np
 
 import Orange
-from Orange.data import StringVariable
+from Orange.data import StringVariable, ContinuousVariable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
@@ -256,8 +256,10 @@ class OWMergeData(widget.OWWidget):
         var_extra_data = getattr(self, "attr_{}_extra".format(operation))
         merge_method = getattr(self, "_{}_indices".format(operation))
 
-        extra_map = self._get_keymap(self.extra_data, var_extra_data)
-        match_indices = merge_method(var_data, extra_map)
+        as_string = not (isinstance(var_data, ContinuousVariable) and
+                         isinstance(var_extra_data, ContinuousVariable))
+        extra_map = self._get_keymap(self.extra_data, var_extra_data, as_string)
+        match_indices = merge_method(var_data, extra_map, as_string)
         reduced_extra_data = self._compute_reduced_extra_data(var_extra_data)
         return self._join_table_by_indices(reduced_extra_data, match_indices)
 
@@ -274,57 +276,67 @@ class OWMergeData(widget.OWWidget):
                                    if var not in all_vars]]
 
     @staticmethod
-    def _get_keymap(data, var):
-        """Return a generator of pairs (match values in a table, index).
-        This is like reversed pairs from enumeration of values.
-
-        All joins construct a map for extra data, and outer join constructs
-        one for primary and uses it to lookup for non-matched rows.
-
-        The generator is used to fill a dict for left and inner join, while
-        outer join also traverses it to insert non-matched extra rows in the
-        original order.
-        """
+    def _values(data, var, as_string):
+        """Return an iterotor over keys for rows of the table."""
         if var == INSTANCEID:
-            return ((inst.id, i) for i, inst in enumerate(data))
-        elif var == INDEX:
-            return ((i, i) for i in range(len(data)))
+            return (inst.id for inst in data)
+        if var == INDEX:
+            return range(len(data))
+        col = data.get_column_view(var)[0]
+        if not as_string:
+            return col
+        if var.is_primitive():
+            return (var.str_val(val) if not np.isnan(val) else np.nan
+                    for val in col)
         else:
-            return ((str(inst[var]), i) for i, inst in enumerate(data))
+            return (str(val) if val else np.nan for val in col)
 
-    def _augment_indices(self, var_data, extra_map):
+    @classmethod
+    def _get_keymap(cls, data, var, as_string):
+        """Return a generator of pairs (key, index) by enumerating and
+        switching the values for rows (method `_values`).
+        """
+        return ((val, i)
+                for i, val in enumerate(cls._values(data, var, as_string)))
+
+    def _augment_indices(self, var_data, extra_map, as_string):
         """Compute a two-row array of indices:
         - the first row contains indices for the primary table,
         - the second row contains the matching rows in the extra table or -1"""
         data = self.data
-        n = len(self.data)
         extra_map = dict(extra_map)
-        if var_data == INSTANCEID:
-            keys = (extra_map.get(inst.id, -1) for inst in data)
-        elif var_data == INDEX:
-            keys = (extra_map.get(i, -1) for i in range(n))
-        else:
-            keys = (extra_map.get(str(inst[var_data]), -1) for inst in data)
-        return np.vstack((np.arange(n, dtype=np.int64),
-                          np.fromiter(keys, dtype=np.int64, count=n)))
+        # Don't match nans. This is needed since numpy supports using nan as
+        # keys. If numpy fixes this, the below conditions will always be false,
+        # so we're OK again.
+        if np.nan in extra_map:
+            del extra_map[np.nan]
+        keys = (extra_map.get(val, -1)
+                for val in self._values(data, var_data, as_string))
+        return np.vstack((np.arange(len(data), dtype=np.int64),
+                          np.fromiter(keys, dtype=np.int64, count=len(data))))
 
-    def _merge_indices(self, var_data, extra_map):
+    def _merge_indices(self, var_data, extra_map, as_string):
         """Use _augment_indices to compute the array of indices,
         then remove those with no match in the second table"""
-        augmented = self._augment_indices(var_data, extra_map)
+        augmented = self._augment_indices(var_data, extra_map, as_string)
         return augmented[:, augmented[1] != -1]
 
-    def _combine_indices(self, var_data, extra_map):
+    def _combine_indices(self, var_data, extra_map, as_string):
         """Use _augment_indices to compute the array of indices,
         then add rows in the second table without a match in the first"""
         to_add, extra_map = tee(extra_map)
         # dict instead of set because we have pairs; we'll need only keys
-        key_map = dict(self._get_keymap(self.data, var_data))
+        key_map = dict(self._get_keymap(self.data, var_data, as_string))
+        # _augment indices will skip rows where the key in the left table
+        # is nan. See comment in `_augment_indices` wrt numpy and nan in dicts
+        if np.nan in key_map:
+            del key_map[np.nan]
         keys = np.fromiter((j for key, j in to_add if key not in key_map),
                            dtype=np.int64)
         right_indices = np.vstack((np.full(len(keys), -1, np.int64), keys))
         return np.hstack(
-            (self._augment_indices(var_data, extra_map), right_indices))
+            (self._augment_indices(var_data, extra_map, as_string),
+             right_indices))
 
     def _join_table_by_indices(self, reduced_extra, indices):
         """Join (horizontally) self.data and reduced_extra, taking the pairs
