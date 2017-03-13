@@ -30,9 +30,9 @@ Signals
    A subset of instances that the user manually selected from the
    scatterplot.
 
--  **Unselected Data**
+-  **Data**
 
-   All other data (instances not included in the user's selection).
+   Data with an additional column showing whether a point is selected.
 
 Description
 -----------
@@ -67,7 +67,7 @@ the left side of the widget. A snapshot below shows the scatterplot of the
    -  *Show all data on mouse hover* enables information bubbles if the cursor is placed on a dot.
    -  *Show class density* colors the graph by class (see the screenshot below).
    -  *Show regression line* draws the regression line for pair of continuous attributes.
-   -  *Label only selected points* allows you to select individual data instances and label them. 
+   -  *Label only selected points* allows you to select individual data instances and label them.
 
 4. *Select, zoom, pan and zoom to fit* are the options for exploring the graph.
    The manual selection of data instances works as an angular/square
@@ -77,7 +77,7 @@ the left side of the widget. A snapshot below shows the scatterplot of the
    Alternatively, press *Send*.
 6. *Save Image* saves the created image to your computer in a .svg or .png
    format.
-7. Produce a report. 
+7. Produce a report.
 
 For discrete attributes, jittering circumvents the overlap of points
 which have the same value for both axes, and therefore the density of
@@ -112,6 +112,18 @@ length plot (we used the Iris data set for simplicity). Upon running *Find Infor
 projection of petal width to petal length plot.
 
 .. figure:: images/ScatterPlotExample-Ranking.png
+
+Selection
+---------
+
+Selection can be used to manually defined subgroups in the data. Use Shift
+modifier when selecting data instances to put them into a new group.
+Shift + Ctrl (or Shift + Cmd on macOs) appends instances to the last group.
+
+Signal data outputs a data table with an additional column that contains group
+indices.
+
+.. figure:: images/ScatterPlot-selection.png
 
 Explorative Data Analysis
 -------------------------

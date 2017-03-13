@@ -23,7 +23,8 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+                                                 ANNOTATED_DATA_SIGNAL_NAME,
+                                                 get_next_name)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -280,6 +281,14 @@ class OWScatterPlot(OWWidget):
         )
         self.addActions([zoom_in, zoom_out, zoom_fit])
 
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
+    def keyReleaseEvent(self, event):
+        super().keyReleaseEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
     #     for curve in self.graph.selectionCurveList:
@@ -471,19 +480,45 @@ class OWScatterPlot(OWWidget):
     def selection_changed(self):
         self.send_data()
 
+    @staticmethod
+    def create_groups_table(data, selection):
+        if data is None:
+            return None
+        names = [var.name for var in data.domain.variables + data.domain.metas]
+        name = get_next_name(names, "Selection group")
+        metas = data.domain.metas + (
+            DiscreteVariable(
+                name,
+                ["Unselected"] + ["G{}".format(i + 1)
+                                  for i in range(np.max(selection))]),
+        )
+        domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
+        table = Table(
+            domain, data.X, data.Y,
+            metas=np.hstack((data.metas, selection.reshape(len(data), 1))))
+        table.attributes = data.attributes
+        table.ids = data.ids
+        return table
+
     def send_data(self):
         selected = None
         selection = None
         # TODO: Implement selection for sql data
+        graph = self.graph
         if isinstance(self.data, SqlTable):
             selected = self.data
         elif self.data is not None:
-            selection = self.graph.get_selection()
+            selection = graph.get_selection()
             if len(selection) > 0:
                 selected = self.data[selection]
+        if graph.selection is not None and np.max(graph.selection) > 1:
+            annotated = self.create_groups_table(self.data, graph.selection)
+        else:
+            annotated = create_annotated_table(self.data, selection)
         self.send("Selected Data", selected)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.data, selection))
+        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated)
+
+
 
     def send_features(self):
         features = None

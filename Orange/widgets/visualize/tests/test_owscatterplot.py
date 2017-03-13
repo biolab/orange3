@@ -3,13 +3,15 @@
 from unittest.mock import MagicMock
 import numpy as np
 
-from AnyQt.QtCore import QRectF
+from AnyQt.QtCore import QRectF, Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.visualize.owscatterplot import \
     OWScatterPlot, ScatterPlotVizRank
 from Orange.widgets.tests.utils import simulate
+
+from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 
 
 class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -129,3 +131,73 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.cb_attr_y.setCurrentIndex(4)
         self.assertFalse(self.widget.cb_reg_line.isEnabled())
         self.assertIsNone(self.widget.graph.reg_line_item)
+
+    def test_group_selections(self):
+        self.send_signal("Data", self.data)
+        graph = self.widget.graph
+        points = graph.scatterplot_item.points()
+        sel_column = np.zeros((len(self.data), 1))
+
+        x = self.data.X
+
+        def selectedx():
+            return self.get_output("Selected Data").X
+
+        def annotated():
+            return self.get_output(ANNOTATED_DATA_SIGNAL_NAME).metas
+
+        def annotations():
+            return self.get_output(ANNOTATED_DATA_SIGNAL_NAME
+                                  ).domain.metas[0].values
+
+        # Select 0:5
+        graph.select(points[:5])
+        np.testing.assert_equal(selectedx(), x[:5])
+        sel_column[:5] = 1
+        np.testing.assert_equal(annotated(), sel_column)
+        self.assertEqual(annotations(), ["No", "Yes"])
+
+        # Shift-select 5:10; now we have groups 0:5 and 5:10
+        with self.modifiers(Qt.ShiftModifier):
+            graph.select(points[5:10])
+        np.testing.assert_equal(selectedx(), x[:10])
+        sel_column[5:10] = 2
+        np.testing.assert_equal(annotated(), sel_column)
+        self.assertEqual(len(annotations()), 3)
+
+        # Select: 15:20; we have 15:20
+        graph.select(points[15:20])
+        sel_column = np.zeros((len(self.data), 1))
+        sel_column[15:20] = 1
+        np.testing.assert_equal(selectedx(), x[15:20])
+        self.assertEqual(annotations(), ["No", "Yes"])
+
+        # Alt-select (remove) 10:17; we have 17:20
+        with self.modifiers(Qt.AltModifier):
+            graph.select(points[10:17])
+        np.testing.assert_equal(selectedx(), x[17:20])
+        sel_column[15:17] = 0
+        np.testing.assert_equal(annotated(), sel_column)
+        self.assertEqual(annotations(), ["No", "Yes"])
+
+        # Ctrl-Shift-select (add-to-last) 10:17; we have 17:25
+        with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
+            graph.select(points[20:25])
+        np.testing.assert_equal(selectedx(), x[17:25])
+        sel_column[20:25] = 1
+        np.testing.assert_equal(annotated(), sel_column)
+        self.assertEqual(annotations(), ["No", "Yes"])
+
+        # Shift-select (add) 30:35; we have 17:25, 30:35
+        with self.modifiers(Qt.ShiftModifier):
+            graph.select(points[30:35])
+        # ... then Ctrl-Shift-select (add-to-last) 10:17; we have 17:25, 30:40
+        with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
+            graph.select(points[35:40])
+        sel_column[30:40] = 2
+        np.testing.assert_equal(annotated(), sel_column)
+        self.assertEqual(len(annotations()), 3)
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()

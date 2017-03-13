@@ -1,3 +1,4 @@
+import sys
 import itertools
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
@@ -8,7 +9,8 @@ from scipy.stats import linregress
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
     QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter)
-from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture
+from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
+    QGraphicsTextItem, QGraphicsRectItem
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
@@ -356,12 +358,17 @@ class InteractiveViewBox(ViewBox):
             pos = ev.pos()
             if ev.button() == Qt.LeftButton:
                 self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
+                scene = self.scene()
+                dragtip = scene.drag_tooltip
                 if ev.isFinish():
+                    dragtip.hide()
                     self.rbScaleBox.hide()
                     pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
                     value_rect = self.childGroup.mapRectFromParent(pixel_rect)
                     self.graph.select_by_rectangle(value_rect)
                 else:
+                    dragtip.setPos(10, self.height() + 3)
+                    dragtip.show()  # although possibly already shown
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             ev.ignore()
@@ -492,6 +499,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.getPlotItem().buttonsHidden = True
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.sizeHint = lambda: QSize(500, 500)
+        scene = self.plot_widget.scene()
+        self._create_drag_tooltip(scene)
+
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
@@ -547,6 +557,39 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self._tooltip_delegate = HelpEventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
+
+    def _create_drag_tooltip(self, scene):
+        tip_parts = [
+            (Qt.ShiftModifier, "Shift: Add group"),
+            (Qt.ShiftModifier + Qt.ControlModifier,
+             "Shift-{}: Append to group".
+             format("Cmd" if sys.platform == "darwin" else "Ctrl")),
+            (Qt.AltModifier, "Alt: Remove")
+        ]
+        all_parts = ", ".join(part for _, part in tip_parts)
+        self.tiptexts = {
+            int(modifier): all_parts.replace(part, "<b>{}</b>".format(part))
+            for modifier, part in tip_parts
+        }
+        self.tiptexts[0] = all_parts
+
+        self.tip_textitem = text = QGraphicsTextItem()
+        # Set to the longest text
+        text.setHtml(self.tiptexts[Qt.ShiftModifier + Qt.ControlModifier])
+        text.setPos(4, 2)
+        r = text.boundingRect()
+        rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
+        rect.setBrush(QColor(224, 224, 224, 212))
+        rect.setPen(QPen(Qt.NoPen))
+        self.update_tooltip(Qt.NoModifier)
+
+        scene.drag_tooltip = scene.createItemGroup([rect, text])
+        scene.drag_tooltip.hide()
+
+    def update_tooltip(self, modifiers):
+        modifiers &= Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier
+        text = self.tiptexts.get(int(modifiers), self.tiptexts[0])
+        self.tip_textitem.setHtml(text)
 
     def new_data(self, data, subset_data=None, **args):
         self.plot_widget.clear()
@@ -760,12 +803,24 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             p.setCosmetic(True)
             return p
 
-        pens = [QPen(Qt.NoPen),
-                make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1.)]
+        nopen = QPen(Qt.NoPen)
         if self.selection is not None:
+            sels = np.max(self.selection)
+            if sels == 1:
+                pens = [nopen,
+                        make_pen(QColor(255, 190, 0, 255),
+                                 SELECTION_WIDTH + 1.)]
+            else:
+                # Start with the first color so that the colors of the
+                # additional attribute in annotation (which start with 0,
+                # unselected) will match these colors
+                palette = ColorPaletteGenerator(number_of_colors=sels + 1)
+                pens = [nopen] + \
+                       [make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
+                        for i in range(sels)]
             pen = [pens[a] for a in self.selection[self.valid_data]]
         else:
-            pen = [pens[0]] * self.n_points
+            pen = [nopen] * self.n_points
         brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
         return pen, brush
 
@@ -1033,17 +1088,23 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         # noinspection PyArgumentList
         if self.data is None:
             return
-        keys = QApplication.keyboardModifiers()
-        if self.selection is None or not keys & (
-                Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier):
-            self.selection = np.full(len(self.data), False, dtype=np.bool)
+        if self.selection is None:
+            self.selection = np.zeros(len(self.data), dtype=np.uint8)
         indices = [p.data() for p in points]
+        keys = QApplication.keyboardModifiers()
+        # Remove from selection
         if keys & Qt.AltModifier:
-            self.selection[indices] = False
-        elif keys & Qt.ControlModifier:
-            self.selection[indices] = ~self.selection[indices]
-        else:  # Handle shift and no modifiers
-            self.selection[indices] = True
+            self.selection[indices] = 0
+        # Append to the last group
+        elif keys & Qt.ShiftModifier and keys & Qt.ControlModifier:
+            self.selection[indices] = np.max(self.selection)
+        # Create a new group
+        elif keys & Qt.ShiftModifier:
+            self.selection[indices] = np.max(self.selection) + 1
+        # No modifiers: new selection
+        else:
+            self.selection = np.zeros(len(self.data), dtype=np.uint8)
+            self.selection[indices] = 1
         self.update_colors(keep_colors=True)
         if self.label_only_selected:
             self.update_labels()
@@ -1051,7 +1112,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def get_selection(self):
         if self.selection is None:
-            return np.array([], dtype=int)
+            return np.array([], dtype=np.uint8)
         else:
             return np.flatnonzero(self.selection)
 
