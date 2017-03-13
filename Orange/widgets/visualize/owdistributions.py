@@ -321,7 +321,8 @@ class OWDistributions(widget.OWWidget):
     def display_distribution(self):
         dist = self.distributions
         var = self.var
-        assert len(dist) > 0
+        if not len(dist):
+            return
         self.plot.clear()
         self.plot_prob.clear()
         self.ploti.hideAxis('right')
@@ -372,7 +373,8 @@ class OWDistributions(widget.OWWidget):
         """
         cont = self.contingencies
         var, cvar = self.var, self.cvar
-        assert len(cont) > 0
+        if not len(cont):
+            return
         self.plot.clear()
         self.plot_prob.clear()
         self._legend.clear()
