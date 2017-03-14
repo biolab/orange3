@@ -209,3 +209,17 @@ class OWFeatureConstructorTests(WidgetTest):
     def test_create_variable_with_no_data(self):
         self.widget.addFeature(
             ContinuousDescriptor("X1", "", 3))
+
+    def test_error_invalid_expression(self):
+        data = Table("iris")
+        self.widget.setData(data)
+        self.widget.addFeature(
+            ContinuousDescriptor("X", "0", 3)
+        )
+        self.widget.apply()
+        self.assertFalse(self.widget.Error.invalid_expressions.is_shown())
+        self.widget.addFeature(
+            ContinuousDescriptor("X", "0a", 3)
+        )
+        self.widget.apply()
+        self.assertTrue(self.widget.Error.invalid_expressions.is_shown())
