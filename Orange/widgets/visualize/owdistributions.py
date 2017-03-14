@@ -10,23 +10,23 @@ import sys
 import collections
 from xml.sax.saxutils import escape
 
-from AnyQt.QtWidgets import QSizePolicy, QLabel, QListView,QToolTip
+from AnyQt.QtWidgets import QSizePolicy, QLabel, QListView, QToolTip
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPicture, QPalette
 from AnyQt.QtCore import Qt, QRectF
-
 
 import numpy
 import pyqtgraph as pg
 
 import Orange.data
+from Orange.preprocess import Discretize, EqualWidth
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.widget import InputSignal
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
-from Orange.widgets.io import FileFormat
 
 from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
+
 
 def selected_index(view):
     """Return the selected integer `index` (row) in the view.
@@ -104,8 +104,8 @@ class OWDistributions(widget.OWWidget):
 
     ASH_HIST = 50
 
-    bins = [ 2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50 ]
-    smoothing_facs = list(reversed([ 0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 4, 6, 10 ]))
+    bins = [2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50]
+    smoothing_facs = list(reversed([0.1, 0.2, 0.4, 0.6, 0.8, 1, 1.5, 2, 4, 6, 10]))
 
     def __init__(self):
         super().__init__()
@@ -149,20 +149,23 @@ class OWDistributions(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
-        self.groupvarview = gui.comboBox(box, self, "groupvar_idx",
-             callback=self._on_groupvar_idx_changed, valueType=str,
-             contentsLength=12)
+        self.groupvarview = gui.comboBox(
+            box, self, "groupvar_idx",
+            callback=self._on_groupvar_idx_changed,
+            valueType=str, contentsLength=12)
         box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed,
-            tooltip="Normalize probabilities so that probabilities for each group-by value sum to 1.")
+            tooltip="Normalize probabilities so that probabilities "
+                    "for each group-by value sum to 1.")
         gui.separator(box2)
         self.cb_prob = gui.comboBox(
             box2, self, "show_prob", label="Show probabilities:",
             orientation=Qt.Horizontal,
             callback=self._on_relative_freq_changed,
-            tooltip="Show probabilities for a chosen group-by value (at each point probabilities for all group-by values sum to 1).")
+            tooltip="Show probabilities for a chosen group-by value "
+                    "(at each point probabilities for all group-by values sum to 1).")
 
         self.plotview = pg.PlotWidget(background=None)
         self.plotview.setRenderHint(QPainter.Antialiasing)
@@ -184,7 +187,7 @@ class OWDistributions(widget.OWWidget):
         self.plot_prob.setXLink(self.ploti)
         self.update_views()
         self.ploti.vb.sigResized.connect(self.update_views)
-        self.plot_prob.setRange(yRange=[0,1])
+        self.plot_prob.setRange(yRange=[0, 1])
 
         def disable_mouse(plot):
             plot.setMouseEnabled(False, False)
@@ -264,6 +267,10 @@ class OWDistributions(widget.OWWidget):
             self.l_smoothing_l.setText(" " + str(self.bins[0]))
             self.l_smoothing_r.setText(" " + str(self.bins[-1]))
 
+    @property
+    def smoothing_factor(self):
+        return self.smoothing_facs[self.smoothing_index]
+
     def _setup(self):
         self.plot.clear()
         self.plot_prob.clear()
@@ -281,7 +288,7 @@ class OWDistributions(widget.OWWidget):
             self.cb_prob.addItems(self.cvar.values)
             self.cb_prob.addItem("(All)")
             self.show_prob = min(max(self.show_prob, 0),
-                    len(self.cvar.values) + 1)
+                                 len(self.cvar.values) + 1)
         data = self.data
         self._setup_smoothing()
         if self.var is None:
@@ -290,8 +297,8 @@ class OWDistributions(widget.OWWidget):
             domain = Orange.data.Domain(
                 [self.var, self.cvar] if self.cvar else [self.var])
             data = Orange.data.Table(domain, data)
-            disc = Orange.preprocess.discretize.EqualWidth(n=self.bins[self.smoothing_index])
-            data = Orange.preprocess.Discretize(method=disc, remove_const=False)(data)
+            disc = EqualWidth(n=self.bins[self.smoothing_index])
+            data = Discretize(method=disc, remove_const=False)(data)
             self.var = data.domain[0]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
@@ -309,9 +316,11 @@ class OWDistributions(widget.OWWidget):
         in_graph_coor = self.plot.mapSceneToView(ev.scenePos())
         ctooltip = []
         for vb, item in self.tooltip_items:
-            if isinstance(item, pg.PlotCurveItem) and item.mouseShape().contains(vb.mapSceneToView(ev.scenePos())):
-                ctooltip.append(item.tooltip)
-            elif isinstance(item, DistributionBarItem) and item.boundingRect().contains(vb.mapSceneToView(ev.scenePos())):
+            mouse_over_curve = isinstance(item, pg.PlotCurveItem) \
+                and item.mouseShape().contains(vb.mapSceneToView(ev.scenePos()))
+            mouse_over_bar = isinstance(item, DistributionBarItem) \
+                and item.boundingRect().contains(vb.mapSceneToView(ev.scenePos()))
+            if mouse_over_curve or mouse_over_bar:
                 ctooltip.append(item.tooltip)
         if ctooltip:
             QToolTip.showText(ev.screenPos(), "\n\n".join(ctooltip), widget=self.plotview)
@@ -338,7 +347,7 @@ class OWDistributions(widget.OWWidget):
             if not len(dist[0]):
                 return
             edges, curve = ash_curve(dist, None, m=OWDistributions.ASH_HIST,
-                smoothing_factor=self.smoothing_facs[self.smoothing_index])
+                                     smoothing_factor=self.smoothing_factor)
             edges = edges + (edges[1] - edges[0])/2
             edges = edges[:-1]
             item = pg.PlotCurveItem()
@@ -402,46 +411,47 @@ class OWDistributions(widget.OWWidget):
                     weights.append(numpy.sum(W))
                     cols.append(colors[i])
                     cvar_values.append(cvar.values[i])
-                    curves.append(ash_curve(dist, cont,  m=OWDistributions.ASH_HIST,
-                        smoothing_factor=self.smoothing_facs[self.smoothing_index]))
+                    curves.append(ash_curve(
+                        dist, cont, m=OWDistributions.ASH_HIST,
+                        smoothing_factor=self.smoothing_factor))
             weights = numpy.array(weights)
             sumw = numpy.sum(weights)
             weights /= sumw
             colors = cols
             curves = [(X, Y * w) for (X, Y), w in zip(curves, weights)]
-            ncval = len(cvar_values)
 
             curvesline = [] #from histograms to lines
-            for (X,Y) in curves:
+            for X, Y in curves:
                 X = X + (X[1] - X[0])/2
                 X = X[:-1]
                 X = numpy.array(X)
                 Y = numpy.array(Y)
-                curvesline.append((X,Y))
+                curvesline.append((X, Y))
 
-            for t in [ "fill", "line" ]:
-                for (X, Y), color, w, cval in reversed(list(zip(curvesline, colors, weights, cvar_values))):
+            for t in ["fill", "line"]:
+                curve_data = list(zip(curvesline, colors, weights, cvar_values))
+                for (X, Y), color, w, cval in reversed(curve_data):
                     item = pg.PlotCurveItem()
                     pen = QPen(QBrush(color), 3)
                     pen.setCosmetic(True)
                     color = QColor(color)
                     color.setAlphaF(0.2)
-                    item.setData(X, Y/(w if self.relative_freq else 1), antialias=True, stepMode=False,
-                         fillLevel=0 if t == "fill" else None,
-                         brush=QBrush(color), pen=pen)
+                    item.setData(X, Y/(w if self.relative_freq else 1),
+                                 antialias=True, stepMode=False,
+                                 fillLevel=0 if t == "fill" else None,
+                                 brush=QBrush(color), pen=pen)
                     self.plot.addItem(item)
                     if t == "line":
-                        item.tooltip = ("Normalized density " if self.relative_freq else "Density ") \
-                            + "\n"+ cvar.name + "=" + cval
+                        item.tooltip = "{}\n{}={}".format(
+                            "Normalized density " if self.relative_freq else "Density ",
+                            cvar.name, cval)
                         self.tooltip_items.append((self.plot, item))
 
             if self.show_prob:
-                M_EST = 5 #for M estimate
-                all_X = numpy.array(numpy.unique(numpy.hstack([X for X,_ in curvesline])))
+                all_X = numpy.array(numpy.unique(numpy.hstack([X for X, _ in curvesline])))
                 inter_X = numpy.array(numpy.linspace(all_X[0], all_X[-1], len(all_X)*2))
-                curvesinterp = [ numpy.interp(inter_X, X, Y) for (X,Y) in curvesline ]
+                curvesinterp = [numpy.interp(inter_X, X, Y) for (X, Y) in curvesline]
                 sumprob = numpy.sum(curvesinterp, axis=0)
-                # allcorrection = M_EST/sumw*numpy.sum(sumprob)/len(inter_X)
                 legal = sumprob > 0.05 * numpy.max(sumprob)
 
                 i = len(curvesinterp) + 1
@@ -452,10 +462,10 @@ class OWDistributions(widget.OWWidget):
                         item = pg.PlotCurveItem()
                         pen = QPen(QBrush(color), 3, style=Qt.DotLine)
                         pen.setCosmetic(True)
-                        #prob = (Y+allcorrection/ncval)/(sumprob+allcorrection)
                         prob = Y[legal] / sumprob[legal]
-                        item.setData(inter_X[legal], prob, antialias=True, stepMode=False,
-                             fillLevel=None, brush=None, pen=pen)
+                        item.setData(
+                            inter_X[legal], prob, antialias=True, stepMode=False,
+                            fillLevel=None, brush=None, pen=pen)
                         self.plot_prob.addItem(item)
                         item.tooltip = "Probability that \n" + cvar.name + "=" + cval
                         self.tooltip_items.append((self.plot_prob, item))
@@ -464,22 +474,21 @@ class OWDistributions(widget.OWWidget):
             bottomaxis.setTicks([list(enumerate(var.values))])
 
             cont = numpy.array(cont)
-            ncval = len(cvar_values)
 
             maxh = 0 #maximal column height
             maxrh = 0 #maximal relative column height
             scvar = cont.sum(axis=1)
             #a cvar with sum=0 with allways have distribution counts 0,
             #therefore we can divide it by anything
-            scvar[scvar==0] = 1
+            scvar[scvar == 0] = 1
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 maxh = max(maxh, max(dist))
                 maxrh = max(maxrh, max(dist/scvar))
 
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
-                geom = QRectF(i - 0.333, 0, 0.666, maxrh
-                                     if self.relative_freq else maxh)
+                geom = QRectF(i - 0.333, 0, 0.666,
+                              maxrh if self.relative_freq else maxh)
                 if self.show_prob:
                     prob = dist / dsum
                     ci = 1.96 * numpy.sqrt(prob * (1 - prob) / dsum)
@@ -489,11 +498,12 @@ class OWDistributions(widget.OWWidget):
                                            if self.relative_freq
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
-                tooltip = "\n".join("%s: %.*f" % (n, 3 if self.relative_freq else 1,  v)
-                    for n,v in zip(cvar_values, dist/scvar if self.relative_freq else dist ))
-                item.tooltip = ("Normalized frequency " if self.relative_freq else "Frequency ") \
-                    + "(" + cvar.name + "=" + value + "):" \
-                    + "\n" + tooltip
+                tooltip = "\n".join(
+                    "%s: %.*f" % (n, 3 if self.relative_freq else 1, v)
+                    for n, v in zip(cvar_values, dist/scvar if self.relative_freq else dist))
+                item.tooltip = "{} ({}={}):\n{}".format(
+                    "Normalized frequency " if self.relative_freq else "Frequency ",
+                    cvar.name, value, tooltip)
                 self.tooltip_items.append((self.plot, item))
 
                 if self.show_prob:
@@ -517,11 +527,11 @@ class OWDistributions(widget.OWWidget):
                         bar.setData(x=[i+position], y=[prob],
                                     bottom=min(numpy.array([ci]), prob),
                                     top=min(numpy.array([ci]), 1 - prob),
-                                     beam=numpy.array([0.05]),
-                                     brush=QColor(1), pen=pen)
+                                    beam=numpy.array([0.05]),
+                                    brush=QColor(1), pen=pen)
                         mark.setData([i+position], [prob], antialias=True, symbol="o",
-                                 fillLevel=None, pxMode=True, size=10,
-                                 brush=QColor(colors[ic]), pen=pen)
+                                     fillLevel=None, pxMode=True, size=10,
+                                     brush=QColor(colors[ic]), pen=pen)
                         self.plot_prob.addItem(bar)
                         self.plot_prob.addItem(mark)
 
@@ -678,7 +688,7 @@ def triangular_kernel(x):
 
 def gaussian_kernel(x, k):
     #fit k standard deviations into available space from [-1 .. 1]
-    return 1/(numpy.sqrt(2 * numpy.pi)) * numpy.exp( - (x*k)**2 / (2))
+    return 1/(numpy.sqrt(2 * numpy.pi)) * numpy.exp(-(x*k)**2 / 2)
 
 
 def weighted_std(a, axis=None, weights=None, ddof=0):

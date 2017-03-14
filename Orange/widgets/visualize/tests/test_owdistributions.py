@@ -1,6 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
-# pylint: disable=protected-access
+# pylint: disable=missing-docstring,protected-access
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.data.table import dataset_dirs
