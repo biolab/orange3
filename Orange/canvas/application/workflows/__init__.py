@@ -46,7 +46,7 @@ def example_workflows():
     for ep in workflow_entry_points():
         workflows = None
         try:
-            workflows = ep.load()
+            workflows = ep.resolve()
         except pkg_resources.DistributionNotFound as ex:
             log.warning("Could not load workflows from %r (%r)",
                         ep.dist, ex)
