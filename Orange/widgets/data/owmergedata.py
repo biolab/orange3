@@ -1,19 +1,16 @@
 import math
 import itertools
 from collections import defaultdict
+from itertools import chain
 
-from AnyQt.QtWidgets import QWidget, QGridLayout
+from AnyQt.QtWidgets import QWidget, QGridLayout, QApplication, QStyle
 from AnyQt.QtCore import Qt
-import numpy
+import numpy as np
 
 import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
-
-
-INSTANCEID = "Source position (index)"
-INDEX = "Position (index)"
 
 
 class OWMergeData(widget.OWWidget):
@@ -22,120 +19,135 @@ class OWMergeData(widget.OWWidget):
     icon = "icons/MergeData.svg"
     priority = 1110
 
-    inputs = [("Data A", Orange.data.Table, "setDataA", widget.Default),
-              ("Data B", Orange.data.Table, "setDataB")]
+    inputs = [("Data", Orange.data.Table, "setData", widget.Default),
+              ("Extra Data", Orange.data.Table, "setExtraData")]
     outputs = [widget.OutputSignal(
-        "Merged Data", Orange.data.Table,
+        "Data", Orange.data.Table,
         replaces=["Merged Data A+B", "Merged Data B+A"])]
 
-    attr_a = settings.Setting('', schema_only=True)
-    attr_b = settings.Setting('', schema_only=True)
-    inner = settings.Setting(True)
+    attr_augment_data = settings.Setting('', schema_only=True)
+    attr_augment_extra = settings.Setting('', schema_only=True)
+    attr_merge_data = settings.Setting('', schema_only=True)
+    attr_merge_extra = settings.Setting('', schema_only=True)
+    attr_combine_data = settings.Setting('', schema_only=True)
+    attr_combine_extra = settings.Setting('', schema_only=True)
+    merging = settings.Setting(0)
+
 
     want_main_area = False
 
     def __init__(self):
         super().__init__()
 
-        # data
-        self.dataA = None
-        self.dataB = None
+        self.data = None
+        self.extra_data = None
+        self.extra_data = None
 
-        # GUI
-        box = gui.hBox(self.controlArea, "Match instances by")
+        self.model = itemmodels.VariableListModel()
+        self.model_unique = itemmodels.VariableListModel()
+        self.extra_model_unique = itemmodels.VariableListModel()
 
-        # attribute A selection
-        self.attrViewA = gui.comboBox(box, self, 'attr_a', label="Data A",
-                                      orientation=Qt.Vertical,
-                                      sendSelectedValue=True,
-                                      callback=self._invalidate)
-        self.attrModelA = itemmodels.VariableListModel()
-        self.attrViewA.setModel(self.attrModelA)
-
-        # attribute  B selection
-        self.attrViewB = gui.comboBox(box, self, 'attr_b', label="Data B",
-                                      orientation=Qt.Vertical,
-                                      sendSelectedValue=True,
-                                      callback=self._invalidate)
-        self.attrModelB = itemmodels.VariableListModel()
-        self.attrViewB.setModel(self.attrModelB)
-
-        # info A
         box = gui.hBox(self.controlArea, box=None)
-        self.infoBoxDataA = gui.label(box, self, self.dataInfoText(None),
-                                      box="Data A Info")
+        self.infoBoxData = gui.label(
+            box, self, self.dataInfoText(None), box="Data")
+        self.infoBoxExtraData = gui.label(
+            box, self, self.dataInfoText(None), box="Extra Data")
 
-        # info B
-        self.infoBoxDataB = gui.label(box, self, self.dataInfoText(None),
-                                      box="Data B Info")
+        grp = gui.radioButtonsInBox(
+            self.controlArea, self, "merging", box="Merging",
+            callback=self.change_merging)
+        self.attr_boxes = []
 
-        gui.separator(self.controlArea)
-        box = gui.vBox(self.controlArea, box=True)
-        gui.checkBox(box, self, "inner", "Exclude instances without a match",
-                     callback=self._invalidate)
+        radio_width = \
+            QApplication.style().pixelMetric(QStyle.PM_ExclusiveIndicatorWidth)
 
-    def _setAttrs(self, model, data, othermodel, otherdata):
-        model[:] = allvars(data) if data is not None else []
+        def add_option(label, pre_label, between_label,
+                       merge_type, model, extra_model):
+            gui.appendRadioButton(grp, label)
+            vbox = gui.vBox(grp)
+            box = gui.hBox(vbox)
+            box.layout().addSpacing(radio_width)
+            self.attr_boxes.append(box)
+            gui.widgetLabel(box, pre_label)
+            gui.comboBox(box, self, 'attr_{}_data'.format(merge_type),
+                         callback=self._invalidate, model=model)
+            gui.widgetLabel(box, between_label)
+            gui.comboBox(box, self, 'attr_{}_extra'.format(merge_type),
+                         callback=self._invalidate, model=extra_model)
+            vbox.layout().addSpacing(6)
 
-        if data is not None and otherdata is not None and \
-                len(numpy.intersect1d(data.ids, otherdata.ids)):
-            for model_ in (model, othermodel):
-                if len(model_) and model_[0] != INSTANCEID:
-                    model_.insert(0, INSTANCEID)
+        add_option("Append columns from Extra Data",
+                   "by matching", "with", "augment",
+                   self.model, self.extra_model_unique)
+        add_option("Find matching rows", "where",
+                   "equals", "merge",
+                   self.model_unique, self.extra_model_unique)
+        add_option("Concatenate tables, merge rows",
+                   "where", "equals", "combine",
+                   self.model_unique, self.extra_model_unique)
+        self.set_merging()
+
+    def set_merging(self):
+        for i, box in enumerate(self.attr_boxes):
+            if self.merging == i:
+                box.show()
+            else:
+                box.hide()
+
+    def change_merging(self):
+        self.set_merging()
+
+    @staticmethod
+    def _set_unique_model(data, model):
+        m = ["Position (index)"]
+        for attr in data.domain:
+            col = data.get_column_view(attr)[0]
+            print(col)
+            col = col[~np.isnan(col)]
+            if len(np.unique(col)) == len(col):
+                m.append(attr)
+        # TODO: handle unknowns in metas, sparse data...
+        for attr in data.domain.metas:
+            col = data.get_column_view(attr)[0]
+            if len(np.unique(col)) == len(col):
+                m.append(attr)
+        model[:] = m
+
+    @staticmethod
+    def _set_model(data, model):
+        model[:] = list(chain(data.domain, data.domain.metas))
 
     @check_sql_input
-    def setDataA(self, data):
-        self.dataA = data
-        self._setAttrs(self.attrModelA, data, self.attrModelB, self.dataB)
-        curr_index = -1
-        if self.attr_a:
-            curr_index = next((i for i, val in enumerate(self.attrModelA)
-                               if str(val) == self.attr_a), -1)
-        if curr_index != -1:
-            self.attrViewA.setCurrentIndex(curr_index)
-        else:
-            self.attr_a = INDEX
-        self.infoBoxDataA.setText(self.dataInfoText(data))
+    def setData(self, data):
+        self.data = data
+        self._set_model(data, self.model)
+        self._set_unique_model(data, self.model_unique)
+        self.infoBoxData.setText(self.dataInfoText(data))
+        if len(self.model_unique) > 1:
+            attr_merge_data = self.model_unique[1]
+            attr_combine_data = self.model_unique[1]
 
     @check_sql_input
-    def setDataB(self, data):
-        self.dataB = data
-        self._setAttrs(self.attrModelB, data, self.attrModelA, self.dataA)
-        curr_index = -1
-        if self.attr_b:
-            curr_index = next((i for i, val in enumerate(self.attrModelB)
-                               if str(val) == self.attr_b), -1)
-        if curr_index != -1:
-            self.attrViewB.setCurrentIndex(curr_index)
-        else:
-            self.attr_b = INDEX
-        self.infoBoxDataB.setText(self.dataInfoText(data))
+    def setExtraData(self, data):
+        self.extra_data = data
+        self._set_unique_model(data, self.extra_model_unique)
+        self.infoBoxExtraData.setText(self.dataInfoText(data))
+        if len(self.extra_model_unique) > 1:
+            attr_augment_extra = attr_merge_extra = attr_combine_extra = \
+                self.extra_model_unique[1]
 
     def handleNewSignals(self):
         self._invalidate()
 
     def dataInfoText(self, data):
-        ninstances = 0
-        nvariables = 0
-        if data is not None:
-            ninstances = len(data)
-            nvariables = len(data.domain)
-
-        instances = self.tr("%n instance(s)", None, ninstances)
-        attributes = self.tr("%n variable(s)", None, nvariables)
-        return "\n".join([instances, attributes])
+        if data is None:
+            return "No data."
+        else:
+            return "{}\n{} instances\n{} variables".format(
+                data.name, len(data), len(data.domain) + len(data.domain.metas))
 
     def commit(self):
-        AB = None
-        if (self.attr_a and self.attr_b and
-                self.dataA is not None and
-                self.dataB is not None):
-            varA = (self.attr_a if self.attr_a in (INDEX, INSTANCEID) else
-                    self.dataA.domain[self.attr_a])
-            varB = (self.attr_b if self.attr_b in (INDEX, INSTANCEID) else
-                    self.dataB.domain[self.attr_b])
-            AB = merge(self.dataA, varA, self.dataB, varB, self.inner)
-        self.send("Merged Data", AB)
+        return
 
     def _invalidate(self):
         self.commit()
@@ -155,10 +167,6 @@ class OWMergeData(widget.OWWidget):
             ("Attribute A", attr_a),
             ("Attribute B", attr_b),
         ))
-
-
-def allvars(data):
-    return (INDEX,) + data.domain.attributes + data.domain.class_vars + data.domain.metas
 
 
 def merge(A, varA, B, varB, inner=True):
@@ -252,16 +260,16 @@ def join_table_by_indices(left, right, indices):
         left.domain.metas + right.domain.metas
     )
     X = join_array_by_indices(left.X, right.X, indices)
-    Y = join_array_by_indices(numpy.c_[left.Y], numpy.c_[right.Y], indices)
+    Y = join_array_by_indices(np.c_[left.Y], np.c_[right.Y], indices)
     metas = join_array_by_indices(left.metas, right.metas, indices)
     for col, var in enumerate(domain.metas):
         if var.is_string:
             for row in range(metas.shape[0]):
                 cell = metas[row, col]
-                if isinstance(cell, float) and numpy.isnan(cell):
+                if isinstance(cell, float) and np.isnan(cell):
                     metas[row, col] = ""
 
-    return Orange.data.Table.from_numpy(domain, X, Y, metas)
+    return Orange.data.Table.from_np(domain, X, Y, metas)
 
 
 def join_array_by_indices(left, right, indices, masked=float("nan")):
@@ -281,12 +289,12 @@ def join_array_by_indices(left, right, indices, masked=float("nan")):
             rightparts.append(right_masked)
 
     def hstack_blocks(blocks):
-        return numpy.hstack(list(map(numpy.vstack, blocks)))
+        return np.hstack(list(map(np.vstack, blocks)))
 
     if left.shape[1] and left.dtype == object:
-        leftparts = numpy.array(leftparts).astype(object)
+        leftparts = np.array(leftparts).astype(object)
     if right.shape[1] and right.dtype == object:
-        rightparts = numpy.array(rightparts).astype(object)
+        rightparts = np.array(rightparts).astype(object)
     return hstack_blocks((leftparts, rightparts))
 
 
@@ -295,11 +303,10 @@ def test():
     app = QApplication([])
 
     w = OWMergeData()
-    zoo = Orange.data.Table("zoo")
-    A = zoo[:, [0, 1, 2, "type", -1]]
-    B = zoo[:, [3, 4, 5, "type", -1]]
-    w.setDataA(A)
-    w.setDataB(B)
+    data = Orange.data.Table("tests/data-gender-region")
+    extra_data = Orange.data.Table("tests/data-regions")
+    w.setData(data)
+    w.setExtraData(extra_data)
     w.handleNewSignals()
     w.show()
     app.exec_()
