@@ -1,11 +1,11 @@
 import sys
-from functools import partial, reduce
+from functools import partial
 
 from AnyQt.QtWidgets import (
     QWidget, QListView, QLineEdit, QCompleter, QSizePolicy, QGridLayout)
 from AnyQt.QtGui import QDrag
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QMimeData, QByteArray, QModelIndex,
+    Qt, QObject, QEvent, QModelIndex,
     QAbstractItemModel, QSortFilterProxyModel, QStringListModel,
     QItemSelection, QItemSelectionModel
 )
@@ -15,7 +15,7 @@ from Orange.util import deprecated
 from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
-from Orange.widgets.settings import *
+from Orange.widgets.settings import ContextSetting, Setting
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel, PyListModel
@@ -348,31 +348,37 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(bbox, 0, 1, 1, 1)
 
         self.up_attr_button = gui.button(bbox, self, "Up",
-            callback=partial(self.move_up, self.used_attrs_view))
+                                         callback=partial(self.move_up, self.used_attrs_view))
         self.move_attr_button = gui.button(bbox, self, ">",
-            callback=partial(self.move_selected, self.used_attrs_view))
+                                           callback=partial(self.move_selected,
+                                                            self.used_attrs_view)
+                                          )
         self.down_attr_button = gui.button(bbox, self, "Down",
-            callback=partial(self.move_down, self.used_attrs_view))
+                                           callback=partial(self.move_down, self.used_attrs_view))
 
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 1, 1, 1, 1)
 
         self.up_class_button = gui.button(bbox, self, "Up",
-                                         callback=partial(self.move_up, self.class_attrs_view))
+                                          callback=partial(self.move_up, self.class_attrs_view))
         self.move_class_button = gui.button(bbox, self, ">",
-            callback=partial(self.move_selected,
-                             self.class_attrs_view, exclusive=False))
+                                            callback=partial(self.move_selected,
+                                                             self.class_attrs_view,
+                                                             exclusive=False)
+                                           )
         self.down_class_button = gui.button(bbox, self, "Down",
-                                           callback=partial(self.move_down, self.class_attrs_view))
+                                            callback=partial(self.move_down, self.class_attrs_view))
 
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 2, 1, 1, 1)
         self.up_meta_button = gui.button(bbox, self, "Up",
-            callback=partial(self.move_up, self.meta_attrs_view))
+                                         callback=partial(self.move_up, self.meta_attrs_view))
         self.move_meta_button = gui.button(bbox, self, ">",
-            callback=partial(self.move_selected, self.meta_attrs_view))
+                                           callback=partial(self.move_selected,
+                                                            self.meta_attrs_view)
+                                          )
         self.down_meta_button = gui.button(bbox, self, "Down",
-            callback=partial(self.move_down, self.meta_attrs_view))
+                                           callback=partial(self.move_down, self.meta_attrs_view))
 
         autobox = gui.auto_commit(None, self, "auto_commit", "Send")
         layout.addWidget(autobox, 3, 0, 1, 3)
@@ -409,7 +415,7 @@ class OWSelectAttributes(widget.OWWidget):
                             for i, attr in enumerate(data.domain.attributes)}
 
             domain_hints.update({var_sig(attr): ("meta", i)
-                                for i, attr in enumerate(data.domain.metas)})
+                                 for i, attr in enumerate(data.domain.metas)})
 
             if data.domain.class_vars:
                 domain_hints.update(
