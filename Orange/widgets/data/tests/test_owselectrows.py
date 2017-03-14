@@ -8,7 +8,7 @@ from Orange.data import (
     Table, ContinuousVariable, StringVariable, DiscreteVariable)
 from Orange.widgets.data.owselectrows import (
     OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, datasets
 
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
@@ -115,7 +115,7 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(iris.domain[2], "is below", "5.2")
         self.assertEqual(self.widget.conditions[0][2], ("52",))
 
-    def enterFilter(self, variable, filter, value, value2=None):
+    def enterFilter(self, variable, filter, value=None, value2=None):
         row = self.widget.cond_list.model().rowCount()
         self.widget.add_button.click()
 
@@ -125,15 +125,21 @@ class TestOWSelectRows(WidgetTest):
         oper_combo = self.widget.cond_list.cellWidget(row, 1)
         simulate.combobox_activate_item(oper_combo, filter, delay=0)
 
-        value_inputs = self.widget.cond_list.cellWidget(row, 2).children()
-        value_inputs = [w for w in value_inputs if isinstance(w, QLineEdit)]
-        QTest.mouseClick(value_inputs[0], Qt.LeftButton)
-        QTest.keyClicks(value_inputs[0], value, delay=0)
-        QTest.keyClick(value_inputs[0], Qt.Key_Enter)
-        if value2 is not None:
-            QTest.mouseClick(value_inputs[1], Qt.LeftButton)
-            QTest.keyClicks(value_inputs[1], value2, delay=0)
-            QTest.keyClick(value_inputs[1], Qt.Key_Enter)
+        value_inputs = self._get_value_line_edits(row)
+        for i, value in enumerate([value, value2]):
+            if value is None:
+                continue
+            QTest.mouseClick(value_inputs[i], Qt.LeftButton)
+            QTest.keyClicks(value_inputs[i], value, delay=0)
+            QTest.keyClick(value_inputs[i], Qt.Key_Enter)
+
+    def _get_value_line_edits(self, row):
+        value_inputs = self.widget.cond_list.cellWidget(row, 2)
+        if value_inputs:
+            value_inputs = [w for w in value_inputs.children()
+                            if isinstance(w, QLineEdit)]
+        return value_inputs
+
 
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
@@ -214,6 +220,19 @@ class TestOWSelectRows(WidgetTest):
         oper_combo = w2.cond_list.cellWidget(1, 1)
         self.assertEqual(oper_combo.currentText(), "is at most")
 
+    def test_is_defined_on_continuous_variable(self):
+        # gh-2054 regression
+
+        data = Table(datasets.path("testing_dataset_cls"))
+        self.send_signal("Data", data)
+
+        self.enterFilter(data.domain["c2"], "is defined")
+        self.assertFalse(self.widget.Error.parsing_error.is_shown())
+        self.assertEqual(len(self.get_output("Matching Data")), 3)
+        self.assertEqual(len(self.get_output("Unmatched Data")), 1)
+
+        # Test saving of settings
+        self.widget.settingsHandler.pack_data(self.widget)
 
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()

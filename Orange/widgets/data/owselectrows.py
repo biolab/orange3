@@ -5,8 +5,8 @@ from itertools import chain
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
-    QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy
-)
+    QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
+    QLabel)
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
@@ -24,6 +24,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils import vartype
 from Orange.canvas import report
+from Orange.widgets.widget import Msg
 
 
 class SelectRowsContextHandler(DomainContextHandler):
@@ -39,7 +40,7 @@ class SelectRowsContextHandler(DomainContextHandler):
             CONTINUOUS = vartype(ContinuousVariable())
             for i, (attr, op, values) in enumerate(value):
                 if context.attributes.get(attr) == CONTINUOUS:
-                    if isinstance(values[0], str):
+                    if values and isinstance(values[0], str):
                         values = [QLocale().toDouble(v)[0] for v in values]
                         value[i] = (attr, op, values)
         return super().encode_setting(context, setting, value)
@@ -119,6 +120,9 @@ class OWSelectRows(widget.OWWidget):
 
     operator_names = {vtype: [name for _, name in filters]
                       for vtype, filters in Operators.items()}
+
+    class Error(widget.OWWidget.Error):
+        parsing_error = Msg("{}")
 
     def __init__(self):
         super().__init__()
@@ -289,7 +293,7 @@ class OWSelectRows(widget.OWWidget):
                             names.append(item.text())
                     child.desc_text = ', '.join(names)
                     child.set_text()
-            elif child is None:
+            elif isinstance(child, QLabel) or child is None:
                 pass
             else:
                 raise TypeError('Type %s not supported.' % type(child))
@@ -340,8 +344,10 @@ class OWSelectRows(widget.OWWidget):
             lc = self._get_lineedit_contents(box) + lc
         oper = oper_combo.currentIndex()
 
-        if oper == oper_combo.count() - 1:
-            self.cond_list.removeCellWidget(oper_combo.row, 2)
+        if oper_combo.currentText() == "is defined":
+            label = QLabel()
+            label.var_type = vartype(var)
+            self.cond_list.setCellWidget(oper_combo.row, 2, label)
         elif var.is_discrete:
             if oper_combo.currentText() == "is one of":
                 if selected_values:
@@ -430,6 +436,8 @@ class OWSelectRows(widget.OWWidget):
             pass
 
     def _values_to_floats(self, attr, values):
+        if not len(values):
+            return values
         if not all(values):
             return None
         if isinstance(attr, TimeVariable):
@@ -450,7 +458,7 @@ class OWSelectRows(widget.OWWidget):
     def commit(self):
         matching_output = self.data
         non_matching_output = None
-        self.error()
+        self.Error.clear()
         if self.data:
             domain = self.data.domain
             conditions = []
@@ -463,7 +471,7 @@ class OWSelectRows(widget.OWWidget):
                     try:
                         floats = self._values_to_floats(attr, values)
                     except ValueError as e:
-                        self.error(e.args[0])
+                        self.Error.parsing_error(e.args[0])
                         return
                     if floats is None:
                         continue
@@ -508,7 +516,7 @@ class OWSelectRows(widget.OWWidget):
                 attr_flags = sum([Remove.RemoveConstant * purge_attrs,
                                   Remove.RemoveUnusedValues * purge_attrs])
                 class_flags = sum([Remove.RemoveConstant * purge_classes,
-                                  Remove.RemoveUnusedValues * purge_classes])
+                                   Remove.RemoveUnusedValues * purge_classes])
                 # same settings used for attributes and meta features
                 remover = Remove(attr_flags, class_flags, attr_flags)
 
@@ -532,7 +540,9 @@ class OWSelectRows(widget.OWWidget):
         else:
             lab1.setText(label + "~%s row%s, %s variable%s" %
                          (sp(data.approx_len()) +
-            sp(len(data.domain.variables) + len(data.domain.metas))))
+                          sp(len(data.domain.variables) +
+                             len(data.domain.metas)))
+                        )
 
     def send_report(self):
         if not self.data:
