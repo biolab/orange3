@@ -1,12 +1,13 @@
 """Tests for OWPredictions"""
-
+import io
 import numpy as np
 
+from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
 
 from Orange.data import Table, Domain
-from Orange.classification import MajorityLearner
+from Orange.classification import MajorityLearner, TreeLearner
 from Orange.evaluation import Results
 
 
@@ -119,3 +120,41 @@ class TestOWPredictions(WidgetTest):
         self.send_signal("Data", titanic)
         out = self.get_output("Predictions")
         np.testing.assert_allclose(out.get_column_view("majority")[0], 0)
+
+    def test_bad_data(self):
+        """
+        Firstly it creates predictions with TreeLearner. Then sends predictions and
+        different data with different domain to Predictions widget. Those different
+        data and domain are similar to original data and domain but they have three
+        different target values instead of two.
+        GH-2129
+        """
+        filestr1 = """\
+        age\tsex\tsurvived
+        d\td\td
+        \t\tclass
+        adult\tmale\tyes
+        adult\tfemale\tno
+        child\tmale\tyes
+        child\tfemale\tyes
+        """
+        file1 = io.StringIO(filestr1)
+        table = TabReader(file1).read()
+
+        learner = TreeLearner()
+        tree = learner(table)
+
+        filestr2 = """\
+        age\tsex\tsurvived
+        d\td\td
+        \t\tclass
+        adult\tmale\tyes
+        adult\tfemale\tno
+        child\tmale\tyes
+        child\tfemale\tunknown
+        """
+        file2 = io.StringIO(filestr2)
+        bad_table = TabReader(file2).read()
+
+        self.send_signal("Predictors", tree, 1)
+        self.send_signal("Data", bad_table)
