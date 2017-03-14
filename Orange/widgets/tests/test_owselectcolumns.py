@@ -1,11 +1,13 @@
 from unittest import TestCase
 from unittest.mock import Mock
-from Orange.data import ContinuousVariable, DiscreteVariable, Domain
+from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils import vartype
-
+from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.data.owselectcolumns \
+    import OWSelectAttributes
 
 Continuous = vartype(ContinuousVariable())
 Discrete = vartype(DiscreteVariable())
@@ -105,3 +107,34 @@ class SimpleWidget:
 
     def storeSpecificSettings(self):
         pass
+
+class TestOWSelectAttributes(WidgetTest):
+    def setUp(self):
+        self.widget = self.create_widget(OWSelectAttributes)
+
+    def assertVariableCountsEqual(self, available, used, classattrs):
+        self.assertEqual(len(self.widget.available_attrs), available)
+        self.assertEqual(len(self.widget.used_attrs), used)
+        self.assertEqual(len(self.widget.class_attrs), classattrs)
+
+    def test_multiple_target_variable(self):
+        """
+        More than one target variable can be moved to a box for target variables
+        at the same time and moved back as well.
+        GH-2100
+        GH-2086
+        """
+        iris = Table("iris")
+        self.send_signal("Data", iris)
+        self.assertVariableCountsEqual(available=0, used=4, classattrs=1)
+
+        self.widget.move_class_button.click()
+        self.assertVariableCountsEqual(available=0, used=4, classattrs=1)
+
+        self.widget.used_attrs_view.selectAll()
+        self.widget.move_selected(self.widget.used_attrs_view)
+        self.assertVariableCountsEqual(available=4, used=0, classattrs=1)
+
+        self.widget.available_attrs_view.selectAll()
+        self.widget.move_selected(self.widget.class_attrs_view)
+        self.assertVariableCountsEqual(available=0, used=0, classattrs=5)
