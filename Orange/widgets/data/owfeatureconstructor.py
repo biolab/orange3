@@ -819,7 +819,10 @@ def construct_variables(descriptions, source_vars):
 
 
 def sanitized_name(name):
-    return re.sub(r"\W", "_", name)
+    sanitized = re.sub(r"\W", "_", name)
+    if sanitized[0].isdigit():
+        sanitized = "_" + sanitized
+    return sanitized
 
 
 def bind_variable(descriptor, env):
