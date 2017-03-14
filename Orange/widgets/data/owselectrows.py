@@ -40,7 +40,7 @@ class SelectRowsContextHandler(DomainContextHandler):
             CONTINUOUS = vartype(ContinuousVariable())
             for i, (attr, op, values) in enumerate(value):
                 if context.attributes.get(attr) == CONTINUOUS:
-                    if isinstance(values[0], str):
+                    if values and isinstance(values[0], str):
                         values = [QLocale().toDouble(v)[0] for v in values]
                         value[i] = (attr, op, values)
         return super().encode_setting(context, setting, value)
@@ -434,6 +434,8 @@ class OWSelectRows(widget.OWWidget):
             pass
 
     def _values_to_floats(self, attr, values):
+        if not len(values):
+            return values
         if not all(values):
             return None
         if isinstance(attr, TimeVariable):
