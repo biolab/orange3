@@ -24,6 +24,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils import vartype
 from Orange.canvas import report
+from Orange.widgets.widget import Msg
 
 
 class SelectRowsContextHandler(DomainContextHandler):
@@ -119,6 +120,9 @@ class OWSelectRows(widget.OWWidget):
 
     operator_names = {vtype: [name for _, name in filters]
                       for vtype, filters in Operators.items()}
+
+    class Error(widget.OWWidget.Error):
+        parsing_error = Msg("{}")
 
     def __init__(self):
         super().__init__()
@@ -450,7 +454,7 @@ class OWSelectRows(widget.OWWidget):
     def commit(self):
         matching_output = self.data
         non_matching_output = None
-        self.error()
+        self.Error.clear()
         if self.data:
             domain = self.data.domain
             conditions = []
@@ -463,7 +467,7 @@ class OWSelectRows(widget.OWWidget):
                     try:
                         floats = self._values_to_floats(attr, values)
                     except ValueError as e:
-                        self.error(e.args[0])
+                        self.Error.parsing_error(e.args[0])
                         return
                     if floats is None:
                         continue
