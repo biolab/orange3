@@ -1,10 +1,10 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.data.table import dataset_dirs
 from Orange.tests import test_dirname
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.visualize.owdistributions import OWDistributions
 
 
@@ -57,3 +57,13 @@ class TestOWDistributions(WidgetTest):
             widget.varview.model().index(4, 0))
         self.assertIsInstance(widget.var, DiscreteVariable)
         self.assertEqual(widget.var.name, mdomain.metas[0].name)
+
+    def test_variable_group_combinations(self):
+        """Check widget for all combinations of variable and group for dataset
+        with constant columns and missing data"""
+        self.send_signal("Data", Table(datasets.path("testing_dataset_cls")))
+        for groupvar_idx in range(len(self.widget.groupvarmodel)):
+            self.widget.groupvar_idx = groupvar_idx
+            for var_idx in range(len(self.widget.varmodel)):
+                self.widget.variable_idx = var_idx
+                self.widget._setup()
