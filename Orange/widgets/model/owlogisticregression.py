@@ -92,10 +92,10 @@ class OWLogisticRegression(OWBaseLearner):
 def create_coef_table(classifier):
     i = classifier.intercept
     c = classifier.coefficients
-    if len(classifier.domain.class_var.values) > 2:
-        values = classifier.domain.class_var.values
+    if c.shape[0] > 2:
+        values = [classifier.domain.class_var.values[int(i)] for i in classifier.used_vals[0]]
     else:
-        values = ["coef"]
+        values = [classifier.domain.class_var.values[int(classifier.used_vals[0][1])]]
     domain = Domain([ContinuousVariable(value, number_of_decimals=7)
                      for value in values], metas=[StringVariable("name")])
     coefs = np.vstack((i.reshape(1, len(i)), c.T))
