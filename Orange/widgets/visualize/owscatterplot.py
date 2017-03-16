@@ -43,7 +43,7 @@ def font_resize(font, factor, minsize=None, maxsize=None):
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
     captionTitle = "Score Plots"
-    K = 10
+    maxRows = 10
 
     def check_preconditions(self):
         self.Information.add_message(
@@ -69,9 +69,9 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         valid = graph.get_valid_list(ind12)
         X = graph.jittered_data[ind12, :][:, valid].T
         Y = self.master.data.Y[valid]
-        if X.shape[0] < self.K:
+        if X.shape[0] < self.maxRows:
             return
-        n_neighbors = min(self.K, len(X) - 1)
+        n_neighbors = min(self.maxRows, len(X) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(X)
         ind = knn.kneighbors(return_distance=False)
         if self.master.data.domain.has_discrete_class:
@@ -92,7 +92,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         data = Table(dom, X, Y)
         relief = ReliefF if isinstance(dom.class_var, DiscreteVariable) \
             else RReliefF
-        weights = relief(n_iterations=100, k_nearest=self.K)(data)
+        weights = relief(n_iterations=100, k_nearest=self.maxRows)(data)
         attrs = sorted(zip(weights, mdomain.attributes),
                        key=lambda x: (-x[0], x[1].name))
         return [a for _, a in attrs]
