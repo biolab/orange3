@@ -420,9 +420,12 @@ class OWSieveDiagram(OWWidget):
         self.canvasView.setSceneRect(0, 0, view.width(), view.height())
         if not disc_x.values or not disc_y.values:
             text_ = "Features {} and {} have no values".format(disc_x, disc_y) \
-                if not disc_x.values and not disc_y.values and \
-                   disc_x != disc_y else "Feature {} has no values".format(
-                disc_x if not disc_x.values else disc_y)
+                if not disc_x.values and \
+                   not disc_y.values and \
+                          disc_x != disc_y \
+                else \
+                    "Feature {} has no values".format(
+                        disc_x if not disc_x.values else disc_y)
             text(text_, view.width() / 2 + 70, view.height() / 2,
                  Qt.AlignRight | Qt.AlignVCenter)
             return
