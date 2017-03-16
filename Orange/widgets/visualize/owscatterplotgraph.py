@@ -484,6 +484,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     tooltip_shows_all = Setting(False)
     class_density = Setting(False)
     show_reg_line = Setting(False)
+    flag_fixed_yaxis_scales = Setting(False)
     resolution = 256
 
     CurveSymbols = np.array("o x t + d s ?".split())
@@ -628,6 +629,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.set_axis_title("left", "")
 
     def update_data(self, attr_x, attr_y, reset_view=True):
+        def normalize(flag1, flag2, data):
+            if flag1 and flag2:
+                max = np.nanmax(data)
+                min = np.nanmin(data)
+                scale = max - min if not 0 else 1
+                data[:] = 100. * (data[:] - min) / scale
+            return data
+
         self.master.Warning.missing_coords.clear()
         self.master.Information.missing_coords.clear()
         self._clear_plot_widget()
@@ -652,6 +661,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         x_data, y_data = self.get_xy_data_positions(
             attr_x, attr_y, self.valid_data)
         self.n_points = len(x_data)
+
+        y_data = normalize(self.flag_fixed_yaxis_scales,
+                           self.can_fixed_yaxis_scales(),
+                           y_data
+                          )
 
         if reset_view:
             min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
@@ -736,6 +750,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def should_draw_density(self):
         return self.class_density and self.n_points > 1 and self.can_draw_density()
+
+    def can_fixed_yaxis_scales(self):
+        return self.shown_y.is_continuous
 
     def can_draw_regresssion_line(self):
         return self.domain is not None and \

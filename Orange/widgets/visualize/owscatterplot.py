@@ -235,6 +235,12 @@ class OWScatterPlot(OWWidget):
         gui.checkBox(
             box, self, 'graph.label_only_selected',
             'Label only selected points', callback=self.graph.update_labels)
+        self.cb_fixed_yaxis_scales = gui.checkBox(
+            box, self,
+            value='graph.flag_fixed_yaxis_scales',
+            label='Fixed y-axis scales',
+            callback=self.update_graph
+        )
 
         self.zoom_select_toolbar = g.zoom_select_toolbar(
             gui.vBox(self.controlArea, "Zoom/Select"), nomargin=True,
@@ -428,6 +434,7 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
+        self.cb_fixed_yaxis_scales.setEnabled(self.graph.can_fixed_yaxis_scales())
         self.unconditional_commit()
 
     def set_shown_attributes(self, attributes):
@@ -459,6 +466,7 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
+        self.cb_fixed_yaxis_scales.setEnabled(self.graph.can_fixed_yaxis_scales())
         self.send_features()
 
     def update_colors(self):
