@@ -86,7 +86,7 @@ class WidgetDiscovery(object):
 
         for entry_point in entry_points_iter:
             try:
-                point = entry_point.load()
+                point = entry_point.resolve()
             except pkg_resources.DistributionNotFound:
                 log.error("Could not load '%s' (unsatisfied dependencies).",
                           entry_point, exc_info=True)
