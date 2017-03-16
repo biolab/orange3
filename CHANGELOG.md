@@ -6,6 +6,20 @@ Change Log
 * ...
 
 
+[3.4.1] - 2017-03-16
+--------------------
+##### Enhancements
+* Scatterplot: Implement grouping of selections ([#2070](../../pull/2070))
+
+##### Bugfixes
+* Discover widgets when some dependencies are missing ([#2103](../../pull/2103))
+* Select Rows: "is defined" fails ([#2087](../../pull/2087))
+* report comments and OWFile reporting filename ([#1956](../../pull/1956))
+* owcorrespondence: Handle variables with one value ([#2066](../../pull/2066))
+* OWTreeViewer: Fix trees being displayed differently for same tree object ([#2067](../../pull/2067))
+* Fitter: Properly delegate preprocessors ([#2093](../../pull/2093))
+
+
 [3.4.0] - 2017-03-06
 --------------------
 ##### Enhancements
@@ -425,7 +439,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.4.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.1...HEAD
+[3.4.1]: https://github.com/biolab/orange3/compare/3.4.0...3.4.1
 [3.4.0]: https://github.com/biolab/orange3/compare/3.3.12...3.4.0
 [3.3.12]: https://github.com/biolab/orange3/compare/3.3.11...3.3.12
 [3.3.11]: https://github.com/biolab/orange3/compare/3.3.10...3.3.11
