@@ -306,12 +306,13 @@ class OWSilhouettePlot(widget.OWWidget):
             self._set_bar_height()
 
             if self.group_by_cluster:
-                silplot.setScores(self._silhouette, self._labels, var.values)
+                silplot.setScores(self._silhouette, self._labels, var.values,
+                                  var.colors)
             else:
                 silplot.setScores(
                     self._silhouette,
                     numpy.zeros(len(self._silhouette), dtype=int),
-                    [""]
+                    [""], numpy.array([[63, 207, 207]])
                 )
 
             self.scene.addItem(silplot)
@@ -438,14 +439,13 @@ class SilhouettePlot(QGraphicsWidget):
         self.__selection = numpy.asarray([], dtype=int)
         self.__selstate = None
         self.__pen = QPen(Qt.NoPen)
-        self.__brush = QBrush(QColor("#3FCFCF"))
         self.__layout = QGraphicsGridLayout()
         self.__hoveredItem = None
         self.setLayout(self.__layout)
         self.layout().setColumnSpacing(0, 1.)
         self.setFocusPolicy(Qt.StrongFocus)
 
-    def setScores(self, scores, labels, values, rownames=None):
+    def setScores(self, scores, labels, values, colors, rownames=None):
         """
         Set the silhouette scores/labels to for display.
 
@@ -457,6 +457,8 @@ class SilhouettePlot(QGraphicsWidget):
             A ndarray (dtype=int) of label/clusters indices.
         values : list of str
             A list of label/cluster names.
+        colors : (N, 3) ndarray
+            A ndarray of RGB values.
         rownames : list of str, optional
             A list (len == N) of row names.
         """
@@ -483,8 +485,9 @@ class SilhouettePlot(QGraphicsWidget):
         groups = [
             namespace(scores=scores[indices], indices=indices, label=label,
                       rownames=(rownames[indices] if rownames is not None
-                                else None))
-            for indices, label in zip(cluster_indices, values)
+                                else None),
+                      color=color)
+            for indices, label, color in zip(cluster_indices, values, colors)
         ]
         self.clear()
         self.__groups = groups
@@ -583,7 +586,7 @@ class SilhouettePlot(QGraphicsWidget):
 
         for i, group in enumerate(self.__groups):
             silhouettegroup = BarPlotItem(parent=self)
-            silhouettegroup.setBrush(self.__brush)
+            silhouettegroup.setBrush(QBrush(QColor(*group.color)))
             silhouettegroup.setPen(self.__pen)
             silhouettegroup.setDataRange(smin, smax)
             silhouettegroup.setPlotData(group.scores)
@@ -730,7 +733,7 @@ class SilhouettePlot(QGraphicsWidget):
                 rect = rect.adjusted(-1e-7, -1e-7, 1e-7, 1e-7)
 
             rect = rect.intersected(self.contentsRect())
-            action = action = self.__selstate.action & ~SelectAction.Current
+            action = self.__selstate.action & ~SelectAction.Current
             self.__setSelectionRect(rect, action)
             self.__selstate = None
 
@@ -838,13 +841,14 @@ class SilhouettePlot(QGraphicsWidget):
             items = item.items()
             if select.size:
                 for i in select:
-                    items[i].setBrush(Qt.red)
+                    color = numpy.hstack((grp.color, numpy.array([130])))
+                    items[i].setBrush(QBrush(QColor(*color)))
 
             deselect = numpy.flatnonzero(
                 numpy.in1d(grp.indices, deselected, assume_unique=True))
             if deselect.size:
                 for i in deselect:
-                    items[i].setBrush(self.__brush)
+                    items[i].setBrush(QBrush(QColor(*grp.color)))
 
     def __plotItems(self):
         for i in range(len(self.__groups)):
