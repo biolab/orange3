@@ -158,6 +158,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         master_close_event = master.closeEvent
         master_hide_event = master.hideEvent
+        master_delete_event = master.onDeleteWidget
 
         def closeEvent(event):
             vizrank.close()
@@ -167,8 +168,13 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
             vizrank.hide()
             master_hide_event(event)
 
+        def deleteEvent():
+            vizrank.keep_running = False
+            master_delete_event()
+
         master.closeEvent = closeEvent
         master.hideEvent = hideEvent
+        master.onDeleteWidget = deleteEvent
         return vizrank, button
 
     def reshow(self):
