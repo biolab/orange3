@@ -208,12 +208,15 @@ class MahalanobisDistance(Distance):
         x = _orange_to_numpy(data)
         if axis == 0:
             x = x.T
-        n, m = x.shape
-        if n <= m:
-            raise ValueError(
-                'Too few observations for the number of dimensions.')
         self.axis = axis
-        self.VI = np.linalg.inv(np.cov(x.T))
+        try:
+            c = np.cov(x.T)
+        except:
+            raise MemoryError("Covariance matrix is too large.")
+        try:
+            self.VI = np.linalg.inv(c)
+        except:
+            raise ValueError("Computation of inverse covariance matrix failed.")
 
     def __call__(self, e1, e2=None, axis=None, impute=False):
         assert self.VI is not None, \
