@@ -1,16 +1,19 @@
-import math
-import itertools
-from collections import defaultdict
+from enum import IntEnum
+from itertools import chain, product, tee
 
-from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtCore import Qt
-import numpy
+from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
+
+import numpy as np
 
 import Orange
+from Orange.data import StringVariable, ContinuousVariable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 
+
+class MergeType(IntEnum):
+    LEFT_JOIN, INNER_JOIN, OUTER_JOIN = 0, 1, 2
 
 INSTANCEID = "Source position (index)"
 INDEX = "Position (index)"
@@ -18,288 +21,367 @@ INDEX = "Position (index)"
 
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
-    description = "Merge data sets based on the values of selected data features."
+    description = "Merge data sets based on the values of selected features."
     icon = "icons/MergeData.svg"
     priority = 1110
 
-    inputs = [("Data A", Orange.data.Table, "setDataA", widget.Default),
-              ("Data B", Orange.data.Table, "setDataB")]
+    inputs = [widget.InputSignal("Data", Orange.data.Table, "setData",
+                                 widget.Default, replaces=["Data A"]),
+              widget.InputSignal("Extra Data", Orange.data.Table,
+                                 "setExtraData", replaces=["Data B"])]
     outputs = [widget.OutputSignal(
-        "Merged Data", Orange.data.Table,
-        replaces=["Merged Data A+B", "Merged Data B+A"])]
+        "Data", Orange.data.Table,
+        replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"])]
 
-    attr_a = settings.Setting('', schema_only=True)
-    attr_b = settings.Setting('', schema_only=True)
-    inner = settings.Setting(True)
+    attr_augment_data = settings.Setting('', schema_only=True)
+    attr_augment_extra = settings.Setting('', schema_only=True)
+    attr_merge_data = settings.Setting('', schema_only=True)
+    attr_merge_extra = settings.Setting('', schema_only=True)
+    attr_combine_data = settings.Setting('', schema_only=True)
+    attr_combine_extra = settings.Setting('', schema_only=True)
+    merging = settings.Setting(0)
 
     want_main_area = False
+    resizing_enabled = False
+
+    class Warning(widget.OWWidget.Warning):
+        duplicate_names = widget.Msg("Duplicate variable names in output.")
 
     def __init__(self):
         super().__init__()
 
-        # data
-        self.dataA = None
-        self.dataB = None
+        self.data = None
+        self.extra_data = None
+        self.extra_data = None
 
-        # GUI
-        box = gui.hBox(self.controlArea, "Match instances by")
+        self.model = itemmodels.VariableListModel()
+        self.model_unique_with_id = itemmodels.VariableListModel()
+        self.extra_model_unique = itemmodels.VariableListModel()
+        self.extra_model_unique_with_id = itemmodels.VariableListModel()
 
-        # attribute A selection
-        self.attrViewA = gui.comboBox(box, self, 'attr_a', label="Data A",
-                                      orientation=Qt.Vertical,
-                                      sendSelectedValue=True,
-                                      callback=self._invalidate)
-        self.attrModelA = itemmodels.VariableListModel()
-        self.attrViewA.setModel(self.attrModelA)
-
-        # attribute  B selection
-        self.attrViewB = gui.comboBox(box, self, 'attr_b', label="Data B",
-                                      orientation=Qt.Vertical,
-                                      sendSelectedValue=True,
-                                      callback=self._invalidate)
-        self.attrModelB = itemmodels.VariableListModel()
-        self.attrViewB.setModel(self.attrModelB)
-
-        # info A
         box = gui.hBox(self.controlArea, box=None)
-        self.infoBoxDataA = gui.label(box, self, self.dataInfoText(None),
-                                      box="Data A Info")
+        self.infoBoxData = gui.label(
+            box, self, self.dataInfoText(None), box="Data")
+        self.infoBoxExtraData = gui.label(
+            box, self, self.dataInfoText(None), box="Extra Data")
 
-        # info B
-        self.infoBoxDataB = gui.label(box, self, self.dataInfoText(None),
-                                      box="Data B Info")
+        grp = gui.radioButtonsInBox(
+            self.controlArea, self, "merging", box="Merging",
+            callback=self.change_merging)
+        self.attr_boxes = []
 
-        gui.separator(self.controlArea)
-        box = gui.vBox(self.controlArea, box=True)
-        gui.checkBox(box, self, "inner", "Exclude instances without a match",
-                     callback=self._invalidate)
+        radio_width = \
+            QApplication.style().pixelMetric(QStyle.PM_ExclusiveIndicatorWidth)
 
-    def _setAttrs(self, model, data, othermodel, otherdata):
-        model[:] = allvars(data) if data is not None else []
+        def add_option(label, pre_label, between_label,
+                       merge_type, model, extra_model):
+            gui.appendRadioButton(grp, label)
+            vbox = gui.vBox(grp)
+            box = gui.hBox(vbox)
+            box.layout().addSpacing(radio_width)
+            self.attr_boxes.append(box)
+            gui.widgetLabel(box, pre_label)
+            model[:] = [getattr(self, 'attr_{}_data'.format(merge_type))]
+            extra_model[:] = [getattr(self, 'attr_{}_extra'.format(merge_type))]
+            cb = gui.comboBox(box, self, 'attr_{}_data'.format(merge_type),
+                              callback=self._invalidate, model=model)
+            cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+            cb.setFixedWidth(190)
+            gui.widgetLabel(box, between_label)
+            cb = gui.comboBox(box, self, 'attr_{}_extra'.format(merge_type),
+                              callback=self._invalidate, model=extra_model)
+            cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+            cb.setFixedWidth(190)
+            vbox.layout().addSpacing(6)
 
-        if data is not None and otherdata is not None and \
-                len(numpy.intersect1d(data.ids, otherdata.ids)):
-            for model_ in (model, othermodel):
-                if len(model_) and model_[0] != INSTANCEID:
-                    model_.insert(0, INSTANCEID)
+        add_option("Append columns from Extra Data",
+                   "by matching", "with", "augment",
+                   self.model, self.extra_model_unique)
+        add_option("Find matching rows", "where",
+                   "equals", "merge",
+                   self.model_unique_with_id, self.extra_model_unique_with_id)
+        add_option("Concatenate tables, merge rows",
+                   "where", "equals", "combine",
+                   self.model_unique_with_id, self.extra_model_unique_with_id)
+        self.set_merging()
+
+    def set_merging(self):
+        # pylint: disable=invalid-sequence-index
+        # all boxes should be hidden before one is shown, otherwise widget's
+        # layout changes height
+        for box in self.attr_boxes:
+            box.hide()
+        self.attr_boxes[self.merging].show()
+
+    def change_merging(self):
+        self.set_merging()
+        self._invalidate()
+
+    @staticmethod
+    def _set_unique_model(data, model):
+        if data is None:
+            model[:] = []
+            return
+        m = [INDEX]
+        for attr in chain(data.domain.variables, data.domain.metas):
+            col = data.get_column_view(attr)[0]
+            if attr.is_primitive():
+                col = col.astype(float)
+                col = col[~np.isnan(col)]
+            else:
+                col = col[~(col == "")]
+            if len(np.unique(col)) == len(col):
+                m.append(attr)
+        model[:] = m
+
+    @staticmethod
+    def _set_model(data, model):
+        if data is None:
+            model[:] = []
+            return
+        model[:] = list(chain([INDEX], data.domain, data.domain.metas))
+
+    def _add_instanceid_to_models(self):
+        needs_id = self.data is not None and self.extra_data is not None and \
+            len(np.intersect1d(self.data.ids, self.extra_data.ids))
+        for model in (self.model_unique_with_id,
+                      self.extra_model_unique_with_id):
+            has_id = INSTANCEID in model
+            if needs_id and not has_id:
+                model.insert(0, INSTANCEID)
+            elif not needs_id and has_id:
+                model.remove(INSTANCEID)
+
+    def _init_combo_current_items(self, variables, models):
+        for var, model in zip(variables, models):
+            value = getattr(self, var)
+            if len(model) > 0:
+                setattr(self, var, value if value in model else INDEX)
+
+    def _find_best_match(self):
+        def get_unique_str_metas_names(model_):
+            return [m for m in model_ if isinstance(m, StringVariable)]
+
+        def best_match(model, extra_model):
+            attr, extra_attr, n_max_intersect = INDEX, INDEX, 0
+            str_metas = get_unique_str_metas_names(model)
+            extra_str_metas = get_unique_str_metas_names(extra_model)
+            for m_a, m_b in product(str_metas, extra_str_metas):
+                n_inter = len(np.intersect1d(self.data[:, m_a].metas,
+                                             self.extra_data[:, m_b].metas))
+                if n_inter > n_max_intersect:
+                    n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
+            return attr, extra_attr
+
+        def set_attrs(attr_name, attr_extra_name, attr, extra_attr):
+            if getattr(self, attr_name) == INDEX and \
+                    getattr(self, attr_extra_name) == INDEX:
+                setattr(self, attr_name, attr)
+                setattr(self, attr_extra_name, extra_attr)
+
+        if self.data and self.extra_data:
+            attrs = best_match(self.model, self.extra_model_unique)
+            set_attrs("attr_augment_data", "attr_augment_extra", *attrs)
+            attrs = best_match(self.model_unique_with_id,
+                               self.extra_model_unique_with_id)
+            set_attrs("attr_merge_data", "attr_merge_extra", *attrs)
+            set_attrs("attr_combine_data", "attr_combine_extra", *attrs)
 
     @check_sql_input
-    def setDataA(self, data):
-        self.dataA = data
-        self._setAttrs(self.attrModelA, data, self.attrModelB, self.dataB)
-        curr_index = -1
-        if self.attr_a:
-            curr_index = next((i for i, val in enumerate(self.attrModelA)
-                               if str(val) == self.attr_a), -1)
-        if curr_index != -1:
-            self.attrViewA.setCurrentIndex(curr_index)
-        else:
-            self.attr_a = INDEX
-        self.infoBoxDataA.setText(self.dataInfoText(data))
+    def setData(self, data):
+        self.data = data
+        self._set_model(data, self.model)
+        self._set_unique_model(data, self.model_unique_with_id)
+        self._add_instanceid_to_models()
+        self._init_combo_current_items(
+            ("attr_augment_data", "attr_merge_data", "attr_combine_data"),
+            (self.model, self.model_unique_with_id, self.model_unique_with_id))
+        self.infoBoxData.setText(self.dataInfoText(data))
+        self._find_best_match()
 
     @check_sql_input
-    def setDataB(self, data):
-        self.dataB = data
-        self._setAttrs(self.attrModelB, data, self.attrModelA, self.dataA)
-        curr_index = -1
-        if self.attr_b:
-            curr_index = next((i for i, val in enumerate(self.attrModelB)
-                               if str(val) == self.attr_b), -1)
-        if curr_index != -1:
-            self.attrViewB.setCurrentIndex(curr_index)
-        else:
-            self.attr_b = INDEX
-        self.infoBoxDataB.setText(self.dataInfoText(data))
+    def setExtraData(self, data):
+        self.extra_data = data
+        self._set_unique_model(data, self.extra_model_unique)
+        self._set_unique_model(data, self.extra_model_unique_with_id)
+        self._add_instanceid_to_models()
+        self._init_combo_current_items(
+            ("attr_augment_extra", "attr_merge_extra", "attr_combine_extra"),
+            (self.extra_model_unique, self.extra_model_unique_with_id,
+             self.extra_model_unique_with_id))
+        self.infoBoxExtraData.setText(self.dataInfoText(data))
+        self._find_best_match()
 
     def handleNewSignals(self):
         self._invalidate()
 
     def dataInfoText(self, data):
-        ninstances = 0
-        nvariables = 0
-        if data is not None:
-            ninstances = len(data)
-            nvariables = len(data.domain)
-
-        instances = self.tr("%n instance(s)", None, ninstances)
-        attributes = self.tr("%n variable(s)", None, nvariables)
-        return "\n".join([instances, attributes])
+        if data is None:
+            return "No data."
+        else:
+            return "{}\n{} instances\n{} variables".format(
+                data.name, len(data), len(data.domain) + len(data.domain.metas))
 
     def commit(self):
-        AB = None
-        if (self.attr_a and self.attr_b and
-                self.dataA is not None and
-                self.dataB is not None):
-            varA = (self.attr_a if self.attr_a in (INDEX, INSTANCEID) else
-                    self.dataA.domain[self.attr_a])
-            varB = (self.attr_b if self.attr_b in (INDEX, INSTANCEID) else
-                    self.dataB.domain[self.attr_b])
-            AB = merge(self.dataA, varA, self.dataB, varB, self.inner)
-        self.send("Merged Data", AB)
+        self.Warning.duplicate_names.clear()
+        if self.data is None or len(self.data) == 0 or \
+                self.extra_data is None or len(self.extra_data) == 0:
+            merged_data = None
+        else:
+            merged_data = self.merge()
+            if merged_data:
+                merged_domain = merged_data.domain
+                var_names = [var.name for var in chain(merged_domain.variables,
+                                                       merged_domain.metas)]
+                if len(set(var_names)) != len(var_names):
+                    self.Warning.duplicate_names()
+        self.send("Data", merged_data)
 
     def _invalidate(self):
         self.commit()
 
     def send_report(self):
-        attr_a = None
-        attr_b = None
-        if self.dataA is not None:
-            attr_a = self.attr_a
-            if attr_a in self.dataA.domain:
-                attr_a = self.dataA.domain[attr_a]
-        if self.dataB is not None:
-            attr_b = self.attr_b
-            if attr_b in self.dataB.domain:
-                attr_b = self.dataB.domain[attr_b]
+        # pylint: disable=invalid-sequence-index
+        attr = (self.attr_augment_data, self.attr_merge_data,
+                self.attr_combine_data)
+        extra_attr = (self.attr_augment_extra, self.attr_merge_extra,
+                      self.attr_combine_extra)
+        merging_types = ("Append columns from Extra Data", "Find matching rows",
+                         "Concatenate tables, merge rows")
         self.report_items((
-            ("Attribute A", attr_a),
-            ("Attribute B", attr_b),
-        ))
+            ("Merging", merging_types[self.merging]),
+            ("Data attribute", attr[self.merging]),
+            ("Extra data attribute", extra_attr[self.merging])))
 
+    def merge(self):
+        # pylint: disable=invalid-sequence-index
+        operation = ["augment", "merge", "combine"][self.merging]
+        var_data = getattr(self, "attr_{}_data".format(operation))
+        var_extra_data = getattr(self, "attr_{}_extra".format(operation))
+        merge_method = getattr(self, "_{}_indices".format(operation))
 
-def allvars(data):
-    return (INDEX,) + data.domain.attributes + data.domain.class_vars + data.domain.metas
+        as_string = not (isinstance(var_data, ContinuousVariable) and
+                         isinstance(var_extra_data, ContinuousVariable))
+        extra_map = self._get_keymap(self.extra_data, var_extra_data, as_string)
+        match_indices = merge_method(var_data, extra_map, as_string)
+        reduced_extra_data = self._compute_reduced_extra_data(var_extra_data)
+        return self._join_table_by_indices(reduced_extra_data, match_indices)
 
+    def _compute_reduced_extra_data(self, var_extra_data):
+        """Prepare a table with extra columns that will appear in the merged
+        table"""
+        domain = self.data.domain
+        extra_domain = self.extra_data.domain
+        all_vars = set(chain(domain.variables, domain.metas))
+        if self.merging != MergeType.OUTER_JOIN:
+            all_vars.add(var_extra_data)
+        extra_vars = chain(extra_domain.variables, extra_domain.metas)
+        return self.extra_data[:, [var for var in extra_vars
+                                   if var not in all_vars]]
 
-def merge(A, varA, B, varB, inner=True):
-    join_indices = inner_join_indices(A, B, varA, varB) if inner else \
-        outer_join_indices(A, B, varA, varB)
-    seen_set = set()
-
-    def seen(val):
-        return (val in seen_set or bool(seen_set.add(val))) and val is not None
-
-    merge_indices = [(i, j) for i, j in join_indices if not seen(i)]
-
-    all_vars = set(A.domain.variables + A.domain.metas)
-    if inner:
-        all_vars.add(varB)
-
-    iter_vars_B = itertools.chain(
-        enumerate(B.domain.variables),
-        ((-i, m) for i, m in enumerate(B.domain.metas, start=1))
-    )
-    reduced_B = B[:, [i for i, var in iter_vars_B if var not in all_vars]]
-
-    return join_table_by_indices(A, reduced_B, merge_indices)
-
-
-def group_table_indices(table, key_var, exclude_unknown=False):
-    """
-    Group table indices based on values of selected columns (`key_vars`).
-
-    Return a dictionary mapping all unique value combinations (keys)
-    into a list of indices in the table where they are present.
-
-    :param Orange.data.Table table:
-    :param Orange.data.FeatureDescriptor] key_var:
-    :param bool exclude_unknown:
-
-    """
-    groups = defaultdict(list)
-    for i, inst in enumerate(table):
-        key = inst.id if key_var == INSTANCEID else i if \
-            key_var == INDEX else inst[key_var]
-        if exclude_unknown and math.isnan(key):
-            continue
-        groups[str(key)].append(i)
-    return groups
-
-
-def inner_join_indices(table1, table2, var1, var2):
-    key_map1 = group_table_indices(table1, var1, True)
-    key_map2 = group_table_indices(table2, var2, True)
-    indices = []
-    for i, inst in enumerate(table1):
-        key = str(inst.id if var1 == INSTANCEID
-                  else i if var1 == INDEX else inst[var1])
-        if key in key_map1 and key in key_map2:
-            for j in key_map2[key]:
-                indices.append((i, j))
-    return indices
-
-
-def outer_join_indices(table1, table2, var1, var2):
-    key_map1 = group_table_indices(table1, var1, True)
-    key_map2 = group_table_indices(table2, var2, True)
-    indices = []
-
-    def get_key(var):
-        # local function due to better performance
-        return str(inst.id if var == INSTANCEID
-                   else i if var == INDEX else inst[var])
-
-    for i, inst in enumerate(table1):
-        key = get_key(var1)
-        if key in key_map1 and key in key_map2:
-            for j in key_map2[key]:
-                indices.append((i, j))
+    @staticmethod
+    def _values(data, var, as_string):
+        """Return an iterotor over keys for rows of the table."""
+        if var == INSTANCEID:
+            return (inst.id for inst in data)
+        if var == INDEX:
+            return range(len(data))
+        col = data.get_column_view(var)[0]
+        if not as_string:
+            return col
+        if var.is_primitive():
+            return (var.str_val(val) if not np.isnan(val) else np.nan
+                    for val in col)
         else:
-            indices.append((i, None))
-    for i, inst in enumerate(table2):
-        key = get_key(var2)
-        if not (key in key_map1 and key in key_map2):
-            indices.append((None, i))
-    return indices
+            return (str(val) if val else np.nan for val in col)
 
+    @classmethod
+    def _get_keymap(cls, data, var, as_string):
+        """Return a generator of pairs (key, index) by enumerating and
+        switching the values for rows (method `_values`).
+        """
+        return ((val, i)
+                for i, val in enumerate(cls._values(data, var, as_string)))
 
-def join_table_by_indices(left, right, indices):
-    if not indices:
-        return None
-    domain = Orange.data.Domain(
-        left.domain.attributes + right.domain.attributes,
-        left.domain.class_vars + right.domain.class_vars,
-        left.domain.metas + right.domain.metas
-    )
-    X = join_array_by_indices(left.X, right.X, indices)
-    Y = join_array_by_indices(numpy.c_[left.Y], numpy.c_[right.Y], indices)
-    metas = join_array_by_indices(left.metas, right.metas, indices)
-    for col, var in enumerate(domain.metas):
-        if var.is_string:
-            for row in range(metas.shape[0]):
-                cell = metas[row, col]
-                if isinstance(cell, float) and numpy.isnan(cell):
-                    metas[row, col] = ""
+    def _augment_indices(self, var_data, extra_map, as_string):
+        """Compute a two-row array of indices:
+        - the first row contains indices for the primary table,
+        - the second row contains the matching rows in the extra table or -1"""
+        data = self.data
+        extra_map = dict(extra_map)
+        # Don't match nans. This is needed since numpy supports using nan as
+        # keys. If numpy fixes this, the below conditions will always be false,
+        # so we're OK again.
+        if np.nan in extra_map:
+            del extra_map[np.nan]
+        keys = (extra_map.get(val, -1)
+                for val in self._values(data, var_data, as_string))
+        return np.vstack((np.arange(len(data), dtype=np.int64),
+                          np.fromiter(keys, dtype=np.int64, count=len(data))))
 
-    return Orange.data.Table.from_numpy(domain, X, Y, metas)
+    def _merge_indices(self, var_data, extra_map, as_string):
+        """Use _augment_indices to compute the array of indices,
+        then remove those with no match in the second table"""
+        augmented = self._augment_indices(var_data, extra_map, as_string)
+        return augmented[:, augmented[1] != -1]
 
+    def _combine_indices(self, var_data, extra_map, as_string):
+        """Use _augment_indices to compute the array of indices,
+        then add rows in the second table without a match in the first"""
+        to_add, extra_map = tee(extra_map)
+        # dict instead of set because we have pairs; we'll need only keys
+        key_map = dict(self._get_keymap(self.data, var_data, as_string))
+        # _augment indices will skip rows where the key in the left table
+        # is nan. See comment in `_augment_indices` wrt numpy and nan in dicts
+        if np.nan in key_map:
+            del key_map[np.nan]
+        keys = np.fromiter((j for key, j in to_add if key not in key_map),
+                           dtype=np.int64)
+        right_indices = np.vstack((np.full(len(keys), -1, np.int64), keys))
+        return np.hstack(
+            (self._augment_indices(var_data, extra_map, as_string),
+             right_indices))
 
-def join_array_by_indices(left, right, indices, masked=float("nan")):
-    left_masked = [masked] * left.shape[1]
-    right_masked = [masked] * right.shape[1]
+    def _join_table_by_indices(self, reduced_extra, indices):
+        """Join (horizontally) self.data and reduced_extra, taking the pairs
+        of rows given in indices"""
+        if not len(indices):
+            return None
+        domain = Orange.data.Domain(
+            *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
+              for x in ("attributes", "class_vars", "metas")))
+        X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
+        Y = self._join_array_by_indices(
+            np.c_[self.data.Y], np.c_[reduced_extra.Y], indices)
+        string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
+        metas = self._join_array_by_indices(
+            self.data.metas, reduced_extra.metas, indices, string_cols)
+        return Orange.data.Table.from_numpy(domain, X, Y, metas)
 
-    leftparts = []
-    rightparts = []
-    for i, j in indices:
-        if i is not None:
-            leftparts.append(left[i])
-        else:
-            leftparts.append(left_masked)
-        if j is not None:
-            rightparts.append(right[j])
-        else:
-            rightparts.append(right_masked)
-
-    def hstack_blocks(blocks):
-        return numpy.hstack(list(map(numpy.vstack, blocks)))
-
-    if left.shape[1] and left.dtype == object:
-        leftparts = numpy.array(leftparts).astype(object)
-    if right.shape[1] and right.dtype == object:
-        rightparts = numpy.array(rightparts).astype(object)
-    return hstack_blocks((leftparts, rightparts))
+    @staticmethod
+    def _join_array_by_indices(left, right, indices, string_cols=None):
+        """Join (horizontally) two arrays, taking pairs of rows given in indices
+        """
+        tpe = object if object in (left.dtype, right.dtype) else left.dtype
+        left_width, right_width = left.shape[1], right.shape[1]
+        arr = np.full((indices.shape[1], left_width + right_width), np.nan, tpe)
+        if string_cols:
+            arr[:, string_cols] = ""
+        for indices, to_change, lookup in (
+                (indices[0], arr[:, :left_width], left),
+                (indices[1], arr[:, left_width:], right)):
+            known = indices != -1
+            to_change[known] = lookup[indices[known]]
+        return arr
 
 
 def test():
-    from AnyQt.QtWidgets import QApplication
     app = QApplication([])
-
     w = OWMergeData()
-    zoo = Orange.data.Table("zoo")
-    A = zoo[:, [0, 1, 2, "type", -1]]
-    B = zoo[:, [3, 4, 5, "type", -1]]
-    w.setDataA(A)
-    w.setDataB(B)
+    data = Orange.data.Table("tests/data-gender-region")
+    extra_data = Orange.data.Table("tests/data-regions")
+    w.setData(data)
+    w.setExtraData(extra_data)
     w.handleNewSignals()
     w.show()
     app.exec_()

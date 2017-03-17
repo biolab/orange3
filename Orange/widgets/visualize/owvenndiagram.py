@@ -867,8 +867,6 @@ def unique(seq):
             yield item
             seen.add(item)
 
-from Orange.widgets.data.owmergedata import group_table_indices
-
 
 def unique_non_nan(ar):
     # metas have sometimes object dtype, but values are numpy floats
@@ -1649,6 +1647,19 @@ def drop_columns(data, columns):
         filter_vars(data.domain.metas)
     )
     return Orange.data.Table.from_table(domain, data)
+
+
+def group_table_indices(table, key_var):
+    """
+    Group table indices based on values of selected columns (`key_vars`).
+
+    Return a dictionary mapping all unique value combinations (keys)
+    into a list of indices in the table where they are present.
+    """
+    groups = defaultdict(list)
+    for i, inst in enumerate(table):
+        groups[str(inst[key_var])].append(i)
+    return groups
 
 
 def test():
