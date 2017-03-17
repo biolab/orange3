@@ -42,9 +42,10 @@ class OWMergeData(widget.OWWidget):
     merging = settings.Setting(0)
 
     want_main_area = False
+    resizing_enabled = False
 
     class Warning(widget.OWWidget.Warning):
-        duplicate_names = widget.Msg("Duplicate variable names.")
+        duplicate_names = widget.Msg("Duplicate variable names in output.")
 
     def __init__(self):
         super().__init__()
@@ -85,10 +86,12 @@ class OWMergeData(widget.OWWidget):
             cb = gui.comboBox(box, self, 'attr_{}_data'.format(merge_type),
                               callback=self._invalidate, model=model)
             cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+            cb.setFixedWidth(190)
             gui.widgetLabel(box, between_label)
             cb = gui.comboBox(box, self, 'attr_{}_extra'.format(merge_type),
                               callback=self._invalidate, model=extra_model)
             cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+            cb.setFixedWidth(190)
             vbox.layout().addSpacing(6)
 
         add_option("Append columns from Extra Data",
