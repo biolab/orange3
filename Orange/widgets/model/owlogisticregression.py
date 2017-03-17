@@ -1,5 +1,5 @@
-import numpy as np
 from itertools import chain
+import numpy as np
 from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
@@ -61,9 +61,9 @@ class OWLogisticRegression(OWBaseLearner):
         self.set_c()
 
     def set_c(self):
-        self.C = self.C_s[self.C_index]
-        fmt = "C={}" if self.C >= 1 else "C={:.3f}"
-        self.c_label.setText(fmt.format(self.C))
+        self.strength_C = self.C_s[self.C_index]
+        fmt = "C={}" if self.strength_C >= 1 else "C={:.3f}"
+        self.c_label.setText(fmt.format(self.strength_C))
 
     def create_learner(self):
         penalty = self.penalty_types_short[self.penalty_type]
@@ -71,7 +71,7 @@ class OWLogisticRegression(OWBaseLearner):
             penalty=penalty,
             dual=self.dual,
             tol=self.tol,
-            C=self.C,
+            C=self.strength_C,
             fit_intercept=self.fit_intercept,
             intercept_scaling=self.intercept_scaling,
             preprocessors=self.preprocessors
@@ -86,7 +86,7 @@ class OWLogisticRegression(OWBaseLearner):
 
     def get_learner_parameters(self):
         return (("Regularization", "{}, C={}".format(
-                self.penalty_types[self.penalty_type], self.C_s[self.C_index])),)
+            self.penalty_types[self.penalty_type], self.C_s[self.C_index])),)
 
 
 def create_coef_table(classifier):
