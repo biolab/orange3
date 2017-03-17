@@ -42,7 +42,9 @@ class TestOWDistances(WidgetTest):
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
 
     def test_mahalanobis_error(self):
-        self.widget.axis = 1
-        self.send_signal("Data", self.iris)
-        self.widget.compute_distances(Mahalanobis, self.iris)
-        self.assertTrue(self.widget.Error.too_few_observations.is_shown())
+        data = self.iris
+        data.X = np.vstack((data.X[0], data.X[0]))
+        data.Y = np.vstack((data.Y[0], data.Y[0]))
+        self.send_signal("Data", data)
+        self.widget.compute_distances(Mahalanobis, data)
+        self.assertTrue(self.widget.Error.mahalanobis_error.is_shown())

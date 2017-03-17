@@ -779,6 +779,14 @@ class TestMahalanobis(TestCase):
         self.assertRaises(AssertionError, mah, x, axis=1)
         self.assertEqual(mah(x, x).shape, (self.n, self.n))
 
+    def test_dimensions(self):
+        x = Table('iris')[:20].X
+        xt = Table('iris')[:20].X.T
+        mah = MahalanobisDistance(x)
+        mah(x[0], x[1])
+        mah = MahalanobisDistance(xt)
+        mah(xt[0], xt[1])
+
 
 class TestDistances(TestCase):
     @classmethod
