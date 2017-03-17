@@ -338,6 +338,7 @@ class OWFeatureConstructor(OWWidget):
 
     class Error(OWWidget.Error):
         more_values_needed = Msg("Discrete feature {} needs more values.")
+        invalid_expressions = Msg("Invalid expressions: {}.")
 
     def __init__(self):
         super().__init__()
@@ -552,11 +553,7 @@ class OWFeatureConstructor(OWWidget):
                     return var.name
         return None
 
-    def apply(self):
-        if self.data is None:
-            return
-
-        desc = list(self.featuremodel)
+    def _validate_descriptors(self, desc):
 
         def validate(source):
             try:
@@ -564,11 +561,28 @@ class OWFeatureConstructor(OWWidget):
             except Exception:
                 return False
 
-        def remove_invalid_expression(desc):
-            return (desc if validate(desc.expression)
-                    else desc._replace(expression=""))
+        final = []
+        invalid = []
+        for d in desc:
+            if validate(d.expression):
+                final.append(d)
+            else:
+                final.append(d._replace(expression=""))
+                invalid.append(d)
 
-        desc = map(remove_invalid_expression, desc)
+        if invalid:
+            self.Error.invalid_expressions(", ".join(s.name for s in invalid))
+
+        return final
+
+    def apply(self):
+        self.Error.clear()
+
+        if self.data is None:
+            return
+
+        desc = list(self.featuremodel)
+        desc = self._validate_descriptors(desc)
         source_vars = tuple(self.data.domain) + self.data.domain.metas
         new_variables = construct_variables(desc, source_vars)
 
@@ -580,7 +594,6 @@ class OWFeatureConstructor(OWWidget):
             metas=self.data.domain.metas + tuple(metas)
         )
 
-        self.Error.clear()
         try:
             data = Orange.data.Table(new_domain, self.data)
         except Exception as err:
@@ -806,7 +819,10 @@ def construct_variables(descriptions, source_vars):
 
 
 def sanitized_name(name):
-    return re.sub(r"\W", "_", name)
+    sanitized = re.sub(r"\W", "_", name)
+    if sanitized[0].isdigit():
+        sanitized = "_" + sanitized
+    return sanitized
 
 
 def bind_variable(descriptor, env):
