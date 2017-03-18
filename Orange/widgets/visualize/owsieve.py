@@ -1,4 +1,5 @@
 import math
+from itertools import chain
 
 import numpy as np
 from scipy.stats.distributions import chi2
@@ -167,13 +168,13 @@ class OWSieveDiagram(OWWidget):
             self.domain_model.set_domain(None)
         else:
             self.domain_model.set_domain(data.domain)
-            if any(attr.is_continuous for attr in data.domain):
+            if any(attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
                 discretizer = Discretize(
-                    method=EqualFreq(n=4),remove_const=False,
+                    method=EqualFreq(n=4), remove_const=False,
                     discretize_classes=True, discretize_metas=True)
                 self.discrete_data = discretizer(data)
             else:
-                self.discrete_data = self.data
+                self.discrete_data = data
         self.attrs = [x for x in self.domain_model if isinstance(x, Variable)]
         if self.attrs:
             self.attr_x = self.attrs[0]
@@ -419,9 +420,12 @@ class OWSieveDiagram(OWWidget):
         self.canvasView.setSceneRect(0, 0, view.width(), view.height())
         if not disc_x.values or not disc_y.values:
             text_ = "Features {} and {} have no values".format(disc_x, disc_y) \
-                if not disc_x.values and not disc_y.values and \
-                   disc_x != disc_y else "Feature {} has no values".format(
-                disc_x if not disc_x.values else disc_y)
+                if not disc_x.values and \
+                   not disc_y.values and \
+                          disc_x != disc_y \
+                else \
+                    "Feature {} has no values".format(
+                        disc_x if not disc_x.values else disc_y)
             text(text_, view.width() / 2 + 70, view.height() / 2,
                  Qt.AlignRight | Qt.AlignVCenter)
             return
