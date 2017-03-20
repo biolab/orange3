@@ -197,6 +197,7 @@ class Report:
         :type header_columns: int
         :param num_format: numeric format, e.g. `{:.3}`
         """
+        row_limit = 100
         name, table = self._fix_args(name, table)
         join = "".join
 
@@ -266,7 +267,7 @@ class Report:
                 stream.extend(item_html(None, col) for col in columns)
                 stream.append('</tr>')
 
-            for row in rows:
+            for row in rows[:row_limit]:
                 stream.append('<tr>')
                 if has_vertical_header:
                     stream.append(item_html(row, None))
@@ -291,17 +292,31 @@ class Report:
             return join("  <tr>\n    {}</tr>\n".format(
                 join(cells[rowi < header_rows or coli < header_columns]
                      .format(fmtnum(elm)) for coli, elm in enumerate(row))
-            ) for rowi, row in enumerate(data))
+            ) for rowi, row in zip(range(row_limit + header_rows), data))
 
         self.report_name(name)
+        n_hidden_rows, n_cols = 0, 1
         if isinstance(table, QTableView):
             body = report_abstract_model(table.model(), table)
+            n_hidden_rows = table.model().rowCount() - row_limit
+            n_cols = table.model().columnCount()
         elif isinstance(table, QAbstractItemModel):
             body = report_abstract_model(table)
+            n_hidden_rows = table.rowCount() - row_limit
+            n_cols = table.columnCount()
         elif isinstance(table, Iterable):
             body = report_list(table, header_rows, header_columns)
+            table = list(table)
+            n_hidden_rows = len(table)
+            if len(table) and isinstance(table[0], Iterable):
+                n_cols = len(table[0])
         else:
             body = None
+
+        if n_hidden_rows > 0:
+            body += """<tr><th></th><td colspan='{}'><b>+ {} more</b></td></tr>
+            """.format(n_cols, n_hidden_rows)
+
         if body:
             self.report_html += "<table>\n" + body + "</table>"
 
