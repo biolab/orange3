@@ -10,7 +10,7 @@ from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, \
     StringVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay
-
+from Orange.widgets.tests.utils import simulate
 
 class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
@@ -227,3 +227,66 @@ class MosaicVizRankTests(WidgetTest):
             ])
         )
         self.send_signal("Data", table)
+
+    def test_color_combo(self):
+        """
+        Color combo enables to select class values. Checks if class values
+        are selected correctly.
+        GH-2133
+        GH-2036
+        """
+        table = Table("iris")
+        self.send_signal("Data", table)
+        color_vars = ["(Pearson residuals)"] + [str(x) for x in table.domain]
+        for i in range(0, len(color_vars)):
+            idx = self.widget.cb_attr_color.findText(color_vars[i])
+            self.widget.cb_attr_color.setCurrentIndex(idx)
+            color = self.widget.cb_attr_color.currentText()
+            simulate.combobox_activate_index(self.widget.controls.variable_color, idx, 0)
+            discrete_data = self.widget.discrete_data
+
+            if color == "(Pearson residuals)":
+                self.assertIsNone(discrete_data.domain.class_var)
+            else:
+                self.assertEqual(color, str(discrete_data.domain.class_var))
+            output = self.get_output("Data")
+            self.assertEqual(output.domain.class_var, table.domain.class_var)
+
+    def test_vizrank(self):
+        """
+        Tests if vizrank works accordingly to selected color value.
+        GH-2133
+        GH-2036
+        """
+        def test(i):
+            self.send_signal("Data", table)
+            idx = self.widget.cb_attr_color.findText(color_vars[i])
+            self.widget.cb_attr_color.setCurrentIndex(idx)
+            color = self.widget.cb_attr_color.currentText()
+            simulate.combobox_activate_index(self.widget.controls.variable_color, idx, 0)
+            self.widget.vizrank.button.click()
+            time.sleep(.5)
+            model = self.widget.vizrank.rank_model
+            nrows = model.rowCount()
+            all_data = []
+            self.assertTrue((nrows == 7 and i != 0) or (nrows == 10 and i == 0))
+            for row in range(nrows):
+                data = []
+                for column in range(model.columnCount()):
+                    index = model.index(row, column)
+                    data.append(str(model.data(index)))
+                    all_data = all_data + str(model.data(index)).replace(',', '').split()
+                for text in data:
+                    self.assertNotIn(color, text)
+            self.assertEqual(len(set(all_data)), 3 if color != "(Pearson residuals)" else 4)
+            self.vizrank.stop_and_reset()
+            self.vizrank.toggle()
+
+        table = Table("titanic")
+        self.send_signal("Data", table)
+        self.widget.vizrank.max_attrs = 4
+        color_vars = ["(Pearson residuals)"] + [str(x) for x in table.domain]
+
+        for i in range(len(color_vars)):
+            self.widget = self.create_widget(OWMosaicDisplay)
+            test(i)
