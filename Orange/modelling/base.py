@@ -30,7 +30,7 @@ class Fitter(Learner, metaclass=FitterMeta):
     learners.
 
     """
-    __fits__ = None
+    __fits__ = {}
     __returns__ = Model
 
     # Constants to indicate what kind of problem we're dealing with
@@ -106,10 +106,9 @@ class Fitter(Learner, metaclass=FitterMeta):
         """The fitter supports weights if both the classification and
         regression learners support weights."""
         return (
-            hasattr(self.get_learner(self.CLASSIFICATION), 'supports_weights')
-            and self.get_learner(self.CLASSIFICATION).supports_weights) and (
-            hasattr(self.get_learner(self.REGRESSION), 'supports_weights')
-            and self.get_learner(self.REGRESSION).supports_weights)
+            getattr(self.get_learner(self.CLASSIFICATION), 'supports_weights', False) and
+            getattr(self.get_learner(self.REGRESSION), 'supports_weights', False)
+        )
 
     @property
     def params(self):
