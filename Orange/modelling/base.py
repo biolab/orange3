@@ -50,10 +50,17 @@ class Fitter(Learner, metaclass=FitterMeta):
             learner = self.get_learner(self.REGRESSION)
 
         if type(self).fit is Learner.fit:
-            return learner.fit_storage(data)
+            model = learner.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            return learner.fit(X, Y, W)
+            model = learner.fit(X, Y, W)
+
+        if data.domain.has_discrete_class:
+            model.params = self.get_params(self.CLASSIFICATION)
+        else:
+            model.params = self.get_params(self.REGRESSION)
+
+        return model
 
     def preprocess(self, data):
         if data.domain.has_discrete_class:

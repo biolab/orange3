@@ -82,6 +82,11 @@ class Learner(_ReprableWithPreprocessors):
     preprocessors = ()
     learner_adequacy_err_msg = ''
 
+    # Just a fallback in case learners don't specify their params. Params
+    # should be specified instance-wise, every learner can be constructed with
+    # different params, so we should store those.
+    params = {}
+
     def __init__(self, preprocessors=None):
         self.use_default_preprocessors = False
         if isinstance(preprocessors, Iterable):
@@ -121,14 +126,17 @@ class Learner(_ReprableWithPreprocessors):
         model.name = self.name
         model.original_domain = origdomain
         model.original_data = origdata
+        model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
         return model
 
     def _fit_model(self, data):
         if type(self).fit is Learner.fit:
-            return self.fit_storage(data)
+            model = self.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            return self.fit(X, Y, W)
+            model = self.fit(X, Y, W)
+        model.params = self.params
+        return model
 
     def preprocess(self, data):
         """Apply the `preprocessors` to the data"""
@@ -303,13 +311,17 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
     """
     __wraps__ = None
     __returns__ = SklModel
-    _params = {}
 
     preprocessors = default_preprocessors = [
         RemoveNaNClasses(),
         Continuize(),
         RemoveNaNColumns(),
-        SklImpute()]
+        SklImpute(),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        self._params = {}
+        super().__init__(*args, **kwargs)
 
     @property
     def params(self):
@@ -334,18 +346,11 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
     def preprocess(self, data):
         data = super().preprocess(data)
 
-        if any(v.is_discrete and len(v.values) > 2
-               for v in data.domain.attributes):
+        if any(v.is_discrete and len(v.values) > 2 for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support " +
                              "multinomial variables.")
 
         return data
-
-    def __call__(self, data):
-        m = super().__call__(data)
-        m.used_vals = [np.unique(y) for y in data.Y[:, None].T]
-        m.params = self.params
-        return m
 
     def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
