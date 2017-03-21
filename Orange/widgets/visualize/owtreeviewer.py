@@ -444,14 +444,11 @@ def test():
     """Standalone test"""
     import sys
     from AnyQt.QtWidgets import QApplication
-    from Orange.classification.tree import TreeLearner, SklTreeLearner
-    from Orange.regression.tree import TreeLearner, SklTreeRegressionLearner
+    from Orange.modelling.tree import TreeLearner
     a = QApplication(sys.argv)
     ow = OWTreeGraph()
-    data = Table("titanic")
-    # data = Table("housing")[:30]
-    clf = SklTreeLearner()(data)
-    # clf = TreeLearner()(data)
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else "titanic")
+    clf = TreeLearner()(data)
     clf.instances = data
 
     ow.ctree(clf)

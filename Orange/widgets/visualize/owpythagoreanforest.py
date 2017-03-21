@@ -268,7 +268,7 @@ class OWPythagoreanForest(OWWidget):
         if self.__prevent_commit:
             return
 
-        if len(self.scene.selectedItems()) == 0:
+        if not self.scene.selectedItems():
             self.send('Tree', None)
             # The selected tree index should only reset when model changes
             if self.model is None:
@@ -303,7 +303,7 @@ class OWPythagoreanForest(OWWidget):
             values.insert(0, 'None')
         else:
             label_text = 'Node color'
-            values = ContinuousTreeNode.COLOR_METHODS.keys()
+            values = list(ContinuousTreeNode.COLOR_METHODS.keys())
         label.setText(label_text)
         self.ui_target_class_combo.addItems(values)
         self.ui_target_class_combo.setCurrentIndex(self.target_class_index)
@@ -325,18 +325,14 @@ class SklRandomForestAdapter:
     """Take a `RandomForest` and wrap all the trees into the `SklTreeAdapter`
     instances that Pythagorean trees use."""
     def __init__(self, model):
-        self._adapters = []
+        self._adapters = None
         self._domain = model.domain
         self._trees = model.trees
 
     def get_trees(self):
         """Get the tree adapters in the random forest."""
-        if len(self._adapters) > 0:
-            return self._adapters
-        if len(self._trees) < 1:
-            return self._adapters
-
-        self._adapters = list(map(SklTreeAdapter, self._trees))
+        if not self._adapters:
+            self._adapters = list(map(SklTreeAdapter, self._trees))
         return self._adapters
 
     @property

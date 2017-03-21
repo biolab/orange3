@@ -164,9 +164,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
 
         def _recurse(node):
             node.target_class_index = target_class_index
-            if len(node.children) > 0:
-                for child in node.children:
-                    _recurse(child)
+            for child in node.children:
+                _recurse(child)
 
         _recurse(self.root)
 
@@ -584,7 +583,7 @@ class TreeNode(metaclass=ABCMeta):
 
     def _rules_str(self):
         rules = self.tree.rules(self.label)
-        if len(rules):
+        if rules:
             if isinstance(rules[0], Rule):
                 sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
                 return '<br>'.join(str(rule) for rule in sorted_rules) + \
@@ -645,9 +644,7 @@ class DiscreteTreeNode(TreeNode):
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree.is_leaf(self.label) else '') \
-            + ('<br><br>'
-               if rules_str and not self.tree.is_leaf(self.label)
-               else '') \
+            + ('<br><br>' if rules_str and not self.tree.is_leaf(self.label) else '') \
             + rules_str \
             + '</p>'
 
@@ -716,8 +713,7 @@ class ContinuousTreeNode(TreeNode):
             + '<hr>' \
             + ('Split by ' + splitting_attr.name
                if not self.tree.is_leaf(self.label) else '') \
-            + ('<br><br>' if rules_str and not self.tree.is_leaf(
-               self.label) else '') \
+            + ('<br><br>' if rules_str and not self.tree.is_leaf(self.label) else '') \
             + rules_str \
             + '</p>'
 

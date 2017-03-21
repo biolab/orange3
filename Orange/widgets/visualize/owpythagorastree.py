@@ -323,7 +323,7 @@ class OWPythagorasTree(OWWidget):
             values.insert(0, 'None')
         else:
             label_text = 'Node color'
-            values = ContinuousTreeNode.COLOR_METHODS.keys()
+            values = list(ContinuousTreeNode.COLOR_METHODS.keys())
         label.setText(label_text)
         self.target_class_combo.addItems(values)
         self.target_class_combo.setCurrentIndex(self.target_class_index)
@@ -386,10 +386,10 @@ class OWPythagorasTree(OWWidget):
 
 
 class TreeGraphicsView(
-    PannableGraphicsView,
-    ZoomableGraphicsView,
-    AnchorableGraphicsView,
-    PreventDefaultWheelEvent
+        PannableGraphicsView,
+        ZoomableGraphicsView,
+        AnchorableGraphicsView,
+        PreventDefaultWheelEvent
 ):
     """QGraphicsView that contains all functionality we will use to display
     tree."""

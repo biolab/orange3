@@ -214,7 +214,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             any([x != y for x, y in zip(inital_sizing_sq, updated_sizing_sq)]),
             'Squares are drawn in same positions after changing log factor')
 
-    def test_test_legend(self):
+    def test_legend(self):
         """Test legend behaviour."""
         self.widget.cb_show_legend.setChecked(True)
 
@@ -227,8 +227,9 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsInstance(self.widget.legend, OWContinuousLegend)
         self.assertFalse(self.widget.legend.isVisible())
 
-        # The legend should appear when there is a coloring
-        simulate.combobox_activate_item(self.widget.target_class_combo, 'Mean')
+        # The legend should appear when there is a coloring (2 is mean coloring)
+        index = 2
+        simulate.combobox_activate_index(self.widget.target_class_combo, index)
         self.assertIsInstance(self.widget.legend, OWContinuousLegend)
         self.assertTrue(self.widget.legend.isVisible())
 
@@ -309,16 +310,6 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         """Check that the tree is drawn identically upon receiving the same
         dataset with no parameter changes."""
         n_tries = 10
-
-        def _check_all_same(data):
-            """Check that all the elements within an iterable are identical."""
-            iterator = iter(data)
-            try:
-                first = next(iterator)
-            except StopIteration:
-                return True
-            return all(first == rest for rest in iterator)
-
         # Make sure the tree are deterministic for iris
         scene_nodes = []
         for _ in range(n_tries):
@@ -326,7 +317,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             scene_nodes.append([n.pos() for n in self.get_visible_squares()])
         for node_row in zip(*scene_nodes):
             self.assertTrue(
-                _check_all_same(node_row),
+                self._check_all_same(node_row),
                 "The tree was not drawn identically in the %d times it was "
                 "sent to widget after receiving the iris dataset." % n_tries
             )
@@ -343,11 +334,12 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             scene_nodes.append([n.pos() for n in self.get_visible_squares()])
         for node_row in zip(*scene_nodes):
             self.assertTrue(
-                _check_all_same(node_row),
+                self._check_all_same(node_row),
                 "The tree was not drawn identically in the %d times it was "
                 "sent to widget after receiving a dataset with variables with "
                 "same entropy." % n_tries
             )
+
     def test_keep_colors_on_sizing_change(self):
         """The color should be the same after a full recompute of the tree."""
         self.send_signal('Tree', self.titanic)
