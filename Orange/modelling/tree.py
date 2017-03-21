@@ -5,6 +5,8 @@ from Orange.regression import TreeLearner as RegressionTreeLearner
 from Orange.regression.tree import SklTreeRegressionLearner
 from Orange.tree import TreeModel
 
+__all__ = ['SklTreeLearner', 'TreeLearner']
+
 
 class SklTreeLearner(Fitter):
     name = 'tree'

@@ -18,8 +18,8 @@ ADDONS_ENTRY_POINT = 'orange.addons'
 from Orange import data
 
 for mod_name in ['classification', 'clustering', 'distance', 'ensembles',
-                 'evaluation', 'misc', 'preprocess', 'projection', 'regression',
-                 'statistics', 'version', 'widgets']:
+                 'evaluation', 'misc', 'modelling', 'preprocess', 'projection',
+                 'regression', 'statistics', 'version', 'widgets']:
     globals()[mod_name] = _LazyModule(mod_name)
 
 datasets = _DatasetInfo()

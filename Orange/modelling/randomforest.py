@@ -3,6 +3,8 @@ from Orange.classification import RandomForestLearner as RFClassification
 from Orange.modelling import Fitter
 from Orange.regression import RandomForestRegressionLearner as RFRegression
 
+__all__ = ['RandomForestLearner']
+
 
 class RandomForestLearner(Fitter):
     name = 'random forest'

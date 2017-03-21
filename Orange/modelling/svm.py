@@ -2,6 +2,8 @@ from Orange.classification import SVMLearner, LinearSVMLearner, NuSVMLearner
 from Orange.modelling import Fitter
 from Orange.regression import SVRLearner, LinearSVRLearner, NuSVRLearner
 
+__all__ = ['SVMFitter', 'LinearSVMFitter', 'NuSVMFitter']
+
 
 class SVMFitter(Fitter):
     __fits__ = {'classification': SVMLearner, 'regression': SVRLearner}
