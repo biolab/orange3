@@ -82,17 +82,21 @@ class Learner(_ReprableWithPreprocessors):
     preprocessors = ()
     learner_adequacy_err_msg = ''
 
-    # Just a fallback in case learners don't specify their params. Params
-    # should be specified instance-wise, every learner can be constructed with
-    # different params, so we should store those.
-    params = {}
-
     def __init__(self, preprocessors=None):
         self.use_default_preprocessors = False
+        self.__params = {}
         if isinstance(preprocessors, Iterable):
             self.preprocessors = tuple(preprocessors)
         elif preprocessors:
             self.preprocessors = (preprocessors,)
+
+    @property
+    def params(self):
+        return self.__params
+
+    @params.setter
+    def params(self, value):
+        self.__params = value
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
@@ -320,16 +324,16 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
     ]
 
     def __init__(self, *args, **kwargs):
-        self._params = {}
+        self.__params = {}
         super().__init__(*args, **kwargs)
 
     @property
     def params(self):
-        return self._params
+        return self.__params
 
     @params.setter
     def params(self, value):
-        self._params = self._get_sklparams(value)
+        self.__params = self._get_sklparams(value)
 
     def _get_sklparams(self, values):
         skllearner = self.__wraps__
