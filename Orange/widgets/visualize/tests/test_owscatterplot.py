@@ -198,6 +198,23 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
 
+    def test_none_data(self):
+        """
+        Prevent crash due to missing data.
+        GH-2122
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"),
+                 DiscreteVariable("b", values=["y", "n"])]
+            ),
+            list(zip(
+                [],
+                ""))
+        )
+        self.send_signal("Data", table)
+        self.widget.reset_graph_data()
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
