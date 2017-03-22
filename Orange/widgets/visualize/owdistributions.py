@@ -313,7 +313,7 @@ class OWDistributions(widget.OWWidget):
         self.plot.autoRange()
 
     def help_event(self, ev):
-        in_graph_coor = self.plot.mapSceneToView(ev.scenePos())
+        self.plot.mapSceneToView(ev.scenePos())
         ctooltip = []
         for vb, item in self.tooltip_items:
             mouse_over_curve = isinstance(item, pg.PlotCurveItem) \
@@ -521,18 +521,18 @@ class OWDistributions(widget.OWWidget):
                         ci = 1.96 * sqrt(prob * (1 - prob) / dsum)
                         item.tooltip += "\n%s: %.3f ± %.3f" % (cvar_values[ic], prob, ci)
                         mark = pg.ScatterPlotItem()
-                        bar = pg.ErrorBarItem()
+                        errorbar = pg.ErrorBarItem()
                         pen = QPen(QBrush(QColor(0)), 1)
                         pen.setCosmetic(True)
-                        bar.setData(x=[i+position], y=[prob],
-                                    bottom=min(numpy.array([ci]), prob),
-                                    top=min(numpy.array([ci]), 1 - prob),
-                                    beam=numpy.array([0.05]),
-                                    brush=QColor(1), pen=pen)
+                        errorbar.setData(x=[i+position], y=[prob],
+                                         bottom=min(numpy.array([ci]), prob),
+                                         top=min(numpy.array([ci]), 1 - prob),
+                                         beam=numpy.array([0.05]),
+                                         brush=QColor(1), pen=pen)
                         mark.setData([i+position], [prob], antialias=True, symbol="o",
                                      fillLevel=None, pxMode=True, size=10,
                                      brush=QColor(colors[ic]), pen=pen)
-                        self.plot_prob.addItem(bar)
+                        self.plot_prob.addItem(errorbar)
                         self.plot_prob.addItem(mark)
 
         for color, name in zip(colors, cvar_values):
@@ -597,12 +597,12 @@ class OWDistributions(widget.OWWidget):
         self.report_caption(text)
 
 
-def dist_sum(D1, D2):
+def dist_sum(dXW1, dXW2):
     """
     A sum of two continuous distributions.
     """
-    X1, W1 = D1
-    X2, W2 = D2
+    X1, W1 = dXW1
+    X2, W2 = dXW2
     X = numpy.r_[X1, X2]
     W = numpy.r_[W1, W2]
     sort_ind = numpy.argsort(X)
