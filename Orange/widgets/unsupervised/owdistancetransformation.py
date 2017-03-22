@@ -20,7 +20,7 @@ class OWDistanceTransformation(widget.OWWidget):
 
     normalization_method = settings.Setting(0)
     inversion_method = settings.Setting(0)
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     normalization_options = (
         ("No normalization", lambda x: x),

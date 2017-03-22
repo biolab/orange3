@@ -256,7 +256,7 @@ class OWSelectAttributes(widget.OWWidget):
 
     settingsHandler = SelectAttributesDomainContextHandler()
     domain_role_hints = ContextSetting({})
-    auto_commit = Setting(False)
+    auto_commit = Setting(True)
 
     def __init__(self):
         super().__init__()

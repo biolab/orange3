@@ -872,7 +872,7 @@ class OWImageViewer(widget.OWWidget):
     titleAttr = settings.ContextSetting(0)
 
     imageSize = settings.Setting(100)
-    autoCommit = settings.Setting(False)
+    autoCommit = settings.Setting(True)
 
     buttons_area_orientation = Qt.Vertical
     graph_name = "scene"

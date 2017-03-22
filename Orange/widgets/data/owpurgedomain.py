@@ -23,7 +23,7 @@ class OWPurgeDomain(widget.OWWidget):
     removeClassAttribute = Setting(1)
     removeMetaAttributeValues = Setting(1)
     removeMetaAttributes = Setting(1)
-    autoSend = Setting(False)
+    autoSend = Setting(True)
     sortValues = Setting(True)
     sortClasses = Setting(True)
 

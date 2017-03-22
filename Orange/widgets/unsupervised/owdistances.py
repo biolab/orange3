@@ -33,7 +33,7 @@ class OWDistances(OWWidget):
 
     axis = settings.Setting(0)
     metric_idx = settings.Setting(0)
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
