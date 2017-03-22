@@ -577,6 +577,7 @@ class OWDistributions(widget.OWWidget):
             return self.varmodel[self.variable_idx]
 
     def send_report(self):
+        self.plotview.scene().setSceneRect(self.plotview.sceneRect())
         if self.variable_idx < 0:
             return
         self.report_plot()
