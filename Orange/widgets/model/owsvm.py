@@ -4,7 +4,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QGridLayout
 
 from Orange.data import Table
-from Orange.modelling.svm import SVMFitter, NuSVMFitter
+from Orange.modelling import SVMLearner, NuSVMLearner
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -21,7 +21,7 @@ class OWSVM(OWBaseLearner):
     ]
     priority = 50
 
-    LEARNER = SVMFitter
+    LEARNER = SVMLearner
 
     outputs = [("Support vectors", Table, widget.Explicit)]
 
@@ -204,9 +204,9 @@ class OWSVM(OWBaseLearner):
             'preprocessors': self.preprocessors
         }
         if self.svm_type == self.SVM:
-            return SVMFitter(C=self.C, epsilon=self.epsilon, **common_args)
+            return SVMLearner(C=self.C, epsilon=self.epsilon, **common_args)
         else:
-            return NuSVMFitter(nu=self.nu, C=self.nu_C, **common_args)
+            return NuSVMLearner(nu=self.nu, C=self.nu_C, **common_args)
 
     def get_learner_parameters(self):
         items = OrderedDict()

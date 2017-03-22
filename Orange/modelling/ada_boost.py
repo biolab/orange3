@@ -4,6 +4,8 @@ from Orange.ensembles import (
 )
 from Orange.modelling import Fitter
 
+__all__ = ['SklAdaBoostLearner']
+
 
 class SklAdaBoostLearner(Fitter):
     __fits__ = {'classification': SklAdaBoostClassificationLearner,
