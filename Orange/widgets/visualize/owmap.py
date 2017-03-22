@@ -89,8 +89,6 @@ class LeafletMap(WebviewWidget):
 
     def set_data(self, data, lat_attr, lon_attr):
         self.data = data
-        self.lat_attr = None
-        self.lon_attr = None
         self._image_token = np.nan  # Stop drawing previous image
         self._owwidget.progressBarFinished(None)
 
@@ -742,7 +740,7 @@ class OWMap(widget.OWWidget):
 
         self.closeContext()
 
-        if data is None:
+        if data is None or not len(data):
             return self.clear()
 
         all_vars = list(chain(self.data.domain.variables, self.data.domain.metas))
