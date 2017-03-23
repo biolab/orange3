@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import time
 from unittest.mock import MagicMock
 import numpy as np
 
@@ -247,6 +248,40 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal("Data", self.data[:10])
         selected_data = self.get_output("Selected Data")
         self.assertEqual(len(selected_data), 10)
+
+
+    def test_vizrank_color(self):
+        """
+        Tests if ScatterPlotVizRank is now able to build ranks correctly and
+        according to selected color.
+        GH-2134
+        GH-2037
+        """
+        def test(i):
+            self.send_signal("Data", table)
+            cb_attr_color = self.widget.controls.graph.attr_color
+            cb_attr_color.setCurrentIndex(i)
+            color = cb_attr_color.currentText()
+            if color:
+                simulate.combobox_activate_index(self.widget.controls.graph.attr_color, i, 0)
+                self.widget.vizrank.button.click()
+                time.sleep(.5)
+                model = self.widget.vizrank.rank_model
+                nrows = model.rowCount()
+                self.assertEqual(nrows * i, 3 * i)
+                for row in range(nrows):
+                    data = []
+                    for column in range(model.columnCount()):
+                        index = model.index(row, column)
+                        data.append(str(model.data(index)))
+                    for text in data:
+                        self.assertNotIn(color, text)
+
+        table = Table("titanic")
+        self.send_signal("Data", table)
+        for i in range(self.widget.controls.graph.attr_color.count()):
+            self.widget = self.create_widget(OWScatterPlot)
+            test(i)
 
 
 if __name__ == "__main__":
