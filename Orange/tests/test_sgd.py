@@ -35,7 +35,7 @@ class TestSGDClassificationLearner(unittest.TestCase):
     def test_SGDClassification(self):
         sgd = SGDClassificationLearner()
         res = CrossValidation(self.iris, [sgd], k=3)
-        self.assertGreater(AUC(res)[0], 0.85)
+        self.assertGreater(AUC(res)[0], 0.8)
 
     def test_coefficients(self):
         lrn = SGDClassificationLearner()

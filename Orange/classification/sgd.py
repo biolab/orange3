@@ -13,7 +13,7 @@ class SGDClassificationLearner(SklLearner):
     __returns__ = LinearModel
     preprocessors = SklLearner.preprocessors + [Normalize()]
 
-    def __init__(self, loss='squared_loss',penalty='l2', alpha=0.0001,
+    def __init__(self, loss='hinge', penalty='l2', alpha=0.0001,
                  l1_ratio=0.15,fit_intercept=True, n_iter=5, shuffle=True,
                  epsilon=0.1, random_state=None, learning_rate='invscaling',
                  eta0=0.01, power_t=0.25, warm_start=False, average=False,
