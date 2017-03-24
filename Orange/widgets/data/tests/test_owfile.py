@@ -11,6 +11,7 @@ from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
+from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.tests.base import WidgetTest
 
@@ -140,3 +141,27 @@ class TestOWFile(WidgetTest):
         self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
         self.widget.domain_editor.model().setData(idx, "", Qt.EditRole)
         self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
+
+    def test_context_match_includes_variable_values(self):
+        file1 = """\
+var
+a b
+
+a
+"""
+        file2 = """\
+var
+a b c
+
+a
+"""
+        editor = self.widget.domain_editor
+        idx = self.widget.domain_editor.model().createIndex(0, 3)
+
+        with named_file(file1, suffix=".tab") as filename:
+            self.open_dataset(filename)
+            self.assertEqual(editor.model().data(idx, Qt.DisplayRole), "a, b")
+
+        with named_file(file2, suffix=".tab") as filename:
+            self.open_dataset(filename)
+            self.assertEqual(editor.model().data(idx, Qt.DisplayRole), "a, b, c")
