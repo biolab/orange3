@@ -42,9 +42,21 @@ class TestOWDistances(WidgetTest):
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
 
     def test_mahalanobis_error(self):
-        data = self.iris
-        data.X = np.vstack((data.X[0], data.X[0]))
-        data.Y = np.vstack((data.Y[0], data.Y[0]))
-        self.send_signal("Data", data)
-        self.widget.compute_distances(Mahalanobis, data)
-        self.assertTrue(self.widget.Error.mahalanobis_error.is_shown())
+        self.widget.metric_idx = METRICS.index(Mahalanobis)
+        self.widget.autocommit = True
+
+        invalid = self.iris[:]
+        invalid.X = np.vstack((invalid.X[0], invalid.X[0]))
+        invalid.Y = np.vstack((invalid.Y[0], invalid.Y[0]))
+        datasets = [self.iris, None, invalid]
+        bad = [False, False, True]
+        out = [True, False, False]
+
+        for data1, bad1, out1 in zip(datasets, bad, out):
+            for data2, bad2, out2 in zip(datasets, bad, out):
+                self.send_signal("Data", data1)
+                self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad1)
+                self.assertEqual(self.get_output("Distances") is not None, out1)
+                self.send_signal("Data", data2)
+                self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad2)
+                self.assertEqual(self.get_output("Distances") is not None, out2)
