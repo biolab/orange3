@@ -7,7 +7,7 @@ from itertools import chain
 from numbers import Real, Integral
 from functools import reduce
 from warnings import warn
-from threading import Lock
+from threading import Lock, RLock
 
 import numpy as np
 import bottleneck as bn
@@ -39,6 +39,7 @@ dataset_dirs = ['', get_sample_datasets_dir()]
 chaining of domain conversions also works with caching even with descendants
 of Table."""
 _conversion_cache = None
+_conversion_cache_lock = RLock()
 
 
 class RowInstance(Instance):
@@ -338,60 +339,61 @@ class Table(MutableSequence, Storage):
 
             return a
 
-        new_cache = _conversion_cache is None
-        try:
-            if new_cache:
-                _conversion_cache = {}
-            else:
-                cached = _conversion_cache.get((id(domain), id(source)))
-                if cached:
-                    return cached
-            if domain == source.domain:
-                return cls.from_table_rows(source, row_indices)
+        with _conversion_cache_lock:
+            new_cache = _conversion_cache is None
+            try:
+                if new_cache:
+                    _conversion_cache = {}
+                else:
+                    cached = _conversion_cache.get((id(domain), id(source)))
+                    if cached:
+                        return cached
+                if domain == source.domain:
+                    return cls.from_table_rows(source, row_indices)
 
-            if isinstance(row_indices, slice):
-                start, stop, stride = row_indices.indices(source.X.shape[0])
-                n_rows = (stop - start) // stride
-                if n_rows < 0:
-                    n_rows = 0
-            elif row_indices is ...:
-                n_rows = len(source)
-            else:
-                n_rows = len(row_indices)
+                if isinstance(row_indices, slice):
+                    start, stop, stride = row_indices.indices(source.X.shape[0])
+                    n_rows = (stop - start) // stride
+                    if n_rows < 0:
+                        n_rows = 0
+                elif row_indices is ...:
+                    n_rows = len(source)
+                else:
+                    n_rows = len(row_indices)
 
-            self = cls()
-            self.domain = domain
-            conversion = domain.get_conversion(source.domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                 is_sparse=sp.issparse(source.X))
-            if self.X.ndim == 1:
-                self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                 is_sparse=sp.issparse(source.Y))
+                self = cls()
+                self.domain = domain
+                conversion = domain.get_conversion(source.domain)
+                self.X = get_columns(row_indices, conversion.attributes, n_rows,
+                                     is_sparse=sp.issparse(source.X))
+                if self.X.ndim == 1:
+                    self.X = self.X.reshape(-1, len(self.domain.attributes))
+                self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
+                                     is_sparse=sp.issparse(source.Y))
 
-            dtype = np.float64
-            if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = np.object
-            self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype,
-                                     is_sparse=sp.issparse(source.metas))
-            if self.metas.ndim == 1:
-                self.metas = self.metas.reshape(-1, len(self.domain.metas))
-            if source.has_weights():
-                self.W = np.array(source.W[row_indices])
-            else:
-                self.W = np.empty((n_rows, 0))
-            self.name = getattr(source, 'name', '')
-            if hasattr(source, 'ids'):
-                self.ids = np.array(source.ids[row_indices])
-            else:
-                cls._init_ids(self)
-            self.attributes = getattr(source, 'attributes', {})
-            _conversion_cache[(id(domain), id(source))] = self
-            return self
-        finally:
-            if new_cache:
-                _conversion_cache = None
+                dtype = np.float64
+                if any(isinstance(var, StringVariable) for var in domain.metas):
+                    dtype = np.object
+                self.metas = get_columns(row_indices, conversion.metas,
+                                         n_rows, dtype,
+                                         is_sparse=sp.issparse(source.metas))
+                if self.metas.ndim == 1:
+                    self.metas = self.metas.reshape(-1, len(self.domain.metas))
+                if source.has_weights():
+                    self.W = np.array(source.W[row_indices])
+                else:
+                    self.W = np.empty((n_rows, 0))
+                self.name = getattr(source, 'name', '')
+                if hasattr(source, 'ids'):
+                    self.ids = np.array(source.ids[row_indices])
+                else:
+                    cls._init_ids(self)
+                self.attributes = getattr(source, 'attributes', {})
+                _conversion_cache[(id(domain), id(source))] = self
+                return self
+            finally:
+                if new_cache:
+                    _conversion_cache = None
 
     @classmethod
     def from_table_rows(cls, source, row_indices):
@@ -1349,10 +1351,8 @@ class Table(MutableSequence, Storage):
 
         if col_vars is None:
             col_vars = range(len(self.domain.variables))
-            single_column = False
         else:
             col_vars = [self.domain.index(var) for var in col_vars]
-            single_column = len(col_vars) == 1 and len(self.domain) > 1
         if row_var is None:
             row_var = self.domain.class_var
             if row_var is None:

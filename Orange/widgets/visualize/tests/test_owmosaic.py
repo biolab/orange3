@@ -1,11 +1,13 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import time
 import numpy as np
 
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
 
-from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, StringVariable
+from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, \
+    StringVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay
 
@@ -193,18 +195,21 @@ class MosaicVizRankTests(WidgetTest):
 
         widget.interior_coloring = widget.PEARSON
         vizrank.toggle()
+        time.sleep(0.5)
         self.assertEqual(vizrank.rank_model.rowCount(), 10)  # 4x5 / 2
         widget.interior_coloring = widget.CLASS_DISTRIBUTION
         vizrank.toggle()
+        time.sleep(0.5)
         self.assertEqual(vizrank.rank_model.rowCount(), 10)  # 4 + 4x5 / 2
 
         widget.set_data(self.iris_no_class)
         vizrank.toggle()
-        self.assertEqual(vizrank.rank_model.rowCount(), 6)  # 3x4 / 2
 
+    def test_does_not_crash_cont_class(self):
+        """MosaicVizrank computes rankings without crashing"""
         data = Table("housing.tab")
-        widget.set_data(data)
-        vizrank.toggle()
+        self.widget.set_data(data)
+        self.vizrank.toggle()
 
     def test_nan_column(self):
         """
@@ -222,4 +227,3 @@ class MosaicVizRankTests(WidgetTest):
             ])
         )
         self.send_signal("Data", table)
-

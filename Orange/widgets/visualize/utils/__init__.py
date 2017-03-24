@@ -5,7 +5,10 @@ Utility classes for visualization widgets
 from bisect import bisect_left
 from operator import attrgetter
 
-from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
+from AnyQt.QtCore import (
+    Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel, QThread, QObject,
+    pyqtSlot as Slot, QCoreApplication
+)
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
     QTableView, QGraphicsTextItem, QGraphicsRectItem, QGraphicsView, QDialog,
@@ -96,6 +99,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.saved_progress = 0
         self.scores = []
 
+        self._thread = None
+        self._worker = None
+
         self.filter = QLineEdit()
         self.filter.setPlaceholderText("Filter ...")
         self.filter.textChanged.connect(self.filter_changed)
@@ -185,6 +191,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         This method must be called by the widget when the data is reset,
         e.g. from `set_data` handler.
         """
+        if self._thread is not None and self._thread.isRunning():
+            self.keep_running = False
+            self._thread.quit()
+            self._thread.wait()
         self.keep_running = False
         self.scheduled_call = None
         self.saved_state = None
@@ -193,6 +203,12 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.rank_model.clear()
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
+        self._thread = QThread(self)
+        self._worker = Worker(self.run)
+        self._worker.moveToThread(self._thread)
+        self._worker.done.connect(self._thread.quit)
+        self._worker.done.connect(self._select_first_if_none)
+        self._thread.started.connect(self._worker.do_work)
 
     def filter_changed(self, text):
         self.model_proxy.setFilterFixedString(text)
@@ -285,20 +301,22 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
                     else:
                         self.saved_state = state
                         self.saved_progress = progress.count
-                        self._select_first_if_none()
                     return
-                score = self.compute_score(state)
-                if score is not None:
-                    pos = bisect_left(self.scores, score)
-                    row_items = self.row_for_state(score, state)
-                    if self._has_bars:
-                        bar = self.bar_length(score)
-                        if bar is not None:
-                            row_items[0].setData(bar, gui.TableBarItem.BarRole)
-                    self.rank_model.insertRow(pos, row_items)
-                    self.scores.insert(pos, score)
+                try:
+                    score = self.compute_score(state)
+                    if score is not None:
+                        pos = bisect_left(self.scores, score)
+                        row_items = self.row_for_state(score, state)
+                        if self._has_bars:
+                            bar = self.bar_length(score)
+                            if bar is not None:
+                                row_items[0].setData(bar,
+                                                     gui.TableBarItem.BarRole)
+                        self.rank_model.insertRow(pos, row_items)
+                        self.scores.insert(pos, score)
+                except Exception:
+                    pass
                 progress.advance()
-            self._select_first_if_none()
             self.button.setText("Finished")
             self.button.setEnabled(False)
             self.keep_running = False
@@ -309,10 +327,25 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.keep_running = not self.keep_running
         if self.keep_running:
             self.button.setText("Pause")
-            self.run()
+            self._worker.moveToThread(self._thread)
+            self._thread.start()
         else:
-            self._select_first_if_none()
             self.button.setText("Continue")
+            self._thread.quit()
+
+
+class Worker(QObject):
+    done = Signal()
+
+    def __init__(self, function):
+        super().__init__()
+        self.function = function
+
+    @Slot()
+    def do_work(self):
+        self.function()
+        self.moveToThread(QCoreApplication.instance().thread())
+        self.done.emit()
 
 
 class VizRankDialogAttr(VizRankDialog):
