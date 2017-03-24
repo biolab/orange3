@@ -1150,7 +1150,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
 
         if self.match_values == self.MATCH_VALUES_ALL:
             def _encode(attrs):
-                return tuple((v.name, v.values if v.is_discrete else vartype(v))
+                return tuple((v.name, list(v.values) if v.is_discrete else vartype(v))
                              for v in attrs)
         else:
             def _encode(attrs):
