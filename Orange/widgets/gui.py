@@ -2620,7 +2620,7 @@ SortOrderRole = next(OrangeUserRole)  # Used for sorting
 
 class TableBarItem(QItemDelegate):
     BarRole = next(OrangeUserRole)
-    ColorRole = next(OrangeUserRole)
+    BarColorRole = next(OrangeUserRole)
 
     def __init__(self, parent=None, color=QtGui.QColor(255, 170, 127),
                  color_schema=None):
@@ -2645,14 +2645,18 @@ class TableBarItem(QItemDelegate):
             if math.isnan(ratio):
                 ratio = None
 
-        color = self.color
-        if self.color_schema is not None and ratio is not None:
-            class_ = index.data(TableClassValueRole)
-            if isinstance(class_, Orange.data.Value) and \
-                    class_.variable.is_discrete and \
-                    not math.isnan(class_):
-                color = self.color_schema[int(class_)]
-
+        color = None
+        if ratio is not None:
+            if self.color_schema is not None:
+                class_ = index.data(TableClassValueRole)
+                if isinstance(class_, Orange.data.Value) and \
+                        class_.variable.is_discrete and \
+                        not math.isnan(class_):
+                    color = self.color_schema[int(class_)]
+            else:
+                color = index.data(self.BarColorRole)
+        if color is None:
+            color = self.color
         rect = option.rect
         if ratio is not None:
             pw = 5
