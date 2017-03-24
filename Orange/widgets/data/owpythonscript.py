@@ -376,7 +376,7 @@ class OWPythonScript(widget.OWWidget):
         Setting([Script("Hello world", "print('Hello world')\n")])
     currentScriptIndex = Setting(0)
     splitterState = Setting(None)
-    auto_execute = Setting(False)
+    auto_execute = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -386,7 +386,6 @@ class OWPythonScript(widget.OWWidget):
         self.in_learner = None
         self.in_classifier = None
         self.in_object = None
-        self.auto_execute = False
 
         for s in self.libraryListSource:
             s.flags = 0
