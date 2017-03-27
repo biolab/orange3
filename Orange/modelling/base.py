@@ -29,6 +29,14 @@ class Fitter(Learner, metaclass=FitterMeta):
     will then determine which parameters have to be passed to individual
     learners.
 
+    Attributes
+    ----------
+    params : dict
+        All the parameters used to construct the learner, including
+        classification and regression parameters. If you need parameters for
+        only a specific learner to handle e.g. classification, see
+        `get_params`.
+
     """
     __fits__ = None
     __returns__ = Model
@@ -38,9 +46,9 @@ class Fitter(Learner, metaclass=FitterMeta):
 
     def __init__(self, preprocessors=None, **kwargs):
         super().__init__(preprocessors=preprocessors)
-        self.kwargs = kwargs
+        self.params = kwargs
         # Make sure to pass preprocessor params to individual learners
-        self.kwargs['preprocessors'] = preprocessors
+        self.params['preprocessors'] = preprocessors
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
     def _fit_model(self, data):
@@ -50,10 +58,17 @@ class Fitter(Learner, metaclass=FitterMeta):
             learner = self.get_learner(self.REGRESSION)
 
         if type(self).fit is Learner.fit:
-            return learner.fit_storage(data)
+            model = learner.fit_storage(data)
         else:
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            return learner.fit(X, Y, W)
+            model = learner.fit(X, Y, W)
+
+        if data.domain.has_discrete_class:
+            model.params = self.get_params(self.CLASSIFICATION)
+        else:
+            model.params = self.get_params(self.REGRESSION)
+
+        return model
 
     def preprocess(self, data):
         if data.domain.has_discrete_class:
@@ -82,7 +97,7 @@ class Fitter(Learner, metaclass=FitterMeta):
     def __kwargs(self, problem_type):
         learner_kwargs = set(
             self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
-        changed_kwargs = self._change_kwargs(self.kwargs, problem_type)
+        changed_kwargs = self._change_kwargs(self.params, problem_type)
         return {k: v for k, v in changed_kwargs.items() if k in learner_kwargs}
 
     def _change_kwargs(self, kwargs, problem_type):
@@ -96,6 +111,10 @@ class Fitter(Learner, metaclass=FitterMeta):
         renamed into `loss` before passed to the actual learner instance. This
         is done here.
 
+        It is important that in case the parameter is not passed, that we do
+        not throw an exception here and that `None` is passed for that param.
+        I would recommend using `kwargs.get(...)`.
+
         """
         return kwargs
 
@@ -108,12 +127,6 @@ class Fitter(Learner, metaclass=FitterMeta):
             and self.get_learner(self.CLASSIFICATION).supports_weights) and (
             hasattr(self.get_learner(self.REGRESSION), 'supports_weights')
             and self.get_learner(self.REGRESSION).supports_weights)
-
-    @property
-    def params(self):
-        raise TypeError(
-            'A fitter does not have its own params. If you need to access '
-            'learner params, please use the `get_params` method.')
 
     def get_params(self, problem_type):
         """Access the specific learner params of a given learner."""
