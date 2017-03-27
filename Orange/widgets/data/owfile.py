@@ -86,7 +86,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     SIZE_LIMIT = 1e7
     LOCAL_FILE, URL = range(2)
 
-    settingsHandler = PerfectDomainContextHandler()
+    settingsHandler = PerfectDomainContextHandler(
+        match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
+    )
 
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
     recent_paths = Setting([
