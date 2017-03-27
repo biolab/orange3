@@ -42,7 +42,7 @@ class OWDistances(OWWidget):
         no_continuous_features = Msg("No continuous features")
         dense_metric_sparse_data = Msg("Selected metric does not support sparse data")
         empty_data = Msg("Empty data set")
-        too_few_observations = Msg("Too few observations for the number of dimensions")
+        mahalanobis_error = Msg("{}")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring discrete features")
@@ -134,14 +134,15 @@ class OWDistances(OWWidget):
             n, m = data.X.shape
             if self.axis == 1:
                 n, m = m, n
-            if n <= m:
-                self.Error.too_few_observations()
-                return
 
         if isinstance(metric, distance.MahalanobisDistance):
             # Mahalanobis distance has to be trained before it can be used
             # to compute distances
-            metric.fit(data, axis=1 - self.axis)
+            try:
+                metric.fit(data, axis=1 - self.axis)
+            except (ValueError, MemoryError) as e:
+                self.Error.mahalanobis_error(e)
+                return
 
         return metric(data, data, 1 - self.axis, impute=True)
 
