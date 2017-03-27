@@ -152,3 +152,43 @@ class FitterTest(unittest.TestCase):
         pp_data = fitter.preprocess(self.heart_disease)
         self.assertTrue(not any(
             isinstance(v, ContinuousVariable) for v in pp_data.domain.variables))
+
+    def test_default_kwargs_with_change_kwargs(self):
+        """Fallback to default args in case specialized params not specified.
+        """
+        class DummyClassificationLearner(LearnerClassification):
+            def __init__(self, param='classification_default', **_):
+                super().__init__()
+                self.param = param
+
+            def fit_storage(self, data):
+                return DummyModel(self.param)
+
+        class DummyRegressionLearner(LearnerRegression):
+            def __init__(self, param='regression_default', **_):
+                super().__init__()
+                self.param = param
+
+            def fit_storage(self, data):
+                return DummyModel(self.param)
+
+        class DummyModel:
+            def __init__(self, param):
+                self.param = param
+
+        class DummyFitter(Fitter):
+            __fits__ = {'classification': DummyClassificationLearner,
+                        'regression': DummyRegressionLearner}
+
+            def _change_kwargs(self, kwargs, problem_type):
+                if problem_type == self.CLASSIFICATION:
+                    kwargs['param'] = kwargs.get('classification_param')
+                else:
+                    kwargs['param'] = kwargs.get('regression_param')
+                return kwargs
+
+        learner = DummyFitter()
+        iris, housing = Table('iris')[:5], Table('housing')[:5]
+        self.assertEqual(learner(iris).param, 'classification_default')
+        self.assertEqual(learner(housing).param, 'regression_default')
+

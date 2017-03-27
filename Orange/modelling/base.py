@@ -30,7 +30,7 @@ class Fitter(Learner, metaclass=FitterMeta):
     learners.
 
     """
-    __fits__ = None
+    __fits__ = {}
     __returns__ = Model
 
     # Constants to indicate what kind of problem we're dealing with
@@ -83,7 +83,9 @@ class Fitter(Learner, metaclass=FitterMeta):
         learner_kwargs = set(
             self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
         changed_kwargs = self._change_kwargs(self.kwargs, problem_type)
-        return {k: v for k, v in changed_kwargs.items() if k in learner_kwargs}
+        # Make sure to remove any params that are set to None and use defaults
+        filtered_kwargs = {k: v for k, v in changed_kwargs.items() if v is not None}
+        return {k: v for k, v in filtered_kwargs.items() if k in learner_kwargs}
 
     def _change_kwargs(self, kwargs, problem_type):
         """Handle the kwargs to be passed to the learner before they are used.
@@ -104,10 +106,9 @@ class Fitter(Learner, metaclass=FitterMeta):
         """The fitter supports weights if both the classification and
         regression learners support weights."""
         return (
-            hasattr(self.get_learner(self.CLASSIFICATION), 'supports_weights')
-            and self.get_learner(self.CLASSIFICATION).supports_weights) and (
-            hasattr(self.get_learner(self.REGRESSION), 'supports_weights')
-            and self.get_learner(self.REGRESSION).supports_weights)
+            getattr(self.get_learner(self.CLASSIFICATION), 'supports_weights', False) and
+            getattr(self.get_learner(self.REGRESSION), 'supports_weights', False)
+        )
 
     @property
     def params(self):
