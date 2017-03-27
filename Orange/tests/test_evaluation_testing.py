@@ -9,9 +9,10 @@ import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.regression import LinearRegressionLearner, MeanLearner
-from Orange.data import Table
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrainingData,
-                               TestOnTestData, ShuffleSplit, sample, RMSE)
+                               TestOnTestData, ShuffleSplit, sample, RMSE,
+                               CrossValidationFeature)
 from Orange.preprocess import discretize, preprocess
 from Orange.util import OrangeWarning
 
@@ -276,6 +277,37 @@ class TestCrossValidation(TestSampling):
         with patch('Orange.evaluation.testing.CrossValidation._MIN_NJOBS_X_SIZE', 1):
             res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=5, n_jobs=3)
         self.check_folds(res, 5, self.nrows)
+
+
+class TestCrossValidationFeature(TestSampling):
+
+    def add_meta_fold(self, data, f):
+        fat = DiscreteVariable(name="fold", values=[str(a) for a in range(f)])
+        domain = Domain(data.domain.attributes, data.domain.class_var, metas=[fat])
+        ndata = Table(domain, data)
+        vals = np.tile(range(f), len(data)//f + 1)[:len(data)]
+        vals = vals.reshape((-1, 1))
+        ndata[:, fat] = vals
+        return ndata
+
+    def test_call(self):
+        t = self.random_table
+        t = self.add_meta_fold(t, 3)
+        res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=t.domain.metas[0])
+        y = t.Y
+        np.testing.assert_equal(res.actual, y[res.row_indices].reshape(len(t)))
+        np.testing.assert_equal(res.predicted[0],
+                                y[res.row_indices].reshape(len(t)))
+        np.testing.assert_equal(np.argmax(res.probabilities[0], axis=1),
+                                y[res.row_indices].reshape(len(t)))
+
+    def test_unknown(self):
+        t = self.random_table
+        t = self.add_meta_fold(t, 3)
+        fat = t.domain.metas[0]
+        t[0][fat] = float("nan")
+        res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=fat)
+        self.assertNotIn(0, res.row_indices)
 
 
 class TestLeaveOneOut(TestSampling):
