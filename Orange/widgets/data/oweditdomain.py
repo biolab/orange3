@@ -213,7 +213,7 @@ class VariableEditor(QWidget):
     def get_data(self):
         """Retrieve the modified variable.
         """
-        name = str(self.name_edit.text())
+        name = str(self.name_edit.text()).strip()
         labels = self.labels_model.get_dict()
 
         # Is the variable actually changed.
@@ -226,12 +226,15 @@ class VariableEditor(QWidget):
 
         return var
 
+    def is_legal(self):
+        name = str(self.name_edit.text()).strip()
+        return not len(name) == 0
+
     def is_same(self):
         """Is the current model state the same as the input.
         """
-        name = str(self.name_edit.text())
+        name = str(self.name_edit.text()).strip()
         labels = self.labels_model.get_dict()
-
         return (self.var is not None and name == self.var.name and
                 labels == self.var.attributes)
 
@@ -243,7 +246,7 @@ class VariableEditor(QWidget):
         self.labels_model.set_dict({})
 
     def maybe_commit(self):
-        if not self.is_same():
+        if not self.is_same() and self.is_legal():
             self.commit()
 
     def commit(self):
@@ -317,7 +320,7 @@ class DiscreteVariableEditor(VariableEditor):
     def get_data(self):
         """Retrieve the modified variable
         """
-        name = str(self.name_edit.text())
+        name = str(self.name_edit.text()).strip()
         labels = self.labels_model.get_dict()
         values = map(str, self.values_model)
 
@@ -401,6 +404,10 @@ class OWEditDomain(widget.OWWidget):
         self.editor_stack.addWidget(VariableEditor())
 
         box.layout().addWidget(self.editor_stack)
+
+        self.Error.add_message(
+            "duplicate_var_name",
+            "A variable name is duplicated.")
 
     @check_sql_input
     def set_data(self, data):
@@ -530,17 +537,21 @@ class OWEditDomain(widget.OWWidget):
     def commit(self):
         """Send the changed data to output."""
         new_data = None
+        var_names = [vn.name for vn in self.domain_model]
+        self.Error.duplicate_var_name.clear()
         if self.data is not None:
-            input_domain = self.data.domain
-            n_attrs = len(input_domain.attributes)
-            n_vars = len(input_domain.variables)
-            n_class_vars = len(input_domain.class_vars)
-            all_new_vars = list(self.domain_model)
-            attrs = all_new_vars[: n_attrs]
-            class_vars = all_new_vars[n_attrs: n_attrs + n_class_vars]
-            new_metas = all_new_vars[n_attrs + n_class_vars:]
-            new_domain = Orange.data.Domain(attrs, class_vars, new_metas)
-            new_data = self.data.from_table(new_domain, self.data)
+            if len(var_names) == len(set(var_names)):
+                input_domain = self.data.domain
+                n_attrs = len(input_domain.attributes)
+                n_class_vars = len(input_domain.class_vars)
+                all_new_vars = list(self.domain_model)
+                attrs = all_new_vars[: n_attrs]
+                class_vars = all_new_vars[n_attrs: n_attrs + n_class_vars]
+                new_metas = all_new_vars[n_attrs + n_class_vars:]
+                new_domain = Orange.data.Domain(attrs, class_vars, new_metas)
+                new_data = self.data.from_table(new_domain, self.data)
+            else:
+                self.Error.duplicate_var_name()
 
         self.send("Data", new_data)
 

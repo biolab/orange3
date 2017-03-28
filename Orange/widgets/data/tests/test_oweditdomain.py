@@ -140,6 +140,35 @@ class TestOWEditDomain(WidgetTest):
         t2 = self.get_output("Data")
         self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])
 
+    def test_duplicate_names(self):
+        """
+        Tests if widget shows error when duplicate name is entered.
+        And tests if widget sends None data when error is shown.
+        GH-2143
+        GH-2146
+        """
+        table = Table("iris")
+        self.send_signal("Data", table)
+        self.assertFalse(self.widget.Error.duplicate_var_name.is_shown())
+
+        idx = self.widget.domain_view.model().index(0)
+        self.widget.domain_view.setCurrentIndex(idx)
+        editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
+
+        editor.name_edit.setText("iris")
+        editor.commit()
+        self.widget.commit()
+        self.assertTrue(self.widget.Error.duplicate_var_name.is_shown())
+        output = self.get_output("Data")
+        self.assertIsNone(output)
+
+        editor.name_edit.setText("sepal height")
+        editor.commit()
+        self.widget.commit()
+        self.assertFalse(self.widget.Error.duplicate_var_name.is_shown())
+        output = self.get_output("Data")
+        self.assertIsInstance(output, Table)
+
 
 class TestEditors(GuiTest):
     def test_variable_editor(self):
