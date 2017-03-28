@@ -47,3 +47,21 @@ class TestOWContinuize(WidgetTest):
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
         self.widget.unconditional_commit()
+
+    def test_one_column_nan_values_normalize_sd(self):
+        """
+        No crash on a column with NaN values and with selected option
+        normalize by standard deviation (Not the same issue which is
+        tested above).
+        GH-2144
+        """
+        table = Table("iris")
+        table[:, 2] = np.NaN
+        self.send_signal("Data", table)
+        # Normalize.NormalizeBySD
+        self.widget.continuous_treatment = 2
+        self.widget.unconditional_commit()
+        table = Table("iris")
+        table[1, 2] = np.NaN
+        self.send_signal("Data", table)
+        self.widget.unconditional_commit()

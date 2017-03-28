@@ -346,7 +346,10 @@ def normalize_by_span(var, data_or_dist, zero_based=True):
 
 def normalize_by_sd(var, data_or_dist):
     dist = _ensure_dist(var, data_or_dist)
-    mean, sd = dist.mean(), dist.standard_deviation()
+    if dist.shape[1] > 0:
+        mean, sd = dist.mean(), dist.standard_deviation()
+    else:
+        mean, sd = 0, 1
     sd = sd if sd > 1e-10 else 1
     return normalized_var(var, mean, 1 / sd)
 
