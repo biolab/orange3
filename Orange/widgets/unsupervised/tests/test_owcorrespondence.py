@@ -37,3 +37,17 @@ class TestOWCorrespondence(WidgetTest):
                 "klkk"
             )))
         self.send_signal("Data", table)
+
+    def test_data_one_value_zero(self):
+        """
+        Check that the widget does not crash on discrete attributes with only
+        one value.
+        GH-2149
+        """
+        table = Table(
+            Domain(
+                [DiscreteVariable("a", values=["0"])]
+            ),
+            [(0,), (0,), (0,)]
+        )
+        self.send_signal("Data", table)
