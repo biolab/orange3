@@ -65,3 +65,21 @@ class TestOWContinuize(WidgetTest):
         table[1, 2] = np.NaN
         self.send_signal("Data", table)
         self.widget.unconditional_commit()
+
+
+    def test_one_column_nan_values_normalize_span(self):
+        """
+        No crash on a column with NaN values and with selected option
+        normalize by span.
+        GH-2144
+        """
+        table = Table("iris")
+        table[:, 2] = np.NaN
+        self.send_signal("Data", table)
+        # Normalize.NormalizeBySpan
+        self.widget.continuous_treatment = 1
+        self.widget.unconditional_commit()
+        table = Table("iris")
+        table[1, 2] = np.NaN
+        self.send_signal("Data", table)
+        self.widget.unconditional_commit()
