@@ -32,6 +32,7 @@ so they can be used alter. It should be called before widget starts modifying
 import copy
 import itertools
 import os
+import logging
 import pickle
 import time
 import warnings
@@ -39,6 +40,8 @@ import warnings
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
 from Orange.widgets.utils import vartype
+
+log = logging.getLogger(__name__)
 
 __all__ = ["Setting", "SettingsHandler",
            "ContextSetting", "ContextHandler",
@@ -397,15 +400,17 @@ class SettingsHandler:
         should overload the latter."""
         filename = self._get_settings_filename()
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-
-        settings_file = open(filename, "wb")
         try:
-            self.write_defaults_file(settings_file)
-        except (EOFError, IOError, pickle.PicklingError):
-            settings_file.close()
-            os.remove(filename)
-        else:
-            settings_file.close()
+            settings_file = open(filename, "wb")
+            try:
+                self.write_defaults_file(settings_file)
+            except (EOFError, IOError, pickle.PicklingError):
+                settings_file.close()
+                os.remove(filename)
+            else:
+                settings_file.close()
+        except PermissionError:
+            log.error("PermissionError when trying to write defaults.", exc_info=True)
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file

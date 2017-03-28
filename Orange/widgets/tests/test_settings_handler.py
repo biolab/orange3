@@ -1,9 +1,12 @@
+# pylint: disable=protected-access
 from contextlib import contextmanager
 import os
 import pickle
 from tempfile import mkstemp
+from sys import version_info
+from platform import system
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 import warnings
 from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider,\
     VERSION_KEY, rename_setting, Context, migrate_str_to_variable
@@ -63,6 +66,49 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(handler.defaults, default_settings)
 
         os.remove(settings_file)
+
+    def test_write_PermissionError(self):
+        """
+        Error may occur while trying to open file. Therefore file
+        cannot be closed. Tests if error is handled.
+        GH-2147
+        """
+        handler = SettingsHandler()
+        handler._get_settings_filename = lambda: ""
+        patch_target = "Orange.widgets.settings.open" if version_info >= (3, 5) \
+            else "builtins.open"
+        patch_target_2 = "Orange.widgets.settings.SettingsHandler.write_defaults_file"
+        patch_target_3 = "os.makedirs"
+
+        mock2 = MagicMock()
+        mock = MagicMock(side_effect=PermissionError)
+        with patch(patch_target, mock),\
+                patch(patch_target_2, mock2),\
+                patch(patch_target_3, mock2):
+            handler.write_defaults()
+
+    def test_write_EOF_IO_Pickling_Errors(self):
+        """
+        Tests if errors are handled.
+        GH-2147
+        """
+        patch_target_1 = "Orange.widgets.settings.open" if version_info >= (3, 5) \
+            else "builtins.open"
+        patch_target_2 = "os.remove"
+        patch_target_3 = "os.makedirs"
+        patch_target_4 = "Orange.widgets.settings.SettingsHandler.write_defaults_file"
+        handler = SettingsHandler()
+        handler._get_settings_filename = lambda: ""
+
+        mock = MagicMock()
+        with patch(patch_target_1, mock), patch(patch_target_2, mock), \
+                patch(patch_target_3, mock):
+            with patch(patch_target_4, side_effect=EOFError):
+                handler.write_defaults()
+            with patch(patch_target_4, side_effect=IOError):
+                handler.write_defaults()
+            with patch(patch_target_4, side_effect=pickle.PicklingError):
+                handler.write_defaults()
 
     def test_initialize_widget(self):
         handler = SettingsHandler()
