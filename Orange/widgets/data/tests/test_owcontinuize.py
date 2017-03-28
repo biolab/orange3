@@ -33,3 +33,17 @@ class TestOWContinuize(WidgetTest):
         widget.unconditional_commit()
         imp_data = self.get_output("Data")
         self.assertIsNone(imp_data)
+
+    def test_one_column_equal_values(self):
+        """
+        No crash on a column with equal values and with selected option
+        normalize by standard deviation.
+        GH-2144
+        """
+        table = Table("iris")
+        table = table[:, 1]
+        table[:] = 42.0
+        self.send_signal("Data", table)
+        # Normalize.NormalizeBySD
+        self.widget.continuous_treatment = 2
+        self.widget.unconditional_commit()
