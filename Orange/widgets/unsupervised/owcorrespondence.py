@@ -2,7 +2,7 @@ import sys
 
 from collections import namedtuple, OrderedDict
 
-import numpy as np
+import numpy
 
 from AnyQt.QtWidgets import QListView, QApplication
 from AnyQt.QtGui import QBrush, QColor, QPainter
@@ -203,7 +203,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         p_axes = self._p_axes()
 
-        if points is None:
+        if points == None:
             return
 
         if len(variables) == 2:
@@ -213,7 +213,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         else:
             points = self.ca.row_factors[:, p_axes]
             counts = [len(var.values) for var in variables]
-            range_indices = np.cumsum([0] + counts)
+            range_indices = numpy.cumsum([0] + counts)
             ranges = zip(range_indices, range_indices[1:])
             points = [points[s:e] for s, e in ranges]
 
@@ -225,7 +225,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             item = ScatterPlotItem(
                 x=points[:, 0], y=points[:, 1], brush=QBrush(color),
                 pen=pg.mkPen(color_outline.darker(120), width=1.5),
-                size=np.full((points.shape[0],), 10.1),
+                size=numpy.full((points.shape[0],), 10.1),
             )
             self.plot.addItem(item)
 
@@ -235,10 +235,10 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                 item.setPos(point[0], point[1])
 
         inertia = self.ca.inertia_of_axis()
-        if np.sum(inertia) == 0:
+        if numpy.sum(inertia) == 0:
             inertia = 100 * inertia
         else:
-            inertia = 100 * inertia / np.sum(inertia)
+            inertia = 100 * inertia / numpy.sum(inertia)
 
         ax = self.plot.getAxis("bottom")
         ax.setLabel("Component {} ({:.1f}%)"
@@ -254,10 +254,10 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             fmt = ("Axis 1: {:.2f}\n"
                    "Axis 2: {:.2f}")
             inertia = self.ca.inertia_of_axis()
-            if np.sum(inertia) == 0:
+            if numpy.sum(inertia) == 0:
                 inertia = 100 * inertia
             else:
-                inertia = 100 * inertia / np.sum(inertia)
+                inertia = 100 * inertia / numpy.sum(inertia)
 
             ax1, ax2 = self._p_axes()
             self.infotext.setText(fmt.format(inertia[ax1], inertia[ax2]))
@@ -296,9 +296,9 @@ def burt_table(data, variables):
     """
     values = [(var, value) for var in variables for value in var.values]
 
-    table = np.zeros((len(values), len(values)))
+    table = numpy.zeros((len(values), len(values)))
     counts = [len(attr.values) for attr in variables]
-    offsets = np.r_[0, np.cumsum(counts)]
+    offsets = numpy.r_[0, numpy.cumsum(counts)]
 
     for i in range(len(variables)):
         for j in range(i + 1):
@@ -321,37 +321,37 @@ def correspondence(A):
     """
     :param numpy.ndarray A:
     """
-    A = np.asarray(A)
+    A = numpy.asarray(A)
 
-    total = np.sum(A)
+    total = numpy.sum(A)
     if total > 0:
         corr_mat = A / total
     else:
         # ???
         corr_mat = A
 
-    col_sum = np.sum(corr_mat, axis=0, keepdims=True)
-    row_sum = np.sum(corr_mat, axis=1, keepdims=True)
+    col_sum = numpy.sum(corr_mat, axis=0, keepdims=True)
+    row_sum = numpy.sum(corr_mat, axis=1, keepdims=True)
     E = row_sum * col_sum
 
     D_r, D_c = row_sum.ravel() ** -1, col_sum.ravel() ** -1
-    D_r, D_c = np.nan_to_num(D_r), np.nan_to_num(D_c)
+    D_r, D_c = numpy.nan_to_num(D_r), numpy.nan_to_num(D_c)
 
     def gsvd(M, wu, wv):
         assert len(M.shape) == 2
         assert len(wu.shape) == 1 and len(wv.shape) == 1
-        Wu_sqrt = np.sqrt(wu)
-        Wv_sqrt = np.sqrt(wv)
-        B = np.c_[Wu_sqrt] * M * np.r_[Wv_sqrt]
-        Ub, D, Vb = np.linalg.svd(B, full_matrices=False)
-        U = np.c_[Wu_sqrt ** -1] * Ub
-        V = (np.c_[Wv_sqrt ** -1] * Vb.T).T
+        Wu_sqrt = numpy.sqrt(wu)
+        Wv_sqrt = numpy.sqrt(wv)
+        B = numpy.c_[Wu_sqrt] * M * numpy.r_[Wv_sqrt]
+        Ub, D, Vb = numpy.linalg.svd(B, full_matrices=False)
+        U = numpy.c_[Wu_sqrt ** -1] * Ub
+        V = (numpy.c_[Wv_sqrt ** -1] * Vb.T).T
         return U, D, V
 
     U, D, V = gsvd(corr_mat - E, D_r, D_c)
 
-    F = np.c_[D_r] * U * D
-    G = np.c_[D_c] * V.T * D
+    F = numpy.c_[D_r] * U * D
+    G = numpy.c_[D_c] * V.T * D
 
     if F.shape == (1, 1) and F[0, 0] == 0:
         F[0, 0] = 1
@@ -370,7 +370,7 @@ class CA(CA):
         return self.column_sums.T * (self.col_factors ** 2)
 
     def inertia_of_axis(self):
-        return np.sum(self.row_inertia(), axis=0)
+        return numpy.sum(self.row_inertia(), axis=0)
 
 
 def test_main(argv=None):
