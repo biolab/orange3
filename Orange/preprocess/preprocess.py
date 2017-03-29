@@ -403,8 +403,8 @@ class Scale(Preprocess):
         def __call__(self, *args, **kwargs):
             return getattr(Scale, '_' + self.name)(*args, **kwargs)
 
-    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median', type=int)
-    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span', type=int)
+    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median')
+    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span')
     NoCentering, Mean, Median = CenteringType
     NoScaling, Std, Span = ScalingType
 
