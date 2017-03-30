@@ -22,7 +22,7 @@ from AnyQt.QtCore import (
 )
 
 from Orange.base import Learner
-from Orange.data import (Table,  Domain, ContinuousVariable, DiscreteVariable,
+from Orange.data import (Table, Domain, ContinuousVariable, DiscreteVariable,
                          StringVariable)
 from Orange.preprocess import score
 from Orange.canvas import report
@@ -39,19 +39,19 @@ def table(shape, fill=None):
     return [[fill for j in range(shape[1])] for i in range(shape[0])]
 
 
-score_meta = namedtuple("score_meta", ["name", "shortname", "score"])
+ScoreMeta = namedtuple("score_meta", ["name", "shortname", "score"])
 
 # Default scores.
-SCORES = [score_meta("Information Gain", "Inf. gain", score.InfoGain),
-          score_meta("Gain Ratio", "Gain Ratio", score.GainRatio),
-          score_meta("Gini Decrease", "Gini", score.Gini),
-          score_meta("ANOVA", "ANOVA", score.ANOVA),
-          score_meta("Chi2", "Chi2", score.Chi2),
-          score_meta("ReliefF", "ReliefF", score.ReliefF),
-          score_meta("FCBF", "FCBF", score.FCBF),
-          score_meta("Univariate Linear Regression", "Univar. Lin. Reg.",
-                     score.UnivariateLinearRegression),
-          score_meta("RReliefF", "RReliefF", score.RReliefF)]
+SCORES = [ScoreMeta("Information Gain", "Inf. gain", score.InfoGain),
+          ScoreMeta("Gain Ratio", "Gain Ratio", score.GainRatio),
+          ScoreMeta("Gini Decrease", "Gini", score.Gini),
+          ScoreMeta("ANOVA", "ANOVA", score.ANOVA),
+          ScoreMeta("Chi2", "Chi2", score.Chi2),
+          ScoreMeta("ReliefF", "ReliefF", score.ReliefF),
+          ScoreMeta("FCBF", "FCBF", score.FCBF),
+          ScoreMeta("Univariate Linear Regression", "Univar. Lin. Reg.",
+                    score.UnivariateLinearRegression),
+          ScoreMeta("RReliefF", "RReliefF", score.RReliefF)]
 
 
 class OWRank(OWWidget):
@@ -134,7 +134,7 @@ class OWRank(OWWidget):
         gui.rubber(self.controlArea)
 
         selMethBox = gui.vBox(
-                self.controlArea, "Select Attributes", addSpace=True)
+            self.controlArea, "Select Attributes", addSpace=True)
 
         grid = QGridLayout()
         grid.setContentsMargins(6, 0, 6, 0)
@@ -377,7 +377,7 @@ class OWRank(OWWidget):
         if learner is None and lid is not None:
             del self.learners[lid]
         elif learner is not None:
-            self.learners[lid] = score_meta(
+            self.learners[lid] = ScoreMeta(
                 learner.name,
                 learner.name,
                 learner
