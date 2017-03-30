@@ -209,12 +209,12 @@ class OWKMeans(widget.OWWidget):
         try:
             self.controlArea.setDisabled(True)
             if not self.check_data_size(self.k_from, self.Error):
-                return
+                return False
             self.check_data_size(self.k_to, self.Warning)
             needed_ks = [k for k in range(self.k_from, self.k_to + 1)
                          if k not in self.clusterings]
             if not needed_ks:
-                return  # Skip showing progress bar
+                return True  # Skip showing progress bar
             with self.progressBar(len(needed_ks)) as progress:
                 for k in needed_ks:
                     progress.advance()
@@ -227,6 +227,7 @@ class OWKMeans(widget.OWWidget):
                 self.mainArea.hide()
         finally:
             self.controlArea.setDisabled(False)
+        return True
 
     def cluster(self):
         if self.k in self.clusterings or \
@@ -242,8 +243,7 @@ class OWKMeans(widget.OWWidget):
     def apply(self):
         self.clear_messages()
         if self.data is not None:
-            if self.optimize_k:
-                self.run_optimization()
+            if self.optimize_k and self.run_optimization():
                 self.mainArea.show()
                 self.update_results()
             else:
