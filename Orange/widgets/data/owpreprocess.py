@@ -948,7 +948,7 @@ class OWPreprocess(widget.OWWidget):
                ("Preprocessed Data", Orange.data.Table)]
 
     storedsettings = settings.Setting({})
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     def __init__(self):
         super().__init__()

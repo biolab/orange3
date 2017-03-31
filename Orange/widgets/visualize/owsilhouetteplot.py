@@ -66,7 +66,7 @@ class OWSilhouettePlot(widget.OWWidget):
     bar_size = settings.Setting(3)
     #: Add silhouette scores to output data
     add_scores = settings.Setting(False)
-    auto_commit = settings.Setting(False)
+    auto_commit = settings.Setting(True)
 
     Distances = [("Euclidean", Orange.distance.Euclidean),
                  ("Manhattan", Orange.distance.Manhattan)]

@@ -42,6 +42,7 @@ class TestOWPythonScript(WidgetTest):
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""
+        self.widget.execute_button.checkbox.setCheckState(False)
         self.widget.text.setPlainText("temp = 42\nprint(temp)")
         self.widget.execute_button.button.click()
         self.assertIn("42", self.widget.console.toPlainText())

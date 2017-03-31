@@ -76,7 +76,7 @@ class OWImpute(OWWidget):
 
     _default_method_index = settings.Setting(DO_NOT_IMPUTE)
     variable_methods = settings.ContextSetting({})
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_main_area = False
     resizing_enabled = False
