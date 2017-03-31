@@ -33,12 +33,12 @@ class Preprocess(_RefuseDataInConstructor, Reprable):
 
 
 class Continuize(Preprocess):
-    (Indicators, FirstAsBase, FrequentAsBase,Remove, RemoveMultinomial,
+    (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
      ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = Enum(
-        "Continuize",
-        "Indicators, FirstAsBase, FrequentAsBase,"
-        "Remove, RemoveMultinomial, ReportError, AsOrdinal,"
-        "AsNormalizedOrdinal, Leave")
+         "Continuize",
+         "Indicators, FirstAsBase, FrequentAsBase,"
+         "Remove, RemoveMultinomial, ReportError, AsOrdinal,"
+         "AsNormalizedOrdinal, Leave")
 
     def __init__(self, zero_based=True,
                  multinomial_treatment=Indicators):
@@ -288,9 +288,9 @@ class Normalize(Preprocess):
                for a in data.domain.attributes if a.is_continuous):
             # Skip normalization for data sets where all features are marked as already normalized.
             # Required for SVMs (with normalizer as their default preprocessor) on sparse data to
-            # retain sparse structure. Normalizing sparse data would otherwise result in a dense matrix,
-            # which requires too much memory. For example, this is used for Bag of Words models where
-            # normalization is not really needed.
+            # retain sparse structure. Normalizing sparse data would otherwise result in a dense
+            # matrix, which requires too much memory. For example, this is used for Bag of Words
+            # models where normalization is not really needed.
             return data
         normalizer = normalize.Normalizer(
             zero_based=self.zero_based,
@@ -403,8 +403,8 @@ class Scale(Preprocess):
         def __call__(self, *args, **kwargs):
             return getattr(Scale, '_' + self.name)(*args, **kwargs)
 
-    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median', type=int)
-    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span', type=int)
+    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median')
+    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span')
     NoCentering, Mean, Median = CenteringType
     NoScaling, Std, Span = ScalingType
 
