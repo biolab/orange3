@@ -591,17 +591,18 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         text = self.tiptexts.get(int(modifiers), self.tiptexts[0])
         self.tip_textitem.setHtml(text)
 
-    def new_data(self, data, subset_data=None, **args):
-        self.plot_widget.clear()
-        self.remove_legend()
+    def new_data(self, data, subset_data=None, new=True, **args):
+        if new:
+            self.plot_widget.clear()
+            self.remove_legend()
 
-        self.density_img = None
-        self.scatterplot_item = None
-        self.scatterplot_item_sel = None
-        self.reg_line_item = None
-        self.labels = []
-        self.selection = None
-        self.valid_data = None
+            self.density_img = None
+            self.scatterplot_item = None
+            self.scatterplot_item_sel = None
+            self.reg_line_item = None
+            self.labels = []
+            self.selection = None
+            self.valid_data = None
 
         self.subset_indices = set(e.id for e in subset_data) if subset_data else None
 
@@ -776,12 +777,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return size_data
 
     def update_sizes(self):
+        self.master.prepare_data()
+        self.update_point_size()
+
+    def update_point_size(self):
         if self.scatterplot_item:
             size_data = self.compute_sizes()
             self.scatterplot_item.setSize(size_data)
             self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
-
-    update_point_size = update_sizes
 
     def get_color_index(self):
         if self.attr_color is None:
@@ -907,6 +910,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def update_colors(self, keep_colors=False):
         self.master.update_colors()
+        self.update_alpha_value(keep_colors)
+
+    def update_alpha_value(self, keep_colors=False):
         if self.scatterplot_item:
             pen_data, brush_data = self.compute_colors(keep_colors)
             pen_data_sel, brush_data_sel = self.compute_colors_sel(keep_colors)
@@ -922,8 +928,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 elif self.density_img:
                     self.plot_widget.removeItem(self.density_img)
 
-    update_alpha_value = update_colors
-
     def create_labels(self):
         for x, y in zip(*self.scatterplot_item.getData()):
             ti = TextItem()
@@ -937,6 +941,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             for label in self.labels:
                 label.setText("")
             return
+        self.assure_attribute_present(self.attr_label)
         if not self.labels:
             self.create_labels()
         label_column = self.data.get_column_view(self.attr_label)[0]
@@ -972,10 +977,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return shape_data
 
     def update_shapes(self):
+        self.assure_attribute_present(self.attr_shape)
         if self.scatterplot_item:
             shape_data = self.compute_symbols()
             self.scatterplot_item.setSymbol(shape_data)
         self.make_legend()
+
+    def assure_attribute_present(self, attr):
+        if attr not in self.data.domain:
+            self.master.prepare_data()
 
     def update_grid(self):
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)

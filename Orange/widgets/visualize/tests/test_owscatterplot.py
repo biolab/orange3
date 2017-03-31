@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 from unittest.mock import MagicMock
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import QRectF, Qt
 
@@ -267,6 +268,23 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(w.graph.attr_color.name, "sepal width")
         self.assertEqual(w.graph.attr_shape.name, "iris")
         self.assertEqual(w.graph.attr_size.name, "petal width")
+
+    def test_sparse(self):
+        """
+        Test sparse data.
+        GH-2152
+        GH-2157
+        """
+        table = Table("iris")
+        table.X = sp.csr_matrix(table.X)
+        self.assertTrue(sp.issparse(table.X))
+        table.Y = sp.csr_matrix(table._Y)  # pylint: disable=protected-access
+        self.assertTrue(sp.issparse(table.Y))
+        self.send_signal("Data", table)
+        self.widget.set_subset_data(table[:30])
+        data = self.get_output("Data")
+        self.assertTrue(data.is_sparse())
+        self.assertEqual(len(data.domain), 5)
 
 
 if __name__ == "__main__":
