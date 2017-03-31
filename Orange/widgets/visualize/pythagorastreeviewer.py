@@ -18,11 +18,11 @@ Point : namedtuple (x, y)
 from collections import namedtuple, defaultdict, deque
 from math import pi, sqrt, cos, sin, degrees
 
+from AnyQt.QtCore import Qt, QPointF, QTimer, QRectF, QSizeF
+from AnyQt.QtGui import QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
     QSizePolicy, QGraphicsItem, QGraphicsRectItem, QGraphicsWidget, QStyle
 )
-from AnyQt.QtGui import QColor, QBrush, QPen
-from AnyQt.QtCore import Qt, QPointF, QTimer, QRectF, QSizeF
 
 from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 
@@ -245,9 +245,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
 
     def _calculate_tree(self, tree_adapter, weight_adjustment):
         """Actually calculate the tree squares"""
-        tree_builder = PythagorasTree(
-            weight_adjustment=weight_adjustment
-        )
+        tree_builder = PythagorasTree(weight_adjustment=weight_adjustment)
         return tree_builder.pythagoras_tree(
             tree_adapter, tree_adapter.root, Square(Point(0, 0), 200, -pi / 2)
         )
@@ -367,8 +365,6 @@ class SquareGraphicsItem(QGraphicsRectItem):
         The tree node the square represents.
     brush : QColor, optional
         The brush to be used as the backgound brush.
-    pen : QPen, optional
-        The pen to be used for the border.
 
     """
 
@@ -386,7 +382,11 @@ class SquareGraphicsItem(QGraphicsRectItem):
         self.setRotation(degrees(angle))
 
         self.setBrush(kwargs.get('brush', QColor('#297A1F')))
-        self.setPen(kwargs.get('pen', QPen(QColor('#000'))))
+        # The border should be invariant to scaling
+        pen = QPen(QColor(Qt.black))
+        pen.setWidthF(0.75)
+        pen.setCosmetic(True)
+        self.setPen(pen)
 
         self.setAcceptHoverEvents(True)
         self.setZValue(kwargs.get('zvalue', 0))
@@ -544,10 +544,11 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
             super().paint(painter, option, widget)
             painter.save()
             pen = QPen(QColor(Qt.black))
-            pen.setWidth(4)
+            pen.setWidthF(2)
+            pen.setCosmetic(True)
             pen.setJoinStyle(Qt.MiterJoin)
             painter.setPen(pen)
-            painter.drawRect(rect.adjusted(2, 2, -2, -2))
+            painter.drawRect(rect)
             painter.restore()
         else:
             super().paint(painter, option, widget)
