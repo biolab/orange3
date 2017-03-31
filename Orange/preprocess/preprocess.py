@@ -5,6 +5,7 @@ Preprocess
 """
 import numpy as np
 import sklearn.preprocessing as skl_preprocessing
+from sklearn.utils import shuffle as skl_shuffle
 import bottleneck as bn
 
 import Orange.data
@@ -353,20 +354,15 @@ class Randomize(Preprocess):
         new_data.ensure_copy()
 
         if self.rand_type & Randomize.RandomizeClasses:
-            self.randomize(new_data.Y)
+            new_data.Y = self.randomize(new_data.Y)
         if self.rand_type & Randomize.RandomizeAttributes:
-            self.randomize(new_data.X)
+            new_data.X = self.randomize(new_data.X)
         if self.rand_type & Randomize.RandomizeMetas:
-            self.randomize(new_data.metas)
+            new_data.metas = self.randomize(new_data.metas)
         return new_data
 
     def randomize(self, table):
-        np.random.seed(self.rand_seed)
-        if len(table.shape) > 1:
-            for i in range(table.shape[1]):
-                np.random.shuffle(table[:, i])
-        else:
-            np.random.shuffle(table)
+        return skl_shuffle(table, random_state=self.rand_seed)
 
 
 class ProjectPCA(Preprocess):
