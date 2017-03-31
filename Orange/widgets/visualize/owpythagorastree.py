@@ -154,9 +154,6 @@ class OWPythagorasTree(OWWidget):
             self.tree_adapter = self._get_tree_adapter(self.model)
             self.ptree.clear()
 
-            # The target class can also be passed from the meta properties
-            if hasattr(model, 'meta_target_class_index'):
-                self.target_class_index = model.meta_target_class_index
             self.ptree.set_tree(
                 self.tree_adapter,
                 weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1],
@@ -167,9 +164,6 @@ class OWPythagorasTree(OWWidget):
             # if the tree is passed from the Pythagorean forest widget.
             if hasattr(model, 'meta_size_calc_idx'):
                 self.size_calc_idx = model.meta_size_calc_idx
-            # Updating the size calc redraws the whole tree
-            if hasattr(model, 'meta_size_calc_idx') or \
-                    hasattr(model, 'meta_size_log_scale'):
                 self.update_size_calc()
 
             self._update_depth_slider()
@@ -183,6 +177,12 @@ class OWPythagorasTree(OWWidget):
             self._update_legend_visibility()
             self._update_info_box()
             self._update_target_class_combo()
+
+            # The target class can also be passed from the meta properties
+            # This must be set after `_update_target_class_combo`
+            if hasattr(model, 'meta_target_class_index'):
+                self.target_class_index = model.meta_target_class_index
+                self.update_colors()
 
             self._update_main_area()
 

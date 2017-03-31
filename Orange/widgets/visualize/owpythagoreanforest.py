@@ -206,7 +206,7 @@ class OWPythagoreanForest(OWWidget):
         self.ui_depth_slider.setMaximum(0)
 
     def _get_max_depth(self):
-        return max([tree.tree_adapter.max_depth for tree in self.ptrees])
+        return max(tree.tree_adapter.max_depth for tree in self.ptrees)
 
     def _get_forest_adapter(self, model):
         return SklRandomForestAdapter(model)
