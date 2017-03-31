@@ -29,16 +29,6 @@ class FitterTest(unittest.TestCase):
         cls.heart_disease = Table('heart_disease')
         cls.housing = Table('housing')
 
-    def test_throws_if_fits_property_is_invalid(self):
-        """The `__fits__` attribute must be an instance of `LearnerTypes`"""
-        with self.assertRaises(Exception):
-            class DummyFitter(Fitter):
-                name = 'dummy'
-                __fits__ = (DummyClassificationLearner, DummyRegressionLearner)
-
-            fitter = DummyFitter()
-            fitter(self.heart_disease)
-
     def test_dispatches_to_correct_learner(self):
         """Based on the input data, it should dispatch the fitting process to
         the appropriate learner"""
@@ -101,15 +91,6 @@ class FitterTest(unittest.TestCase):
             self.assertEqual(fitter.get_learner(Fitter.REGRESSION).param, 20)
         except TypeError:
             self.fail('Fitter did not properly distribute params to learners')
-
-    def test_error_for_data_type_with_no_learner(self):
-        """If we attempt to define a fitter which only handles one data type
-        it makes more sense to simply use a Learner."""
-        with self.assertRaises(AssertionError):
-            class DummyFitter(Fitter):
-                name = 'dummy'
-                __fits__ = {'classification': None,
-                            'regression': DummyRegressionLearner}
 
     def test_correctly_sets_preprocessors_on_learner(self):
         """Fitters have to be able to pass the `use_default_preprocessors` and

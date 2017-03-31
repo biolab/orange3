@@ -2,12 +2,12 @@ from Orange.base import SklModel
 from Orange.ensembles import (
     SklAdaBoostClassificationLearner, SklAdaBoostRegressionLearner
 )
-from Orange.modelling import Fitter
+from Orange.modelling import SklFitter
 
 __all__ = ['SklAdaBoostLearner']
 
 
-class SklAdaBoostLearner(Fitter):
+class SklAdaBoostLearner(SklFitter):
     __fits__ = {'classification': SklAdaBoostClassificationLearner,
                 'regression': SklAdaBoostRegressionLearner}
 

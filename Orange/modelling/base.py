@@ -1,22 +1,9 @@
-from Orange.base import Learner, Model
+import numpy as np
+
+from Orange.base import Learner, Model, SklLearner
 
 
-class FitterMeta(type):
-    """Ensure that each subclass of the `Fitter` class overrides the `__fits__`
-    attribute with a valid value."""
-    def __new__(mcs, name, bases, attrs):
-        # Check that a fitter implementation defines a valid `__fits__`
-        if any(cls.__name__ == 'Fitter' for cls in bases):
-            fits = attrs.get('__fits__')
-            assert isinstance(fits, dict), '__fits__ must be dict instance'
-            assert fits.get('classification') and fits.get('regression'), \
-                ('`__fits__` property does not define classification '
-                 'or regression learner. Use a simple learner if you don\'t '
-                 'need the functionality provided by Fitter.')
-        return super().__new__(mcs, name, bases, attrs)
-
-
-class Fitter(Learner, metaclass=FitterMeta):
+class Fitter(Learner):
     """Handle multiple types of target variable with one learner.
 
     Subclasses of this class serve as a sort of dispatcher. When subclassing,
@@ -119,3 +106,14 @@ class Fitter(Learner, metaclass=FitterMeta):
     def get_params(self, problem_type):
         """Access the specific learner params of a given learner."""
         return self.get_learner(problem_type).params
+
+
+class SklFitter(Fitter):
+    def _fit_model(self, data):
+        model = super()._fit_model(data)
+        model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
+        if data.domain.has_discrete_class:
+            model.params = self.get_params(self.CLASSIFICATION)
+        else:
+            model.params = self.get_params(self.REGRESSION)
+        return model

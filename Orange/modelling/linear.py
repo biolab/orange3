@@ -1,11 +1,11 @@
 from Orange.classification.sgd import SGDClassificationLearner
-from Orange.modelling import Fitter
+from Orange.modelling import SklFitter
 from Orange.regression import SGDRegressionLearner
 
 __all__ = ['SGDLearner']
 
 
-class SGDLearner(Fitter):
+class SGDLearner(SklFitter):
     name = 'sgd'
 
     __fits__ = {'classification': SGDClassificationLearner,
