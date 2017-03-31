@@ -177,9 +177,11 @@ class OWPythagoreanForest(OWWidget):
 
     @contextmanager
     def _prevent_commit(self):
-        self.__prevent_commit = True
-        yield
-        self.__prevent_commit = False
+        try:
+            self.__prevent_commit = True
+            yield
+        finally:
+            self.__prevent_commit = False
 
     def _update_info_box(self):
         self.ui_info.setText('Trees: {}'.format(len(self.forest_adapter.get_trees())))
@@ -212,15 +214,17 @@ class OWPythagoreanForest(OWWidget):
     @contextmanager
     def disable_ui(self):
         """Temporarly disable the UI while trees may be redrawn."""
-        self.ui_size_calc_combo.setEnabled(False)
-        self.ui_depth_slider.setEnabled(False)
-        self.ui_target_class_combo.setEnabled(False)
-        self.ui_zoom_slider.setEnabled(False)
-        yield
-        self.ui_size_calc_combo.setEnabled(True)
-        self.ui_depth_slider.setEnabled(True)
-        self.ui_target_class_combo.setEnabled(True)
-        self.ui_zoom_slider.setEnabled(True)
+        try:
+            self.ui_size_calc_combo.setEnabled(False)
+            self.ui_depth_slider.setEnabled(False)
+            self.ui_target_class_combo.setEnabled(False)
+            self.ui_zoom_slider.setEnabled(False)
+            yield
+        finally:
+            self.ui_size_calc_combo.setEnabled(True)
+            self.ui_depth_slider.setEnabled(True)
+            self.ui_target_class_combo.setEnabled(True)
+            self.ui_zoom_slider.setEnabled(True)
 
     def _draw_trees(self):
         self.grid_items, self.ptrees = [], []
