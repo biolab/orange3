@@ -210,7 +210,7 @@ def stats(X, weights=None, compute_variance=False):
             np.nanvar(X, axis=0) if compute_variance else np.zeros(X.shape[1]),
             nans,
             X.shape[0] - nans))
-    elif is_sparse:
+    elif is_sparse and X.size:
         if compute_variance:
             raise NotImplementedError
 
