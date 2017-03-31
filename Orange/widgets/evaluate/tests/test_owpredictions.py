@@ -5,7 +5,7 @@ import numpy as np
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.classification import MajorityLearner
 from Orange.evaluation import Results
 
@@ -47,6 +47,8 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(len(evres.data), 0)
 
     def test_mismatching_targets(self):
+        error = self.widget.Error
+
         titanic = Table("titanic")
         majority_titanic = MajorityLearner()(titanic)
         majority_iris = MajorityLearner()(self.iris)
@@ -54,35 +56,66 @@ class TestOWPredictions(WidgetTest):
         self.send_signal("Data", self.iris)
         self.send_signal("Predictors", majority_iris, 1)
         self.send_signal("Predictors", majority_titanic, 2)
-        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
-        output = self.get_output("Predictions")
-        self.assertEqual(len(output.domain.metas), 4)
+        self.assertTrue(error.predictors_target_mismatch.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
 
         self.send_signal("Predictors", None, 1)
-        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertTrue(error.data_target_mismatch.is_shown())
         self.assertIsNone(self.get_output("Predictions"))
 
         self.send_signal("Data", None)
-        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(error.data_target_mismatch.is_shown())
         self.assertIsNone(self.get_output("Predictions"))
 
         self.send_signal("Predictors", None, 2)
-        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(error.data_target_mismatch.is_shown())
         self.assertIsNone(self.get_output("Predictions"))
 
         self.send_signal("Predictors", majority_titanic, 2)
-        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(error.data_target_mismatch.is_shown())
         self.assertIsNone(self.get_output("Predictions"))
 
         self.send_signal("Data", self.iris)
-        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertTrue(error.data_target_mismatch.is_shown())
         self.assertIsNone(self.get_output("Predictions"))
 
         self.send_signal("Predictors", majority_iris, 2)
-        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(error.data_target_mismatch.is_shown())
+        output = self.get_output("Predictions")
         self.assertEqual(len(output.domain.metas), 4)
 
         self.send_signal("Predictors", majority_iris, 1)
         self.send_signal("Predictors", majority_titanic, 3)
-        output = self.get_output("Predictions")
-        self.assertEqual(len(output.domain.metas), 8)
+        self.assertTrue(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(error.data_target_mismatch.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+    def test_no_class_on_test(self):
+        """Allow test data with no class"""
+        error = self.widget.Error
+
+        titanic = Table("titanic")
+        majority_titanic = MajorityLearner()(titanic)
+        majority_iris = MajorityLearner()(self.iris)
+
+        no_class = Table(Domain(titanic.domain.attributes, None), titanic)
+        self.send_signal("Predictors", majority_titanic, 1)
+        self.send_signal("Data", no_class)
+        out = self.get_output("Predictions")
+        np.testing.assert_allclose(out.get_column_view("majority")[0], 0)
+
+        self.send_signal("Predictors", majority_iris, 2)
+        self.assertTrue(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(error.data_target_mismatch.is_shown())
+        self.assertIsNone(self.get_output("Predictions"))
+
+        self.send_signal("Predictors", None, 2)
+        self.send_signal("Data", titanic)
+        out = self.get_output("Predictions")
+        np.testing.assert_allclose(out.get_column_view("majority")[0], 0)
