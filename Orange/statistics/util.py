@@ -193,20 +193,19 @@ def stats(X, weights=None, compute_variance=False):
     is_sparse = sp.issparse(X)
     weighted = weights is not None and X.dtype != object
 
-    if weighted:
-        weights = np.c_[weights] / sum(weights)
+    def weighted_mean():
         if is_sparse:
-            w_X = X.multiply(sp.csr_matrix(weights))
-            weighted_mean = np.asarray(w_X.sum(axis=0)).ravel()
+            w_X = X.multiply(sp.csr_matrix(np.c_[weights] / sum(weights)))
+            return np.asarray(w_X.sum(axis=0)).ravel()
         else:
-            weighted_mean = np.nansum(X * weights, axis=0)
+            return np.nansum(X * np.c_[weights] / sum(weights), axis=0)
 
     if X.size and is_numeric and not is_sparse:
         nans = np.isnan(X).sum(axis=0)
         return np.column_stack((
             np.nanmin(X, axis=0),
             np.nanmax(X, axis=0),
-            np.nanmean(X, axis=0) if not weighted else weighted_mean,
+            np.nanmean(X, axis=0) if not weighted else weighted_mean(),
             np.nanvar(X, axis=0) if compute_variance else np.zeros(X.shape[1]),
             nans,
             X.shape[0] - nans))
@@ -219,7 +218,7 @@ def stats(X, weights=None, compute_variance=False):
         return np.column_stack((
             X.min(axis=0).toarray().ravel(),
             X.max(axis=0).toarray().ravel(),
-            np.asarray(X.mean(axis=0)).ravel() if not weighted else weighted_mean,
+            np.asarray(X.mean(axis=0)).ravel() if not weighted else weighted_mean(),
             np.zeros(X.shape[1]),      # variance not supported
             X.shape[0] - non_zero,
             non_zero))
