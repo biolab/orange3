@@ -11,7 +11,7 @@ from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import Qt, QSize
 
-from Orange.data import Table
+from Orange.data import Table, DiscreteVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
 import Orange.classification
@@ -22,6 +22,7 @@ from Orange.evaluation import scoring, Results
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Msg
 
 Input = namedtuple(
@@ -137,10 +138,12 @@ class OWTestLearners(OWWidget):
     outputs = [("Predictions", Table),
                ("Evaluation Results", Results)]
 
-    settingsHandler = settings.ClassValuesContextHandler()
+    settings_version = 2
+    settingsHandler = settings.PerfectDomainContextHandler(metas_in_res=True)
 
     #: Resampling/testing types
-    KFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
+    KFold, FeatureFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest \
+        = 0, 1, 2, 3, 4, 5
     #: Numbers of folds
     NFolds = [2, 3, 5, 10, 20]
     #: Number of repetitions
@@ -160,6 +163,9 @@ class OWTestLearners(OWWidget):
     sample_size = settings.Setting(9)
     #: Stratified sampling for Random Sampling
     shuffle_stratified = settings.Setting(True)
+    # CV where nr. of feature values determines nr. of folds
+    fold_feature = settings.ContextSetting(None)
+    fold_feature_selected = settings.ContextSetting(False)
 
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
@@ -211,6 +217,13 @@ class OWTestLearners(OWWidget):
         gui.checkBox(
             ibox, self, "cv_stratified", "Stratified",
             callback=self.kfold_changed)
+        gui.appendRadioButton(rbox, "Cross validation by feature")
+        ibox = gui.indentedBox(rbox)
+        self.feature_model = DomainModel(
+            order=DomainModel.METAS, valid_types=DiscreteVariable)
+        self.features_combo = gui.comboBox(
+            ibox, self, "fold_feature", model=self.feature_model,
+            orientation=Qt.Horizontal, callback=self.fold_feature_changed)
 
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
@@ -259,6 +272,20 @@ class OWTestLearners(OWWidget):
 
     def sizeHint(self):
         return QSize(780, 1)
+
+    def _update_controls(self):
+        self.fold_feature = None
+        self.feature_model.set_domain(None)
+        if self.data:
+            self.feature_model.set_domain(self.data.domain)
+            if self.fold_feature is None and self.feature_model:
+                self.fold_feature = self.feature_model[0]
+        enabled = bool(self.feature_model)
+        self.controls.resampling.buttons[
+            OWTestLearners.FeatureFold].setEnabled(enabled)
+        self.features_combo.setEnabled(enabled)
+        if self.resampling == OWTestLearners.FeatureFold and not enabled:
+            self.resampling = OWTestLearners.KFold
 
     def set_learner(self, learner, key):
         """
@@ -310,9 +337,12 @@ class OWTestLearners(OWWidget):
 
         self.data = data
         self.closeContext()
+        self._update_controls()
         if data is not None:
             self._update_class_selection()
-            self.openContext(data.domain.class_var)
+            self.openContext(data.domain)
+            if self.fold_feature_selected and bool(self.feature_model):
+                self.resampling = OWTestLearners.FeatureFold
         self._invalidate()
 
     def set_test_data(self, data):
@@ -372,6 +402,10 @@ class OWTestLearners(OWWidget):
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
+        self._param_changed()
+
+    def fold_feature_changed(self):
+        self.resampling = OWTestLearners.FeatureFold
         self._param_changed()
 
     def shuffle_split_changed(self):
@@ -440,6 +474,10 @@ class OWTestLearners(OWWidget):
                         random_state=rstate, warnings=warnings, **common_args)
                     if warnings:
                         self.warning(warnings[0])
+                elif self.resampling == OWTestLearners.FeatureFold:
+                    results = Orange.evaluation.CrossValidationFeature(
+                        self.data, learners, self.fold_feature,
+                        **common_args)
                 elif self.resampling == OWTestLearners.LeaveOneOut:
                     results = Orange.evaluation.LeaveOneOut(
                         self.data, learners, **common_args)
@@ -469,13 +507,9 @@ class OWTestLearners(OWWidget):
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
         for learner, result in zip(learners, results.split_by_model()):
             stats = None
-            if class_var.is_discrete:
-                scorers = classification_stats.scores
-            elif class_var.is_continuous:
-                scorers = regression_stats.scores
-            else:
-                scorers = None
-            if scorers:
+            if class_var.is_primitive():
+                scorers = classification_stats.scores if class_var.is_discrete \
+                    else regression_stats.scores
                 ex = result.failed[0]
                 if ex:
                     stats = [Try.Fail(ex)] * len(scorers)
@@ -593,6 +627,8 @@ class OWTestLearners(OWWidget):
         self._update_stats_model()
 
     def _invalidate(self, which=None):
+        self.fold_feature_selected = \
+            self.resampling == OWTestLearners.FeatureFold
         # Invalidate learner results for `which` input keys
         # (if None then all learner results are invalidated)
         if which is None:
@@ -666,6 +702,14 @@ class OWTestLearners(OWWidget):
         if items:
             self.report_items("Settings", items)
         self.report_table("Scores", self.view)
+
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            if not hasattr(settings_["context_settings"][0], "attributes"):
+                settings_["context_settings"][0].attributes = {}
+            if settings_["resampling"] > 0:
+                settings_["resampling"] += 1
 
 
 def learner_name(learner):
