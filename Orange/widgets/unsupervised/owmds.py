@@ -10,11 +10,13 @@ import numpy
 import scipy.spatial.distance
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction, QApplication,
-    QGraphicsLineItem
+    QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction,
+    QApplication, QGraphicsLineItem
 )
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
-from AnyQt.QtCore import Qt, QEvent
+from AnyQt.QtGui import (
+    QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
+)
+from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -165,6 +167,9 @@ class OWMDS(OWWidget):
         self._effective_matrix = None
 
         self.__update_loop = None
+        # timer for scheduling updates
+        self.__timer = QTimer(self, singleShot=True, interval=0)
+        self.__timer.timeout.connect(self.__next_step)
         self.__state = OWMDS.Waiting
         self.__in_next_step = False
         self.__draw_similar_pairs = False
@@ -592,8 +597,8 @@ class OWMDS(OWWidget):
         MDS points, `stress` is the current stress and `progress` a float
         ratio (0 <= progress <= 1)
 
-        If an existing update loop is already in palace it is interrupted
-        (closed).
+        If an existing update coroutine loop is already in palace it is
+        interrupted (i.e. closed).
 
         .. note::
             The `loop` must not explicitly yield control flow to the event
@@ -612,15 +617,19 @@ class OWMDS(OWWidget):
             self.setStatusMessage("Running")
             self.runbutton.setText("Stop")
             self.__state = OWMDS.Running
-            QApplication.postEvent(self, QEvent(QEvent.User))
+            self.__timer.start()
         else:
             self.setStatusMessage("")
             self.runbutton.setText("Start")
             self.__state = OWMDS.Finished
+            self.__timer.stop()
 
     def __next_step(self):
         if self.__update_loop is None:
             return
+
+        assert not self.__in_next_step
+        self.__in_next_step = True
 
         loop = self.__update_loop
         self.Error.out_of_memory.clear()
@@ -647,25 +656,9 @@ class OWMDS(OWWidget):
             self._update_plot()
             self.plot.autoRange(padding=0.1, items=[self._scatter_item])
             # schedule next update
-            QApplication.postEvent(
-                self, QEvent(QEvent.User), Qt.LowEventPriority)
+            self.__timer.start()
 
-    def customEvent(self, event):
-        if event.type() == QEvent.User and self.__update_loop is not None:
-            if not self.__in_next_step:
-                self.__in_next_step = True
-                try:
-                    self.__next_step()
-                finally:
-                    self.__in_next_step = False
-            else:
-                warnings.warn(
-                    "Re-entry in update loop detected. "
-                    "A rogue `proccessEvents` is on the loose.",
-                    RuntimeWarning)
-                # re-schedule the update iteration.
-                QApplication.postEvent(self, QEvent(QEvent.User))
-        return super().customEvent(event)
+        self.__in_next_step = False
 
     def __invalidate_embedding(self):
         # reset/invalidate the MDS embedding, to the default initialization
