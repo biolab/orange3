@@ -2,10 +2,11 @@ import contextlib
 import time
 import warnings
 
-from AnyQt.QtCore import QEventLoop, pyqtSignal as Signal, pyqtProperty
-from AnyQt.QtWidgets import QApplication, qApp
+from AnyQt.QtCore import pyqtProperty
+from AnyQt.QtWidgets import qApp
 
 from Orange.widgets import gui
+
 
 class ProgressBarMixin:
     # Set these here so we avoid having to call `__init__` fromm classes
@@ -14,17 +15,20 @@ class ProgressBarMixin:
     __progressState = 0
     startTime = time.time()  # used in progressbar
 
-    def progressBarInit(self, processEvents=QEventLoop.AllEvents):
+    def progressBarInit(self, processEvents=None):
         """
         Initialize the widget's progress (i.e show and set progress to 0%).
 
-        .. note::
-            This method will by default call `QApplication.processEvents`
-            with `processEvents`. To suppress this behavior pass
-            ``processEvents=None``.
+        Parameters
+        ----------
+        processEvents : Optional[QEventLoop.ProcessEventsFlags]
+            If present then `QApplication.processEvents(processEvents)`
+            will be called. Passing any value here is highly discouraged.
+            It is up to the client to handle the consequences of such action.
 
-        :param processEvents: Process events flag
-        :type processEvents: `QEventLoop.ProcessEventsFlags` or `None`
+        .. versionchanged:: 3.4.2
+            Deprecated and changed default `processEvents` value.
+
         """
         self.startTime = time.time()
         self.setWindowTitle(self.captionTitle + " (0% complete)")
@@ -35,18 +39,21 @@ class ProgressBarMixin:
 
         self.progressBarSet(0, processEvents)
 
-    def progressBarSet(self, value, processEvents=QEventLoop.AllEvents):
+    def progressBarSet(self, value, processEvents=None):
         """
         Set the current progress bar to `value`.
 
-        .. note::
-            This method will by default call `QApplication.processEvents`
-            with `processEvents`. To suppress this behavior pass
-            ``processEvents=None``.
+        Parameters
+        ----------
+        value : float
+            Progress value.
+        processEvents : Optional[QEventLoop.ProcessEventsFlags]
+            If present then `QApplication.processEvents(processEvents)`
+            will be called. Passing any value here is highly discouraged.
+            It is up to the client to handle the consequences of such action.
 
-        :param float value: Progress value
-        :param processEvents: Process events flag
-        :type processEvents: `QEventLoop.ProcessEventsFlags` or `None`
+        .. versionchanged:: 3.4.2
+            Deprecated and changed default `processEvents` value.
         """
         old = self.__progressBarValue
         self.__progressBarValue = value
@@ -89,33 +96,39 @@ class ProgressBarMixin:
         float, fset=progressBarSet, fget=progressBarValue)
     processingState = pyqtProperty(int, fget=lambda self: self.__progressState)
 
-    def progressBarAdvance(self, value, processEvents=QEventLoop.AllEvents):
+    def progressBarAdvance(self, value, processEvents=None):
         """
-        Advance the progress bar.
+        Advance the progress bar by `value`.
 
-        .. note::
-            This method will by default call `QApplication.processEvents`
-            with `processEvents`. To suppress this behavior pass
-            ``processEvents=None``.
+        Parameters
+        ----------
+        value : float
+            Progress value increment.
+        processEvents : Optional[QEventLoop.ProcessEventsFlags]
+            If present then `QApplication.processEvents(processEvents)`
+            will be called. Passing any value here is highly discouraged.
+            It is up to the client to handle the consequences of such action.
 
-        Args:
-            value (int): progress value
-            processEvents (`QEventLoop.ProcessEventsFlags` or `None`):
-                process events flag
+        .. versionchanged:: 3.4.2
+            Deprecated and changed default `processEvents` value.
         """
         self.progressBarSet(self.progressBarValue + value, processEvents)
 
-    def progressBarFinished(self, processEvents=QEventLoop.AllEvents):
+    def progressBarFinished(self, processEvents=None):
         """
         Stop the widget's progress (i.e hide the progress bar).
 
-        .. note::
-            This method will by default call `QApplication.processEvents`
-            with `processEvents`. To suppress this behavior pass
-            ``processEvents=None``.
+        Parameters
+        ----------
+        value : float
+            Progress value increment.
+        processEvents : Optional[QEventLoop.ProcessEventsFlags]
+            If present then `QApplication.processEvents(processEvents)`
+            will be called. Passing any value here is highly discouraged.
+            It is up to the client to handle the consequences of such action.
 
-        :param processEvents: Process events flag
-        :type processEvents: `QEventLoop.ProcessEventsFlags` or `None`
+        .. versionchanged:: 3.4.2
+            Deprecated and changed default `processEvents` value.
         """
         self.setWindowTitle(self.captionTitle)
         if self.__progressState != 0:
