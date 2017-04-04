@@ -146,11 +146,6 @@ values for both attributes used).
 Example
 -------
 
-The **Scatterplot** can be combined with any widget that outputs a list of
-selected data instances. In the example below, we combine
-:doc:`Classification Tree <../classify/classificationtree>` and **Scatterplot** to display instances taken
-from a chosen classification tree node (clicking on any node of the
-classification tree will send a set of selected data instances to the
-scatterplot and mark selected instances with filled symbols).
+The **Scatterplot** can be combined with any widget that outputs a list of selected data instances. In the example below, we combine :doc:`Tree <../model/tree>` and **Scatterplot** to display instances taken from a chosen decision tree node (clicking on any node of the tree will send a set of selected data instances to the scatterplot and mark selected instances with filled symbols).
 
 .. figure:: images/ScatterPlotExample-Classification.png

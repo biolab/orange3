@@ -12,7 +12,7 @@ Signals
 
 -  **Tree**
 
-   A classification or regression tree model.
+   A decision tree model.
 
 - **Selected Data**
 
@@ -22,7 +22,7 @@ Description
 -----------
 
 **Pythagorean Trees** are plane fractals that can be used to depict general tree hierarchies as presented in an article by `Fabian Beck and co-authors <http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In our case, they are used for visualizing and exploring tree models, such as 
-:doc:`Classification Tree <../classify/classificationtree>`.
+:doc:`Tree <../model/tree>`.
 
 .. figure:: images/Pythagorean-Tree1-stamped.png
 
@@ -53,10 +53,7 @@ Pythagorean Tree can visualize both classification and regression trees. Below i
 Example
 -------
 
-The workflow from the screenshot below demonstrates the difference between 
-:doc:`Classification Tree Viewer <../classify/classificationtreeviewer>` and Pythagorean Tree. They can both visualize :doc:`Classification Tree <../classify/classificationtree>`, but Pythagorean visualization takes less space and is more compact, even for a small 
-`Iris flower <https://en.wikipedia.org/wiki/Iris_flower_data_set>`_
-data set. For both visualization widgets, we have hidden the control area on the left by clicking on the splitter between control and visualization area.
+The workflow from the screenshot below demonstrates the difference between :doc:`Tree Viewer <../visualize/treeviewer>` and Pythagorean Tree. They can both visualize :doc:`Tree <../model/tree>`, but Pythagorean visualization takes less space and is more compact, even for a small `Iris flower <https://en.wikipedia.org/wiki/Iris_flower_data_set>`_ data set. For both visualization widgets, we have hidden the control area on the left by clicking on the splitter between control and visualization area.
 
 .. figure:: images/Pythagorean-Tree-comparison.png
 

@@ -37,7 +37,8 @@ Description
 
 **Geo Map** widget maps geo-spatial data on a world map. It only works on data sets containing latitude and longitude variables. It also enables class predictions when a learner is provided on the input.
 
-.. figure:: images/map-stamped.png
+.. figure:: images/GeoMap-stamped.png
+   :scale: 50%
 
 1. Define map properties:
    - Set the type of *map*: Black and White, `OpenStreetMap <http://www.openstreetmap.org>`_, Topographic, Satellite, Print, Light, Dark, Railyways and Watercolor.
@@ -60,10 +61,10 @@ Description
 Examples
 --------
 
-In the first example we will model class predictions on a map. We will use *philadelphia-crime* data set, load it with :doc:`File <../data/file>` widget and connect it to **Map**. We can already observe the mapped points in Map. Now, we connect :doc:`Classification Tree <../classify/classificationtree>` to Map and set target variable to Type. This will display the predicted type of crime for a specific region of Philadelphia city (each region will be colored with a corresponding color code, explained in a legend on the right).
+In the first example we will model class predictions on a map. We will use *philadelphia-crime* data set, load it with :doc:`File <../data/file>` widget and connect it to **Map**. We can already observe the mapped points in Map. Now, we connect :doc:`Tree <../model/tree>` to Map and set target variable to Type. This will display the predicted type of crime for a specific region of Philadelphia city (each region will be colored with a corresponding color code, explained in a legend on the right).
 
-.. figure:: images/map-classification.png
+.. figure:: images/GeoMap-classification.png
 
-The second example uses `global-airports.csv <https://raw.githubusercontent.com/ajdapretnar/datasets/master/data/global_airports.csv>`_ data. Say we somehow want to predict the altitude of the area based soley on the latitude and longitude. We again load the data with :doc:`File <../data/file>` widget and connect it to Map. Then we use a regressor, say, :doc:`KNN <../regression/nearestneighbors>` and connect it to Map as well. Now we set target to altitude and use Black and White map type. The model guessed the Himalaya, but mades some errors elsewhere.
+The second example uses `global-airports.csv <https://raw.githubusercontent.com/ajdapretnar/datasets/master/data/global_airports.csv>`_ data. Say we somehow want to predict the altitude of the area based soley on the latitude and longitude. We again load the data with :doc:`File <../data/file>` widget and connect it to Map. Then we use a regressor, say, :doc:`KNN <../model/knn>` and connect it to Map as well. Now we set target to altitude and use Black and White map type. The model guessed the Himalaya, but mades some errors elsewhere.
 
-.. figure:: images/map-regression.png
+.. figure:: images/GeoMap-regression.png
