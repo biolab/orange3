@@ -3,7 +3,7 @@ Predictions
 
 .. figure:: icons/predictions.png
 
-Shows classifiers' predictions on the data.
+Shows models' predictions on the data.
 
 Signals
 -------
@@ -55,10 +55,10 @@ Example
 
 .. figure:: images/Predictions-Schema.png
 
-We randomly split the data into two subsets. The larger subset,
-containing 70 % of data instances, is sent to :doc:`Naive Bayes <../classify/naivebayes>` and
-:doc:`Classification Tree <../classify/classificationtree>`, so they can produce the corresponding
-classifiers. Classifiers are then sent into **Predictions**, among with
+We randomly split the *iris* data into two subsets. The larger subset,
+containing 70 % of data instances, is sent to :doc:`Naive Bayes <../model/naivebayes>` and
+:doc:`Tree <../model/tree>`, so they can produce the corresponding
+model. Models are then sent into **Predictions**, among with
 the remaining 30 % of the data. Predictions shows how these examples are
 classified.
 
@@ -66,7 +66,7 @@ To save the predictions, we simply attach the :doc:`Save <../data/save>` widget 
 **Predictions**. The final file is a data table and can be saved as in a
 .tab or .tsv format.
 
-Finally, we can analyze the classifiers' predictions. For that, we first
+Finally, we can analyze the models' predictions. For that, we first
 take :doc:`Select Columns <../data/selectcolumns>` with which we move the meta attributes with
 probability predictions to features. The transformed data is then given
 to the :doc:`Scatterplot <../visualize/scatterplot>`, which we set to use the attributes with
@@ -76,9 +76,9 @@ default) used to color the data points.
 .. figure:: images/Predictions-ExampleScatterplot.png
 
 To get the above plot, we selected *Jitter continuous values*, since the
-classification tree gives just a few distinct probabilities. The blue
+decision tree gives just a few distinct probabilities. The blue
 points in the bottom left corner represent the people with no diameter
-narrowing, which were correctly classified by both classifiers. The
+narrowing, which were correctly classified by both models. The
 upper right red points represent the patients with narrowed vessels,
 which were correctly classified by both.
 

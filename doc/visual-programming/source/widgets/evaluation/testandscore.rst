@@ -1,7 +1,7 @@
 Test & Score
 ============
 
-.. figure:: icons/test-learners.png
+.. figure:: icons/test-and-score.png
 
 Tests learning algorithms on data.
 
@@ -36,7 +36,7 @@ The widget tests learning algorithms. Different sampling schemes are
 available, including using separate test data. The widget does two
 things. First, it shows a table with different classifier performance
 measures, such as `classification accuracy <https://en.wikipedia.org/wiki/Accuracy_and_precision>`_ 
-and `area under ROC <https://en.wikipedia.org/wiki/Receiver_operating_characteristic#Area_under_the_curve>`_.
+and `area under the curve <https://en.wikipedia.org/wiki/Receiver_operating_characteristic#Area_under_the_curve>`_.
 Second, it outputs evaluation results, which can be used by other
 widgets for analyzing the performance of classifiers, such as :doc:`ROC Analysis <../evaluation/rocanalysis>` or :doc:`Confusion Matrix <../evaluation/confusionmatrix>`.
 
@@ -103,7 +103,7 @@ Example
 
 In a typical use of the widget, we give it a data set and a few learning
 algorithms and we observe their performance in the table inside the
-:doc:`Test&Score <../evaluation/testlearners>` widget and in the :doc:`ROC <../evaluation/rocanalysis>`. The data is often
+**Test & Score** widget and in the :doc:`ROC <../evaluation/rocanalysis>`. The data is often
 preprocessed before testing; in this case we did some manual feature
 selection (:doc:`Select Columns <../data/selectcolumns>` widget) on *Titanic* data set, where we
 want to know only the sex and status of the survived and omit the age.
