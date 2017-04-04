@@ -420,7 +420,7 @@ class OWScatterPlot(OWWidget):
 
     def apply_selection(self):
         """
-        Selection is saved only in a schema file. 
+        Selection is saved only in a schema file.
         GH-2192, GH-2181
         """
         if self.data is not None and self.selection is not None:
@@ -574,7 +574,7 @@ class OWScatterPlot(OWWidget):
         self.graph.plot_widget.clear()
 
 
-def test_main(argv=None):
+def main(argv=None):
     import sys
     if argv is None:
         argv = sys.argv
@@ -604,4 +604,4 @@ def test_main(argv=None):
     return rval
 
 if __name__ == "__main__":
-    test_main()
+    main()
