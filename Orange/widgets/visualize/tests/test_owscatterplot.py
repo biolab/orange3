@@ -215,6 +215,22 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal("Data", table)
         self.widget.reset_graph_data()
 
+    def test_points_selection(self):
+        """
+        Tests if widget crashes when receives data with less data points
+        than selected.
+        GH-2192
+        GH-2181 
+        """
+        table = Table("iris")
+        self.send_signal("Data", table)
+        self.widget.selection = range(0, 150)
+        self.send_signal("Data", table[0:10])
+        self.assertSequenceEqual(list(self.widget.selection),
+                                 list(range(0, 10)),
+                                 seq_type=list
+                                 )
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
