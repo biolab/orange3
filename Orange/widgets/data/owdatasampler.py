@@ -110,7 +110,7 @@ class OWDataSampler(OWWidget):
             addToLayout=False, callback=self.fold_changed)
         form.addRow("Selected fold:", self.selected_fold_spin)
 
-        gui.appendRadioButton(sampling, "Boostrap")
+        gui.appendRadioButton(sampling, "Bootstrap")
 
         self.sql_box = gui.vBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sql_box, self, "sampling_type",
