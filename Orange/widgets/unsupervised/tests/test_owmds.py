@@ -25,7 +25,12 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         cls.same_input_output_domain = False
 
     def setUp(self):
-        self.widget = self.create_widget(OWMDS)  # type: OWMDS
+        self.widget = self.create_widget(
+            OWMDS, stored_settings={
+                "max_iter": 10,
+                "initialization": OWMDS.PCA,
+            }
+        )  # type: OWMDS
 
     def _select_data(self):
         random.seed(42)
@@ -35,18 +40,15 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         return sorted(points)
 
     def test_pca_init(self):
-        self.send_signal(self.signal_name, self.signal_data)
-        self.widget.customEvent(QEvent(QEvent.User))
-        self.widget.commit()
+        self.send_signal(self.signal_name, self.signal_data, wait=1000)
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        np.testing.assert_array_almost_equal(
-            output.X[0, 4:], np.array([-2.6928912, 0.32603512]))
-        np.testing.assert_array_almost_equal(
-            output.X[1, 4:], np.array([-2.72432089, -0.21129957]))
-        np.testing.assert_array_almost_equal(
-            output.X[2, 4:], np.array([-2.90231621, -0.13535431]))
-        np.testing.assert_array_almost_equal(
-            output.X[3, 4:], np.array([-2.75269913, -0.33885988]))
+        expected = np.array(
+            [[-2.69304803, 0.32676458],
+             [-2.7246721, -0.20921726],
+             [-2.90244761, -0.13630526],
+             [-2.75281107, -0.33854819]]
+        )
+        np.testing.assert_array_almost_equal(output.X[:4, 4:], expected)
 
     def test_nan_plot(self):
         data = datasets.missing_data_1()

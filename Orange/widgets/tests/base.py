@@ -8,7 +8,7 @@ import sip
 
 import numpy as np
 from AnyQt.QtCore import Qt
-from AnyQt.QtTest import QTest
+from AnyQt.QtTest import QTest, QSignalSpy
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
@@ -180,7 +180,7 @@ class WidgetTest(GuiTest):
         widget.show()
         app.exec()
 
-    def send_signal(self, input_name, value, *args, widget=None):
+    def send_signal(self, input_name, value, *args, widget=None, wait=-1):
         """ Send signal to widget by calling appropriate triggers.
 
         Parameters
@@ -191,6 +191,8 @@ class WidgetTest(GuiTest):
             channel id, used for inputs with flag Multiple
         widget : Optional[OWWidget]
             widget to send signal to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
         """
         if widget is None:
             widget = self.widget
@@ -202,6 +204,9 @@ class WidgetTest(GuiTest):
             raise ValueError("'{}' is not an input name for widget {}"
                              .format(input_name, type(widget).__name__))
         widget.handleNewSignals()
+        if wait >= 0 and widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
 
     def get_output(self, output_name, widget=None):
         """Return the last output that has been sent from the widget.
@@ -628,14 +633,12 @@ class WidgetOutputsTestMixin:
         self.data = Table("iris")
         self.same_input_output_domain = True
 
-    def test_outputs(self):
+    def test_outputs(self, timeout=5000):
         self.send_signal(self.signal_name, self.signal_data)
 
-        # only needed in TestOWMDS
-        if type(self).__name__ == "TestOWMDS":
-            from AnyQt.QtCore import QEvent
-            self.widget.customEvent(QEvent(QEvent.User))
-            self.widget.commit()
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
 
         # check selected data output
         self.assertIsNone(self.get_output("Selected Data"))

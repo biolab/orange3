@@ -1,5 +1,5 @@
 # PyQt4/PyQt5 compatibility
-AnyQt>=0.0.6
+AnyQt>=0.0.8
 
 pyqtgraph>=0.10.0
 
