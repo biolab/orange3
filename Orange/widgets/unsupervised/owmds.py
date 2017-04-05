@@ -613,12 +613,14 @@ class OWMDS(OWWidget):
         self.__update_loop = loop
 
         if loop is not None:
+            self.setBlocking(True)
             self.progressBarInit(processEvents=None)
             self.setStatusMessage("Running")
             self.runbutton.setText("Stop")
             self.__state = OWMDS.Running
             self.__timer.start()
         else:
+            self.setBlocking(False)
             self.setStatusMessage("")
             self.runbutton.setText("Start")
             self.__state = OWMDS.Finished
