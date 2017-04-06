@@ -10,7 +10,7 @@ images="$(git diff --name-only origin/master..HEAD |
           grep -E '\bdoc/' | grep -iE '\.(png|jpg)$' || true )"
 echo "Checking if images are indexed:"
 while read image; do
-    [ "$image" ] || break;
+    [ -f "$image" ] || continue
     imtype=$(identify -verbose "$image" | awk '/^ *Type: /{ print $2 }')
     echo "$image  $imtype"
     if ! echo "$imtype" | grep -Eq '(Palette|Grayscale)'; then
