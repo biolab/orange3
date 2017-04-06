@@ -682,26 +682,19 @@ def list_pypi_addons():
 
         name = addon["name"]
         multicall.release_data(name, version_)
-        multicall.release_urls(name, version_)
 
     results = list(multicall())
-    release_data = results[::2]
-    release_urls = results[1::2]
     packages = []
 
-    for release, urls in zip(release_data, release_urls):
-        if release and urls:
+    for release in results:
+        if release:
             # ignore releases without actual source/wheel/egg files,
             # or with empty metadata (deleted from PyPi?).
-            urls = [ReleaseUrl(url["filename"], url["url"],
-                               url["size"], url["python_version"],
-                               url["packagetype"])
-                    for url in urls]
             packages.append(
                 Installable(release["name"], release["version"],
                             release["summary"], release["description"],
                             release["package_url"],
-                            urls)
+                            release["package_url"])
             )
     return packages
 
