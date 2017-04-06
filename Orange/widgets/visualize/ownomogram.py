@@ -12,6 +12,7 @@ from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
 
 from Orange.data import Table, Domain
+from Orange.statistics.util import nanmin, nanmax, mean, unique
 from Orange.classification import Model
 from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.classification.logistic_regression import \
@@ -870,8 +871,8 @@ class OWNomogram(OWWidget):
         for i in range(len(self.log_reg_coeffs)):
             if self.log_reg_coeffs[i].shape[1] == 1:
                 coef = self.log_reg_coeffs[i]
-                min_t = np.nanmin(self.data.X, axis=0)[i]
-                max_t = np.nanmax(self.data.X, axis=0)[i]
+                min_t = nanmin(self.data.X, axis=0)[i]
+                max_t = nanmax(self.data.X, axis=0)[i]
                 self.log_reg_coeffs[i] = np.hstack((coef * min_t, coef * max_t))
                 self.log_reg_cont_data_extremes.append(
                     [sorted([min_t, max_t], reverse=(c < 0)) for c in coef])
@@ -1080,10 +1081,10 @@ class OWNomogram(OWWidget):
             value, feature_val = 0, None
             if len(self.log_reg_coeffs):
                 if attr.is_discrete:
-                    ind, n = np.unique(self.data.X[:, i], return_counts=True)
+                    ind, n = unique(self.data.X[:, i], return_counts=True)
                     feature_val = np.nan_to_num(ind[np.argmax(n)])
                 else:
-                    feature_val = np.average(self.data.X[:, i])
+                    feature_val = mean(self.data.X[:, i])
             inst_in_dom = instances and attr in instances.domain
             if inst_in_dom and not np.isnan(instances[0][attr]):
                 feature_val = instances[0][attr]
