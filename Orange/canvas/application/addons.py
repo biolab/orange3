@@ -14,7 +14,6 @@ from glob import iglob
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
-from email.parser import HeaderParser
 import urllib.request
 import xmlrpc.client
 
@@ -42,7 +41,6 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-from ..config import ADDON_KEYWORD
 from ..gui.utils import message_warning, message_information, \
                         message_critical as message_error, \
                         OSX_NSURL_toLocalFile
@@ -74,7 +72,7 @@ ReleaseUrl = namedtuple(
      "size",
      "python_version",
      "package_type"
-     ]
+    ]
 )
 
 Available = namedtuple(
@@ -405,9 +403,9 @@ class AddonManagerWidget(QWidget):
                     writer_name="html",
                     settings_overrides={
                         "output-encoding": "utf-8",
-#                         "embed-stylesheet": False,
-#                         "stylesheet": [],
-#                         "stylesheet_path": []
+                        # "embed-stylesheet": False,
+                        # "stylesheet": [],
+                        # "stylesheet_path": []
                     }
                 ).decode("utf-8")
 
@@ -573,7 +571,7 @@ class AddonManagerDialog(QDialog):
     def dragEnterEvent(self, event):
         urls = event.mimeData().urls()
         if any((OSX_NSURL_toLocalFile(url) or url.toLocalFile())
-                .endswith(self.ADDON_EXTENSIONS) for url in urls):
+               .endswith(self.ADDON_EXTENSIONS) for url in urls):
             event.acceptProposedAction()
 
     def dropEvent(self, event):
@@ -770,7 +768,11 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -785,7 +787,11 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -796,7 +802,11 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -808,7 +818,11 @@ class Installer(QObject):
             self.setStatusMessage("Uninstalling {}".format(dist.project_name))
 
             cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if self.__user_install:
