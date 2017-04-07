@@ -51,7 +51,6 @@ def regression_stats(results):
 regression_stats.headers, regression_stats.scores = zip(*(
     ("MSE", scoring.MSE),
     ("RMSE", scoring.RMSE),
-    ("CVRMSE", scoring.CVRMSE),
     ("MAE", scoring.MAE),
     ("R2", scoring.R2),
 ))
