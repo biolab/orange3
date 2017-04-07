@@ -14,7 +14,7 @@ from Orange.util import OrangeWarning
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
-           "ShuffleSplit", "TestOnTestData", "sample"]
+           "ShuffleSplit", "TestOnTestData", "sample", "CrossValidationFeature"]
 
 _MpResults = namedtuple('_MpResults', ('fold_i', 'learner_i', 'model',
                                        'failed', 'n_values', 'values', 'probs'))
@@ -537,6 +537,35 @@ class CrossValidation(Results):
             )
             splitter.get_n_splits(test_data)
             self.indices = list(splitter.split(test_data))
+
+
+class CrossValidationFeature(Results):
+    """
+    Cross validation with folds according to values of a feature.
+
+    .. attribute:: feature
+
+        The feature defining the folds.
+
+    """
+    def  __init__(self, data, learners, feature, store_data=False, store_models=False,
+                  preprocessor=None, callback=None, n_jobs=1):
+        self.feature = feature
+        super().__init__(data, learners=learners, store_data=store_data,
+                         store_models=store_models, preprocessor=preprocessor,
+                         callback=callback, n_jobs=n_jobs)
+
+    def setup_indices(self, train_data, test_data):
+        data = Table(Domain([self.feature], None), test_data)
+        values = data[:, self.feature].X
+        self.indices = []
+        for v in range(len(self.feature.values)):
+            test_index = np.where(values == v)[0]
+            train_index = np.where((values != v) & (~np.isnan(values)))[0]
+            if len(test_index) and len(train_index):
+                self.indices.append((train_index, test_index))
+        if not self.indices:
+            raise ValueError("No folds could be created from the given feature.")
 
 
 class LeaveOneOut(Results):

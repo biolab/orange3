@@ -3,9 +3,10 @@ import numpy as np
 
 import unittest
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.classification import MajorityLearner
 from Orange.regression import MeanLearner
+from Orange.modelling import ConstantLearner
 
 from Orange.evaluation import Results, TestOnTestData
 from Orange.widgets.tests.base import WidgetTest
@@ -37,6 +38,37 @@ class TestOWTestLearners(WidgetTest):
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
+
+    def test_testOnTest(self):
+        data = Table("iris")
+        self.send_signal("Data", data)
+        self.widget.resampling = OWTestLearners.TestOnTest
+        self.send_signal("Test Data", data)
+
+    def test_CrossValidationByFeature(self):
+        data = Table("iris")
+        attrs = data.domain.attributes
+        domain = Domain(attrs[:-1], attrs[-1], data.domain.class_vars)
+        data_with_disc_metas = Table.from_table(domain, data)
+        rb = self.widget.controls.resampling.buttons[OWTestLearners.FeatureFold]
+
+        self.send_signal("Learner", ConstantLearner(), 0)
+        self.send_signal("Data", data)
+        self.assertFalse(rb.isEnabled())
+        self.assertFalse(self.widget.features_combo.isEnabled())
+
+        self.send_signal("Data", data_with_disc_metas)
+        self.assertTrue(rb.isEnabled())
+        rb.click()
+        self.assertEqual(self.widget.resampling, OWTestLearners.FeatureFold)
+        self.assertTrue(self.widget.features_combo.isEnabled())
+        self.assertEqual(self.widget.features_combo.currentText(), "iris")
+        self.assertEqual(len(self.widget.features_combo.model()), 1)
+
+        self.send_signal("Data", None)
+        self.assertFalse(rb.isEnabled())
+        self.assertEqual(self.widget.resampling, OWTestLearners.KFold)
+        self.assertFalse(self.widget.features_combo.isEnabled())
 
 
 class TestHelpers(unittest.TestCase):
