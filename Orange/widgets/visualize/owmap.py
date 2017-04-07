@@ -370,7 +370,7 @@ class LeafletMap(WebviewWidget):
                                    raw_values=self._raw_sizes[visible]))
         self.evalJS('''
             window.latlon_data = latlon_data.data;
-            window.selected_markers = selected_markers.data
+            window.selected_markers = selected_markers.data;
             add_markers(latlon_data);
         ''')
 

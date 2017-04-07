@@ -5,6 +5,7 @@ around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
 import os
+import threading
 from os.path import join, dirname, abspath
 import warnings
 from random import random
@@ -444,6 +445,36 @@ if HAVE_WEBKIT:
 
 
 elif HAVE_WEBENGINE:
+    class IdStore:
+        """Generates and stores unique ids.
+
+        Used in WebviewWidget._evalJS below to match scheduled js executions
+        and returned results. WebEngine operations are async, so locking is
+        used to guard against problems that could occur if multiple executions
+        ended at exactly the same time.
+        """
+
+        def __init__(self):
+            self.id = 0
+            self.lock = threading.Lock()
+            self.ids = set()
+
+        def create(self):
+            with self.lock:
+                self.id += 1
+                return self.id
+
+        def store(self, id):
+            with self.lock:
+                self.ids.add(id)
+
+        def __contains__(self, id):
+            return id in self.ids
+
+        def remove(self, id):
+            with self.lock:
+                self.ids.remove(id)
+
 
     class _JSObjectChannel(QObject):
         """ This class hopefully prevent options data from being
@@ -487,7 +518,6 @@ elif HAVE_WEBENGINE:
     @inherit_docstrings
     class WebviewWidget(_WebViewBase, WebEngineView):
         _html = _NOTSET
-        _result = _NOTSET
 
         def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
             WebEngineView.__init__(self, parent, bridge, debug=debug, **kwargs)
@@ -502,18 +532,18 @@ elif HAVE_WEBENGINE:
             self._jsobject_channel = jsobj = _JSObjectChannel(self)
             self.page().webChannel().registerObject(
                 '__js_object_channel', jsobj)
+            self._results = IdStore()
 
         def _evalJS(self, code):
             while not self._jsobject_channel.is_all_exposed():
                 qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
             if sip.isdeleted(self):
                 return
-            self.runJavaScript(code,
-                               lambda result: setattr(self, '_result', result))
-            while self._result is _NOTSET:
+            result = self._results.create()
+            self.runJavaScript(code, lambda x: self._results.store(result))
+            while result not in self._results:
                 qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-            result, self._result = self._result, _NOTSET
-            return result
+            self._results.remove(result)
 
         def onloadJS(self, code):
             self._onloadJS(code, injection_point=QWebEngineScript.Deferred)
