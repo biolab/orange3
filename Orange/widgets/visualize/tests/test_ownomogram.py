@@ -24,6 +24,7 @@ class TestOWNomogram(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWNomogram)
+        self.widget.repaint = True
 
     def test_input_nb_cls(self):
         """Check naive bayes classifier on input"""

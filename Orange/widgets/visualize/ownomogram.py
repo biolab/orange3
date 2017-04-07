@@ -652,6 +652,7 @@ class OWNomogram(OWWidget):
         self.hidden_vertical_line = None
         self.old_target_class_index = self.target_class_index
         self.markers_set = False
+        self.repaint = False
 
         # GUI
         box = gui.vBox(self.controlArea, "Target class")
@@ -765,6 +766,7 @@ class OWNomogram(OWWidget):
 
     def eventFilter(self, obj, event):
         if obj is self.view.viewport() and event.type() == QEvent.Resize:
+            self.repaint = True
             values = [item.dot.value for item in self.feature_items]
             self.feature_marker_values = self.scale_back(values)
             self.update_scene()
@@ -877,6 +879,8 @@ class OWNomogram(OWWidget):
                 self.log_reg_cont_data_extremes.append([None])
 
     def update_scene(self):
+        if not self.repaint:
+            return
         self.clear_scene()
         if self.domain is None or not len(self.points[0]):
             return
