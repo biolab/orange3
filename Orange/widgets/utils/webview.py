@@ -6,25 +6,24 @@ around either WebEngineView (extends QWebEngineView) or WebKitView
 """
 import os
 import threading
-from os.path import join, dirname, abspath
 import warnings
-from random import random
-from collections.abc import Mapping, Set, Sequence, Iterable
-from numbers import Integral, Real
+from collections.abc import Iterable, Mapping, Set, Sequence
 from itertools import count
-
+from numbers import Integral, Real
+from os.path import abspath, dirname, join
+from random import random
 from urllib.parse import urljoin
 from urllib.request import pathname2url
 
 import numpy as np
+import sip
+
+from Orange.util import inherit_docstrings, OrangeDeprecationWarning
 
 from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
     pyqtProperty, pyqtSlot, pyqtSignal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QSizePolicy, QWidget, qApp
-import sip
-
-from Orange.util import inherit_docstrings, OrangeDeprecationWarning
 
 try:
     from AnyQt.QtWebKitWidgets import QWebView
