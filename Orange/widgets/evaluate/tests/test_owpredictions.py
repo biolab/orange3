@@ -6,7 +6,7 @@ from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, Variable
 from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch
@@ -130,6 +130,8 @@ class TestOWPredictions(WidgetTest):
         different target values instead of two.
         GH-2129
         """
+        Variable._clear_all_caches()
+
         filestr1 = """\
         age\tsex\tsurvived
         d\td\td
@@ -141,7 +143,6 @@ class TestOWPredictions(WidgetTest):
         """
         file1 = io.StringIO(filestr1)
         table = TabReader(file1).read()
-
         learner = TreeLearner()
         tree = learner(table)
 
@@ -161,6 +162,8 @@ class TestOWPredictions(WidgetTest):
 
         with excepthook_catch():
             self.send_signal("Data", bad_table)
+
+        Variable._clear_all_caches()  # so that test excepting standard titanic work
 
     def test_continuous_class(self):
         data = Table("housing")
