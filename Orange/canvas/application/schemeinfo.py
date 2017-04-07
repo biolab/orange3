@@ -34,7 +34,7 @@ class SchemeInfoEdit(QWidget):
         self.desc_edit = QTextEdit(self)
         self.desc_edit.setTabChangesFocus(True)
 
-        layout.addRow(self.tr("Name"), self.name_edit)
+        layout.addRow(self.tr("Title"), self.name_edit)
         layout.addRow(self.tr("Description"), self.desc_edit)
 
         self.__schemeIsUntitled = True
