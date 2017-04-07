@@ -50,9 +50,8 @@ class SelectBestFeatures(Reprable):
         self.decreasing = decreasing
 
     def __call__(self, data):
-        method = self.method
         # select default method according to the provided data
-        if method is None:
+        if self.method is None:
             autoMethod = True
             discr_ratio = (sum(a.is_discrete
                                for a in data.domain.attributes)
@@ -64,7 +63,9 @@ class SelectBestFeatures(Reprable):
                     method = ANOVA()
             else:
                 method = UnivariateLinearRegression()
-
+        else:
+            method = self.method()
+            
         if not isinstance(data.domain.class_var, method.class_type):
             raise ValueError(("Scoring method {} requires a class variable " +
                               "of type {}.").format(
