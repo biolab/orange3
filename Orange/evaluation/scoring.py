@@ -249,6 +249,14 @@ class RMSE(Score):
         return np.sqrt(MSE(results))
 
 
+class CVRMSE(Score):
+    """
+    Coefficient of variation of the RMSE
+    """
+    def compute_score(self, results):
+        return RMSE(results)/np.nanmean(results.actual) * 100
+
+
 class MAE(Score):
     __wraps__ = skl_metrics.mean_absolute_error
 
