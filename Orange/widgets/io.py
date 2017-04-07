@@ -62,8 +62,8 @@ class ImgFormat(FileFormat):
                 scene.render(painter, target, rect)
             except TypeError:
                 scene.render(painter)  # QWidget.render() takes different params
-            cls._save_buffer(buffer, filename)
             painter.end()
+            cls._save_buffer(buffer, filename)
 
     @classmethod
     def write(cls, filename, scene):
