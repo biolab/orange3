@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import numpy as np
+from scipy import sparse
 
 from Orange.data import Table
 from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
@@ -61,3 +62,14 @@ class TestOWManifoldLearning(WidgetTest):
         self.assertEqual((len(self.iris), n_components), _output.X.shape)
         np.testing.assert_array_equal(self.iris.Y, _output.Y)
         np.testing.assert_array_equal(self.iris.metas, _output.metas)
+
+    def test_sparse_data(self):
+        data = Table("iris")
+        data.X = sparse.csr_matrix(data.X)
+        self.assertTrue(sparse.issparse(data.X))
+        self.send_signal("Data", data)
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
+        self.send_signal("Data", None)
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())

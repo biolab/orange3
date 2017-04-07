@@ -179,6 +179,7 @@ class OWManifoldLearning(OWWidget):
     class Error(OWWidget.Error):
         n_neighbors_too_small = Msg("Neighbors must be greater than {}.")
         manifold_error = Msg("{}")
+        sparse_not_supported = Msg("Sparse data is not supported.")
 
     def __init__(self):
         self.data = None
@@ -235,27 +236,30 @@ class OWManifoldLearning(OWWidget):
         data = None
         self.clear_messages()
         if self.data:
-            with self.progressBar():
-                self.progressBarSet(10)
-                domain = Domain([ContinuousVariable("C{}".format(i))
-                                 for i in range(self.n_components)],
-                                self.data.domain.class_vars,
-                                self.data.domain.metas)
+            if self.data.is_sparse():
+                self.Error.sparse_not_supported()
+            else:
+                with self.progressBar():
+                    self.progressBarSet(10)
+                    domain = Domain([ContinuousVariable("C{}".format(i))
+                                     for i in range(self.n_components)],
+                                    self.data.domain.class_vars,
+                                    self.data.domain.metas)
 
-                method = self.MANIFOLD_METHODS[self.manifold_method_index]
-                projector = method(**self.get_method_parameters())
-                try:
-                    self.progressBarSet(20)
-                    X = projector(self.data).embedding_
-                    data = Table(domain, X, self.data.Y, self.data.metas)
-                except ValueError as e:
-                    if e.args[0] == "for method='hessian', n_neighbors must " \
-                                    "be greater than [n_components * (" \
-                                    "n_components + 3) / 2]":
-                        n = self.n_components * (self.n_components + 3) / 2
-                        self.Error.n_neighbors_too_small("{}".format(n))
-                    else:
-                        self.Error.manifold_error(e.args[0])
+                    method = self.MANIFOLD_METHODS[self.manifold_method_index]
+                    projector = method(**self.get_method_parameters())
+                    try:
+                        self.progressBarSet(20)
+                        X = projector(self.data).embedding_
+                        data = Table(domain, X, self.data.Y, self.data.metas)
+                    except ValueError as e:
+                        if e.args[0] == "for method='hessian', n_neighbors " \
+                                        "must be greater than [n_components" \
+                                        " * (n_components + 3) / 2]":
+                            n = self.n_components * (self.n_components + 3) / 2
+                            self.Error.n_neighbors_too_small("{}".format(n))
+                        else:
+                            self.Error.manifold_error(e.args[0])
         self.send("Transformed data", data)
 
     def get_method_parameters(self):
