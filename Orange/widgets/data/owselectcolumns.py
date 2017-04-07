@@ -1,11 +1,11 @@
 import sys
-from functools import partial, reduce
+from functools import partial
 
 from AnyQt.QtWidgets import (
     QWidget, QListView, QLineEdit, QCompleter, QSizePolicy, QGridLayout)
 from AnyQt.QtGui import QDrag
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QMimeData, QByteArray, QModelIndex,
+    Qt, QObject, QEvent, QModelIndex,
     QAbstractItemModel, QSortFilterProxyModel, QStringListModel,
     QItemSelection, QItemSelectionModel
 )
@@ -15,7 +15,7 @@ from Orange.util import deprecated
 from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
-from Orange.widgets.settings import *
+from Orange.widgets.settings import ContextSetting, Setting
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel, PyListModel
@@ -79,7 +79,7 @@ class ClassVarListItemModel(VariableListModel):
         """ Ensure only one variable can be dropped onto the view.
         """
         vars = mime.property('_items')
-        if vars is None or len(self) + len(vars) > 1:
+        if vars is None:
             return False
         if action == Qt.IgnoreAction:
             return True
@@ -180,9 +180,6 @@ class ClassVariableItemView(VariablesListItemView):
         mime = event.mimeData()
         vars = mime.property('_items')
         if vars is None:
-            return False
-
-        if len(self.model()) + len(vars) > 1:
             return False
 
         return accepts
@@ -332,7 +329,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.class_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.class_attrs_view))
         self.class_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
-        self.class_attrs_view.setMaximumHeight(24)
+        self.class_attrs_view.setMaximumHeight(72)
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
@@ -351,26 +348,37 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(bbox, 0, 1, 1, 1)
 
         self.up_attr_button = gui.button(bbox, self, "Up",
-            callback=partial(self.move_up, self.used_attrs_view))
+                                         callback=partial(self.move_up, self.used_attrs_view))
         self.move_attr_button = gui.button(bbox, self, ">",
-            callback=partial(self.move_selected, self.used_attrs_view))
+                                           callback=partial(self.move_selected,
+                                                            self.used_attrs_view)
+                                          )
         self.down_attr_button = gui.button(bbox, self, "Down",
-            callback=partial(self.move_down, self.used_attrs_view))
+                                           callback=partial(self.move_down, self.used_attrs_view))
 
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 1, 1, 1, 1)
+
+        self.up_class_button = gui.button(bbox, self, "Up",
+                                          callback=partial(self.move_up, self.class_attrs_view))
         self.move_class_button = gui.button(bbox, self, ">",
-            callback=partial(self.move_selected,
-                             self.class_attrs_view, exclusive=True))
+                                            callback=partial(self.move_selected,
+                                                             self.class_attrs_view,
+                                                             exclusive=False)
+                                           )
+        self.down_class_button = gui.button(bbox, self, "Down",
+                                            callback=partial(self.move_down, self.class_attrs_view))
 
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
         layout.addWidget(bbox, 2, 1, 1, 1)
         self.up_meta_button = gui.button(bbox, self, "Up",
-            callback=partial(self.move_up, self.meta_attrs_view))
+                                         callback=partial(self.move_up, self.meta_attrs_view))
         self.move_meta_button = gui.button(bbox, self, ">",
-            callback=partial(self.move_selected, self.meta_attrs_view))
+                                           callback=partial(self.move_selected,
+                                                            self.meta_attrs_view)
+                                          )
         self.down_meta_button = gui.button(bbox, self, "Down",
-            callback=partial(self.move_down, self.meta_attrs_view))
+                                           callback=partial(self.move_down, self.meta_attrs_view))
 
         autobox = gui.auto_commit(None, self, "auto_commit", "Send")
         layout.addWidget(autobox, 3, 0, 1, 3)
@@ -407,7 +415,7 @@ class OWSelectAttributes(widget.OWWidget):
                             for i, attr in enumerate(data.domain.attributes)}
 
             domain_hints.update({var_sig(attr): ("meta", i)
-                                for i, attr in enumerate(data.domain.metas)})
+                                 for i, attr in enumerate(data.domain.metas)})
 
             if data.domain.class_vars:
                 domain_hints.update(
@@ -505,16 +513,10 @@ class OWSelectAttributes(widget.OWWidget):
         src_model = source_model(src)
         attrs = [src_model[r] for r in rows]
 
-        if exclusive and len(attrs) != 1:
-            return
-
         for s1, s2 in reversed(list(slices(rows))):
             del src_model[s1:s2]
 
         dst_model = source_model(dst)
-        if exclusive and len(dst_model) > 0:
-            src_model.append(dst_model[0])
-            del dst_model[0]
 
         dst_model.extend(attrs)
 
@@ -546,8 +548,7 @@ class OWSelectAttributes(widget.OWWidget):
         if move_attr_enabled:
             self.move_attr_button.setText(">" if available_selected else "<")
 
-        move_class_enabled = (len(available_selected) == 1 and all_primitive) or \
-                             class_selected
+        move_class_enabled = (all_primitive and available_selected) or class_selected
 
         self.move_class_button.setEnabled(bool(move_class_enabled))
         if move_class_enabled:
