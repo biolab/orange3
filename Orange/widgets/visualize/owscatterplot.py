@@ -418,17 +418,6 @@ class OWScatterPlot(OWWidget):
         self.subset_data = self.move_primitive_metas_to_X(subset_data)
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
 
-    def apply_selection(self):
-        """
-        Selection is saved only in a schema file.
-        GH-2192, GH-2181
-        """
-        if self.data is not None and self.selection is not None:
-            self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
-            self.selection = [x for x in self.selection if x < len(self.data)]
-            self.graph.selection[self.selection] = 1
-            self.graph.update_colors(keep_colors=True)
-
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
         self.graph.new_data(self.data_metas_X, self.subset_data)
@@ -443,6 +432,14 @@ class OWScatterPlot(OWWidget):
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.apply_selection()
         self.unconditional_commit()
+
+    def apply_selection(self):
+        """Apply selection saved in workflow."""
+        if self.data is not None and self.selection is not None:
+            self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
+            self.selection = [x for x in self.selection if x < len(self.data)]
+            self.graph.selection[self.selection] = 1
+            self.graph.update_colors(keep_colors=True)
 
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
@@ -532,7 +529,9 @@ class OWScatterPlot(OWWidget):
         self.send("Selected Data", selected)
         self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated)
 
-        self.selection = selection
+        # Store current selection in a setting that is stored in workflow
+        if self.selection is not None and len(selection):
+            self.selection = list(selection)
 
     def send_features(self):
         features = None
@@ -567,6 +566,12 @@ class OWScatterPlot(OWWidget):
         self.report_plot()
         if caption:
             self.report_caption(caption)
+
+    def closeContext(self):
+        if self.current_context is not None:
+            # When dataset changes, forget selection
+            self.selection = None
+        super().closeContext()
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
