@@ -471,7 +471,11 @@ class FeatureSelectEditor(BaseEditor):
         ("Gain ratio", preprocess.score.GainRatio),
         ("Gini index", preprocess.score.Gini),
         ("ReliefF", preprocess.score.ReliefF),
-        ("Fast Correlation Based Filter", preprocess.score.FCBF)
+        ("Fast Correlation Based Filter", preprocess.score.FCBF),
+        ("ANOVA", preprocess.score.ANOVA),
+        ("Chi2", preprocess.score.Chi2),
+        ("RReliefF", preprocess.score.RReliefF),
+        ("Univariate Linear Regression", preprocess.score.UnivariateLinearRegression)
     ]
 
     def __init__(self, parent=None):
@@ -488,7 +492,11 @@ class FeatureSelectEditor(BaseEditor):
              {"text": "Gain Ratio"},
              {"text": "Gini Index"},
              {"text": "ReliefF"},
-             {"text": "Fast Correlation Based Filter"}
+             {"text": "Fast Correlation Based Filter"},
+             {"text": "ANOVA"},
+             {"text": "Chi2"},
+             {"text": "RReliefF"},
+             {"text": "UnivariateLinearRegression"}
             ]
         )
         self.layout().addWidget(self.__uni_fs)
