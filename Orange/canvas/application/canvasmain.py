@@ -226,9 +226,9 @@ class CanvasMainWindow(QMainWindow):
         frame.setColor(QColor(0, 0, 0, 100))
         frame.setWidget(self.scheme_widget)
 
-        # Main window title and title icon.
-        self.set_document_title(self.scheme_widget.scheme().title)
-        self.scheme_widget.titleChanged.connect(self.set_document_title)
+        # Window 'title'
+        self.setWindowFilePath(self.scheme_widget.path())
+        self.scheme_widget.pathChanged.connect(self.setWindowFilePath)
         self.scheme_widget.modificationChanged.connect(self.setWindowModified)
 
         # QMainWindow's Dock widget
