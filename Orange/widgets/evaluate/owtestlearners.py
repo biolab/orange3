@@ -466,6 +466,15 @@ class OWTestLearners(OWWidget):
             else:
                 self.error()
 
+        self.puts_results(learners, results, class_var)
+
+        self.setStatusMessage("")
+
+    def puts_results(self, learners, results, class_var):
+        """
+        Called by _update_results. This method prepares calculated results and
+        put them into self.learners.
+        """
         learner_key = {slot.learner: key for key, slot in self.learners.items()}
         for learner, result in zip(learners, results.split_by_model()):
             stats = None
@@ -483,11 +492,10 @@ class OWTestLearners(OWWidget):
                 else:
                     stats = [Try(lambda: score(result)) for score in scorers]
                     result = Try.Success(result)
-            key = learner_key[learner]
-            self.learners[key] = \
-                self.learners[key]._replace(results=result, stats=stats)
-
-        self.setStatusMessage("")
+            if learner in learner_key:
+                key = learner_key.get(learner)
+                self.learners[key] = \
+                    self.learners[key]._replace(results=result, stats=stats)
 
     def _update_header(self):
         # Set the correct horizontal header labels on the results_model.
