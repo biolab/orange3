@@ -113,8 +113,8 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         """
         table = datasets.data_one_column_nans()
         self.send_signal("Data", table)
-
-        simulate.combobox_activate_item(self.widget.cb_attr_color, "b")
+        cb_attr_color = self.widget.controls.graph.attr_color
+        simulate.combobox_activate_item(cb_attr_color, "b")
         simulate.combobox_activate_item(self.widget.cb_attr_x, "a")
         simulate.combobox_activate_item(self.widget.cb_attr_y, "a")
 
@@ -131,6 +131,18 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.cb_attr_y.setCurrentIndex(4)
         self.assertFalse(self.widget.cb_reg_line.isEnabled())
         self.assertIsNone(self.widget.graph.reg_line_item)
+
+    def test_points_combo_boxes(self):
+        """Check Point box combo models and values"""
+        self.send_signal("Data", self.data)
+        self.assertEqual(len(self.widget.controls.graph.attr_color.model()), 8)
+        self.assertEqual(len(self.widget.controls.graph.attr_shape.model()), 3)
+        self.assertEqual(len(self.widget.controls.graph.attr_size.model()), 6)
+        self.assertEqual(len(self.widget.controls.graph.attr_label.model()), 8)
+        other_widget = self.create_widget(OWScatterPlot)
+        self.send_signal("Data", self.data, widget=other_widget)
+        self.assertEqual(self.widget.graph.controls.attr_color.currentText(),
+                         self.data.domain.class_var.name)
 
     def test_group_selections(self):
         self.send_signal("Data", self.data)

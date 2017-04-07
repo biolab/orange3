@@ -191,36 +191,10 @@ class OWScatterPlot(OWWidget):
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
-        box = gui.vBox(self.controlArea, "Points")
-        self.color_model = DomainModel(
-            placeholder="(Same color)", valid_types=dmod.PRIMITIVE)
-        self.cb_attr_color = gui.comboBox(
-            box, self, "graph.attr_color", label="Color:",
-            callback=self.update_colors,
-            model=self.color_model, **common_options)
-        self.label_model = DomainModel(
-            placeholder="(No labels)")
-        self.cb_attr_label = gui.comboBox(
-            box, self, "graph.attr_label", label="Label:",
-            callback=self.graph.update_labels,
-            model=self.label_model, **common_options)
-        self.shape_model = DomainModel(
-            placeholder="(Same shape)", valid_types=DiscreteVariable)
-        self.cb_attr_shape = gui.comboBox(
-            box, self, "graph.attr_shape", label="Shape:",
-            callback=self.graph.update_shapes,
-            model=self.shape_model, **common_options)
-        self.size_model = DomainModel(
-            placeholder="(Same size)", valid_types=ContinuousVariable)
-        self.cb_attr_size = gui.comboBox(
-            box, self, "graph.attr_size", label="Size:",
-            callback=self.graph.update_sizes,
-            model=self.size_model, **common_options)
-        self.models = [self.xy_model, self.color_model, self.label_model,
-                       self.shape_model, self.size_model]
-
         g = self.graph.gui
-        g.point_properties_box(self.controlArea, box)
+        g.point_properties_box(self.controlArea)
+        self.models = [self.xy_model] + g.points_models
+
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(

@@ -40,9 +40,9 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
             if not espy.events():
                 assert espy.wait(1000)
 
-        cb_color = self.widget.controls.color_index
-        cb_size = self.widget.controls.size_index
-        cb_shape = self.widget.controls.shape_index
+        cb_color = self.widget.controls.attr_color
+        cb_size = self.widget.controls.attr_size
+        cb_shape = self.widget.controls.attr_shape
         cb_jitter = self.widget.controls.jitter_value
 
         simulate.combobox_run_through_all(cb_color)
@@ -72,3 +72,10 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
 
         with excepthook_catch():
             simulate.combobox_activate_index(cb_jitter, 2, delay=1)
+
+    def test_points_combo_boxes(self):
+        self.send_signal("Data", self.data)
+        self.assertEqual(len(self.widget.controls.attr_color.model()), 8)
+        self.assertEqual(len(self.widget.controls.attr_shape.model()), 3)
+        self.assertEqual(len(self.widget.controls.attr_size.model()), 6)
+        self.assertEqual(len(self.widget.controls.attr_label.model()), 8)
