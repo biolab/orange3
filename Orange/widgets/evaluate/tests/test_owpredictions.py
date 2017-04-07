@@ -9,6 +9,7 @@ from Orange.widgets.evaluate.owpredictions import OWPredictions
 from Orange.data import Table, Domain
 from Orange.classification import MajorityLearner, TreeLearner
 from Orange.evaluation import Results
+from Orange.widgets.tests.utils import excepthook_catch
 
 
 class TestOWPredictions(WidgetTest):
@@ -157,4 +158,6 @@ class TestOWPredictions(WidgetTest):
         bad_table = TabReader(file2).read()
 
         self.send_signal("Predictors", tree, 1)
-        self.send_signal("Data", bad_table)
+
+        with excepthook_catch():
+            self.send_signal("Data", bad_table)
