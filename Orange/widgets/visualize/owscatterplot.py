@@ -360,8 +360,8 @@ class OWScatterPlot(OWWidget):
             for el in iterable:
                 if isinstance(el, Orange.data.Variable) and el.name == name:
                     return el
-            else:
-                return None
+            return None
+
         # handle restored settings from  < 3.3.9 when attr_* were stored
         # by name
         if isinstance(self.attr_x, str):
