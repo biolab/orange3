@@ -70,7 +70,7 @@ def variable_from_description(description, compute_value=None):
     module, type_name, name, kwargs, attrs = description
     try:
         constructor = get_qualified(module, type_name)
-    except (ImportError, AttributeError) as ex:
+    except (ImportError, AttributeError):
         raise ValueError("Invalid descriptor type '{}.{}"
                          "".format(module, type_name))
 
@@ -521,7 +521,9 @@ class OWEditDomain(widget.OWWidget):
 
         # Replace the variable in the 'Domain Features' view/model
         old_var = self.input_vars[self.selected_index]
-        new_var = editor.get_data().copy(compute_value=Orange.preprocess.transformation.Identity(old_var))
+        new_var = editor.get_data().copy(
+            compute_value=Orange.preprocess.transformation.Identity(old_var)
+        )
         self.domain_model[self.selected_index] = new_var
 
 
