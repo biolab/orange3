@@ -17,7 +17,9 @@ matrix:
           script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
         - &pyqt5
           python: '3.5'
-          env: PYQT5=true
+          env:
+            - PYQT5=true
+            - UPLOAD_COVERAGE=true
           dist: trusty
           addons: { apt: { packages: [] } }
     fast_finish: true
