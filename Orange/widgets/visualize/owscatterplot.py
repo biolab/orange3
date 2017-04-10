@@ -124,6 +124,7 @@ class OWScatterPlot(OWWidget):
 
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
+    selection = Setting(None, schema_only=True)
 
     graph = SettingProvider(OWScatterPlotGraph)
 
@@ -333,8 +334,8 @@ class OWScatterPlot(OWWidget):
             for el in iterable:
                 if isinstance(el, Orange.data.Variable) and el.name == name:
                     return el
-            else:
-                return None
+            return None
+
         # handle restored settings from  < 3.3.9 when attr_* were stored
         # by name
         if isinstance(self.attr_x, str):
@@ -403,7 +404,16 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
+        self.apply_selection()
         self.unconditional_commit()
+
+    def apply_selection(self):
+        """Apply selection saved in workflow."""
+        if self.data is not None and self.selection is not None:
+            self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
+            self.selection = [x for x in self.selection if x < len(self.data)]
+            self.graph.selection[self.selection] = 1
+            self.graph.update_colors(keep_colors=True)
 
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
@@ -493,7 +503,9 @@ class OWScatterPlot(OWWidget):
         self.send("Selected Data", selected)
         self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated)
 
-
+        # Store current selection in a setting that is stored in workflow
+        if self.selection is not None and len(selection):
+            self.selection = list(selection)
 
     def send_features(self):
         features = None
@@ -529,13 +541,19 @@ class OWScatterPlot(OWWidget):
         if caption:
             self.report_caption(caption)
 
+    def closeContext(self):
+        if self.current_context is not None:
+            # When dataset changes, forget selection
+            self.selection = None
+        super().closeContext()
+
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
 
 
-def test_main(argv=None):
+def main(argv=None):
     import sys
     if argv is None:
         argv = sys.argv
@@ -565,4 +583,4 @@ def test_main(argv=None):
     return rval
 
 if __name__ == "__main__":
-    test_main()
+    main()
