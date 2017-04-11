@@ -154,5 +154,12 @@ m4 -D__VERSION__="${VERSION:?}" "${APPDIR}"/Contents/Info.plist.in \
     > "${APPDIR}"/Contents/Info.plist
 
 # Sanity check
-"${PYTHON}" -m pip install --no-cache-dir --no-index orange3 PyQt5
-"${PYTHON}" -m Orange.canvas --help > /dev/null
+(
+    # run from an empty dir to avoid importing/finding any packages on ./
+    tempdir=$(mktemp -d)
+    cleanup() { rm -r "${tempdir}"; }
+    trap cleanup EXIT
+    cd "${tempdir}"
+    "${PYTHON}" -m pip install --no-cache-dir --no-index orange3 PyQt5
+    "${PYTHON}" -m Orange.canvas --help > /dev/null
+)
