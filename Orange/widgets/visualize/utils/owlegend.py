@@ -223,6 +223,7 @@ class LegendItemSquare(ColorIndicator):
     """
 
     SIZE = QSizeF(12, 12)
+    _size_hint = SIZE
 
     def __init__(self, color, parent):
         super().__init__(parent)
@@ -232,9 +233,10 @@ class LegendItemSquare(ColorIndicator):
         self.__square.setBrush(QBrush(color))
         self.__square.setPen(QPen(QColor(0, 0, 0, 0)))
         self.__square.setParentItem(self)
+        self._size_hint = QSizeF(self.__square.boundingRect().size())
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QSizeF(self.__square.boundingRect().size())
+        return self._size_hint
 
 
 class LegendItemCircle(ColorIndicator):
@@ -258,6 +260,7 @@ class LegendItemCircle(ColorIndicator):
     """
 
     SIZE = QSizeF(12, 12)
+    _size_hint = SIZE
 
     def __init__(self, color, parent):
         super().__init__(parent)
@@ -267,9 +270,10 @@ class LegendItemCircle(ColorIndicator):
         self.__circle.setBrush(QBrush(color))
         self.__circle.setPen(QPen(QColor(0, 0, 0, 0)))
         self.__circle.setParentItem(self)
+        self._size_hint = QSizeF(self.__circle.boundingRect().size())
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QSizeF(self.__circle.boundingRect().size())
+        return self._size_hint
 
 
 class LegendItemTitle(QGraphicsWidget):
@@ -285,6 +289,7 @@ class LegendItemTitle(QGraphicsWidget):
         This
 
     """
+    _size_hint = QSizeF(100, 10)
 
     def __init__(self, text, parent, font):
         super().__init__(parent)
@@ -292,9 +297,10 @@ class LegendItemTitle(QGraphicsWidget):
         self.__text = QGraphicsTextItem(text.title())
         self.__text.setParentItem(self)
         self.__text.setFont(font)
+        self._size_hint = QSizeF(self.__text.boundingRect().size())
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QSizeF(self.__text.boundingRect().size())
+        return self._size_hint
 
 
 class LegendItem(QGraphicsLinearLayout):
@@ -356,6 +362,7 @@ class LegendGradient(QGraphicsWidget):
     # Default sizes (assume gradient is vertical by default)
     GRADIENT_WIDTH = 20
     GRADIENT_HEIGHT = 150
+    _size_hint = QSizeF(GRADIENT_WIDTH, GRADIENT_HEIGHT)
 
     def __init__(self, palette, parent, orientation):
         super().__init__(parent)
@@ -382,9 +389,10 @@ class LegendGradient(QGraphicsWidget):
         self.__rect_item = QGraphicsRectItem(0, 0, width, height, self)
         self.__rect_item.setPen(QPen(QColor(0, 0, 0, 0)))
         self.__rect_item.setBrush(QBrush(self.__gradient))
+        self._size_hint = QSizeF(self.__rect_item.boundingRect().size())
 
     def sizeHint(self, size_hint, size_constraint=None, *args, **kwargs):
-        return QSizeF(self.__rect_item.boundingRect().size())
+        return self._size_hint
 
 
 class ContinuousLegendItem(QGraphicsLinearLayout):
