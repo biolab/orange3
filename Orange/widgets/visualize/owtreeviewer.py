@@ -263,6 +263,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.color_combo.clear()
         self.closeContext()
         self.model = model
+        self.target_class_index = 0
         if model is None:
             self.info.setText('No tree.')
             self.root_node = None
@@ -440,7 +441,7 @@ class OWTreeGraph(OWTreeViewer2D):
         return TreeAdapter(model)
 
 
-def test():
+def main():
     """Standalone test"""
     import sys
     from AnyQt.QtWidgets import QApplication
@@ -458,4 +459,4 @@ def test():
     ow.saveSettings()
 
 if __name__ == "__main__":
-    test()
+    main()
