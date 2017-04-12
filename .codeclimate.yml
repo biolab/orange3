@@ -1,0 +1,18 @@
+engines:
+  pep8:
+    enabled: true
+  eslint:
+    enabled: true
+  shellcheck:
+    enabled: true
+  csslint:
+    enabled: true
+
+ratings:
+  paths:
+  - "**.py"
+  - "**.js"
+  - "**.sh"
+  - "**.css"
+
+exclude_paths:
