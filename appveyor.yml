@@ -53,12 +53,12 @@ build_script:
         $env:PATH="C:\Program Files (x86)\NSIS;C:\msys2\bin;$env:PATH"
 
         bash scripts\windows\build-win-application.sh -d dist\installers
-        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+        if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
         bash scripts\windows\build-win-application.sh `
             -d installers `
             --standalone
-        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+        if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
       }
 
 test_script:
