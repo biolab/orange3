@@ -114,6 +114,22 @@ class TestReport(WidgetTest):
             'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
             '</tr></table>')
 
+    def test_save_report(self):
+        """
+        Permission Error may occur when trying to save report.
+        GH-2147
+        """
+        rep = OWReport.get_instance()
+        patch_target_1 = "Orange.canvas.report.owreport.open"
+        patch_target_2 = "AnyQt.QtWidgets.QFileDialog.getSaveFileName"
+        patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
+        filenames = ["f.report", "f.html"]
+        for filename in filenames:
+            with unittest.patch(patch_target_1, create=True, side_effect=PermissionError),\
+                    unittest.patch(patch_target_2, return_value=(filename, 0)),\
+                    unittest.patch(patch_target_3, return_value=True):
+                rep.save_report()
+
 
 class TestReportWidgets(WidgetTest):
     model_widgets = MODEL_WIDGETS
