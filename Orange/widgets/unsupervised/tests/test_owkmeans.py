@@ -298,6 +298,33 @@ class TestOWKMeans(WidgetTest):
             self.assertIs(report_table.call_args[0][1],
                           widget.table_view)
 
+    def test_not_enough_rows(self):
+        """
+        Widget should not crash when there is less rows than k_from.
+        GH-2172
+        """
+        table = Table("iris")
+        self.widget.controls.k_from.setValue(2)
+        self.widget.controls.k_to.setValue(9)
+        self.send_signal("Data", table[0:1, :])
+
+    def test_from_to_table(self):
+        """
+        From and To spins and number of rows in a scores table changes.
+        GH-2172
+        """
+        table = Table("iris")
+        k_from, k_to = 2, 9
+        self.widget.controls.k_from.setValue(k_from)
+        self.send_signal("Data", table)
+        check = lambda x: 2 if x - k_from + 1 < 2 else x - k_from + 1
+        for i in range(k_from, k_to):
+            self.widget.controls.k_to.setValue(i)
+            self.assertEqual(len(self.widget.table_view.model().scores), check(i))
+        for i in range(k_to, k_from, -1):
+            self.widget.controls.k_to.setValue(i)
+            self.assertEqual(len(self.widget.table_view.model().scores), check(i))
+
 
 if __name__ == "__main__":
     unittest.main()
