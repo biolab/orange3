@@ -37,12 +37,23 @@ class PCA(SklProjector, _FeatureScorerMixin):
 
     def __init__(self, n_components=None, copy=True, whiten=False,
                  svd_solver='auto', tol=0.0, iterated_power='auto',
-                 random_state=None, preprocessors=None):
+                 random_state=None, preprocessors=None, max_components=None):
         super().__init__(preprocessors=preprocessors)
+        if n_components is not None and max_components is not None:
+            raise ValueError("n_components and max_components can not both be defined.")
+        # max_components limits the number of PCA components if the minimum
+        # shape of the X matrix (after preprocessing) is higher than
+        # max_components, so that sklearn does not always compute the full
+        # transform, which is faster and uses less memory for big data.
+        self.max_components = max_components
         self.params = vars()
 
     def fit(self, X, Y=None):
-        proj = self.__wraps__(**self.params)
+        params = self.params.copy()
+        if params["n_components"] is None and self.max_components is not None:
+            # shape of X after preprocessing
+            params["n_components"] = min(min(X.shape), self.max_components)
+        proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain)
 

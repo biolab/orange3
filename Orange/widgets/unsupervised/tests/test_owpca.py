@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
+
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owpca import OWPCA
@@ -37,3 +39,22 @@ class TestOWPCA(WidgetTest):
 
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.no_features.is_shown())
+
+    def test_limit_components(self):
+        X = np.random.RandomState(0).rand(101, 101)
+        data = Table(X)
+        self.widget.ncomponents = 100
+        self.send_signal("Data", data)
+        tran = self.get_output("Transformed data")
+        self.assertEqual(len(tran.domain.attributes), 100)
+        self.widget.ncomponents = 101  # should not be accesible
+        with self.assertRaises(IndexError):
+            self.send_signal("Data", data)
+
+    def test_migrate_settings(self):
+        settings = dict(ncomponents=10)
+        OWPCA.migrate_settings(settings, 0)
+        self.assertEqual(settings['ncomponents'], 10)
+        settings = dict(ncomponents=101)
+        OWPCA.migrate_settings(settings, 0)
+        self.assertEqual(settings['ncomponents'], 100)
