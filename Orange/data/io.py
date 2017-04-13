@@ -807,7 +807,11 @@ class PickleReader(FileFormat):
 
     def read(self):
         with open(self.filename, 'rb') as f:
-            return pickle.load(f)
+            table = pickle.load(f)
+            if not isinstance(table, Table):
+                raise TypeError("file does not contain a data table")
+            else:
+                return table
 
     @staticmethod
     def write_file(filename, data):
