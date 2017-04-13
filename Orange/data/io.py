@@ -78,7 +78,8 @@ def detect_encoding(filename):
                     if encoding in (b'utf-8', b'us-ascii', b'iso-8859-1',
                                     b'utf-7', b'utf-16le', b'utf-16be', b'ebcdic'):
                         return encoding.decode('us-ascii')
-        except OSError: pass  # windoze
+        except OSError:
+            pass  # windoze
 
     # file not available or unable to guess the encoding, have chardet do it
     detector = UniversalDetector()
@@ -163,7 +164,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
                 offset = len(new_order)
                 column = values if data.ndim > 1 else data
                 column += offset
-                for i, val in enumerate(var.values):
+                for _, val in enumerate(var.values):
                     try:
                         oldval = old_order.index(val)
                     except ValueError:
@@ -185,11 +186,11 @@ class Flags:
     _RE_SPLIT = re.compile(r'(?<!\\)' + DELIMITER).split
     _RE_ATTR_UNQUOTED_STR = re.compile(r'^[a-zA-Z_]').match
     ALL = OrderedDict((
-        ('class',     'c'),
-        ('ignore',    'i'),
-        ('meta',      'm'),
-        ('weight',    'w'),
-        ('.+?=.*?',    ''),  # general key=value attributes
+        ('class', 'c'),
+        ('ignore', 'i'),
+        ('meta', 'm'),
+        ('weight', 'w'),
+        ('.+?=.*?', ''),  # general key=value attributes
     ))
     _RE_ALL = re.compile(r'^({})$'.format('|'.join(filter(None, flatten(ALL.items())))))
 
@@ -228,10 +229,13 @@ class Flags:
 
 # Matches discrete specification where all the values are listed, space-separated
 _RE_DISCRETE_LIST = re.compile(r'^\s*[^\s]+(\s[^\s]+)+\s*$')
-_RE_TYPES = re.compile(r'^\s*({}|{}|)\s*$'.format(_RE_DISCRETE_LIST.pattern,
-                                                  '|'.join(flatten(getattr(vartype, 'TYPE_HEADERS')
-                                                                   for vartype in Variable.registry.values()))))
-_RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format('|'.join(flatten(filter(None, i) for i in Flags.ALL.items()))))
+_RE_TYPES = re.compile(r'^\s*({}|{}|)\s*$'.format(
+    _RE_DISCRETE_LIST.pattern,
+    '|'.join(flatten(getattr(vartype, 'TYPE_HEADERS') for vartype in Variable.registry.values()))
+    ))
+_RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format(
+    '|'.join(flatten(filter(None, i) for i in Flags.ALL.items()))
+    ))
 
 
 class FileFormatMeta(Registry):
@@ -454,8 +458,10 @@ class FileFormat(metaclass=FileFormatMeta):
         """Return (header rows, rest of data) as discerned from `data`"""
 
         def is_number(item):
-            try: float(item)
-            except ValueError: return False
+            try:
+                float(item)
+            except ValueError:
+                return False
             return True
         # Second row items are type identifiers
         def header_test2(items):
@@ -485,8 +491,10 @@ class FileFormat(metaclass=FileFormatMeta):
 
         # Try to parse a single-line header
         if not header_rows:
-            try: lines.append(list(next(data)))
-            except StopIteration: pass
+            try:
+                lines.append(list(next(data)))
+            except StopIteration:
+                pass
             if lines:
                 # Header if none of the values in line 1 parses as a number
                 if not all(is_number(i) for i in lines[0]):
@@ -497,7 +505,7 @@ class FileFormat(metaclass=FileFormatMeta):
         return header_rows, data
 
     @classmethod
-    def data_table(self, data, headers=None):
+    def data_table(cls, data, headers=None):
         """
         Return Orange.data.Table given rows of `headers` (iterable of iterable)
         and rows of `data` (iterable of iterable; if ``numpy.ndarray``, might
@@ -510,22 +518,24 @@ class FileFormat(metaclass=FileFormatMeta):
         assuming they precede it.
         """
         if not headers:
-            headers, data = self.parse_headers(data)
+            headers, data = cls.parse_headers(data)
 
         # Consider various header types (single-row, two-row, three-row, none)
-        if 3 == len(headers):
+        if len(headers) == 3:
             names, types, flags = map(list, headers)
         else:
-            if 1 == len(headers):
+            if len(headers) == 1:
                 HEADER1_FLAG_SEP = '#'
                 # First row format either:
                 #   1) delimited column names
                 #   2) -||- with type and flags prepended, separated by #,
                 #      e.g. d#sex,c#age,cC#IQ
-                _flags, names = zip(*[i.split(HEADER1_FLAG_SEP, 1) if HEADER1_FLAG_SEP in i else ('', i)
-                                      for i in headers[0]])
+                _flags, names = zip(*[i.split(HEADER1_FLAG_SEP, 1)
+                                      if HEADER1_FLAG_SEP in i else ('', i)
+                                      for i in headers[0]]
+                                   )
                 names = list(names)
-            elif 2 == len(headers):
+            elif len(headers) == 2:
                 names, _flags = map(list, headers)
             else:
                 # Use heuristics for everything
@@ -635,7 +645,7 @@ class FileFormat(metaclass=FileFormatMeta):
             cols, domain_vars = append_to
             cols.append(col)
 
-            existing_var, new_var_name, column = None, None, None
+            existing_var, new_var_name = None, None
             if domain_vars is not None:
                 existing_var = names and names[col]
                 if not existing_var:
