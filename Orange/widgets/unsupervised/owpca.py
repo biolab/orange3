@@ -337,7 +337,7 @@ class OWPCA(widget.OWWidget):
 
         var = self._cumulative[cut - 1]
         if numpy.isfinite(var):
-            self.variance_covered = int(var) * 100
+            self.variance_covered = int(var * 100)
 
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)

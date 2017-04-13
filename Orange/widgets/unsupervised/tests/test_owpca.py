@@ -58,3 +58,14 @@ class TestOWPCA(WidgetTest):
         settings = dict(ncomponents=101)
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 100)
+
+    def test_variance_shown(self):
+        data = Table("iris")
+        self.send_signal("Data", data)
+        self.widget.maxp = 2
+        self.widget._setup_plot()
+        var2 = self.widget.variance_covered
+        self.widget.ncomponents = 3
+        self.widget._update_selection_component_spin()
+        var3 = self.widget.variance_covered
+        self.assertGreater(var3, var2)
