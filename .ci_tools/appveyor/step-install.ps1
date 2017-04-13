@@ -8,4 +8,4 @@ python -m pip install `
     --only-binary numpy `
     numpy==$env:NUMPY_BUILD_VERSION
 
-if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
