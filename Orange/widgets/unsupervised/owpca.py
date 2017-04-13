@@ -20,6 +20,10 @@ except ImportError:
     remotely = False
 
 
+# Maximum number of PCA components that we can set in the widget
+MAX_COMPONENTS = 100
+
+
 class OWPCA(widget.OWWidget):
     name = "PCA"
     description = "Principal component analysis with a scree-diagram."
@@ -61,7 +65,8 @@ class OWPCA(widget.OWWidget):
         self._variance_ratio = None
         self._cumulative = None
         self._line = False
-        self._pca_projector = PCA()
+        # max_components limit allows scikit-learn to select a faster method for big data
+        self._pca_projector = PCA(max_components=MAX_COMPONENTS)
         self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = PCA.preprocessors
 
@@ -71,7 +76,7 @@ class OWPCA(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.components_spin = gui.spin(
-            box, self, "ncomponents", 0, 1000,
+            box, self, "ncomponents", 1, MAX_COMPONENTS,
             callback=self._update_selection_component_spin,
             keyboardTracking=False
         )
@@ -120,7 +125,7 @@ class OWPCA(widget.OWWidget):
         gui.checkBox(self.options_box, self, "normalize", "Normalize data",
                      callback=self._update_normalize)
         self.maxp_spin = gui.spin(
-            self.options_box, self, "maxp", 1, 100,
+            self.options_box, self, "maxp", 1, MAX_COMPONENTS,
             label="Show only first", callback=self._setup_plot,
             keyboardTracking=False
         )
@@ -396,7 +401,7 @@ class OWPCA(widget.OWWidget):
         transformed = components = None
         if self._pca is not None:
             if self._transformed is None:
-                # Compute the full transform (all components) only once.
+                # Compute the full transform (MAX_COMPONENTS components) only once.
                 self._transformed = self._pca(self.data)
             transformed = self._transformed
 
@@ -441,6 +446,8 @@ class OWPCA(widget.OWWidget):
                 else:
                     vc = 100
                 settings["variance_covered"] = vc
+        if settings["ncomponents"] > MAX_COMPONENTS:
+            settings["ncomponents"] = MAX_COMPONENTS
 
 
 def main():
