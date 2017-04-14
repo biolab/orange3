@@ -906,7 +906,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return pen, brush
 
     def update_colors(self, keep_colors=False):
-        self.master.update_colors()
         if self.scatterplot_item:
             pen_data, brush_data = self.compute_colors(keep_colors)
             pen_data_sel, brush_data_sel = self.compute_colors_sel(keep_colors)
