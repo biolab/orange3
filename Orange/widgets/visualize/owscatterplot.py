@@ -447,7 +447,6 @@ class OWScatterPlot(OWWidget):
         self.send_features()
 
     def update_colors(self):
-        self.graph.update_colors()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_density(self):
