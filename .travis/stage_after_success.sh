@@ -8,5 +8,8 @@ if [ "$BUILD_DOCS" ] &&
         return 0
 fi
 
-codecov
+if [ "$UPLOAD_COVERAGE" ]; then
+    codecov
+fi
+
 cd $TRAVIS_BUILD_DIR
