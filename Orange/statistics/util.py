@@ -231,3 +231,81 @@ def stats(X, weights=None, compute_variance=False):
             np.zeros(X.shape[1]),
             nans,
             X.shape[0] - nans))
+
+
+def _sparse_has_zeros(x):
+    """ Check if sparse matrix contains any implicit zeros. """
+    return np.prod(x.shape) != x.nnz
+
+
+def _nan_min_max(x, func, axis=0):
+    if not sp.issparse(x):
+        return func(x, axis=axis)
+    if axis is None:
+        extreme = func(x.data, axis=axis) if x.nnz else float('nan')
+        if _sparse_has_zeros(x):
+            extreme = func([0, extreme])
+        return extreme
+    if axis == 0:
+        x = x.T
+    else:
+        assert axis == 1
+
+    # TODO check & transform to correct format
+    r = []
+    for row in x:
+        values = row.data
+        extreme = func(values) if values.size else float('nan')
+        if _sparse_has_zeros(row):
+            extreme = func([0, extreme])
+        r.append(extreme)
+    return np.array(r)
+
+
+def nanmin(x, axis=None):
+    """ Equivalent of np.nammin that supports sparse or dense matrices. """
+    return _nan_min_max(x, np.nanmin, axis)
+
+
+def nanmax(x, axis=None):
+    """ Equivalent of np.nammax that supports sparse or dense matrices. """
+    return _nan_min_max(x, np.nanmax, axis)
+
+
+def mean(x):
+    """ Equivalent of np.mean that supports sparse or dense matrices. """
+    if not sp.issparse(x):
+        return np.mean(x)
+
+    n_values = np.prod(x.shape)
+    return np.sum(x.data) / n_values
+
+
+def nanmean(x):
+    """ Equivalent of np.nanmean that supports sparse or dense matrices. """
+    if not sp.issparse(x):
+        return np.nanmean(x)
+
+    n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+    return np.nansum(x.data) / n_values
+
+
+def unique(x, return_counts=True):
+    """ Equivalent of np.unique that supports sparse or dense matrices. """
+    if not sp.issparse(x):
+        return np.unique(x, return_counts=return_counts)
+
+    implicit_zeros = np.prod(x.shape) - x.nnz
+    explicit_zeros = not np.all(x.data)
+    r = np.unique(x.data, return_counts=return_counts)
+    if not implicit_zeros:
+        return r
+    if return_counts:
+        if explicit_zeros:
+            r[1][r[0] == 0.] += implicit_zeros
+            return r
+        return np.insert(r[0], 0, 0), np.insert(r[1], 0, implicit_zeros)
+    else:
+        if explicit_zeros:
+            return r
+        return np.insert(r, 0, 0)

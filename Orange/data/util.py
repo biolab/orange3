@@ -44,10 +44,13 @@ class SharedComputeValue:
         A callable that performs computation that is shared between
         multiple variables. Variables sharing computation need to set
         the same instance.
+    variable: Orange.data.Variable
+        The original variable on which this compute value is set.
     """
 
-    def __init__(self, compute_shared):
+    def __init__(self, compute_shared, variable=None):
         self.compute_shared = compute_shared
+        self.variable = variable
 
     def __call__(self, data, shared_data=None):
         """Fallback if common parts are not passed."""
