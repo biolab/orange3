@@ -1256,7 +1256,7 @@ class SchemeEditWidget(QWidget):
     def __onNodeActivate(self, item):
         node = self.__scene.node_for_item(item)
         widget = self.scheme().widget_for_node(node)
-        widget.show()
+        widget.showNormal()
         widget.raise_()
         widget.activateWindow()
 
