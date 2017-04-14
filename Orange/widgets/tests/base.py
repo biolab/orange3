@@ -631,10 +631,12 @@ class WidgetOutputsTestMixin:
     def test_outputs(self):
         self.send_signal(self.signal_name, self.signal_data)
 
-        # only needed in TestOWMDS
+        # only needed in widgets with event loop
         if type(self).__name__ == "TestOWMDS":
             from AnyQt.QtCore import QEvent
             self.widget.customEvent(QEvent(QEvent.User))
+            self.widget.commit()
+        elif type(self).__name__ == "TestOWFreeViz":
             self.widget.commit()
 
         # check selected data output
