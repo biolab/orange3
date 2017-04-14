@@ -1,4 +1,5 @@
 import os.path
+import traceback
 
 from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import QSettings
@@ -24,8 +25,13 @@ def save_plot(data, file_formats, filename=""):
     try:
         writer.write(filename, data)
     except Exception as e:
-        QMessageBox.critical(
-            None, "Error", 'Error occurred while saving file "{}": {}'.format(filename, e))
+        mb = QMessageBox(
+            None,
+            windowTitle="Error",
+            text='Error occurred while saving file "{}": {}'.format(filename, e),
+            detailedText=traceback.format_exc(),
+            icon=QMessageBox.Critical)
+        mb.exec_()
     else:
         settings.setValue(_LAST_DIR_KEY, os.path.split(filename)[0])
         settings.setValue(_LAST_FILTER_KEY, filter)
