@@ -47,12 +47,12 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def check_preconditions(self):
         self.Information.add_message(
-            "color_required", "Color is not selected.")
-        self.Information.color_required.clear()
+            "class_required", "Data with a class variable is required.")
+        self.Information.class_required.clear()
         if not super().check_preconditions():
             return False
-        if not self.master.graph.attr_color:
-            self.Information.color_required()
+        if not self.master.data.domain.class_var:
+            self.Information.class_required()
             return False
         return True
 
@@ -87,16 +87,13 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         X = self.master.graph.jittered_data.T
         Y = self.master.data.Y
         mdomain = self.master.data.domain
-        color_var = mdomain[self.master.graph.attr_color]
         dom = Domain([ContinuousVariable(str(i)) for i in range(X.shape[1])],
-                     color_var)
+                     mdomain.class_vars)
         data = Table(dom, X, Y)
         relief = ReliefF if isinstance(dom.class_var, DiscreteVariable) \
             else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
-        mdomain_var = list(mdomain.variables)
-        mdomain_var.remove(color_var)
-        attrs = sorted(zip(weights, tuple(mdomain_var)),
+        attrs = sorted(zip(weights, mdomain.attributes),
                        key=lambda x: (-x[0], x[1].name))
         return [a for _, a in attrs]
 
@@ -450,7 +447,7 @@ class OWScatterPlot(OWWidget):
         self.send_features()
 
     def update_colors(self):
-        self.vizrank.initialize()
+        self.graph.update_colors()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_density(self):
