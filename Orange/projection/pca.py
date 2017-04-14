@@ -85,7 +85,7 @@ class _LinearCombination:
             return ' + '.join('{} * {}'.format(w, a.to_sql())
                               for a, w in zip(self.attrs, self.weights))
         return ' + '.join('{} * ({} - {})'.format(w, a.to_sql(), m, w)
-            for a, m, w in zip(self.attrs, self.mean, self.weights))
+                          for a, m, w in zip(self.attrs, self.mean, self.weights))
 
 
 class _PCATransformDomain:
@@ -108,7 +108,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
         def pca_variable(i):
             v = Orange.data.ContinuousVariable(
                 'PC%d' % (i + 1),
-                compute_value= Projector(self, i, pca_transform))
+                compute_value=Projector(self, i, pca_transform))
             v.to_sql = _LinearCombination(
                 domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))
@@ -119,7 +119,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
         self.n_components = self.components_.shape[0]
         self.domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
-             domain.class_vars, domain.metas)
+            domain.class_vars, domain.metas)
 
 
 class IncrementalPCA(SklProjector):
