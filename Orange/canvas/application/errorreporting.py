@@ -13,7 +13,7 @@ from pprint import pformat
 from tempfile import mkstemp
 from collections import OrderedDict
 from urllib.parse import urljoin, urlencode
-from urllib.request import pathname2url, urlopen
+from urllib.request import pathname2url, urlopen, build_opener
 from unittest.mock import patch
 
 from AnyQt.QtCore import pyqtSlot, QSettings, Qt
@@ -33,7 +33,7 @@ except ImportError:
     VERSION_STR = '???'
 
 
-REPORT_POST_URL = 'http://orange.biolab.si/error_report/v1/'
+REPORT_POST_URL = 'https://qa.orange.biolab.si/error_report/v1/'
 
 log = logging.getLogger()
 
@@ -141,7 +141,10 @@ class ErrorReporting(QDialog):
             MAX_RETRIES = 2
             for _retry in range(MAX_RETRIES):
                 try:
-                    urlopen(REPORT_POST_URL,
+                    opener = build_opener()
+                    u = opener.open(REPORT_POST_URL)
+                    url = u.geturl()
+                    urlopen(url,
                             timeout=10,
                             data=urlencode(data).encode('utf8'))
                 except Exception as e:
