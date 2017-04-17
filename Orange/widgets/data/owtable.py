@@ -803,6 +803,12 @@ class OWDataTable(widget.OWWidget):
             rowsel, colsel = self.get_selection(view)
             self.selected_rows, self.selected_cols = rowsel, colsel
 
+            # Handle case when nothing is selected
+            if len(rowsel) == 0:
+                self.send("Selected Data", None)
+                self.send("Other Data", table)
+                return
+
             def select(data, rows, domain):
                 """
                 Select the data subset with specified rows and domain subsets.
