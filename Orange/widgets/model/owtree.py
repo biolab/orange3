@@ -19,6 +19,8 @@ class OWTreeLearner(OWBaseLearner):
     replaces = [
         "Orange.widgets.classify.owclassificationtree.OWClassificationTree",
         "Orange.widgets.regression.owregressiontree.OWRegressionTree",
+        "Orange.widgets.classify.owclassificationtree.OWTreeLearner",
+        "Orange.widgets.regression.owregressiontree.OWTreeLearner",
     ]
     priority = 30
 
@@ -100,7 +102,7 @@ class OWTreeLearner(OWBaseLearner):
         return items
 
 
-def _test():
+def main():
     import sys
     from AnyQt.QtWidgets import QApplication
 
@@ -113,4 +115,4 @@ def _test():
     ow.saveSettings()
 
 if __name__ == "__main__":
-    _test()
+    main()
