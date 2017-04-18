@@ -341,6 +341,13 @@ class ScriptItemDelegate(QStyledItemDelegate):
         model[index.row()].name = str(editor.text())
 
 
+class ScriptListModel(itemmodels.PyListModel):
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            return self[index.row()]
+        return super().data(index, role)
+
+
 def select_row(view, row):
     """
     Select a `row` in an item view
@@ -402,7 +409,7 @@ class OWPythonScript(widget.OWWidget):
             "</ul></p>"
         )
 
-        self.libraryList = itemmodels.PyListModel(
+        self.libraryList = ScriptListModel(
             [], self,
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
 
