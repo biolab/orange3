@@ -1,6 +1,7 @@
 from itertools import chain
 
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QAbstractTableModel
 from AnyQt.QtGui import QColor
@@ -8,6 +9,7 @@ from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable, Domain
+from Orange.statistics.util import unique
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.settings import ContextSetting
@@ -196,6 +198,37 @@ class DomainEditor(QTableView):
         self.place_delegate = PlaceDelegate(self, VarTableModel.places)
         self.setItemDelegateForColumn(Column.place, self.place_delegate)
 
+    @staticmethod
+    def _is_missing(x):
+        return str(x) in ("nan", "")
+
+    @staticmethod
+    def _iter_vals(x):
+        """Iterate over values of sparse or dense arrays."""
+        for i in range(x.shape[0]):
+            yield x[i, 0]
+
+    @staticmethod
+    def _to_column(x, to_sparse, dtype=None):
+        """Transform list of values to sparse/dense column array."""
+        x = np.array(x, dtype=dtype).reshape(-1, 1)
+        if to_sparse:
+            x = sp.csc_matrix(x)
+        return x
+
+    @staticmethod
+    def _merge(cols, force_dense=False):
+        if len(cols) == 0:
+            return None
+
+        all_dense = not any(sp.issparse(c) for c in cols)
+        if all_dense:
+            return np.hstack(cols)
+        if force_dense:
+            return np.hstack([c.toarray() if sp.issparse(c) else c for c in cols])
+        sparse_cols = [c if sp.issparse(c) else sp.csc_matrix(c) for c in cols]
+        return sp.hstack(sparse_cols).tocsr()
+
     def get_domain(self, domain, data):
         """Create domain (and dataset) from changes made in the widget.
 
@@ -212,9 +245,6 @@ class DomainEditor(QTableView):
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
 
-        def is_missing(x):
-            return str(x) in ("nan", "")
-
         for (name, tpe, place, _, _), (orig_var, orig_plc) in \
                 zip(variables,
                         chain([(at, Place.feature) for at in domain.attributes],
@@ -222,13 +252,14 @@ class DomainEditor(QTableView):
                               [(mt, Place.meta) for mt in domain.metas])):
             if place == Place.skip:
                 continue
+
             if orig_plc == Place.meta:
                 col_data = data[:, orig_var].metas
             elif orig_plc == Place.class_var:
-                col_data = data[:, orig_var].Y
+                col_data = data[:, orig_var].Y.reshape(-1, 1)
             else:
                 col_data = data[:, orig_var].X
-            col_data = col_data.ravel()
+            is_sparse = sp.issparse(col_data)
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == type(orig_var):
@@ -236,20 +267,30 @@ class DomainEditor(QTableView):
                 orig_var.name = name
                 var = orig_var
             elif tpe == DiscreteVariable:
-                values = list(str(i) for i in np.unique(col_data) if not is_missing(i))
+                values = list(str(i) for i in unique(col_data) if not self._is_missing(i))
                 var = tpe(name, values)
-                col_data = [np.nan if is_missing(x) else values.index(str(x))
-                            for x in col_data]
+                col_data = [np.nan if self._is_missing(x) else values.index(str(x))
+                            for x in self._iter_vals(col_data)]
+                col_data = self._to_column(col_data, is_sparse)
             elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
                 var = tpe(name)
                 col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
-                            for x in col_data]
+                            for x in self._iter_vals(col_data)]
+                # don't obey sparsity for StringVariable since they are
+                # in metas which are transformed to dense below
+                col_data = self._to_column(col_data, False, dtype=object)
             else:
                 var = tpe(name)
             places[place].append(var)
             cols[place].append(col_data)
+
+        # merge columns for X, Y and metas
+        feats = cols[Place.feature]
+        X = self._merge(feats) if len(feats) else np.empty((len(data), 0))
+        Y = self._merge(cols[Place.class_var], force_dense=True)
+        m = self._merge(cols[Place.meta], force_dense=True)
         domain = Domain(*places)
-        return domain, cols
+        return domain, [X, Y, m]
 
     def set_domain(self, domain):
         self.variables = self.parse_domain(domain)
