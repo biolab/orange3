@@ -1,0 +1,234 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="" title="" version="2.0">
+	<nodes>
+		<node id="0" name="File" position="(81.0, 180.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
+		<node id="1" name="Scatter Plot" position="(483.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
+		<node id="2" name="Data Table" position="(633.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="3" name="Paint Data" position="(783.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owpaintdata.OWPaintData" title="Paint Data" version="" />
+		<node id="4" name="Data Info" position="(933.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owdatainfo.OWDataInfo" title="Data Info" version="" />
+		<node id="5" name="Data Sampler" position="(1083.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owdatasampler.OWDataSampler" title="Data Sampler" version="" />
+		<node id="6" name="Select Columns" position="(1233.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owselectcolumns.OWSelectAttributes" title="Select Columns" version="" />
+		<node id="7" name="Select Rows" position="(1383.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owselectrows.OWSelectRows" title="Select Rows" version="" />
+		<node id="8" name="Rank" position="(1533.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owrank.OWRank" title="Rank" version="" />
+		<node id="9" name="Merge Data" position="(1683.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owmergedata.OWMergeData" title="Merge Data" version="" />
+		<node id="10" name="Concatenate" position="(1833.0, 178.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owconcatenate.OWConcatenate" title="Concatenate" version="" />
+		<node id="11" name="Transpose" position="(72.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtranspose.OWTranspose" title="Transpose" version="" />
+		<node id="12" name="Randomize" position="(222.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owrandomize.OWRandomize" title="Randomize" version="" />
+		<node id="13" name="Preprocess" position="(372.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owpreprocess.OWPreprocess" title="Preprocess" version="" />
+		<node id="14" name="Impute" position="(522.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owimpute.OWImpute" title="Impute" version="" />
+		<node id="15" name="Outliers" position="(672.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owoutliers.OWOutliers" title="Outliers" version="" />
+		<node id="16" name="Edit Domain" position="(822.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.oweditdomain.OWEditDomain" title="Edit Domain" version="" />
+		<node id="17" name="Python Script" position="(972.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owpythonscript.OWPythonScript" title="Python Script" version="" />
+		<node id="18" name="Image Viewer" position="(1122.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owimageviewer.OWImageViewer" title="Image Viewer" version="" />
+		<node id="19" name="Color" position="(1272.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owcolor.OWColor" title="Color" version="" />
+		<node id="20" name="Continuize" position="(1422.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owcontinuize.OWContinuize" title="Continuize" version="" />
+		<node id="21" name="Create Class" position="(64.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owcreateclass.OWCreateClass" title="Create Class" version="" />
+		<node id="22" name="Discretize" position="(214.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owdiscretize.OWDiscretize" title="Discretize" version="" />
+		<node id="23" name="Feature Constructor" position="(364.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfeatureconstructor.OWFeatureConstructor" title="Feature Constructor" version="" />
+		<node id="24" name="Purge Domain" position="(514.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owpurgedomain.OWPurgeDomain" title="Purge Domain" version="" />
+		<node id="25" name="Save Data" position="(664.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owsave.OWSave" title="Save Data" version="" />
+		<node id="26" name="Tree Viewer" position="(814.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owtreeviewer.OWTreeGraph" title="Tree Viewer" version="" />
+		<node id="27" name="Box Plot" position="(964.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owboxplot.OWBoxPlot" title="Box Plot" version="" />
+		<node id="28" name="Distributions" position="(1114.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owdistributions.OWDistributions" title="Distributions" version="" />
+		<node id="29" name="Sieve Diagram" position="(1264.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owsieve.OWSieveDiagram" title="Sieve Diagram" version="" />
+		<node id="30" name="Mosaic Display" position="(1414.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owmosaic.OWMosaicDisplay" title="Mosaic Display" version="" />
+		<node id="31" name="Linear Projection" position="(67.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owlinearprojection.OWLinearProjection" title="Linear Projection" version="" />
+		<node id="32" name="Heat Map" position="(217.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owheatmap.OWHeatMap" title="Heat Map" version="" />
+		<node id="33" name="Venn Diagram" position="(367.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owvenndiagram.OWVennDiagram" title="Venn Diagram" version="" />
+		<node id="34" name="Silhouette Plot" position="(517.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owsilhouetteplot.OWSilhouettePlot" title="Silhouette Plot" version="" />
+		<node id="35" name="Pythagorean Tree" position="(667.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owpythagorastree.OWPythagorasTree" title="Pythagorean Tree" version="" />
+		<node id="36" name="Pythagorean Forest" position="(817.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owpythagoreanforest.OWPythagoreanForest" title="Pythagorean Forest" version="" />
+		<node id="37" name="CN2 Rule Viewer" position="(967.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owruleviewer.OWRuleViewer" title="CN2 Rule Viewer" version="" />
+		<node id="38" name="Nomogram" position="(1117.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.ownomogram.OWNomogram" title="Nomogram" version="" />
+		<node id="39" name="Constant" position="(1417.0, 535.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owconstant.OWConstant" title="Constant" version="" />
+		<node id="40" name="CN2 Rule Induction" position="(69.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owrules.OWRuleLearner" title="CN2 Rule Induction" version="" />
+		<node id="41" name="kNN" position="(219.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owknn.OWKNNLearner" title="kNN" version="" />
+		<node id="42" name="Tree" position="(369.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owtree.OWTreeLearner" title="Tree" version="" />
+		<node id="43" name="Random Forest" position="(519.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owrandomforest.OWRandomForest" title="Random Forest" version="" />
+		<node id="44" name="SVM" position="(669.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owsvm.OWSVM" title="SVM" version="" />
+		<node id="45" name="Linear Regression" position="(819.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owlinearregression.OWLinearRegression" title="Linear Regression" version="" />
+		<node id="46" name="Logistic Regression" position="(969.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owlogisticregression.OWLogisticRegression" title="Logistic Regression" version="" />
+		<node id="47" name="Naive Bayes" position="(1119.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.ownaivebayes.OWNaiveBayes" title="Naive Bayes" version="" />
+		<node id="48" name="AdaBoost" position="(1269.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owadaboost.OWAdaBoost" title="AdaBoost" version="" />
+		<node id="49" name="Stochastic Gradient Descent" position="(1419.0, 641.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owsgd.OWSGD" title="Stochastic Gradient Descent" version="" />
+		<node id="50" name="Save Model" position="(80.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owsavemodel.OWSaveModel" title="Save Model" version="" />
+		<node id="51" name="Load Model" position="(230.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.model.owloadmodel.OWLoadModel" title="Load Model" version="" />
+		<node id="52" name="Test &amp; Score" position="(380.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owtestlearners.OWTestLearners" title="Test &amp; Score" version="" />
+		<node id="53" name="Predictions" position="(530.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owpredictions.OWPredictions" title="Predictions" version="" />
+		<node id="54" name="Confusion Matrix" position="(680.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owconfusionmatrix.OWConfusionMatrix" title="Confusion Matrix" version="" />
+		<node id="55" name="ROC Analysis" position="(830.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owrocanalysis.OWROCAnalysis" title="ROC Analysis" version="" />
+		<node id="56" name="Lift Curve" position="(980.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owliftcurve.OWLiftCurve" title="Lift Curve" version="" />
+		<node id="57" name="Calibration Plot" position="(1130.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owcalibrationplot.OWCalibrationPlot" title="Calibration Plot" version="" />
+		<node id="58" name="Distance File" position="(1280.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistancefile.OWDistanceFile" title="Distance File" version="" />
+		<node id="59" name="Distance Matrix" position="(1430.0, 752.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistancematrix.OWDistanceMatrix" title="Distance Matrix" version="" />
+		<node id="60" name="Distance Map" position="(64.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistancemap.OWDistanceMap" title="Distance Map" version="" />
+		<node id="61" name="Hierarchical Clustering" position="(214.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owhierarchicalclustering.OWHierarchicalClustering" title="Hierarchical Clustering" version="" />
+		<node id="62" name="k-Means" position="(364.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owkmeans.OWKMeans" title="k-Means" version="" />
+		<node id="63" name="Manifold Learning" position="(514.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owmanifoldlearning.OWManifoldLearning" title="Manifold Learning" version="" />
+		<node id="64" name="PCA" position="(664.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owpca.OWPCA" title="PCA" version="" />
+		<node id="65" name="Correspondence Analysis" position="(814.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owcorrespondence.OWCorrespondenceAnalysis" title="Correspondence Analysis" version="" />
+		<node id="66" name="Distances" position="(964.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistances.OWDistances" title="Distances" version="" />
+		<node id="67" name="Distance Transformation" position="(1114.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owdistancetransformation.OWDistanceTransformation" title="Distance Transformation" version="" />
+		<node id="68" name="MDS" position="(1264.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owmds.OWMDS" title="MDS" version="" />
+		<node id="69" name="Save Distance Matrix" position="(1414.0, 847.0)" project_name="Orange3" qualified_name="Orange.widgets.unsupervised.owsavedistances.OWSaveDistances" title="Save Distance Matrix" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
+	</links>
+	<annotations />
+	<thumbnail />
+	<node_properties>
+		<properties format="pickle" node_id="0">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFOWAMAAAB1cmxxAlgAAAAAcQNYBgAAAHNv
+dXJjZXEESwBYCwAAAHJlY2VudF91cmxzcQVdcQZYDQAAAGRvbWFpbl9lZGl0b3JxB31xCFgMAAAA
+cmVjZW50X3BhdGhzcQldcQooY09yYW5nZS53aWRnZXRzLnV0aWxzLmZpbGVkaWFsb2dzClJlY2Vu
+dFBhdGgKcQspgXEMfXENKFgFAAAAc2hlZXRxDmgDWAUAAAB0aXRsZXEPaANYBgAAAHByZWZpeHEQ
+WA8AAABzYW1wbGUtZGF0YXNldHNxEVgHAAAAYWJzcGF0aHESWD4AAAAvaG9tZS9qZXJuZWovUHJv
+amVjdHMvT3JhbmdlMi9vcmFuZ2UzL09yYW5nZS9kYXRhc2V0cy9pcmlzLnRhYnETWAcAAAByZWxw
+YXRocRRYCAAAAGlyaXMudGFicRV1YmgLKYFxFn1xFyhoDmgDaA9oA2gQaBFoElhBAAAAL2hvbWUv
+amVybmVqL1Byb2plY3RzL09yYW5nZTIvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvdGl0YW5pYy50
+YWJxGGgUWAsAAAB0aXRhbmljLnRhYnEZdWJoCymBcRp9cRsoaA5oA2gPaANoEGgRaBJYQQAAAC9o
+b21lL2plcm5lai9Qcm9qZWN0cy9PcmFuZ2UyL29yYW5nZTMvT3JhbmdlL2RhdGFzZXRzL2hvdXNp
+bmcudGFicRxoFFgLAAAAaG91c2luZy50YWJxHXViaAspgXEefXEfKGgOaANoD2gDaBBoEWgSWEcA
+AAAvaG9tZS9qZXJuZWovUHJvamVjdHMvT3JhbmdlMi9vcmFuZ2UzL09yYW5nZS9kYXRhc2V0cy9o
+ZWFydF9kaXNlYXNlLnRhYnEgaBRYEQAAAGhlYXJ0X2Rpc2Vhc2UudGFicSF1YmVYCwAAAF9fdmVy
+c2lvbl9fcSJLAVgLAAAAc2hlZXRfbmFtZXNxI31xJFgQAAAAY29udGV4dF9zZXR0aW5nc3ElXXEm
+Y09yYW5nZS53aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcScpgXEofXEpKFgKAAAAY2xhc3NfdmFy
+c3EqWAQAAABpcmlzcStdcSwoWAsAAABJcmlzLXNldG9zYXEtWA8AAABJcmlzLXZlcnNpY29sb3Jx
+LlgOAAAASXJpcy12aXJnaW5pY2FxL2WGcTCFcTFYBQAAAG1ldGFzcTIpWA4AAABvcmRlcmVkX2Rv
+bWFpbnEzXXE0KFgMAAAAc2VwYWwgbGVuZ3RocTVLAoZxNlgLAAAAc2VwYWwgd2lkdGhxN0sChnE4
+WAwAAABwZXRhbCBsZW5ndGhxOUsChnE6WAsAAABwZXRhbCB3aWR0aHE7SwKGcTxoK0sBhnE9ZVgK
+AAAAYXR0cmlidXRlc3E+KGg1SwKGcT9oN0sChnFAaDlLAoZxQWg7SwKGcUJ0cUNYBAAAAHRpbWVx
+REdB1j4x22Dy+lgSAAAAbW9kaWZpZWRfdmFyaWFibGVzcUVdcUZYBgAAAHZhbHVlc3FHfXFIKFgJ
+AAAAdmFyaWFibGVzcUldcUpoB31xS2hJXXFMKF1xTShoNWNPcmFuZ2UuZGF0YS52YXJpYWJsZQpD
+b250aW51b3VzVmFyaWFibGUKcU5LAGgDiGVdcU8oaDdoTksAaAOIZV1xUChoOWhOSwBoA4hlXXFR
+KGg7aE5LAGgDiGVdcVIoaCtjT3JhbmdlLmRhdGEudmFyaWFibGUKRGlzY3JldGVWYXJpYWJsZQpx
+U0sBWCwAAABJcmlzLXNldG9zYSwgSXJpcy12ZXJzaWNvbG9yLCBJcmlzLXZpcmdpbmljYXFUiWVl
+c1gJAAAAeGxzX3NoZWV0cVVoA0r/////hnFWaCJLAXV1YmF1Lg==
+</properties>
+		<properties format="pickle" node_id="1">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFDMgHZ0MsAAgAAAAACXgAAARgAAAUOAAAE
+VQAAAl4AAAEYAAAFDgAABFUAAAAAAAAAAAeAcQJYEwAAAGF1dG9fc2VuZF9zZWxlY3Rpb25xA4hY
+CQAAAHNlbGVjdGlvbnEETlgRAAAAdG9vbGJhcl9zZWxlY3Rpb25xBUsAWAsAAABhdXRvX3NhbXBs
+ZXEGiFgQAAAAY29udGV4dF9zZXR0aW5nc3EHXXEIY09yYW5nZS53aWRnZXRzLnNldHRpbmdzCkNv
+bnRleHQKcQkpgXEKfXELKFgGAAAAdmFsdWVzcQx9cQ0oWAYAAABhdHRyX3hxDlgMAAAAc2VwYWwg
+bGVuZ3RocQ9LZoZxEFgGAAAAYXR0cl95cRFYCwAAAHNlcGFsIHdpZHRocRJLZoZxE1gLAAAAX192
+ZXJzaW9uX19xFEsBWAUAAABncmFwaHEVfXEWKFgKAAAAYXR0cl9jb2xvcnEXWAQAAABpcmlzcRhL
+ZYZxGVgKAAAAYXR0cl9zaGFwZXEaTkr+////hnEbWAoAAABhdHRyX2xhYmVscRxOSv7///+GcR1Y
+CQAAAGF0dHJfc2l6ZXEeTkr+////hnEfdXVYBQAAAG1ldGFzcSB9cSFYDgAAAG9yZGVyZWRfZG9t
+YWlucSJdcSMoWAwAAABzZXBhbCBsZW5ndGhxJEsChnElWAsAAABzZXBhbCB3aWR0aHEmSwKGcSdY
+DAAAAHBldGFsIGxlbmd0aHEoSwKGcSlYCwAAAHBldGFsIHdpZHRocSpLAoZxK1gEAAAAaXJpc3Es
+SwGGcS1lWAQAAAB0aW1lcS5HQdY+Mdtoqn1YCgAAAGF0dHJpYnV0ZXNxL31xMChoLEsBaCpLAmgo
+SwJoJEsCaCZLAnV1YmFoFEsBaBV9cTEoWAsAAABwb2ludF93aWR0aHEySwpYCQAAAHNob3dfZ3Jp
+ZHEziVgLAAAAYWxwaGFfdmFsdWVxNEuAWBEAAABqaXR0ZXJfY29udGludW91c3E1iVgRAAAAdG9v
+bHRpcF9zaG93c19hbGxxNolYCwAAAHNob3dfbGVnZW5kcTeIWA0AAABjbGFzc19kZW5zaXR5cTiJ
+WAsAAABqaXR0ZXJfc2l6ZXE5SwpYEwAAAGxhYmVsX29ubHlfc2VsZWN0ZWRxOolYDQAAAHNob3df
+cmVnX2xpbmVxO4l1dS4=
+</properties>
+		<properties format="literal" node_id="2">{'color_by_class': True, 'dist_color_RGB': (220, 220, 220, 255), 'auto_commit': True, 'select_rows': True, 'show_distributions': False, 'savedWidgetGeometry': None, '__version__': 1, 'show_attribute_labels': True, 'context_settings': []}</properties>
+		<properties format="pickle" node_id="3">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFOWAsAAABicnVzaFJhZGl1c3ECS0tYBQAA
+AGF0dHIycQNYAQAAAHlxBFgKAAAAYXV0b2NvbW1pdHEFiFgFAAAAYXR0cjFxBlgBAAAAeHEHWAoA
+AAB0YWJsZV9uYW1lcQhYDAAAAFBhaW50ZWQgZGF0YXEJWAgAAABoYXNBdHRyMnEKiFgLAAAAX192
+ZXJzaW9uX19xC0sBWAcAAABkZW5zaXR5cQxLB1gEAAAAZGF0YXENY251bXB5LmNvcmUubXVsdGlh
+cnJheQpfcmVjb25zdHJ1Y3QKcQ5jbnVtcHkKbmRhcnJheQpxD0sAhXEQQwFicRGHcRJScRMoSwFL
+AEsDhnEUY251bXB5CmR0eXBlCnEVWAIAAABmOHEWSwBLAYdxF1JxGChLA1gBAAAAPHEZTk5OSv//
+//9K/////0sAdHEaYolDAHEbdHEcYnUu
+</properties>
+		<properties format="literal" node_id="4">{'savedWidgetGeometry': None, '__version__': 1}</properties>
+		<properties format="literal" node_id="5">{'number_of_folds': 10, 'replacement': False, 'stratify': False, 'sampling_type': 0, '__version__': 1, 'selectedFold': 1, 'sampleSizeSqlTime': 1, 'sampleSizeNumber': 1, 'savedWidgetGeometry': None, 'use_seed': False, 'sql_dl': False, 'sampleSizeSqlPercentage': 0.1, 'sampleSizePercentage': 70}</properties>
+		<properties format="literal" node_id="6">{'savedWidgetGeometry': None, '__version__': 1, 'auto_commit': True, 'context_settings': []}</properties>
+		<properties format="literal" node_id="7">{'savedWidgetGeometry': None, 'purge_attributes': True, 'purge_classes': True, 'update_on_change': True, '__version__': 1, 'auto_commit': True, 'context_settings': []}</properties>
+		<properties format="pickle" node_id="8">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFOWBQAAABjbHNfZGVmYXVsdF9zZWxlY3Rl
+ZHECY2J1aWx0aW5zCnNldApxA11xBChYCgAAAEdhaW4gUmF0aW9xBVgNAAAAR2luaSBEZWNyZWFz
+ZXEGZYVxB1JxCFgUAAAAcmVnX2RlZmF1bHRfc2VsZWN0ZWRxCWgDXXEKKFgcAAAAVW5pdmFyaWF0
+ZSBMaW5lYXIgUmVncmVzc2lvbnELWAgAAABSUmVsaWVmRnEMZYVxDVJxDlgQAAAAY29udGV4dF9z
+ZXR0aW5nc3EPXXEQWAoAAABhdXRvX2FwcGx5cRGIWAwAAABzZWxlY3RNZXRob2RxEksDWAsAAABo
+ZWFkZXJTdGF0ZXETXXEUKE5OTmVYCQAAAG5TZWxlY3RlZHEVSwVYCwAAAF9fdmVyc2lvbl9fcRZL
+AXUu
+</properties>
+		<properties format="literal" node_id="9">{'savedWidgetGeometry': None, 'attr_combine_data': '', 'attr_combine_extra': '', 'attr_merge_extra': '', 'attr_merge_data': '', 'merging': 0, 'attr_augment_extra': '', 'attr_augment_data': '', '__version__': 1}</properties>
+		<properties format="literal" node_id="10">{'savedWidgetGeometry': None, 'source_attr_name': 'Source ID', 'source_column_role': 0, 'merge_type': 0, 'append_source_column': False, 'auto_commit': True, '__version__': 1}</properties>
+		<properties format="literal" node_id="11">{'auto_apply': True, 'savedWidgetGeometry': None, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="12">{'savedWidgetGeometry': None, 'shuffle_class': True, 'auto_apply': True, 'scope_prop': 80, '__version__': 1, 'random_seed': 0, 'shuffle_attrs': False, 'shuffle_metas': False}</properties>
+		<properties format="literal" node_id="13">{'savedWidgetGeometry': None, '__version__': 1, 'storedsettings': {'name': '', 'preprocessors': []}, 'autocommit': True}</properties>
+		<properties format="literal" node_id="14">{'savedWidgetGeometry': None, '_default_method_index': 1, 'context_settings': [], '__version__': 1, 'autocommit': True}</properties>
+		<properties format="literal" node_id="15">{'outlier_method': 0, 'savedWidgetGeometry': None, 'nu': 50, 'empirical_covariance': False, 'support_fraction': 1, 'cont': 10, 'gamma': 0.01, '__version__': 1}</properties>
+		<properties format="literal" node_id="16">{'savedWidgetGeometry': None, 'context_settings': [], '__version__': 1, 'autocommit': True}</properties>
+		<properties format="pickle" node_id="17">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFOWA0AAABzcGxpdHRlclN0YXRlcQJOWBIA
+AABjdXJyZW50U2NyaXB0SW5kZXhxA0sAWBEAAABsaWJyYXJ5TGlzdFNvdXJjZXEEXXEFY09yYW5n
+ZS53aWRnZXRzLmRhdGEub3dweXRob25zY3JpcHQKU2NyaXB0CnEGKYFxB31xCChYBAAAAG5hbWVx
+CVgLAAAASGVsbG8gd29ybGRxClgGAAAAc2NyaXB0cQtYFQAAAHByaW50KCdIZWxsbyB3b3JsZCcp
+CnEMWAUAAABmbGFnc3ENSwBYCAAAAGZpbGVuYW1lcQ5OdWJhWAwAAABhdXRvX2V4ZWN1dGVxD4hY
+CwAAAF9fdmVyc2lvbl9fcRBLAXUu
+</properties>
+		<properties format="literal" node_id="18">{'savedWidgetGeometry': None, 'autoCommit': True, '__version__': 1, 'imageSize': 100, 'context_settings': []}</properties>
+		<properties format="literal" node_id="19">{'savedWidgetGeometry': None, 'auto_apply': True, 'color_settings': None, '__version__': 1, 'selected_schema_index': 0, 'context_settings': []}</properties>
+		<properties format="literal" node_id="20">{'autosend': True, 'continuous_treatment': 0, 'class_treatment': 0, 'multinomial_treatment': 0, 'transform_class': False, 'savedWidgetGeometry': None, 'zero_based': 1, '__version__': 1}</properties>
+		<properties format="literal" node_id="21">{'savedWidgetGeometry': None, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="22">{'autosend': True, 'savedWidgetGeometry': None, 'default_k': 3, 'default_method': 2, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="23">{'savedWidgetGeometry': None, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="24">{'savedWidgetGeometry': None, 'sortClasses': True, 'removeMetaAttributeValues': 1, 'removeAttributes': 1, 'removeMetaAttributes': 1, 'sortValues': True, 'removeClasses': 1, 'removeValues': 1, 'removeClassAttribute': 1, 'autoSend': True, '__version__': 1}</properties>
+		<properties format="literal" node_id="25">{'last_dir': '', 'auto_save': False, 'last_filter': '', 'savedWidgetGeometry': None, '__version__': 1}</properties>
+		<properties format="literal" node_id="26">{'savedWidgetGeometry': None, 'max_node_width': 150, 'context_settings': [], 'regression_colors': 0, 'line_width_method': 2, 'max_tree_depth': 0, '__version__': 1, 'zoom': 5}</properties>
+		<properties format="literal" node_id="27">{'savedWidgetGeometry': None, 'order_by_importance': False, 'sig_threshold': 0.05, 'compare': 2, 'show_annotations': True, 'context_settings': [], 'stattest': 0, 'stretched': True, 'auto_commit': True, '__version__': 1}</properties>
+		<properties format="literal" node_id="28">{'savedWidgetGeometry': None, 'disc_cont': False, 'context_settings': [], 'relative_freq': False, '__version__': 1, 'smoothing_index': 5}</properties>
+		<properties format="literal" node_id="29">{'savedWidgetGeometry': None, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="30">{'interior_coloring': 1, 'savedWidgetGeometry': None, 'vizrank': {'max_attrs': 3}, 'use_boxes': True, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="31">{'savedWidgetGeometry': None, 'point_width': 10, 'context_settings': [], 'class_density': False, 'alpha_value': 128, 'jitter_value': 0, 'legend_anchor': ((1, 0), (1, 0)), 'auto_commit': True, '__version__': 2}</properties>
+		<properties format="literal" node_id="32">{'threshold_high': 1.0, 'row_clustering': False, 'merge_kmeans_k': 50, 'context_settings': [], 'merge_kmeans': False, 'gamma': 0, 'color_settings': None, 'column_label_pos': 1, 'auto_commit': True, 'threshold_low': 0.0, 'savedWidgetGeometry': None, 'palette_index': 18, 'legend': True, 'user_palettes': [], 'averages': True, '__version__': 1, 'col_clustering': False}</properties>
+		<properties format="literal" node_id="33">{'savedWidgetGeometry': None, 'selection': [], 'inputhints': {}, 'output_duplicates': False, 'autocommit': True, '__version__': 1, 'useidentifiers': True}</properties>
+		<properties format="literal" node_id="34">{'savedWidgetGeometry': None, 'bar_size': 3, 'add_scores': False, 'distance_idx': 0, 'group_by_cluster': True, '__version__': 1, 'auto_commit': True, 'context_settings': []}</properties>
+		<properties format="literal" node_id="35">{'savedWidgetGeometry': None, 'tooltips_enabled': True, 'show_legend': False, 'size_log_scale': 2, '__version__': 1, 'size_calc_idx': 0}</properties>
+		<properties format="literal" node_id="36">{'savedWidgetGeometry': None, '__version__': 1, 'size_calc_idx': 0, 'zoom': 50}</properties>
+		<properties format="literal" node_id="37">{'savedWidgetGeometry': None, '__version__': 1, 'compact_view': False}</properties>
+		<properties format="pickle" node_id="38">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFOWAwAAABuX2F0dHJpYnV0ZXNxAksKWAoA
+AABzb3J0X2luZGV4cQNjT3JhbmdlLndpZGdldHMudmlzdWFsaXplLm93bm9tb2dyYW0KU29ydEJ5
+CnEESwKFcQVScQZYFgAAAGNvbnRfZmVhdHVyZV9kaW1faW5kZXhxB0sAWAsAAABfX3ZlcnNpb25f
+X3EISwFYEAAAAGNvbnRleHRfc2V0dGluZ3NxCV1xClgNAAAAZGlzcGxheV9pbmRleHELSwFYFwAA
+AG5vcm1hbGl6ZV9wcm9iYWJpbGl0aWVzcQyJWAUAAABzY2FsZXENSwF1Lg==
+</properties>
+		<properties format="literal" node_id="39">{'auto_apply': True, 'savedWidgetGeometry': None, 'learner_name': 'Constant', '__version__': 1}</properties>
+		<properties format="literal" node_id="40">{'parent_alpha': 1.0, 'min_covered_examples': 1, 'evaluation_measure': 0, 'rule_ordering': 0, 'gamma': 0.7, 'learner_name': 'CN2 rule inducer', 'beam_width': 5, '__version__': 1, 'savedWidgetGeometry': None, 'default_alpha': 1.0, 'max_rule_length': 5, 'checked_parent_alpha': False, 'auto_apply': True, 'covering_algorithm': 0, 'checked_default_alpha': False}</properties>
+		<properties format="literal" node_id="41">{'savedWidgetGeometry': None, 'weight_index': 0, 'metric_index': 0, 'n_neighbors': 5, 'auto_apply': True, 'learner_name': 'kNN', '__version__': 1}</properties>
+		<properties format="literal" node_id="42">{'binary_trees': True, 'min_internal': 5, 'learner_name': 'Tree', '__version__': 1, 'max_depth': 100, 'savedWidgetGeometry': None, 'limit_depth': True, 'sufficient_majority': 95, 'limit_min_internal': True, 'auto_apply': True, 'limit_min_leaf': True, 'min_leaf': 2, 'limit_majority': True}</properties>
+		<properties format="literal" node_id="43">{'use_min_samples_split': True, 'random_state': 0, '__version__': 1, 'learner_name': 'Random Forest', 'use_max_features': False, 'use_max_depth': False, 'max_depth': 3, 'savedWidgetGeometry': None, 'use_random_state': False, 'min_samples_split': 5, 'max_features': 5, 'auto_apply': True, 'index_output': 0, 'n_estimators': 10}</properties>
+		<properties format="literal" node_id="44">{'tol': 0.001, 'nu': 0.5, 'C': 1.0, 'max_iter': 100, 'svm_type': 0, 'gamma': 0.0, 'learner_name': 'SVM', '__version__': 1, 'epsilon': 0.1, 'savedWidgetGeometry': None, 'kernel_type': 2, 'coef0': 0.0, 'auto_apply': True, 'degree': 3, 'limit_iter': True, 'nu_C': 1.0}</properties>
+		<properties format="literal" node_id="45">{'autosend': True, 'reg_type': 0, 'alpha_index': 0, 'learner_name': 'Linear Regression', 'auto_apply': True, 'l2_ratio': 0.5, 'savedWidgetGeometry': None, '__version__': 1, 'ridge': False}</properties>
+		<properties format="literal" node_id="46">{'savedWidgetGeometry': None, 'penalty_type': 1, 'C_index': 61, 'auto_apply': True, 'learner_name': 'Logistic Regression', '__version__': 1}</properties>
+		<properties format="literal" node_id="47">{'auto_apply': True, 'savedWidgetGeometry': None, 'learner_name': 'Naive Bayes', '__version__': 1}</properties>
+		<properties format="literal" node_id="48">{'learning_rate': 1.0, 'savedWidgetGeometry': None, 'auto_apply': True, '__version__': 1, 'use_random_seed': False, 'loss_index': 0, 'learner_name': 'AdaBoost', 'random_seed': 0, 'algorithm_index': 1, 'n_estimators': 50}</properties>
+		<properties format="literal" node_id="49">{'shuffle': True, 'l1_ratio': 0.15, 'learning_rate_index': 0, 'penalty_index': 2, 'power_t': 0.25, 'alpha': 1e-05, '__version__': 1, 'learner_name': 'SGD', 'n_iter': 5, 'eta0': 0.01, 'savedWidgetGeometry': None, 'use_random_state': False, 'random_state': 0, 'cls_epsilon': 0.1, 'cls_loss_function_index': 0, 'auto_apply': True, 'reg_epsilon': 0.1, 'reg_loss_function_index': 0}</properties>
+		<properties format="literal" node_id="50">{'savedWidgetGeometry': None, 'filename': None, 'history': [], '__version__': 1}</properties>
+		<properties format="literal" node_id="51">{'savedWidgetGeometry': None, 'filename': None, 'history': [], '__version__': 1}</properties>
+		<properties format="literal" node_id="52">{'savedWidgetGeometry': None, 'n_repeats': 3, 'cv_stratified': True, 'resampling': 0, 'context_settings': [], '__version__': 2, 'sample_size': 9, 'n_folds': 3, 'shuffle_stratified': True}</properties>
+		<properties format="literal" node_id="53">{'savedWidgetGeometry': None, 'output_predictions': True, 'output_attrs': True, '__version__': 1, 'context_settings': [], 'show_predictions': True, 'output_probabilities': True, 'show_attrs': True, 'show_probabilities': True, 'draw_dist': True}</properties>
+		<properties format="pickle" node_id="54">gAN9cQAoWBIAAABhcHBlbmRfcHJlZGljdGlvbnNxAYhYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlx
+Ak5YCgAAAGF1dG9jb21taXRxA4hYFAAAAGFwcGVuZF9wcm9iYWJpbGl0aWVzcQSJWBEAAABzZWxl
+Y3RlZF9xdWFudGl0eXEFSwBYCwAAAF9fdmVyc2lvbl9fcQZLAVgQAAAAc2VsZWN0ZWRfbGVhcm5l
+cnEHY2NvcHlyZWcKX3JlY29uc3RydWN0b3IKcQhjYnVpbHRpbnMKbGlzdApxCWgJKYdxClJxC0sA
+YVgQAAAAY29udGV4dF9zZXR0aW5nc3EMXXENdS4=
+</properties>
+		<properties format="literal" node_id="55">{'display_perf_line': True, 'fn_cost': 500, 'display_convex_hull': False, 'roc_averaging': 0, 'display_convex_curve': False, 'fp_cost': 500, 'target_prior': 50.0, 'savedWidgetGeometry': None, 'target_index': 0, 'display_def_threshold': True, '__version__': 1}</properties>
+		<properties format="pickle" node_id="56">gAN9cQAoWAcAAABmbl9jb3N0cQFN9AFYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxAk5YEwAAAGRp
+c3BsYXlfY29udmV4X2h1bGxxA4lYBwAAAGZwX2Nvc3RxBE30AVgRAAAAZGlzcGxheV9jb3N0X2Z1
+bmNxBYhYFAAAAHNlbGVjdGVkX2NsYXNzaWZpZXJzcQZjY29weXJlZwpfcmVjb25zdHJ1Y3Rvcgpx
+B2NidWlsdGlucwpsaXN0CnEIaAgph3EJUnEKWAwAAAB0YXJnZXRfcHJpb3JxC0dASQAAAAAAAFgM
+AAAAdGFyZ2V0X2luZGV4cQxLAFgLAAAAX192ZXJzaW9uX19xDUsBdS4=
+</properties>
+		<properties format="pickle" node_id="57">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFOWBQAAABzZWxlY3RlZF9jbGFzc2lmaWVy
+c3ECY2NvcHlyZWcKX3JlY29uc3RydWN0b3IKcQNjYnVpbHRpbnMKbGlzdApxBGgEKYdxBVJxBlgL
+AAAAZGlzcGxheV9ydWdxB4hYDAAAAHRhcmdldF9pbmRleHEISwBYCwAAAF9fdmVyc2lvbl9fcQlL
+AXUu
+</properties>
+		<properties format="literal" node_id="58">{'savedWidgetGeometry': None, 'recent_paths': [], '__version__': 1}</properties>
+		<properties format="literal" node_id="59">{'savedWidgetGeometry': None, '__version__': 1, 'auto_commit': True, 'context_settings': []}</properties>
+		<properties format="literal" node_id="60">{'savedWidgetGeometry': None, 'color_high': 1.0, 'sorting': 0, 'autocommit': True, 'color_gamma': 0.0, 'colormap': 18, '__version__': 1, 'color_low': 0.0, 'context_settings': []}</properties>
+		<properties format="literal" node_id="61">{'context_settings': [], 'annotation_if_enumerate': 'Enumerate', 'cluster_role': 2, 'cut_ratio': 75.0, 'append_clusters': True, '__version__': 1, 'max_depth': 10, 'savedWidgetGeometry': None, 'pruning': 0, 'linkage': 1, 'autocommit': True, 'cluster_name': 'Cluster', 'annotation_if_names': 'Name', 'zoom_factor': 0, 'selection_method': 0, 'top_n': 3}</properties>
+		<properties format="literal" node_id="62">{'savedWidgetGeometry': None, 'k_from': 2, 'k': 3, 'k_to': 8, 'n_init': 10, 'auto_run': True, 'max_iterations': 300, 'smart_init': 0, 'optimize_k': False, '__version__': 1}</properties>
+		<properties format="literal" node_id="63">{'spectral_editor': {'affinity_index': 0}, 'tsne_editor': {'metric_index': 0}, 'manifold_method_index': 0, 'lle_editor': {'method_index': 0, 'max_iter': 100, 'n_neighbors': 5}, '__version__': 1, 'savedWidgetGeometry': None, 'n_components': 2, 'isomap_editor': {'n_neighbors': 5}, 'auto_apply': True, 'mds_editor': {'init_type_index': 0, 'max_iter': 300}}</properties>
+		<properties format="literal" node_id="64">{'auto_update': True, 'savedWidgetGeometry': None, 'normalize': True, 'axis_labels': 10, 'batch_size': 100, '__version__': 1, 'maxp': 20, 'variance_covered': 100, 'ncomponents': 2, 'auto_commit': True, 'address': ''}</properties>
+		<properties format="literal" node_id="65">{'savedWidgetGeometry': None, '__version__': 1, 'context_settings': []}</properties>
+		<properties format="literal" node_id="66">{'savedWidgetGeometry': None, 'autocommit': True, 'axis': 0, '__version__': 1, 'metric_idx': 0}</properties>
+		<properties format="literal" node_id="67">{'normalization_method': 0, 'savedWidgetGeometry': None, '__version__': 1, 'inversion_method': 0, 'autocommit': True}</properties>
+		<properties format="literal" node_id="68">{'symbol_size': 8, 'output_embedding_role': 2, 'connected_pairs': 5, 'initialization': 0, 'refresh_rate': 3, 'max_iter': 300, 'label_only_selected': False, 'legend_anchor': ((1, 0), (1, 0)), '__version__': 1, 'savedWidgetGeometry': None, 'autocommit': True, 'jitter': 0, 'symbol_opacity': 230, 'context_settings': []}</properties>
+		<properties format="literal" node_id="69">{'last_dir': '', 'auto_save': False, 'savedWidgetGeometry': None, '__version__': 1}</properties>
+	</node_properties>
+</scheme>
