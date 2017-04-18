@@ -344,16 +344,16 @@ class OWScatterPlot(OWWidget):
             self.attr_y = findvar(self.attr_y, self.xy_model)
         if isinstance(self.graph.attr_label, str):
             self.graph.attr_label = findvar(
-                self.graph.attr_label, self.label_model)
+                self.graph.attr_label, self.graph.gui.label_model)
         if isinstance(self.graph.attr_color, str):
             self.graph.attr_color = findvar(
-                self.graph.attr_color, self.color_model)
+                self.graph.attr_color, self.graph.gui.color_model)
         if isinstance(self.graph.attr_shape, str):
             self.graph.attr_shape = findvar(
-                self.graph.attr_shape, self.shape_model)
+                self.graph.attr_shape, self.graph.gui.shape_model)
         if isinstance(self.graph.attr_size, str):
             self.graph.attr_size = findvar(
-                self.graph.attr_size, self.size_model)
+                self.graph.attr_size, self.graph.gui.size_model)
 
     def add_data(self, time=0.4):
         if self.data and len(self.data) > 2000:

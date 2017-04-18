@@ -248,6 +248,26 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         selected_data = self.get_output("Selected Data")
         self.assertEqual(len(selected_data), 10)
 
+    def test_set_strings_settings(self):
+        """
+        Test if settings can be loaded as strings and successfully put
+        in new owplotgui combos.
+        GH-2240
+        """
+        self.send_signal("Data", self.data)
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        graph_settings = settings["context_settings"][0].values["graph"]
+        graph_settings["attr_label"] = ("sepal length", -2)
+        graph_settings["attr_color"] = ("sepal width", -2)
+        graph_settings["attr_shape"] = ("iris", -2)
+        graph_settings["attr_size"] = ("petal width", -2)
+        w = self.create_widget(OWScatterPlot, stored_settings=settings)
+        self.send_signal("Data", self.data, widget=w)
+        self.assertEqual(w.graph.attr_label.name, "sepal length")
+        self.assertEqual(w.graph.attr_color.name, "sepal width")
+        self.assertEqual(w.graph.attr_shape.name, "iris")
+        self.assertEqual(w.graph.attr_size.name, "petal width")
+
 
 if __name__ == "__main__":
     import unittest
