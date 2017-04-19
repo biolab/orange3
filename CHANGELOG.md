@@ -6,6 +6,43 @@ Change Log
 * ...
 
 
+[3.4.2] - 2017-04-19
+--------------------
+##### Enhancements
+* Nomogram: Support for sparse data ([#2197](../../pull/2197))
+* Add PDF format to image exporters ([#2210](../../pull/2210))
+* Reimplement macOS application (.app) build scripts ([#2217](../../pull/2217))
+* Canvas: Use 'windowFilePath' to display display current filename instead of the title ([#2206](../../pull/2206))
+* OWTestLearners: Cross validation by feature ([#2145](../../pull/2145))
+* Pythagorean tree: Make border scale invariant ([#2141](../../pull/2141))
+
+##### Bugfixes
+* Scatterplot crashes when loaded from old workflow ([#2241](../../pull/2241))
+* Error Report: URL changed ([#2220](../../pull/2220))
+* Scatter Plot: update class density ([#2238](../../pull/2238))
+* KMeans: should not crash when there is less data rows than k ([#2172](../../pull/2172))
+* Edit Domain: Prevent duplicate variable names ([#2146](../../pull/2146))
+* Scatter Plot: left margin (axis y) is now adapting ([#2200](../../pull/2200))
+* Predictions widget: handle similar but different domains ([#2129](../../pull/2129))
+* OWNomogram: Do not paint scene until the widget is not open ([#2202](../../pull/2202))
+* Test & Score: crashing prevented when learner disconnects ([#2194](../../pull/2194))
+* Widget Logistic Regression: can handle unused values ([#2116](../../pull/2116))
+* stats: Open Corpus in OWDataTable after transposing it ([#2177](../../pull/2177))
+* Rank: fixes creating Table with infinite numbers ([#2168](../../pull/2168))
+* Add-ons: Problems with datetime parsing ([#2196](../../pull/2196))
+* OWPredictions: Allow classification when data has no target column ([#2183](../../pull/2183))
+* OWDataSampler: Fix typo boostrap to bootstrap ([#2195](../../pull/2195))
+* All widgets are set to auto* when they are used for the first time ([#2136](../../pull/2136))
+* Preprocess: enums containing function names changed ([#2151](../../pull/2151))
+* Fitter: Fix used_vals and params not being set ([#2138](../../pull/2138))
+* VizRankDialog: Stop computation when parent widget is deleted ([#2118](../../pull/2118))
+* Distributions Report: Visualizations are now fitted ([#2130](../../pull/2130))
+* Fitter: Change params uses default if None ([#2127](../../pull/2127))
+* Fix invalid settings reuse in File widget  ([#2137](../../pull/2137))
+* Scatter Plot - Prevent crash due to missing data ([#2122](../../pull/2122))
+* Sieve Diagram: Using datasets with meta data ([#2098](../../pull/2098))
+
+
 [3.4.1] - 2017-03-16
 --------------------
 ##### Enhancements
@@ -439,7 +476,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.4.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.2...HEAD
+[3.4.2]: https://github.com/biolab/orange3/compare/3.4.1...3.4.2
 [3.4.1]: https://github.com/biolab/orange3/compare/3.4.0...3.4.1
 [3.4.0]: https://github.com/biolab/orange3/compare/3.3.12...3.4.0
 [3.3.12]: https://github.com/biolab/orange3/compare/3.3.11...3.3.12

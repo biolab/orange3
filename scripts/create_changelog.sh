@@ -6,7 +6,7 @@ RELEASE_DATE=$(date "+%Y-%m-%d")
 
 # compile a list of already reported PRs
 reported="$(mktemp)"
-grep -E "#[0-9]{4}" -o CHANGELOG.md | sort > "$tempfile"
+grep -E "#[0-9]{4}" -o CHANGELOG.md | sort > "$reported"
 
 echo "[$VERSION] - $RELEASE_DATE"
 echo "--------------------"
