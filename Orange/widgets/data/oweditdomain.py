@@ -137,7 +137,14 @@ class VariableEditor(QWidget):
         self._setup_gui_labels()
 
     def _setup_gui_name(self):
-        self.name_edit = QLineEdit()
+        class OrangeLineEdit(QLineEdit):
+            def keyPressEvent(self, event):
+                if event.key() in [Qt.Key_Return, Qt.Key_Enter]:
+                    self.parent().on_name_changed()
+                else:
+                    super().keyPressEvent(event)
+
+        self.name_edit = OrangeLineEdit()
         self.main_form.addRow("Name:", self.name_edit)
         self.name_edit.editingFinished.connect(self.on_name_changed)
 
