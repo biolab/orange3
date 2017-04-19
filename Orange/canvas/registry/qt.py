@@ -336,7 +336,7 @@ def whats_this_helper(desc, include_more_link=False):
 
     template = ["<h3>{0}</h3>".format(escape(title))]
 
-    if description:
+    if description and not long_description.startswith(description):
         template.append("<p>{0}</p>".format(escape(description)))
 
     if help_url and include_more_link:
