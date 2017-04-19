@@ -196,6 +196,19 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         return rfs
 
     def _setup_plot(self):
+        def get_minmax(points):
+            minmax = [float('inf'),
+                      float('-inf'),
+                      float('inf'),
+                      float('-inf')]
+            for pp in points:
+                for p in pp:
+                    minmax[0] = min(p[0], minmax[0])
+                    minmax[1] = max(p[0], minmax[1])
+                    minmax[2] = min(p[1], minmax[2])
+                    minmax[3] = max(p[1], minmax[3])
+            return minmax
+
         self.plot.clear()
         points = self.ca
         variables = self.selected_vars()
@@ -216,6 +229,15 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             range_indices = np.cumsum([0] + counts)
             ranges = zip(range_indices, range_indices[1:])
             points = [points[s:e] for s, e in ranges]
+
+        minmax = get_minmax(points)
+
+        margin = abs(minmax[0] - minmax[1])
+        margin = margin * 0.05 if margin > 1e-10 else 1
+        self.plot.setXRange(minmax[0] - margin, minmax[1] + margin)
+        margin = abs(minmax[2] - minmax[3])
+        margin = margin * 0.05 if margin > 1e-10 else 1
+        self.plot.setYRange(minmax[2] - margin, minmax[3] + margin)
 
         for i, (v, points) in enumerate(zip(variables, points)):
             color_outline = colors[i]
@@ -373,7 +395,7 @@ class CA(CA):
         return np.sum(self.row_inertia(), axis=0)
 
 
-def test_main(argv=None):
+def main(argv=None):
     import sip
     if argv is None:
         argv = sys.argv[1:]
@@ -396,4 +418,4 @@ def test_main(argv=None):
     return rval
 
 if __name__ == "__main__":
-    sys.exit(test_main())
+    sys.exit(main())
