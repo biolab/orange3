@@ -1,10 +1,14 @@
+# pylint: disable=protected-access
 from contextlib import contextmanager
 import os
 import pickle
-from tempfile import mkstemp
+from tempfile import mkstemp, NamedTemporaryFile
+
 import unittest
 from unittest.mock import patch, Mock
 import warnings
+
+from Orange.tests import named_file
 from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider,\
     VERSION_KEY, rename_setting, Context, migrate_str_to_variable
 
@@ -63,6 +67,33 @@ class SettingHandlerTestCase(unittest.TestCase):
         self.assertEqual(handler.defaults, default_settings)
 
         os.remove(settings_file)
+
+    def test_write_defaults_handles_permission_error(self):
+        handler = SettingsHandler()
+
+        with named_file("") as f:
+            handler._get_settings_filename = lambda: f
+
+            with patch('Orange.widgets.settings.open', create=True) as mocked_open:
+                mocked_open.side_effect = PermissionError()
+
+                handler.write_defaults()
+
+    def test_write_defaults_handles_writing_errors(self):
+        handler = SettingsHandler()
+
+        for error in (EOFError, IOError, pickle.PicklingError):
+            f = NamedTemporaryFile("wt", delete=False)
+            f.close()  # so it can be opened on windows
+            handler._get_settings_filename = lambda x=f: x.name
+
+            with patch.object(handler, "write_defaults_file") as mocked_write:
+                mocked_write.side_effect = error()
+
+                handler.write_defaults()
+
+            # Corrupt setting files should be removed
+            self.assertFalse(os.path.exists(f.name))
 
     def test_initialize_widget(self):
         handler = SettingsHandler()
@@ -286,9 +317,9 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         h = SettingsHandler()
         h.widget_class = widget
+        h.defaults = defaults
         filename = h._get_settings_filename()
-        with open(filename, "wb") as f:
-            pickle.dump(defaults, f)
+        h.write_defaults()
 
         yield
 

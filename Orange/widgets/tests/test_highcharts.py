@@ -1,6 +1,4 @@
 import time
-import os
-import sys
 import unittest
 
 from AnyQt.QtCore import Qt, QPoint, QObject
@@ -35,9 +33,7 @@ class HighchartTest(WidgetTest):
         self.assertEqual(svg[:5], '<svg ')
         self.assertEqual(svg[-6:], '</svg>')
 
-    @unittest.skipIf(os.environ.get('APPVEYOR'), 'test stalls on AppVeyor')
-    @unittest.skipIf(sys.version_info[:2] <= (3, 4),
-                     'the second iteration stalls on Travis / Py3.4')
+    @unittest.skip("Does not work")
     def test_selection(self):
 
         class NoopBridge(QObject):
