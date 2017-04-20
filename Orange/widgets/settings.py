@@ -404,13 +404,16 @@ class SettingsHandler:
             settings_file = open(filename, "wb")
             try:
                 self.write_defaults_file(settings_file)
-            except (EOFError, IOError, pickle.PicklingError):
+            except (EOFError, IOError, pickle.PicklingError) as ex:
+                log.error("Could not write default settings for %s (%s).",
+                          self.widget_class, type(ex).__name__)
                 settings_file.close()
                 os.remove(filename)
             else:
                 settings_file.close()
-        except PermissionError:
-            log.error("PermissionError when trying to write defaults.", exc_info=True)
+        except PermissionError as ex:
+            log.error("Could not write default settings for %s (%s).",
+                      self.widget_class, type(ex).__name__)
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file
