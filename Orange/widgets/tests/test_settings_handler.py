@@ -317,9 +317,9 @@ class SettingHandlerTestCase(unittest.TestCase):
 
         h = SettingsHandler()
         h.widget_class = widget
+        h.defaults = defaults
         filename = h._get_settings_filename()
-        with open(filename, "wb") as f:
-            pickle.dump(defaults, f)
+        h.write_defaults()
 
         yield
 
