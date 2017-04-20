@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
@@ -69,3 +70,9 @@ class TestOWPCA(WidgetTest):
         self.widget._update_selection_component_spin()
         var3 = self.widget.variance_covered
         self.assertGreater(var3, var2)
+
+    def test_error_on_sparse_data(self):
+        data = Table('iris')
+        data.X = sp.csr_matrix(data.X)
+        self.widget.set_data(data)
+        self.assertTrue(self.widget.Error.sparse_data.is_shown())

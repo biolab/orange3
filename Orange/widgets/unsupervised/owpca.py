@@ -55,6 +55,7 @@ class OWPCA(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         no_features = widget.Msg("At least 1 feature is required")
         no_instances = widget.Msg("At least 1 data instance is required")
+        sparse_data = widget.Msg("Sparse data is not supported")
 
     def __init__(self):
         super().__init__()
@@ -191,6 +192,9 @@ class OWPCA(widget.OWWidget):
         self.clear()
         self.start_button.setEnabled(False)
         if self.data is None:
+            return
+        if self.data.is_sparse():
+            self.Error.sparse_data()
             return
         data = self.data
         self._transformed = None
