@@ -679,8 +679,8 @@ class OWTestLearners(OWWidget):
     def show_column_chooser(self, pos):
         # pylint doesn't know that self.shown_scores is a set, not a Setting
         # pylint: disable=unsupported-membership-test
-        def update(col_name, state):
-            if state:
+        def update(col_name, checked):
+            if checked:
                 self.shown_scores.add(col_name)
             else:
                 self.shown_scores.remove(col_name)
