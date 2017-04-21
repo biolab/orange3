@@ -90,6 +90,10 @@ class WidgetTest(GuiTest):
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
 
+    def tearDown(self):
+        """Process any pending events before the next test is executed."""
+        self.process_events()
+
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
         """Create a widget instance using mock signal_manager.
 
