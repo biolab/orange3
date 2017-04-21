@@ -1,22 +1,22 @@
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
+import collections
 import unittest
 
-import collections
 import numpy as np
-
 from AnyQt.QtWidgets import QMenu
 from AnyQt.QtCore import QPoint
 
-from Orange.data import Table, Domain
 from Orange.classification import MajorityLearner
-from Orange.regression import MeanLearner
-from Orange.modelling import ConstantLearner
-
+from Orange.data import Table, Domain
 from Orange.evaluation import Results, TestOnTestData
+from Orange.modelling import ConstantLearner
+from Orange.regression import MeanLearner
+from Orange.widgets.evaluate.owtestlearners import (
+    OWTestLearners, results_one_vs_rest)
+from Orange.widgets.settings import (
+    ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.evaluate.owtestlearners import OWTestLearners
-from Orange.widgets.evaluate import owtestlearners
 
 
 class TestOWTestLearners(WidgetTest):
@@ -132,15 +132,22 @@ class TestOWTestLearners(WidgetTest):
                 unittest.mock.patch("AnyQt.QtWidgets.QMenu.exec", execmenu):
             w.show_column_chooser(QPoint(0, 0))
 
+    def test_migrate_removes_invalid_contexts(self):
+        context_invalid = ClassValuesContextHandler().new_context([0, 1, 2])
+        context_valid = PerfectDomainContextHandler().new_context(*[[]] * 4)
+        settings = {'context_settings': [context_invalid, context_valid]}
+        self.widget.migrate_settings(settings, 2)
+        self.assertEqual(settings['context_settings'], [context_valid])
+
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
         data = Table("lenses")
         learners = [MajorityLearner()]
         res = TestOnTestData(data[1::2], data[::2], learners=learners)
-        r1 = owtestlearners.results_one_vs_rest(res, pos_index=0)
-        r2 = owtestlearners.results_one_vs_rest(res, pos_index=1)
-        r3 = owtestlearners.results_one_vs_rest(res, pos_index=2)
+        r1 = results_one_vs_rest(res, pos_index=0)
+        r2 = results_one_vs_rest(res, pos_index=1)
+        r3 = results_one_vs_rest(res, pos_index=2)
 
         np.testing.assert_almost_equal(np.sum(r1.probabilities, axis=2), 1.0)
         np.testing.assert_almost_equal(np.sum(r2.probabilities, axis=2), 1.0)

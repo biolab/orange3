@@ -138,7 +138,7 @@ class OWTestLearners(OWWidget):
     outputs = [("Predictions", Table),
                ("Evaluation Results", Results)]
 
-    settings_version = 2
+    settings_version = 3
     settingsHandler = settings.PerfectDomainContextHandler(metas_in_res=True)
 
     #: Resampling/testing types
@@ -750,10 +750,13 @@ class OWTestLearners(OWWidget):
     @classmethod
     def migrate_settings(cls, settings_, version):
         if version < 2:
-            if not hasattr(settings_["context_settings"][0], "attributes"):
-                settings_["context_settings"][0].attributes = {}
             if settings_["resampling"] > 0:
                 settings_["resampling"] += 1
+        if version < 3:
+            # Older version used an incompatible context handler
+            settings_["context_settings"] = [
+                c for c in settings_.get("context_settings", ())
+                if not hasattr(c, 'classes')]
 
 
 def learner_name(learner):
