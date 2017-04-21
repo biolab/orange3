@@ -1,3 +1,7 @@
+from functools import reduce
+
+import numpy as np
+
 from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
@@ -5,6 +9,8 @@ import Orange.data
 from Orange.util import Reprable
 from Orange.statistics import distribution
 from Orange.preprocess import Continuize, Normalize
+from Orange.preprocess.transformation import \
+    Identity, Indicator, Indicator1, Normalizer
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
@@ -138,12 +144,6 @@ class OWContinuize(widget.OWWidget):
              ("Value range", self.value_ranges[self.zero_based])])
 
 
-from Orange.preprocess.transformation import \
-    Identity, Indicator, Indicator1, Normalizer
-
-from functools import reduce
-
-
 class WeightedIndicator(Indicator):
     def __init__(self, variable, value, weight=1.0):
         super().__init__(variable, value)
@@ -156,7 +156,7 @@ class WeightedIndicator(Indicator):
         return t
 
 
-class WeightedIndicator_1(Indicator1):
+class WeightedIndicator1(Indicator1):
     def __init__(self, variable, value, weight=1.0):
         super().__init__(variable, value)
         self.weight = weight
@@ -176,7 +176,7 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
     elif weight is None:
         indicator = Indicator1(source, value=value_ind)
     else:
-        indicator = WeightedIndicator_1(source, value=value_ind, weight=weight)
+        indicator = WeightedIndicator1(source, value=value_ind, weight=weight)
     return Orange.data.ContinuousVariable(
         "{}={}".format(source.name, source.values[value_ind]),
         compute_value=indicator
@@ -279,7 +279,7 @@ def continuize_var(var,
         elif multinomial_treatment == Continuize.AsOrdinal:
             return [ordinal_to_continuous(var)]
         elif multinomial_treatment == Continuize.AsNormalizedOrdinal:
-            return [ordinal_to_normalized_continuous(var, zero_based)]
+            return [ordinal_to_norm_continuous(var, zero_based)]
         elif multinomial_treatment == Continuize.Indicators:
             return one_hot_coding(var, zero_based)
         elif multinomial_treatment == Continuize.FirstAsBase or \
@@ -320,7 +320,7 @@ def ordinal_to_continuous(var):
                                           compute_value=Identity(var))
 
 
-def ordinal_to_normalized_continuous(var, zero_based=True):
+def ordinal_to_norm_continuous(var, zero_based=True):
     n_values = len(var.values)
     if zero_based:
         return normalized_var(var, 0, 1 / (n_values - 1))
@@ -330,8 +330,11 @@ def ordinal_to_normalized_continuous(var, zero_based=True):
 
 def normalize_by_span(var, data_or_dist, zero_based=True):
     dist = _ensure_dist(var, data_or_dist)
-    v_max, v_min = dist.max(), dist.min()
-    span = v_max - v_min
+    if dist.shape[1] > 0:
+        v_max, v_min = dist.max(), dist.min()
+    else:
+        v_max, v_min = 0, 0
+    span = (v_max - v_min)
     if span < 1e-15:
         span = 1
 
@@ -343,7 +346,11 @@ def normalize_by_span(var, data_or_dist, zero_based=True):
 
 def normalize_by_sd(var, data_or_dist):
     dist = _ensure_dist(var, data_or_dist)
-    mean, sd = dist.mean(), dist.standard_deviation()
+    if dist.shape[1] > 0:
+        mean, sd = dist.mean(), dist.standard_deviation()
+    else:
+        mean, sd = 0, 1
+    sd = sd if sd > 1e-10 else 1
     return normalized_var(var, mean, 1 / sd)
 
 
@@ -365,7 +372,7 @@ class DomainContinuizer(Reprable):
             domain = data.domain
 
         if (treat == Continuize.ReportError and
-            any(var.is_discrete and len(var.values) > 2 for var in domain)):
+                any(var.is_discrete and len(var.values) > 2 for var in domain)):
             raise ValueError("Domain has multinomial attributes")
 
         newdomain = continuize_domain(
