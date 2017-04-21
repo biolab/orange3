@@ -1,6 +1,7 @@
 import sys
 import sysconfig
 import os
+import logging
 import re
 import errno
 import shlex
@@ -45,6 +46,8 @@ from ..gui.utils import message_warning, message_information, \
                         message_critical as message_error, \
                         OSX_NSURL_toLocalFile
 from ..help.manager import get_dist_meta, trim, parse_meta
+
+log = logging.getLogger(__name__)
 
 OFFICIAL_ADDONS = [
     "Orange-Bioinformatics",
@@ -492,13 +495,14 @@ class AddonManagerDialog(QDialog):
 
         try:
             packages = f.result()
-        except (IOError, OSError) as err:
+        except (IOError, OSError, ValueError) as err:
             message_warning(
                 "Could not retrieve package list",
                 title="Error",
                 informative_text=str(err),
                 parent=self
             )
+            log.error(str(err), exc_info=True)
             packages = []
         except Exception:
             raise
