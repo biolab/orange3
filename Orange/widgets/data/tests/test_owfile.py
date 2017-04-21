@@ -2,8 +2,12 @@
 # pylint: disable=missing-docstring
 from os import path, remove
 from unittest.mock import Mock
+import pickle
+import tempfile
+
 
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
@@ -195,3 +199,19 @@ a
             for i in range(4):
                 vartype_delegate.setEditorData(combo, idx(i))
                 self.assertEqual(combo.count(), counts[i])
+
+    def test_domain_edit_on_sparse_data(self):
+        iris = Table("iris")
+        iris.X = sp.csr_matrix(iris.X)
+
+        f = tempfile.NamedTemporaryFile(suffix='.pickle', delete=False)
+        pickle.dump(iris, f)
+        f.close()
+
+        self.widget.add_path(f.name)
+        self.widget.load_data()
+
+        output = self.get_output("Data")
+        self.assertIsInstance(output, Table)
+        self.assertEqual(iris.X.shape, output.X.shape)
+        self.assertTrue(sp.issparse(output.X))
