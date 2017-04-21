@@ -5,6 +5,7 @@ around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
 import os
+import time
 import threading
 import warnings
 from collections.abc import Iterable, Mapping, Set, Sequence
@@ -476,6 +477,21 @@ elif HAVE_WEBENGINE:
                 self.ids.remove(id)
 
 
+    def wait(until: callable, timeout=5000):
+        """Process events until condition is satisfied
+
+        Parameters
+        ----------
+        until: callable that returns True when condition is satisfied
+        timeout: number of milliseconds to wait until TimeoutError is raised
+        """
+        started = time.clock()
+        while not until():
+            qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            if (time.clock() - started) * 1000 > timeout:
+                raise TimeoutError()
+
+
     class _JSObjectChannel(QObject):
         """ This class hopefully prevent options data from being
         marshalled into a string-like dumb (JSON) object when
@@ -500,8 +516,7 @@ elif HAVE_WEBENGINE:
             id = next(self._id_gen)
             value = self._objects[id] = dict(id=id, name=name, obj=obj)
             # Wait till JS is connected to receive objects
-            while not self.receivers(self.objectChanged):
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            wait(until=lambda: self.receivers(self.objectChanged))
             self.objectChanged.emit(value)
 
         @pyqtSlot(int)
@@ -535,14 +550,12 @@ elif HAVE_WEBENGINE:
             self._results = IdStore()
 
         def _evalJS(self, code):
-            while not self._jsobject_channel.is_all_exposed():
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            wait(until=self._jsobject_channel.is_all_exposed)
             if sip.isdeleted(self):
                 return
             result = self._results.create()
             self.runJavaScript(code, lambda x: self._results.store(result))
-            while result not in self._results:
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            wait(until=lambda: result in self._results)
             self._results.remove(result)
 
         def onloadJS(self, code):
@@ -550,8 +563,7 @@ elif HAVE_WEBENGINE:
 
         def html(self):
             self.page().toHtml(lambda html: setattr(self, '_html', html))
-            while self._html is _NOTSET and not sip.isdeleted(self):
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            wait(until=lambda: self._html is not _NOTSET or sip.isdeleted(self))
             html, self._html = self._html, _NOTSET
             return html
 

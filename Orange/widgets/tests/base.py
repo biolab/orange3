@@ -1,12 +1,12 @@
+from contextlib import contextmanager
 import os
 import time
-from contextlib import contextmanager
 import unittest
 from unittest.mock import Mock
 
+import numpy as np
 import sip
 
-import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest, QSignalSpy
 from AnyQt.QtWidgets import (
@@ -33,6 +33,8 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 sip.setdestroyonexit(False)
 
 app = None
+
+DEFAULT_TIMEOUT = 5000
 
 
 class DummySignalManager:
@@ -141,8 +143,7 @@ class WidgetTest(GuiTest):
             # Reset context settings
             settings_handler.global_contexts = []
 
-    @staticmethod
-    def process_events(until: callable=None):
+    def process_events(self, until: callable=None, timeout=DEFAULT_TIMEOUT):
         """Process Qt events, optionally until `until` returns
         something True-ish.
 
@@ -153,6 +154,9 @@ class WidgetTest(GuiTest):
         until: callable or None
             If callable, the events are processed until the function returns
             something True-ish.
+        timeout: int
+            If until condition is not satisfied within timeout milliseconds,
+            a TimeoutError is raised.
 
         Returns
         -------
@@ -161,6 +165,7 @@ class WidgetTest(GuiTest):
         if until is None:
             until = lambda: True
 
+        started = time.clock()
         while True:
             app.processEvents()
             try:
@@ -169,6 +174,8 @@ class WidgetTest(GuiTest):
                     return result
             except Exception:  # until can fail with anything; pylint: disable=broad-except
                 pass
+            if (time.clock() - started) * 1000 > timeout:
+                raise TimeoutError()
             time.sleep(.05)
 
     def show(self, widget=None):
@@ -241,6 +248,13 @@ class WidgetTest(GuiTest):
         finally:
             QTest.keyRelease(self.widget, Qt.Key_BassBoost, old_modifiers)
 
+
+class TestWidgetTest(WidgetTest):
+    """Meta tests for widget test helpers"""
+
+    def test_process_events_handles_timeouts(self):
+        with self.assertRaises(TimeoutError):
+            self.process_events(until=lambda: False, timeout=0)
 
 
 
@@ -633,7 +647,7 @@ class WidgetOutputsTestMixin:
         self.data = Table("iris")
         self.same_input_output_domain = True
 
-    def test_outputs(self, timeout=5000):
+    def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
 
         if self.widget.isBlocking():
