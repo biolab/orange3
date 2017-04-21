@@ -25,6 +25,7 @@ class OWTranspose(OWWidget):
 
     class Error(OWWidget.Error):
         value_error = Msg("{}")
+        no_features = Msg("Cannot transpose data without features.")
 
     def __init__(self):
         super().__init__()
@@ -79,11 +80,15 @@ class OWTranspose(OWWidget):
         self.clear_messages()
         transposed = None
         if self.data:
-            try:
-                transposed = Table.transpose(
-                    self.data, self.feature_type and self.feature_names_column)
-            except ValueError as e:
-                self.Error.value_error(e)
+            if not len(self.data.domain.attributes):
+                self.Error.no_features()
+            else:
+                try:
+                    transposed = Table.transpose(
+                        self.data,
+                        self.feature_type and self.feature_names_column)
+                except ValueError as e:
+                    self.Error.value_error(e)
         self.send("Data", transposed)
 
     def send_report(self):
