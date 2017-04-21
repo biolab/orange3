@@ -63,3 +63,16 @@ class TestLocate(unittest.TestCase):
         l = FileFormat.locate("t", search_dirs=[tempdir])
         self.assertEqual(l, fn)
         shutil.rmtree(tempdir)
+
+
+class TestReader(unittest.TestCase):
+
+    def test_open_bad_pickle(self):
+        """
+        Raise TypeError when PickleReader reads a pickle
+        file without a table (and it suppose to be there).
+        GH-2232
+        """
+        reader = PickleReader("")
+        with unittest.mock.patch("pickle.load", return_value=None):
+            self.assertRaises(TypeError, reader.read, "foo")
