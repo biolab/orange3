@@ -253,12 +253,7 @@ class DomainEditor(QTableView):
             if place == Place.skip:
                 continue
 
-            if orig_plc == Place.meta:
-                col_data = data[:, orig_var].metas
-            elif orig_plc == Place.class_var:
-                col_data = data[:, orig_var].Y.reshape(-1, 1)
-            else:
-                col_data = data[:, orig_var].X
+            col_data = self._get_column(data, orig_var, orig_plc)
             is_sparse = sp.issparse(col_data)
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
@@ -291,6 +286,16 @@ class DomainEditor(QTableView):
         m = self._merge(cols[Place.meta], force_dense=True)
         domain = Domain(*places)
         return domain, [X, Y, m]
+
+    def _get_column(self, data, source_var, source_place):
+        """ Extract column from data and preserve sparsity. """
+        if source_place == Place.meta:
+            col_data = data[:, source_var].metas
+        elif source_place == Place.class_var:
+            col_data = data[:, source_var].Y.reshape(-1, 1)
+        else:
+            col_data = data[:, source_var].X
+        return col_data
 
     def set_domain(self, domain):
         self.variables = self.parse_domain(domain)
