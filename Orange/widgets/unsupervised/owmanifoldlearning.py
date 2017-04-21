@@ -1,3 +1,5 @@
+import numpy as np
+
 from AnyQt.QtWidgets import QWidget, QVBoxLayout
 from AnyQt.QtCore import Qt
 
@@ -260,6 +262,8 @@ class OWManifoldLearning(OWWidget):
                             self.Error.n_neighbors_too_small("{}".format(n))
                         else:
                             self.Error.manifold_error(e.args[0])
+                    except np.linalg.linalg.LinAlgError as e:
+                        self.Error.manifold_error(str(e))
         self.send("Transformed data", data)
 
     def get_method_parameters(self):

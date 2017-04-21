@@ -3,7 +3,7 @@
 import numpy as np
 from scipy import sparse
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
 from Orange.widgets.tests.base import WidgetTest
 
@@ -73,3 +73,24 @@ class TestOWManifoldLearning(WidgetTest):
         self.send_signal("Data", None)
         self.widget.apply_button.button.click()
         self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
+
+    def test_singular_matrices(self):
+        """
+        Handle singular matrices.
+        GH-2228
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"), ContinuousVariable("b")],
+                class_vars=DiscreteVariable("c", values=["0", "1"])),
+            list(zip(
+                [1, 1, 1],
+                [0, 1, 2],
+                [0, 1, 1]))
+        )
+        self.send_signal("Data", table)
+        self.widget.manifold_methods_combo.activated.emit(0)  # t-SNE
+        self.widget.tsne_editor.metric_combo.activated.emit(4)  # Mahalanobis
+        self.assertFalse(self.widget.Error.manifold_error.is_shown())
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.manifold_error.is_shown())
