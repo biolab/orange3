@@ -145,6 +145,7 @@ if HAVE_WEBENGINE:
             script.setInjectionPoint(injection_point)
             script.setWorldId(script.MainWorld)
             script.setRunsOnSubFrames(False)
+            self.page().scripts().insert(script)
             self.loadStarted.connect(
                 lambda: self.page().scripts().insert(script))
 
