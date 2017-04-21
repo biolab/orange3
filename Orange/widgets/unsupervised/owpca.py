@@ -55,6 +55,7 @@ class OWPCA(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         no_features = widget.Msg("At least 1 feature is required")
         no_instances = widget.Msg("At least 1 data instance is required")
+        sparse_data = widget.Msg("Sparse data is not supported")
 
     def __init__(self):
         super().__init__()
@@ -174,7 +175,11 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
+        self.clear_messages()
+        self.clear()
+        self.start_button.setEnabled(False)
         self.information()
+        self.data = None
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
@@ -183,36 +188,35 @@ class OWPCA(widget.OWWidget):
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
+            else:       # data was big and remote available
+                self.sampling_box.setVisible(True)
+                self.start_button.setText("Start remote computation")
+                self.start_button.setEnabled(True)
+        if not isinstance(data, SqlTable):
+            self.sampling_box.setVisible(False)
+        if isinstance(data, Table):
+            if data.is_sparse():
+                self.Error.sparse_data()
+                self.clear_outputs()
+                return
+            if len(data.domain.attributes) == 0:
+                self.Error.no_features()
+                self.clear_outputs()
+                return
+            if len(data) == 0:
+                self.Error.no_instances()
+                self.clear_outputs()
+                return
         self.data = data
         self.fit()
 
     def fit(self):
-        self.clear_messages()
         self.clear()
-        self.start_button.setEnabled(False)
+        self.Warning.trivial_components.clear()
         if self.data is None:
             return
         data = self.data
-        self._transformed = None
-        if isinstance(data, SqlTable): # data was big and remote available
-            self.sampling_box.setVisible(True)
-            self.start_button.setText("Start remote computation")
-            self.start_button.setEnabled(True)
-        else:
-            self.sampling_box.setVisible(False)
-            if len(data.domain.attributes) == 0:
-                self.Error.no_features()
-                self.send("Transformed data", None)
-                self.send("Components", None)
-                self.send("PCA", None)
-                return
-            if len(data) == 0:
-                self.Error.no_instances()
-                self.send("Transformed data", None)
-                self.send("Components", None)
-                self.send("PCA", None)
-                return
-
+        if not isinstance(data, SqlTable):
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
             cumulative = numpy.cumsum(variance_ratio)
@@ -237,7 +241,11 @@ class OWPCA(widget.OWWidget):
         self.plot_horlabels = []
         self.plot_horlines = []
         self.plot.clear()
-        self.Warning.trivial_components.clear()
+
+    def clear_outputs(self):
+        self.send("Transformed data", None)
+        self.send("Components", None)
+        self.send("PCA", self._pca_projector)
 
     def get_model(self):
         if self.rpca is None:
