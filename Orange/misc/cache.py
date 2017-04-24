@@ -26,13 +26,13 @@ def single_cache(func):
 def memoize_method(*lru_args, **lru_kwargs):
     """Memoize methods without keeping reference to `self`.
 
+    Using ordinary lru_cache on methods keeps a reference to the object in the cache,
+    creating a cycle that keeps the object from getting garbage collected.
+
     Parameters
     ----------
     lru_args
     lru_kwargs
-
-    Returns
-    -------
 
     See Also
     --------
