@@ -5,7 +5,7 @@ engines:
      languages:
      - python
  pep8:
-   enabled: true
+   enabled: false
  radon:
    enabled: true
  eslint:
