@@ -778,6 +778,7 @@ class OWPaintData(OWWidget):
     density = Setting(7)
     #: current data array (shape=(N, 3)) as presented on the output
     data = Setting(None, schema_only=True)
+    labels = Setting(["C1", "C2"], schema_only=True)
 
     graph_name = "plot"
 
@@ -803,7 +804,6 @@ class OWPaintData(OWWidget):
         #: a copy of this array (as seen when the `invalidate` method is
         #: called
         self.__buffer = None
-        self.labels = ["C1", "C2"]
 
         self.undo_stack = QUndoStack(self)
 
@@ -1298,7 +1298,7 @@ class OWPaintData(OWWidget):
         self.report_items("Painted data", settings)
         self.report_plot()
 
-def test():
+def main():
     from AnyQt.QtWidgets import QApplication
     import gc
     import sip
@@ -1317,4 +1317,4 @@ def test():
 
 
 if __name__ == "__main__":
-    sys.exit(test())
+    sys.exit(main())
