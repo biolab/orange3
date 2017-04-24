@@ -438,17 +438,16 @@ class OWTestLearners(OWWidget):
             elif self.test_data.domain.class_var != class_var:
                 self.Error.class_inconsistent()
                 return
+        elif self.test_data is not None:
+            self.Warning.test_data_unused()
 
         # items in need of an update
         items = [(key, slot) for key, slot in self.learners.items()
                  if slot.results is None]
         learners = [slot.learner for _, slot in items]
+
         if len(items) == 0:
             return
-
-        if self.test_data is not None and \
-                self.resampling != OWTestLearners.TestOnTest:
-            self.Warning.test_data_unused()
 
         rstate = 42
         def update_progress(finished):
