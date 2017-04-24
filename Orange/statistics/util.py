@@ -290,7 +290,7 @@ def nanmean(x):
     return np.nansum(x.data) / n_values
 
 
-def unique(x, return_counts=True):
+def unique(x, return_counts=False):
     """ Equivalent of np.unique that supports sparse or dense matrices. """
     if not sp.issparse(x):
         return np.unique(x, return_counts=return_counts)
