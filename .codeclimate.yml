@@ -1,18 +1,25 @@
 engines:
-  pep8:
-    enabled: true
-  eslint:
-    enabled: true
-  shellcheck:
-    enabled: true
-  csslint:
-    enabled: true
+ duplication:
+   enabled: true
+   config:
+     languages:
+     - python
+ pep8:
+   enabled: true
+ radon:
+   enabled: true
+ eslint:
+   enabled: false
+ shellcheck:
+   enabled: false
+ csslint:
+   enabled: false
 
 ratings:
-  paths:
-  - "**.py"
-  - "**.js"
-  - "**.sh"
-  - "**.css"
+ paths:
+ - "**.py"
+ - "**.js"
+ - "**.sh"
+ - "**.css"
 
 exclude_paths:
