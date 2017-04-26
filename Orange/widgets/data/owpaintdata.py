@@ -4,6 +4,7 @@ import sys
 import unicodedata
 import itertools
 from functools import partial
+from collections import namedtuple
 
 import numpy as np
 
@@ -71,7 +72,6 @@ def stack_on_condition(a, b, condition):
 # Data manipulation operators
 # ###########################
 
-from collections import namedtuple
 if sys.version_info < (3, 4):
     # use singledispatch backports from pypi
     from singledispatch import singledispatch
@@ -273,8 +273,7 @@ class PutInstanceTool(DataTool):
             event.accept()
             self.editingFinished.emit()
             return True
-        else:
-            return super().mousePressEvent(event)
+        return super().mousePressEvent(event)
 
 
 class PenTool(DataTool):
@@ -286,22 +285,19 @@ class PenTool(DataTool):
             self.editingStarted.emit()
             self.__handleEvent(event)
             return True
-        else:
-            return super().mousePressEvent()
+        return super().mousePressEvent()
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.__handleEvent(event)
             return True
-        else:
-            return super().mouseMoveEvent()
+        return super().mouseMoveEvent()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.editingFinished.emit()
             return True
-        else:
-            return super().mouseReleaseEvent()
+        return super().mouseReleaseEvent()
 
     def __handleEvent(self, event):
         pos = self.mapToPlot(event.pos())
@@ -328,23 +324,20 @@ class AirBrushTool(DataTool):
             self.__pos = self.mapToPlot(event.pos())
             self.__timer.start()
             return True
-        else:
-            return super().mousePressEvent(event)
+        return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.__pos = self.mapToPlot(event.pos())
             return True
-        else:
-            return super().mouseMoveEvent(event)
+        return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.__timer.stop()
             self.editingFinished.emit()
             return True
-        else:
-            return super().mouseReleaseEvent(event)
+        return super().mouseReleaseEvent(event)
 
     def __timout(self):
         self.issueCommand.emit(
@@ -355,8 +348,7 @@ class AirBrushTool(DataTool):
 def random_state(rstate):
     if isinstance(rstate, np.random.RandomState):
         return rstate
-    else:
-        return np.random.RandomState(rstate)
+    return np.random.RandomState(rstate)
 
 
 def create_data(x, y, radius, size, rstate):
@@ -384,23 +376,20 @@ class MagnetTool(DataTool):
             self._pos = self.mapToPlot(event.pos())
             self.__timer.start()
             return True
-        else:
-            return super().mousePressEvent(event)
+        return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self._pos = self.mapToPlot(event.pos())
             return True
-        else:
-            return super().mouseMoveEvent(event)
+        return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.__timer.stop()
             self.editingFinished.emit()
             return True
-        else:
-            return super().mouseReleaseEvent(event)
+        return super().mouseReleaseEvent(event)
 
     def __timeout(self):
         self.issueCommand.emit(
@@ -427,23 +416,20 @@ class JitterTool(DataTool):
             self._pos = self.mapToPlot(event.pos())
             self.__timer.start()
             return True
-        else:
-            return super().mousePressEvent(event)
+        return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self._pos = self.mapToPlot(event.pos())
             return True
-        else:
-            return super().mouseMoveEvent(event)
+        return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.__timer.stop()
             self.editingFinished.emit()
             return True
-        else:
-            return super().mouseReleaseEvent(event)
+        return super().mouseReleaseEvent(event)
 
     def _do(self):
         self.issueCommand.emit(
@@ -507,8 +493,7 @@ class SelectTool(DataTool):
             self.setSelectionRect(QRectF(pos, pos))
             event.accept()
             return True
-        else:
-            return super().mousePressEvent(event)
+        return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
@@ -516,8 +501,7 @@ class SelectTool(DataTool):
             self.setSelectionRect(QRectF(self._start_pos, pos).normalized())
             event.accept()
             return True
-        else:
-            return super().mouseMoveEvent(event)
+        return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -528,8 +512,7 @@ class SelectTool(DataTool):
             self._item.setCursor(Qt.OpenHandCursor)
             self._mouse_dragging = False
             return True
-        else:
-            return super().mouseReleaseEvent(event)
+        return super().mouseReleaseEvent(event)
 
     def activate(self):
         if self._item is None:
@@ -647,8 +630,7 @@ def indices_eq(ind1, ind2):
     if isinstance(ind1, tuple) and isinstance(ind2, tuple):
         if len(ind1) != len(ind2):
             return False
-        else:
-            return all(indices_eq(i1, i2) for i1, i2 in zip(ind1, ind2))
+        return all(indices_eq(i1, i2) for i1, i2 in zip(ind1, ind2))
     elif isinstance(ind1, slice) and isinstance(ind2, slice):
         return ind1 == ind2
     elif ind1 is ... and ind2 is ...:
@@ -658,8 +640,7 @@ def indices_eq(ind1, ind2):
 
     if ind1.shape != ind2.shape or ind1.dtype != ind2.dtype:
         return False
-    else:
-        return (ind1 == ind2).all()
+    return (ind1 == ind2).all()
 
 
 def merge_cmd(composit):
@@ -739,24 +720,23 @@ class ColoredListModel(itemmodels.PyListModel):
                 role == Qt.DecorationRole and \
                 0 <= index.row() < self.colors.number_of_colors:
             return gui.createAttributePixmap("", self.colors[index.row()])
-        else:
-            return super().data(index, role)
+        return super().data(index, role)
 
 
-def _i(name, icon_path="icons/paintdata",
-       widg_path=os.path.dirname(os.path.abspath(__file__))):
+def _icon(name, icon_path="icons/paintdata",
+        widg_path=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(widg_path, icon_path, name)
 
 
 class OWPaintData(OWWidget):
     TOOLS = [
-        ("Brush", "Create multiple instances", AirBrushTool, _i("brush.svg")),
-        ("Put", "Put individual instances", PutInstanceTool, _i("put.svg")),
+        ("Brush", "Create multiple instances", AirBrushTool, _icon("brush.svg")),
+        ("Put", "Put individual instances", PutInstanceTool, _icon("put.svg")),
         ("Select", "Select and move instances", SelectTool,
-            _i("select-transparent_42px.png")),
-        ("Jitter", "Jitter instances", JitterTool, _i("jitter.svg")),
-        ("Magnet", "Attract multiple instances", MagnetTool, _i("magnet.svg")),
-        ("Clear", "Clear the plot", ClearTool, _i("../../../icons/Dlg_clear.png"))
+         _icon("select-transparent_42px.png")),
+        ("Jitter", "Jitter instances", JitterTool, _icon("jitter.svg")),
+        ("Magnet", "Attract multiple instances", MagnetTool, _icon("magnet.svg")),
+        ("Clear", "Clear the plot", ClearTool, _icon("../../../icons/Dlg_clear.png"))
     ]
 
     name = "Paint Data"
@@ -778,6 +758,7 @@ class OWPaintData(OWWidget):
     density = Setting(7)
     #: current data array (shape=(N, 3)) as presented on the output
     data = Setting(None, schema_only=True)
+    labels = Setting(["C1", "C2"], schema_only=True)
 
     graph_name = "plot"
 
@@ -803,14 +784,13 @@ class OWPaintData(OWWidget):
         #: a copy of this array (as seen when the `invalidate` method is
         #: called
         self.__buffer = None
-        self.labels = ["C1", "C2"]
 
         self.undo_stack = QUndoStack(self)
 
         self.class_model = ColoredListModel(
             self.labels, self,
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled |
-                  Qt.ItemIsEditable)
+            Qt.ItemIsEditable)
 
         self.class_model.dataChanged.connect(self._class_value_changed)
         self.class_model.rowsInserted.connect(self._class_count_changed)
@@ -1118,8 +1098,7 @@ class OWPaintData(OWWidget):
         rows = self.classValuesView.selectedIndexes()
         if rows:
             return rows[0].row()
-        else:
-            return None
+        return None
 
     def set_current_tool(self, tool):
         prev_tool = self.current_tool.__class__
@@ -1172,14 +1151,14 @@ class OWPaintData(OWWidget):
         name = "Name"
 
         if (not self.hasAttr2 and
-            isinstance(cmd, (Move, MoveSelection, Jitter, Magnet))):
+                isinstance(cmd, (Move, MoveSelection, Jitter, Magnet))):
             # tool only supported if both x and y are enabled
             return
 
         if isinstance(cmd, Append):
             cls = self.selected_class_label()
             points = np.array([(p.x(), p.y() if self.hasAttr2 else 0, cls)
-                                  for p in cmd.points])
+                               for p in cmd.points])
             self.undo_stack.push(UndoCommand(Append(points), self, text=name))
         elif isinstance(cmd, Move):
             self.undo_stack.push(UndoCommand(cmd, self, text=name))
@@ -1298,7 +1277,7 @@ class OWPaintData(OWWidget):
         self.report_items("Painted data", settings)
         self.report_plot()
 
-def test():
+def main():
     from AnyQt.QtWidgets import QApplication
     import gc
     import sip
@@ -1317,4 +1296,4 @@ def test():
 
 
 if __name__ == "__main__":
-    sys.exit(test())
+    sys.exit(main())
