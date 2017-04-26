@@ -355,7 +355,7 @@ class OWTestLearners(OWWidget):
             self.Error.test_data_empty()
             data = None
         if data and not data.domain.class_var:
-            self.Error.class_required()
+            self.Error.class_required_test()
             data = None
         else:
             self.Error.class_required_test.clear()
