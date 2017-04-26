@@ -881,35 +881,26 @@ class TableTestCase(unittest.TestCase):
         f = filter.Values([filter.Values([f1, f2], conjunction=False), f3])
         self.assertEqual(41, len(f(d)))
 
-    def test_filter_value_continuous_as_string(self):
-        """
-        When compares strings it should compare strings and not numbers.
-        GH-2176
-        """
-        d = data.Table("iris")
-        domain = Domain(attributes=[ContinuousVariable("a")],
-                        class_vars=d.domain.class_vars,
-                        metas=[ContinuousVariable("c")])
-        table = Table.from_numpy(domain=domain,
-                                 X=d.X[:, 0:1],
-                                 Y=d.Y,
-                                 metas=d.X[:, 1:2])
-        v = table.columns
-        filters = ("Greater",
-                   "NotEqual",
-                   "Equal",
-                   "Less",
-                   "IsDefined",
-                   "LessEqual",
-                   "GreaterEqual",
-                   "Between",
-                   "Outside")
-        for fil in filters:
-            f = filter.FilterString(v.c,
-                                    getattr(filter.FilterString, fil),
-                                    ref='4.2',
-                                    max='42.0')
-            filter.Values([f])(table)
+    def test_filter_string_works_for_numeric_columns(self):
+        var = StringVariable("s")
+        data = Table(Domain([], metas=[var]), [[x] for x in range(21)])
+        # 1, 2, 3, ..., 18, 19, 20
+
+        fs = filter.FilterString
+        filters = [
+            ((fs.Greater, "5"), dict(rows=4)),
+            # 6, 7, 8, 9
+            ((fs.Between, "15", "2"), dict(rows=6)),
+            # 15, 16, 17, 18, 19, 2
+            ((fs.Contains, "2"), dict(rows=3)),
+            # 2, 12, 20
+        ]
+
+        for args, expected in filters:
+            f = fs(var, *args)
+            filtered_data = filter.Values([f])(data)
+            self.assertEqual(len(filtered_data), expected["rows"],
+                             "{} returned wrong number of rows".format(args))
 
     def test_filter_value_continuous(self):
         d = data.Table("iris")
