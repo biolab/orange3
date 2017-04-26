@@ -1134,10 +1134,10 @@ class Table(MutableSequence, Storage):
         return self.from_table_rows(self, sel)
 
     def _filter_values(self, filter):
-        selection = self._filter_values_to_indicator(filter)
+        selection = self._values_filter_to_indicator(filter)
         return self.from_table(self.domain, self, selection)
 
-    def _filter_values_to_indicator(self, filter):
+    def _values_filter_to_indicator(self, filter):
         """Return selection of rows matching the filter conditions
 
         Handles conjunction/disjunction and negate modifiers
@@ -1191,77 +1191,130 @@ class Table(MutableSequence, Storage):
             FilterStringList, Values
         )
         if isinstance(filter, Values):
-            return self._filter_values_to_indicator(filter)
+            return self._values_filter_to_indicator(filter)
 
         col = self.get_column_view(filter.column)[0]
-        if isinstance(filter, FilterDiscrete) and filter.values is None \
-                or isinstance(filter, FilterContinuous) and \
-                                filter.oper == filter.IsDefined:
-            col = col.astype(float)
-            return ~np.isnan(col)
-        elif isinstance(filter, FilterString) and \
-                        filter.oper == filter.IsDefined:
-            return col.astype(bool)
-        elif isinstance(filter, FilterDiscrete):
-            s2 = np.zeros(len(self), dtype=bool)
-            for val in filter.values:
-                if not isinstance(val, Real):
-                    val = self.domain[filter.column].to_val(val)
-                s2 += (col == val)
-            return s2
-        elif isinstance(filter, FilterStringList):
+
+        if isinstance(filter, FilterDiscrete):
+            return self._discrete_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterContinuous):
+            return self._continuous_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterString):
+            return self._string_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterStringList):
             if not filter.case_sensitive:
-                # noinspection PyTypeChecker
                 col = np.char.lower(np.array(col, dtype=str))
                 vals = [val.lower() for val in filter.values]
             else:
                 vals = filter.values
             return reduce(operator.add, (col == val for val in vals))
-        elif isinstance(filter, FilterRegex):
-            return np.vectorize(filter)(col)
-        elif isinstance(filter, (FilterContinuous, FilterString)):
-            col = col.astype(str) if isinstance(filter, FilterString) else col
-            if (isinstance(filter, FilterString) and
-                    not filter.case_sensitive):
-                # noinspection PyTypeChecker
-                col = np.char.lower(np.array(col, dtype=str))
-                fmin = filter.min.lower()
-                if filter.oper in [filter.Between, filter.Outside]:
-                    fmax = filter.max.lower()
-            else:
-                fmin, fmax = filter.min, filter.max
-            if filter.oper == filter.Equal:
-                col = (col == fmin)
-            elif filter.oper == filter.NotEqual:
-                col = (col != fmin)
-            elif filter.oper == filter.Less:
-                col = (col < fmin)
-            elif filter.oper == filter.LessEqual:
-                col = (col <= fmin)
-            elif filter.oper == filter.Greater:
-                col = (col > fmin)
-            elif filter.oper == filter.GreaterEqual:
-                col = (col >= fmin)
-            elif filter.oper == filter.Between:
-                col = (col >= fmin) * (col <= fmax)
-            elif filter.oper == filter.Outside:
-                col = (col < fmin) + (col > fmax)
-            elif not isinstance(filter, FilterString):
-                raise TypeError("Invalid operator")
-            elif filter.oper == filter.Contains:
-                col = np.fromiter((fmin in e for e in col),
-                                  dtype=bool)
-            elif filter.oper == filter.StartsWith:
-                col = np.fromiter((e.startswith(fmin) for e in col),
-                                  dtype=bool)
-            elif filter.oper == filter.EndsWith:
-                col = np.fromiter((e.endswith(fmin) for e in col),
-                                  dtype=bool)
-            else:
-                raise TypeError("Invalid operator")
 
-            return col
+        if isinstance(filter, FilterRegex):
+            return np.vectorize(filter)(col)
+
         raise TypeError("Invalid filter")
+
+    def _discrete_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given discrete filter.
+
+        Parameters
+        ----------
+        filter: FilterDiscrete
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.values is None:  # <- is defined filter
+            col = col.astype(float)
+            return ~np.isnan(col)
+
+        sel = np.zeros(len(self), dtype=bool)
+        for val in filter.values:
+            if not isinstance(val, Real):
+                val = self.domain[filter.column].to_val(val)
+            sel += (col == val)
+        return sel
+
+    def _continuous_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given continuous filter.
+
+        Parameters
+        ----------
+        filter: FilterContinuous
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.oper == filter.IsDefined:
+            col = col.astype(float)
+            return ~np.isnan(col)
+
+        return self._range_filter_to_indicator(filter, col, filter.min, filter.max)
+
+    def _string_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given string filter.
+
+        Parameters
+        ----------
+        filter: FilterString
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.oper == filter.IsDefined:
+            return col.astype(bool)
+
+        col = col.astype(str)
+        fmin = filter.min or ""
+        fmax = filter.max or ""
+
+        if not filter.case_sensitive:
+            # convert all to lower case
+            col = np.char.lower(col)
+            fmin = fmin.lower()
+            fmax = fmax.lower()
+
+        if filter.oper == filter.Contains:
+            return np.fromiter((fmin in e for e in col),
+                               dtype=bool)
+        if filter.oper == filter.StartsWith:
+            return np.fromiter((e.startswith(fmin) for e in col),
+                               dtype=bool)
+        if filter.oper == filter.EndsWith:
+            return np.fromiter((e.endswith(fmin) for e in col),
+                               dtype=bool)
+
+        return self._range_filter_to_indicator(filter, col, fmin, fmax)
+
+    @staticmethod
+    def _range_filter_to_indicator(filter, col, fmin, fmax):
+        if filter.oper == filter.Equal:
+            return col == fmin
+        if filter.oper == filter.NotEqual:
+            return col != fmin
+        if filter.oper == filter.Less:
+            return col < fmin
+        if filter.oper == filter.LessEqual:
+            return col <= fmin
+        if filter.oper == filter.Greater:
+            return col > fmin
+        if filter.oper == filter.GreaterEqual:
+            return col >= fmin
+        if filter.oper == filter.Between:
+            return (col >= fmin) * (col <= fmax)
+        if filter.oper == filter.Outside:
+            return (col < fmin) + (col > fmax)
+
+        raise TypeError("Invalid operator")
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
