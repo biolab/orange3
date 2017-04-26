@@ -1,0 +1,25 @@
+engines:
+ duplication:
+   enabled: true
+   config:
+     languages:
+     - python
+ pep8:
+   enabled: false
+ radon:
+   enabled: true
+ eslint:
+   enabled: false
+ shellcheck:
+   enabled: false
+ csslint:
+   enabled: false
+
+ratings:
+ paths:
+ - "**.py"
+ - "**.js"
+ - "**.sh"
+ - "**.css"
+
+exclude_paths:
