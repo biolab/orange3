@@ -1133,10 +1133,26 @@ class Table(MutableSequence, Storage):
             sel = np.logical_not(sel)
         return self.from_table_rows(self, sel)
 
-    def _filter_values_indicators(self, filter):
-        from Orange.data import filter as data_filter
+    def _filter_values(self, filter):
+        selection = self._filter_values_to_indicator(filter)
+        return self.from_table(self.domain, self, selection)
 
-        if isinstance(filter, data_filter.Values):
+    def _filter_values_to_indicator(self, filter):
+        """Return selection of rows matching the filter conditions
+
+        Handles conjunction/disjunction and negate modifiers
+
+        Parameters
+        ----------
+        filter: Values object containing the conditions
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        from Orange.data.filter import Values
+
+        if isinstance(filter, Values):
             conditions = filter.conditions
             conjunction = filter.conjunction
         else:
@@ -1148,110 +1164,104 @@ class Table(MutableSequence, Storage):
             sel = np.zeros(len(self), dtype=bool)
 
         for f in conditions:
-            if isinstance(f, data_filter.Values):
-                if conjunction:
-                    sel *= self._filter_values_indicators(f)
-                else:
-                    sel += self._filter_values_indicators(f)
-                continue
-            col = self.get_column_view(f.column)[0]
-            if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
-                    or isinstance(f, data_filter.FilterContinuous) and \
-                                    f.oper == f.IsDefined:
-                col = col.astype(float)
-                if conjunction:
-                    sel *= ~np.isnan(col)
-                else:
-                    sel += ~np.isnan(col)
-            elif isinstance(f, data_filter.FilterString) and \
-                            f.oper == f.IsDefined:
-                if conjunction:
-                    sel *= col.astype(bool)
-                else:
-                    sel += col.astype(bool)
-            elif isinstance(f, data_filter.FilterDiscrete):
-                if conjunction:
-                    s2 = np.zeros(len(self), dtype=bool)
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        s2 += (col == val)
-                    sel *= s2
-                else:
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        sel += (col == val)
-            elif isinstance(f, data_filter.FilterStringList):
-                if not f.case_sensitive:
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    vals = [val.lower() for val in f.values]
-                else:
-                    vals = f.values
-                if conjunction:
-                    sel *= reduce(operator.add,
-                                  (col == val for val in vals))
-                else:
-                    sel = reduce(operator.add,
-                                 (col == val for val in vals), sel)
-            elif isinstance(f, data_filter.FilterRegex):
-                sel = np.vectorize(f)(col)
-            elif isinstance(f, (data_filter.FilterContinuous,
-                                data_filter.FilterString)):
-                col = col.astype(str) if isinstance(f, data_filter.FilterString) else col
-                if (isinstance(f, data_filter.FilterString) and
-                        not f.case_sensitive):
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    fmin = f.min.lower()
-                    if f.oper in [f.Between, f.Outside]:
-                        fmax = f.max.lower()
-                else:
-                    fmin, fmax = f.min, f.max
-                if f.oper == f.Equal:
-                    col = (col == fmin)
-                elif f.oper == f.NotEqual:
-                    col = (col != fmin)
-                elif f.oper == f.Less:
-                    col = (col < fmin)
-                elif f.oper == f.LessEqual:
-                    col = (col <= fmin)
-                elif f.oper == f.Greater:
-                    col = (col > fmin)
-                elif f.oper == f.GreaterEqual:
-                    col = (col >= fmin)
-                elif f.oper == f.Between:
-                    col = (col >= fmin) * (col <= fmax)
-                elif f.oper == f.Outside:
-                    col = (col < fmin) + (col > fmax)
-                elif not isinstance(f, data_filter.FilterString):
-                    raise TypeError("Invalid operator")
-                elif f.oper == f.Contains:
-                    col = np.fromiter((fmin in e for e in col),
-                                      dtype=bool)
-                elif f.oper == f.StartsWith:
-                    col = np.fromiter((e.startswith(fmin) for e in col),
-                                      dtype=bool)
-                elif f.oper == f.EndsWith:
-                    col = np.fromiter((e.endswith(fmin) for e in col),
-                                      dtype=bool)
-                else:
-                    raise TypeError("Invalid operator")
-                if conjunction:
-                    sel *= col
-                else:
-                    sel += col
+            selection = self._filter_to_indicator(f)
+
+            if conjunction:
+                sel *= selection
             else:
-                raise TypeError("Invalid filter")
+                sel += selection
 
         if filter.negate:
             sel = ~sel
         return sel
 
-    def _filter_values(self, filter):
-        sel = self._filter_values_indicators(filter)
-        return self.from_table(self.domain, self, sel)
+    def _filter_to_indicator(self, filter):
+        """Return selection of rows that match the condition.
+
+        Parameters
+        ----------
+        filter: ValueFilter describing the condition
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        from Orange.data.filter import (
+            FilterContinuous, FilterDiscrete, FilterRegex, FilterString,
+            FilterStringList, Values
+        )
+        if isinstance(filter, Values):
+            return self._filter_values_to_indicator(filter)
+
+        col = self.get_column_view(filter.column)[0]
+        if isinstance(filter, FilterDiscrete) and filter.values is None \
+                or isinstance(filter, FilterContinuous) and \
+                                filter.oper == filter.IsDefined:
+            col = col.astype(float)
+            return ~np.isnan(col)
+        elif isinstance(filter, FilterString) and \
+                        filter.oper == filter.IsDefined:
+            return col.astype(bool)
+        elif isinstance(filter, FilterDiscrete):
+            s2 = np.zeros(len(self), dtype=bool)
+            for val in filter.values:
+                if not isinstance(val, Real):
+                    val = self.domain[filter.column].to_val(val)
+                s2 += (col == val)
+            return s2
+        elif isinstance(filter, FilterStringList):
+            if not filter.case_sensitive:
+                # noinspection PyTypeChecker
+                col = np.char.lower(np.array(col, dtype=str))
+                vals = [val.lower() for val in filter.values]
+            else:
+                vals = filter.values
+            return reduce(operator.add, (col == val for val in vals))
+        elif isinstance(filter, FilterRegex):
+            return np.vectorize(filter)(col)
+        elif isinstance(filter, (FilterContinuous, FilterString)):
+            col = col.astype(str) if isinstance(filter, FilterString) else col
+            if (isinstance(filter, FilterString) and
+                    not filter.case_sensitive):
+                # noinspection PyTypeChecker
+                col = np.char.lower(np.array(col, dtype=str))
+                fmin = filter.min.lower()
+                if filter.oper in [filter.Between, filter.Outside]:
+                    fmax = filter.max.lower()
+            else:
+                fmin, fmax = filter.min, filter.max
+            if filter.oper == filter.Equal:
+                col = (col == fmin)
+            elif filter.oper == filter.NotEqual:
+                col = (col != fmin)
+            elif filter.oper == filter.Less:
+                col = (col < fmin)
+            elif filter.oper == filter.LessEqual:
+                col = (col <= fmin)
+            elif filter.oper == filter.Greater:
+                col = (col > fmin)
+            elif filter.oper == filter.GreaterEqual:
+                col = (col >= fmin)
+            elif filter.oper == filter.Between:
+                col = (col >= fmin) * (col <= fmax)
+            elif filter.oper == filter.Outside:
+                col = (col < fmin) + (col > fmax)
+            elif not isinstance(filter, FilterString):
+                raise TypeError("Invalid operator")
+            elif filter.oper == filter.Contains:
+                col = np.fromiter((fmin in e for e in col),
+                                  dtype=bool)
+            elif filter.oper == filter.StartsWith:
+                col = np.fromiter((e.startswith(fmin) for e in col),
+                                  dtype=bool)
+            elif filter.oper == filter.EndsWith:
+                col = np.fromiter((e.endswith(fmin) for e in col),
+                                  dtype=bool)
+            else:
+                raise TypeError("Invalid operator")
+
+            return col
+        raise TypeError("Invalid filter")
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
