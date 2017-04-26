@@ -37,16 +37,10 @@ Example
 -------
 
 At the moment, the only widget which gives the right type of signal
-needed by the **Calibration Plot** is :doc:`Test&Score <../evaluation/testlearners>`. The Calibration
+needed by the **Calibration Plot** is :doc:`Test&Score <../evaluation/testandscore>`. The Calibration
 Plot will hence always follow Test&Score and, since it has no
 outputs, no other widgets follow it.
 
-Here is a typical example, where we compare three classifiers (namely
-:doc:`Naive Bayes<../classify/naivebayes>`, :doc:`Classification Tree <../classify/classificationtree>` and :doc:`Majority <../classify/majority>`) and input
-them into :doc:`Test&Score <../evaluation/testlearners>`. We used the *Titanic* data set. Test&Score then displays evaluation
-results for each classifier. Then we draw **Calibration Plot** and :doc:`ROC
-Analysis <../evaluation/rocanalysis>` widgets from Test&Score to further analyze the performance
-of classifiers. **Calibration Plot** enables you to see prediction accuracy
-of class probabilities in a plot.
+Here is a typical example, where we compare three classifiers (namely :doc:`Naive Bayes<../model/naivebayes>`, :doc:`Tree <../model/tree>` and :doc:`Constant <../model/constant>`) and input them into :doc:`Test&Score <../evaluation/testandscore>`. We used the *Titanic* data set. Test&Score then displays evaluation results for each classifier. Then we draw **Calibration Plot** and :doc:`ROC Analysis <../evaluation/rocanalysis>` widgets from Test&Score to further analyze the performance of classifiers. **Calibration Plot** enables you to see prediction accuracy of class probabilities in a plot.
 
 .. figure:: images/CalibrationPlot-example.png

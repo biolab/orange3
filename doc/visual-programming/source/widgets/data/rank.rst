@@ -69,7 +69,7 @@ first split the data into a training set and a test set. In the upper branch, th
 training data passes through the **Rank** widget to select the most
 informative attributes, while in the lower branch there is no feature
 selection. Both feature selected and original data sets are passed to
-their own :doc:`Test & Score <../evaluation/testlearners>` widgets, which develop a *Naive Bayes*
+their own :doc:`Test & Score <../evaluation/testandscore>` widgets, which develop a *Naive Bayes*
 classifier and score it on a test set.
 
 .. figure:: images/Rank-and-Test.png

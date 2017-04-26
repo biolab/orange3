@@ -59,7 +59,7 @@ which can be found in the intersection of the two circles.
 
 The **Venn Diagram** widget can be also used for exploring different
 prediction models. In the following example, we analysed 3 prediction
-methods, namely :doc:`Naive Bayes <../classify/naivebayes>`, :doc:`SVM Learner <../classify/svm>` and :doc:`Random Forest Learner<../classify/randomforest>`, according to their misclassified instances. By selecting
+methods, namely :doc:`Naive Bayes <../model/naivebayes>`, :doc:`SVM <../model/svm>` and :doc:`Random Forest <../model/randomforest>`, according to their misclassified instances. By selecting
 misclassifications in the three :doc:`Confusion Matrix <../evaluation/confusionmatrix>` widgets and sending
 them to Venn diagram, we can see all the misclassification instances
 visualized per method used. Then we open **Venn Diagram** and select,

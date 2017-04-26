@@ -57,13 +57,12 @@ Example
 -------
 
 At the moment, the only widget which gives the right type of the signal
-needed by the **Lift Curve** is :doc:`Test&Score <../evaluation/testlearners>`.
+needed by the **Lift Curve** is :doc:`Test&Score <../evaluation/testandscore>`.
 
 In the example below, we try to see the prediction quality for the class
 'survived' on the *Titanic* data set. We compared three different
 classifiers in the Test Learners widget and sent them to Lift Curve to see
-their performance against a random model. We see the :doc:`Classification
-Tree <../classify/classificationtree>` classifier is the best out of the three, since it best aligns
+their performance against a random model. We see the :doc:`Tree <../model/tree>` classifier is the best out of the three, since it best aligns
 with *lift convex hull*. We also see that its performance is the best
 for the first 30% of the population (in order of descending
 probability), which we can set as the threshold for optimal

@@ -29,7 +29,7 @@ The selection of the elements in the matrix feeds the corresponding
 instances into the output signal. This way, one can observe which
 specific instances were misclassified and how.
 
-The widget usually gets the evaluation results from :doc:`Test Learners <../evaluation/testlearners>`;
+The widget usually gets the evaluation results from :doc:`Test & Score <../evaluation/testandscore>`;
 an example of the schema is shown below.
 
 .. figure:: images/ConfusionMatrix-stamped.png
@@ -37,10 +37,10 @@ an example of the schema is shown below.
 1. When evaluation results contain data on multiple learning algorithms,
    we have to choose one in the *Learners* box.
 
-The snapshot shows the confusion matrix for :doc:`Classification Tree <../classify/classificationtree>` and
-:doc:`Naive Bayesian <../classify/naivebayes>` classifier trained and tested on the *Iris* data. The
+The snapshot shows the confusion matrix for :doc:`Tree <../model/tree>` and
+:doc:`Naive Bayesian <../model/naivebayes>` models trained and tested on the *iris* data. The
 righthand side of the widget contains the matrix for the naive Bayesian
-classifier (since this classifier is selected on the left). Each row
+model (since this model is selected on the left). Each row
 corresponds to a correct class, while columns represent the predicted
 classes. For instance, four instances of *Iris-versicolor* were
 misclassified as *Iris-virginica*. The rightmost column gives the number
@@ -86,12 +86,12 @@ into each class (e.g., 48 instances were classified into virginica).
 Example
 -------
 
-The following schema demonstrates well what this widget can be used for.
+The following workflow demonstrates what this widget can be used for.
 
 .. figure:: images/ConfusionMatrix-Schema.png
 
-:doc:`Test&Score <../evaluation/testlearners>` gets the data from :doc:`File <../data/file>` and two learning
-algorithms from :doc:`Naive Bayes <../classify/naivebayes>` and :doc:`Classification Tree <../classify/classificationtree>`. It performs
+:doc:`Test & Score <../evaluation/testandscore>` gets the data from :doc:`File <../data/file>` and two learning
+algorithms from :doc:`Naive Bayes <../model/naivebayes>` and :doc:`Tree <../model/tree>`. It performs
 cross-validation or some other train-and-test procedures to get class
 predictions by both algorithms for all (or some) data instances. The test
 results are fed into the **Confusion Matrix**, where we can observe how

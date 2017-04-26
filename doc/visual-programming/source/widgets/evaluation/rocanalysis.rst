@@ -111,6 +111,6 @@ widget can also determine the optimal classifier and threshold.
 Example
 -------
 
-At the moment, the only widget which gives the right type of signal needed by the **ROC Analysis** is :doc:`Test&Score <../evaluation/testlearners>`. Below, we compare two classifiers, namely :doc:`Classification Tree <../classify/classificationtree>` and :doc:`Naive Bayes <../classify/naivebayes>`, in **Test&Score** and then compare their performance in **ROC Analysis**, :doc:`Life Curve <../evaluation/liftcurve>` and :doc:`Calibration Plot <../evaluation/calibrationplot>`.
+At the moment, the only widget which gives the right type of signal needed by the **ROC Analysis** is :doc:`Test&Score <../evaluation/testandscore>`. Below, we compare two classifiers, namely :doc:`Tree <../model/tree>` and :doc:`Naive Bayes <../model/naivebayes>`, in **Test&Score** and then compare their performance in **ROC Analysis**, :doc:`Life Curve <../evaluation/liftcurve>` and :doc:`Calibration Plot <../evaluation/calibrationplot>`.
 
 .. figure:: images/ROCAnalysis-example.png
