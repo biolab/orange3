@@ -881,6 +881,36 @@ class TableTestCase(unittest.TestCase):
         f = filter.Values([filter.Values([f1, f2], conjunction=False), f3])
         self.assertEqual(41, len(f(d)))
 
+    def test_filter_value_continuous_as_string(self):
+        """
+        When compares strings it should compare strings and not numbers.
+        GH-2176
+        """
+        d = data.Table("iris")
+        domain = Domain(attributes=[ContinuousVariable("a")],
+                        class_vars=d.domain.class_vars,
+                        metas=[ContinuousVariable("c")])
+        table = Table.from_numpy(domain=domain,
+                                 X=d.X[:, 0:1],
+                                 Y=d.Y,
+                                 metas=d.X[:, 1:2])
+        v = table.columns
+        filters = ("Greater",
+                   "NotEqual",
+                   "Equal",
+                   "Less",
+                   "IsDefined",
+                   "LessEqual",
+                   "GreaterEqual",
+                   "Between",
+                   "Outside")
+        for fil in filters:
+            f = filter.FilterString(v.c,
+                                    getattr(filter.FilterString, fil),
+                                    ref='4.2',
+                                    max='42.0')
+            filter.Values([f])(table)
+
     def test_filter_value_continuous(self):
         d = data.Table("iris")
         col = d.X[:, 2]

@@ -1199,6 +1199,7 @@ class Table(MutableSequence, Storage):
                 sel = np.vectorize(f)(col)
             elif isinstance(f, (data_filter.FilterContinuous,
                                 data_filter.FilterString)):
+                col = col.astype(str) if isinstance(f, data_filter.FilterString) else col
                 if (isinstance(f, data_filter.FilterString) and
                         not f.case_sensitive):
                     # noinspection PyTypeChecker
