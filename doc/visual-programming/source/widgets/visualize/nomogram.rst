@@ -61,7 +61,7 @@ Example
 -------
 
 The **Nomogram** widget should be used immediately after trained classifier widget
-(e.g. :doc:`Naive Bayes <../classify/naivebayes>`. It can also be passed a data
+(e.g. :doc:`Naive Bayes <../model/naivebayes>`. It can also be passed a data
 instance using any widget that enables selection
 (e.g. :doc:`Data Table <../data/datatable>`) as shown in the workflow below.
 

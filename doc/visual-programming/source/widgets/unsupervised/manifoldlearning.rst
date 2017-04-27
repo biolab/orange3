@@ -31,6 +31,7 @@ visualized with :doc:`Scatter Plot <../visualize/scatterplot>` or other visualiz
 .. figure:: images/manifold-learning-stamped.png
 
 1. Method for manifold learning:
+
    - `t-SNE <http://scikit-learn.org/stable/modules/manifold.html#t-distributed-stochastic-neighbor-embedding-t-sne>`_
    - `MDS <http://scikit-learn.org/stable/modules/manifold.html#multi-dimensional-scaling-mds>`_, see also :doc:`MDS widget <../unsupervised/mds>`
    - `Isomap <http://scikit-learn.org/stable/modules/manifold.html#isomap>`_
@@ -38,6 +39,7 @@ visualized with :doc:`Scatter Plot <../visualize/scatterplot>` or other visualiz
    - `Spectral Embedding <http://scikit-learn.org/stable/modules/manifold.html#spectral-embedding>`_
 
 2. Set parameters for the method:
+
    - t-SNE (distance measures):
       - *Euclidean* distance
       - *Manhattan*

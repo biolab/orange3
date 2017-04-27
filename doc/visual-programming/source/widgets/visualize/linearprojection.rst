@@ -68,9 +68,9 @@ References
 Koren Y., Carmel L. (2003). Visualization of labeled data using linear
 transformations. In Proceedings of IEEE Information Visualization 2003,
 (InfoVis'03). Available
-`here <http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=3DDF0DB68D8AB9949820A19B0344C1F3?doi=10.1.1.13.8657&rep=rep1&type=pdf>`_.
+`here <http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=3DDF0DB68D8AB9949820A19B0344C1F3?doi=10.1.1.13.8657&rep=rep1&type=pdf>`__.
 
 Boulesteix A.-L., Strimmer K. (2006). Partial least squares: a versatile
 tool for the analysis of high-dimensional genomic data. Briefings in
 Bioinformatics, 8(1), 32-44. Abstract
-`here <http://bib.oxfordjournals.org/content/8/1/32.abstract>`_.
+`here <http://bib.oxfordjournals.org/content/8/1/32.abstract>`__.
