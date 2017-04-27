@@ -26,17 +26,23 @@ class TreeLearner(Learner):
 
     If the tree is not binary, it can contain zero-branches.
 
-    Args:
-        binarize: if `True` the inducer will find optimal split into two
-            subsets for values of discrete attributes. If `False` (default),
-            each value gets its branch.
-        min_samples_leaf: the minimal number of data instances in a leaf
-        min_samples_split: the minimal number of data instances that is split
-            into subgroups
-        max_depth: the maximal depth of the tree
+    Parameters
+    ----------
+    binarize
+        if `True` the inducer will find optimal split into two
+        subsets for values of discrete attributes. If `False` (default),
+        each value gets its branch.
+    min_samples_leaf
+        the minimal number of data instances in a leaf
+    min_samples_split
+        the minimal number of data instances that is split
+        into subgroups
+    max_depth
+        the maximal depth of the tree
 
-    Returns:
-        instance of OrangeTreeModel
+    Returns
+    -------
+    instance of OrangeTreeModel
     """
     __returns__ = TreeModel
 
@@ -57,10 +63,11 @@ class TreeLearner(Learner):
     def _select_attr(self, data):
         """Select the attribute for the next split.
 
-        Returns:
-            tuple with an instance of Node and a numpy array indicating
-            the branch index for each data instance, or -1 if data instance
-            is dropped
+        Returns
+        -------
+        tuple with an instance of Node and a numpy array indicating
+        the branch index for each data instance, or -1 if data instance
+        is dropped
         """
         # Prevent false warnings by pylint
         attr = attr_no = None
