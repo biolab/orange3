@@ -94,7 +94,7 @@ sampled data is sent as a token to the output channel with a name
 
 Although our widget is now ready to test, for a final touch, let's
 design an icon for our widget. As specified in the widget header, we
-will call it :download:`DataSamplerA.svg <orange-demo/orangedeomo/icons/DataSamplerA.svg>` and will
+will call it :download:`DataSamplerA.svg <orange-demo/orangedemo/icons/DataSamplerA.svg>` and will
 put it in `icons` subdirectory of `orangedemo` directory.
 
 
