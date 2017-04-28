@@ -652,7 +652,7 @@ class OWBoxPlot(widget.OWWidget):
 
         bv = self.box_view
         viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
-        self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
+        self.scale_x = scale_x = (viewrect.width() - 60) / (gtop - gbottom)
 
         # In principle we should repeat this until convergence since the new
         # scaling is too conservative. (No chance am I doing this.)
@@ -660,7 +660,7 @@ class OWBoxPlot(widget.OWWidget):
                   for stat, mean_lab in zip(stats, mean_labels))
         if mlb < gbottom:
             gbottom = mlb
-            self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
+            self.scale_x = scale_x = (viewrect.width() - 60) / (gtop - gbottom)
 
         self.scene_min_x = gbottom * scale_x
         self.scene_width = (gtop - gbottom) * scale_x
