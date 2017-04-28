@@ -496,7 +496,7 @@ class FeatureSelectEditor(BaseEditor):
              {"text": "ANOVA"},
              {"text": "Chi2"},
              {"text": "RReliefF"},
-             {"text": "UnivariateLinearRegression"}
+             {"text": "Univariate Linear Regression"}
             ]
         )
         self.layout().addWidget(self.__uni_fs)
