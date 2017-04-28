@@ -308,11 +308,12 @@ class Results:
     def fit(self, train_data, test_data=None):
         """Fits `self.learners` using folds sampled from the provided data.
 
-        Args:
-            train_data (Table): table to sample train folds
-            test_data (Optional[Table]): tap to sample test folds
-                of None then `train_data` will be used
-
+        Parameters
+        ----------
+        train_data : Table
+            table to sample train folds
+        test_data : Optional[Table]
+            tap to sample test folds of None then `train_data` will be used
         """
         test_data = test_data or train_data
         self.setup_indices(train_data, test_data)

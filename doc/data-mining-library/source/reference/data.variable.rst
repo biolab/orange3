@@ -87,7 +87,7 @@ Base class
     .. automethod:: str_val
     .. automethod:: to_val
     .. automethod:: val_from_str_add
-    .. automethod:: compute_value
+    .. autoattribute:: compute_value
 
     Method `compute_value` is usually invoked behind the scenes in
     conversion of domains::

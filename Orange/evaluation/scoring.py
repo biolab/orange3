@@ -103,6 +103,7 @@ class Recall(Score):
 class F1(Score):
     """
     ${sklpar}
+
     Parameters
     ----------
     results : Orange.evaluation.Results
@@ -144,6 +145,7 @@ class PrecisionRecallFSupport(Score):
 class AUC(Score):
     """
     ${sklpar}
+
     Parameters
     ----------
     results : Orange.evaluation.Results
@@ -200,6 +202,7 @@ class AUC(Score):
 class LogLoss(Score):
     """
     ${sklpar}
+
     Parameters
     ----------
     results : Orange.evaluation.Results

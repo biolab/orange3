@@ -36,7 +36,7 @@ In addition, we add the following guidelines:
 * Only ever `import *` to make objects available in another namespace,
   preferably in *\_\_init\_\_.py*. Everywhere else use explicit object
   imports.
-* Use [Napoleon]-comaptible (e.g. NumPy style) docstrings, preferably with
+* Use [Napoleon]-compatible (e.g. NumPy style) docstrings, preferably with
   [tests].
 * When instantiating Qt widgets, pass static property values as
   [keyword args to the constructor] instead of calling separate property
@@ -182,8 +182,10 @@ Read more [about squashing commits].
 
 Documentation
 -------------
-Documentation in located in doc folder. You can build it with:
+Documentation in located in doc folder. It is split into three parts:
+data-mining-library (scripting api), development (development guides),
+and visual-programming (widget help files). You can build it with:
 
-    cd doc
+    cd doc/<part>
     make html
     # Now open build/html/index.html to see it

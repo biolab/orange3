@@ -129,7 +129,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #: responsible for displaying messages within the widget in an
     #: appropriate manner.
     want_message_bar = True
-    #: Widget painted by `Save graph" button
+    #: Widget painted by `Save graph` button
     graph_name = None
     graph_writers = FileFormat.img_writers
 
