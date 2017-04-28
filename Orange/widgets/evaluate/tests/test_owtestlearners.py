@@ -1,7 +1,12 @@
 # pylint: disable=missing-docstring
+# pylint: disable=protected-access
+import unittest
+
+import collections
 import numpy as np
 
-import unittest
+from AnyQt.QtWidgets import QMenu
+from AnyQt.QtCore import QPoint
 
 from Orange.data import Table, Domain
 from Orange.classification import MajorityLearner
@@ -69,6 +74,63 @@ class TestOWTestLearners(WidgetTest):
         self.assertFalse(rb.isEnabled())
         self.assertEqual(self.widget.resampling, OWTestLearners.KFold)
         self.assertFalse(self.widget.features_combo.isEnabled())
+
+    def test_update_shown_columns(self):
+        w = self.widget  #: OWTestLearners
+        all, shown = "MABDEFG", "ABDF"
+        header = w.view.horizontalHeader()
+        w.shown_scores = set(shown)
+        w.result_model.setHorizontalHeaderLabels(list(all))
+        w._update_shown_columns()
+        for i, name in enumerate(all):
+            self.assertEqual(name == "M" or name in shown,
+                             not header.isSectionHidden(i),
+                             msg="error in section {}({})".format(i, name))
+
+        w.shown_scores = set()
+        w._update_shown_columns()
+        for i, name in enumerate(all):
+            self.assertEqual(i == 0,
+                             not header.isSectionHidden(i),
+                             msg="error in section {}({})".format(i, name))
+
+    def test_show_column_chooser(self):
+        w = self.widget  #: OWTestLearners
+        all, shown = "MABDEFG", "ABDF"
+        header = w.view.horizontalHeader()
+        w.shown_scores = set(shown)
+        w.result_model.setHorizontalHeaderLabels(list(all))
+        w._update_shown_columns()
+
+        actions = collections.OrderedDict()
+        menu_add_action = QMenu.addAction
+
+        def addAction(menu, a):
+            action = menu_add_action(menu, a)
+            actions[a] = action
+            return action
+
+        def execmenu(*_):
+            self.assertEqual(list(actions), list(all)[1:])
+            for name, action in actions.items():
+                self.assertEqual(action.isChecked(), name in shown)
+            actions["E"].triggered.emit(True)
+            self.assertEqual(w.shown_scores, set("ABDEF"))
+            actions["B"].triggered.emit(False)
+            self.assertEqual(w.shown_scores, set("ADEF"))
+            for i, name in enumerate(all):
+                self.assertEqual(name == "M" or name in "ADEF",
+                                 not header.isSectionHidden(i),
+                                 msg="error in section {}({})".format(i, name))
+
+        # We must patch `QMenu.exec` because the Qt would otherwise (invisibly)
+        # show the popup and wait for the user.
+        # Assertions are made within `menuexec` since they check the
+        # instances of `QAction`, which are invalid (destroyed by Qt?) after
+        # `menuexec` finishes.
+        with unittest.mock.patch("AnyQt.QtWidgets.QMenu.addAction", addAction),\
+                unittest.mock.patch("AnyQt.QtWidgets.QMenu.exec", execmenu):
+            w.show_column_chooser(QPoint(0, 0))
 
 
 class TestHelpers(unittest.TestCase):

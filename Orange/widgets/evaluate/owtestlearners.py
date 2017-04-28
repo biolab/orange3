@@ -7,7 +7,7 @@ from collections import OrderedDict, namedtuple
 import numpy as np
 
 from AnyQt import QtGui
-from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate
+from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import Qt, QSize
 
@@ -170,6 +170,10 @@ class OWTestLearners(OWWidget):
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
+    shown_scores = \
+        settings.Setting({"AUC", "CA", "F1", "Precision", "Recall",
+                          "MSE", "RMSE", "MAE", "R2"})
+
     class Error(OWWidget.Error):
         train_data_empty = Msg("Train data set is empty.")
         test_data_empty = Msg("Test data set is empty.")
@@ -261,6 +265,8 @@ class OWTestLearners(OWWidget):
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
         header.setDefaultAlignment(Qt.AlignCenter)
         header.setStretchLastSection(False)
+        header.setContextMenuPolicy(Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_column_chooser)
 
         self.result_model = QStandardItemModel(self)
         self.result_model.setHorizontalHeaderLabels(["Method"])
@@ -545,6 +551,16 @@ class OWTestLearners(OWWidget):
             self.result_model.takeColumn(i)
 
         self.result_model.setHorizontalHeaderLabels(headers)
+        self._update_shown_columns()
+
+    def _update_shown_columns(self):
+        # pylint doesn't know that self.shown_scores is a set, not a Setting
+        # pylint: disable=unsupported-membership-test
+        model = self.result_model
+        header = self.view.horizontalHeader()
+        for section in range(1, model.columnCount()):
+            col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
+            header.setSectionHidden(section, col_name not in self.shown_scores)
 
     def _update_stats_model(self):
         # Update the results_model with up to date scores.
@@ -658,6 +674,27 @@ class OWTestLearners(OWWidget):
                         item.setData(None, Qt.ToolTipRole)
 
         self.commit()
+
+    def show_column_chooser(self, pos):
+        # pylint doesn't know that self.shown_scores is a set, not a Setting
+        # pylint: disable=unsupported-membership-test
+        def update(col_name, checked):
+            if checked:
+                self.shown_scores.add(col_name)
+            else:
+                self.shown_scores.remove(col_name)
+            self._update_shown_columns()
+
+        menu = QMenu()
+        model = self.result_model
+        header = self.view.horizontalHeader()
+        for section in range(1, model.columnCount()):
+            col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
+            action = menu.addAction(col_name)
+            action.setCheckable(True)
+            action.setChecked(col_name in self.shown_scores)
+            action.triggered.connect(functools.partial(update, col_name))
+        menu.exec(header.mapToGlobal(pos))
 
     def commit(self):
         """Recompute and output the results"""
@@ -839,6 +876,7 @@ def main(argv=None):
     for i in range(len(learners)):
         w.set_learner(None, i)
     w.handleNewSignals()
+    w.saveSettings()
     return rval
 
 if __name__ == "__main__":
