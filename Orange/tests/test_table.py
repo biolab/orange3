@@ -1202,6 +1202,24 @@ class TableTestCase(unittest.TestCase):
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 7)
 
+    def test_valueFilter_stringList(self):
+        data = Table("zoo")
+        var = data.domain["name"]
+
+        fs = filter.FilterStringList
+        filters = [
+            ((["swan", "tuna", "wasp"], True), dict(rows=3)),
+            ((["swan", "tuna", "wasp"], False), dict(rows=3)),
+            ((["WoRm", "TOad", "vOLe"], True), dict(rows=0)),
+            ((["WoRm", "TOad", "vOLe"], False), dict(rows=3)),
+        ]
+
+        for args, expected in filters:
+            f = fs(var, *args)
+            filtered_data = filter.Values([f])(data)
+            self.assertEqual(len(filtered_data), expected["rows"],
+                             "{} returned wrong number of rows".format(args))
+
     def test_table_dtypes(self):
         table = data.Table("iris")
         metas = np.hstack((table.metas, table.Y.reshape(len(table), 1)))
