@@ -65,12 +65,6 @@ class SelectBestFeatures(Reprable):
             else:
                 method = UnivariateLinearRegression()
 
-        if not isinstance(data.domain.class_var, method.class_type):
-            raise ValueError(("Scoring method {} requires a class variable " +
-                              "of type {}.").format(
-                (method if type(method) == type else type(method)).__name__,
-                method.class_type.__name__)
-            )
         features = data.domain.attributes
         try:
             scores = method(data)
