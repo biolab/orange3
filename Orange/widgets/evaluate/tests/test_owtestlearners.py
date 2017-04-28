@@ -10,6 +10,8 @@ from AnyQt.QtCore import QPoint
 from Orange.classification import MajorityLearner
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import Results, TestOnTestData
+from Orange.evaluation.scoring import ClassificationScore, RegressionScore, \
+    Score
 from Orange.modelling import ConstantLearner
 from Orange.regression import MeanLearner
 from Orange.widgets.evaluate.owtestlearners import (
@@ -178,6 +180,42 @@ class TestOWTestLearners(WidgetTest):
         self.send_signal("Learner", MajorityLearner(), 0, wait=1000)
         self.assertTrue(self.widget.Error.only_one_class_var_value.is_shown())
 
+    def test_addon_scorers(self):
+        try:
+            class NewScore(Score):
+                class_types = (DiscreteVariable, ContinuousVariable)
+
+            class NewClassificationScore(ClassificationScore):
+                pass
+
+            class NewRegressionScore(RegressionScore):
+                pass
+
+            builtins = self.widget.BUILTIN_ORDER
+            self.send_signal("Data", Table("iris"))
+            scorer_names = [scorer.name for scorer in self.widget.scorers]
+            self.assertEqual(
+                tuple(scorer_names[:len(builtins[DiscreteVariable])]),
+                builtins[DiscreteVariable])
+            self.assertIn("NewScore", scorer_names)
+            self.assertIn("NewClassificationScore", scorer_names)
+            self.assertNotIn("NewRegressionScore", scorer_names)
+
+            self.send_signal("Data", Table("housing"))
+            scorer_names = [scorer.name for scorer in self.widget.scorers]
+            self.assertEqual(
+                tuple(scorer_names[:len(builtins[ContinuousVariable])]),
+                builtins[ContinuousVariable])
+            self.assertIn("NewScore", scorer_names)
+            self.assertNotIn("NewClassificationScore", scorer_names)
+            self.assertIn("NewRegressionScore", scorer_names)
+
+            self.send_signal("Data", None)
+            self.assertEqual(self.widget.scorers, [])
+        finally:
+            del Score.registry["NewScore"]
+            del Score.registry["NewClassificationScore"]
+            del Score.registry["NewRegressionScore"]
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
@@ -205,6 +243,7 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(r1.row_indices, res.row_indices)
         np.testing.assert_equal(r2.row_indices, res.row_indices)
         np.testing.assert_equal(r3.row_indices, res.row_indices)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,16 +1,54 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import sys
+import contextlib
 import unittest
+from unittest.mock import Mock
 import numpy as np
 
-from Orange.data import DiscreteVariable, Domain
+from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner, SklTreeLearner, NaiveBayesLearner,\
                                   MajorityLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
     Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
+from Orange.evaluation.scoring import ScoreMetaType
 from Orange.preprocess import discretize, Discretize
+
+
+class TestScoreMetaType(unittest.TestCase):
+    class BaseScore(metaclass=ScoreMetaType):
+        pass
+
+    class Score1(BaseScore, abstract=True):
+        class_types = (DiscreteVariable,)
+
+    class Score2(Score1):
+        pass
+
+    class Score3(Score2):
+        name = "foo"
+
+    class Score4(Score2):
+        pass
+
+    class Score5(BaseScore):
+        class_types = (DiscreteVariable, ContinuousVariable)
+
+    def test_registry(self):
+        """All non-abstract classes appear in the registry"""
+        self.assertEqual(
+            self.BaseScore.registry,
+            {"Score2": self.Score2, "Score3": self.Score3,
+             "Score4": self.Score4, "Score5": self.Score5})
+
+    def test_names(self):
+        """Attribute `name` defaults to class and is not inherited"""
+        self.assertEqual(self.Score2.name, "Score2")
+        self.assertEqual(self.Score3.name, "foo")
+        self.assertEqual(self.Score4.name, "Score4")
+        self.assertEqual(self.Score5.name, "Score5")
 
 
 class TestPrecision(unittest.TestCase):
@@ -299,6 +337,24 @@ class TestComputeCD(unittest.TestCase):
         cd = scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
 
+        @contextlib.contextmanager
+        def mock_module(name):
+            if not name in sys.modules:
+                try:
+                    sys.modules[name] = Mock()
+                    yield
+                finally:
+                    del sys.modules[name]
+            else:
+                yield
+
+        # Do what you will, just don't crash
+        with mock_module("matplotlib"), \
+                mock_module("matplotlib.pyplot"), \
+                mock_module("matplotlib.backends.backend_agg"):
+            scoring.graph_ranks(avranks, "abcd", cd)
+            scoring.graph_ranks(avranks, "abcd", cd, cdmethod=0)
+
 
 class TestLogLoss(unittest.TestCase):
     def test_log_loss(self):
@@ -330,3 +386,4 @@ class TestLogLoss(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    del TestScoreMetaType
