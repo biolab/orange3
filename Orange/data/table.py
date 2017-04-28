@@ -1133,10 +1133,26 @@ class Table(MutableSequence, Storage):
             sel = np.logical_not(sel)
         return self.from_table_rows(self, sel)
 
-    def _filter_values_indicators(self, filter):
-        from Orange.data import filter as data_filter
+    def _filter_values(self, filter):
+        selection = self._values_filter_to_indicator(filter)
+        return self.from_table(self.domain, self, selection)
 
-        if isinstance(filter, data_filter.Values):
+    def _values_filter_to_indicator(self, filter):
+        """Return selection of rows matching the filter conditions
+
+        Handles conjunction/disjunction and negate modifiers
+
+        Parameters
+        ----------
+        filter: Values object containing the conditions
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        from Orange.data.filter import Values
+
+        if isinstance(filter, Values):
             conditions = filter.conditions
             conjunction = filter.conjunction
         else:
@@ -1148,109 +1164,157 @@ class Table(MutableSequence, Storage):
             sel = np.zeros(len(self), dtype=bool)
 
         for f in conditions:
-            if isinstance(f, data_filter.Values):
-                if conjunction:
-                    sel *= self._filter_values_indicators(f)
-                else:
-                    sel += self._filter_values_indicators(f)
-                continue
-            col = self.get_column_view(f.column)[0]
-            if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
-                    or isinstance(f, data_filter.FilterContinuous) and \
-                                    f.oper == f.IsDefined:
-                col = col.astype(float)
-                if conjunction:
-                    sel *= ~np.isnan(col)
-                else:
-                    sel += ~np.isnan(col)
-            elif isinstance(f, data_filter.FilterString) and \
-                            f.oper == f.IsDefined:
-                if conjunction:
-                    sel *= col.astype(bool)
-                else:
-                    sel += col.astype(bool)
-            elif isinstance(f, data_filter.FilterDiscrete):
-                if conjunction:
-                    s2 = np.zeros(len(self), dtype=bool)
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        s2 += (col == val)
-                    sel *= s2
-                else:
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        sel += (col == val)
-            elif isinstance(f, data_filter.FilterStringList):
-                if not f.case_sensitive:
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    vals = [val.lower() for val in f.values]
-                else:
-                    vals = f.values
-                if conjunction:
-                    sel *= reduce(operator.add,
-                                  (col == val for val in vals))
-                else:
-                    sel = reduce(operator.add,
-                                 (col == val for val in vals), sel)
-            elif isinstance(f, data_filter.FilterRegex):
-                sel = np.vectorize(f)(col)
-            elif isinstance(f, (data_filter.FilterContinuous,
-                                data_filter.FilterString)):
-                if (isinstance(f, data_filter.FilterString) and
-                        not f.case_sensitive):
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    fmin = f.min.lower()
-                    if f.oper in [f.Between, f.Outside]:
-                        fmax = f.max.lower()
-                else:
-                    fmin, fmax = f.min, f.max
-                if f.oper == f.Equal:
-                    col = (col == fmin)
-                elif f.oper == f.NotEqual:
-                    col = (col != fmin)
-                elif f.oper == f.Less:
-                    col = (col < fmin)
-                elif f.oper == f.LessEqual:
-                    col = (col <= fmin)
-                elif f.oper == f.Greater:
-                    col = (col > fmin)
-                elif f.oper == f.GreaterEqual:
-                    col = (col >= fmin)
-                elif f.oper == f.Between:
-                    col = (col >= fmin) * (col <= fmax)
-                elif f.oper == f.Outside:
-                    col = (col < fmin) + (col > fmax)
-                elif not isinstance(f, data_filter.FilterString):
-                    raise TypeError("Invalid operator")
-                elif f.oper == f.Contains:
-                    col = np.fromiter((fmin in e for e in col),
-                                      dtype=bool)
-                elif f.oper == f.StartsWith:
-                    col = np.fromiter((e.startswith(fmin) for e in col),
-                                      dtype=bool)
-                elif f.oper == f.EndsWith:
-                    col = np.fromiter((e.endswith(fmin) for e in col),
-                                      dtype=bool)
-                else:
-                    raise TypeError("Invalid operator")
-                if conjunction:
-                    sel *= col
-                else:
-                    sel += col
+            selection = self._filter_to_indicator(f)
+
+            if conjunction:
+                sel *= selection
             else:
-                raise TypeError("Invalid filter")
+                sel += selection
 
         if filter.negate:
             sel = ~sel
         return sel
 
-    def _filter_values(self, filter):
-        sel = self._filter_values_indicators(filter)
-        return self.from_table(self.domain, self, sel)
+    def _filter_to_indicator(self, filter):
+        """Return selection of rows that match the condition.
+
+        Parameters
+        ----------
+        filter: ValueFilter describing the condition
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        from Orange.data.filter import (
+            FilterContinuous, FilterDiscrete, FilterRegex, FilterString,
+            FilterStringList, Values
+        )
+        if isinstance(filter, Values):
+            return self._values_filter_to_indicator(filter)
+
+        col = self.get_column_view(filter.column)[0]
+
+        if isinstance(filter, FilterDiscrete):
+            return self._discrete_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterContinuous):
+            return self._continuous_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterString):
+            return self._string_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterStringList):
+            if not filter.case_sensitive:
+                col = np.char.lower(np.array(col, dtype=str))
+                vals = [val.lower() for val in filter.values]
+            else:
+                vals = filter.values
+            return reduce(operator.add, (col == val for val in vals))
+
+        if isinstance(filter, FilterRegex):
+            return np.vectorize(filter)(col)
+
+        raise TypeError("Invalid filter")
+
+    def _discrete_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given discrete filter.
+
+        Parameters
+        ----------
+        filter: FilterDiscrete
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.values is None:  # <- is defined filter
+            col = col.astype(float)
+            return ~np.isnan(col)
+
+        sel = np.zeros(len(self), dtype=bool)
+        for val in filter.values:
+            if not isinstance(val, Real):
+                val = self.domain[filter.column].to_val(val)
+            sel += (col == val)
+        return sel
+
+    def _continuous_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given continuous filter.
+
+        Parameters
+        ----------
+        filter: FilterContinuous
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.oper == filter.IsDefined:
+            col = col.astype(float)
+            return ~np.isnan(col)
+
+        return self._range_filter_to_indicator(filter, col, filter.min, filter.max)
+
+    def _string_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given string filter.
+
+        Parameters
+        ----------
+        filter: FilterString
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.oper == filter.IsDefined:
+            return col.astype(bool)
+
+        col = col.astype(str)
+        fmin = filter.min or ""
+        fmax = filter.max or ""
+
+        if not filter.case_sensitive:
+            # convert all to lower case
+            col = np.char.lower(col)
+            fmin = fmin.lower()
+            fmax = fmax.lower()
+
+        if filter.oper == filter.Contains:
+            return np.fromiter((fmin in e for e in col),
+                               dtype=bool)
+        if filter.oper == filter.StartsWith:
+            return np.fromiter((e.startswith(fmin) for e in col),
+                               dtype=bool)
+        if filter.oper == filter.EndsWith:
+            return np.fromiter((e.endswith(fmin) for e in col),
+                               dtype=bool)
+
+        return self._range_filter_to_indicator(filter, col, fmin, fmax)
+
+    @staticmethod
+    def _range_filter_to_indicator(filter, col, fmin, fmax):
+        if filter.oper == filter.Equal:
+            return col == fmin
+        if filter.oper == filter.NotEqual:
+            return col != fmin
+        if filter.oper == filter.Less:
+            return col < fmin
+        if filter.oper == filter.LessEqual:
+            return col <= fmin
+        if filter.oper == filter.Greater:
+            return col > fmin
+        if filter.oper == filter.GreaterEqual:
+            return col >= fmin
+        if filter.oper == filter.Between:
+            return (col >= fmin) * (col <= fmax)
+        if filter.oper == filter.Outside:
+            return (col < fmin) + (col > fmax)
+
+        raise TypeError("Invalid operator")
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):

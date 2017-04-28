@@ -881,6 +881,27 @@ class TableTestCase(unittest.TestCase):
         f = filter.Values([filter.Values([f1, f2], conjunction=False), f3])
         self.assertEqual(41, len(f(d)))
 
+    def test_filter_string_works_for_numeric_columns(self):
+        var = StringVariable("s")
+        data = Table(Domain([], metas=[var]), [[x] for x in range(21)])
+        # 1, 2, 3, ..., 18, 19, 20
+
+        fs = filter.FilterString
+        filters = [
+            ((fs.Greater, "5"), dict(rows=4)),
+            # 6, 7, 8, 9
+            ((fs.Between, "15", "2"), dict(rows=6)),
+            # 15, 16, 17, 18, 19, 2
+            ((fs.Contains, "2"), dict(rows=3)),
+            # 2, 12, 20
+        ]
+
+        for args, expected in filters:
+            f = fs(var, *args)
+            filtered_data = filter.Values([f])(data)
+            self.assertEqual(len(filtered_data), expected["rows"],
+                             "{} returned wrong number of rows".format(args))
+
     def test_filter_value_continuous(self):
         d = data.Table("iris")
         col = d.X[:, 2]
@@ -1180,6 +1201,24 @@ class TableTestCase(unittest.TestCase):
         f = filter.FilterRegex(d.domain['name'], '^c...$')
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 7)
+
+    def test_valueFilter_stringList(self):
+        data = Table("zoo")
+        var = data.domain["name"]
+
+        fs = filter.FilterStringList
+        filters = [
+            ((["swan", "tuna", "wasp"], True), dict(rows=3)),
+            ((["swan", "tuna", "wasp"], False), dict(rows=3)),
+            ((["WoRm", "TOad", "vOLe"], True), dict(rows=0)),
+            ((["WoRm", "TOad", "vOLe"], False), dict(rows=3)),
+        ]
+
+        for args, expected in filters:
+            f = fs(var, *args)
+            filtered_data = filter.Values([f])(data)
+            self.assertEqual(len(filtered_data), expected["rows"],
+                             "{} returned wrong number of rows".format(args))
 
     def test_table_dtypes(self):
         table = data.Table("iris")
