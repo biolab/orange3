@@ -742,6 +742,7 @@ class TableTestCase(unittest.TestCase):
                 self.assertEqual(e1, e2)
         finally:
             os.remove("test-save.tab")
+            os.remove("test-save.tab.metadata")
 
         dom = data.Domain([data.ContinuousVariable("a")])
         d = data.Table(dom)
@@ -755,7 +756,6 @@ class TableTestCase(unittest.TestCase):
                 self.assertEqual(d2[i], [i])
         finally:
             os.remove("test-save.tab")
-            os.remove("test-save.tab.metadata")
 
         dom = data.Domain([data.ContinuousVariable("a")], None)
         d = data.Table(dom)

@@ -379,15 +379,23 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @classmethod
     def write_table_metadata(cls, filename, data):
-        if isinstance(filename, str) and getattr(data, 'attributes', None):
+
+        def write_file(fn):
             if all(isinstance(key, str) and isinstance(value, str)
                    for key, value in data.attributes.items()):
-                with open(filename + '.metadata', 'w', encoding='utf-8') as f:
+                with open(fn, 'w', encoding='utf-8') as f:
                     f.write("\n".join("{}: {}".format(*kv)
                                       for kv in data.attributes.items()))
             else:
-                with open(filename + '.metadata', 'wb') as f:
+                with open(fn, 'wb') as f:
                     pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
+
+        if isinstance(filename, str):
+            metafile = filename + '.metadata'
+            if getattr(data, 'attributes', None):
+                write_file(metafile)
+            elif path.exists(metafile):
+                unlink(metafile)
 
     @classmethod
     def set_table_metadata(cls, filename, table):

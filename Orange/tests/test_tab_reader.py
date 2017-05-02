@@ -6,7 +6,6 @@ from os import path, remove
 import unittest
 import tempfile
 import shutil
-import pickle
 from collections import OrderedDict
 
 import numpy as np
@@ -223,6 +222,18 @@ class TestTabReader(unittest.TestCase):
         table = Table("titanic")
         table.attributes = OrderedDict()
         fname = path.join(tempdir, "out.tab")
+        TabReader.write_table_metadata(fname, table)
+        self.assertFalse(path.isfile(fname + ".metadata"))
+        shutil.rmtree(tempdir)
+
+    def test_had_metadata_now_there_is_none(self):
+        tempdir = tempfile.mkdtemp()
+        table = Table("titanic")
+        table.attributes["a"] = "aa"
+        fname = path.join(tempdir, "out.tab")
+        TabReader.write_table_metadata(fname, table)
+        self.assertTrue(path.isfile(fname + ".metadata"))
+        del table.attributes["a"]
         TabReader.write_table_metadata(fname, table)
         self.assertFalse(path.isfile(fname + ".metadata"))
         shutil.rmtree(tempdir)
