@@ -13,7 +13,7 @@ from functools import lru_cache
 from itertools import chain, repeat
 from math import isnan
 from numbers import Number
-from os import path, unlink
+from os import path, remove
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
 from urllib.request import urlopen, Request
@@ -395,7 +395,7 @@ class FileFormat(metaclass=FileFormatMeta):
             if getattr(data, 'attributes', None):
                 write_file(metafile)
             elif path.exists(metafile):
-                unlink(metafile)
+                remove(metafile)
 
     @classmethod
     def set_table_metadata(cls, filename, table):
@@ -941,7 +941,7 @@ class UrlReader(FileFormat):
 
             reader = self.get_reader(f.name)
             data = reader.read()
-            unlink(f.name)
+            remove(f.name)
         # Override name set in from_file() to avoid holding the temp prefix
         data.name = path.splitext(name)[0]
         data.origin = self.filename
