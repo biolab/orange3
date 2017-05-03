@@ -13,7 +13,7 @@ from functools import lru_cache
 from itertools import chain, repeat
 from math import isnan
 from numbers import Number
-from os import path, unlink
+from os import path, remove
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
 from urllib.request import urlopen, Request
@@ -379,15 +379,23 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @classmethod
     def write_table_metadata(cls, filename, data):
-        if isinstance(filename, str) and getattr(data, 'attributes', None):
+
+        def write_file(fn):
             if all(isinstance(key, str) and isinstance(value, str)
                    for key, value in data.attributes.items()):
-                with open(filename + '.metadata', 'w', encoding='utf-8') as f:
+                with open(fn, 'w', encoding='utf-8') as f:
                     f.write("\n".join("{}: {}".format(*kv)
                                       for kv in data.attributes.items()))
             else:
-                with open(filename + '.metadata', 'wb') as f:
+                with open(fn, 'wb') as f:
                     pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
+
+        if isinstance(filename, str):
+            metafile = filename + '.metadata'
+            if getattr(data, 'attributes', None):
+                write_file(metafile)
+            elif path.exists(metafile):
+                remove(metafile)
 
     @classmethod
     def set_table_metadata(cls, filename, table):
@@ -933,7 +941,7 @@ class UrlReader(FileFormat):
 
             reader = self.get_reader(f.name)
             data = reader.read()
-            unlink(f.name)
+            remove(f.name)
         # Override name set in from_file() to avoid holding the temp prefix
         data.name = path.splitext(name)[0]
         data.origin = self.filename
