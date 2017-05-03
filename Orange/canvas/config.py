@@ -55,6 +55,9 @@ spec = \
      ("startup/show-welcome-screen", bool, True,
       "Show Welcome screen at startup"),
 
+     ("startup/check-updates", bool, True,
+      "Check for updates"),
+
      ("stylesheet", str, "orange",
       "QSS stylesheet to use"),
 

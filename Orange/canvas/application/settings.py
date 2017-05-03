@@ -303,13 +303,18 @@ class UserSettingsDialog(QMainWindow):
                               objectName="show-splash-screen")
 
         cb_welcome = QCheckBox(self.tr("Show welcome screen"), self,
-                                objectName="show-welcome-screen")
+                               objectName="show-welcome-screen")
+
+        cb_updates = QCheckBox(self.tr("Check for updates"), self,
+                               objectName="check-updates")
 
         self.bind(cb_splash, "checked", "startup/show-splash-screen")
         self.bind(cb_welcome, "checked", "startup/show-welcome-screen")
+        self.bind(cb_updates, "checked", "startup/check-updates")
 
         startup.layout().addWidget(cb_splash)
         startup.layout().addWidget(cb_welcome)
+        startup.layout().addWidget(cb_updates)
 
         form.addRow(self.tr("On startup"), startup)
 
