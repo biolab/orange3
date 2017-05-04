@@ -37,6 +37,7 @@ class TestUtil(unittest.TestCase):
         from Orange.data import ContinuousVariable
         from Orange.preprocess.impute import ReplaceUnknownsRandom
         from Orange.statistics.distribution import Continuous
+        from Orange.classification import LogisticRegressionLearner
 
         var = ContinuousVariable('x')
         transform = ReplaceUnknownsRandom(var, Continuous(1, var))
@@ -45,6 +46,11 @@ class TestUtil(unittest.TestCase):
                          "ReplaceUnknownsRandom("
                          "variable=ContinuousVariable(name='x', number_of_decimals=3), "
                          "distribution=Continuous([[ 0.], [ 0.]]))")
+
+        # GH 2275
+        logit = LogisticRegressionLearner()
+        for _ in range(2):
+            self.assertEqual(repr(logit), 'LogisticRegressionLearner()')
 
     def test_deepgetattr(self):
         class a:
