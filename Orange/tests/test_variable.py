@@ -247,6 +247,11 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(len(var.colors), 4)
         np.testing.assert_array_equal(var.colors[2], user_defined)
 
+    def test_no_nonstringvalues(self):
+        self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
+        a = DiscreteVariable("foo", values=["a", "b", "c"])
+        self.assertRaises(TypeError, a.add_value, 42)
+
 
 @variabletest(ContinuousVariable)
 class TestContinuousVariable(VariableTest):
@@ -407,8 +412,6 @@ PickleContinuousVariable = create_pickling_tests(
 PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
     ("with_name", lambda: DiscreteVariable(name="Feature 0")),
-    ("with_int_values", lambda: DiscreteVariable(name="Feature 0",
-                                                 values=[1, 2, 3])),
     ("with_str_value", lambda: DiscreteVariable(name="Feature 0",
                                                 values=["F", "M"])),
     ("ordered", lambda: DiscreteVariable(name="Feature 0",
