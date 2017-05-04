@@ -34,12 +34,20 @@ class Preprocess(_RefuseDataInConstructor, Reprable):
 
 
 class Continuize(Preprocess):
-    (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
-     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = Enum(
-         "Continuize",
-         "Indicators, FirstAsBase, FrequentAsBase,"
-         "Remove, RemoveMultinomial, ReportError, AsOrdinal,"
-         "AsNormalizedOrdinal, Leave")
+    class ContinuizeDV(Enum):
+        Indicators = "Indicators"
+        FirstAsBase = "FirstAsBase"
+        FrequentAsBase = "FrequentAsBase"
+        Remove = "Remove"
+        RemoveMultinomial = "RemoveMultinomial"
+        ReportError = "ReportError"
+        AsOrdinal = "AsOrdinal"
+        AsNormalizedOrdinal = "AsNormalizedOrdinal"
+        Leave = "Leave"
+
+    Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial, ReportError,\
+    AsOrdinal, AsNormalizedOrdinal, Leave\
+        = ContinuizeDV
 
     def __init__(self, zero_based=True,
                  multinomial_treatment=Indicators):
@@ -327,8 +335,12 @@ class Randomize(Preprocess):
     >>> randomizer = Randomize(Randomize.RandomizeClasses)
     >>> randomized_data = randomizer(data)
     """
-    Type = Enum("Randomize", dict(RandomizeClasses=1, RandomizeAttributes=2,
-                                  RandomizeMetas=4), type=int)
+    from enum import IntEnum
+    class Type(IntEnum):
+        RandomizeClasses = 1
+        RandomizeAttributes = 2
+        RandomizeMetas = 4
+
     RandomizeClasses, RandomizeAttributes, RandomizeMetas = Type
 
     def __init__(self, rand_type=RandomizeClasses, rand_seed=None):
@@ -399,8 +411,16 @@ class Scale(Preprocess):
         def __call__(self, *args, **kwargs):
             return getattr(Scale, '_' + self.name)(*args, **kwargs)
 
-    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median')
-    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span')
+    class CenteringType(_MethodEnum):
+        NoCentering = "NoCentering"
+        Mean = "Mean"
+        Median = "Median"
+
+    class ScalingType(_MethodEnum):
+        NoScaling = "NoScaling"
+        Std = "Std"
+        Span = "Span"
+
     NoCentering, Mean, Median = CenteringType
     NoScaling, Std, Span = ScalingType
 
