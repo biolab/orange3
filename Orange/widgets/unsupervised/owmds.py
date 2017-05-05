@@ -1,5 +1,4 @@
 import sys
-import warnings
 
 from xml.sax.saxutils import escape
 from itertools import chain
@@ -22,7 +21,7 @@ import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
 
 import Orange.data
-import Orange.projection
+from Orange.projection import MDS
 from Orange.projection.manifold import torgerson
 import Orange.distance
 from Orange.data.domain import filter_visible
@@ -513,7 +512,7 @@ class OWMDS(OWWidget):
             if self.matrix.axis == 0 and self.data is self.matrix_data:
                 self.data = None
         elif self.data.domain.attributes:
-            preprocessed_data = Orange.projection.MDS().preprocess(self.data)
+            preprocessed_data = MDS(n_jobs=-1).preprocess(self.data)
             self._effective_matrix = Orange.distance.Euclidean(preprocessed_data)
         else:
             self.Error.no_attributes()
@@ -565,9 +564,9 @@ class OWMDS(OWWidget):
 
             while not done:
                 step_iter = min(max_iter - iterations_done, step)
-                mds = Orange.projection.MDS(
+                mds = MDS(
                     dissimilarity="precomputed", n_components=2,
-                    n_init=1, max_iter=step_iter,
+                    n_init=1, max_iter=step_iter, n_jobs=-1,
                     init_type=init_type, init_data=init)
 
                 mdsfit = mds(X)
