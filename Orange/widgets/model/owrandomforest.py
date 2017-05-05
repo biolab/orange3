@@ -63,7 +63,8 @@ class OWRandomForest(OWBaseLearner):
             checkCallback=self.settings_changed, alignment=Qt.AlignRight)
 
     def create_learner(self):
-        common_args = {"n_estimators": self.n_estimators}
+        common_args = {"n_estimators": self.n_estimators,
+                       "n_jobs": -1}
         if self.use_max_features:
             common_args["max_features"] = self.max_features
         if self.use_random_state:
