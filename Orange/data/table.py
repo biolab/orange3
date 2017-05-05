@@ -1355,9 +1355,9 @@ class Table(MutableSequence, Storage):
         distributions = []
         if sp.issparse(self.X):
             self.X = self.X.tocsc()
+        W = self.W.ravel() if self.has_weights() else None
         for col in columns:
             var = self.domain[col]
-            W = self.W if self.has_weights() else None
             if 0 <= col < self.X.shape[1]:
                 m = self.X[:, col]
             elif col < 0:
@@ -1367,8 +1367,6 @@ class Table(MutableSequence, Storage):
             else:
                 m = self._Y[:, col - self.X.shape[1]]
             if var.is_discrete:
-                if W is not None:
-                    W = W.ravel()
                 dist, unknowns = bincount(m, len(var.values) - 1, W)
             elif not m.shape[0]:
                 dist, unknowns = np.zeros((2, 0)), 0
@@ -1378,10 +1376,10 @@ class Table(MutableSequence, Storage):
                     if sp.issparse(m):
                         arg_sort = np.argsort(m.data)
                         ranks = m.indices[arg_sort]
-                        vals = np.vstack((m.data[arg_sort], W[ranks].flatten()))
+                        vals = np.vstack((m.data[arg_sort], W[ranks]))
                     else:
                         ranks = np.argsort(m)
-                        vals = np.vstack((m[ranks], W[ranks].flatten()))
+                        vals = np.vstack((m[ranks], W[ranks]))
                 else:
                     unknowns = countnans(m.astype(float))
                     if sp.issparse(m):
