@@ -395,6 +395,31 @@ class Table(MutableSequence, Storage):
                 if new_cache:
                     _conversion_cache = None
 
+    def transform(self, domain):
+        """
+        Construct a table with a different domain.
+
+        The new table keeps the row ids and other information. If the table
+        is a subclass of :obj:`Table`, the resulting table will be of the same
+        type.
+
+        In a typical scenario, an existing table is augmented with a new
+        column by ::
+
+            domain = Domain(old_domain.attributes + [new_attribute],
+                            old_domain.class_vars,
+                            old_domain.metas)
+            table = data.transform(domain)
+            table[:, new_attribute] = new_column
+
+        Args:
+            domain (Domain): new domain
+
+        Returns:
+            A new table
+        """
+        return type(self).from_table(domain, self)
+
     @classmethod
     def from_table_rows(cls, source, row_indices):
         """

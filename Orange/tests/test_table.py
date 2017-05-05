@@ -1721,6 +1721,20 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertIsNot(self.table, new_table)
         self.assertEqual(new_table.domain, self.domain)
 
+    def test_transform(self):
+        class MyTableClass(data.Table):
+            pass
+
+        table = MyTableClass.from_table(self.table.domain, self.table)
+        domain = table.domain
+        attr = ContinuousVariable("x")
+        new_domain = data.Domain(list(domain.attributes) + [attr], None)
+        new_table = table.transform(new_domain)
+
+        self.assertIsInstance(new_table, MyTableClass)
+        self.assertIsNot(table, new_table)
+        self.assertIs(new_table.domain, new_domain)
+
     def test_can_copy_table(self):
         new_table = data.Table.from_table(self.domain, self.table)
         self.assert_table_with_filter_matches(new_table, self.table)
@@ -1832,7 +1846,7 @@ class CreateTableWithDomainAndTable(TableTests):
         new_domain = data.domain.Domain([], iris.domain.class_vars,
                                         iris.domain.attributes, source=iris.domain)
         new_iris = data.Table.from_table(new_domain, iris)
-        
+
         self.assertTrue(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
         self.assertEqual(new_iris.X.shape, (len(iris), 0))
