@@ -28,8 +28,6 @@ from .errors import (
 
 from . import readwrite
 
-from ..registry import WidgetDescription, InputSignal, OutputSignal
-
 log = logging.getLogger(__name__)
 
 

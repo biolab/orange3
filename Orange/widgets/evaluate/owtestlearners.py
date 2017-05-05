@@ -23,10 +23,10 @@ from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import DomainModel
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
-Input = namedtuple(
-    "Input",
+InputLearner = namedtuple(
+    "InputLearner",
     ["learner",  # :: Orange.base.Learner
      "results",  # :: Option[Try[Orange.evaluation.Results]]
      "stats"]    # :: Option[Sequence[Try[float]]]
@@ -130,13 +130,16 @@ class OWTestLearners(OWWidget):
     icon = "icons/TestLearners1.svg"
     priority = 100
 
-    inputs = [("Learner", Learner, "set_learner", widget.Multiple),
-              ("Data", Table, "set_train_data", widget.Default),
-              ("Test Data", Table, "set_test_data"),
-              ("Preprocessor", Preprocess, "set_preprocessor")]
+    class Inputs:
+        train_data = Input("Data", Table, flags=widget.Default)
+        test_data = Input("Test Data", Table)
+        learner = Input("Learner", Learner, flags=widget.Multiple)
+        preprocessor = Input("Preprocessor", Preprocess)
 
-    outputs = [("Predictions", Table),
-               ("Evaluation Results", Results)]
+    class Outputs:
+        predictions = Output("Predictions", Table)
+        evalutions_results = Output("Evaluation Results", Results)
+
 
     settings_version = 3
     settingsHandler = settings.PerfectDomainContextHandler(metas_in_res=True)
@@ -293,6 +296,7 @@ class OWTestLearners(OWWidget):
         if self.resampling == OWTestLearners.FeatureFold and not enabled:
             self.resampling = OWTestLearners.KFold
 
+    @Inputs.learner
     def set_learner(self, learner, key):
         """
         Set the input `learner` for `key`.
@@ -301,9 +305,10 @@ class OWTestLearners(OWWidget):
             # Removed
             del self.learners[key]
         else:
-            self.learners[key] = Input(learner, None, None)
+            self.learners[key] = InputLearner(learner, None, None)
             self._invalidate([key])
 
+    @Inputs.train_data
     def set_train_data(self, data):
         """
         Set the input training dataset.
@@ -351,6 +356,7 @@ class OWTestLearners(OWWidget):
                 self.resampling = OWTestLearners.FeatureFold
         self._invalidate()
 
+    @Inputs.test_data
     def set_test_data(self, data):
         """
         Set the input separate testing dataset.
@@ -394,6 +400,7 @@ class OWTestLearners(OWWidget):
                 (False, True): " test "}[(self.train_data_missing_vals,
                                           self.test_data_missing_vals)]
 
+    @Inputs.preprocessor
     def set_preprocessor(self, preproc):
         """
         Set the input preprocessor to apply on the training data.
@@ -716,8 +723,8 @@ class OWTestLearners(OWWidget):
         else:
             combined = None
             predictions = None
-        self.send("Evaluation Results", combined)
-        self.send("Predictions", predictions)
+        self.Outputs.evalutions_results.send(combined)
+        self.Outputs.predictions.send(predictions)
 
     def send_report(self):
         """Report on the testing schema and results"""

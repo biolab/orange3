@@ -5,12 +5,8 @@ Widget meta description classes
 """
 
 import sys
-import copy
-import warnings
 
 # Exceptions
-
-
 class DescriptionError(Exception):
     pass
 
@@ -19,169 +15,8 @@ class WidgetSpecificationError(DescriptionError):
     pass
 
 
-class SignalSpecificationError(DescriptionError):
-    pass
-
-
 class CategorySpecificationError(DescriptionError):
     pass
-
-
-###############
-# Channel flags
-###############
-
-# A single signal
-Single = 2
-
-# Multiple signal (more then one input on the channel)
-Multiple = 4
-
-# Default signal (default or primary input/output)
-Default = 8
-NonDefault = 16
-
-# Explicit - only connected if specifically requested or the only possibility
-Explicit = 32
-
-# Dynamic type output signal
-Dynamic = 64
-
-
-# Input/output signal (channel) description
-
-
-class InputSignal(object):
-    """
-    Description of an input channel.
-
-    Parameters
-    ----------
-    name : str
-        Name of the channel.
-    type : str or `type`
-        Type of the accepted signals.
-    handler : str
-        Name of the handler method for the signal.
-    flags : int, optional
-        Channel flags.
-    id : str
-        A unique id of the input signal.
-    doc : str, optional
-        A docstring documenting the channel.
-    replaces : List[str]
-        A list of names this input replaces.
-    """
-    def __init__(self, name, type, handler, flags=Single + NonDefault,
-                 id=None, doc=None, replaces=[]):
-        self.name = name
-        self.type = type
-        self.handler = handler
-        self.id = id
-        self.doc = doc
-        self.replaces = list(replaces)
-
-        if isinstance(flags, str):
-            # flags are stored as strings
-            warnings.warn("Passing 'flags' as string is deprecated, use "
-                          "integer constants instead",
-                          PendingDeprecationWarning)
-            flags = eval(flags)
-
-        if not (flags & Single or flags & Multiple):
-            flags += Single
-
-        if not (flags & Default or flags & NonDefault):
-            flags += NonDefault
-
-        self.single = flags & Single
-        self.default = flags & Default
-        self.explicit = flags & Explicit
-        self.flags = flags
-
-    def __str__(self):
-        fmt = ("{0.__name__}(name={name!r}, type={type!s}, "
-               "handler={handler}, ...)")
-        return fmt.format(type(self), **self.__dict__)
-
-    __repr__ = __str__
-
-
-def input_channel_from_args(args):
-    if isinstance(args, tuple):
-        return InputSignal(*args)
-    elif isinstance(args, InputSignal):
-        return copy.copy(args)
-    else:
-        raise TypeError("invalid declaration of widget input signal")
-
-
-class OutputSignal(object):
-    """
-    Description of an output channel.
-
-    Parameters
-    ----------
-    name : str
-        Name of the channel.
-    type : str or `type`
-        Type of the output signals.
-    flags : int, optional
-        Channel flags.
-    id : str
-        A unique id of the output signal.
-    doc : str, optional
-        A docstring documenting the channel.
-    replaces : List[str]
-        A list of names this output replaces.
-    """
-    def __init__(self, name, type, flags=Single + NonDefault,
-                 id=None, doc=None, replaces=[]):
-        self.name = name
-        self.type = type
-        self.id = id
-        self.doc = doc
-        self.replaces = list(replaces)
-
-        if isinstance(flags, str):
-            # flags are stored as strings
-            warnings.warn("Passing 'flags' as string is deprecated, use "
-                          "integer constants instead",
-                          PendingDeprecationWarning)
-            flags = eval(flags)
-
-        if not (flags & Single or flags & Multiple):
-            flags += Single
-
-        if not (flags & Default or flags & NonDefault):
-            flags += NonDefault
-
-        self.single = flags & Single
-        self.default = flags & Default
-        self.explicit = flags & Explicit
-        self.dynamic = flags & Dynamic
-        self.flags = flags
-
-        if self.dynamic and not self.single:
-            raise SignalSpecificationError(
-                "Output signal can not be 'Multiple' and 'Dynamic'."
-                )
-
-    def __str__(self):
-        fmt = ("{0.__name__}(name={name!r}, type={type!s}, "
-               "...)")
-        return fmt.format(type(self), **self.__dict__)
-
-    __repr__ = __str__
-
-
-def output_channel_from_args(args):
-    if isinstance(args, tuple):
-        return OutputSignal(*args)
-    elif isinstance(args, OutputSignal):
-        return copy.copy(args)
-    else:
-        raise TypeError("invalid declaration of widget output signal")
 
 
 class WidgetDescription(object):
@@ -308,10 +143,8 @@ class WidgetDescription(object):
 
         qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
         description = widget_class.description
-        inputs = [input_channel_from_args(input_) for input_ in
-                  widget_class.inputs]
-        outputs = [output_channel_from_args(output) for output in
-                   widget_class.outputs]
+        inputs = widget_class.inputs
+        outputs = widget_class.outputs
 
         # Convert all signal types into qualified names.
         # This is to prevent any possible import problems when cached

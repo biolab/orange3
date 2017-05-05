@@ -43,11 +43,7 @@ NAMED_COLORS = \
 DEFAULT_COLOR = "light-yellow"
 
 
-from .description import (
-    WidgetDescription, CategoryDescription,
-    InputSignal, OutputSignal
-)
-
+from .description import WidgetDescription, CategoryDescription
 from .base import WidgetRegistry, VERSION_HEX
 from . import discovery
 from .discovery import WidgetDiscovery
