@@ -21,7 +21,7 @@ class OWLoadModel(widget.OWWidget):
     replaces = ["Orange.widgets.classify.owloadclassifier.OWLoadClassifier"]
     icon = "icons/LoadModel.svg"
 
-    outputs = [("Model", Model, widget.Dynamic)]
+    outputs = [("Model", Model)]
 
     #: List of recent filenames.
     history = Setting([])

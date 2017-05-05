@@ -814,12 +814,17 @@ Multiple = widget_description.Multiple
 #: Only connected if specifically requested (in a dedicated "Links" dialog)
 #: or it is the only possible connection.
 Explicit = widget_description.Explicit
-#: Dynamic output type.
+#: Dynamic output type (obsolete and ignored).
 #: Specifies that the instances on the output will in general be
 #: subtypes of the declared type and that the output can be connected
 #: to any input signal which can accept a subtype of the declared output
 #: type.
 Dynamic = widget_description.Dynamic
+#: Only applies to output. Specifies that this output can be connected only
+#: to inputs that expect this type of its supertypes. Otherwise, the output
+#: can be connected to any input which can accept a subtype of the
+#: declared output type.
+Strict = widget_description.Strict
 
 InputSignal = widget_description.InputSignal
 OutputSignal = widget_description.OutputSignal

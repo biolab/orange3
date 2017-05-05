@@ -1832,7 +1832,7 @@ class CreateTableWithDomainAndTable(TableTests):
         new_domain = data.domain.Domain([], iris.domain.class_vars,
                                         iris.domain.attributes, source=iris.domain)
         new_iris = data.Table.from_table(new_domain, iris)
-        
+
         self.assertTrue(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
         self.assertEqual(new_iris.X.shape, (len(iris), 0))
