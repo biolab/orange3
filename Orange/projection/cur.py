@@ -122,7 +122,7 @@ class CURModel(Projection):
 
     def __call__(self, data, axis=0):
         if data.domain is not self.domain:
-            data = Orange.data.Table(self.domain, data)
+            data = data.transform(self.domain)
         Xt = self.proj.transform(data.X, axis)
 
         if axis == 0:

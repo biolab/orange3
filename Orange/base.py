@@ -228,7 +228,7 @@ class Model(Reprable):
             if not isinstance(data[0], (list, tuple)):
                 data = [data]
             data = Table(self.original_domain, data)
-            data = Table(self.domain, data)
+            data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         else:
             raise TypeError("Unrecognized argument (instance of '{}')"

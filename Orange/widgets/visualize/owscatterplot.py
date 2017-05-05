@@ -514,11 +514,9 @@ class OWScatterPlot(OWWidget):
                                   for i in range(np.max(selection))]),
         )
         domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        table = Table(
-            domain, data.X, data.Y,
-            metas=np.hstack((data.metas, selection.reshape(len(data), 1))))
-        table.attributes = data.attributes
-        table.ids = data.ids
+        table = data.transform(domain)
+        table.metas[:, len(data.domain.metas):] = \
+            selection.reshape(len(data), 1)
         return table
 
     def send_data(self):

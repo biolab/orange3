@@ -148,4 +148,4 @@ class RemoveNaNColumns(Preprocess):
         att = [a for a, n in zip(data.domain.attributes, nans) if n < threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
-        return Orange.data.Table(domain, data)
+        return data.transform(domain)

@@ -35,7 +35,7 @@ class DBSCANModel(Projection):
 
         if isinstance(data, Table):
             if data.domain is not self.pre_domain:
-                data = Table(self.pre_domain, data)
+                data = data.transform(self.pre_domain)
             y = self.proj.fit_predict(data.X)
             vals = [-1] + list(self.proj.core_sample_indices_)
             c = DiscreteVariable(name='Core sample index', values=vals)
