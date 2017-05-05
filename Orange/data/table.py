@@ -6,7 +6,6 @@ from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
 from numbers import Real, Integral
 from functools import reduce
-from warnings import warn
 from threading import Lock, RLock
 
 import numpy as np
@@ -1349,36 +1348,24 @@ class Table(MutableSequence, Storage):
         return stats
 
     def _compute_distributions(self, columns=None):
-        def _get_matrix(M, cachedM, col):
-            nonlocal single_column
-            W = self.W if self.has_weights() else None
-            if not sp.issparse(M):
-                return M[:, col], W, None
-            if cachedM is None:
-                if single_column:
-                    warn("computing distributions on sparse data "
-                         "for a single column is inefficient")
-                cachedM = sp.csc_matrix(self.X)
-            return cachedM[:, col], W, cachedM
-
         if columns is None:
             columns = range(len(self.domain.variables))
-            single_column = False
         else:
             columns = [self.domain.index(var) for var in columns]
-            single_column = len(columns) == 1 and len(self.domain) > 1
         distributions = []
-        Xcsc = Ycsc = None
+        if sp.issparse(self.X):
+            self.X = self.X.tocsc()
         for col in columns:
             var = self.domain[col]
+            W = self.W if self.has_weights() else None
             if 0 <= col < self.X.shape[1]:
-                m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
+                m = self.X[:, col]
             elif col < 0:
-                m, W, Xcsc = _get_matrix(self.metas, Xcsc, col * (-1) - 1)
+                m = self.metas[:, col * (-1) - 1]
                 if np.issubdtype(m.dtype, np.dtype(object)):
                     m = m.astype(float)
             else:
-                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
+                m = self._Y[:, col - self.X.shape[1]]
             if var.is_discrete:
                 if W is not None:
                     W = W.ravel()
