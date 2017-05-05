@@ -28,7 +28,7 @@ class Normalizer(Reprable):
             new_class_vars = [self.normalize(dists[i + attr_len], var) for
                               (i, var) in enumerate(data.domain.class_vars)]
         domain = Domain(new_attrs, new_class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
     def normalize(self, dist, var):
         if not var.is_continuous:

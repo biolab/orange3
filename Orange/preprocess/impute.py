@@ -187,7 +187,7 @@ class Model(BaseImputeMethod):
         domain = domain_with_class_var(data.domain, variable)
 
         if self.learner.check_learner_adequacy(domain):
-            data = data.from_table(domain, data)
+            data = data.transform(domain)
             model = self.learner(data)
             assert model.domain.class_var == variable
             return variable.copy(

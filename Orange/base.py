@@ -222,7 +222,7 @@ class Model(Reprable):
             prediction = self.predict_storage(data)
         elif isinstance(data, Table):
             if data.domain != self.domain:
-                data = data.from_table(self.domain, data)
+                data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
             if not isinstance(data[0], (list, tuple)):

@@ -96,7 +96,7 @@ class _PCATransformDomain:
 
     def __call__(self, data):
         if data.domain != self.pca.pre_domain:
-            data = data.from_table(self.pca.pre_domain, data)
+            data = data.transform(self.pca.pre_domain)
         return self.pca.transform(data.X)
 
 

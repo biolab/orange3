@@ -53,7 +53,7 @@ class Continuize(Preprocess):
             zero_based=self.zero_based,
             multinomial_treatment=self.multinomial_treatment)
         domain = continuizer(data)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class Discretize(Preprocess):
@@ -110,7 +110,7 @@ class Discretize(Preprocess):
             discretized(data.domain.attributes, True),
             discretized(data.domain.class_vars, self.discretize_classes),
             discretized(data.domain.metas, self.discretize_metas))
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class Impute(Preprocess):
@@ -141,7 +141,7 @@ class Impute(Preprocess):
         newattrs = [method(data, var) for var in data.domain.attributes]
         domain = Orange.data.Domain(
             newattrs, data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class SklImpute(Preprocess):
@@ -466,7 +466,7 @@ class Scale(Preprocess):
                 newvars.append(var)
         domain = Orange.data.Domain(newvars, data.domain.class_vars,
                                     data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class PreprocessorList(Reprable):
