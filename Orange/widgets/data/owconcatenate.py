@@ -157,7 +157,7 @@ class OWConcatenate(widget.OWWidget):
         tables = [table.transform(domain) for table in tables]
 
         if tables:
-            data = concat(tables)
+            data = type(tables[0]).concatenate(tables, axis=0)
             if self.append_source_column:
                 source_var = Orange.data.DiscreteVariable(
                     self.source_attr_name,
@@ -196,19 +196,6 @@ class OWConcatenate(widget.OWWidget):
                 self.source_attr_name,
                 self.id_roles[self.source_column_role].lower())
         self.report_items(items)
-
-
-def concat(tables):
-    Xs = [table.X for table in tables]
-    Ys = [numpy.c_[table.Y] for table in tables]
-    metas = [table.metas for table in tables]
-
-    domain = tables[0].domain
-
-    X = numpy.vstack(Xs)
-    Y = numpy.vstack(Ys)
-    metas = numpy.vstack(metas)
-    return Orange.data.Table.from_numpy(domain, X, Y, metas)
 
 
 def unique(seq):
