@@ -18,7 +18,7 @@ from Orange.data import (
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue
+from Orange.data.util import SharedComputeValue, vstack, hstack
 from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
 from Orange.util import flatten
 
@@ -898,30 +898,25 @@ class Table(MutableSequence, Storage):
         :param instances: additional instances
         :type instances: Orange.data.Table or a sequence of instances
         """
-        old_length = len(self)
-        self._resize_all(old_length + len(instances))
-        try:
-            # shortcut
-            if isinstance(instances, Table) and instances.domain == self.domain:
-                self.X[old_length:] = instances.X
-                self._Y[old_length:] = instances._Y
-                self.metas[old_length:] = instances.metas
-                if self.W.shape[-1]:
-                    if instances.W.shape[-1]:
-                        self.W[old_length:] = instances.W
-                    else:
-                        self.W[old_length:] = 1
-                self.ids[old_length:] = instances.ids
-            else:
+        if isinstance(instances, Table) and instances.domain == self.domain:
+            self.X = vstack((self.X, instances.X))
+            self._Y = vstack((self._Y, instances._Y))
+            self.metas = vstack((self.metas, instances.metas))
+            self.W = vstack((self.W, instances.W))
+            self.ids = hstack((self.ids, instances.ids))
+        else:
+            try:
+                old_length = len(self)
+                self._resize_all(old_length + len(instances))
                 for i, example in enumerate(instances):
                     self[old_length + i] = example
                     try:
                         self.ids[old_length + i] = example.id
                     except AttributeError:
                         self.ids[old_length + i] = self.new_id()
-        except Exception:
-            self._resize_all(old_length)
-            raise
+            except Exception:
+                self._resize_all(old_length)
+                raise
 
     @staticmethod
     def concatenate(tables, axis=1):

@@ -689,7 +689,15 @@ class TableTestCase(unittest.TestCase):
                                        [1, np.nan],
                                        [2, np.nan]])
 
-
+    def test_sparse_concatenate_rows(self):
+        iris = Table("iris")
+        iris.X = sp.csc_matrix(iris.X)
+        new = Table.concatenate([iris, iris], axis=0)
+        self.assertEqual(len(new), 300)
+        self.assertTrue(sp.issparse(new.X), "Concatenated X is not sparse.")
+        self.assertFalse(sp.issparse(new.Y), "Concatenated Y is not dense.")
+        self.assertFalse(sp.issparse(new.metas), "Concatenated metas is not dense.")
+        self.assertEqual(len(new.ids), 300)
 
     def test_convert_through_append(self):
         d = data.Table("iris")
