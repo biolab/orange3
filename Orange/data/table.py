@@ -1465,6 +1465,8 @@ class Table(MutableSequence, Storage):
             arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
 
             vars = [(e, f_ind(col_indi[e]), col_desc[e]) for e in arr_indi]
+            if vars and arr is self.X and sp.issparse(self.X):
+                self.X = self.X.tocsc()
             disc_vars = [v for v in vars if v[2].is_discrete]
             if disc_vars:
                 if sp.issparse(arr):
