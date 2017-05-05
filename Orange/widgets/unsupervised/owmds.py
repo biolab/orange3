@@ -1016,7 +1016,7 @@ class OWMDS(OWWidget):
                 metas += embedding.domain.attributes
 
             domain = Orange.data.Domain(attrs, class_vars, metas)
-            output = Orange.data.Table.from_table(domain, self.data)
+            output = self.data.transform(domain)
 
             if self.output_embedding_role == OWMDS.AttrRole:
                 output.X[:] = embedding.X

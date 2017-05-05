@@ -1160,7 +1160,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                     metas = metas + (clust_var,)
 
                 domain = Orange.data.Domain(attrs, class_, metas)
-                data = Orange.data.Table.from_table(domain, items)
+                data = items.transform(domain)
                 data.get_column_view(clust_var)[0][:] = c
             else:
                 data = items

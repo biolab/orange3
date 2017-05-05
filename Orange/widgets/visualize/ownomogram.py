@@ -854,7 +854,7 @@ class OWNomogram(OWWidget):
 
         self.domain = self.reconstruct_domain(self.classifier.original_domain,
                                               self.domain)
-        self.data = Table.from_table(self.domain, self.classifier.original_data)
+        self.data = self.classifier.original_data.transform(self.domain)
         attrs, ranges, start = self.domain.attributes, [], 0
         for attr in attrs:
             stop = start + len(attr.values) if attr.is_discrete else start + 1

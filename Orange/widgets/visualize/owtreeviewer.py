@@ -274,7 +274,7 @@ class OWTreeGraph(OWTreeViewer2D):
             self.domain = model.domain
             self.dataset = model.instances
             if self.dataset is not None and self.dataset.domain != self.domain:
-                self.clf_dataset = Table.from_table(model.domain, self.dataset)
+                self.clf_dataset = self.dataset.transform(model.domain)
             else:
                 self.clf_dataset = self.dataset
             class_var = self.domain.class_var

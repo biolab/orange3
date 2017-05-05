@@ -154,8 +154,7 @@ class OWConcatenate(widget.OWWidget):
                 domain = reduce(domain_intersection,
                                 (table.domain for table in tables))
 
-        tables = [Orange.data.Table.from_table(domain, table)
-                  for table in tables]
+        tables = [table.transform(domain) for table in tables]
 
         if tables:
             data = concat(tables)

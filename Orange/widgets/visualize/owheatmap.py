@@ -68,7 +68,7 @@ def vstack_by_subdomain(data, sub_domains):
     newtable = Table(domain)
 
     for sub_dom in sub_domains:
-        sub_data = data.from_table(sub_dom, data)
+        sub_data = data.transform(sub_dom)
         # TODO: improve O(N ** 2)
         newtable.extend(sub_data)
 
@@ -680,12 +680,11 @@ class OWHeatMap(widget.OWWidget):
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
             ndisc = sum(var.is_discrete for var in data.domain.attributes)
-            data = data.from_table(
+            data = data.transform(
                 Domain([var for var in data.domain.attributes
                         if var.is_continuous],
                        data.domain.class_vars,
-                       data.domain.metas),
-                data)
+                       data.domain.metas))
             if not data.domain.attributes:
                 self.Error.no_continuous()
                 input_data = data = None
@@ -849,14 +848,12 @@ class OWHeatMap(widget.OWWidget):
         group_label = split_label
         if self.merge_kmeans:
             if self.kmeans_model is None:
-                effective_data = self.input_data.from_table(
+                effective_data = self.input_data.transform(
                     Orange.data.Domain(
                         [var for var in self.input_data.domain.attributes
                          if var.is_continuous],
                         self.input_data.domain.class_vars,
-                        self.input_data.domain.metas),
-                    self.input_data
-                )
+                        self.input_data.domain.metas))
                 nclust = min(self.merge_kmeans_k, len(effective_data) - 1)
                 self.kmeans_model = kmeans_compress(effective_data, k=nclust)
                 effective_data.domain = self.kmeans_model.pre_domain
