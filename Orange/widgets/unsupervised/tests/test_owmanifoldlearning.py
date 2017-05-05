@@ -15,8 +15,8 @@ class TestOWManifoldLearning(WidgetTest):
         cls.iris = Table("iris")
 
     def setUp(self):
-        self.widget = self.create_widget(OWManifoldLearning,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(
+            OWManifoldLearning, stored_settings={"auto_apply": False})  # type: OWManifoldLearning
 
     def test_input_data(self):
         """Check widget's data"""
@@ -67,12 +67,26 @@ class TestOWManifoldLearning(WidgetTest):
         data = Table("iris")
         data.X = sparse.csr_matrix(data.X)
         self.assertTrue(sparse.issparse(data.X))
+        self.widget.manifold_method_index = 2
         self.send_signal("Data", data)
         self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
+        self.assertTrue(self.widget.Error.sparse_methods.is_shown())
         self.send_signal("Data", None)
         self.widget.apply_button.button.click()
-        self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
+        self.assertFalse(self.widget.Error.sparse_methods.is_shown())
+        # GH 2158
+        self.widget.manifold_method_index = 0
+        self.assertEqual(
+            'TSNE',
+            self.widget.MANIFOLD_METHODS[self.widget.manifold_method_index].__name__)
+        self.send_signal("Data", data)
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Error.sparse_methods.is_shown())
+        self.assertFalse(self.widget.Error.sparse_tsne_distance.is_shown())
+        self.assertIsInstance(self.get_output('Transformed data'), Table)
+        self.widget.params_widget.parameters['metric'] = 'chebyshev'
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.sparse_tsne_distance.is_shown())
 
     def test_singular_matrices(self):
         """

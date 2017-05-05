@@ -179,9 +179,12 @@ class OWManifoldLearning(OWWidget):
     auto_apply = Setting(True)
 
     class Error(OWWidget.Error):
-        n_neighbors_too_small = Msg("Neighbors must be greater than {}.")
+        n_neighbors_too_small = Msg("For chosen method and components, "
+                                    "neighbors must be greater than {}")
         manifold_error = Msg("{}")
-        sparse_not_supported = Msg("Sparse data is not supported.")
+        sparse_methods = Msg('Only t-SNE method supported on sparse data')
+        sparse_tsne_distance = Msg('Chebyshev, Jaccard, and Mahalanobis '
+                                   'distances not supported with sparse data.')
 
     def __init__(self):
         self.data = None
@@ -235,46 +238,51 @@ class OWManifoldLearning(OWWidget):
         self.apply()
 
     def apply(self):
-        data = None
-        self.clear_messages()
-        if self.data:
-            if self.data.is_sparse():
-                self.Error.sparse_not_supported()
-            else:
-                with self.progressBar():
-                    self.progressBarSet(10)
-                    domain = Domain([ContinuousVariable("C{}".format(i))
-                                     for i in range(self.n_components)],
-                                    self.data.domain.class_vars,
-                                    self.data.domain.metas)
+        out = None
+        data = self.data
+        method = self.MANIFOLD_METHODS[self.manifold_method_index]
+        have_data = data is not None and len(data)
+        sparse_incompat = have_data and data.is_sparse() and method != TSNE
+        self.Error.clear()
+        self.Error.sparse_methods(shown=sparse_incompat)
+        if have_data and not sparse_incompat:
+            domain = Domain([ContinuousVariable("C{}".format(i))
+                             for i in range(self.n_components)],
+                            data.domain.class_vars,
+                            data.domain.metas)
+            try:
+                projector = method(**self.get_method_parameters(data, method))
+                X = projector(data).embedding_
+                out = Table(domain, X, data.Y, data.metas)
+            except TypeError as e:
+                if 'sparse' in e.args[0] and 'distance' in e.args[0]:
+                    self.Error.sparse_tsne_distance()
+                else:
+                    raise
+            except ValueError as e:
+                if e.args[0] == "for method='hessian', n_neighbors " \
+                                "must be greater than [n_components" \
+                                " * (n_components + 3) / 2]":
+                    n = self.n_components * (self.n_components + 3) / 2
+                    self.Error.n_neighbors_too_small("{}".format(n))
+                else:
+                    self.Error.manifold_error(e.args[0])
+            except np.linalg.linalg.LinAlgError as e:
+                self.Error.manifold_error(str(e))
+        self.send("Transformed data", out)
 
-                    method = self.MANIFOLD_METHODS[self.manifold_method_index]
-                    projector = method(**self.get_method_parameters())
-                    try:
-                        self.progressBarSet(20)
-                        X = projector(self.data).embedding_
-                        data = Table(domain, X, self.data.Y, self.data.metas)
-                    except ValueError as e:
-                        if e.args[0] == "for method='hessian', n_neighbors " \
-                                        "must be greater than [n_components" \
-                                        " * (n_components + 3) / 2]":
-                            n = self.n_components * (self.n_components + 3) / 2
-                            self.Error.n_neighbors_too_small("{}".format(n))
-                        else:
-                            self.Error.manifold_error(e.args[0])
-                    except np.linalg.linalg.LinAlgError as e:
-                        self.Error.manifold_error(str(e))
-        self.send("Transformed data", data)
-
-    def get_method_parameters(self):
+    def get_method_parameters(self, data, method):
         parameters = dict(n_components=self.n_components)
         parameters.update(self.params_widget.parameters)
+        if data is not None and data.is_sparse() and method == TSNE:
+            parameters.update(method='exact',
+                              init='random')
         return parameters
 
     def send_report(self):
-        method_name = self.MANIFOLD_METHODS[self.manifold_method_index].name
-        self.report_items((("Method", method_name),))
-        parameters = self.get_method_parameters()
+        method = self.MANIFOLD_METHODS[self.manifold_method_index]
+        self.report_items((("Method", method.name),))
+        parameters = self.get_method_parameters(self.data, method)
         self.report_items("Method parameters", tuple(parameters.items()))
         if self.data:
             self.report_data("Data", self.data)
