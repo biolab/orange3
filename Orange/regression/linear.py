@@ -28,8 +28,9 @@ class _FeatureScorerMixin(LearnerScorer):
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
 
-    def __init__(self, preprocessors=None):
+    def __init__(self, preprocessors=None, n_jobs=1):
         super().__init__(preprocessors=preprocessors)
+        self.params = vars()
 
     def fit(self, X, Y, W):
         model = super().fit(X, Y, W)
