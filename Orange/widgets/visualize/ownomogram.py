@@ -10,7 +10,7 @@ from AnyQt.QtWidgets import (
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
-from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
+from AnyQt.QtCore import Qt, QRectF, QSize
 
 from Orange.data import Table, Domain
 from Orange.statistics.util import nanmin, nanmax, mean, unique
@@ -24,11 +24,8 @@ from Orange.widgets.widget import OWWidget, Msg, Input
 from Orange.widgets import gui
 
 
-def collides(item, shown_items):
-    for it in shown_items:
-        if item.collidesWithItem(it):
-            return True
-    return False
+def collides(item, items):
+    return any(item.collidesWithItem(i) for i in items)
 
 
 class SortBy(IntEnum):
@@ -555,13 +552,12 @@ class NomogramItem(QGraphicsWidget):
     def __init__(self):
         super().__init__()
         self._items = []
-        self.layout = QGraphicsLinearLayout(Qt.Vertical)
-        self.setLayout(self.layout)
+        self.setLayout(QGraphicsLinearLayout(Qt.Vertical))
 
     def add_items(self, items):
         self._items = items
         for item in items:
-            self.layout.addItem(item)
+            self.layout().addItem(item)
 
 
 class SortableNomogramItem(NomogramItem):
@@ -586,7 +582,7 @@ class SortableNomogramItem(NomogramItem):
         self._sorted_items = self._items if sort_type == SortBy.NO_SORTING \
             else sorted(self._items, key=key, reverse=reverse)
         for item in self._sorted_items:
-            self.layout.addItem(item)
+            self.layout().addItem(item)
 
     def hide(self, n):
         items = self._sorted_items or self._items
@@ -670,17 +666,17 @@ class OWNomogram(OWWidget):
 
         self.scale_radio = gui.radioButtons(
             self.controlArea, self, "scale", ["Point scale", "Log odds ratios"],
-            box="Scale", callback=self._radio_button_changed)
+            box="Scale", callback=self._scale_radio_changed)
 
         box = gui.vBox(self.controlArea, "Display features")
         grid = QGridLayout()
-        self.display_radio = gui.radioButtonsInBox(
+        radio_group = gui.radioButtonsInBox(
             box, self, "display_index", [], orientation=grid,
-            callback=self._display_radio_button_changed)
+            callback=self._n_attributes_radio_changed)
         radio_all = gui.appendRadioButton(
-            self.display_radio, "All:", addToLayout=False)
+            radio_group, "All", addToLayout=False)
         radio_best = gui.appendRadioButton(
-            self.display_radio, "Best ranked:", addToLayout=False)
+            radio_group, "Best ranked:", addToLayout=False)
         spin_box = gui.hBox(None, margin=0)
         self.n_spin = gui.spin(
             spin_box, self, "n_attributes", 1, self.MAX_N_ATTRS, label=" ",
@@ -690,7 +686,7 @@ class OWNomogram(OWWidget):
         grid.addWidget(spin_box, 2, 2)
 
         self.sort_combo = gui.comboBox(
-            box, self, "sort_index", label="Sort by: ", items=SortBy.items(),
+            box, self, "sort_index", label="Rank by:", items=SortBy.items(),
             orientation=Qt.Horizontal, callback=self._sort_combo_changed)
 
         self.cont_feature_dim_combo = gui.comboBox(
@@ -700,12 +696,21 @@ class OWNomogram(OWWidget):
 
         gui.rubber(self.controlArea)
 
+        class GraphicsView(QGraphicsView):
+            def resizeEvent(self, resizeEvent):
+                nonlocal owwidget
+                owwidget.repaint = True
+                values = [item.dot.value for item in owwidget.feature_items]
+                owwidget.feature_marker_values = owwidget.scale_back(values)
+                owwidget.update_scene()
+                return super().resizeEvent(resizeEvent)
+
         self.scene = QGraphicsScene()
-        self.view = QGraphicsView(
+        owwidget = self
+        self.view = GraphicsView(
             self.scene, horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             renderHints=QPainter.Antialiasing | QPainter.TextAntialiasing |
                         QPainter.SmoothPixmapTransform, alignment=Qt.AlignLeft)
-        self.view.viewport().installEventFilter(self)
         self.view.viewport().setMinimumWidth(300)
         self.view.sizeHint = lambda: QSize(600, 500)
         self.mainArea.layout().addWidget(self.view)
@@ -713,9 +718,10 @@ class OWNomogram(OWWidget):
     def _class_combo_changed(self):
         values = [item.dot.value for item in self.feature_items]
         self.feature_marker_values = self.scale_back(values)
-        coeffs = [np.nan_to_num(p[self.target_class_index] /
-                                p[self.old_target_class_index])
-                  for p in self.points]
+        with np.errstate(invalid='ignore'):
+            coeffs = [np.nan_to_num(p[self.target_class_index] /
+                                    p[self.old_target_class_index])
+                      for p in self.points]
         points = [p[self.old_target_class_index] for p in self.points]
         self.feature_marker_values = [
             self.get_points_from_coeffs(v, c, p) for (v, c, p) in
@@ -728,12 +734,12 @@ class OWNomogram(OWWidget):
         self.feature_marker_values = self.scale_back(values)
         self.update_scene()
 
-    def _radio_button_changed(self):
+    def _scale_radio_changed(self):
         values = [item.dot.value for item in self.feature_items]
         self.feature_marker_values = self.scale_back(values)
         self.update_scene()
 
-    def _display_radio_button_changed(self):
+    def _n_attributes_radio_changed(self):
         self.__hide_attrs(self.n_attributes if self.display_index else None)
 
     def _n_spin_changed(self):
@@ -746,7 +752,7 @@ class OWNomogram(OWWidget):
         self.nomogram_main.hide(n_show)
         if self.vertical_line:
             x = self.vertical_line.line().x1()
-            y = self.nomogram_main.layout.preferredHeight() + 30
+            y = self.nomogram_main.layout().preferredHeight() + 30
             self.vertical_line.setLine(x, -6, x, y)
             self.hidden_vertical_line.setLine(x, -6, x, y)
         rect = QRectF(self.scene.sceneRect().x(),
@@ -766,14 +772,6 @@ class OWNomogram(OWWidget):
         values = [item.dot.value for item in self.feature_items]
         self.feature_marker_values = self.scale_back(values)
         self.update_scene()
-
-    def eventFilter(self, obj, event):
-        if obj is self.view.viewport() and event.type() == QEvent.Resize:
-            self.repaint = True
-            values = [item.dot.value for item in self.feature_items]
-            self.feature_marker_values = self.scale_back(values)
-            self.update_scene()
-        return super().eventFilter(obj, event)
 
     def update_controls(self):
         self.class_combo.clear()
@@ -801,11 +799,12 @@ class OWNomogram(OWWidget):
             item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
             item = model.item(SortBy.NEGATIVE)
             item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
-            if self.sort_index in (SortBy.POSITIVE, SortBy.POSITIVE):
+            if self.sort_index in (SortBy.POSITIVE,
+                                   SortBy.NEGATIVE):
                 self.sort_index = SortBy.NO_SORTING
 
     @Inputs.data
-    def set_instance(self, data):
+    def set_data(self, data):
         self.instances = data
         self.feature_marker_values = []
         self.set_feature_marker_values()
@@ -886,8 +885,6 @@ class OWNomogram(OWWidget):
                 self.log_reg_cont_data_extremes.append([None])
 
     def update_scene(self):
-        if not self.repaint:
-            return
         self.clear_scene()
         if self.domain is None or not len(self.points[0]):
             return
@@ -965,11 +962,13 @@ class OWNomogram(OWWidget):
         self.nomogram_main = SortableNomogramItem()
         cont_feature_item_class = ContinuousFeature2DItem if \
             self.cont_feature_dim_index else ContinuousFeatureItem
+
         self.feature_items = [
             DiscreteFeatureItem(
-                name_items[i], [val for val in att.values], points[i],
+                name_items[i], att.values, points[i],
                 scale_x, name_offset, - scale_x * min_p,
-                self.points[i][cls_index]) if att.is_discrete else
+                self.points[i][cls_index])
+            if att.is_discrete else
             cont_feature_item_class(
                 name_items[i], self.log_reg_cont_data_extremes[i][cls_index],
                 self.get_ruler_values(
@@ -983,7 +982,7 @@ class OWNomogram(OWWidget):
             self.n_attributes if self.display_index else None)
 
         x = - scale_x * min_p
-        y = self.nomogram_main.layout.preferredHeight() + 30
+        y = self.nomogram_main.layout().preferredHeight() + 30
         self.vertical_line = QGraphicsLineItem(x, -6, x, y)
         self.vertical_line.setPen(QPen(Qt.DotLine))
         self.vertical_line.setParentItem(point_item)
@@ -1174,11 +1173,11 @@ if __name__ == "__main__":
 
     app = QApplication([])
     ow = OWNomogram()
-    titanic = Table("titanic")
-    clf = NaiveBayesLearner()(titanic)
-    # clf = LogisticRegressionLearner()(titanic)
+    data = Table("heart_disease")
+    clf = NaiveBayesLearner()(data)
+    # clf = LogisticRegressionLearner()(data)
     ow.set_classifier(clf)
-    ow.set_instance(titanic[0:])
+    ow.set_data(data[0:])
     ow.show()
     app.exec_()
     ow.saveSettings()
