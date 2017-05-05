@@ -26,7 +26,8 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        if issparse(c):     # sparse does not have unknown values
+        if issparse(c):
+            c.data = numpy.where(numpy.isnan(c.data), self.value, c.data)
             return c
         else:
             return numpy.where(numpy.isnan(c), self.value, c)
