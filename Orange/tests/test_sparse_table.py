@@ -21,8 +21,7 @@ class InterfaceTest(tabletests.InterfaceTest):
             super().test_append_rows()
 
     def test_insert_rows(self):
-        with self.assertRaises(Exception):
-            super().test_insert_rows()
+        super().test_insert_rows()
 
     def test_insert_view(self):
         with self.assertRaises(Exception):
