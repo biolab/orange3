@@ -8,6 +8,8 @@ engines:
    enabled: false
  radon:
    enabled: true
+   config:
+     threshold: "C"
  eslint:
    enabled: false
  shellcheck:
