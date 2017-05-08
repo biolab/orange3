@@ -2,9 +2,6 @@
 # pylint: disable=missing-docstring
 
 import unittest
-import multiprocessing as mp
-from unittest.mock import patch
-
 import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
@@ -14,7 +11,6 @@ from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrai
                                TestOnTestData, ShuffleSplit, sample, RMSE,
                                CrossValidationFeature)
 from Orange.preprocess import discretize, preprocess
-from Orange.util import OrangeWarning
 
 
 def random_data(nrows, ncols):
@@ -255,28 +251,6 @@ class TestCrossValidation(TestSampling):
         self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
         # +2 for class, +1 for fold
         self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)
-
-    def test_unpicklable_params(self):
-
-        class NonPicklableLearner(MajorityLearner):
-            pass
-
-        self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [NonPicklableLearner()], k=3, n_jobs=3)
-
-    def test_internal_cv(self):
-        # This test just covers; can't catch warnings from subprocesses
-        proc = mp.current_process()
-        was_daemon = proc.daemon
-        proc.daemon = True
-        self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [_ParameterTuningLearner()], k=2, n_jobs=3)
-        proc.daemon = was_daemon
-
-    def test_njobs(self):
-        with patch('Orange.evaluation.testing.CrossValidation._MIN_NJOBS_X_SIZE', 1):
-            res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=5, n_jobs=3)
-        self.check_folds(res, 5, self.nrows)
 
 
 class TestCrossValidationFeature(TestSampling):

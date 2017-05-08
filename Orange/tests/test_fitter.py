@@ -1,9 +1,8 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table, ContinuousVariable
-from Orange.evaluation import CrossValidation
 from Orange.modelling import Fitter
 from Orange.preprocess import Randomize, Discretize
 from Orange.regression.base_regression import LearnerRegression
@@ -107,10 +106,6 @@ class FitterTest(unittest.TestCase):
         self.assertEqual(
             tuple(learner.active_preprocessors), (pp,),
             'Fitter did not properly pass its preprocessors to its learners')
-
-    def test_n_jobs_fitting(self):
-        with patch('Orange.evaluation.testing.CrossValidation._MIN_NJOBS_X_SIZE', 1):
-            CrossValidation(self.heart_disease, [DummyFitter()], k=5, n_jobs=5)
 
     def test_properly_delegates_preprocessing(self):
         class DummyClassificationLearner(LearnerClassification):
