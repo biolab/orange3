@@ -3,6 +3,7 @@
 from itertools import chain
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Table, Domain, DiscreteVariable, StringVariable
 from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX
@@ -425,3 +426,28 @@ class TestOWMergeData(WidgetTest):
         self.assertEqual(self.widget.attr_merge_extra, zoo_images.domain[-1])
         self.assertEqual(self.widget.attr_combine_data, zoo.domain[-1])
         self.assertEqual(self.widget.attr_combine_extra, zoo_images.domain[-1])
+
+    def test_sparse(self):
+        """
+        Merge should work with sparse.
+        GH-2295
+        GH-2155
+        """
+        data = Table("iris")[::25]
+        data_ed_dense = Table("titanic")[::300]
+        data_ed_sparse = Table("titanic")[::300]
+        data_ed_sparse.X = sp.csr_matrix(data_ed_sparse.X)
+        self.send_signal("Data", data)
+
+        self.send_signal("Extra Data", data_ed_dense)
+        output_dense = self.get_output("Data")
+        self.assertFalse(sp.issparse(output_dense.X))
+        self.assertFalse(output_dense.is_sparse())
+
+        self.send_signal("Extra Data", data_ed_sparse)
+        output_sparse = self.get_output("Data")
+        self.assertTrue(sp.issparse(output_sparse.X))
+        self.assertTrue(output_sparse.is_sparse())
+
+        output_sparse.X = output_sparse.X.toarray()
+        self.assertTablesEqual(output_dense, output_sparse)
