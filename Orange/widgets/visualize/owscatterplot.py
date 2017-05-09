@@ -578,12 +578,6 @@ class OWScatterPlot(OWWidget):
         if caption:
             self.report_caption(caption)
 
-    def closeContext(self):
-        if self.current_context is not None:
-            # When dataset changes, forget selection
-            self.selection = None
-        super().closeContext()
-
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
