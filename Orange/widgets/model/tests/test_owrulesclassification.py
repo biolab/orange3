@@ -1,9 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from scipy import sparse
+
 from AnyQt.QtWidgets import (
     QButtonGroup, QRadioButton, QSpinBox, QDoubleSpinBox, QComboBox
 )
 
+from Orange.data import Table
 from Orange.widgets.model.owrules import OWRuleLearner
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
@@ -102,3 +105,14 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
 
         self.assertEqual(self.double_spin_boxes[2].value(),
                          self.widget.parent_alpha)
+
+    def test_sparse_data(self):
+        data = Table("iris")
+        data.X = sparse.csr_matrix(data.X)
+        self.assertTrue(sparse.issparse(data.X))
+        self.send_signal("Data", data)
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
+        self.send_signal("Data", None)
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())

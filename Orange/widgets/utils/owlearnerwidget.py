@@ -116,6 +116,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     """
     LEARNER = None
+    supports_sparse = True
 
     want_main_area = False
     resizing_enabled = False
@@ -124,6 +125,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     class Error(OWWidget.Error):
         data_error = Msg("{}")
         fitting_failed = Msg("Fitting failed.\n{}")
+        sparse_not_supported = Msg("Sparse data is not supported.")
 
     class Warning(OWWidget.Warning):
         outdated_learner = Msg("Press Apply to submit changes.")
@@ -207,6 +209,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     def check_data(self):
         self.valid_data = False
+        self.Error.sparse_not_supported.clear()
         if self.data is not None and self.learner is not None:
             self.Error.data_error.clear()
             if not self.learner.check_learner_adequacy(self.data.domain):
@@ -217,6 +220,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
                 self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:
                 self.Error.data_error("Data has no features to learn from.")
+            elif self.data.is_sparse() and not self.supports_sparse:
+                self.Error.sparse_not_supported()
             else:
                 self.valid_data = True
         return self.valid_data
