@@ -168,13 +168,6 @@ class OWSieveDiagram(OWWidget):
             self.domain_model.set_domain(None)
         else:
             self.domain_model.set_domain(data.domain)
-            if any(attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
-                discretizer = Discretize(
-                    method=EqualFreq(n=4), remove_const=False,
-                    discretize_classes=True, discretize_metas=True)
-                self.discrete_data = discretizer(data)
-            else:
-                self.discrete_data = data
         self.attrs = [x for x in self.domain_model if isinstance(x, Variable)]
         if self.attrs:
             self.attr_x = self.attrs[0]
@@ -184,6 +177,8 @@ class OWSieveDiagram(OWWidget):
             self.areas = []
             self.selection = set()
         self.openContext(self.data)
+        if self.data:
+            self.discrete_data = self.sparse_to_dense(data, True)
         self.resolve_shown_attributes()
         self.update_graph()
         self.update_selection()
@@ -191,7 +186,7 @@ class OWSieveDiagram(OWWidget):
         self.vizrank.initialize()
         self.vizrank_button.setEnabled(
             self.data is not None and len(self.data) > 1 and
-            len(self.data.domain.attributes) > 1)
+            len(self.data.domain.attributes) > 1 and not self.data.is_sparse())
 
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y
@@ -200,8 +195,32 @@ class OWSieveDiagram(OWWidget):
     def update_attr(self):
         """Update the graph and selection."""
         self.selection = set()
+        self.discrete_data = self.sparse_to_dense(self.data)
         self.update_graph()
         self.update_selection()
+
+    def sparse_to_dense(self, data, init=False):
+        """
+        Extracts two selected columns from sparse matrix.
+        GH-2260
+        """
+        def discretizer(data):
+            if any(attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
+                discretize = Discretize(
+                    method=EqualFreq(n=4), remove_const=False,
+                    discretize_classes=True, discretize_metas=True)
+                return discretize(data)
+            return data
+
+        if not data.is_sparse() and not init:
+            return self.discrete_data
+        if data.is_sparse():
+            attrs = {self.attr_x,
+                     self.attr_y}
+            new_domain = data.domain.select_columns(attrs)
+            data = Table.from_table(new_domain, data)
+            data.X = data.X.toarray()
+        return discretizer(data)
 
     def set_input_features(self, attr_list):
         """

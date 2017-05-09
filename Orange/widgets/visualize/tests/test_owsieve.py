@@ -3,6 +3,7 @@
 from math import isnan
 from unittest.mock import patch
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
@@ -86,3 +87,21 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         metas = self.widget.discrete_data.domain.metas
         self.assertEqual(len(metas), 2)
         self.assertTrue(all(attr.is_discrete for attr in metas))
+
+    def test_sparse_data(self):
+        """
+        Sparse support.
+        GH-2160
+        GH-2260
+        """
+        table = Table("iris")
+        self.send_signal("Data", table)
+        self.assertEqual(len(self.widget.discrete_data.domain), len(table.domain))
+        output = self.get_output("Data")
+        self.assertFalse(output.is_sparse())
+
+        table.X = sp.csr_matrix(table.X)
+        self.send_signal("Data", table)
+        self.assertEqual(len(self.widget.discrete_data.domain), 2)
+        output = self.get_output("Data")
+        self.assertTrue(output.is_sparse())
