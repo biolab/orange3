@@ -94,7 +94,7 @@ def git_version():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
+        out = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
         return out
 
     try:
@@ -176,7 +176,8 @@ PACKAGE_DATA = {
     "Orange.widgets": ["icons/*.png",
                        "icons/*.svg",
                        "_highcharts/*"],
-    "Orange.widgets.tests": ["datasets/*.tab"],
+    "Orange.widgets.tests": ["datasets/*.tab",
+                             "workflows/*.ows"],
     "Orange.widgets.data": ["icons/*.svg",
                             "icons/paintdata/*.png",
                             "icons/paintdata/*.svg"],
