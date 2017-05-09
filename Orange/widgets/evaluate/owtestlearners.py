@@ -3,6 +3,7 @@ import abc
 import enum
 import logging
 import traceback
+import copy
 from functools import partial, reduce
 
 import concurrent.futures
@@ -742,28 +743,34 @@ class OWTestLearners(OWWidget):
                  if slot.results is None]
         learners = [slot.learner for _, slot in items]
 
+        # deepcopy all learners as they are not thread safe (by virtue of
+        # the base API). These will be the effective learner objects tested
+        # but will be replaced with the originals on return (see restore
+        # learners bellow)
+        learners_c = [copy.deepcopy(learner) for learner in learners]
+
         if self.resampling == OWTestLearners.KFold:
             folds = self.NFolds[self.n_folds]
             test_f = partial(
                 Orange.evaluation.CrossValidation,
-                self.data, learners, k=folds,
+                self.data, learners_c, k=folds,
                 random_state=rstate, **common_args)
         elif self.resampling == OWTestLearners.FeatureFold:
             test_f = partial(
                 Orange.evaluation.CrossValidationFeature,
-                self.data, learners, self.fold_feature,
+                self.data, learners_c, self.fold_feature,
                 **common_args
             )
         elif self.resampling == OWTestLearners.LeaveOneOut:
             test_f = partial(
                 Orange.evaluation.LeaveOneOut,
-                self.data, learners, **common_args
+                self.data, learners_c, **common_args
             )
         elif self.resampling == OWTestLearners.ShuffleSplit:
             train_size = self.SampleSizes[self.sample_size] / 100
             test_f = partial(
                 Orange.evaluation.ShuffleSplit,
-                self.data, learners,
+                self.data, learners_c,
                 n_resamples=self.NRepeats[self.n_repeats],
                 train_size=train_size, test_size=None,
                 stratified=self.shuffle_stratified,
@@ -772,17 +779,24 @@ class OWTestLearners(OWWidget):
         elif self.resampling == OWTestLearners.TestOnTrain:
             test_f = partial(
                 Orange.evaluation.TestOnTrainingData,
-                self.data, learners, **common_args
+                self.data, learners_c, **common_args
             )
         elif self.resampling == OWTestLearners.TestOnTest:
             test_f = partial(
                 Orange.evaluation.TestOnTestData,
-                self.data, self.test_data, learners, **common_args
+                self.data, self.test_data, learners_c, **common_args
             )
         else:
             assert False
 
-        test_f = test_f  # type: Callable[[], Results]
+        def replace_learners(evalfunc, *args, **kwargs):
+            res = evalfunc(*args, **kwargs)
+            assert all(lc is lo for lc, lo in zip(learners_c, res.learners))
+            res.learners[:] = learners
+            return res
+
+        test_f = partial(replace_learners, test_f)  # type: Callable[[], Results]
+
         if self.__state == State.Running:
             assert self.__task is not None
             self.__task.cancel()
@@ -857,7 +871,8 @@ class OWTestLearners(OWWidget):
         # handle a completed task
         assert self.thread() is QThread.currentThread()
         if self.__task is not task:
-            log.debug("Reaping stale task: %r", "<>")
+            assert task.cancelled
+            log.debug("Reaping cancelled task: %r", "<>")
             return
 
         self.setBlocking(False)
@@ -867,7 +882,8 @@ class OWTestLearners(OWWidget):
         assert result.done()
         self.__task = None
         try:
-            results = result.result()  # type: Results
+            results = result.result()    # type: Results
+            learners = results.learners  # type: List[Learner]
         except Exception as er:
             log.exception("testing error (in __task_complete):",
                           exc_info=True)
@@ -879,7 +895,8 @@ class OWTestLearners(OWWidget):
 
         learner_key = {slot.learner: key for key, slot in
                        self.learners.items()}
-        learners = results.learners
+
+        # Update the results for individual learners
         class_var = results.domain.class_var
         for learner, result in zip(learners, results.split_by_model()):
             stats = None
