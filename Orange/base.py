@@ -1,4 +1,5 @@
 import inspect
+import itertools
 from collections import Iterable
 import re
 
@@ -10,27 +11,25 @@ from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
                                RemoveNaNColumns, SklImpute, Normalize)
-from Orange.util import Reprable, patch
+from Orange.util import Reprable
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
 class _ReprableWithPreprocessors(Reprable):
-    def __repr__(self):
-        preprocessors = self.preprocessors
-        # TODO: Implement __eq__ on preprocessors to avoid comparing reprs
-        if repr(preprocessors) == repr(list(self.__class__.preprocessors)):
-            # If they are default, set to None temporarily to avoid printing
-            preprocessors = None
-        with patch.object(self, 'preprocessors', preprocessors):
-            return super().__repr__()
-
-
-class _ReprableWithParams(Reprable):
-    def __repr__(self):
-        # In addition to saving values onto self, SklLearners save into params
-        with patch.dict(self.__dict__, self.params):
-            return super().__repr__()
+    def _reprable_omit_param(self, name, default, value):
+        if name == "preprocessors":
+            default_cls = type(self).preprocessors
+            if value is default or value is default_cls:
+                return True
+            else:
+                try:
+                    return all(p1 is p2 for p1, p2 in
+                               itertools.zip_longest(value, default_cls))
+                except (ValueError, TypeError):
+                    return False
+        else:
+            return super()._reprable_omit_param(name, default, value)
 
 
 class Learner(_ReprableWithPreprocessors):
@@ -300,7 +299,7 @@ class SklModel(Model, metaclass=WrapperMeta):
         return super().__repr__() + '  # params=' + repr(self.params)
 
 
-class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
+class SklLearner(Learner, metaclass=WrapperMeta):
     """
     ${skldoc}
     Additional Orange parameters
@@ -367,6 +366,18 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
         """Indicates whether this learner supports weighted instances.
         """
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
+
+    def __getattr__(self, item):
+        try:
+            return self.params[item]
+        except (KeyError, AttributeError):
+            raise AttributeError(item) from None
+
+    # TODO: Disallow (or mirror) __setattr__ for keys in params?
+
+    def __dir__(self):
+        dd = super().__dir__()
+        return list(sorted(set(dd) | set(self.params.keys())))
 
 
 class TreeModel(Model):
