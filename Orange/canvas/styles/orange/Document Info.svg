@@ -1,17 +1,65 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Generator: Adobe Illustrator 16.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<g fill="white">
-	<path d="M27.999,6H13.001H11v2v32v2h2.001h22.002H37v-2V16v-2.002L27.999,6z M13.001,40V8h11.998c2.001,0,3,4.001,2.001,8
-		c0,0,8.003-3.124,8.003,0.998V40H13.001z"/>
-	<g>
-		<path d="M19.99,27.094c0.03-0.77,0.331-1.953,0.659-2.533c0.718-0.329,1.959-0.55,3.145-0.55c0.719,0,1.708,0.108,2.176,0.302
-			v10.743c0.578,0.081,1.487,0.274,1.955,0.495c0.085,0.302,0.136,0.965,0.136,1.541c0,0.223,0,0.414-0.025,0.607h-8.096
-			c0.051-0.661,0.246-1.57,0.438-2.01c0.387-0.305,1.05-0.578,1.599-0.771v-7.824H19.99z"/>
-		<path d="M26.433,19.401c0,1.904-1.16,2.967-2.801,2.967c-1.869,0-2.87-1.033-2.87-2.967c0-1.677,1.194-2.772,2.87-2.772
-			C25.272,16.629,26.433,17.63,26.433,19.401z"/>
-	</g>
-</g>
-</svg>
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   width="48px"
+   height="48px"
+   viewBox="0 0 48 48"
+   enable-background="new 0 0 48 48"
+   xml:space="preserve"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="Document Info.svg"><metadata
+     id="metadata7617"><rdf:RDF><cc:Work
+         rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" /></cc:Work></rdf:RDF></metadata><defs
+     id="defs7615" /><sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1861"
+     inkscape:window-height="1056"
+     id="namedview7613"
+     showgrid="false"
+     inkscape:zoom="9.8333333"
+     inkscape:cx="27.302559"
+     inkscape:cy="32.319251"
+     inkscape:window-x="59"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" /><g
+     transform="matrix(1.1544011,0,0,1.1544011,-19.989046,-1176.5)"
+     id="text4257"
+     style="font-size:36.62047195px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"><g
+       transform="matrix(1.1782913,0,0,1.1782913,-5.7466029,-182.82109)"
+       id="g4500"
+       style="fill:#ffffff;fill-opacity:1"><g
+         id="g5543"
+         style="fill:#ffffff;fill-opacity:1" /><path
+         d="m 37.959278,1032.0105 c -0.634762,0 -1.184069,-0.2197 -1.647921,-0.6592 -0.463865,-0.4394 -0.695795,-1.0376 -0.695789,-1.7944 -6e-6,-0.7568 0.231924,-1.3549 0.695789,-1.7944 0.463852,-0.4394 1.013159,-0.6592 1.647921,-0.6592 0.65916,0 1.208467,0.2198 1.647921,0.6592 0.46385,0.4395 0.695779,1.0376 0.695789,1.7944 -10e-6,0.7568 -0.231939,1.355 -0.695789,1.7944 -0.439454,0.4395 -0.988761,0.6592 -1.647921,0.6592"
+         style="font-size:36.62047195px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+         id="path4253-3"
+         inkscape:connector-curvature="0"
+         sodipodi:nodetypes="ccccscccc" /><path
+         d="m 36.495768,1037.8053 -2.571165,0 0,-3.1582 6.584197,0 0,13.7199 -4.013015,0 0,-10.5617"
+         style="font-variant:normal;font-stretch:normal;fill:#ffffff;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+         id="path4262-7"
+         inkscape:connector-curvature="0"
+         sodipodi:nodetypes="ccccccc" /><g
+         id="g5547"
+         style="fill:#ffffff;fill-opacity:1" /></g></g></svg>

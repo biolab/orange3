@@ -1,16 +1,83 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Generator: Adobe Illustrator 16.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<g fill="white">
-	<path d="M9.217,9.213C7.143,11.284,6.004,14.039,6,16.971c0.004,2.933,1.143,5.686,3.217,7.757
-		c2.069,2.072,4.824,3.213,7.757,3.213c2.932,0,5.687-1.141,7.761-3.213c4.275-4.275,4.271-11.235-0.005-15.515
-		C20.45,4.936,13.492,4.936,9.217,9.213z M21.99,11.954c1.336,1.337,2.074,3.12,2.074,5.015c0,1.899-0.742,3.681-2.078,5.02
-		c-2.763,2.764-7.263,2.762-10.03-0.002c-1.34-1.335-2.073-3.116-2.073-5.013c0-1.899,0.733-3.681,2.073-5.018l0.004-0.002
-		c1.336-1.338,3.116-2.074,5.018-2.074C18.87,9.88,20.655,10.616,21.99,11.954z"/>
-	<path d="M27.345,27.341c-0.485,0.487-1.015,0.919-1.564,1.281l-1.243,0.82l11.535,11.537c1.355,1.354,3.558,1.355,4.913,0.002
-		C41.639,40.325,42,39.451,42,38.524c0-0.929-0.361-1.799-1.015-2.45L29.446,24.535l-0.822,1.239
-		C28.255,26.334,27.83,26.857,27.345,27.341z"/>
-</g>
-</svg>
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   width="48px"
+   height="48px"
+   viewBox="0 0 48 48"
+   enable-background="new 0 0 48 48"
+   xml:space="preserve"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="Search.svg"><metadata
+     id="metadata3184"><rdf:RDF><cc:Work
+         rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" /></cc:Work></rdf:RDF></metadata><defs
+     id="defs3182" /><sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1861"
+     inkscape:window-height="1056"
+     id="namedview3180"
+     showgrid="false"
+     inkscape:zoom="3.4766083"
+     inkscape:cx="39.874382"
+     inkscape:cy="44.779017"
+     inkscape:window-x="59"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="Layer_1" /><g
+     id="g3034"
+     transform="matrix(0.75251938,0,0,0.75251938,16.356512,7.5086717)"
+     style="fill:#ffffff;fill-opacity:1;stroke:none"><path
+       d="m 6.2689487,6.262073 c -2.8626758,2.858535 -4.434801,6.661173 -4.4403221,10.708119 0.00552,4.048326 1.5776463,7.848204 4.4403221,10.706739 2.8557744,2.859915 6.6584123,4.434801 10.7067383,4.434801 4.046946,0 7.849584,-1.574886 10.71226,-4.434801 5.900646,-5.900646 5.895124,-15.507311 -0.0069,-21.414858 -5.907547,-5.90340605 -15.511452,-5.90340605 -21.4120973,0 z m 17.6301623,3.783315 c 1.844038,1.845418 2.862676,4.306436 2.862676,6.922043 0,2.621129 -1.024159,5.080767 -2.868197,6.928946 -3.81368,3.81506 -10.024886,3.8123 -13.844087,-0.0028 -1.8495595,-1.842658 -2.8612959,-4.300915 -2.8612959,-6.919283 0,-2.621129 1.0117364,-5.080767 2.8612959,-6.926185 l 0.0055,-0.0028 c 1.844038,-1.846799 4.300915,-2.8626762 6.926184,-2.8626762 2.611467,0 5.075246,1.0158772 6.917903,2.8626762 z"
+       id="path3036"
+       inkscape:connector-curvature="0"
+       style="fill:#ffffff;fill-opacity:1;stroke:none" /><path
+       d="m 27.345,27.341 c -0.485,0.487 -1.015,0.919 -1.564,1.281 l -1.243,0.82 11.535,11.537 c 1.355,1.354 3.558,1.355 4.913,0.002 C 41.639,40.325 42,39.451 42,38.524 42,37.595 41.639,36.725 40.985,36.074 L 29.446,24.535 28.624,25.774 c -0.369,0.56 -0.794,1.083 -1.279,1.567 z"
+       id="path3038"
+       inkscape:connector-curvature="0"
+       style="fill:#ffffff;fill-opacity:1;stroke:none" /></g><g
+     id="g3596"
+     transform="matrix(0.66499999,0,0,0.66499999,14.10538,6.836609)"
+     style="fill:#ffffff"><g
+       transform="matrix(1.9292248,0,0,0.9454543,363.52999,19.621208)"
+       style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"
+       id="flowRoot3554"><path
+         d="m -198.58509,19.733248 10.52174,0 0,5.683593 -10.52174,0 0,-5.683593"
+         style="font-weight:bold;fill:#ffffff;-inkscape-font-specification:Sans Bold"
+         id="path4645"
+         inkscape:connector-curvature="0" /></g><g
+       transform="matrix(0.9454543,0,0,0.9454543,165.3456,-47.077451)"
+       id="g3586"
+       style="fill:#ffffff"><g
+         transform="matrix(2.0405268,0,0,1,209.61815,46.865831)"
+         style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"
+         id="flowRoot3570"><path
+           d="m -199.45703,19.733248 12.26562,0 0,5.683593 -12.26562,0 0,-5.683593"
+           style="font-weight:bold;fill:#ffffff;-inkscape-font-specification:Sans Bold"
+           id="path4648"
+           inkscape:connector-curvature="0" /></g><g
+         transform="matrix(0,2.0405268,-1,0,-162.29005,463.92413)"
+         style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans"
+         id="flowRoot3578"><path
+           d="m -199.45703,19.733248 12.26562,0 0,5.683593 -12.26562,0 0,-5.683593"
+           style="font-weight:bold;fill:#ffffff;-inkscape-font-specification:Sans Bold"
+           id="path4651"
+           inkscape:connector-curvature="0" /></g></g></g></svg>
