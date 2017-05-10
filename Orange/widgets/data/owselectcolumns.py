@@ -597,7 +597,7 @@ class OWSelectAttributes(widget.OWWidget):
             metas = list(self.meta_attrs)
 
             domain = Orange.data.Domain(attributes, class_var, metas)
-            newdata = self.data.from_table(domain, self.data)
+            newdata = self.data.transform(domain)
             self.output_data = newdata
             self.send("Data", newdata)
             self.send("Features", widget.AttributeList(attributes))

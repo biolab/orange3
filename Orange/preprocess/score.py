@@ -65,7 +65,7 @@ class Scorer(_RefuseDataInConstructor, Reprable):
 
         if feature is not None:
             f = data.domain[feature]
-            data = data.from_table(Domain([f], data.domain.class_vars), data)
+            data = data.transform(Domain([f], data.domain.class_vars))
 
         for pp in self.preprocessors:
             data = pp(data)

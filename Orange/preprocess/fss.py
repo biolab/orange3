@@ -81,7 +81,7 @@ class SelectBestFeatures(Reprable):
 
         domain = Orange.data.Domain([f for s, f in best],
                                     data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
     def score_only_nice_features(self, data, method):
         mask = np.array([isinstance(a, method.feature_type)
@@ -119,7 +119,7 @@ class SelectRandomFeatures(Reprable):
             random.sample(data.domain.attributes,
                           min(self.k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class RemoveNaNColumns(Preprocess):
@@ -148,4 +148,4 @@ class RemoveNaNColumns(Preprocess):
         att = [a for a, n in zip(data.domain.attributes, nans) if n < threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
-        return Orange.data.Table(domain, data)
+        return data.transform(domain)

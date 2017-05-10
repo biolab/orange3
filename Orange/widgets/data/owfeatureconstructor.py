@@ -595,7 +595,7 @@ class OWFeatureConstructor(OWWidget):
         )
 
         try:
-            data = Orange.data.Table(new_domain, self.data)
+            data = self.data.transform(new_domain)
         except Exception as err:
             log = logging.getLogger(__name__)
             log.error("", exc_info=True)

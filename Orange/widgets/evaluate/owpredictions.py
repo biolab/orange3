@@ -475,7 +475,7 @@ class OWPredictions(OWWidget):
         metas = list(self.data.domain.metas) + newmetas
         domain = \
             Orange.data.Domain(attrs, self.data.domain.class_var, metas=metas)
-        predictions = self.data.from_table(domain, self.data)
+        predictions = self.data.transform(domain)
         if newcolumns:
             newcolumns = numpy.hstack(
                 [numpy.atleast_2d(cols) for cols in newcolumns])

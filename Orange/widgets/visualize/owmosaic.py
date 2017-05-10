@@ -456,7 +456,7 @@ class OWMosaicDisplay(OWWidget):
             self.unprocessed_subset_data = data
             return
         try:
-            self.subset_data = data.from_table(self.data.domain, data)
+            self.subset_data = data.transform(self.data.domain)
         except:
             self.subset_data = None
             self.Warning.incompatible_subset(shown=data is not None)

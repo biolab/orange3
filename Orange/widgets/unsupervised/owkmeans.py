@@ -313,7 +313,7 @@ class OWKMeans(widget.OWWidget):
         domain = self.data.domain
         new_domain = Domain(
             domain.attributes, [clust_var], domain.metas + domain.class_vars)
-        new_table = Table.from_table(new_domain, self.data)
+        new_table = self.data.transform(new_domain)
         new_table.get_column_view(clust_var)[0][:] = clust_ids.X.ravel()
 
         centroids = Table(Domain(km.pre_domain.attributes), km.centroids)

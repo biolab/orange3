@@ -381,8 +381,7 @@ class OWSilhouettePlot(widget.OWWidget):
                     self.data.domain.attributes,
                     self.data.domain.class_vars,
                     self.data.domain.metas + (silhouette_var, ))
-                data = self.data.from_table(
-                    domain, self.data)
+                data = self.data.transform(domain)
             else:
                 domain = self.data.domain
                 data = self.data

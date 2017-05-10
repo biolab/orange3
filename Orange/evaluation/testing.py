@@ -295,11 +295,10 @@ class Results:
         new_meta_attr = list(data.domain.metas) + new_meta_attr
         new_meta_vals = np.hstack((data.metas, new_meta_vals))
 
-        X = data.X if include_attrs else np.empty((len(data), 0))
         attrs = data.domain.attributes if include_attrs else []
-
         domain = Domain(attrs, data.domain.class_vars, metas=new_meta_attr)
-        predictions = Table.from_numpy(domain, X, data.Y, metas=new_meta_vals)
+        predictions = data.transform(domain)
+        predictions.metas = new_meta_vals
         predictions.name = data.name
         return predictions
 

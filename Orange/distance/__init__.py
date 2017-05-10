@@ -19,7 +19,7 @@ def _preprocess(table):
         [a for a in table.domain.attributes if a.is_continuous],
         table.domain.class_vars,
         table.domain.metas)
-    new_data = data.Table(new_domain, table)
+    new_data = table.transform(new_domain)
     new_data = SklImpute()(new_data)
     return new_data
 

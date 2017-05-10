@@ -146,8 +146,7 @@ class OWPythagorasTree(OWWidget):
             # this bit is important for the regression classifier
             if self.instances is not None and \
                     self.instances.domain != model.domain:
-                self.clf_dataset = Table.from_table(
-                    self.model.domain, self.instances)
+                self.clf_dataset = self.instances.transform(self.model.domain)
             else:
                 self.clf_dataset = self.instances
 

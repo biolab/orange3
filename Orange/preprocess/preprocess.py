@@ -9,7 +9,6 @@ from sklearn.utils import shuffle as skl_shuffle
 import bottleneck as bn
 
 import Orange.data
-from Orange.data import Table
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution
 from Orange.util import Reprable, Enum
@@ -53,7 +52,7 @@ class Continuize(Preprocess):
             zero_based=self.zero_based,
             multinomial_treatment=self.multinomial_treatment)
         domain = continuizer(data)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class Discretize(Preprocess):
@@ -110,7 +109,7 @@ class Discretize(Preprocess):
             discretized(data.domain.attributes, True),
             discretized(data.domain.class_vars, self.discretize_classes),
             discretized(data.domain.metas, self.discretize_metas))
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class Impute(Preprocess):
@@ -141,7 +140,7 @@ class Impute(Preprocess):
         newattrs = [method(data, var) for var in data.domain.attributes]
         domain = Orange.data.Domain(
             newattrs, data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class SklImpute(Preprocess):
@@ -167,8 +166,8 @@ class SklImpute(Preprocess):
         assert X.shape[1] == len(features)
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
-        new_data = Orange.data.Table(domain, X, data.Y, data.metas, W=data.W)
-        new_data.attributes = getattr(data, 'attributes', {})
+        new_data = data.transform(domain)
+        new_data.X = X
         return new_data
 
 
@@ -193,7 +192,7 @@ class RemoveConstant(Preprocess):
         atts = [data.domain.attributes[i] for i, ok in enumerate(oks) if ok]
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
-        return Orange.data.Table(domain, data)
+        return data.transform(domain)
 
 
 class RemoveNaNClasses(Preprocess):
@@ -219,7 +218,7 @@ class RemoveNaNClasses(Preprocess):
             nan_cls = np.any(np.isnan(data.Y), axis=1)
         else:
             nan_cls = np.isnan(data.Y)
-        return Table(data.domain, data, np.where(nan_cls == False))
+        return data[~nan_cls]
 
 
 class Normalize(Preprocess):
@@ -350,9 +349,7 @@ class Randomize(Preprocess):
         data : Orange.data.Table
             Randomized data table.
         """
-        new_data = Table(data)
-        new_data.ensure_copy()
-
+        new_data = data.copy()
         if self.rand_type & Randomize.RandomizeClasses:
             new_data.Y = self.randomize(new_data.Y)
         if self.rand_type & Randomize.RandomizeAttributes:
@@ -466,7 +463,7 @@ class Scale(Preprocess):
                 newvars.append(var)
         domain = Orange.data.Domain(newvars, data.domain.class_vars,
                                     data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class PreprocessorList(Reprable):

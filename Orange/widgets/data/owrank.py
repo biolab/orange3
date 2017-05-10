@@ -652,8 +652,9 @@ class OWRank(OWWidget):
             self.send("Reduced Data", None)
             self.out_domain_desc = None
         else:
-            data = Table(Domain(selected, self.data.domain.class_var,
-                                self.data.domain.metas), self.data)
+            reduced_domain = Domain(
+                selected, self.data.domain.class_var, self.data.domain.metas)
+            data = self.data.transform(reduced_domain)
             self.send("Reduced Data", data)
             self.out_domain_desc = report.describe_domain(data.domain)
 

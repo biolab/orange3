@@ -153,9 +153,8 @@ class OWOutliers(widget.OWWidget):
                 else:
                     inliers_ind = np.where(y_pred == 1)[0]
                     outliers_ind = np.where(y_pred == -1)[0]
-                    inliers = Table(self.new_domain, self.new_data, inliers_ind)
-                    outliers = Table(self.new_domain,
-                                     self.new_data, outliers_ind)
+                    inliers = self.new_data[inliers_ind]
+                    outliers = self.new_data[outliers_ind]
                     self.in_out_info_label.setText(
                         "{} inliers, {} outliers".format(len(inliers),
                                                          len(outliers)))
@@ -189,7 +188,7 @@ class OWOutliers(widget.OWWidget):
             new_metas = list(self.data.domain.metas) + \
                         [ContinuousVariable(name="Mahalanobis")]
             self.new_domain = Domain(attrs, classes, new_metas)
-            self.new_data = Table(self.new_domain, self.data)
+            self.new_data = self.data.transform(self.new_domain)
             self.new_data.metas = np.hstack((self.data.metas, mahal))
         else:
             self.new_domain = self.data.domain

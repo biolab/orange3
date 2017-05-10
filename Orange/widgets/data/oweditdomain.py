@@ -558,7 +558,7 @@ class OWEditDomain(widget.OWWidget):
                 class_vars = all_new_vars[n_attrs: n_attrs + n_class_vars]
                 new_metas = all_new_vars[n_attrs + n_class_vars:]
                 new_domain = Orange.data.Domain(attrs, class_vars, new_metas)
-                new_data = self.data.from_table(new_domain, self.data)
+                new_data = self.data.transform(new_domain)
             else:
                 self.Error.duplicate_var_name()
 

@@ -47,7 +47,7 @@ class Projection:
         return self.proj.transform(X)
 
     def __call__(self, data):
-        return data.from_table(self.domain, data)
+        return data.transform(self.domain)
 
     def __repr__(self):
         return self.name

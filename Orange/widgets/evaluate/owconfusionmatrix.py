@@ -382,21 +382,13 @@ class OWConfusionMatrix(widget.OWWidget):
                          for value in class_var.values]
                 metas = metas + tuple(pvars)
 
-            X = self.data.X
-            Y = self.data.Y
-            M = self.data.metas
-            row_ids = self.data.ids
-
-            M = numpy.hstack((M,) + tuple(extra))
-            domain = Orange.data.Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                metas
-            )
-            data = Orange.data.Table.from_numpy(domain, X, Y, M)
-            data.ids = row_ids
+            domain = Orange.data.Domain(self.data.domain.attributes,
+                                        self.data.domain.class_vars,
+                                        metas)
+            data = self.data.transform(domain)
+            data.metas[:, len(self.data.domain.metas):] = \
+                numpy.hstack(tuple(extra))
             data.name = learner_name
-            data.attributes = self.data.attributes
 
             if selected:
                 annotated_data = create_annotated_table(data, selected)

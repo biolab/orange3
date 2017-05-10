@@ -349,9 +349,7 @@ class OWColor(widget.OWWidget):
                                         self._create_proxies(domain.class_vars),
                                         self._create_proxies(domain.metas))
             self.openContext(data)
-            self.data = Orange.data.Table(domain, data)
-            self.data.domain = domain
-
+            self.data = data.transform(domain)
             self.disc_model.set_data(self.disc_colors)
             self.cont_model.set_data(self.cont_colors)
             self.disc_view.resizeColumnsToContents()

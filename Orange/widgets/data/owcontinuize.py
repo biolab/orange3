@@ -128,7 +128,7 @@ class OWContinuize(widget.OWWidget):
         continuizer = self.constructContinuizer()
         if self.data is not None and len(self.data):
             domain = continuizer(self.data)
-            data = Table.from_table(domain, self.data)
+            data = self.data.transform(domain)
             self.send("Data", data)
         else:
             self.send("Data", self.data)  # None or empty data

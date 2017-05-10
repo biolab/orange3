@@ -1,6 +1,6 @@
 import re
 import numpy as np
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Domain, DiscreteVariable
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
@@ -41,8 +41,6 @@ def create_annotated_table(data, selected_indices):
     annotated = np.zeros((len(data), 1))
     if selected_indices is not None:
         annotated[selected_indices] = 1
-    table = Table(domain, data.X, data.Y,
-                  metas=np.hstack((data.metas, annotated)))
-    table.attributes = data.attributes
-    table.ids = data.ids
+    table = data.transform(domain)
+    table[:, name] = annotated
     return table

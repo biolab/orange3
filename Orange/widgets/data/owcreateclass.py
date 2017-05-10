@@ -468,7 +468,7 @@ class OWCreateClass(widget.OWWidget):
             self.class_name, names, compute_value=compute_value)
         new_domain = Domain(
             domain.attributes, new_class, domain.metas + domain.class_vars)
-        new_data = Table(new_domain, self.data)
+        new_data = self.data.transform(new_domain)
         self.send("Data", new_data)
 
     def send_report(self):

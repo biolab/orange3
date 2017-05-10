@@ -833,7 +833,7 @@ class OWMap(widget.OWWidget):
             if self.lat_attr and self.lon_attr and self.class_attr in domain:
                 domain = Domain([domain[self.lat_attr], domain[self.lon_attr]],
                                 [domain[self.class_attr]])  # I am retarded
-                train = Table.from_table(domain, self.data)
+                train = self.data.transform(domain)
                 try:
                     model = self.learner(train)
                 except Exception as e:

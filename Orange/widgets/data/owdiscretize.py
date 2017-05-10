@@ -467,7 +467,7 @@ class OWDiscretize(widget.OWWidget):
         output = None
         if self.data is not None and len(self.data):
             domain = self.discretized_domain()
-            output = self.data.from_table(domain, self.data)
+            output = self.data.transform(domain)
         self.send("Data", output)
 
     def storeSpecificSettings(self):

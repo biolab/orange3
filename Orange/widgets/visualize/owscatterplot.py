@@ -378,8 +378,8 @@ class OWScatterPlot(OWWidget):
             new_attrs = [a for a in data.domain.attributes + data.domain.metas
                          if a.is_primitive()]
             new_metas = [m for m in data.domain.metas if not m.is_primitive()]
-            data = Table.from_table(Domain(new_attrs, data.domain.class_vars,
-                                           new_metas), data)
+            new_domain = Domain(new_attrs, data.domain.class_vars, new_metas)
+            data = data.transform(new_domain)
         return data
 
     def set_subset_data(self, subset_data):
@@ -433,7 +433,7 @@ class OWScatterPlot(OWWidget):
             if attr in attrs:
                 keys.append(i)
         new_domain = input_data.domain.select_columns(keys)
-        dmx = Table.from_table(new_domain, input_data)
+        dmx = input_data.transform(new_domain)
         dmx.X = dmx.X.toarray()
         # TODO: remove once we make sure Y is always dense.
         if sp.issparse(dmx.Y):
@@ -514,11 +514,9 @@ class OWScatterPlot(OWWidget):
                                   for i in range(np.max(selection))]),
         )
         domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        table = Table(
-            domain, data.X, data.Y,
-            metas=np.hstack((data.metas, selection.reshape(len(data), 1))))
-        table.attributes = data.attributes
-        table.ids = data.ids
+        table = data.transform(domain)
+        table.metas[:, len(data.domain.metas):] = \
+            selection.reshape(len(data), 1)
         return table
 
     def send_data(self):
