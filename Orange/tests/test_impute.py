@@ -28,7 +28,7 @@ class TestReplaceUnknowns(unittest.TestCase):
     def test_sparse(self):
         m = sp.csr_matrix(np.eye(10))
         rm = preprocess.ReplaceUnknowns(None, value=42).transform(m)
-        self.assertEqual((m!=rm).nnz, 0)
+        self.assertEqual((m != rm).nnz, 0)
 
     def test_sparse_nans(self):
         """
