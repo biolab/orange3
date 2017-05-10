@@ -1,8 +1,10 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import pickle
 import unittest
 
-from Orange.base import SklLearner, Learner
+from Orange.base import SklLearner, Learner, Model
+from Orange.data import Domain
 from Orange.preprocess import Discretize, Randomize
 from Orange.regression import LinearRegressionLearner
 
@@ -98,3 +100,14 @@ class TestSklLearner(unittest.TestCase):
             LinearRegressionLearner().supports_weights,
             "Either LinearRegression no longer supports weighted tables or "
             "SklLearner.supports_weights is out-of-date.")
+
+
+class TestModel(unittest.TestCase):
+    def test_pickle(self):
+        """Make sure data is not saved when pickling a model."""
+        model = Model(Domain([]))
+        model.original_data = [1, 2, 3]
+        model2 = pickle.loads(pickle.dumps(model))
+        self.assertEqual(model.domain, model2.domain)
+        self.assertEqual(model.original_data, [1, 2, 3])
+        self.assertEqual(model2.original_data, None)

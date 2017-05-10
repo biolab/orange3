@@ -273,6 +273,14 @@ class Model(Reprable):
         else:  # ret == Model.ValueProbs
             return value, probs
 
+    def __getstate__(self):
+        """Skip (possibly large) data when pickling models"""
+        state = self.__dict__
+        if 'original_data' in state:
+            state = state.copy()
+            state['original_data'] = None
+        return state
+
 
 class SklModel(Model, metaclass=WrapperMeta):
     used_vals = None
