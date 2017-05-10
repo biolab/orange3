@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines
 from collections import defaultdict
 from functools import reduce
 from itertools import product, chain
@@ -186,7 +185,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             # Reset while running; just abort
             if self.attr_ordering is None:
                 break
-            for up in range(len(state)):
+            for up, _ in enumerate(state):
                 state[up] += 1
                 if up + 1 == len(state) or state[up] < state[up + 1]:
                     break
