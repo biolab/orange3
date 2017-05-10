@@ -58,29 +58,36 @@ class MDS(SklProjector):
         self.init_data = init_data
 
     def __call__(self, data):
+        params = self.params.copy()
+        dissimilarity = params['dissimilarity']
         distances = SklDistance, SpearmanDistance, PearsonDistance
         if isinstance(self._metric, distances):
             data = self.preprocess(data)
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)
-            self.params['dissimilarity'] = 'precomputed'
+            dissimilarity = 'precomputed'
         elif self._metric is 'precomputed':
             dist_matrix, Y, domain = data, None, None
             X = dist_matrix
+            dissimilarity = 'precomputed'
         else:
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
             if self.init_type == "PCA":
                 dist_matrix = Euclidean(X)
-        if self.init_type == "PCA" and self.init_data is None:
-            self.init_data = torgerson(dist_matrix, self.params['n_components'])
-        clf = self.fit(X, Y=Y)
-        clf.domain = domain
-        return clf
 
-    def fit(self, X, Y=None):
-        proj = self.__wraps__(**self.params)
-        return proj.fit(X, init=self.init_data, y=Y)
+        if self.init_type == "PCA" and self.init_data is None:
+            init_data = torgerson(dist_matrix, params['n_components'])
+        elif self.init_data is not None:
+            init_data = self.init_data
+        else:
+            init_data = None
+
+        params["dissimilarity"] = dissimilarity
+        mds = self.__wraps__(**params)
+        mds.fit(X, y=Y, init=init_data)
+        mds.domain = domain
+        return mds
 
 
 class Isomap(SklProjector):
@@ -131,15 +138,19 @@ class TSNE(SklProjector):
         self.params = vars()
 
     def __call__(self, data):
-        if self.params['metric'] is 'precomputed':
+        params = self.params.copy()
+        metric = params["metric"]
+        if metric == 'precomputed':
             X, Y, domain = data, None, None
         else:
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
             distances = SklDistance, SpearmanDistance, PearsonDistance
-            if isinstance(self.params['metric'], distances):
-                X = self.params['metric'](X)
-                self.params['metric'] = 'precomputed'
-        clf = self.fit(X, Y=Y)
-        clf.domain = domain
-        return clf
+            if isinstance(metric, distances):
+                X = metric(X)
+                params['metric'] = 'precomputed'
+
+        tsne = self.__wraps__(**params)
+        tsne.fit(X, y=Y)
+        tsne.domain = domain
+        return tsne
