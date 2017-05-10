@@ -25,7 +25,8 @@ from .annotations import SchemeTextAnnotation, SchemeArrowAnnotation
 from .errors import IncompatibleChannelTypeError
 
 from ..registry import global_registry
-from ..registry import WidgetDescription, InputSignal, OutputSignal
+from ..registry import WidgetDescription
+from Orange.widgets.utils.signals import InputSignal, OutputSignal
 
 log = logging.getLogger(__name__)
 

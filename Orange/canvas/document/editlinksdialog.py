@@ -26,7 +26,7 @@ from AnyQt.QtCore import (
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..scheme import SchemeNode, SchemeLink, compatible_channels
-from ..registry import InputSignal, OutputSignal
+from Orange.widgets.utils.signals import InputSignal, OutputSignal
 
 from ..resources import icon_loader
 

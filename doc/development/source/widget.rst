@@ -106,12 +106,17 @@ Input/Output flags:
    Multiple signal (more then one input on the channel). Input with this
    flag receive a second parameter `id`.
 
-.. attribute:: Dynamic
+.. attribute:: Strict
 
-   Only applies to output. Specifies that the instances on the output
-   will in general be subtypes of the declared type and that the output
+   Only applies to output. Specifies that this output can be connected only
+   to inputs that expect this type of its supertypes. Otherwise, the output
    can be connected to any input which can accept a subtype of the
    declared output type.
+
+.. attribute:: Dynamic (obsolete and ignored)
+
+   Opposite of `Strict`. All output signals are now dynamic by default.
+   Non-dynamic signals can be specified by using the flag `Strict`.
 
 .. attribute:: Explicit
 

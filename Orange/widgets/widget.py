@@ -12,7 +12,6 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
-from Orange.canvas.registry import description as widget_description
 from Orange.canvas.report import Report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
@@ -21,6 +20,13 @@ from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.utils.messages import \
     WidgetMessagesMixin, UnboundMsg
+from Orange.widgets.utils.signals import \
+    WidgetSignalsMixin, Input, Output, AttributeList, \
+    Default, NonDefault, Single, Multiple, Explicit, Dynamic, Strict
+# Temporary compatibility fix
+InputSignal = Input
+OutputSignal = Output
+
 from .utils.overlay import MessageOverlayWidget
 
 # Msg is imported and renamed, so widgets can import it from this module rather
@@ -46,34 +52,28 @@ class WidgetMetaClass(type(QDialog)):
     #noinspection PyMethodParameters
     # pylint: disable=bad-classmethod-argument
     def __new__(mcs, name, bases, kwargs):
-        from Orange.canvas.registry.description import (
-            input_channel_from_args, output_channel_from_args)
-
         cls = super().__new__(mcs, name, bases, kwargs)
-        if not cls.name: # not a widget
+        if not cls.name:  # not a widget
             return cls
-
-        cls.inputs = [input_channel_from_args(inp) for inp in cls.inputs]
-        cls.outputs = [output_channel_from_args(outp) for outp in cls.outputs]
-
-        for inp in cls.inputs:
-            if not hasattr(cls, inp.handler):
-                raise AttributeError("missing input signal handler '{}' in {}".
-                                     format(inp.handler, cls.name))
-
-        # TODO Remove this when all widgets are migrated to Orange 3.0
-        if (hasattr(cls, "settingsToWidgetCallback") or
-                hasattr(cls, "settingsFromWidgetCallback")):
-            raise TypeError("Reimplement settingsToWidgetCallback and "
-                            "settingsFromWidgetCallback")
-
+        cls.patch_signals()
         cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
-
         return cls
+
+    @property
+    def inputs(self):
+        return [signal for signal in self.Inputs.__dict__.values()
+                if isinstance(signal, Input)]
+
+    @property
+    def outputs(self):
+        return [signal for signal in self.Outputs.__dict__.values()
+                if isinstance(signal, Output)]
+
 
 
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
-               WidgetMessagesMixin, metaclass=WidgetMetaClass):
+               WidgetMessagesMixin, WidgetSignalsMixin,
+               metaclass=WidgetMetaClass):
     """Base widget class"""
 
     # Global widget count
@@ -180,6 +180,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         QDialog.__init__(self, None, self.get_flags())
         OWComponent.__init__(self)
         WidgetMessagesMixin.__init__(self)
+        WidgetSignalsMixin.__init__(self)
 
         stored_settings = kwargs.get('stored_settings', None)
         if self.settingsHandler:
@@ -471,19 +472,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.raise_()
         self.activateWindow()
 
-    def send(self, signalName, value, id=None):
-        """
-        Send a `value` on the `signalName` widget output.
-
-        An output with `signalName` must be defined in the class ``outputs``
-        list.
-        """
-        if not any(s.name == signalName for s in self.outputs):
-            raise ValueError('{} is not a valid output signal for widget {}'.format(
-                signalName, self.name))
-        if self.signalManager is not None:
-            self.signalManager.send(self, signalName, value, id)
-
     def openContext(self, *a):
         """Open a new context corresponding to the given data.
 
@@ -554,16 +542,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         If possible, subclasses should gracefully cancel any currently
         executing tasks.
-        """
-        pass
-
-    def handleNewSignals(self):
-        """
-        Invoked by the workflow signal propagation manager after all
-        signals handlers have been called.
-
-        Reimplement this method in order to coalesce updates from
-        multiple updated inputs.
         """
         pass
 
@@ -794,38 +772,3 @@ class Message(object):
         self.icon = icon
         self.moreurl = moreurl
         self.persistent_id = persistent_id
-
-
-#: Input/Output flags.
-#: -------------------
-#:
-#: The input/output is the default for its type.
-#: When there are multiple IO signals with the same type the
-#: one with the default flag takes precedence when adding a new
-#: link in the canvas.
-Default = widget_description.Default
-NonDefault = widget_description.NonDefault
-#: Single input signal (default)
-Single = widget_description.Single
-#: Multiple outputs can be linked to this signal.
-#: Signal handlers with this flag have (object, id: object) -> None signature.
-Multiple = widget_description.Multiple
-#: Applies to user interaction only.
-#: Only connected if specifically requested (in a dedicated "Links" dialog)
-#: or it is the only possible connection.
-Explicit = widget_description.Explicit
-#: Dynamic output type.
-#: Specifies that the instances on the output will in general be
-#: subtypes of the declared type and that the output can be connected
-#: to any input signal which can accept a subtype of the declared output
-#: type.
-Dynamic = widget_description.Dynamic
-
-InputSignal = widget_description.InputSignal
-OutputSignal = widget_description.OutputSignal
-
-
-class AttributeList(list):
-    """Signal type for lists of attributes (variables)
-    """
-    pass
