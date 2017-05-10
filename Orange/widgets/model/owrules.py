@@ -319,15 +319,10 @@ class OWRuleLearner(OWBaseLearner):
 
     def update_model(self):
         """
-        Ensure that the progress bar is updated only if the generated
-        learner is used within this widget (for example, it must not be
-        accessed from test&score widget).
+        Reimplemented from OWBaseLearner.
         """
         if self.check_data():
-            with self.progressBar() as progress:
-                self.learner.set_progress_advance_callback(progress.advance)
-                self.model = self.learner(self.data)
-                self.learner.clear_progress_advance_callback()
+            self.model = self.learner(self.data)
             self.model.name = self.learner_name
             self.model.instances = self.data
             self.valid_data = True
@@ -336,6 +331,9 @@ class OWRuleLearner(OWBaseLearner):
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def create_learner(self):
+        """
+        Reimplemented from OWBaseLearner.
+        """
         return self.LEARNER(
             preprocessors=self.preprocessors,
             base_rules=self.base_rules,
