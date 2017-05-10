@@ -349,6 +349,11 @@ class SklLearner(_ReprableWithParams, Learner, metaclass=WrapperMeta):
 
     def fit(self, X, Y, W=None):
         clf = self.__wraps__(**self.params)
+
+        # If problem "small enough", running it on a single core is probably faster
+        if hasattr(clf, 'n_jobs') and np.multiply(*X.shape) < 20000:
+            clf.set_params(n_jobs=1)
+
         Y = Y.reshape(-1)
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
