@@ -1,4 +1,5 @@
 import inspect
+import threading
 
 import Orange.data
 from Orange.base import _ReprableWithPreprocessors
@@ -18,6 +19,7 @@ class Projector(_ReprableWithPreprocessors):
         if preprocessors is None:
             preprocessors = type(self).preprocessors
         self.preprocessors = tuple(preprocessors)
+        self.__tls = threading.local()
 
     def fit(self, X, Y=None):
         raise NotImplementedError(
@@ -27,7 +29,7 @@ class Projector(_ReprableWithPreprocessors):
         data = self.preprocess(data)
         self.domain = data.domain
         clf = self.fit(data.X, data.Y)
-        clf.pre_domain = self.domain
+        clf.pre_domain = data.domain
         clf.name = self.name
         return clf
 
@@ -35,6 +37,31 @@ class Projector(_ReprableWithPreprocessors):
         for pp in self.preprocessors:
             data = pp(data)
         return data
+
+    # Projectors implemented using `fit` access the `domain` through the
+    # instance attribute. This makes (or it would) make it impossible to
+    # be implemented in a thread-safe manner. So the domain is made a
+    # property descriptor utilizing thread local storage behind the scenes.
+    @property
+    def domain(self):
+        return self.__tls.domain
+
+    @domain.setter
+    def domain(self, value):
+        self.__tls.domain = value
+
+    @domain.deleter
+    def domain(self):
+        del self.__tls.domain
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state["_Projector__tls"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__tls = threading.local()
 
 
 class Projection:
