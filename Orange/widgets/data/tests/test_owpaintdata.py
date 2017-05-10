@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring, protected-access
 
 import numpy as np
+import scipy.sparse as sp
+
 from AnyQt.QtCore import QRectF, QPointF
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
@@ -56,3 +58,16 @@ class TestOWPaintData(WidgetTest):
         )
         data = Table(domain, [[0.1, 0.2, "a"], [0.4, 0.7, "t"]])
         self.send_signal("Data", data)
+
+    def test_sparse_data(self):
+        """
+        Show warning msg when data is sparse.
+        GH-2298
+        GH-2163
+        """
+        data = Table("iris")[::25]
+        data.X = sp.csr_matrix(data.X)
+        self.send_signal("Data", data)
+        self.assertTrue(self.widget.Warning.sparse_not_supported.is_shown())
+        self.send_signal("Data", None)
+        self.assertFalse(self.widget.Warning.sparse_not_supported.is_shown())

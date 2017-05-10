@@ -765,6 +765,7 @@ class OWPaintData(OWWidget):
     class Warning(OWWidget.Warning):
         no_input_variables = Msg("Input data has no variables")
         continuous_target = Msg("Continuous target value can not be used.")
+        sparse_not_supported = Msg("Sparse data is ignored.")
 
     class Information(OWWidget.Information):
         use_first_two = \
@@ -973,6 +974,9 @@ class OWPaintData(OWWidget):
         """Set the input_data and call reset_to_input"""
         def _check_and_set_data(data):
             self.clear_messages()
+            if data and data.is_sparse():
+                self.Warning.sparse_not_supported()
+                return False
             if data is not None and len(data):
                 if not data.domain.attributes:
                     self.Warning.no_input_variables()
