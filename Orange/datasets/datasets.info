@@ -953,6 +953,21 @@
             "values": null
         }
     },
+    "spambase": {
+        "features": {
+            "continuous": 57,
+            "discrete": 0,
+            "meta": 0
+        },
+        "location": "spambase.tab",
+        "missing": false,
+        "name": "spambase",
+        "rows": 4601,
+        "target": {
+            "type": "discrete",
+            "values": 2
+        }
+    },
     "sponge": {
         "features": {
             "continuous": 0,
