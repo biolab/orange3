@@ -28,7 +28,19 @@ class TestReplaceUnknowns(unittest.TestCase):
     def test_sparse(self):
         m = sp.csr_matrix(np.eye(10))
         rm = preprocess.ReplaceUnknowns(None, value=42).transform(m)
-        self.assertEqual((m!=rm).nnz, 0)
+        self.assertEqual((m != rm).nnz, 0)
+
+    def test_sparse_nans(self):
+        """
+        Remove nans from sparse matrix.
+        GH-2295
+        GH-2178
+        """
+        m = sp.csr_matrix(np.ones((3, 3)))
+        m[0, :] = np.nan
+        self.assertTrue(np.isnan(m.data).any())
+        preprocess.ReplaceUnknowns(None, value=42.).transform(m)
+        self.assertFalse(np.isnan(m.data).any())
 
 
 class TestDropInstances(unittest.TestCase):

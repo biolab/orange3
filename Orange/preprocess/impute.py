@@ -4,7 +4,7 @@ from scipy.sparse import issparse
 import Orange.data
 from Orange.statistics import distribution, basic_stats
 from Orange.util import Reprable
-from .transformation import Transformation, Lookup
+from .transformation import Transformation, Lookup as BaseLookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
            "Model", "AsValue", "Random", "Default"]
@@ -26,7 +26,8 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        if issparse(c):     # sparse does not have unknown values
+        if issparse(c):
+            c.data = numpy.where(numpy.isnan(c.data), self.value, c.data)
             return c
         else:
             return numpy.where(numpy.isnan(c), self.value, c)
@@ -226,7 +227,7 @@ class IsDefined(Transformation):
         return ~numpy.isnan(c)
 
 
-class Lookup(Lookup):
+class Lookup(BaseLookup):
     def __init__(self, variable, lookup_table, unknown=None):
         super().__init__(variable, lookup_table)
         self.unknown = unknown
