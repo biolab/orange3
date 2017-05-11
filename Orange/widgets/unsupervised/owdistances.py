@@ -10,10 +10,15 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, Msg
 
+# A placeholder. This metric is handled specially in commit method.
+__Mahalanobis = distance.MahalanobisDistance()
+__Mahalanobis.fit = None
+
+
 METRICS = [
     distance.Euclidean,
     distance.Manhattan,
-    distance.Mahalanobis,
+    __Mahalanobis,
     distance.Cosine,
     distance.Jaccard,
     distance.SpearmanR,
@@ -131,15 +136,10 @@ class OWDistances(OWWidget):
             return
 
         if isinstance(metric, distance.MahalanobisDistance):
-            n, m = data.X.shape
-            if self.axis == 1:
-                n, m = m, n
-
-        if isinstance(metric, distance.MahalanobisDistance):
             # Mahalanobis distance has to be trained before it can be used
             # to compute distances
             try:
-                metric.fit(data, axis=1 - self.axis)
+                metric = distance.MahalanobisDistance(data, axis=1 - self.axis)
             except (ValueError, MemoryError) as e:
                 self.Error.mahalanobis_error(e)
                 return

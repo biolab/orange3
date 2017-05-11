@@ -3,7 +3,7 @@
 import numpy as np
 
 from Orange.data import Table
-from Orange.distance import MahalanobisDistance, Mahalanobis
+from Orange.distance import MahalanobisDistance
 from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS
 from Orange.widgets.tests.base import WidgetTest
 
@@ -12,8 +12,8 @@ class TestOWDistances(WidgetTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.iris = Table("iris")
-        cls.titanic = Table("titanic")
+        cls.iris = Table("iris")[::5]
+        cls.titanic = Table("titanic")[::10]
 
     def setUp(self):
         self.widget = self.create_widget(OWDistances)
@@ -24,7 +24,7 @@ class TestOWDistances(WidgetTest):
         self.send_signal("Data", self.iris)
         for i, metric in enumerate(METRICS):
             if isinstance(metric, MahalanobisDistance):
-                metric.fit(self.iris)
+                metric = MahalanobisDistance(self.iris)
             self.widget.metrics_combo.activated.emit(i)
             self.widget.metrics_combo.setCurrentIndex(i)
             self.send_signal("Data", self.iris)
@@ -42,7 +42,9 @@ class TestOWDistances(WidgetTest):
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
 
     def test_mahalanobis_error(self):
-        self.widget.metric_idx = METRICS.index(Mahalanobis)
+        mah_index = [i for i, d in enumerate(METRICS)
+                     if isinstance(d, MahalanobisDistance)][0]
+        self.widget.metric_idx = mah_index
         self.widget.autocommit = True
 
         invalid = self.iris[:]
