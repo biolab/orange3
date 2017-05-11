@@ -121,7 +121,7 @@ class PythonScriptEditor(QPlainTextEdit):
             text = self.lastLine()
             if text and not text.strip():
                 cursor = self.textCursor()
-                for i in range(min(self.INDENT, len(text))):
+                for _ in range(min(self.INDENT, len(text))):
                     cursor.deletePreviousChar()
             else:
                 super().keyPressEvent(event)
@@ -359,8 +359,8 @@ class OWPythonScript(widget.OWWidget):
 
     inputs = [("in_data", Orange.data.Table, "setExampleTable",
                widget.Default),
-#               ("in_distance", Orange.misc.SymMatrix, "setDistanceMatrix",
-#                widget.Default),
+              # ("in_distance", Orange.misc.SymMatrix, "setDistanceMatrix",
+              # widget.Default),
               ("in_learner", Learner, "setLearner",
                widget.Default),
               ("in_classifier", Model, "setClassifier",
@@ -368,7 +368,7 @@ class OWPythonScript(widget.OWWidget):
               ("in_object", object, "setObject")]
 
     outputs = [("out_data", Orange.data.Table, ),
-#                ("out_distance", Orange.misc.SymMatrix, ),
+               # ("out_distance", Orange.misc.SymMatrix, ),
                ("out_learner", Learner, ),
                ("out_classifier", Model, widget.Dynamic),
                ("out_object", object, widget.Dynamic)]
@@ -417,7 +417,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.libraryView = QListView(
             editTriggers=QListView.DoubleClicked |
-                         QListView.EditKeyPressed,
+            QListView.EditKeyPressed,
             sizePolicy=QSizePolicy(QSizePolicy.Ignored,
                                    QSizePolicy.Preferred)
         )
