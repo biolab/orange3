@@ -10,10 +10,10 @@ import concurrent.futures
 from concurrent.futures import Future
 
 from collections import OrderedDict, namedtuple
-from types import SimpleNamespace as namespace
 
 try:
     # only used in type hinting
+    # pylint: disable=unused-import
     from typing import Any, Optional, List, Tuple, Dict, Callable
 except ImportError:
     pass
@@ -147,19 +147,14 @@ class State(enum.Enum):
     """
     OWTestLearner's runtime state.
     """
-    Waiting = "Waiting"  # Insufficient input
+    #: No or insufficient input (i.e. no data or no learners)
+    Waiting = "Waiting"
+    #: Executing/running the evaluations
     Running = "Running"
+    #: Finished running evaluations (success or error)
     Done = "Done"
+    #: Evaluation cancelled
     Cancelled = "Cancelled"
-
-
-def wait_until_done(future, timeout=None):
-    # type: (Future, Optional[float]) -> None
-    assert isinstance(future, Future)
-    try:
-        future.exception(timeout=timeout)
-    except concurrent.futures.CancelledError:
-        pass
 
 
 class OWTestLearners(OWWidget):
@@ -250,13 +245,6 @@ class OWTestLearners(OWWidget):
         # cleared by __update
         self.__needupdate = False
         self.__task = None  # type: Optional[Task]
-
-        # TODO: Change/replace the current implementation of ThreadExecutor
-        # Ensure full compatibility with concurrent.futures implementation, or
-        # just use the concurrent.futures (from a global pool? have different
-        # pools for gil intensive, numpy intensive, IO intensive tasks?
-        # cannot even be sure what is required here. The learners can be gil
-        # or numpy/cython heavy)
         self.__executor = ThreadExecutor()
 
         sbox = gui.vBox(self.controlArea, "Sampling")
@@ -446,7 +434,7 @@ class OWTestLearners(OWWidget):
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
             if data:
-                data = RemoveNaNClasses(data)
+                data = RemoveNaNClasses()(data)
         else:
             self.Warning.missing_data.clear()
 
@@ -787,7 +775,7 @@ class OWTestLearners(OWWidget):
                 self.data, self.test_data, learners_c, **common_args
             )
         else:
-            assert False
+            assert False, "self.resampling %s" % self.resampling
 
         def replace_learners(evalfunc, *args, **kwargs):
             res = evalfunc(*args, **kwargs)
@@ -795,7 +783,7 @@ class OWTestLearners(OWWidget):
             res.learners[:] = learners
             return res
 
-        test_f = partial(replace_learners, test_f)  # type: Callable[[], Results]
+        test_f = partial(replace_learners, test_f)
 
         if self.__state == State.Running:
             assert self.__task is not None
@@ -807,62 +795,44 @@ class OWTestLearners(OWWidget):
         self.__submit(test_f)
 
     def __submit(self, testfunc):
-        # type: (Callable[Callable[float], Results]) -> None
-        # testfunc must be a callable taking a single callback
-        # ((float,) -> None) and returning Results
+        # type: (Callable[[Callable[float]], Results]) -> None
+        """
+        Submit a testing function for evaluation
+
+        MUST not be called if an evaluation is already pending/running.
+        Cancel the existing task first.
+
+        Parameters
+        ----------
+        testfunc : Callable[[Callable[float]], Results])
+            Must be a callable taking a single `callback` argument and
+            returning a Results instance
+        """
         assert self.__state != State.Running
+        # Setup the task
+        task = Task()
 
-        # Ad-hoc task state
-        task = namespace(
-            cancelled=False,
-            future=Future(),
-            report_progress=None,
-            func=testfunc,
-        )
-
-        def report_progress(finished):
+        def progress_callback(finished):
             if task.cancelled:
                 raise UserInterrupt()
             QMetaObject.invokeMethod(
                 self, "setProgressValue", Qt.QueuedConnection,
                 Q_ARG(float, 100 * finished)
             )
-        task.report_progress = report_progress
 
         def ondone(_):
             QMetaObject.invokeMethod(
                 self, "__task_complete", Qt.QueuedConnection,
                 Q_ARG(object, task))
+
+        testfunc = partial(testfunc, callback=progress_callback)
+        task.future = self.__executor.submit(testfunc)
         task.future.add_done_callback(ondone)
-
-        def cancel():
-            log.debug("cancel task")
-            task.cancelled = True
-            cancelled = task.future.cancel()
-            if cancelled:
-                log.debug("Task cancelled before starting")
-            else:
-                log.debug("Attempting cooperative cancellation for task")
-            wait_until_done(task.future)
-        task.cancel = cancel
-
-        def run():
-            # run the evaluation and set the resulting future
-            if not task.future.set_running_or_notify_cancel():
-                return
-            try:
-                r = task.func(callback=task.report_progress)
-            except BaseException as error:
-                task.future.set_exception(error)
-            else:
-                task.future.set_result(r)
-        task.run = run
 
         self.progressBarInit(processEvents=None)
         self.setBlocking(True)
         self.setStatusMessage("Running")
 
-        self.__executor.submit(task.run)
         self.__state = State.Running
         self.__task = task
 
@@ -895,6 +865,7 @@ class OWTestLearners(OWWidget):
 
         learner_key = {slot.learner: key for key, slot in
                        self.learners.items()}
+        assert all(learner in learner_key for learner in learners)
 
         # Update the results for individual learners
         class_var = results.domain.class_var
@@ -911,10 +882,9 @@ class OWTestLearners(OWWidget):
                     stats = [Try(lambda: score(result)) for score in
                              scorers]
                     result = Try.Success(result)
-            if learner in learner_key:
-                key = learner_key.get(learner)
-                self.learners[key] = \
-                    self.learners[key]._replace(results=result, stats=stats)
+            key = learner_key.get(learner)
+            self.learners[key] = \
+                self.learners[key]._replace(results=result, stats=stats)
 
         self._update_header()
         self._update_stats_model()
@@ -930,7 +900,7 @@ class OWTestLearners(OWWidget):
             self.__state = State.Cancelled
             task, self.__task = self.__task, None
             task.cancel()
-            wait_until_done(task.future)
+            assert task.future.done()
 
     def onDeleteWidget(self):
         self.cancel()
@@ -1019,6 +989,33 @@ def results_one_vs_rest(results, pos_index):
     res.data = None
     res.domain = domain
     return res
+
+
+class Task:
+    """
+    A simple task state.
+    """
+    #: A future holding the results. This field is set by the client.
+    future = ...        # type: Future
+    #: True if the task was cancelled
+    cancelled = False   # type: bool
+    #: A function to call. Filled by the client.
+    func = ...          # type: Callable[Callable[float], Results]
+
+    def cancel(self):
+        """
+        Cancel the task.
+
+        Set the `cancelled` field to True and block until the future is done.
+        """
+        log.debug("cancel task")
+        self.cancelled = True
+        cancelled = self.future.cancel()
+        if cancelled:
+            log.debug("Task cancelled before starting")
+        else:
+            log.debug("Attempting cooperative cancellation for task")
+        concurrent.futures.wait([self.future])
 
 
 def main(argv=None):
