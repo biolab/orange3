@@ -30,7 +30,7 @@ class TestOWPythonScript(WidgetTest):
         for _input, _output, data in (
                 ("in_data", "out_data", self.iris),
                 ("in_learner", "out_learner", self.learner),
-                ("in_classifier", "out_data", self.model),
+                ("in_classifier", "out_classifier", self.model),
                 ("in_object", "out_object", "object")):
             self.widget.text.setPlainText("{} = {}".format(_output, _input))
             self.send_signal(_input, data)
@@ -50,3 +50,21 @@ class TestOWPythonScript(WidgetTest):
         self.widget.execute_button.button.click()
         self.assertNotIn("NameError: name 'temp' is not defined",
                          self.widget.console.toPlainText())
+
+    def test_wrong_outputs(self):
+        """
+        Error is shown when output variables are filled with wrong variable types.
+        And also output variable is set to None.
+        GH-2308
+        """
+        self.assertEqual(len(self.widget.Error.active), 0)
+        for _input, _output, data in (
+                ("in_data", "out_data", self.iris),
+                ("in_learner", "out_learner", self.learner),
+                ("in_classifier", "out_classifier", self.model)):
+            self.widget.text.setPlainText("{} = {}".format(_output, _input))
+            self.send_signal(_input, "42")
+            self.assertEqual(self.get_output(_output), None)
+            self.assertTrue(getattr(self.widget.Error, _output).is_shown())
+            self.send_signal(_input, data)
+            self.assertFalse(getattr(self.widget.Error, _output).is_shown())

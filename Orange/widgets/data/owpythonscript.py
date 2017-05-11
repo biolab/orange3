@@ -22,6 +22,7 @@ from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
+from Orange.widgets.widget import OWWidget
 
 __all__ = ["OWPythonScript"]
 
@@ -378,6 +379,9 @@ class OWPythonScript(widget.OWWidget):
     splitterState = Setting(None)
     auto_execute = Setting(True)
 
+    class Error(OWWidget.Error):
+        pass
+
     def __init__(self):
         super().__init__()
 
@@ -646,6 +650,7 @@ class OWPythonScript(widget.OWWidget):
         return d
 
     def commit(self):
+        self.Error.clear()
         self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()
         lcls["_script"] = str(self.text.toPlainText())
@@ -655,7 +660,14 @@ class OWPythonScript(widget.OWWidget):
         self.console.new_prompt(sys.ps1)
         for out in self.outputs:
             signal = out.name
-            self.send(signal, self.console.locals.get(signal, None))
+            out_var = self.console.locals.get(signal, None)
+            if not isinstance(out_var, out.type) and out_var is not None:
+                self.Error.add_message(signal,
+                                       "Variable '{}' has to be an instance of '{}'.".
+                                       format(signal, out.type.__name__))
+                getattr(self.Error, signal)()
+                out_var = None
+            self.send(signal, out_var)
 
 
 if __name__ == "__main__":
