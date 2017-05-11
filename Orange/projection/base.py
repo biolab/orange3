@@ -4,7 +4,6 @@ import threading
 import Orange.data
 from Orange.base import _ReprableWithPreprocessors
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.misc.cache import single_cache
 import Orange.preprocess
 
 __all__ = ["Projector", "Projection", "SklProjector"]
@@ -69,7 +68,6 @@ class Projection:
         self.__dict__.update(proj.__dict__)
         self.proj = proj
 
-    @single_cache
     def transform(self, X):
         return self.proj.transform(X)
 
