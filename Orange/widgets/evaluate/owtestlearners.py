@@ -704,6 +704,18 @@ class OWTestLearners(OWWidget):
 
     def __update(self):
         self.__needupdate = False
+
+        assert self.__task is None or self.__state == State.Running
+        if self.__state == State.Running:
+            self.cancel()
+
+        self.Warning.test_data_unused.clear()
+        self.Warning.test_data_missing.clear()
+        self.warning()
+        self.Error.class_inconsistent.clear()
+        self.Error.too_many_folds.clear()
+        self.error()
+
         # check preconditions and return early
         if self.data is None:
             self.__state = State.Waiting
@@ -715,11 +727,26 @@ class OWTestLearners(OWWidget):
             return
         if self.resampling == OWTestLearners.KFold and \
                 len(self.data) < self.NFolds[self.n_folds]:
-            self.__state = State.Error
-            # TODO: clear the results view?
             self.Error.too_many_folds()
+            self.__state = State.Waiting
             self.commit()
             return
+
+        elif self.resampling == OWTestLearners.TestOnTest:
+            if self.test_data is None:
+                if not self.Error.test_data_empty.is_shown():
+                    self.Warning.test_data_missing()
+                self.__state = State.Waiting
+                self.commit()
+                return
+            elif self.test_data.domain.class_var != self.data.domain.class_var:
+                self.Error.class_inconsistent()
+                self.__state = State.Waiting
+                self.commit()
+                return
+
+        elif self.test_data is not None:
+            self.Warning.test_data_unused()
 
         rstate = 42
         common_args = dict(
@@ -784,13 +811,6 @@ class OWTestLearners(OWWidget):
             return res
 
         test_f = partial(replace_learners, test_f)
-
-        if self.__state == State.Running:
-            assert self.__task is not None
-            self.__task.cancel()
-            assert self.__task.future.done()
-            self.__task = None
-            self.__state = State.Cancelled
 
         self.__submit(test_f)
 
@@ -893,7 +913,7 @@ class OWTestLearners(OWWidget):
 
     def cancel(self):
         """
-        Cancel the current/pending evaluation.
+        Cancel the current/pending evaluation (if any).
         """
         if self.__task is not None:
             assert self.__state == State.Running
