@@ -2,7 +2,6 @@ import sys
 import os
 import types
 
-import copy
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton
@@ -14,7 +13,7 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
 from Orange.canvas.registry import description as widget_description, \
-    WidgetDescription, InputSignal, OutputSignal
+    WidgetDescription, OutputSignal, InputSignal
 from Orange.canvas.report import Report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
@@ -23,6 +22,8 @@ from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.utils.messages import \
     WidgetMessagesMixin, UnboundMsg
+from Orange.widgets.utils.signals import \
+    WidgetSignalsMixin, Input, Output, AttributeList
 from .utils.overlay import MessageOverlayWidget
 
 # Msg is imported and renamed, so widgets can import it from this module rather
@@ -52,7 +53,7 @@ class WidgetMetaClass(type(QDialog)):
         if not cls.name: # not a widget
             return cls
 
-        mcs.convert_signals(cls)
+        cls.convert_signals()
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
                 hasattr(cls, "settingsFromWidgetCallback")):
@@ -63,27 +64,10 @@ class WidgetMetaClass(type(QDialog)):
 
         return cls
 
-    @staticmethod
-    def convert_signals(cls):
-        def signal_from_args(args, signal_type):
-            if isinstance(args, tuple):
-                return signal_type(*args)
-            elif isinstance(args, signal_type):
-                return copy.copy(args)
-
-        cls.inputs = [signal_from_args(input_, InputSignal)
-                      for input_ in cls.inputs]
-        cls.outputs = [signal_from_args(output, OutputSignal)
-                       for output in cls.outputs]
-
-        for inp in cls.inputs:
-            if not hasattr(cls, inp.handler):
-                raise AttributeError("missing input signal handler '{}' in {}".
-                                     format(inp.handler, cls.name))
-
 
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
-               WidgetMessagesMixin, metaclass=WidgetMetaClass):
+               WidgetMessagesMixin, WidgetSignalsMixin,
+               metaclass=WidgetMetaClass):
     """Base widget class"""
 
     # Global widget count
@@ -190,6 +174,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         QDialog.__init__(self, None, self.get_flags())
         OWComponent.__init__(self)
         WidgetMessagesMixin.__init__(self)
+        WidgetSignalsMixin.__init__(self)
 
         stored_settings = kwargs.get('stored_settings', None)
         if self.settingsHandler:
@@ -248,7 +233,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             return
         properties = {name: getattr(cls, name) for name in
                       ("name", "icon", "description", "priority", "keywords",
-                       "inputs", "outputs",
                        "help", "help_ref", "url",
                        "version", "background", "replaces")}
         properties["id"] = cls.id or cls.__module__
@@ -496,19 +480,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.show()
         self.raise_()
         self.activateWindow()
-
-    def send(self, signalName, value, id=None):
-        """
-        Send a `value` on the `signalName` widget output.
-
-        An output with `signalName` must be defined in the class ``outputs``
-        list.
-        """
-        if not any(s.name == signalName for s in self.outputs):
-            raise ValueError('{} is not a valid output signal for widget {}'.format(
-                signalName, self.name))
-        if self.signalManager is not None:
-            self.signalManager.send(self, signalName, value, id)
 
     def openContext(self, *a):
         """Open a new context corresponding to the given data.
@@ -846,10 +817,3 @@ Explicit = widget_description.Explicit
 #: to any input signal which can accept a subtype of the declared output
 #: type.
 Dynamic = widget_description.Dynamic
-
-
-
-class AttributeList(list):
-    """Signal type for lists of attributes (variables)
-    """
-    pass
