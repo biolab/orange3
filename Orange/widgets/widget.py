@@ -2,6 +2,7 @@ import sys
 import os
 import types
 
+import copy
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton
@@ -12,7 +13,8 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
-from Orange.canvas.registry import description as widget_description
+from Orange.canvas.registry import description as widget_description, \
+    WidgetDescription, InputSignal, OutputSignal
 from Orange.canvas.report import Report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
@@ -46,21 +48,11 @@ class WidgetMetaClass(type(QDialog)):
     #noinspection PyMethodParameters
     # pylint: disable=bad-classmethod-argument
     def __new__(mcs, name, bases, kwargs):
-        from Orange.canvas.registry.description import (
-            input_channel_from_args, output_channel_from_args)
-
         cls = super().__new__(mcs, name, bases, kwargs)
         if not cls.name: # not a widget
             return cls
 
-        cls.inputs = [input_channel_from_args(inp) for inp in cls.inputs]
-        cls.outputs = [output_channel_from_args(outp) for outp in cls.outputs]
-
-        for inp in cls.inputs:
-            if not hasattr(cls, inp.handler):
-                raise AttributeError("missing input signal handler '{}' in {}".
-                                     format(inp.handler, cls.name))
-
+        mcs.convert_signals(cls)
         # TODO Remove this when all widgets are migrated to Orange 3.0
         if (hasattr(cls, "settingsToWidgetCallback") or
                 hasattr(cls, "settingsFromWidgetCallback")):
@@ -70,6 +62,24 @@ class WidgetMetaClass(type(QDialog)):
         cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
 
         return cls
+
+    @staticmethod
+    def convert_signals(cls):
+        def signal_from_args(args, signal_type):
+            if isinstance(args, tuple):
+                return signal_type(*args)
+            elif isinstance(args, signal_type):
+                return copy.copy(args)
+
+        cls.inputs = [signal_from_args(input_, InputSignal)
+                      for input_ in cls.inputs]
+        cls.outputs = [signal_from_args(output, OutputSignal)
+                       for output in cls.outputs]
+
+        for inp in cls.inputs:
+            if not hasattr(cls, inp.handler):
+                raise AttributeError("missing input signal handler '{}' in {}".
+                                     format(inp.handler, cls.name))
 
 
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
@@ -89,7 +99,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     version = None
     #: Short widget description (:class:`str` optional), displayed in
     #: canvas help tooltips.
-    description = None
+    description = ""
     #: Widget icon path relative to the defining module
     icon = "icons/Unknown.png"
     #: Widget priority used for sorting within a category
@@ -231,6 +241,22 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     # pylint: disable=super-init-not-called
     def __init__(self, *args, **kwargs):
         """__init__s are called in __new__; don't call them from here"""
+
+    @classmethod
+    def get_widget_description(cls):
+        if not cls.name:
+            return
+        properties = {name: getattr(cls, name) for name in
+                      ("name", "icon", "description", "priority", "keywords",
+                       "inputs", "outputs",
+                       "help", "help_ref", "url",
+                       "version", "background", "replaces")}
+        properties["id"] = cls.id or cls.__module__
+        properties["inputs"] = cls.get_signals("inputs")
+        properties["outputs"] = cls.get_signals("outputs")
+        properties["qualified_name"] = \
+            "{}.{}".format(cls.__module__, cls.__name__)
+        return properties
 
     @classmethod
     def get_flags(cls):
@@ -821,8 +847,6 @@ Explicit = widget_description.Explicit
 #: type.
 Dynamic = widget_description.Dynamic
 
-InputSignal = widget_description.InputSignal
-OutputSignal = widget_description.OutputSignal
 
 
 class AttributeList(list):

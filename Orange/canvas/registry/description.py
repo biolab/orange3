@@ -5,10 +5,10 @@ Widget meta description classes
 """
 
 import sys
-import copy
 import warnings
 
 # Exceptions
+from itertools import chain
 
 
 class DescriptionError(Exception):
@@ -107,15 +107,6 @@ class InputSignal(object):
     __repr__ = __str__
 
 
-def input_channel_from_args(args):
-    if isinstance(args, tuple):
-        return InputSignal(*args)
-    elif isinstance(args, InputSignal):
-        return copy.copy(args)
-    else:
-        raise TypeError("invalid declaration of widget input signal")
-
-
 class OutputSignal(object):
     """
     Description of an output channel.
@@ -173,15 +164,6 @@ class OutputSignal(object):
         return fmt.format(type(self), **self.__dict__)
 
     __repr__ = __str__
-
-
-def output_channel_from_args(args):
-    if isinstance(args, tuple):
-        return OutputSignal(*args)
-    elif isinstance(args, OutputSignal):
-        return copy.copy(args)
-    else:
-        raise TypeError("invalid declaration of widget output signal")
 
 
 class WidgetDescription(object):
@@ -277,20 +259,25 @@ class WidgetDescription(object):
         """
         Get the widget description from a module.
 
-        The module is inspected for global variables (upper case versions of
-        `WidgetDescription.__init__` parameters).
+        The module is inspected for classes that have a method
+        `get_widget_description`. The function calls this method and expects
+        a dictionary, which is used as keyword arguments for
+        :obj:`WidgetDescription`. This method also converts all signal types
+        into qualified names to prevent import problems when cached
+        descriptions are unpickled (the relevant code using this lists should
+        be able to handle missing types better).
 
         Parameters
         ----------
-        module : `module` or str
-            A module to inspect for widget description. Can be passed
-            as a string (qualified import name).
+        module (`module` or `str`): a module to inspect
 
+        Returns
+        -------
+        An instance of :obj:`WidgetDescription`
         """
         if isinstance(module, str):
             module = __import__(module, fromlist=[""])
 
-        module_name = module.__name__.rsplit(".", 1)[-1]
         if module.__package__:
             package_name = module.__package__.rsplit(".", 1)[-1]
         else:
@@ -298,47 +285,21 @@ class WidgetDescription(object):
 
         default_cat_name = package_name if package_name else ""
 
-        from Orange.widgets.widget import WidgetMetaClass
         for widget_cls_name, widget_class in module.__dict__.items():
-            if (isinstance(widget_class, WidgetMetaClass) and
-                    widget_class.name):
-                break
+            if not hasattr(widget_class, "get_widget_description"):
+                continue
+            description = widget_class.get_widget_description()
+            if description is None:
+                continue
+            for s in chain(description["inputs"], description["outputs"]):
+                s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
+            description = WidgetDescription(**description)
+
+            description.package = module.__package__
+            description.category = widget_class.category or default_cat_name
+            return description
         else:
             raise WidgetSpecificationError
-
-        qualified_name = "%s.%s" % (module.__name__, widget_cls_name)
-        description = widget_class.description
-        inputs = [input_channel_from_args(input_) for input_ in
-                  widget_class.inputs]
-        outputs = [output_channel_from_args(output) for output in
-                   widget_class.outputs]
-
-        # Convert all signal types into qualified names.
-        # This is to prevent any possible import problems when cached
-        # descriptions are unpickled (the relevant code using this lists
-        # should be able to handle missing types better).
-        for s in inputs + outputs:
-            s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
-
-        return cls(
-            name=widget_class.name,
-            id=widget_class.id or module_name,
-            category=widget_class.category or default_cat_name,
-            version=widget_class.version,
-            description=description,
-            qualified_name=qualified_name,
-            package=module.__package__,
-            inputs=inputs,
-            outputs=outputs,
-            help=widget_class.help,
-            help_ref=widget_class.help_ref,
-            url=widget_class.url,
-            keywords=widget_class.keywords,
-            priority=widget_class.priority,
-            icon=widget_class.icon,
-            background=widget_class.background,
-            replaces=widget_class.replaces)
-
 
 class CategoryDescription(object):
     """
