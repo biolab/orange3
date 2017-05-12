@@ -196,7 +196,8 @@ PACKAGE_DATA = {
     "Orange.widgets.visualize": ["icons/*.svg",
                                  "_owmap/*"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
-    "Orange.widgets.utils": ["_webview/*.js"],
+    "Orange.widgets.utils": ["_webview/*.js",
+                             "_plotly/*"],
     "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]
 }
 
