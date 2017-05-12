@@ -37,15 +37,6 @@ def to_html(str):
 getHtmlCompatibleString = to_html
 
 
-def checksum(x):
-    if x is None:
-        return None
-    try:
-        return x.checksum()
-    except:
-        return float('nan')
-
-
 def get_variable_values_sorted(variable):
     """
     Return a list of sorted values for given attribute, if all its values can be
