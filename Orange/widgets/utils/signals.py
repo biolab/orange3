@@ -51,10 +51,10 @@ class Input(InputSignal, _Signal):
         the only option or when explicitly connected in the dialog
         (default: `False`)
     """
-    def __init__(self, name, type, id=None, doc=None, replaces=[], *,
+    def __init__(self, name, type, id=None, doc=None, replaces=None, *,
                  multiple=False, default=False, explicit=False):
         flags = self.get_flags(multiple, default, explicit, False)
-        super().__init__(name, type, "", flags, id, doc, replaces)
+        super().__init__(name, type, "", flags, id, doc, replaces or [])
 
     def __call__(self, method):
         """
@@ -101,10 +101,10 @@ class Output(OutputSignal, _Signal):
         be connected to any input signal which can accept a subtype of the
         declared output type.
     """
-    def __init__(self, name, type, id=None, doc=None, replaces=[], *,
+    def __init__(self, name, type, id=None, doc=None, replaces=None, *,
                  default=False, explicit=False, dynamic=True):
         flags = self.get_flags(False, default, explicit, dynamic)
-        super().__init__(name, type, flags, id, doc, replaces)
+        super().__init__(name, type, flags, id, doc, replaces or [])
 
     def bound_signal(self, widget):
         """

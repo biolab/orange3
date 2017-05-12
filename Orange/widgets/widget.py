@@ -1,3 +1,6 @@
+# Module imports Input, Output and AttributeList to be used in widgets
+# pylint: disable=unused-import
+
 import sys
 import os
 import types
@@ -12,6 +15,8 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
+# OutputSignal and InputSignal are imported for compatibility, but shouldn't
+# be used; use Input and Output instead
 from Orange.canvas.registry import description as widget_description, \
     WidgetDescription, OutputSignal, InputSignal
 from Orange.canvas.report import Report
@@ -52,16 +57,9 @@ class WidgetMetaClass(type(QDialog)):
         cls = super().__new__(mcs, name, bases, kwargs)
         if not cls.name: # not a widget
             return cls
-
         cls.convert_signals()
-        # TODO Remove this when all widgets are migrated to Orange 3.0
-        if (hasattr(cls, "settingsToWidgetCallback") or
-                hasattr(cls, "settingsFromWidgetCallback")):
-            raise TypeError("Reimplement settingsToWidgetCallback and "
-                            "settingsFromWidgetCallback")
-
-        cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
-
+        cls.settingsHandler = \
+            SettingsHandler.create(cls, template=cls.settingsHandler)
         return cls
 
 
