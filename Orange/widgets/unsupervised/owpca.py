@@ -10,7 +10,7 @@ import pyqtgraph as pg
 from Orange.data import Table, Domain, StringVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
-from Orange.projection import PCA
+from Orange.projection import PCA, TruncatedSVD
 from Orange.widgets import widget, gui, settings
 
 try:
@@ -42,6 +42,7 @@ class OWPCA(widget.OWWidget):
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
     normalize = settings.Setting(True)
+    centralize = settings.Setting(True)
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
@@ -125,6 +126,8 @@ class OWPCA(widget.OWWidget):
         self.options_box = gui.vBox(self.controlArea, "Options")
         gui.checkBox(self.options_box, self, "normalize", "Normalize data",
                      callback=self._update_normalize)
+        gui.checkBox(self.options_box, self, "centralize", "Data centering",
+                     callback=self._update_centralize)
         self.maxp_spin = gui.spin(
             self.options_box, self, "maxp", 1, MAX_COMPONENTS,
             label="Show only first", callback=self._setup_plot,
@@ -151,6 +154,7 @@ class OWPCA(widget.OWWidget):
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
 
         self.mainArea.layout().addWidget(self.plot)
+        self._init_projector()
         self._update_normalize()
 
     def update_model(self):
@@ -196,9 +200,15 @@ class OWPCA(widget.OWWidget):
             self.sampling_box.setVisible(False)
         if isinstance(data, Table):
             if data.is_sparse():
-                self.Error.sparse_data()
-                self.clear_outputs()
-                return
+                # PCA does not support sparse data
+                # Falling back to TruncatedSVD aka LSA
+                self.centralize = False
+                self._update_centralize()
+            else:
+                # Revert to PCA for non-sparse data
+                self.centralize = True
+                self._update_centralize()
+
             if len(data.domain.attributes) == 0:
                 self.Error.no_features()
                 self.clear_outputs()
@@ -374,6 +384,26 @@ class OWPCA(widget.OWWidget):
         self.fit()
         if self.data is None:
             self._invalidate_selection()
+
+    def _init_projector(self):
+        if self.centralize:
+            self._pca_projector = PCA(max_components=MAX_COMPONENTS)
+            self._pca_projector.component = self.ncomponents
+            self._pca_preprocessors = PCA.preprocessors
+        else:
+            # Equivalent to PCA, but without data centering
+            self._pca_projector = TruncatedSVD(max_components=MAX_COMPONENTS)
+            self._pca_projector.component = self.ncomponents
+            self._pca_preprocessors = TruncatedSVD.preprocessors
+
+    def _update_centralize(self):
+        if self.centralize and self.data and self.data.is_sparse():
+            self.Error.sparse_data()
+            self.clear_outputs()
+            return
+        self.clear_messages()
+        self._init_projector()
+        self._update_normalize()
 
     def _nselected_components(self):
         """Return the number of selected components."""
