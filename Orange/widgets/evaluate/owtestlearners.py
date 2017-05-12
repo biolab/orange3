@@ -163,9 +163,9 @@ class OWTestLearners(OWWidget):
     priority = 100
 
     class Inputs:
-        train_data = Input("Data", Table, flags=widget.Default)
+        train_data = Input("Data", Table, default=True)
         test_data = Input("Test Data", Table)
-        learner = Input("Learner", Learner, flags=widget.Multiple)
+        learner = Input("Learner", Learner, multiple=True)
         preprocessor = Input("Preprocessor", Preprocess)
 
     class Outputs:

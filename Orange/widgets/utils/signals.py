@@ -1,20 +1,59 @@
 import copy
 
-from Orange.canvas.registry.description import \
-    InputSignal, OutputSignal, \
-    Single, Multiple, Default, NonDefault, Explicit, Dynamic
+from Orange.canvas.registry.description import InputSignal, OutputSignal
 
 
-class Input(InputSignal):
-    def __init__(self, name, type, flags=None, id=None, doc=None, replaces=[],
-                 single=True, multiple=False, default=False, explicit=False,
-                 dynamic=True):
-        if flags is None:
-            flags = (single and Single) | \
-                    (multiple and Multiple) | \
-                    (default and Default or NonDefault) | \
-                    (explicit and Explicit) | \
-                    (dynamic and Dynamic)
+class _Signal:
+    @staticmethod
+    def get_flags(multiple, default, explicit, dynamic):
+        """Compute flags from arguments"""
+        from Orange.canvas.registry.description import \
+            Single, Multiple, Default, NonDefault, Explicit, Dynamic
+        return (Multiple if multiple else Single) | \
+                (Default if default else NonDefault) | \
+                (explicit and Explicit) | \
+                (dynamic and Dynamic)
+
+
+class Input(InputSignal, _Signal):
+    """
+    Description of an input signal.
+
+    The class is used to declare input signals for a widget as follows
+    (the example is taken from the widget Test & Score)::
+
+        class Inputs:
+            train_data = Input("Data", Table, default=True)
+            test_data = Input("Test Data", Table)
+            learner = Input("Learner", Learner, multiple=True)
+            preprocessor = Input("Preprocessor", Preprocess)
+
+    Every input signal must be used to decorate exactly one method that
+    serves as the input handler, for instance::
+
+        @Inputs.train_data
+        def set_train_data(self, data):
+            ...
+
+    Parameters
+    ----------
+    name (str): signal name
+    type (type): signal type
+    id (str): a unique id of the signal
+    doc (str, optional): signal documentation
+    replaces (list of str): a list with names of signals replaced by this signal
+    multiple (bool, optional): if set, multiple signals can be connected
+        to this output (default: `False`)
+    default (bool, optional): when the widget accepts multiple signals of the
+        same type, one of them can set this flag to act as the default
+        (default: `False`)
+    explicit (bool, optional): if set, this signal is only used when it is
+        the only option or when explicitly connected in the dialog
+        (default: `False`)
+    """
+    def __init__(self, name, type, id=None, doc=None, replaces=[], *,
+                 multiple=False, default=False, explicit=False):
+        flags = self.get_flags(multiple, default, explicit, False)
         super().__init__(name, type, "", flags, id, doc, replaces)
 
     def __call__(self, method):
@@ -29,25 +68,56 @@ class Input(InputSignal):
         return method
 
 
-class Output(OutputSignal):
-    def __init__(self, name, type, flags=None, id=None, doc=None, replaces=[],
-                 single=True, multiple=False, default=False, explicit=False,
-                 dynamic=True):
-        if flags is None:
-            flags = (single and Single) | \
-                    (multiple and Multiple) | \
-                    (default and Default or NonDefault) | \
-                    (explicit and Explicit) | \
-                    (dynamic and not multiple and Dynamic)
+class Output(OutputSignal, _Signal):
+    """
+    Description of an output signal.
+
+    The class is used to declare output signals for a widget as follows
+    (the example is taken from the widget Test & Score)::
+
+        class Outputs:
+            predictions = Output("Predictions", Table)
+            evaluations_results = Output("Evaluation Results", Results)
+
+    The signal is then transmitted by, for instance::
+
+        self.Outputs.predictions.send(predictions)
+
+    Parameters
+    ----------
+    name (str): signal name
+    type (type): signal type
+    id (str): a unique id of the signal
+    doc (str, optional): signal documentation
+    replaces (list of str): a list with names of signals replaced by this signal
+    default (bool, optional): when the widget outputs multiple signals of the
+        same type, one of them can set this flag to act as the default
+        (default: `False`)
+    explicit (bool, optional): if set, this signal is only used when it is
+        the only option or when explicitly connected in the dialog
+        (default: `False`)
+    dynamic (bool, optional): Specifies that the instances on the output will
+        in general be subtypes of the declared type and that the output can
+        be connected to any input signal which can accept a subtype of the
+        declared output type.
+    """
+    def __init__(self, name, type, id=None, doc=None, replaces=[], *,
+                 default=False, explicit=False, dynamic=True):
+        flags = self.get_flags(False, default, explicit, dynamic)
         super().__init__(name, type, flags, id, doc, replaces)
 
     def bound_signal(self, widget):
-        """Return a copy of the signal bound to a widget."""
+        """
+        Return a copy of the signal bound to a widget.
+
+        Called from `WidgetSignalsMixin.__init__`
+        """
         new_signal = copy.copy(self)
         new_signal.widget = widget
         return new_signal
 
     def send(self, value, id=None):
+        """Emit the signal through signal manager."""
         assert self.widget is not None
         signal_manager = self.widget.signalManager
         if signal_manager is not None:
@@ -55,6 +125,7 @@ class Output(OutputSignal):
 
 
 class WidgetSignalsMixin:
+    """Mixin for managing widget's input and output signals"""
     class Inputs:
         pass
 
@@ -96,6 +167,11 @@ class WidgetSignalsMixin:
     # Methods used by the meta class
     @classmethod
     def convert_signals(cls):
+        """
+        Convert tuple descriptions into old-style signals for backwards
+        compatibility, and check the input handlers exist.
+        The method is called from the meta-class.
+        """
         def signal_from_args(args, signal_type):
             if isinstance(args, tuple):
                 return signal_type(*args)
@@ -121,12 +197,26 @@ class WidgetSignalsMixin:
 
     @classmethod
     def get_signals(cls, direction):
+        """
+        Return a list of `InputSignal` or `OutputSignal` needed for the
+        widget description. For old-style signals, the method returns the
+        original list. New-style signals are collected into a list.
+
+        Parameters
+        ----------
+        direction (str): `"inputs"` or `"outputs"`
+
+        Returns
+        -------
+        list of `InputSignal` or `OutputSignal`
+        """
         old_style = cls.__dict__.get(direction, None)
         if old_style:
             return [copy.copy(signal) for signal in old_style]
+
         signal_class = getattr(cls, direction.title())
         return [signal for signal in signal_class.__dict__.values()
-                if isinstance(signal, (Input, Output))]
+                if isinstance(signal, _Signal)]
 
 
 class AttributeList(list):
