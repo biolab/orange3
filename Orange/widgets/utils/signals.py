@@ -105,6 +105,7 @@ class Output(OutputSignal, _Signal):
                  default=False, explicit=False, dynamic=True):
         flags = self.get_flags(False, default, explicit, dynamic)
         super().__init__(name, type, flags, id, doc, replaces or [])
+        self.widget = None
 
     def bound_signal(self, widget):
         """
@@ -189,11 +190,17 @@ class WidgetSignalsMixin:
 
     @classmethod
     def _check_input_handlers(cls):
-        unbound = [signal.name for signal in cls.inputs
-                   if not signal.handler]
+        unbound = [signal.name for signal in cls.Inputs.__dict__.values()
+                   if isinstance(signal, Input) and not signal.handler]
         if unbound:
             raise ValueError("unbound signal(s) in {}: {}".
                              format(cls.__name__, ", ".join(unbound)))
+
+        missing_handlers = [signal.handler for signal in cls.inputs
+                            if not hasattr(cls, signal.handler)]
+        if missing_handlers:
+            raise ValueError("missing handlers in {}: {}".
+                             format(cls.__name__, ", ".join(missing_handlers)))
 
     @classmethod
     def get_signals(cls, direction):
