@@ -1,34 +1,75 @@
 import sys
+import logging
 from collections import OrderedDict
-from functools import reduce
+from functools import reduce, partial
 
 import numpy
 
 from AnyQt.QtWidgets import QTableWidget, QTableWidgetItem
+from AnyQt.QtCore import QThread, pyqtSlot
 
 import Orange.data
 import Orange.classification
 import Orange.evaluation
 
-from Orange.widgets import gui, settings
-from Orange.widgets.widget import OWWidget, Input
+from Orange.widgets import widget, gui, settings
 from Orange.evaluation.testing import Results
 
+# [start-snippet-1]
+import concurrent.futures
+from Orange.widgets.utils.concurrent import (
+    ThreadExecutor, FutureWatcher, methodinvoke
+)
+# [end-snippet-1]
 
-class OWLearningCurveB(OWWidget):
-    name = "Learning Curve (B)"
+
+# [start-snippet-2]
+class Task:
+    """
+    A class that will hold the state for an learner evaluation.
+    """
+    #: A concurrent.futures.Future with our (eventual) results.
+    #: The OWLearningCurveC class must fill this field
+    future = ...       # type: concurrent.futures.Future
+
+    #: FutureWatcher. Likewise this will be filled by OWLearningCurveC
+    watcher = ...      # type: FutureWatcher
+
+    #: True if this evaluation has been cancelled. The OWLearningCurveC
+    #: will setup the task execution environment in such a way that this
+    #: field will be checked periodically in the worker thread and cancel
+    #: the computation if so required. In a sense this is the only
+    #: communication channel in the direction from the OWLearningCurve to the
+    #: worker thread
+    cancelled = False  # type: bool
+
+    def cancel(self):
+        """
+        Cancel the task.
+
+        Set the `cancelled` field to True and block until the future is done.
+        """
+        # set cancelled state
+        self.cancelled = True
+        # cancel the future. Note this succeeds only if the execution has
+        # not yet started (see `concurrent.futures.Future.cancel`) ..
+        self.future.cancel()
+        # ... and wait until computation finishes
+        concurrent.futures.wait([self.future])
+# [end-snippet-2]
+
+
+class OWLearningCurveC(widget.OWWidget):
+    name = "Learning Curve (C)"
     description = ("Takes a data set and a set of learners and shows a "
                    "learning curve in a table")
     icon = "icons/LearningCurve.svg"
     priority = 1010
 
-# [start-snippet-1]
-    class Inputs:
-        data = Input("Data", Orange.data.Table, default=True)
-        test_data = Input("Test Data", Orange.data.Table)
-        learner = Input("Learner", Orange.classification.Learner,
-                        multiple=True)
-# [end-snippet-1]
+    inputs = [("Data", Orange.data.Table, "set_dataset", widget.Default),
+              ("Test Data", Orange.data.Table, "set_testdataset"),
+              ("Learner", Orange.classification.Learner, "set_learner",
+               widget.Multiple + widget.Default)]
 
     #: cross validation folds
     folds = settings.Setting(5)
@@ -64,6 +105,13 @@ class OWLearningCurveB(OWWidget):
         #: A {input_id: List[float]} mapping of input id to learning curve
         #: point scores
         self.curves = OrderedDict()
+
+        # [start-snippet-3]
+        #: The current evaluating task (if any)
+        self._task = None   # type: Optional[Task]
+        #: An executor we use to submit learner evaluations into a thread pool
+        self._executor = ThreadExecutor()
+        # [end-snippet-3]
 
         # GUI
         box = gui.widgetBox(self.controlArea, "Info")
@@ -103,7 +151,6 @@ class OWLearningCurveB(OWWidget):
     ##########################################################################
     # slots: handle input signals
 
-    @Inputs.data
     def set_dataset(self, data):
         """Set the input train dataset."""
         # Clear all results/scores
@@ -121,7 +168,6 @@ class OWLearningCurveB(OWWidget):
 
         self.commitBtn.setEnabled(self.data is not None)
 
-    @Inputs.test_data
     def set_testdataset(self, testdata):
         """Set a separate test dataset."""
         # Clear all results/scores
@@ -132,7 +178,6 @@ class OWLearningCurveB(OWWidget):
 
         self.testdata = testdata
 
-    @Inputs.learner
     def set_learner(self, learner, id):
         """Set the input learner for channel id."""
         if id in self.learners:
@@ -163,11 +208,10 @@ class OWLearningCurveB(OWWidget):
 
         self.commitBtn.setEnabled(len(self.learners))
 
+# [start-snippet-4]
     def handleNewSignals(self):
-        if self.data is not None:
-            self._update()
-            self._update_curve_points()
-        self._update_table()
+        self._update()
+# [end-snippet-4]
 
     def _invalidate_curves(self):
         if self.data is not None:
@@ -178,37 +222,144 @@ class OWLearningCurveB(OWWidget):
         for id in self.learners:
             self.curves[id] = None
             self.results[id] = None
+        self._update()
 
-        if self.data is not None:
-            self._update()
-            self._update_curve_points()
-        self._update_table()
-
+# [start-snippet-5]
     def _update(self):
-        assert self.data is not None
+        if self._task is not None:
+            # First make sure any pending tasks are cancelled.
+            self.cancel()
+        assert self._task is None
+
+        if self.data is None:
+            return
         # collect all learners for which results have not yet been computed
         need_update = [(id, learner) for id, learner in self.learners.items()
                        if self.results[id] is None]
         if not need_update:
             return
+# [end-snippet-5]
+# [start-snippet-6]
         learners = [learner for _, learner in need_update]
-
+        # setup the learner evaluations as partial function capturing
+        # the necessary arguments.
         if self.testdata is None:
-            # compute the learning curve result for all learners in one go
-            results = learning_curve(
+            learning_curve_func = partial(
+                learning_curve,
                 learners, self.data, folds=self.folds,
                 proportions=self.curvePoints,
             )
         else:
-            results = learning_curve_with_test_data(
+            learning_curve_func = partial(
+                learning_curve_with_test_data,
                 learners, self.data, self.testdata, times=self.folds,
                 proportions=self.curvePoints,
             )
-        # split the combined result into per learner/model results
-        results = [list(Results.split_by_model(p_results)) for p_results in results]
+# [end-snippet-6]
+# [start-snippet-7]
+        # setup the task state
+        self._task = task = Task()
+        # The learning_curve[_with_test_data] also takes a callback function
+        # to report the progress. We instrument this callback to both invoke
+        # the appropriate slots on this widget for reporting the progress
+        # (in a thread safe manner) and to implement cooperative cancellation.
+        set_progress = methodinvoke(self, "setProgressValue", (float,))
 
-        for i, (id, learner) in enumerate(need_update):
-            self.results[id] = [p_results[i] for p_results in results]
+        def callback(finished):
+            # check if the task has been cancelled and raise an exception
+            # from within. This 'strategy' can only be used with code that
+            # properly cleans up after itself in the case of an exception
+            # (does not leave any global locks, opened file descriptors, ...)
+            if task.cancelled:
+                raise KeyboardInterrupt()
+            set_progress(finished * 100)
+
+        # capture the callback in the partial function
+        learning_curve_func = partial(learning_curve_func, callback=callback)
+# [end-snippet-7]
+# [start-snippet-8]
+        self.progressBarInit()
+        # Submit the evaluation function to the executor and fill in the
+        # task with the resultant Future.
+        task.future = self._executor.submit(learning_curve_func)
+        # Setup the FutureWatcher to notify us of completion
+        task.watcher = FutureWatcher(task.future)
+        # by using FutureWatcher we ensure `_task_finished` slot will be
+        # called from the main GUI thread by the Qt's event loop
+        task.watcher.done.connect(self._task_finished)
+# [end-snippet-8]
+
+    @pyqtSlot(float)
+    def setProgressValue(self, value):
+        assert self.thread() is QThread.currentThread()
+        self.progressBarSet(value)
+
+# [start-snippet-9]
+    @pyqtSlot(concurrent.futures.Future)
+    def _task_finished(self, f):
+        """
+        Parameters
+        ----------
+        f : Future
+            The future instance holding the result of learner evaluation.
+        """
+        assert self.thread() is QThread.currentThread()
+        assert self._task is not None
+        assert self._task.future is f
+        assert f.done()
+
+        self._task = None
+        self.progressBarFinished()
+
+        try:
+            results = f.result()  # type: List[Results]
+        except Exception as ex:
+            # Log the exception with a traceback
+            log = logging.getLogger()
+            log.exception(__name__, exc_info=True)
+            self.error("Exception occurred during evaluation: {!r}"
+                       .format(ex))
+            # clear all results
+            for key in self.results.keys():
+                self.results[key] = None
+        else:
+            # split the combined result into per learner/model results ...
+            results = [list(Results.split_by_model(p_results))
+                       for p_results in results]  # type: List[List[Results]]
+            assert all(len(r.learners) == 1 for r1 in results for r in r1)
+            assert len(results) == len(self.curvePoints)
+
+            learners = [r.learners[0] for r in results[0]]
+            learner_id = {learner: id_ for id_, learner in self.learners.items()}
+
+            # ... and update self.results
+            for i, learner in enumerate(learners):
+                id_ = learner_id[learner]
+                self.results[id_] = [p_results[i] for p_results in results]
+# [end-snippet-9]
+        # update the display
+        self._update_curve_points()
+        self._update_table()
+# [end-snippet-9]
+
+# [start-snippet-10]
+    def cancel(self):
+        """
+        Cancel the current task (if any).
+        """
+        if self._task is not None:
+            self._task.cancel()
+            assert self._task.future.done()
+            # disconnect the `_task_finished` slot
+            self._task.watcher.done.disconnect(self._task_finished)
+            self._task = None
+# [end-snippet-10]
+
+# [start-snippet-11]
+    def onDeleteWidget(self):
+        self.cancel()
+        super().onDeleteWidget()
+# [end-snippet-11]
 
     def _update_curve_points(self):
         for id in self.learners:
@@ -365,6 +516,7 @@ def results_add(x, y):
 
 def main(argv=None):
     from AnyQt.QtWidgets import QApplication
+    logging.basicConfig()
     app = QApplication(list(argv) if argv else [])
     argv = app.arguments()
     if len(argv) > 1:
@@ -378,7 +530,7 @@ def main(argv=None):
     traindata = data[indices[:-20]]
     testdata = data[indices[-20:]]
 
-    ow = OWLearningCurveB()
+    ow = OWLearningCurveC()
     ow.show()
     ow.raise_()
 

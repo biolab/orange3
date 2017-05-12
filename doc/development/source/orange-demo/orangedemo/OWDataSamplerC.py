@@ -49,7 +49,7 @@ class OWDataSamplerC(OWWidget):
 
         self.resize(100,50)
 
-    @Input.data
+    @Inputs.data
     def set_data(self, dataset):
         if dataset is not None:
             self.dataset = dataset
@@ -84,9 +84,12 @@ class OWDataSamplerC(OWWidget):
         if self.commitOnChange:
             self.commit()
 
-def main(argv=sys.argv):
-    from PyQt4.QtGui import QApplication
-    app = QApplication(list(argv))
+
+def main(argv=None):
+    from AnyQt.QtWidgets import QApplication
+    # PyQt changes argv list in-place
+    app = QApplication(list(argv) if argv else [])
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:
@@ -102,7 +105,8 @@ def main(argv=sys.argv):
     app.exec_()
     ow.set_data(None)
     ow.handleNewSignals()
+    ow.onDeleteWidget()
     return 0
 
-if __name__=="__main__":
-    sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

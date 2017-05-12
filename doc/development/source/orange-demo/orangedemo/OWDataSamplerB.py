@@ -5,6 +5,7 @@ import Orange.data
 from Orange.widgets.widget import OWWidget, Input, Output, settings
 from Orange.widgets import gui
 
+
 # [start-snippet-1]
 class OWDataSamplerB(OWWidget):
     name = "Data Sampler (B)"
@@ -81,9 +82,12 @@ class OWDataSamplerB(OWWidget):
             self.commit()
 # [end-snippet-4]
 
-def main(argv=sys.argv):
-    from PyQt4.QtGui import QApplication
-    app = QApplication(list(argv))
+
+def main(argv=None):
+    from AnyQt.QtWidgets import QApplication
+    # PyQt changes argv list in-place
+    app = QApplication(list(argv) if argv else [])
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:
@@ -99,7 +103,8 @@ def main(argv=sys.argv):
     app.exec_()
     ow.set_data(None)
     ow.handleNewSignals()
+    ow.onDeleteWidget()
     return 0
 
-if __name__=="__main__":
-    sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
