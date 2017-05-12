@@ -96,7 +96,8 @@ class Isomap(SklProjector):
 
     def __init__(self, n_neighbors=5, n_components=2, eigen_solver='auto',
                  tol=0, max_iter=None, path_method='auto',
-                 neighbors_algorithm='auto', preprocessors=None):
+                 neighbors_algorithm='auto', n_jobs=1,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -109,7 +110,8 @@ class LocallyLinearEmbedding(SklProjector):
                  eigen_solver='auto', tol=1e-06, max_iter=100,
                  method='standard', hessian_tol=0.0001,
                  modified_tol=1e-12, neighbors_algorithm='auto',
-                 random_state=None, preprocessors=None):
+                 random_state=None, n_jobs=1,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -119,7 +121,7 @@ class SpectralEmbedding(SklProjector):
     name = 'Spectral Embedding'
 
     def __init__(self, n_components=2, affinity='nearest_neighbors', gamma=None,
-                 random_state=None, eigen_solver=None, n_neighbors=None,
+                 random_state=None, eigen_solver=None, n_neighbors=None, n_jobs=1,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
@@ -132,7 +134,7 @@ class TSNE(SklProjector):
     def __init__(self, n_components=2, perplexity=30.0, early_exaggeration=4.0,
                  learning_rate=1000.0, n_iter=1000, n_iter_without_progress=30,
                  min_grad_norm=1e-07, metric='euclidean', init='random',
-                 random_state=None, method='barnes_hut', angle=0.5,
+                 random_state=None, method='barnes_hut', angle=0.5, n_jobs=1,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()

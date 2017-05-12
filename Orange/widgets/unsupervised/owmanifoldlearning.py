@@ -272,7 +272,8 @@ class OWManifoldLearning(OWWidget):
         self.send("Transformed data", out)
 
     def get_method_parameters(self, data, method):
-        parameters = dict(n_components=self.n_components)
+        parameters = dict(n_components=self.n_components,
+                          n_jobs=-2)
         parameters.update(self.params_widget.parameters)
         if data is not None and data.is_sparse() and method == TSNE:
             parameters.update(method='exact',
