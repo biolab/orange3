@@ -5,7 +5,6 @@ import numpy as np
 from Orange.data import Domain
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import checksum
 from Orange.widgets.utils.datacaching import getCached, setCached
 
 
