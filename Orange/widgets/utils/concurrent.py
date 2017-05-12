@@ -1,18 +1,14 @@
-"""\
-OWConcurent
-===========
-
-General helper functions and classes for Orange Canvas
-concurrent programming
-
 """
-
+General helper functions and classes for PyQt concurrent programming
+"""
 import threading
 import atexit
 import logging
-
+import warnings
+import weakref
+import concurrent.futures
+from concurrent.futures import Future, CancelledError, TimeoutError
 from contextlib import contextmanager
-
 
 from AnyQt.QtCore import (
     Qt, QObject, QMetaObject, QThreadPool, QThread, QRunnable,
@@ -85,7 +81,7 @@ class _TaskDepotThread(QThread):
 
 class _TaskRunnable(QRunnable):
     """
-    A QRunnable for running a :class:`Task` by a :class:`ThreadExecuter`.
+    A QRunnable for running a :class:`Task` by a :class:`ThreadExecutor`.
     """
 
     def __init__(self, future, task, args, kwargs):
@@ -154,10 +150,10 @@ class _Runnable(QRunnable):
             _log.critical("Exception in worker thread.", exc_info=True)
 
 
-class ThreadExecutor(QObject):
+class ThreadExecutor(QObject, concurrent.futures.Executor):
     """
-    ThreadExceuter object class provides an interface for running tasks
-    in a thread pool.
+    ThreadExecutor object class provides an interface for running tasks
+    in a QThreadPool.
 
     :param QObject parent:
         Executor's parent instance.
@@ -169,7 +165,7 @@ class ThreadExecutor(QObject):
     """
 
     def __init__(self, parent=None, threadPool=None):
-        QObject.__init__(self, parent)
+        super().__init__(parent)
         if threadPool is None:
             threadPool = QThreadPool.globalInstance()
         self._threadPool = threadPool
@@ -195,13 +191,15 @@ class ThreadExecutor(QObject):
                                    "shutdown.")
 
             if isinstance(func, Task):
+                warnings.warn("Use `submit_task` to run `Task`s",
+                              DeprecationWarning, stacklevel=2)
                 f, runnable = self.__make_task_runnable(func)
             else:
                 f = Future()
                 runnable = _Runnable(f, func, args, kwargs)
 
             self._futures.append(f)
-            f._watchers.append(self._future_state_change)
+            f.add_done_callback(self._future_done)
             self._threadPool.start(runnable)
             return f
 
@@ -214,7 +212,7 @@ class ThreadExecutor(QObject):
             f, runnable = self.__make_task_runnable(task)
 
             self._futures.append(f)
-            f._watchers.append(self._future_state_change)
+            f.add_done_callback(self._future_done)
             self._threadPool.start(runnable)
             return f
 
@@ -231,13 +229,7 @@ class ThreadExecutor(QObject):
         # Use the Task's own Future object
         f = task.future()
         runnable = _TaskRunnable(f, task, (), {})
-        return (f, runnable)
-
-    def map(self, func, *iterables):
-        futures = [self.submit(func, *args) for args in zip(*iterables)]
-
-        for f in futures:
-            yield f.result()
+        return f, runnable
 
     def shutdown(self, wait=True):
         """
@@ -246,19 +238,14 @@ class ThreadExecutor(QObject):
         """
         with self._state_lock:
             self._shutdown = True
+            futures = list(self._futures)
 
         if wait:
-            # Wait until all futures have completed.
-            for future in list(self._futures):
-                try:
-                    future.exception()
-                except (TimeoutError, CancelledError):
-                    pass
+            concurrent.futures.wait(futures)
 
-    def _future_state_change(self, future, state):
+    def _future_done(self, future):
         # Remove futures when finished.
-        if state == Future.Finished:
-            self._futures.remove(future)
+        self._futures.remove(future)
 
 
 class ExecuteCallEvent(QEvent):
@@ -335,191 +322,6 @@ def futures_iter(futures):
         yield f.result()
 
 
-class TimeoutError(Exception):
-    pass
-
-
-class CancelledError(Exception):
-    pass
-
-
-class Future(object):
-    """
-    Represents a result of an asynchronous computation.
-    """
-    Pending, Canceled, Running, Finished = 1, 2, 4, 8
-
-    def __init__(self):
-        self._watchers = []
-        self._state = Future.Pending
-        self._condition = threading.Condition()
-        self._result = None
-        self._exception = None
-        self._done_callbacks = []
-
-    def _set_state(self, state):
-        if self._state != state:
-            self._state = state
-            for watcher in self._watchers:
-                watcher(self, state)
-
-    def cancel(self):
-        """
-        Attempt to cancel the the call. Return `False` if the call is
-        already in progress and cannot be canceled, otherwise return `True`.
-
-        """
-        with self._condition:
-            if self._state in [Future.Running, Future.Finished]:
-                return False
-            elif self._state == Future.Canceled:
-                return True
-            else:
-                self._set_state(Future.Canceled)
-                self._condition.notify_all()
-
-        self._invoke_callbacks()
-        return True
-
-    def cancelled(self):
-        """
-        Return `True` if call was successfully cancelled.
-        """
-        with self._condition:
-            return self._state == Future.Canceled
-
-    def done(self):
-        """
-        Return `True` if the call was successfully cancelled or finished
-        running.
-
-        """
-        with self._condition:
-            return self._state in [Future.Canceled, Future.Finished]
-
-    def running(self):
-        """
-        Return True if the call is currently being executed.
-        """
-        with self._condition:
-            return self._state == Future.Running
-
-    def _get_result(self):
-        if self._exception:
-            raise self._exception
-        else:
-            return self._result
-
-    def result(self, timeout=None):
-        """
-        Return the result of the :class:`Futures` computation. If `timeout`
-        is `None` the call will block until either the computation finished
-        or is cancelled.
-        """
-        with self._condition:
-            if self._state == Future.Finished:
-                return self._get_result()
-            elif self._state == Future.Canceled:
-                raise CancelledError()
-
-            self._condition.wait(timeout)
-
-            if self._state == Future.Finished:
-                return self._get_result()
-            elif self._state == Future.Canceled:
-                raise CancelledError()
-            else:
-                raise TimeoutError()
-
-    def exception(self, timeout=None):
-        """
-        Return the exception instance (if any) resulting from the execution
-        of the :class:`Future`. Can raise a :class:`CancelledError` if the
-        computation was cancelled.
-
-        """
-        with self._condition:
-            if self._state == Future.Finished:
-                return self._exception
-            elif self._state == Future.Canceled:
-                raise CancelledError()
-
-            self._condition.wait(timeout)
-
-            if self._state == Future.Finished:
-                return self._exception
-            elif self._state == Future.Canceled:
-                raise CancelledError()
-            else:
-                raise TimeoutError()
-
-    def set_result(self, result):
-        """
-        Set the result of the computation (called by the worker thread).
-        """
-        with self._condition:
-            self._result = result
-            self._set_state(Future.Finished)
-            self._condition.notify_all()
-
-        self._invoke_callbacks()
-
-    def set_exception(self, exception):
-        """
-        Set the exception instance that was raised by the computation
-        (called by the worker thread).
-
-        """
-        with self._condition:
-            self._exception = exception
-            self._set_state(Future.Finished)
-            self._condition.notify_all()
-
-        self._invoke_callbacks()
-
-    def add_done_callback(self, fn):
-        with self._condition:
-            if self._state not in [Future.Finished, Future.Canceled]:
-                self._done_callbacks.append(fn)
-                return
-        # Already done
-        fn(self)
-
-    def set_running_or_notify_cancel(self):
-        with self._condition:
-            if self._state == Future.Canceled:
-                return False
-            elif self._state == Future.Pending:
-                self._set_state(Future.Running)
-                return True
-            else:
-                raise Exception()
-
-    def _invoke_callbacks(self):
-        for callback in self._done_callbacks:
-            try:
-                callback(self)
-            except Exception:
-                pass
-
-
-class StateChangedEvent(QEvent):
-    """
-    Represents a change in the internal state of a :class:`Future`.
-    """
-    StateChanged = QEvent.registerEventType()
-
-    def __init__(self, state):
-        QEvent.__init__(self, StateChangedEvent.StateChanged)
-        self._state = state
-
-    def state(self):
-        """
-        Return the new state (Future.Pending, Future.Cancelled, ...).
-        """
-        return self._state
-
-
 class FutureWatcher(QObject):
     """
     A `FutureWatcher` class provides a convenient interface to the
@@ -531,82 +333,133 @@ class FutureWatcher(QObject):
         Object's parent instance.
 
     """
-    #: The future was cancelled.
-    cancelled = Signal()
+    #: Emitted when the future is done (cancelled or finished)
+    done = Signal(Future)
 
-    #: The future has finished.
-    finished = Signal()
+    #: Emitted when the future is finished (i.e. returned a result
+    #: or raised an exception - but not if cancelled)
+    finished = Signal(Future)
 
-    #: The future has started computation.
-    started = Signal()
+    #: Emitted when the future was cancelled
+    cancelled = Signal(Future)
 
-    def __init__(self, future, parent=None):
-        QObject.__init__(self, parent)
-        self._future = future
+    #: Emitted with the future's result when successfully finished.
+    resultReady = Signal(object)
 
-        self._future._watchers.append(self._stateChanged)
+    #: Emitted with the future's exception when finished with an exception.
+    exceptionReady = Signal(BaseException)
+
+    # A private event type used to notify the watcher of a Future's completion
+    __FutureDone = QEvent.registerEventType()
+
+    def __init__(self, future, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__future = None
+        if future is not None:
+            self.setFuture(future)
+
+    def setFuture(self, future):
+        # type: (Future) -> None
+        """
+        Set the future to watch.
+
+        Raise a `RuntimeError` if a future is already set.
+
+        Parameters
+        ----------
+        future : Future
+        """
+        if self.__future is not None:
+            raise RuntimeError("Future already set")
+
+        self.__future = future
+        selfweakref = weakref.ref(self)
+
+        def on_done(f):
+            assert f is future
+            selfref = selfweakref()
+
+            if selfref is None:
+                return
+
+            try:
+                QCoreApplication.postEvent(
+                    selfref, QEvent(FutureWatcher.__FutureDone))
+            except RuntimeError:
+                # Ignore RuntimeErrors (when C++ side of QObject is deleted)
+                # (? Use QObject.destroyed and remove the done callback ?)
+                pass
+
+        future.add_done_callback(on_done)
+
+    def future(self):
+        # type: () -> Future
+        """
+        Return the future instance.
+        """
+        return self.__future
 
     def isCancelled(self):
-        """
-        Was the future cancelled.
-        """
-        return self._future.cancelled()
+        warnings.warn("isCancelled is deprecated", DeprecationWarning,
+                      stacklevel=2)
+        return self.__future.cancelled()
 
     def isDone(self):
-        """
-        Is the future done (was cancelled or has finished).
-        """
-        return self._future.done()
-
-    def isRunning(self):
-        """
-        Is the future running (i.e. has started).
-        """
-        return self._future.running()
-
-    def isStarted(self):
-        """
-        Has the future computation started.
-        """
-        return self._future.running()
+        warnings.warn("isDone is deprecated", DeprecationWarning,
+                      stacklevel=2)
+        return self.__future.done()
 
     def result(self):
+        # type: () -> Any
         """
-        Return the result of the computation.
+        Return the future's result.
+
+        Note
+        ----
+        This method is non-blocking. If the future has not yet completed
+        it will raise an error.
         """
-        return self._future.result()
+        try:
+            return self.__future.result(timeout=0)
+        except TimeoutError:
+            raise RuntimeError("Future is not yet done")
 
     def exception(self):
+        # type: () -> Optional[BaseException]
         """
-        Return the exception instance or `None` if no exception was raised.
+        Return the future's exception.
+
+        Note
+        ----
+        This method is non-blocking. If the future has not yet completed
+        it will raise an error.
         """
-        return self._future.exception()
+        try:
+            return self.__future.exception(timeout=0)
+        except TimeoutError:
+            raise RuntimeError("Future is not yet done")
+
+    def __emitSignals(self):
+        assert self.__future is not None
+        assert self.__future.done()
+        if self.__future.cancelled():
+            self.cancelled.emit(self.__future)
+            self.done.emit(self.__future)
+        elif self.__future.done():
+            self.finished.emit(self.__future)
+            self.done.emit(self.__future)
+            if self.__future.exception():
+                self.exceptionReady.emit(self.__future.exception())
+            else:
+                self.resultReady.emit(self.__future.result())
+        else:
+            assert False
 
     def customEvent(self, event):
-        """
-        Reimplemented from `QObject.customEvent`.
-        """
-        if event.type() == StateChangedEvent.StateChanged:
-            if event.state() == Future.Canceled:
-                self.cancelled.emit()
-            elif event.state() == Future.Running:
-                self.started.emit()
-            elif event.state() == Future.Finished:
-                self.finished.emit()
-            return
-
-        return QObject.customEvent(self, event)
-
-    def _stateChanged(self, future, state):
-        """
-        The `future` state has changed (called by :class:`Future`).
-        """
-        ev = StateChangedEvent(state)
-
-        if self.thread() is QThread.currentThread():
-            QCoreApplication.sendEvent(self, ev)
-        else:
-            QCoreApplication.postEvent(self, ev)
+        # Reimplemented.
+        if event.type() == FutureWatcher.__FutureDone:
+            self.__emitSignals()
+        super().customEvent(event)
 
 
 class methodinvoke(object):
@@ -848,7 +701,7 @@ class TestTask(unittest.TestCase):
         task = Task(function=QThread.currentThread)
         task.resultReady.connect(results.append, Qt.DirectConnection)
 
-        f = executor.submit(task)
+        f = executor.submit_task(task)
 
         self.assertIsNot(f.result(3), QThread.currentThread())
 

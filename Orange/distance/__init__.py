@@ -246,4 +246,16 @@ class MahalanobisDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-Mahalanobis = MahalanobisDistance()
+
+# Only retain this to raise errors on use. Remove in some future version.
+class __MahalanobisDistanceError(MahalanobisDistance):
+    def _raise_error(self, *args, **kwargs):
+        raise RuntimeError(
+            "Invalid use of MahalanobisDistance.\n"
+            "Create a new MahalanobisDistance instance first, e.g.\n"
+            ">>> metric = MahalanobisDistance(data)\n"
+            ">>> dist = metric(data)"
+        )
+    fit = _raise_error
+    __call__ = _raise_error
+Mahalanobis = __MahalanobisDistanceError()

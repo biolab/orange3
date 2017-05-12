@@ -95,7 +95,14 @@ class CUR(Projector):
             self.U_ = np.dot(np.dot(pinvC, X), pinvR)
         else:
             self.U_ = None
-        return CURModel(self)
+
+        # TODO: FIX - do not retain state and ref for this instance
+        # The only use pattern admissble by this implementation is
+        # `model = CUR(**param)(data)`
+        # i.e. CUR instance cannot be used after calling fit once.
+        m = CURModel(self)
+        m.domain = self.domain
+        return m
 
     def transform(self, X, axis):
         if axis == 0:
@@ -152,9 +159,12 @@ class Projector:
         self.transformed = None
 
     def __call__(self, data):
-        if data is not self.transformed:
-            self.transformed = self.projection.transform(data.X)
-        return self.transformed[:, self.feature]
+        transformed = self.transformed
+        # ?? This does not seem right ? Is 'cached' by result ?
+        if data is not transformed:
+            transformed = self.projection.transform(data.X)
+            self.transformed = transformed
+        return transformed[:, self.feature]
 
     def __getstate__(self):
         d = dict(self.__dict__)

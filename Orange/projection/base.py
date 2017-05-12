@@ -1,9 +1,9 @@
 import inspect
+import threading
 
 import Orange.data
-from Orange.base import _ReprableWithPreprocessors, _ReprableWithParams
+from Orange.base import _ReprableWithPreprocessors
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.misc.cache import single_cache
 import Orange.preprocess
 
 __all__ = ["Projector", "Projection", "SklProjector"]
@@ -18,6 +18,7 @@ class Projector(_ReprableWithPreprocessors):
         if preprocessors is None:
             preprocessors = type(self).preprocessors
         self.preprocessors = tuple(preprocessors)
+        self.__tls = threading.local()
 
     def fit(self, X, Y=None):
         raise NotImplementedError(
@@ -27,7 +28,7 @@ class Projector(_ReprableWithPreprocessors):
         data = self.preprocess(data)
         self.domain = data.domain
         clf = self.fit(data.X, data.Y)
-        clf.pre_domain = self.domain
+        clf.pre_domain = data.domain
         clf.name = self.name
         return clf
 
@@ -36,13 +37,37 @@ class Projector(_ReprableWithPreprocessors):
             data = pp(data)
         return data
 
+    # Projectors implemented using `fit` access the `domain` through the
+    # instance attribute. This makes (or it would) make it impossible to
+    # be implemented in a thread-safe manner. So the domain is made a
+    # property descriptor utilizing thread local storage behind the scenes.
+    @property
+    def domain(self):
+        return self.__tls.domain
+
+    @domain.setter
+    def domain(self, value):
+        self.__tls.domain = value
+
+    @domain.deleter
+    def domain(self):
+        del self.__tls.domain
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state["_Projector__tls"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__tls = threading.local()
+
 
 class Projection:
     def __init__(self, proj):
         self.__dict__.update(proj.__dict__)
         self.proj = proj
 
-    @single_cache
     def transform(self, X):
         return self.proj.transform(X)
 
@@ -53,7 +78,7 @@ class Projection:
         return self.name
 
 
-class SklProjector(_ReprableWithParams, Projector, metaclass=WrapperMeta):
+class SklProjector(Projector, metaclass=WrapperMeta):
     __wraps__ = None
     _params = {}
     name = 'skl projection'
@@ -91,3 +116,12 @@ class SklProjector(_ReprableWithParams, Projector, metaclass=WrapperMeta):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         return proj.fit(X, Y)
+
+    def __getattr__(self, item):
+        try:
+            return self.params[item]
+        except (AttributeError, KeyError):
+            raise AttributeError(item) from None
+
+    def __dir__(self):
+        return list(sorted(set(super().__dir__()) | set(self.params.keys())))

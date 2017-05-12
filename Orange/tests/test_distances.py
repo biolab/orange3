@@ -13,7 +13,7 @@ from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
-                             Jaccard, _preprocess, Mahalanobis, MahalanobisDistance)
+                             Jaccard, _preprocess, MahalanobisDistance)
 from Orange.misc import DistMatrix
 from Orange.tests import named_file, test_filename
 from Orange.util import OrangeDeprecationWarning
@@ -753,23 +753,23 @@ class TestMahalanobis(TestCase):
                 self.assertAlmostEqual(d[i][j], mah(self.x[i], self.x[j]), delta=1e-5)
 
     def test_attributes(self):
-        Mahalanobis.fit(self.x)
-        self.assertEqual(Mahalanobis(self.x[0], self.x[1]).shape, (1, 1))
-        self.assertEqual(Mahalanobis(self.x).shape, (self.n, self.n))
-        self.assertEqual(Mahalanobis(self.x[0:3], self.x[5:7]).shape, (3, 2))
-        self.assertEqual(Mahalanobis(self.x1, self.x2).shape, (1, 1))
-        Mahalanobis(self.x, impute=True)
-        Mahalanobis(self.x[:-1, :])
-        self.assertRaises(ValueError, Mahalanobis, self.x[:, :-1])
-        self.assertRaises(ValueError, Mahalanobis, self.x1[:-1], self.x2)
-        self.assertRaises(ValueError, Mahalanobis, self.x1, self.x2[:-1])
-        self.assertRaises(ValueError, Mahalanobis, self.x.T)
+        metric = MahalanobisDistance(self.x)
+        self.assertEqual(metric(self.x[0], self.x[1]).shape, (1, 1))
+        self.assertEqual(metric(self.x).shape, (self.n, self.n))
+        self.assertEqual(metric(self.x[0:3], self.x[5:7]).shape, (3, 2))
+        self.assertEqual(metric(self.x1, self.x2).shape, (1, 1))
+        metric(self.x, impute=True)
+        metric(self.x[:-1, :])
+        self.assertRaises(ValueError, metric, self.x[:, :-1])
+        self.assertRaises(ValueError, metric, self.x1[:-1], self.x2)
+        self.assertRaises(ValueError, metric, self.x1, self.x2[:-1])
+        self.assertRaises(ValueError, metric, self.x.T)
 
     def test_iris(self):
         tab = Table('iris')
-        Mahalanobis.fit(tab)
-        self.assertEqual(Mahalanobis(tab).shape, (150, 150))
-        self.assertEqual(Mahalanobis(tab[0], tab[1]).shape, (1, 1))
+        metric = MahalanobisDistance(tab)
+        self.assertEqual(metric(tab).shape, (150, 150))
+        self.assertEqual(metric(tab[0], tab[1]).shape, (1, 1))
 
     def test_axis(self):
         mah = MahalanobisDistance(self.x, axis=1)
@@ -786,6 +786,17 @@ class TestMahalanobis(TestCase):
         mah(x[0], x[1])
         mah = MahalanobisDistance(xt)
         mah(xt[0], xt[1])
+
+    def test_global_is_borked(self):
+        """
+        Test that the global state retaining non-safe Mahalanobis instance
+        raises RuntimeErrors on all invocations
+        """
+        from Orange.distance import Mahalanobis
+        with self.assertRaises(RuntimeError):
+            Mahalanobis.fit(self.x)
+        with self.assertRaises(RuntimeError):
+            Mahalanobis(self.x)
 
 
 class TestDistances(TestCase):

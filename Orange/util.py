@@ -1,14 +1,14 @@
 """Various small utilities that might be useful everywhere"""
 import os
 import inspect
+import itertools
 from enum import Enum as _Enum
-from functools import wraps
+from functools import wraps, partial
 from operator import attrgetter
 from itertools import chain, count
+
 from collections import OrderedDict
 import warnings
-
-import numpy as np
 
 # Exposed here for convenience. Prefer patching to try-finally blocks
 from unittest.mock import patch  # pylint: disable=unused-import
@@ -179,6 +179,60 @@ class Enum(_Enum):
     __repr__ = _Enum.__str__
 
 
+def interleave(seq1, seq2):
+    """
+    Interleave elements of `seq2` between consecutive elements of `seq1`.
+
+    Example
+    -------
+    >>> list(interleave([1, 3, 5], [2, 4]))
+    [1, 2, 3, 4, 5]
+    >>> list(interleave([1, 2, 3, 4], itertools.repeat("<")))
+    [1, '<', 2, '<', 3, '<', 4]
+    """
+    iterator1, iterator2 = iter(seq1), iter(seq2)
+    try:
+        leading = next(iterator1)
+    except StopIteration:
+        pass
+    else:
+        for element in iterator1:
+            yield leading
+            try:
+                yield next(iterator2)
+            except StopIteration:
+                return
+            leading = element
+        yield leading
+
+
+def Reprable_repr_pretty(name, itemsiter, printer, cycle):
+    # type: (str, Iterable[Tuple[str, Any]], Ipython.lib.pretty.PrettyPrinter, bool) -> None
+    if cycle:
+        printer.text("{0}(...)".format("name"))
+    else:
+        def printitem(field, value):
+            printer.text(field + "=")
+            printer.pretty(value)
+
+        def printsep():
+            printer.text(",")
+            printer.breakable()
+
+        itemsiter = (partial(printitem, *item) for item in itemsiter)
+        sepiter = itertools.repeat(printsep)
+
+        with printer.group(len(name) + 1, "{0}(".format(name), ")"):
+            for part in interleave(itemsiter, sepiter):
+                part()
+
+
+class _Undef:
+    def __repr__(self):
+        return "<?>"
+_undef = _Undef()
+
+
 class Reprable:
     """A type that inherits from this class has its __repr__ string
     auto-generated so that it "[...] should look like a valid Python
@@ -224,41 +278,60 @@ class Reprable:
     """
     _reprable_module = ''
 
-    def __repr__(self):
+    def _reprable_fields(self):
+        # type: () -> Iterable[Tuple[str, Any]]
         cls = self.__class__
-        names_values = []
-        # Only use params of __init__; skip __new__
-        if cls.__init__ != object.__init__:
-            sig = inspect.signature(cls.__init__)
-            for param in sig.parameters.values():
-                # Skip self, *args, **kwargs
-                if (param.name != 'self' and
-                    param.kind not in (param.VAR_POSITIONAL,
-                                       param.VAR_KEYWORD)):
-                    value = getattr(self, param.name)
-                    if not self.__equal(value, param.default):
-                        names_values.append((param.name, value))
+        sig = inspect.signature(cls.__init__)
+        for param in sig.parameters.values():
+            # Skip self, *args, **kwargs
+            if (param.name != 'self' and
+                        param.kind not in (param.VAR_POSITIONAL,
+                                           param.VAR_KEYWORD)):
+                yield param.name, param.default
 
-        module = self._reprable_module
-        if module is True:
-            module = cls.__module__
-
-        return '{}{}({})'.format(str(module) + '.' if module else '',
-                                 cls.__name__,
-                                 ', '.join('{}={!r}'.format(*pair)
-                                           for pair in names_values))
-
-    @staticmethod
-    def __equal(obj1, obj2):
-        try:
-            # If the objects are broadcastable (works for array_like as
-            # for arbitrary objects), compare them for equality (possibly
-            # element-wise)
-            return np.broadcast(obj1, obj2) and np.all(obj1 == obj2)
-        except ValueError:
-            # Broadcasting failed
+    def _reprable_omit_param(self, name, default, value):
+        if default is value:
+            return True
+        if type(default) is type(value):
+            try:
+                return default == value
+            except (ValueError, TypeError):
+                return False
+        else:
             return False
 
+    def _reprable_items(self):
+        for name, default in self._reprable_fields():
+            try:
+                value = getattr(self, name)
+            except AttributeError:
+                value = _undef
+            if not self._reprable_omit_param(name, default, value):
+                yield name, default, value
+
+    def _repr_pretty_(self, p, cycle):
+        """IPython pretty print hook."""
+        module = self._reprable_module
+        if module is True:
+            module = self.__class__.__module__
+
+        nameparts = (([str(module)] if module else []) +
+                     [self.__class__.__name__])
+        name = ".".join(nameparts)
+        Reprable_repr_pretty(
+            name, ((f, v) for f, _, v in self._reprable_items()),
+            p, cycle)
+
+    def __repr__(self):
+        module = self._reprable_module
+        if module is True:
+            module = self.__class__.__module__
+        nameparts = (([str(module)] if module else []) +
+                     [self.__class__.__name__])
+        name = ".".join(nameparts)
+        return "{}({})".format(
+            name, ", ".join("{}={!r}".format(f, v) for f, _, v in self._reprable_items())
+        )
 
 # For best result, keep this at the bottom
 __all__ = export_globals(globals(), __name__)

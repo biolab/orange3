@@ -1,16 +1,9 @@
-import sys
-import multiprocessing as mp
-from threading import Thread
 from collections import namedtuple
-import pickle
-import warnings
 
 import numpy as np
 
-import joblib
 import sklearn.model_selection as skl
 
-from Orange.util import OrangeWarning
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
@@ -25,7 +18,7 @@ def _identity(x):
 
 
 def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
-               store_models, mp_queue):
+               store_models):
     predicted, probs, model, failed = None, None, None, False
     try:
         if len(train_data) == 0 or len(test_data) == 0:
@@ -38,7 +31,6 @@ def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
     # Different models can fail at any time raising any exception
     except Exception as ex:  # pylint: disable=broad-except
         failed = ex
-    mp_queue.put("dummy text; use for printing when debugging")
     return _MpResults(fold_i, learner_i, store_models and model,
                       failed, len(test_data), predicted, probs)
 
@@ -120,15 +112,14 @@ class Results:
         :param callback: Function for reporting back the progress as a value
             between 0 and 1
         :type callback: callable
-        :param n_jobs: The number of processes to parallelize the evaluation
-            on. -1 to parallelize on all but one CPUs. 1 for no
-            parallelization.
+        :param n_jobs:
+            Ignored.
         :type n_jobs: int
         """
         self.store_data = store_data
         self.store_models = store_models
         self.dtype = np.float32
-        self.n_jobs = max(1, joblib.cpu_count() - 1 if n_jobs < 0 else n_jobs)
+        self.n_jobs = 1
 
         self.models = None
         self.folds = None
@@ -302,8 +293,6 @@ class Results:
         predictions.name = data.name
         return predictions
 
-    _MIN_NJOBS_X_SIZE = 20e3
-
     def fit(self, train_data, test_data=None):
         """Fits `self.learners` using folds sampled from the provided data.
 
@@ -320,102 +309,23 @@ class Results:
         self._prepare_arrays(test_data)
 
         n_callbacks = len(self.learners) * len(self.indices)
-        n_jobs = max(1, min(self.n_jobs, n_callbacks))
-
-        def _is_picklable(obj):
-            try:
-                return bool(pickle.dumps(obj))
-            except (AttributeError, TypeError, pickle.PicklingError):
-                return False
-
-        if n_jobs > 1 and not all(_is_picklable(learner) for learner in self.learners):
-            n_jobs = 1
-            warnings.warn("Not all arguments (learners) are picklable. "
-                          "Setting n_jobs=1", OrangeWarning)
-
-        if n_jobs > 1 and mp.current_process().daemon:
-            n_jobs = 1
-            warnings.warn("Worker subprocesses cannot spawn new worker "
-                          "subprocesses (e.g. parameter tuning with internal "
-                          "cross-validation). Setting n_jobs=1", OrangeWarning)
-
-        # Workaround for NumPy locking on Macintosh and Ubuntu 14.04 LTS
-        # May be removed once offending libs and OSes are nowhere to be found.
-        # https://pythonhosted.org/joblib/parallel.html#bad-interaction-of-multiprocessing-and-third-party-libraries
-        mp_ctx = mp.get_context(
-            'forkserver' if sys.platform.startswith(('darwin', 'linux')) and n_jobs > 1 else None)
-
-        if (n_jobs > 1 and mp_ctx.get_start_method() != 'fork' and
-                train_data.X.size < self._MIN_NJOBS_X_SIZE):
-            n_jobs = 1
-            warnings.warn("Working with small-enough data; single-threaded "
-                          "sequential excecution will (probably) be faster. "
-                          "Setting n_jobs=1", OrangeWarning)
-
-        try:
-            # Use context-adapted Queue or just the regular Queue if no
-            # multiprocessing (otherwise it shits itself at least on Windos)
-            mp_queue = mp_ctx.Manager().Queue() if n_jobs > 1 else mp.Queue()
-        except (EOFError, RuntimeError):
-            mp_queue = mp.Queue()
-            n_jobs = 1
-            warnings.warn('''
-
-        Can't run multiprocessing code without a __main__ guard.
-
-        Multiprocessing strategies 'forkserver' (used by Orange's evaluation
-        methods by default on Mac OS X) and 'spawn' (default on Windos)
-        require the main code entry point be guarded with:
-
-            if __name__ == '__main__':
-                import multiprocessing as mp
-                mp.freeze_support()  # Needed only on Windos
-                ...  # Rest of your code
-                ...  # See: https://docs.python.org/3/library/__main__.html
-
-        Otherwise, as the module is re-imported in another process, infinite
-        recursion ensues.
-
-        Guard your executed code with above Python idiom, or pass n_jobs=1
-        to evaluation methods, i.e. {}(..., n_jobs=1). Setting n_jobs to 1.
-            '''.format(self.__class__.__name__), OrangeWarning)
 
         data_splits = (
             (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
             for fold_i, (train_i, test_i) in enumerate(self.indices))
-
         args_iter = (
             (fold_i, train_data, test_data, learner_i, learner,
-             self.store_models, mp_queue)
-            # NOTE: If this nested for loop doesn't work, try
-            # itertools.product
+             self.store_models)
             for (fold_i, train_data, test_data) in data_splits
             for (learner_i, learner) in enumerate(self.learners))
 
-        def _callback_percent(n_steps, queue):
-            """Block until one of the subprocesses completes, before
-            signalling callback with percent"""
-            for percent in np.linspace(.0, .99, n_steps + 1)[1:]:
-                queue.get()
-                try:
-                    self._callback(percent)
-                except Exception:
-                    # Callback may error for whatever reason (e.g. PEBKAC)
-                    # In that case, rather gracefully continue computation
-                    # instead of failing
-                    pass
-
         results = []
-        with joblib.Parallel(n_jobs=n_jobs, backend=mp_ctx) as parallel:
-            tasks = (joblib.delayed(_mp_worker)(*args) for args in args_iter)
-            # Start the tasks from another thread ...
-            thread = Thread(target=lambda: results.append(parallel(tasks)))
-            thread.start()
-            # ... so that we can update the GUI (callback) from the main thread
-            _callback_percent(n_callbacks, mp_queue)
-            thread.join()
+        parts = np.linspace(.0, .99, n_callbacks + 1)[1:]
+        for progress, part in zip(parts, args_iter):
+            results.append(_mp_worker(*(part + ())))
+            self._callback(progress)
 
-        results = sorted(results[0])
+        results = sorted(results)
 
         ptr, prev_fold_i, prev_n_values = 0, 0, 0
         for res in results:
@@ -548,7 +458,7 @@ class CrossValidationFeature(Results):
         The feature defining the folds.
 
     """
-    def  __init__(self, data, learners, feature, store_data=False, store_models=False,
+    def __init__(self, data, learners, feature, store_data=False, store_models=False,
                   preprocessor=None, callback=None, n_jobs=1):
         self.feature = feature
         super().__init__(data, learners=learners, store_data=store_data,

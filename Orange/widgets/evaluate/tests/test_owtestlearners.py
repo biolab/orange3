@@ -27,18 +27,20 @@ class TestOWTestLearners(WidgetTest):
     def test_basic(self):
         data = Table("iris")[::3]
         self.send_signal("Data", data)
-        self.send_signal("Learner", MajorityLearner(), 0)
+        self.send_signal("Learner", MajorityLearner(), 0, wait=5000)
         res = self.get_output("Evaluation Results")
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
         self.assertIsNotNone(res.probabilities)
 
-        self.send_signal("Learner", None, 0)
+        self.send_signal("Learner", None, 0, wait=5000)
+        res = self.get_output("Evaluation Results")
+        self.assertIsNone(res)
 
         data = Table("housing")[::10]
         self.send_signal("Data", data)
-        self.send_signal("Learner", MeanLearner(), 0)
+        self.send_signal("Learner", MeanLearner(), 0, wait=5000)
         res = self.get_output("Evaluation Results")
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
