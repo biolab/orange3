@@ -126,7 +126,7 @@ class WidgetSignalsMixin:
             return [copy.copy(signal) for signal in old_style]
         signal_class = getattr(cls, direction.title())
         return [signal for signal in signal_class.__dict__.values()
-                if isinstance(signal, (InputSignal, OutputSignal))]
+                if isinstance(signal, (Input, Output))]
 
 
 class AttributeList(list):
